@@ -1,26 +1,3 @@
-db:
-  <% if_p('director.db.adapter') do |adapter| %>
-  adapter: <%= adapter %>
-  <% end %>
-  <% if_p('director.db.user') do |user| %>
-  user: <%= user %>
-  <% end %>
-  <% if_p('director.db.password') do |password| %>
-  password: <%= password %>
-  <% end %>
-  <% if_p('director.db.host') do |host| %>
-  host: <%= host %>
-  <% end %>
-  <% if_p('director.db.port') do |port| %>
-  port: <%= port %>
-  <% end %>
-  <% if_p('director.db.database') do |database| %>
-  database: "<%= database %>"
-  <% end %>
-  <% if_p('director.db.connection_options') do |connection_options| %>
-  connection_options: <%= JSON.generate(connection_options) %>
-  <% end %>
-
 cloud:
   plugin: vsphere
   properties:

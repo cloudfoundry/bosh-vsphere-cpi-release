@@ -1,0 +1,11 @@
+#!/bin/bash
+
+set -ex
+
+cpi_dir=$(cd $(dirname $0)/../ && pwd)
+gems_dir=$cpi_dir/src/bosh_vsphere_cpi
+
+(
+  cd $gems_dir
+  bundle package
+)
