@@ -1,3 +1,0 @@
-source "https://rubygems.org"
-
-gem 'bosh_vsphere_cpi'

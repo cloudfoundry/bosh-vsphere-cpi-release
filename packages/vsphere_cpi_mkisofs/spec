@@ -1,0 +1,7 @@
+---
+name: vsphere_cpi_mkisofs
+files:
+  - vsphere_cpi_mkisofs/cdrtools-3.00.tar.bz2
+  - vsphere_cpi_mkisofs/patch-include_schily_sha2.h
+  - vsphere_cpi_mkisofs/smake-1.2.4.tar.bz2
+

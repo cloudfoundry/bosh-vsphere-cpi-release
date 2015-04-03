@@ -1,8 +1,0 @@
----
-name: bosh_vsphere_cpi
-dependencies:
-- ruby_vsphere_cpi
-- genisoimage_vsphere_cpi
-files:
-- bosh_vsphere_cpi/Gemfile*
-- bosh_vsphere_cpi/vendor/cache/*.gem

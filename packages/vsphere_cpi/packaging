@@ -9,9 +9,16 @@ mkdir -p ${BOSH_INSTALL_TARGET}/{bin,gem_home}
 export PATH=${BOSH_INSTALL_TARGET}/bin:$PATH
 export GEM_HOME=${BOSH_INSTALL_TARGET}/gem_home
 
-cd bosh_vsphere_cpi
+cd vsphere_cpi
 
-bundle_cmd="$BOSH_PACKAGES_DIR/ruby_vsphere_cpi/bin/bundle"
+cat >> Gemfile <<EOF
+gem 'bosh_vsphere_cpi'
+EOF
+
+# force bundler to use a clean config
+export BUNDLE_CONFIG=`pwd`/.cpi_bundle_config
+
+bundle_cmd="$BOSH_PACKAGES_DIR/vsphere_cpi_ruby/bin/bundle"
 
 $bundle_cmd install \
   --local           \

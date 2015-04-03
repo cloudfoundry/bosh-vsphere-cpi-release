@@ -1,5 +1,5 @@
 --- 
-final_name: bosh
+final_name: bosh-vsphere-cpi
 blobstore:
   provider: s3
   options: 

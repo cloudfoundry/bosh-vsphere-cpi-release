@@ -1,6 +1,6 @@
 set -e
 
-tar xzf ruby_vsphere_cpi/yaml-0.1.5.tar.gz
+tar xzf vsphere_cpi_ruby/yaml-0.1.5.tar.gz
 (
   set -e
   cd yaml-0.1.5
@@ -13,7 +13,7 @@ if [[ $? != 0 ]] ; then
   exit 1
 fi
 
-tar xzf ruby_vsphere_cpi/ruby-1.9.3-p545.tar.gz
+tar xzf vsphere_cpi_ruby/ruby-1.9.3-p545.tar.gz
 (
   set -e
   cd ruby-1.9.3-p545
@@ -26,7 +26,7 @@ if [[ $? != 0 ]] ; then
   exit 1
 fi
 
-tar zxvf ruby_vsphere_cpi/rubygems-2.1.11.tgz
+tar zxvf vsphere_cpi_ruby/rubygems-2.1.11.tgz
 (
   set -e
   cd rubygems-2.1.11
@@ -38,4 +38,4 @@ if [[ $? != 0 ]] ; then
   exit 1
 fi
 
-${BOSH_INSTALL_TARGET}/bin/gem install ruby_vsphere_cpi/bundler-1.8.2.gem --local --no-ri --no-rdoc
+${BOSH_INSTALL_TARGET}/bin/gem install vsphere_cpi_ruby/bundler-1.8.2.gem --local --no-ri --no-rdoc

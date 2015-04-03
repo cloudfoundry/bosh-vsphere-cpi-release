@@ -1,0 +1,6 @@
+---
+name: vsphere_cpi
+dependencies:
+- vsphere_cpi_ruby
+files:
+- vsphere_cpi/vendor/cache/*.gem

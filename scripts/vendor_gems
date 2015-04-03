@@ -3,9 +3,22 @@
 set -ex
 
 cpi_dir=$(cd $(dirname $0)/../ && pwd)
-gems_dir=$cpi_dir/src/bosh_vsphere_cpi
+gem_dir=$cpi_dir/src/vsphere_cpi
+
+cleanup() {
+  cd $gem_dir
+  rm Gemfile*
+}
+
+trap cleanup EXIT
 
 (
-  cd $gems_dir
+  cd $gem_dir
+  cat > 'Gemfile' <<EOF
+source "https://rubygems.org"
+
+gem "bosh_vsphere_cpi"
+EOF
+
   bundle package
 )
