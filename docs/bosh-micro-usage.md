@@ -12,47 +12,61 @@ To start experimenting with vsphere-cpi-release and bosh-micro-cli:
 mkdir my-micro-deployment
 ```
 
-1. Create a deployment manifest `manifest.yml` inside the deployment directory with following properties, replacing the YOUR_* values.
+1. Create a deployment manifest `manifest.yml` inside the deployment directory with following properties, replacing the <values>.
 
 ```
 ---
-name: microbosh-vsphere
+# replace all values between angle brackets! < ... >
+name: my-micro-deployment
 
 networks:
 - name: default
-  type: dynamic
+  type: manual
+  ip: <vm ip>
+  netmask: <netmask>
+  gateway: <gateway>
+  dns: [<dns server ip>]
   cloud_properties:
-    name: YOUR_VSPHERE_NETWORK_NAME
+    name: <vCenter configured network name>
 
 resource_pools:
 - name: default
-  cloud_properties:
-    ram: 2048
-    disk: 8096
-    cpu: 2
-    
+  network: default
+  cloud_properties: {"ram":1024,"cpu":1,"disk":10_000}
+
+# bosh job properties go here
+
 cloud_provider:
+  template: {name: cpi, release: bosh-vsphere-cpi}
+
+  # Tells bosh-micro how to contact remote agent
+  mbus: https://<mbus-user>:<mbus-password>@<vm ip>:<agent-mbus-port>
+
   properties:
-    ntp: [YOUR_NTP_SERVER_ADDRESS]
+    agent: # Tells CPI how agent should listen for requests
+      mbus: "https://<mbus-user>:<mbus-password>@0.0.0.0:<agent-mbus-port>"
+    blobstore:
+      provider: local
+      path: /var/vcap/micro_bosh/data/cache
     director:
       db:
         adapter: sqlite
         database: ':memory:'
-    vcenter:
-      address: YOUR_VCENTER_HOST_IP
-      user: YOUR_VCENTER_USER
-      password: YOUR_VCENTER_PASSWORD
+    ntp: [<ntp ip>]
+    vcenter: # these will match jobs[bosh].properties.vcenter properties
+      address: <vcenter ip>
+      user: <user>
+      password: <pass>
       datacenters:
-        - name: YOUR_TEST_DATACENTER
-          vm_folder: YOUR_VM_FOLDER
-          template_folder: YOUR_TEMPLATE_FOLDER
-          disk_path: YOUR_DISK_FOLDER
-          datastore_pattern: YOUR_DATASTORE_PATTERN
-          persistent_datastore_pattern: YOUR_PERSISTENT_DATASTORE_PATTERN
-          allow_mixed_datastores: true
+        - name: <datacenter name>
+          vm_folder: <vm folder name>
+          template_folder: <tempalte folder name>
+          disk_path: <disk path folder name>
+          datastore_pattern: '<ephemeral datastores regex>'
+          persistent_datastore_pattern: '<persistent datastores regex>'
           clusters:
-            - YOUR_CLUSTER:
-                resource_pool: YOUR_RP
+            - <cluster name>:
+                resource_pool: <resource pool name>
 ```
 
 1. Set the micro deployment
