@@ -18,8 +18,8 @@ tar xzf vsphere_cpi_ruby/ruby-1.9.3-p545.tar.gz
   set -e
   cd ruby-1.9.3-p545
   LDFLAGS="-Wl,-rpath -Wl,${BOSH_INSTALL_TARGET}" CFLAGS='-fPIC' ./configure --prefix=${BOSH_INSTALL_TARGET} --disable-install-doc --with-opt-dir=${BOSH_INSTALL_TARGET}
-  make -j
-  make -j install
+  make
+  make install
 )
 if [[ $? != 0 ]] ; then
   echo "Cannot install ruby"
