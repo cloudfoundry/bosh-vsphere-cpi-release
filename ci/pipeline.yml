@@ -1,0 +1,39 @@
+---
+groups:
+  - name: bosh-vsphere-cpi-release
+    jobs:
+      - build-candidate
+
+jobs:
+  - name: build-candidate
+    serial: true
+    plan:
+      - aggregate:
+          - {trigger: true,  get: bosh-cpi-release}
+          - {trigger: false, get: version-semver, params: {bump: patch}}
+
+      - put: version-semver
+        params: {file: version-semver/number}
+
+      - task: build
+        file: bosh-cpi-release/tasks/build-candidate.yml
+
+      - put: bosh-cpi-dev-artifacts
+        params: {from: build/out/.*\.tgz}
+
+
+resources:
+  - name: bosh-cpi-release
+    type: git
+    source:
+      uri: git@github.com:cloudfoundry-incubator/bosh-vsphere-cpi-release.git
+      branch: master
+      private_key: {{github_deployment_key__bosh-vsphere-cpi-release}}
+
+  - name: version-semver
+    type: semver
+    source:
+      key:                current-version
+      bucket:             bosh-vsphere-cpi-release-pipeline
+      access_key_id:      {{s3_vsphere_cpi_access_key}}
+      secret_access_key:  {{s3_vsphere_cpi_secret_key}}
