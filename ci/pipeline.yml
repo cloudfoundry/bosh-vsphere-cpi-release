@@ -16,13 +16,22 @@ jobs:
         params: {file: version-semver/number}
 
       - task: build
-        file: bosh-cpi-release/tasks/build-candidate.yml
+        file: bosh-cpi-release/ci/tasks/build-candidate.yml
 
       - put: bosh-cpi-dev-artifacts
         params: {from: build/out/.*\.tgz}
 
 
 resources:
+  - name: bosh-cpi-dev-artifacts
+    type: s3
+    source:
+      regexp: bosh-vsphere-cpi\.tgz
+      bucket: bosh-vsphere-cpi-release-pipeline
+      region_name: us-east-1
+      access_key_id:     {{s3_vsphere_cpi_access_key}}
+      secret_access_key: {{s3_vsphere_cpi_secret_key}}
+
   - name: bosh-cpi-release
     type: git
     source:
@@ -33,7 +42,7 @@ resources:
   - name: version-semver
     type: semver
     source:
-      key:                current-version
-      bucket:             bosh-vsphere-cpi-release-pipeline
-      access_key_id:      {{s3_vsphere_cpi_access_key}}
-      secret_access_key:  {{s3_vsphere_cpi_secret_key}}
+      key:               current-version
+      bucket:            bosh-vsphere-cpi-release-pipeline
+      access_key_id:     {{s3_vsphere_cpi_access_key}}
+      secret_access_key: {{s3_vsphere_cpi_secret_key}}
