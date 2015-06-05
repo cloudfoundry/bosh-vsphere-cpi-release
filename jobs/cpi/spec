@@ -74,3 +74,10 @@ properties:
   nats.port:
     description: Port that the nats server listens on
     default: 4222
+
+  env.http_proxy:
+    description: Http proxy to connect to cloud API's
+  env.https_proxy:
+    description: Https proxy to connect to cloud API's
+  env.no_proxy:
+    description: No Proxy environment variable
