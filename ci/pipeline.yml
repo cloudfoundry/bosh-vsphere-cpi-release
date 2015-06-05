@@ -27,7 +27,7 @@ resources:
     type: s3
     source:
       regexp: bosh-vsphere-cpi\.tgz
-      bucket: bosh-vsphere-cpi-release-pipeline
+      bucket: bosh-vsphere-cpi-release
       region_name: us-east-1
       access_key_id:     {{s3_vsphere_cpi_access_key}}
       secret_access_key: {{s3_vsphere_cpi_secret_key}}
@@ -43,6 +43,6 @@ resources:
     type: semver
     source:
       key:               current-version
-      bucket:            bosh-vsphere-cpi-release-pipeline
+      bucket:            bosh-vsphere-cpi-release
       access_key_id:     {{s3_vsphere_cpi_access_key}}
       secret_access_key: {{s3_vsphere_cpi_secret_key}}
