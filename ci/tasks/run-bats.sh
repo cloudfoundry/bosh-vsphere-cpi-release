@@ -21,9 +21,10 @@ chruby 2.1.2
 
 source bosh-concourse-ci/pipelines/$cpi_release_name/$base_os-$network_type_to_test-exports.sh
 
-eval $(ssh-agent)
-chmod go-r $BAT_VCAP_PRIVATE_KEY
-ssh-add $BAT_VCAP_PRIVATE_KEY
+#vsphere uses user/pass and the cdrom drive, not a reverse ssh tunnel
+#eval $(ssh-agent)
+#chmod go-r $BAT_VCAP_PRIVATE_KEY
+#ssh-add $BAT_VCAP_PRIVATE_KEY
 
 echo "using bosh CLI version..."
 bosh version
