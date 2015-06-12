@@ -63,6 +63,7 @@ jobs:
         - {trigger: false, passed: [deploy-ubuntu-manual], get: bosh-cpi-release}
         - {trigger: false, passed: [deploy-ubuntu-manual], get: stemcell, resource: vsphere-ubuntu-stemcell}
         - {trigger: false, passed: [deploy-ubuntu-manual], get: bosh-concourse-ci}
+        - {trigger: false,                                 get: bats}
 
       - task: test
         file: bosh-cpi-release/ci/tasks/run-bats.yml
@@ -119,3 +120,9 @@ resources:
     type: bosh-io-stemcell
     source:
       name: bosh-vsphere-esxi-ubuntu-trusty-go_agent
+
+  - name: bats
+    type: git
+    source:
+      uri: https://github.com/cloudfoundry/bosh-acceptance-tests.git
+      branch: concourse
