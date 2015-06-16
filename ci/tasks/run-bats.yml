@@ -11,3 +11,4 @@ run:
 params:
   base_os:              replace-me
   network_type_to_test: replace-me
+tags: ["vsphere"]

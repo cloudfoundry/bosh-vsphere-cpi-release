@@ -22,9 +22,9 @@ chruby 2.1.2
 source bosh-concourse-ci/pipelines/$cpi_release_name/$base_os-$network_type_to_test-exports.sh
 
 #vsphere uses user/pass and the cdrom drive, not a reverse ssh tunnel
-#eval $(ssh-agent)
-#chmod go-r $BAT_VCAP_PRIVATE_KEY
-#ssh-add $BAT_VCAP_PRIVATE_KEY
+eval $(ssh-agent)
+chmod go-r $BOSH_SSH_PRIVATE_KEY
+ssh-add $BOSH_SSH_PRIVATE_KEY
 
 echo "using bosh CLI version..."
 bosh version
@@ -36,3 +36,6 @@ sed -i.bak s/"uuid: replace-me"/"uuid: $(bosh status --uuid)"/ $BAT_DEPLOYMENT_S
 cd bats
 bundle install
 bundle exec rspec spec
+
+#kill the SSH agent we started earlier
+ssh-agent -k
