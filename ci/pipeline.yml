@@ -3,14 +3,30 @@ groups:
   - name: bosh-vsphere-cpi-release
     jobs:
       - build-candidate
+      - deploy-ubuntu-manual
+      - bats-ubuntu-manual
+      - deploy-centos-manual
+      - bats-centos-manual
+
+  - name: ubuntu
+    jobs:
+      - build-candidate
+      - deploy-ubuntu-manual
+      - bats-ubuntu-manual
+
+  - name: centos
+    jobs:
+      - build-candidate
+      - deploy-centos-manual
+      - bats-centos-manual
 
 jobs:
   - name: build-candidate
     serial: true
     plan:
       - aggregate:
-          - {trigger: true,  get: bosh-cpi-release}
-          - {trigger: false, get: version-semver, params: {bump: patch}}
+          - {trigger: true,  get: bosh-cpi-release, resource: bosh-vsphere-cpi-release}
+          - {trigger: false, get: version-semver,   params: {bump: patch}}
 
       - put: version-semver
         params: {file: version-semver/number}
@@ -21,6 +37,108 @@ jobs:
       - put: bosh-cpi-dev-artifacts
         params: {from: build/out/.*\.tgz}
 
+  - name: deploy-ubuntu-manual
+    serial_groups: [ubuntu-director-manual] # shouldn't deploy while bats are running
+    plan:
+      - aggregate:
+        - {trigger: true,  passed: [build-candidate], get: bosh-cpi-dev-artifacts}
+        - {trigger: false, passed: [build-candidate], get: version-semver}
+        - {trigger: false, passed: [build-candidate], get: bosh-cpi-release, resource: bosh-vsphere-cpi-release}
+        - {trigger: false,                            get: bosh-concourse-ci }
+        - {trigger: false,                            get: bosh-init}
+        - {trigger: false,                            get: bosh-release}
+        - {trigger: false,                            get: stemcell, resource: vsphere-ubuntu-stemcell}
+
+      - task: deploy
+        file: bosh-cpi-release/ci/tasks/deploy.yml
+        config:
+          params:
+            base_os: ubuntu
+            network_type_to_test: manual
+          tags: ["vsphere"]
+
+      - conditions: [success, failure]
+        task: save-deployment
+        file: bosh-cpi-release/ci/tasks/save-deployment.yml
+        config:
+          params:
+            base_os: ubuntu
+            network_type_to_test: manual
+
+      - put: bosh-concourse-ci
+        params:
+          repository: save-deployment/deploy/bosh-concourse-ci
+          rebase: true
+
+  - name: bats-ubuntu-manual
+    serial_groups: [ubuntu-director-manual] # can't run while deploying
+    plan:
+      - aggregate:
+        - {trigger: true,  passed: [deploy-ubuntu-manual], get: bosh-cpi-dev-artifacts}
+        - {trigger: false, passed: [deploy-ubuntu-manual], get: bosh-cpi-release, resource: bosh-vsphere-cpi-release}
+        - {trigger: false, passed: [deploy-ubuntu-manual], get: stemcell, resource: vsphere-ubuntu-stemcell}
+        - {trigger: false, passed: [deploy-ubuntu-manual], get: bosh-concourse-ci}
+        - {trigger: false,                                 get: bats}
+
+      - task: test
+        file: bosh-cpi-release/ci/tasks/run-bats.yml
+        config:
+          params:
+            base_os: ubuntu
+            network_type_to_test: manual
+          tags: ["vsphere"]
+
+  - name: deploy-centos-manual
+    serial_groups: [centos] # shouldn't deploy while bats are running
+    plan:
+      - aggregate:
+        - {trigger: true,  passed: [build-candidate], get: bosh-cpi-dev-artifacts}
+        - {trigger: false, passed: [build-candidate], get: version-semver}
+        - {trigger: false, passed: [build-candidate], get: bosh-cpi-release, resource: bosh-vsphere-cpi-release}
+        - {trigger: false,                            get: bosh-concourse-ci }
+        - {trigger: false,                            get: bosh-init}
+        - {trigger: false,                            get: bosh-release}
+        - {trigger: false,                            get: stemcell, resource: vsphere-centos-stemcell}
+
+      - task: deploy
+        file: bosh-cpi-release/ci/tasks/deploy.yml
+        config:
+          params:
+            base_os: centos
+            network_type_to_test: manual
+            bats_private_key_data: {{bats_private_key}}
+          tags: ["vsphere"]
+
+      - conditions: [success, failure]
+        task: save-deployment
+        file: bosh-cpi-release/ci/tasks/save-deployment.yml
+        config:
+          params:
+            base_os: centos
+            network_type_to_test: manual
+
+      - put: bosh-concourse-ci
+        params:
+          repository: save-deployment/deploy/bosh-concourse-ci
+          rebase: true
+
+  - name: bats-centos-manual
+    serial_groups: [centos-director-manual] # can't run while deploying
+    plan:
+      - aggregate:
+        - {trigger: true,  passed: [deploy-centos-manual], get: bosh-cpi-dev-artifacts}
+        - {trigger: false, passed: [deploy-centos-manual], get: stemcell, resource: vsphere-centos-stemcell}
+        - {trigger: false, passed: [deploy-centos-manual], get: bosh-concourse-ci}
+        - {trigger: false, passed: [deploy-centos-manual], get: bosh-cpi-release, resource: bosh-vsphere-cpi-release}
+        - {trigger: false,                                 get: bats}
+
+      - task: test
+        file: bosh-cpi-release/ci/tasks/run-bats.yml
+        config:
+          params:
+            base_os: centos
+            network_type_to_test: manual
+          tags: ["vsphere"]
 
 resources:
   - name: bosh-cpi-dev-artifacts
@@ -39,6 +157,13 @@ resources:
       branch: master
       private_key: {{github_deployment_key__bosh-vsphere-cpi-release}}
 
+  - name: bosh-concourse-ci
+    type: git
+    source:
+      uri: git@github.com:cloudfoundry/bosh-concourse-ci.git
+      branch: master
+      private_key: {{github_deployment_key__bosh-concourse-ci}}
+
   - name: version-semver
     type: semver
     source:
@@ -46,3 +171,32 @@ resources:
       bucket:            bosh-vsphere-cpi-release
       access_key_id:     {{s3_vsphere_cpi_access_key}}
       secret_access_key: {{s3_vsphere_cpi_secret_key}}
+
+  - name: bosh-init
+    type: s3
+    source:
+      regexp: bosh-init-([0-9.]+)-linux-amd64
+      bucket: bosh-init-artifacts
+      region_name: us-east-1
+
+  - name: bosh-release
+    type: bosh-io-release
+    source:
+      repository: cloudfoundry/bosh
+
+  - name: vsphere-ubuntu-stemcell
+    type: bosh-io-stemcell
+    source:
+      name: bosh-vsphere-esxi-ubuntu-trusty-go_agent
+
+  - name: vsphere-centos-stemcell
+    type: bosh-io-stemcell
+    source:
+      name: bosh-vsphere-esxi-centos-7-go_agent
+
+  - name: bats
+    type: git
+    source:
+      uri: https://github.com/cloudfoundry/bosh-acceptance-tests.git
+      branch: concourse
+>>>>>>> wip/vsphere-pipleline-73636468
