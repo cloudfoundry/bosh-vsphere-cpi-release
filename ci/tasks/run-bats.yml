@@ -8,7 +8,7 @@ inputs:
   - name: bats
 run:
   path: bosh-cpi-release/ci/tasks/run-bats.sh
+tags: ["vsphere"]
 params:
   base_os:              replace-me
   network_type_to_test: replace-me
-tags: ["vsphere"]

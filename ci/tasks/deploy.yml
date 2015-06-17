@@ -11,6 +11,7 @@ inputs:
   - name: stemcell               # -/
 run:
   path: bosh-cpi-release/ci/tasks/deploy.sh
+tags: ["vsphere"]
 params:
   base_os:               replace-me
   network_type_to_test:  replace-me

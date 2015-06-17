@@ -52,10 +52,10 @@ jobs:
       - task: deploy
         file: bosh-cpi-release/ci/tasks/deploy.yml
         config:
+          tags: ["vsphere"]
           params:
             base_os: ubuntu
             network_type_to_test: manual
-          tags: ["vsphere"]
 
       - conditions: [success, failure]
         task: save-deployment
@@ -83,10 +83,10 @@ jobs:
       - task: test
         file: bosh-cpi-release/ci/tasks/run-bats.yml
         config:
+          tags: ["vsphere"]
           params:
             base_os: ubuntu
             network_type_to_test: manual
-          tags: ["vsphere"]
 
   - name: deploy-centos-manual
     serial_groups: [centos] # shouldn't deploy while bats are running
@@ -103,11 +103,11 @@ jobs:
       - task: deploy
         file: bosh-cpi-release/ci/tasks/deploy.yml
         config:
+          tags: ["vsphere"]
           params:
             base_os: centos
             network_type_to_test: manual
             bats_private_key_data: {{bats_private_key}}
-          tags: ["vsphere"]
 
       - conditions: [success, failure]
         task: save-deployment
@@ -135,10 +135,10 @@ jobs:
       - task: test
         file: bosh-cpi-release/ci/tasks/run-bats.yml
         config:
+          tags: ["vsphere"]
           params:
             base_os: centos
             network_type_to_test: manual
-          tags: ["vsphere"]
 
 resources:
   - name: bosh-cpi-dev-artifacts
