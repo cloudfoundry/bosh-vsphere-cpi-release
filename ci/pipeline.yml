@@ -199,4 +199,3 @@ resources:
     source:
       uri: https://github.com/cloudfoundry/bosh-acceptance-tests.git
       branch: concourse
->>>>>>> wip/vsphere-pipleline-73636468
