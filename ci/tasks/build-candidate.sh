@@ -2,7 +2,9 @@
 
 set -e
 
-source /etc/profile.d/chruby-with-ruby-2.1.2.sh
+source bosh-cpi-release/ci/tasks/utils.sh
+source /etc/profile.d/chruby.sh
+chruby 2.1.2
 
 semver=`cat version-semver/number`
 

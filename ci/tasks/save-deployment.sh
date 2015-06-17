@@ -2,17 +2,10 @@
 
 set -e
 
-ensure_not_replace_value() {
-  local name=$1
-  local value=$(eval echo '$'$name)
-  if [ "$value" == 'replace-me' ]; then
-    echo "environment variable $name must be set"
-    exit 1
-  fi
-}
+source bosh-cpi-release/ci/tasks/utils.sh
 
-ensure_not_replace_value base_os
-ensure_not_replace_value network_type_to_test
+check_param base_os
+check_param network_type_to_test
 
 cpi_release_name=bosh-vsphere-cpi
 
