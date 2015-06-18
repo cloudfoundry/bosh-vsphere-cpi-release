@@ -25,7 +25,7 @@ jobs:
     serial: true
     plan:
       - aggregate:
-          - {trigger: true,  get: bosh-cpi-release, resource: bosh-vsphere-cpi-release}
+          - {trigger: true,  get: bosh-cpi-release}
           - {trigger: false, get: version-semver,   params: {bump: patch}}
 
       - put: version-semver
@@ -43,7 +43,7 @@ jobs:
       - aggregate:
         - {trigger: true,  passed: [build-candidate], get: bosh-cpi-dev-artifacts}
         - {trigger: false, passed: [build-candidate], get: version-semver}
-        - {trigger: false, passed: [build-candidate], get: bosh-cpi-release, resource: bosh-vsphere-cpi-release}
+        - {trigger: false, passed: [build-candidate], get: bosh-cpi-release}
         - {trigger: false,                            get: bosh-concourse-ci }
         - {trigger: false,                            get: bosh-init}
         - {trigger: false,                            get: bosh-release}
@@ -75,7 +75,7 @@ jobs:
     plan:
       - aggregate:
         - {trigger: true,  passed: [deploy-ubuntu-manual], get: bosh-cpi-dev-artifacts}
-        - {trigger: false, passed: [deploy-ubuntu-manual], get: bosh-cpi-release, resource: bosh-vsphere-cpi-release}
+        - {trigger: false, passed: [deploy-ubuntu-manual], get: bosh-cpi-release}
         - {trigger: false, passed: [deploy-ubuntu-manual], get: stemcell, resource: vsphere-ubuntu-stemcell}
         - {trigger: false, passed: [deploy-ubuntu-manual], get: bosh-concourse-ci}
         - {trigger: false,                                 get: bats}
@@ -94,7 +94,7 @@ jobs:
       - aggregate:
         - {trigger: true,  passed: [build-candidate], get: bosh-cpi-dev-artifacts}
         - {trigger: false, passed: [build-candidate], get: version-semver}
-        - {trigger: false, passed: [build-candidate], get: bosh-cpi-release, resource: bosh-vsphere-cpi-release}
+        - {trigger: false, passed: [build-candidate], get: bosh-cpi-release}
         - {trigger: false,                            get: bosh-concourse-ci }
         - {trigger: false,                            get: bosh-init}
         - {trigger: false,                            get: bosh-release}
@@ -128,7 +128,7 @@ jobs:
         - {trigger: true,  passed: [deploy-centos-manual], get: bosh-cpi-dev-artifacts}
         - {trigger: false, passed: [deploy-centos-manual], get: stemcell, resource: vsphere-centos-stemcell}
         - {trigger: false, passed: [deploy-centos-manual], get: bosh-concourse-ci}
-        - {trigger: false, passed: [deploy-centos-manual], get: bosh-cpi-release, resource: bosh-vsphere-cpi-release}
+        - {trigger: false, passed: [deploy-centos-manual], get: bosh-cpi-release}
         - {trigger: false,                                 get: bats}
 
       - task: test
