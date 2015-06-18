@@ -7,6 +7,9 @@ export BOSH_INSTALL_TARGET=/usr/local
 
 cd /tmp/cpi-release
 
+# Remove old/sync'd releases
+rm -f dev_releases/bosh-vsphere-cpi/*.tgz
+
 # Create a CPI dev release, which we use to install mkisofs packages.
 bosh create release --with-tarball
 
