@@ -210,6 +210,12 @@ resources:
       bucket: bosh-init-artifacts
       region_name: us-east-1
 
+  - name: bosh-src
+    type: git
+    source:
+      uri: https://github.com/cloudfoundry/bosh.git
+      branch: master
+
   - name: bosh-release
     type: bosh-io-release
     source:
