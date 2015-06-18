@@ -7,6 +7,7 @@ groups:
       - bats-ubuntu-manual
       - deploy-centos-manual
       - bats-centos-manual
+      - lifecycle
 
   - name: ubuntu
     jobs:
@@ -40,34 +41,34 @@ jobs:
   - name: lifecycle
     serial: true
     plan:
-    - aggregate:
-      - {trigger: true,  passed: [build-candidate], get: bosh-cpi-dev-artifacts} # used for job chaining only not for tasks
-      - {trigger: false, passed: [build-candidate], get: bosh-cpi-release}
-      - {trigger: false,                            get: bosh-src}
-      - {trigger: false,                            get: stemcell, resource: vsphere-ubuntu-stemcell}
+      - aggregate:
+        - {trigger: true,  passed: [build-candidate], get: bosh-cpi-dev-artifacts} # used for job chaining only not for tasks
+        - {trigger: false, passed: [build-candidate], get: bosh-cpi-release}
+        - {trigger: false,                            get: bosh-src}
+        - {trigger: false,                            get: stemcell, resource: vsphere-ubuntu-stemcell}
 
-    - task: test
-      file: bosh-cpi-release/ci/tasks/run-lifecycle.yml
-      config:
-        tags: ["vsphere"]
-        params:
-          BOSH_VSPHERE_CPI_HOST: {{lifecycle_BOSH_VSPHERE_CPI_HOST}}
-          BOSH_VSPHERE_CPI_USER: {{lifecycle_BOSH_VSPHERE_CPI_USER}}
-          BOSH_VSPHERE_CPI_PASSWORD: {{lifecycle_BOSH_VSPHERE_CPI_PASSWORD}}
-          BOSH_VSPHERE_VLAN: {{lifecycle_BOSH_VSPHERE_VLAN}}
-          BOSH_VSPHERE_CPI_DATACENTER: {{lifecycle_BOSH_VSPHERE_CPI_DATACENTER}}
-          BOSH_VSPHERE_CPI_CLUSTER: {{lifecycle_BOSH_VSPHERE_CPI_CLUSTER}}
-          BOSH_VSPHERE_CPI_DATASTORE_PATTERN:  {{lifecycle_BOSH_VSPHERE_CPI_DATASTORE_PATTERN}}
-          BOSH_VSPHERE_CPI_PERSISTENT_DATASTORE_PATTERN: {{lifecycle_BOSH_VSPHERE_CPI_PERSISTENT_DATASTORE_PATTERN}}
-          BOSH_VSPHERE_CPI_SECOND_DATASTORE: {{lifecycle_BOSH_VSPHERE_CPI_SECOND_DATASTORE}}
-          BOSH_VSPHERE_CPI_RESOURCE_POOL: {{lifecycle_BOSH_VSPHERE_CPI_RESOURCE_POOL}}
-          BOSH_VSPHERE_CPI_SECOND_RESOURCE_POOL: {{lifecycle_BOSH_VSPHERE_CPI_SECOND_RESOURCE_POOL}}
-          BOSH_VSPHERE_CPI_SECOND_CLUSTER: {{lifecycle_BOSH_VSPHERE_CPI_SECOND_CLUSTER}}
-          BOSH_VSPHERE_CPI_SECOND_CLUSTER_DATASTORE: {{lifecycle_BOSH_VSPHERE_CPI_SECOND_CLUSTER_DATASTORE}}
-          BOSH_VSPHERE_CPI_SECOND_CLUSTER_RESOURCE_POOL: {{lifecycle_BOSH_VSPHERE_CPI_SECOND_CLUSTER_RESOURCE_POOL}}
-          BOSH_VSPHERE_CPI_VM_FOLDER: {{lifecycle_BOSH_VSPHERE_CPI_VM_FOLDER}}
-          BOSH_VSPHERE_CPI_TEMPLATE_FOLDER: {{lifecycle_BOSH_VSPHERE_CPI_TEMPLATE_FOLDER}}
-          BOSH_VSPHERE_CPI_DISK_PATH: {{lifecycle_BOSH_VSPHERE_CPI_DISK_PATH}}
+      - task: test
+        file: bosh-cpi-release/ci/tasks/run-lifecycle.yml
+        config:
+          tags: ["vsphere"]
+          params:
+            BOSH_VSPHERE_CPI_HOST: {{lifecycle_BOSH_VSPHERE_CPI_HOST}}
+            BOSH_VSPHERE_CPI_USER: {{lifecycle_BOSH_VSPHERE_CPI_USER}}
+            BOSH_VSPHERE_CPI_PASSWORD: {{lifecycle_BOSH_VSPHERE_CPI_PASSWORD}}
+            BOSH_VSPHERE_VLAN: {{lifecycle_BOSH_VSPHERE_VLAN}}
+            BOSH_VSPHERE_CPI_DATACENTER: {{lifecycle_BOSH_VSPHERE_CPI_DATACENTER}}
+            BOSH_VSPHERE_CPI_CLUSTER: {{lifecycle_BOSH_VSPHERE_CPI_CLUSTER}}
+            BOSH_VSPHERE_CPI_DATASTORE_PATTERN:  {{lifecycle_BOSH_VSPHERE_CPI_DATASTORE_PATTERN}}
+            BOSH_VSPHERE_CPI_PERSISTENT_DATASTORE_PATTERN: {{lifecycle_BOSH_VSPHERE_CPI_PERSISTENT_DATASTORE_PATTERN}}
+            BOSH_VSPHERE_CPI_SECOND_DATASTORE: {{lifecycle_BOSH_VSPHERE_CPI_SECOND_DATASTORE}}
+            BOSH_VSPHERE_CPI_RESOURCE_POOL: {{lifecycle_BOSH_VSPHERE_CPI_RESOURCE_POOL}}
+            BOSH_VSPHERE_CPI_SECOND_RESOURCE_POOL: {{lifecycle_BOSH_VSPHERE_CPI_SECOND_RESOURCE_POOL}}
+            BOSH_VSPHERE_CPI_SECOND_CLUSTER: {{lifecycle_BOSH_VSPHERE_CPI_SECOND_CLUSTER}}
+            BOSH_VSPHERE_CPI_SECOND_CLUSTER_DATASTORE: {{lifecycle_BOSH_VSPHERE_CPI_SECOND_CLUSTER_DATASTORE}}
+            BOSH_VSPHERE_CPI_SECOND_CLUSTER_RESOURCE_POOL: {{lifecycle_BOSH_VSPHERE_CPI_SECOND_CLUSTER_RESOURCE_POOL}}
+            BOSH_VSPHERE_CPI_VM_FOLDER: {{lifecycle_BOSH_VSPHERE_CPI_VM_FOLDER}}
+            BOSH_VSPHERE_CPI_TEMPLATE_FOLDER: {{lifecycle_BOSH_VSPHERE_CPI_TEMPLATE_FOLDER}}
+            BOSH_VSPHERE_CPI_DISK_PATH: {{lifecycle_BOSH_VSPHERE_CPI_DISK_PATH}}
 
   - name: deploy-ubuntu-manual
     serial_groups: [ubuntu-director-manual] # shouldn't deploy while bats are running
