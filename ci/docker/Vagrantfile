@@ -14,4 +14,5 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   end
 
   config.vm.provision('docker')
+  config.vm.synced_folder "../../", "/vagrant/bosh.vsphere-cpi-release/cpi-release"
 end

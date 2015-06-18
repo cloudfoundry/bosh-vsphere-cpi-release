@@ -31,13 +31,16 @@ RUN mkdir /tmp/ruby-install && \
     sudo make install && \
     rm -rf /tmp/ruby-install
 
-#default ruby
-RUN ruby-install ruby 2.1.2 && \
-    cp /etc/profile.d/chruby.sh /etc/profile.d/chruby-with-ruby-2.1.2.sh && \
-    echo "chruby 2.1.2" >> /etc/profile.d/chruby-with-ruby-2.1.2.sh
+# ruby
+RUN ruby-install ruby 2.1.2
 
-#Bundler
-RUN ["/bin/bash", "-l", "-c", "gem install bundler --no-ri --no-rdoc"]
+# Bundler
+RUN /bin/bash -l -c "source /etc/profile.d/chruby.sh ;  \
+                     chruby 2.1.2 ;                     \
+                     gem install bundler bosh_cli --no-ri --no-rdoc"
 
-#BOSH CLI
-RUN ["/bin/bash", "-l", "-c", "gem install bosh_cli --no-ri --no-rdoc"]
+# mkisofs
+ADD cpi-release /tmp/cpi-release
+ADD install-mkisofs.sh /tmp/install-mkisofs.sh
+RUN chmod a+x /tmp/install-mkisofs.sh
+RUN /tmp/install-mkisofs.sh; rm /tmp/install-mkisofs.sh
