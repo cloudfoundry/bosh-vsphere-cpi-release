@@ -107,7 +107,6 @@ jobs:
           params:
             base_os: centos
             network_type_to_test: manual
-            bats_private_key_data: {{bats_private_key}}
 
       - conditions: [success, failure]
         task: save-deployment
