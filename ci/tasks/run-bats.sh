@@ -12,7 +12,9 @@ chruby 2.1.2
 
 cpi_release_name=bosh-vsphere-cpi
 
-source bosh-concourse-ci/pipelines/$cpi_release_name/$base_os-$network_type_to_test-exports.sh
+BAT_STEMCELL="$PWD$BAT_STEMCELL"
+BAT_VCAP_PRIVATE_KEY="$PWD$BAT_VCAP_PRIVATE_KEY"
+BAT_DEPLOYMENT_SPEC="$PWD$BAT_DEPLOYMENT_SPEC"
 
 #vsphere uses user/pass and the cdrom drive, not a reverse ssh tunnel
 eval $(ssh-agent)
