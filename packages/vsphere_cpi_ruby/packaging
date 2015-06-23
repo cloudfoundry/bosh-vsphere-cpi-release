@@ -5,8 +5,8 @@ tar xzf vsphere_cpi_ruby/yaml-0.1.5.tar.gz
   set -e
   cd yaml-0.1.5
   CFLAGS='-fPIC' ./configure --prefix=${BOSH_INSTALL_TARGET} --disable-shared
-  make -j
-  make -j install
+  make
+  make install
 )
 if [[ $? != 0 ]] ; then
   echo "Cannot install yaml"

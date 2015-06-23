@@ -2,11 +2,10 @@
 # abort script on any command that exit with a non zero value
 set -e
 
-bunzip2 vsphere_cpi_mkisofs/smake-1.2.4.tar.bz2
-tar xvf vsphere_cpi_mkisofs/smake-1.2.4.tar
+tar xvf vsphere_cpi_mkisofs/smake-1.2.4.tar.bz2
 (
   cd smake-1.2.4
-  make -j
+  make
 )
 if [[ $? != 0 ]] ; then
   echo "Cannot install smake"
@@ -14,8 +13,7 @@ if [[ $? != 0 ]] ; then
 fi
 
 
-bunzip2 vsphere_cpi_mkisofs/cdrtools-3.00.tar.bz2
-tar xvf vsphere_cpi_mkisofs/cdrtools-3.00.tar
+tar xvf vsphere_cpi_mkisofs/cdrtools-3.00.tar.bz2
 (
   cd cdrtools-3.00
   patch -g 0 -f -p0 -i ../vsphere_cpi_mkisofs/patch-include_schily_sha2.h
