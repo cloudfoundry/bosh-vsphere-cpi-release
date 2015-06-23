@@ -39,7 +39,8 @@ pushd iso_image_install
   BOSH_INSTALL_TARGET=$PWD ./packaging &> mkisofs_compilation.log
   export PATH=$PWD/bin:$PATH
 popd
-echo "installed mkisofs at `which mkisofs`"
+echo "installed mkisofs at:" 
+which mkisofs
 
 cd bosh-src/bosh_vsphere_cpi
 
