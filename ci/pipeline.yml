@@ -8,18 +8,21 @@ groups:
       - deploy-centos-manual
       - bats-centos-manual
       - lifecycle
+      - promote-candidate
 
   - name: ubuntu
     jobs:
       - build-candidate
       - deploy-ubuntu-manual
       - bats-ubuntu-manual
+      - promote-candidate
 
   - name: centos
     jobs:
       - build-candidate
       - deploy-centos-manual
       - bats-centos-manual
+      - promote-candidate
 
 jobs:
   - name: build-candidate
@@ -217,6 +220,23 @@ jobs:
             BOSH_VSPHERE_VCENTER_UBOSH_DATASTORE_PATTERN: {{BOSH_VSPHERE_VCENTER_UBOSH_DATASTORE_PATTERN}}
             BOSH_VSPHERE_MICROBOSH_IP:                    {{manual_centos_BOSH_VSPHERE_MICROBOSH_IP}}
             BOSH_VSPHERE_VCENTER_FOLDER_PREFIX:           {{manual_centos_BOSH_VSPHERE_VCENTER_FOLDER_PREFIX}}
+
+  - name: promote-candidate
+    serial: true
+    plan:
+    - aggregate:
+      - {trigger: true, passed: [lifecycle, bats-ubuntu-manual, bats-centos-manual], get: bosh-cpi-dev-artifacts}
+      - {trigger: false, passed: [lifecycle, bats-ubuntu-manual, bats-centos-manual], get: bosh-cpi-release}
+
+    - task: promote
+      file: bosh-cpi-release/ci/tasks/promote-candidate.yml
+      config:
+        params:
+          aws_access_key_id:     {{s3_vsphere_cpi_access_key}}
+          aws_secret_access_key: {{s3_vsphere_cpi_secret_key}}
+
+    - put: bosh-cpi-release
+      params: {repository: promote/bosh-cpi-release, rebase: true}
 
 resources:
   - name: bosh-cpi-dev-artifacts
