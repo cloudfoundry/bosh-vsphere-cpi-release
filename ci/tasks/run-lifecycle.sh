@@ -25,6 +25,22 @@ check_param BOSH_VSPHERE_CPI_DISK_PATH
 source /etc/profile.d/chruby.sh
 chruby 2.1.2
 
+pushd bosh-cpi-release
+  echo "using bosh CLI version..."
+  bosh version
+  bosh create release --name local --version 0.0.0 --with-tarball --force
+popd
+
+mkdir iso_image_install
+pushd iso_image_install
+  tar -xvzf ../bosh-cpi-release/dev_releases/local/local-0.0.0.tgz
+  tar -xvzf packages/bosh_vcloud_cpi_mkisofs.tgz
+  chmod +x packaging
+  BOSH_INSTALL_TARGET=$PWD ./packaging
+  export PATH=$PATH:$PWD/bin
+popd
+echo "installed mkisofs at `which mkisofs`"
+
 cd bosh-src/bosh_vsphere_cpi
 
 export BOSH_VSPHERE_STEMCELL=../../stemcell/stemcell.tgz

@@ -38,9 +38,3 @@ RUN ruby-install ruby 2.1.2
 RUN /bin/bash -l -c "source /etc/profile.d/chruby.sh ;  \
                      chruby 2.1.2 ;                     \
                      gem install bundler bosh_cli --no-ri --no-rdoc"
-
-# mkisofs
-ADD cpi-release /tmp/cpi-release
-ADD install-mkisofs.sh /tmp/install-mkisofs.sh
-RUN chmod a+x /tmp/install-mkisofs.sh
-RUN /tmp/install-mkisofs.sh; rm /tmp/install-mkisofs.sh
