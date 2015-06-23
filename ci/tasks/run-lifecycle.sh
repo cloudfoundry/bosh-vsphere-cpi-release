@@ -33,11 +33,11 @@ popd
 
 mkdir iso_image_install
 pushd iso_image_install
-  tar -xvzf ../bosh-cpi-release/dev_releases/local/local-0.0.0.tgz
-  tar -xvzf packages/bosh_vcloud_cpi_mkisofs.tgz
+  tar -xf ../bosh-cpi-release/dev_releases/local/local-0.0.0.tgz
+  tar -xf packages/vsphere_cpi_mkisofs.tgz
   chmod +x packaging
-  BOSH_INSTALL_TARGET=$PWD ./packaging
-  export PATH=$PATH:$PWD/bin
+  BOSH_INSTALL_TARGET=$PWD ./packaging &> mkisofs_compilation.log
+  export PATH=$PWD/bin:$PATH
 popd
 echo "installed mkisofs at `which mkisofs`"
 
