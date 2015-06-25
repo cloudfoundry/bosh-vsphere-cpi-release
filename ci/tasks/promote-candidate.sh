@@ -10,7 +10,8 @@ check_param aws_secret_access_key
 
 cd bosh-cpi-release
 
-source /etc/profile.d/chruby-with-ruby-2.1.2.sh
+source /etc/profile.d/chruby.sh
+chruby 2.1.2
 
 set +x
 echo creating config/private.yml with blobstore secrets
