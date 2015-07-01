@@ -10,4 +10,6 @@ builds:
     version: '4'
   2515c35f-1a1e-45c6-8c53-40539192ca8c:
     version: '5'
+  6ae45836-212c-4a06-87c2-362030de3080:
+    version: '6'
 format-version: '2'
