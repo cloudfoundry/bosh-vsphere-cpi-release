@@ -17,6 +17,8 @@ manifest_dir=bosh-concourse-ci/pipelines/$cpi_release_name
 manifest_filename=$manifest_dir/$base_os-$network_type_to_test-director-manifest.yml
 manifest_artifacts=$manifest_dir/tmp
 
+export BOSH_INIT_LOG_LEVEL=debug 
+
 echo "normalizing paths to match values referenced in $manifest_filename"
 mkdir $manifest_artifacts
 mv ./bosh-cpi-dev-artifacts/$cpi_release_name-$semver.tgz $manifest_artifacts/$cpi_release_name.tgz
