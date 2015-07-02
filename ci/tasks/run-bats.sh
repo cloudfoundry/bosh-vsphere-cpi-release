@@ -39,7 +39,8 @@ BAT_STEMCELL="${PWD}${BAT_STEMCELL}"
 BAT_VCAP_PRIVATE_KEY="${PWD}${BOSH_SSH_PRIVATE_KEY}"
 BAT_DEPLOYMENT_SPEC="${PWD}${BAT_DEPLOYMENT_SPEC}"
 
-#vsphere uses user/pass and the cdrom drive, not a reverse ssh tunnel
+# vsphere uses user/pass and the cdrom drive, not a reverse ssh tunnel
+# the SSH key is required for the` bosh ssh` command to work properly
 eval $(ssh-agent)
 chmod go-r $BAT_VCAP_PRIVATE_KEY
 ssh-add $BAT_VCAP_PRIVATE_KEY

@@ -165,7 +165,8 @@ jobs:
           tags: ["vsphere"]
           params:
             base_os: centos
-            network_type_to_test: manual
+            network_type_to_test:      manual
+            BOSH_VSPHERE_MICROBOSH_IP: {{manual_centos_BOSH_VSPHERE_MICROBOSH_IP}}
 
       - conditions: [success, failure]
         task: save-deployment

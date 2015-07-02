@@ -6,6 +6,7 @@ source bosh-cpi-release/ci/tasks/utils.sh
 
 check_param base_os
 check_param network_type_to_test
+check_param BOSH_VSPHERE_MICROBOSH_IP
 
 source /etc/profile.d/chruby.sh
 chruby 2.1.2
@@ -31,6 +32,9 @@ chmod +x $initexe
 
 echo "deleting existing BOSH Director VM..."
 $initexe delete $manifest_filename
+
+echo "verifying no BOSH deployed VM exists at target IP: $BOSH_VSPHERE_MICROBOSH_IP"
+! $(nc -vz -w10 $BOSH_VSPHERE_MICROBOSH_IP 6868)
 
 echo "deploying BOSH..."
 $initexe deploy $manifest_filename
