@@ -6,9 +6,20 @@ source bosh-cpi-release/ci/tasks/utils.sh
 
 check_param base_os
 check_param network_type_to_test
+check_param BAT_NETWORKING
+check_param BAT_DIRECTOR
+check_param BAT_DNS_HOST
 check_param BAT_INFRASTRUCTURE
 check_param BAT_VCAP_PASSWORD
 check_param BAT_STEMCELL
+check_param BAT_STEMCELL_NAME
+check_param BAT_STATIC_IP
+check_param BAT_SECOND_STATIC_IP
+check_param BAT_CIDR
+check_param BAT_RESERVED_RANGE
+check_param BAT_STATIC_RANGE
+check_param BAT_GATEWAY
+check_param BAT_VLAN
 check_param BOSH_SSH_PRIVATE_KEY
 check_param BOSH_VSPHERE_NETMASK
 check_param BOSH_VSPHERE_GATEWAY
@@ -23,10 +34,6 @@ check_param BOSH_VSPHERE_VCENTER_CLUSTER
 check_param BOSH_VSPHERE_VCENTER_RESOURCE_POOL
 check_param BOSH_VSPHERE_VCENTER_DATASTORE_PATTERN
 check_param BOSH_VSPHERE_VCENTER_UBOSH_DATASTORE_PATTERN
-check_param BAT_NETWORKING
-check_param BAT_DIRECTOR
-check_param BAT_DNS_HOST
-check_param BAT_DEPLOYMENT_SPEC
 check_param BOSH_VSPHERE_MICROBOSH_IP
 check_param BOSH_VSPHERE_VCENTER_FOLDER_PREFIX
 
@@ -37,7 +44,7 @@ cpi_release_name=bosh-vsphere-cpi
 
 BAT_STEMCELL="${PWD}${BAT_STEMCELL}"
 BAT_VCAP_PRIVATE_KEY="${PWD}${BOSH_SSH_PRIVATE_KEY}"
-BAT_DEPLOYMENT_SPEC="${PWD}${BAT_DEPLOYMENT_SPEC}"
+export BAT_DEPLOYMENT_SPEC="${PWD}/${base_os}-${network_type_to_test}-bats-config.yml"
 
 #vsphere uses user/pass and the cdrom drive, not a reverse ssh tunnel
 eval $(ssh-agent)
@@ -49,7 +56,29 @@ bosh version
 
 bosh -n target $BAT_DIRECTOR
 
-sed -i.bak s/"uuid: replace-me"/"uuid: $(bosh status --uuid)"/ $BAT_DEPLOYMENT_SPEC
+BOSH_UUID=`bosh status --uuid`
+
+cat > "${BAT_DEPLOYMENT_SPEC}" <<EOF
+---
+cpi: vsphere
+properties:
+  uuid: ${BOSH_UUID}
+  pool_size: 1
+  instances: 1
+  second_static_ip: ${BAT_SECOND_STATIC_IP}
+  stemcell:
+    name: ${BAT_STEMCELL_NAME}
+    version: latest
+  networks:
+  - name: static
+    type: manual
+    static_ip: ${BAT_STATIC_IP}
+    cidr: ${BAT_CIDR}
+    reserved: [${BAT_RESERVED_RANGE}]
+    static: [${BAT_STATIC_RANGE}]
+    gateway: $BAT_GATEWAY
+    vlan: ${BAT_VLAN}
+EOF
 
 cd bats
 

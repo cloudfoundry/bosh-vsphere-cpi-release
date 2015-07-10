@@ -126,10 +126,17 @@ jobs:
             BAT_NETWORKING:                               {{manual_BAT_NETWORKING}}
             BAT_DIRECTOR:                                 {{manual_ubuntu_BAT_DIRECTOR}}
             BAT_DNS_HOST:                                 {{manual_ubuntu_BAT_DNS_HOST}}
-            BAT_DEPLOYMENT_SPEC:                          {{manual_ubuntu_BAT_DEPLOYMENT_SPEC}}
             BAT_INFRASTRUCTURE:                           {{BAT_INFRASTRUCTURE}}
             BAT_VCAP_PASSWORD:                            {{BAT_VCAP_PASSWORD}}
             BAT_STEMCELL:                                 {{BAT_STEMCELL}}
+            BAT_STEMCELL_NAME:                            {{ubuntu_BAT_STEMCELL_NAME}}
+            BAT_STATIC_IP:                                {{manual_ubuntu_BAT_STATIC_IP}}
+            BAT_SECOND_STATIC_IP:                         {{manual_ubuntu_BAT_SECOND_STATIC_IP}}
+            BAT_CIDR:                                     {{manual_ubuntu_BAT_CIDR}}
+            BAT_RESERVED_RANGE:                           {{manual_ubuntu_BAT_RESERVED_RANGE}}
+            BAT_STATIC_RANGE:                             {{manual_ubuntu_BAT_STATIC_RANGE}}
+            BAT_GATEWAY:                                  {{manual_ubuntu_BAT_GATEWAY}}
+            BAT_VLAN:                                     {{manual_ubuntu_BAT_VLAN}}
             BOSH_SSH_PRIVATE_KEY:                         {{BOSH_SSH_PRIVATE_KEY}}
             BOSH_VSPHERE_NETMASK:                         {{BOSH_VSPHERE_NETMASK}}
             BOSH_VSPHERE_GATEWAY:                         {{BOSH_VSPHERE_GATEWAY}}
@@ -197,13 +204,20 @@ jobs:
           params:
             base_os:                                      centos
             network_type_to_test:                         manual
-            BAT_INFRASTRUCTURE:                           {{BAT_INFRASTRUCTURE}}
-            BAT_VCAP_PASSWORD:                            {{BAT_VCAP_PASSWORD}}
-            BAT_STEMCELL:                                 {{BAT_STEMCELL}}
             BAT_NETWORKING:                               {{manual_BAT_NETWORKING}}
             BAT_DIRECTOR:                                 {{manual_centos_BAT_DIRECTOR}}
             BAT_DNS_HOST:                                 {{manual_centos_BAT_DNS_HOST}}
-            BAT_DEPLOYMENT_SPEC:                          {{manual_centos_BAT_DEPLOYMENT_SPEC}}
+            BAT_INFRASTRUCTURE:                           {{BAT_INFRASTRUCTURE}}
+            BAT_VCAP_PASSWORD:                            {{BAT_VCAP_PASSWORD}}
+            BAT_STEMCELL:                                 {{BAT_STEMCELL}}
+            BAT_STEMCELL_NAME:                            {{centos_BAT_STEMCELL_NAME}}
+            BAT_STATIC_IP:                                {{manual_centos_BAT_STATIC_IP}}
+            BAT_SECOND_STATIC_IP:                         {{manual_centos_BAT_SECOND_STATIC_IP}}
+            BAT_CIDR:                                     {{manual_centos_BAT_CIDR}}
+            BAT_RESERVED_RANGE:                           {{manual_centos_BAT_RESERVED_RANGE}}
+            BAT_STATIC_RANGE:                             {{manual_centos_BAT_STATIC_RANGE}}
+            BAT_GATEWAY:                                  {{manual_centos_BAT_GATEWAY}}
+            BAT_VLAN:                                     {{manual_centos_BAT_VLAN}}
             BOSH_SSH_PRIVATE_KEY:                         {{BOSH_SSH_PRIVATE_KEY}}
             BOSH_VSPHERE_NETMASK:                         {{BOSH_VSPHERE_NETMASK}}
             BOSH_VSPHERE_GATEWAY:                         {{BOSH_VSPHERE_GATEWAY}}
