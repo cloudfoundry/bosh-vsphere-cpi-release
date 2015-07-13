@@ -96,12 +96,6 @@ gem 'rake', '~>10.0'
 gem 'rspec', '~> 3.0.0'
 gem 'rspec-its'
 gem 'rspec-instafail'
-
-# extracted from bat group in BOSH/Gemfile
-gem 'httpclient'
-gem 'json'
-gem 'minitar'
-gem 'net-ssh'
 EOF
 
 cat > "Gemfile.lock" <<EOF
