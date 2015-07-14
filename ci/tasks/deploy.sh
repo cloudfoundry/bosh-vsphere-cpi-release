@@ -122,7 +122,7 @@ jobs:
     agent: {mbus: "nats://nats:nats-password@${DIRECTOR_IP}:4222"}
 
     vcenter: &vcenter
-      address: ${BOSH_VSPHERE_VCENTER_IP}
+      address: ${BOSH_VSPHERE_VCENTER}
       user: ${BOSH_VSPHERE_VCENTER_USER}
       password: ${BOSH_VSPHERE_VCENTER_PASSWORD}
       datacenters:
