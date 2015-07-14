@@ -6,12 +6,8 @@ source bosh-cpi-release/ci/tasks/utils.sh
 
 check_param base_os
 check_param network_type_to_test
-check_param BAT_NETWORKING
 check_param BAT_DIRECTOR
 check_param BAT_DNS_HOST
-check_param BAT_INFRASTRUCTURE
-check_param BAT_VCAP_PASSWORD
-check_param BAT_STEMCELL
 check_param BAT_STEMCELL_NAME
 check_param BAT_STATIC_IP
 check_param BAT_SECOND_STATIC_IP
@@ -20,6 +16,7 @@ check_param BAT_RESERVED_RANGE
 check_param BAT_STATIC_RANGE
 check_param BAT_GATEWAY
 check_param BAT_VLAN
+check_param BAT_VCAP_PASSWORD
 check_param BOSH_SSH_PRIVATE_KEY
 check_param BOSH_VSPHERE_NETMASK
 check_param BOSH_VSPHERE_GATEWAY
@@ -41,10 +38,11 @@ source /etc/profile.d/chruby.sh
 chruby 2.1.2
 
 cpi_release_name=bosh-vsphere-cpi
-
-BAT_STEMCELL="${PWD}${BAT_STEMCELL}"
 BAT_VCAP_PRIVATE_KEY="${PWD}${BOSH_SSH_PRIVATE_KEY}"
+export BAT_STEMCELL="${PWD}/stemcell/stemcell.tgz"
 export BAT_DEPLOYMENT_SPEC="${PWD}/${base_os}-${network_type_to_test}-bats-config.yml"
+export BAT_INFRASTRUCTURE=vsphere
+export BAT_NETWORKING=$network_type_to_test
 
 # vsphere uses user/pass and the cdrom drive, not a reverse ssh tunnel
 # the SSH key is required for the` bosh ssh` command to work properly
@@ -77,7 +75,7 @@ properties:
     cidr: ${BAT_CIDR}
     reserved: [${BAT_RESERVED_RANGE}]
     static: [${BAT_STATIC_RANGE}]
-    gateway: $BAT_GATEWAY
+    gateway: ${BAT_GATEWAY}
     vlan: ${BAT_VLAN}
 EOF
 
@@ -295,6 +293,12 @@ DEPENDENCIES
   rspec-instafail
   rspec-its
 EOF
+
+echo "verifying no BOSH deployed VM exists at target IP: $BAT_STATIC_IP"
+! $(nc -vz -w10 $BAT_STATIC_IP 6868)
+
+echo "verifying no BOSH deployed VM exists at target IP: $BAT_SECOND_STATIC_IP"
+! $(nc -vz -w10 $BAT_SECOND_STATIC_IP 6868)
 
 bundle install
 bundle exec rspec spec

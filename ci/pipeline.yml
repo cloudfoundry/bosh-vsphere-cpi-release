@@ -55,23 +55,23 @@ jobs:
         config:
           tags: ["vsphere"]
           params:
-            BOSH_VSPHERE_CPI_HOST: {{lifecycle_BOSH_VSPHERE_CPI_HOST}}
-            BOSH_VSPHERE_CPI_USER: {{lifecycle_BOSH_VSPHERE_CPI_USER}}
-            BOSH_VSPHERE_CPI_PASSWORD: {{lifecycle_BOSH_VSPHERE_CPI_PASSWORD}}
-            BOSH_VSPHERE_VLAN: {{lifecycle_BOSH_VSPHERE_VLAN}}
-            BOSH_VSPHERE_CPI_DATACENTER: {{lifecycle_BOSH_VSPHERE_CPI_DATACENTER}}
-            BOSH_VSPHERE_CPI_CLUSTER: {{lifecycle_BOSH_VSPHERE_CPI_CLUSTER}}
-            BOSH_VSPHERE_CPI_DATASTORE_PATTERN:  {{lifecycle_BOSH_VSPHERE_CPI_DATASTORE_PATTERN}}
-            BOSH_VSPHERE_CPI_PERSISTENT_DATASTORE_PATTERN: {{lifecycle_BOSH_VSPHERE_CPI_PERSISTENT_DATASTORE_PATTERN}}
-            BOSH_VSPHERE_CPI_SECOND_DATASTORE: {{lifecycle_BOSH_VSPHERE_CPI_SECOND_DATASTORE}}
-            BOSH_VSPHERE_CPI_RESOURCE_POOL: {{lifecycle_BOSH_VSPHERE_CPI_RESOURCE_POOL}}
-            BOSH_VSPHERE_CPI_SECOND_RESOURCE_POOL: {{lifecycle_BOSH_VSPHERE_CPI_SECOND_RESOURCE_POOL}}
-            BOSH_VSPHERE_CPI_SECOND_CLUSTER: {{lifecycle_BOSH_VSPHERE_CPI_SECOND_CLUSTER}}
-            BOSH_VSPHERE_CPI_SECOND_CLUSTER_DATASTORE: {{lifecycle_BOSH_VSPHERE_CPI_SECOND_CLUSTER_DATASTORE}}
-            BOSH_VSPHERE_CPI_SECOND_CLUSTER_RESOURCE_POOL: {{lifecycle_BOSH_VSPHERE_CPI_SECOND_CLUSTER_RESOURCE_POOL}}
-            BOSH_VSPHERE_CPI_VM_FOLDER: {{lifecycle_BOSH_VSPHERE_CPI_VM_FOLDER}}
-            BOSH_VSPHERE_CPI_TEMPLATE_FOLDER: {{lifecycle_BOSH_VSPHERE_CPI_TEMPLATE_FOLDER}}
-            BOSH_VSPHERE_CPI_DISK_PATH: {{lifecycle_BOSH_VSPHERE_CPI_DISK_PATH}}
+            BOSH_VSPHERE_CPI_HOST:                         {{lifecycle_VSPHERE_HOST}}
+            BOSH_VSPHERE_CPI_USER:                         {{lifecycle_VSPHERE_USER}}
+            BOSH_VSPHERE_CPI_PASSWORD:                     {{lifecycle_VSPHERE_PASSWORD}}
+            BOSH_VSPHERE_VLAN:                             {{lifecycle_VSPHERE_VLAN}}
+            BOSH_VSPHERE_CPI_DATACENTER:                   {{lifecycle_VSPHERE_DATACENTER}}
+            BOSH_VSPHERE_CPI_CLUSTER:                      {{lifecycle_VSPHERE_CLUSTER}}
+            BOSH_VSPHERE_CPI_DATASTORE_PATTERN:            {{lifecycle_VSPHERE_DATASTORE_PATTERN}}
+            BOSH_VSPHERE_CPI_PERSISTENT_DATASTORE_PATTERN: {{lifecycle_VSPHERE_PERSISTENT_DATASTORE_PATTERN}}
+            BOSH_VSPHERE_CPI_SECOND_DATASTORE:             {{lifecycle_VSPHERE_SECOND_DATASTORE}}
+            BOSH_VSPHERE_CPI_RESOURCE_POOL:                {{lifecycle_VSPHERE_RESOURCE_POOL}}
+            BOSH_VSPHERE_CPI_SECOND_RESOURCE_POOL:         {{lifecycle_VSPHERE_SECOND_RESOURCE_POOL}}
+            BOSH_VSPHERE_CPI_SECOND_CLUSTER:               {{lifecycle_VSPHERE_SECOND_CLUSTER}}
+            BOSH_VSPHERE_CPI_SECOND_CLUSTER_DATASTORE:     {{lifecycle_VSPHERE_SECOND_CLUSTER_DATASTORE}}
+            BOSH_VSPHERE_CPI_SECOND_CLUSTER_RESOURCE_POOL: {{lifecycle_VSPHERE_SECOND_CLUSTER_RESOURCE_POOL}}
+            BOSH_VSPHERE_CPI_VM_FOLDER:                    {{lifecycle_VSPHERE_VM_FOLDER}}
+            BOSH_VSPHERE_CPI_TEMPLATE_FOLDER:              {{lifecycle_VSPHERE_TEMPLATE_FOLDER}}
+            BOSH_VSPHERE_CPI_DISK_PATH:                    {{lifecycle_VSPHERE_DISK_PATH}}
 
   - name: deploy-ubuntu-manual
     serial_groups: [ubuntu-director-manual] # shouldn't deploy while bats are running
@@ -90,9 +90,21 @@ jobs:
         config:
           tags: ["vsphere"]
           params:
-            base_os: ubuntu
-            network_type_to_test:      manual
-            BOSH_VSPHERE_MICROBOSH_IP: {{manual_ubuntu_BOSH_VSPHERE_MICROBOSH_IP}}
+            base_os:                                ubuntu
+            network_type_to_test:                   manual
+            DIRECTOR_IP:                            {{ubuntu_DIRECTOR_IP}}
+            BOSH_VSPHERE_VCENTER:                   {{VCENTER_IP}}
+            BOSH_VSPHERE_VCENTER_USER:              {{VCENTER_USER}}
+            BOSH_VSPHERE_VCENTER_PASSWORD:          {{VCENTER_PASSWORD}}
+            BOSH_VSPHERE_VCENTER_DC:                {{VCENTER_DC}}
+            BOSH_VSPHERE_VCENTER_CLUSTER:           {{VCENTER_CLUSTER}}
+            BOSH_VSPHERE_VCENTER_VM_FOLDER:         {{VCENTER_VM_FOLDER}}
+            BOSH_VSPHERE_VCENTER_TEMPLATE_FOLDER:   {{VCENTER_TEMPLATE_FOLDER}}
+            BOSH_VSPHERE_VCENTER_DATASTORE_PATTERN: {{VCENTER_DATASTORE_PATTERN}}
+            BOSH_VSPHERE_VCENTER_DISK_PATH:         {{VCENTER_DISK_PATH}}
+            BOSH_VSPHERE_VCENTER_VLAN:              {{VCENTER_VLAN}}
+            BOSH_VSPHERE_VCENTER_CIDR:              {{VCENTER_CIDR}}
+            BOSH_VSPHERE_VCENTER_GATEWAY:           {{VCENTER_GATEWAY}}
 
       - conditions: [success, failure]
         task: save-deployment
@@ -124,36 +136,33 @@ jobs:
           params:
             base_os:                                      ubuntu
             network_type_to_test:                         manual
-            BAT_NETWORKING:                               {{manual_BAT_NETWORKING}}
-            BAT_DIRECTOR:                                 {{manual_ubuntu_BAT_DIRECTOR}}
-            BAT_DNS_HOST:                                 {{manual_ubuntu_BAT_DNS_HOST}}
-            BAT_INFRASTRUCTURE:                           {{BAT_INFRASTRUCTURE}}
-            BAT_VCAP_PASSWORD:                            {{BAT_VCAP_PASSWORD}}
-            BAT_STEMCELL:                                 {{BAT_STEMCELL}}
+            BAT_DIRECTOR:                                 {{ubuntu_DIRECTOR_IP}}
+            BAT_DNS_HOST:                                 {{ubuntu_DIRECTOR_IP}}
             BAT_STEMCELL_NAME:                            {{ubuntu_BAT_STEMCELL_NAME}}
-            BAT_STATIC_IP:                                {{manual_ubuntu_BAT_STATIC_IP}}
-            BAT_SECOND_STATIC_IP:                         {{manual_ubuntu_BAT_SECOND_STATIC_IP}}
-            BAT_CIDR:                                     {{manual_ubuntu_BAT_CIDR}}
-            BAT_RESERVED_RANGE:                           {{manual_ubuntu_BAT_RESERVED_RANGE}}
-            BAT_STATIC_RANGE:                             {{manual_ubuntu_BAT_STATIC_RANGE}}
-            BAT_GATEWAY:                                  {{manual_ubuntu_BAT_GATEWAY}}
-            BAT_VLAN:                                     {{manual_ubuntu_BAT_VLAN}}
+            BAT_STATIC_IP:                                {{ubuntu_BAT_STATIC_IP}}
+            BAT_SECOND_STATIC_IP:                         {{ubuntu_BAT_SECOND_STATIC_IP}}
+            BAT_CIDR:                                     {{VCENTER_CIDR}}
+            BAT_RESERVED_RANGE:                           {{ubuntu_BAT_RESERVED_RANGE}}
+            BAT_STATIC_RANGE:                             {{ubuntu_BAT_STATIC_RANGE}}
+            BAT_GATEWAY:                                  {{VCENTER_GATEWAY}}
+            BAT_VLAN:                                     {{VCENTER_VLAN}}
+            BAT_VCAP_PASSWORD:                            {{BAT_VCAP_PASSWORD}}
             BOSH_SSH_PRIVATE_KEY:                         {{BOSH_SSH_PRIVATE_KEY}}
-            BOSH_VSPHERE_NETMASK:                         {{BOSH_VSPHERE_NETMASK}}
-            BOSH_VSPHERE_GATEWAY:                         {{BOSH_VSPHERE_GATEWAY}}
-            BOSH_VSPHERE_DNS:                             {{BOSH_VSPHERE_DNS}}
-            BOSH_VSPHERE_NTP_SERVER:                      {{BOSH_VSPHERE_NTP_SERVER}}
-            BOSH_VSPHERE_NET_ID:                          {{BOSH_VSPHERE_NET_ID}}
-            BOSH_VSPHERE_VCENTER:                         {{BOSH_VSPHERE_VCENTER}}
-            BOSH_VSPHERE_VCENTER_USER:                    {{BOSH_VSPHERE_VCENTER_USER}}
-            BOSH_VSPHERE_VCENTER_PASSWORD:                {{BOSH_VSPHERE_VCENTER_PASSWORD}}
-            BOSH_VSPHERE_VCENTER_DC:                      {{BOSH_VSPHERE_VCENTER_DC}}
-            BOSH_VSPHERE_VCENTER_CLUSTER:                 {{BOSH_VSPHERE_VCENTER_CLUSTER}}
-            BOSH_VSPHERE_VCENTER_RESOURCE_POOL:           {{BOSH_VSPHERE_VCENTER_RESOURCE_POOL}}
-            BOSH_VSPHERE_VCENTER_DATASTORE_PATTERN:       {{BOSH_VSPHERE_VCENTER_DATASTORE_PATTERN}}
-            BOSH_VSPHERE_VCENTER_UBOSH_DATASTORE_PATTERN: {{BOSH_VSPHERE_VCENTER_UBOSH_DATASTORE_PATTERN}}
-            BOSH_VSPHERE_MICROBOSH_IP:                    {{manual_ubuntu_BOSH_VSPHERE_MICROBOSH_IP}}
-            BOSH_VSPHERE_VCENTER_FOLDER_PREFIX:           {{manual_ubuntu_BOSH_VSPHERE_VCENTER_FOLDER_PREFIX}}
+            BOSH_VSPHERE_NETMASK:                         {{VCENTER_NETMASK}}
+            BOSH_VSPHERE_GATEWAY:                         {{VCENTER_GATEWAY}}
+            BOSH_VSPHERE_DNS:                             {{VCENTER_DNS}}
+            BOSH_VSPHERE_NTP_SERVER:                      {{VCENTER_NTP_SERVER}}
+            BOSH_VSPHERE_NET_ID:                          {{VCENTER_VLAN}}
+            BOSH_VSPHERE_VCENTER:                         {{VCENTER_IP}}
+            BOSH_VSPHERE_VCENTER_USER:                    {{VCENTER_USER}}
+            BOSH_VSPHERE_VCENTER_PASSWORD:                {{VCENTER_PASSWORD}}
+            BOSH_VSPHERE_VCENTER_DC:                      {{VCENTER_DC}}
+            BOSH_VSPHERE_VCENTER_CLUSTER:                 {{VCENTER_CLUSTER}}
+            BOSH_VSPHERE_VCENTER_RESOURCE_POOL:           {{VCENTER_RESOURCE_POOL}}
+            BOSH_VSPHERE_VCENTER_DATASTORE_PATTERN:       {{VCENTER_DATASTORE_PATTERN}}
+            BOSH_VSPHERE_VCENTER_UBOSH_DATASTORE_PATTERN: {{VCENTER_DATASTORE_PATTERN}}
+            BOSH_VSPHERE_MICROBOSH_IP:                    {{ubuntu_DIRECTOR_IP}}
+            BOSH_VSPHERE_VCENTER_FOLDER_PREFIX:           {{ubuntu_BOSH_VSPHERE_VCENTER_FOLDER_PREFIX}}
 
   - name: deploy-centos-manual
     serial_groups: [centos] # shouldn't deploy while bats are running
@@ -173,8 +182,20 @@ jobs:
           tags: ["vsphere"]
           params:
             base_os: centos
-            network_type_to_test:      manual
-            BOSH_VSPHERE_MICROBOSH_IP: {{manual_centos_BOSH_VSPHERE_MICROBOSH_IP}}
+            network_type_to_test:                   manual
+            DIRECTOR_IP:                            {{centos_DIRECTOR_IP}}
+            BOSH_VSPHERE_VCENTER:                   {{VCENTER_IP}}
+            BOSH_VSPHERE_VCENTER_USER:              {{VCENTER_USER}}
+            BOSH_VSPHERE_VCENTER_PASSWORD:          {{VCENTER_PASSWORD}}
+            BOSH_VSPHERE_VCENTER_DC:                {{VCENTER_DC}}
+            BOSH_VSPHERE_VCENTER_CLUSTER:           {{VCENTER_CLUSTER}}
+            BOSH_VSPHERE_VCENTER_VM_FOLDER:         {{VCENTER_VM_FOLDER}}
+            BOSH_VSPHERE_VCENTER_TEMPLATE_FOLDER:   {{VCENTER_TEMPLATE_FOLDER}}
+            BOSH_VSPHERE_VCENTER_DATASTORE_PATTERN: {{VCENTER_DATASTORE_PATTERN}}
+            BOSH_VSPHERE_VCENTER_DISK_PATH:         {{VCENTER_DISK_PATH}}
+            BOSH_VSPHERE_VCENTER_VLAN:              {{VCENTER_VLAN}}
+            BOSH_VSPHERE_VCENTER_CIDR:              {{VCENTER_CIDR}}
+            BOSH_VSPHERE_VCENTER_GATEWAY:           {{VCENTER_GATEWAY}}
 
       - conditions: [success, failure]
         task: save-deployment
@@ -206,36 +227,33 @@ jobs:
           params:
             base_os:                                      centos
             network_type_to_test:                         manual
-            BAT_NETWORKING:                               {{manual_BAT_NETWORKING}}
-            BAT_DIRECTOR:                                 {{manual_centos_BAT_DIRECTOR}}
-            BAT_DNS_HOST:                                 {{manual_centos_BAT_DNS_HOST}}
-            BAT_INFRASTRUCTURE:                           {{BAT_INFRASTRUCTURE}}
-            BAT_VCAP_PASSWORD:                            {{BAT_VCAP_PASSWORD}}
-            BAT_STEMCELL:                                 {{BAT_STEMCELL}}
+            BAT_DIRECTOR:                                 {{centos_DIRECTOR_IP}}
+            BAT_DNS_HOST:                                 {{centos_DIRECTOR_IP}}
             BAT_STEMCELL_NAME:                            {{centos_BAT_STEMCELL_NAME}}
-            BAT_STATIC_IP:                                {{manual_centos_BAT_STATIC_IP}}
-            BAT_SECOND_STATIC_IP:                         {{manual_centos_BAT_SECOND_STATIC_IP}}
-            BAT_CIDR:                                     {{manual_centos_BAT_CIDR}}
-            BAT_RESERVED_RANGE:                           {{manual_centos_BAT_RESERVED_RANGE}}
-            BAT_STATIC_RANGE:                             {{manual_centos_BAT_STATIC_RANGE}}
-            BAT_GATEWAY:                                  {{manual_centos_BAT_GATEWAY}}
-            BAT_VLAN:                                     {{manual_centos_BAT_VLAN}}
+            BAT_STATIC_IP:                                {{centos_BAT_STATIC_IP}}
+            BAT_SECOND_STATIC_IP:                         {{centos_BAT_SECOND_STATIC_IP}}
+            BAT_CIDR:                                     {{VCENTER_CIDR}}
+            BAT_RESERVED_RANGE:                           {{centos_BAT_RESERVED_RANGE}}
+            BAT_STATIC_RANGE:                             {{centos_BAT_STATIC_RANGE}}
+            BAT_GATEWAY:                                  {{VCENTER_GATEWAY}}
+            BAT_VLAN:                                     {{VCENTER_VLAN}}
+            BAT_VCAP_PASSWORD:                            {{BAT_VCAP_PASSWORD}}
             BOSH_SSH_PRIVATE_KEY:                         {{BOSH_SSH_PRIVATE_KEY}}
-            BOSH_VSPHERE_NETMASK:                         {{BOSH_VSPHERE_NETMASK}}
-            BOSH_VSPHERE_GATEWAY:                         {{BOSH_VSPHERE_GATEWAY}}
-            BOSH_VSPHERE_DNS:                             {{BOSH_VSPHERE_DNS}}
-            BOSH_VSPHERE_NTP_SERVER:                      {{BOSH_VSPHERE_NTP_SERVER}}
-            BOSH_VSPHERE_NET_ID:                          {{BOSH_VSPHERE_NET_ID}}
-            BOSH_VSPHERE_VCENTER:                         {{BOSH_VSPHERE_VCENTER}}
-            BOSH_VSPHERE_VCENTER_USER:                    {{BOSH_VSPHERE_VCENTER_USER}}
-            BOSH_VSPHERE_VCENTER_PASSWORD:                {{BOSH_VSPHERE_VCENTER_PASSWORD}}
-            BOSH_VSPHERE_VCENTER_DC:                      {{BOSH_VSPHERE_VCENTER_DC}}
-            BOSH_VSPHERE_VCENTER_CLUSTER:                 {{BOSH_VSPHERE_VCENTER_CLUSTER}}
-            BOSH_VSPHERE_VCENTER_RESOURCE_POOL:           {{BOSH_VSPHERE_VCENTER_RESOURCE_POOL}}
-            BOSH_VSPHERE_VCENTER_DATASTORE_PATTERN:       {{BOSH_VSPHERE_VCENTER_DATASTORE_PATTERN}}
-            BOSH_VSPHERE_VCENTER_UBOSH_DATASTORE_PATTERN: {{BOSH_VSPHERE_VCENTER_UBOSH_DATASTORE_PATTERN}}
-            BOSH_VSPHERE_MICROBOSH_IP:                    {{manual_centos_BOSH_VSPHERE_MICROBOSH_IP}}
-            BOSH_VSPHERE_VCENTER_FOLDER_PREFIX:           {{manual_centos_BOSH_VSPHERE_VCENTER_FOLDER_PREFIX}}
+            BOSH_VSPHERE_NETMASK:                         {{VCENTER_NETMASK}}
+            BOSH_VSPHERE_GATEWAY:                         {{VCENTER_GATEWAY}}
+            BOSH_VSPHERE_DNS:                             {{VCENTER_DNS}}
+            BOSH_VSPHERE_NTP_SERVER:                      {{VCENTER_NTP_SERVER}}
+            BOSH_VSPHERE_NET_ID:                          {{VCENTER_VLAN}}
+            BOSH_VSPHERE_VCENTER:                         {{VCENTER_IP}}
+            BOSH_VSPHERE_VCENTER_USER:                    {{VCENTER_USER}}
+            BOSH_VSPHERE_VCENTER_PASSWORD:                {{VCENTER_PASSWORD}}
+            BOSH_VSPHERE_VCENTER_DC:                      {{VCENTER_DC}}
+            BOSH_VSPHERE_VCENTER_CLUSTER:                 {{VCENTER_CLUSTER}}
+            BOSH_VSPHERE_VCENTER_RESOURCE_POOL:           {{VCENTER_RESOURCE_POOL}}
+            BOSH_VSPHERE_VCENTER_DATASTORE_PATTERN:       {{VCENTER_DATASTORE_PATTERN}}
+            BOSH_VSPHERE_VCENTER_UBOSH_DATASTORE_PATTERN: {{VCENTER_DATASTORE_PATTERN}}
+            BOSH_VSPHERE_MICROBOSH_IP:                    {{centos_DIRECTOR_IP}}
+            BOSH_VSPHERE_VCENTER_FOLDER_PREFIX:           {{centos_BOSH_VSPHERE_VCENTER_FOLDER_PREFIX}}
 
   - name: promote-candidate
     serial: true
