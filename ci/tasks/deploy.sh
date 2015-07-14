@@ -27,7 +27,8 @@ semver=`cat version-semver/number`
 cpi_release_name="bosh-vsphere-cpi"
 working_dir=$PWD
 manifest_dir="${working_dir}/tmp"
-manifest_filename=${base_os}-${network_type_to_test}-director-manifest.yml
+manifest_prefix=${base_os}-${network_type_to_test}-director-manifest
+manifest_filename=${manifest_prefix}.yml
 
 mkdir $manifest_dir
 cat > "${manifest_dir}/${manifest_filename}" <<EOF
@@ -145,17 +146,22 @@ cloud_provider:
     ntp: [0.pool.ntp.org, 1.pool.ntp.org]
 EOF
 
-export BOSH_INIT_LOG_LEVEL=debug 
+export BOSH_INIT_LOG_LEVEL=debug
+
+set +e
+echo "if previous runs state file exists, copy into: ${manifest_dir}"
+cp bosh-concourse-ci/pipelines/${cpi_release_name}/${manifest_prefix}-state.json ${manifest_dir}/
+set -e
 
 initver=$(cat bosh-init/version)
 initexe="$PWD/bosh-init/bosh-init-${initver}-linux-amd64"
 chmod +x $initexe
 
 echo "deleting existing BOSH Director VM..."
-$initexe delete $manifest_filename
+$initexe delete ${manifest_dir}/${manifest_filename}
 
 echo "verifying no BOSH deployed VM exists at target IP: $DIRECTOR_IP"
 ! $(nc -vz -w10 $DIRECTOR_IP 6868)
 
 echo "deploying BOSH..."
-$initexe deploy $manifest_filename
+$initexe deploy ${manifest_dir}/${manifest_filename}
