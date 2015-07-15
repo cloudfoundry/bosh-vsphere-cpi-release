@@ -295,10 +295,16 @@ DEPENDENCIES
 EOF
 
 echo "verifying no BOSH deployed VM exists at target IP: $BAT_STATIC_IP"
-! $(nc -vz -w10 $BAT_STATIC_IP 6868)
+if [ ! $(nc -vz -w10 $BAT_STATIC_IP 6868) ]; then
+  echo "aborting due to vm existing at $BAT_STATIC_IP"
+  exit 1
+fi
 
 echo "verifying no BOSH deployed VM exists at target IP: $BAT_SECOND_STATIC_IP"
-! $(nc -vz -w10 $BAT_SECOND_STATIC_IP 6868)
+if [ ! $(nc -vz -w10 $BAT_SECOND_STATIC_IP 6868) ]; then
+  echo "aborting due to vm existing at $BAT_SECOND_STATIC_IP"
+  exit 1
+fi
 
 bundle install
 bundle exec rspec spec
