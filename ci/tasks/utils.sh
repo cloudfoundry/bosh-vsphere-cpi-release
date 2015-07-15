@@ -17,3 +17,13 @@ print_git_state() {
   TERM=xterm-256color git status --verbose
   echo "---"
 }
+
+check_for_rogue_vm() {
+  local ip=$1
+  nc -vz -w10 $ip 22
+  status=$?
+  if [ "${status}" == "0" ]; then
+    echo "aborting due to vm existing at ${ip}"
+    exit 1
+  fi
+}
