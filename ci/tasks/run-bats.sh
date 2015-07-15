@@ -295,13 +295,13 @@ DEPENDENCIES
 EOF
 
 echo "verifying no BOSH deployed VM exists at target IP: $BAT_STATIC_IP"
-if [ ! $(nc -vz -w10 $BAT_STATIC_IP 6868) ]; then
+if [ "$(nc -vz -w10 $BAT_STATIC_IP 6868)" == "0" ]; then
   echo "aborting due to vm existing at $BAT_STATIC_IP"
   exit 1
 fi
 
 echo "verifying no BOSH deployed VM exists at target IP: $BAT_SECOND_STATIC_IP"
-if [ ! $(nc -vz -w10 $BAT_SECOND_STATIC_IP 6868) ]; then
+if [ "$(nc -vz -w10 $BAT_SECOND_STATIC_IP 6868)" == "0" ]; then
   echo "aborting due to vm existing at $BAT_SECOND_STATIC_IP"
   exit 1
 fi

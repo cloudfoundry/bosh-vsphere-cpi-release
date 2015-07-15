@@ -161,7 +161,7 @@ echo "deleting existing BOSH Director VM..."
 $initexe delete ${manifest_dir}/${manifest_filename}
 
 echo "verifying no BOSH deployed VM exists at target IP: $DIRECTOR_IP"
-if [ ! $(nc -vz -w10 $DIRECTOR_IP 6868) ]; then
+if [ "$(nc -vz -w10 $DIRECTOR_IP 6868)" == 0 ]; then
   echo "aborting due to vm existing at $DIRECTOR_IP"
   exit 1
 fi
