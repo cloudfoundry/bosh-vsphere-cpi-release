@@ -21,9 +21,10 @@ print_git_state() {
 check_for_rogue_vm() {
   local ip=$1
   nc -vz -w10 $ip 22
-  status=$?
-  if [ "${status}" == "0" ]; then
+  if [ $? -eq 0 ]; then
     echo "aborting due to vm existing at ${ip}"
     exit 1
   fi
+
+  exit 0
 }
