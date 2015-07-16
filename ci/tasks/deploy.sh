@@ -26,11 +26,10 @@ chruby 2.1.2
 semver=`cat version-semver/number`
 cpi_release_name="bosh-vsphere-cpi"
 working_dir=$PWD
-manifest_dir="${working_dir}/tmp"
-manifest_prefix=${base_os}-${network_type_to_test}-director-manifest
-manifest_filename=${manifest_prefix}.yml
+manifest_prefix=${base_os}-${network_type_to_test}-director
+manifest_dir="${working_dir}/${manifest_prefix}-state-file"
+manifest_filename=${manifest_prefix}-manifest.yml
 
-mkdir $manifest_dir
 cat > "${manifest_dir}/${manifest_filename}" <<EOF
 ---
 name: bosh
@@ -147,11 +146,6 @@ cloud_provider:
 EOF
 
 export BOSH_INIT_LOG_LEVEL=debug
-
-set +e
-echo "if previous runs state file exists, copy into: ${manifest_dir}"
-cp bosh-concourse-ci/pipelines/${cpi_release_name}/${manifest_prefix}-state.json ${manifest_dir}/
-set -e
 
 initver=$(cat bosh-init/version)
 initexe="$PWD/bosh-init/bosh-init-${initver}-linux-amd64"
