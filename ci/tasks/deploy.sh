@@ -27,7 +27,7 @@ semver=`cat version-semver/number`
 cpi_release_name="bosh-vsphere-cpi"
 working_dir=$PWD
 manifest_prefix=${base_os}-${network_type_to_test}-director
-manifest_dir="${working_dir}/${manifest_prefix}-state-file"
+manifest_dir="${working_dir}/director-state-file"
 manifest_filename=${manifest_prefix}-manifest.yml
 
 cat > "${manifest_dir}/${manifest_filename}" <<EOF

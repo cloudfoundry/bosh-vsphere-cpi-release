@@ -3,7 +3,7 @@ platform: linux
 image: docker:///bosh/vsphere-cpi-release
 inputs:
   - name: bosh-cpi-release       # --- location of task script to run
-  - name: ubuntu-manual-director-state-file
+  - name: director-state-file
   - name: bosh-init              # --- bosh-init executable to do deploy
   - name: bosh-release
   - name: bosh-cpi-dev-artifacts
