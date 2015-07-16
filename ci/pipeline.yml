@@ -117,6 +117,7 @@ jobs:
         - {trigger: true,  passed: [deploy-ubuntu-manual], get: bosh-cpi-dev-artifacts}
         - {trigger: false, passed: [deploy-ubuntu-manual], get: bosh-cpi-release}
         - {trigger: false, passed: [deploy-ubuntu-manual], get: stemcell, resource: vsphere-ubuntu-stemcell}
+        - {trigger: false, passed: [deploy-ubuntu-manual], get: bosh-concourse-ci}
         - {trigger: false,                                 get: bats}
 
       - task: test
@@ -198,6 +199,7 @@ jobs:
         - {trigger: true,  passed: [deploy-centos-manual], get: bosh-cpi-dev-artifacts}
         - {trigger: false, passed: [deploy-centos-manual], get: stemcell, resource: vsphere-centos-stemcell}
         - {trigger: false, passed: [deploy-centos-manual], get: bosh-cpi-release}
+        - {trigger: false, passed: [deploy-centos-manual], get: bosh-concourse-ci}
         - {trigger: false,                                 get: bats}
 
       - task: test
@@ -286,6 +288,13 @@ resources:
       uri: git@github.com:cloudfoundry-incubator/bosh-vsphere-cpi-release.git
       branch: master
       private_key: {{github_deployment_key__bosh-vsphere-cpi-release}}
+
+  - name: bosh-concourse-ci
+    type: git
+    source:
+      uri: git@github.com:cloudfoundry/bosh-concourse-ci.git
+      branch: master
+      private_key: {{github_deployment_key__bosh-concourse-ci}}
 
   - name: version-semver
     type: semver
