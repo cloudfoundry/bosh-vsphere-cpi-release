@@ -13,6 +13,11 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     v.customize ['modifyvm', :id, '--memory', '4096']
   end
 
+  config.vm.provision :shell do |shell|
+    shell.inline = <<-BASH
+      apt-get -y update
+    BASH
+  end
   config.vm.provision('docker')
   config.vm.synced_folder "../../", "/vagrant/bosh.vsphere-cpi-release/cpi-release"
 end
