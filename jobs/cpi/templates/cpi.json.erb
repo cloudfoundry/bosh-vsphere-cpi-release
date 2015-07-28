@@ -1,0 +1,104 @@
+<%=
+
+  params = {
+    "cloud" => {
+      "plugin" => "vsphere",
+      "properties" => {
+        "mem_overcommit_ratio" => 0.7,
+        "vcenters" => [
+          {
+            "host" => p('vcenter.address'),
+            "user" => p('vcenter.user'),
+            "password" => p('vcenter.password'),
+            "datacenters" => []
+          }
+        ],
+        "agent" => {
+          "ntp" => p('ntp')
+        }
+      }
+    }
+  }
+
+  params["cloud"]["properties"]["vcenters"].each do |vcenter|
+    p('vcenter.datacenters').each do |datacenter|
+      datacenter_hash = {
+        "name" => datacenter['name'],
+        "vm_folder" => datacenter['vm_folder'] || "BOSH_VMs",
+        "template_folder" => datacenter['template_folder'] || "BOSH_Templates",
+        "disk_path" => datacenter['disk_path'] || "BOSH_Disks",
+        "datastore_pattern" => datacenter['datastore_pattern'],
+        "persistent_datastore_pattern" => datacenter['persistent_datastore_pattern'],
+        "allow_mixed_datastores" => datacenter.fetch('allow_mixed_datastores', true),
+        "clusters" => []
+      }
+
+      datacenter['clusters'].each do |cluster|
+        case cluster
+          when Hash
+            cluster.each do |cluster_name, cluster_properties|
+              cluster_hash = {}
+              cluster_hash[cluster_name.to_s] = cluster_properties.inject({}) do |acc, element|
+                k,v = element
+                acc[k.to_s] = v
+                acc
+              end
+              datacenter_hash["clusters"] << cluster_hash
+            end
+          when String
+            datacenter_hash["clusters"] << cluster.to_s
+        end
+      end
+
+      vcenter["datacenters"] << datacenter_hash
+    end
+  end
+
+
+  if_p('blobstore') do
+    if p('blobstore.provider') == "s3"
+      options = {
+        "bucket_name" => p('blobstore.bucket_name'),
+        "access_key_id" => p(['agent.blobstore.access_key_id', 'blobstore.access_key_id']),
+        "secret_access_key" => p(['agent.blobstore.secret_access_key', 'blobstore.secret_access_key'])
+      }
+
+      if_p('blobstore.use_ssl') do |use_ssl|
+        options["use_ssl"] = use_ssl
+      end
+      if_p('blobstore.s3_port') do |port|
+        options["port"] = port
+      end
+      if_p('blobstore.host') do |host|
+        options["host"] = host
+      end
+      if_p('blobstore.s3_force_path_style') do |s3_force_path_style|
+        options["s3_force_path_style"] = s3_force_path_style
+      end
+    elsif p('blobstore.provider') == 'local'
+      options = {
+        "blobstore_path" => p('blobstore.path')
+      }
+    else
+      options = {
+        "endpoint" => "http://#{p(['agent.blobstore.address', 'blobstore.address'])}:#{p('blobstore.port')}",
+        "user" => p('blobstore.agent.user'),
+        "password" => p('blobstore.agent.password')
+      }
+    end
+
+    params["cloud"]["properties"]["agent"]["blobstore"] = {
+      "provider" => p('blobstore.provider'),
+      "options" => options
+    }
+  end
+
+  if_p('agent.mbus') do |mbus|
+    params["cloud"]["properties"]["agent"]["mbus"] = mbus
+  end.else_if_p('nats') do
+    params["cloud"]["properties"]["agent"]["mbus"] = "nats://#{p('nats.user')}:#{p('nats.password')}@#{p(['agent.nats.address', 'nats.address'])}:#{p('nats.port')}"
+  end
+
+  JSON.dump(params)
+
+%>

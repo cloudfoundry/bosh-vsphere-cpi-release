@@ -28,3 +28,4 @@ params:
   BOSH_VSPHERE_VCENTER_VLAN:              replace-me
   BOSH_VSPHERE_VCENTER_CIDR:              replace-me
   BOSH_VSPHERE_VCENTER_GATEWAY:           replace-me
+  BOSH_INIT_LOG_LEVEL:                    WARN
