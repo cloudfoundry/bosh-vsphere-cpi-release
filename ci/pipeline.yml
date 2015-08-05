@@ -105,10 +105,9 @@ jobs:
             BOSH_VSPHERE_VCENTER_VLAN:              {{VCENTER_VLAN}}
             BOSH_VSPHERE_VCENTER_CIDR:              {{VCENTER_CIDR}}
             BOSH_VSPHERE_VCENTER_GATEWAY:           {{VCENTER_GATEWAY}}
-
-      - conditions: [success, failure]
-        put: ubuntu-manual-director-state-file
-        params: {from: deploy/director-state-file/ubuntu-manual-director-manifest-state.json}
+        ensure:
+          put: ubuntu-manual-director-state-file
+          params: {from: deploy/director-state-file/ubuntu-manual-director-manifest-state.json}
 
   - name: bats-ubuntu-manual
     serial_groups: [ubuntu-director-manual] # can't run while deploying
@@ -187,10 +186,9 @@ jobs:
             BOSH_VSPHERE_VCENTER_VLAN:              {{VCENTER_VLAN}}
             BOSH_VSPHERE_VCENTER_CIDR:              {{VCENTER_CIDR}}
             BOSH_VSPHERE_VCENTER_GATEWAY:           {{VCENTER_GATEWAY}}
-
-      - conditions: [success, failure]
-        put: centos-manual-director-state-file
-        params: {from: deploy/director-state-file/centos-manual-director-manifest-state.json}
+        ensure:
+          put: centos-manual-director-state-file
+          params: {from: deploy/director-state-file/centos-manual-director-manifest-state.json}
 
   - name: bats-centos-manual
     serial_groups: [centos-director-manual] # can't run while deploying
