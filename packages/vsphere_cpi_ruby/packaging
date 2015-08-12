@@ -32,4 +32,4 @@ tar zxvf vsphere_cpi_ruby/rubygems-2.3.0.tgz
   fi
 )
 
-${BOSH_INSTALL_TARGET}/bin/gem install ruby/bundler-1.6.3.gem --local --no-ri --no-rdoc
+${BOSH_INSTALL_TARGET}/bin/gem install vsphere_cpi_ruby/bundler-1.6.3.gem --local --no-ri --no-rdoc
