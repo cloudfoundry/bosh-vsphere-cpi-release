@@ -8,34 +8,28 @@ tar xzf vsphere_cpi_ruby/yaml-0.1.5.tar.gz
   make
   make install
 )
-if [[ $? != 0 ]] ; then
-  echo "Cannot install yaml"
-  exit 1
-fi
 
-tar xzf vsphere_cpi_ruby/ruby-1.9.3-p545.tar.gz
+tar xzf vsphere_cpi_ruby/ruby-2.1.4.tar.gz
 (
   set -e
-  cd ruby-1.9.3-p545
-  LDFLAGS="-Wl,-rpath -Wl,${BOSH_INSTALL_TARGET}" CFLAGS='-fPIC' ./configure --prefix=${BOSH_INSTALL_TARGET} --disable-install-doc --with-opt-dir=${BOSH_INSTALL_TARGET}
+  cd ruby-2.1.4
+  LDFLAGS="-Wl,-rpath -Wl,${BOSH_INSTALL_TARGET}" CFLAGS='-fPIC' ./configure --prefix=${BOSH_INSTALL_TARGET} --disable-install-doc --with-opt-dir=${BOSH_INSTALL_TARGET} --without-gmp
   make
   make install
 )
-if [[ $? != 0 ]] ; then
-  echo "Cannot install ruby"
-  exit 1
-fi
 
-tar zxvf vsphere_cpi_ruby/rubygems-2.1.11.tgz
+tar zxvf vsphere_cpi_ruby/rubygems-2.3.0.tgz
+
 (
   set -e
-  cd rubygems-2.1.11
+  cd rubygems-2.3.0
 
-  ${BOSH_INSTALL_TARGET}/bin/ruby setup.rb
+  ${BOSH_INSTALL_TARGET}/bin/ruby setup.rb --no-ri --no-rdoc
+
+  if [[ $? != 0 ]] ; then
+    echo "Cannot install rubygems"
+    exit 1
+  fi
 )
-if [[ $? != 0 ]] ; then
-  echo "Cannot install rubygems"
-  exit 1
-fi
 
-${BOSH_INSTALL_TARGET}/bin/gem install vsphere_cpi_ruby/bundler-1.8.2.gem --local --no-ri --no-rdoc
+${BOSH_INSTALL_TARGET}/bin/gem install ruby/bundler-1.6.3.gem --local --no-ri --no-rdoc
