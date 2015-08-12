@@ -4,7 +4,6 @@ image: docker:///bosh/vsphere-cpi-release
 inputs:
   - name: bosh-cpi-release
   - name: stemcell
-  - name: bosh-concourse-ci # needed for BOSH_SSH_PRIVATE_KEY
   - name: bats
 run:
   path: bosh-cpi-release/ci/tasks/run-bats.sh

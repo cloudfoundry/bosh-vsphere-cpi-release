@@ -17,7 +17,6 @@ check_param BAT_STATIC_RANGE
 check_param BAT_GATEWAY
 check_param BAT_VLAN
 check_param BAT_VCAP_PASSWORD
-check_param BOSH_SSH_PRIVATE_KEY
 check_param BOSH_VSPHERE_NETMASK
 check_param BOSH_VSPHERE_GATEWAY
 check_param BOSH_VSPHERE_DNS
@@ -38,7 +37,7 @@ source /etc/profile.d/chruby.sh
 chruby 2.1.2
 
 cpi_release_name=bosh-vsphere-cpi
-BAT_VCAP_PRIVATE_KEY="${PWD}${BOSH_SSH_PRIVATE_KEY}"
+export BAT_VCAP_PRIVATE_KEY="${PWD}/keys/bats.pem"
 export BAT_STEMCELL="${PWD}/stemcell/stemcell.tgz"
 export BAT_DEPLOYMENT_SPEC="${PWD}/${base_os}-${network_type_to_test}-bats-config.yml"
 export BAT_INFRASTRUCTURE=vsphere
@@ -46,7 +45,9 @@ export BAT_NETWORKING=$network_type_to_test
 
 # vsphere uses user/pass and the cdrom drive, not a reverse ssh tunnel
 # the SSH key is required for the` bosh ssh` command to work properly
+mkdir -p $PWD/keys
 eval $(ssh-agent)
+ssh-keygen -N "" -t rsa -b 4096 -f keys/bats
 chmod go-r $BAT_VCAP_PRIVATE_KEY
 ssh-add $BAT_VCAP_PRIVATE_KEY
 
