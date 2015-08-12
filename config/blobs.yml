@@ -27,3 +27,7 @@ vsphere_cpi_ruby/rubygems-2.3.0.tgz:
   object_id: 60f1bd52-b217-433f-a515-46dcdc27b4bd
   sha: 6902fff7749fa264b8f9020f33daf92170375f75
   size: 431240
+gem_home/gem_home-0.1.0.tar.gz:
+  object_id: fdb42330-db70-42d0-9014-27667b6bc7a4
+  sha: 338193cbbda0ee7bf0d3c903bb75fd24a4933693
+  size: 6167
