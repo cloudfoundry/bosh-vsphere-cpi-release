@@ -58,6 +58,15 @@ bosh -n target $BAT_DIRECTOR
 
 BOSH_UUID=`bosh status --uuid`
 
+# disable host key checking for deployed VMs
+cat > $HOME/.ssh/config << EOF
+Host ${BAT_STATIC_IP}
+    StrictHostKeyChecking no
+Host ${BAT_SECOND_STATIC_IP}
+    StrictHostKeyChecking no
+EOF
+
+
 cat > "${BAT_DEPLOYMENT_SPEC}" <<EOF
 ---
 cpi: vsphere
