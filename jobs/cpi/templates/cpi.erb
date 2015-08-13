@@ -24,7 +24,7 @@ export PATH=$BOSH_PACKAGES_DIR/vsphere_cpi_ruby/bin:$PATH
 export PATH=$BOSH_PACKAGES_DIR/vsphere_cpi_mkisofs/bin:$PATH
 
 export BUNDLE_GEMFILE=$BOSH_PACKAGES_DIR/vsphere_cpi/Gemfile
-export GEM_HOME=$BOSH_PACKAGES_DIR/bosh_vsphere_cpi/bin/vsphere_cpi/gem_home/ruby/2.1.0
+export GEM_HOME=$BOSH_PACKAGES_DIR/vsphere_cpi/gem_home/ruby/2.1.0
 
 echo $INPUT | $BOSH_PACKAGES_DIR/vsphere_cpi/bin/vsphere_cpi \
   $BOSH_JOBS_DIR/cpi/config/cpi.json
