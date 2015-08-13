@@ -8,7 +8,6 @@ packages:
 - vsphere_cpi_mkisofs
 - vsphere_cpi_ruby
 - vsphere_cpi
-- gem_home
 
 properties:
   vcenter.address:

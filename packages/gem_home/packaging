@@ -1,8 +1,0 @@
-# abort script on any command that exits with a non zero value
-set -e
-
-tar xf gem_home/gem_home-0.1.0.tar.gz
-(
-  cd gem_home-0.1.0
-  make install PREFIX=${BOSH_INSTALL_TARGET}
-)

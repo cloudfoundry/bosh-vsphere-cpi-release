@@ -20,15 +20,11 @@ read INPUT
 BOSH_PACKAGES_DIR=${BOSH_PACKAGES_DIR:-/var/vcap/packages}
 BOSH_JOBS_DIR=${BOSH_JOBS_DIR:-/var/vcap/jobs}
 
-export PATH=$BOSH_PACKAGES_DIR/gem_home/bin:$PATH
 export PATH=$BOSH_PACKAGES_DIR/vsphere_cpi_ruby/bin:$PATH
 export PATH=$BOSH_PACKAGES_DIR/vsphere_cpi_mkisofs/bin:$PATH
 
 export BUNDLE_GEMFILE=$BOSH_PACKAGES_DIR/vsphere_cpi/Gemfile
-
-source $BOSH_PACKAGES_DIR/gem_home/share/gem_home/gem_home.sh
-
-gem_home $BOSH_PACKAGES_DIR/vsphere_cpi/gem_home
+export GEM_HOME=$BOSH_PACKAGES_DIR/bosh_vsphere_cpi/bin/vsphere_cpi/gem_home/ruby/2.1.0
 
 echo $INPUT | $BOSH_PACKAGES_DIR/vsphere_cpi/bin/vsphere_cpi \
   $BOSH_JOBS_DIR/cpi/config/cpi.json
