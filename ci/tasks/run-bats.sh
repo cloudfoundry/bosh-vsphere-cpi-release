@@ -47,7 +47,7 @@ export BAT_NETWORKING=$network_type_to_test
 # the SSH key is required for the` bosh ssh` command to work properly
 mkdir -p $PWD/keys
 eval $(ssh-agent)
-ssh-keygen -N "" -t rsa -b 4096 -f keys/bats
+ssh-keygen -N "" -t rsa -b 4096 -f $BAT_VCAP_PRIVATE_KEY 
 chmod go-r $BAT_VCAP_PRIVATE_KEY
 ssh-add $BAT_VCAP_PRIVATE_KEY
 
