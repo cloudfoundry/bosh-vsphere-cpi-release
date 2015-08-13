@@ -59,6 +59,8 @@ bosh -n target $BAT_DIRECTOR
 BOSH_UUID=`bosh status --uuid`
 
 # disable host key checking for deployed VMs
+mkdir -p $HOME/.ssh
+
 cat > $HOME/.ssh/config << EOF
 Host ${BAT_STATIC_IP}
     StrictHostKeyChecking no
