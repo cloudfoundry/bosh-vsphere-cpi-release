@@ -6,14 +6,8 @@ BOSH_PACKAGES_DIR=${BOSH_PACKAGES_DIR:-/var/vcap/packages}
 
 mkdir -p ${BOSH_INSTALL_TARGET}/{bin,gem_home}
 
-export PATH=$BOSH_PACKAGES_DIR/gem_home/bin:$PATH
 export PATH=$BOSH_PACKAGES_DIR/vsphere_cpi_ruby/bin:$PATH
-
-source $BOSH_PACKAGES_DIR/gem_home/share/gem_home/gem_home.sh
-pushd ${BOSH_INSTALL_TARGET}/gem_home
-
-gem_home .
-popd
+export GEM_HOME=${BOSH_INSTALL_TARGET}/gem_home
 
 cd vsphere_cpi
 
@@ -27,6 +21,7 @@ export BUNDLE_CONFIG=`pwd`/.cpi_bundle_config
 bundle install \
   --local           \
   --no-prune        \
+  --path ${GEM_HOME} \
   --binstubs ${BOSH_INSTALL_TARGET}/bin
 
 cp Gemfile ${BOSH_INSTALL_TARGET}
