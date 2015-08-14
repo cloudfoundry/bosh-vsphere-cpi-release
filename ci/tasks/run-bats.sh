@@ -36,10 +36,12 @@ check_param BOSH_VSPHERE_VCENTER_FOLDER_PREFIX
 source /etc/profile.d/chruby.sh
 chruby 2.1.2
 
+working_dir=$PWD
+
 cpi_release_name=bosh-vsphere-cpi
-export BAT_VCAP_PRIVATE_KEY="${PWD}/keys/bats.pem"
-export BAT_STEMCELL="${PWD}/stemcell/stemcell.tgz"
-export BAT_DEPLOYMENT_SPEC="${PWD}/${base_os}-${network_type_to_test}-bats-config.yml"
+bosh_ssh_key="$working_dir/keys/bats.pem"
+export BAT_STEMCELL="$working_dir/stemcell/stemcell.tgz"
+export BAT_DEPLOYMENT_SPEC="$working_dir/${base_os}-${network_type_to_test}-bats-config.yml"
 export BAT_INFRASTRUCTURE=vsphere
 export BAT_NETWORKING=$network_type_to_test
 
@@ -47,9 +49,9 @@ export BAT_NETWORKING=$network_type_to_test
 # the SSH key is required for the` bosh ssh` command to work properly
 mkdir -p $PWD/keys
 eval $(ssh-agent)
-ssh-keygen -N "" -t rsa -b 4096 -f $BAT_VCAP_PRIVATE_KEY 
+ssh-keygen -N "" -t rsa -b 4096 -f $bosh_ssh_key
 chmod go-r $BAT_VCAP_PRIVATE_KEY
-ssh-add $BAT_VCAP_PRIVATE_KEY
+ssh-add $bosh_ssh_key
 
 echo "using bosh CLI version..."
 bosh version
