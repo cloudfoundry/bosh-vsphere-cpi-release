@@ -50,7 +50,7 @@ export BAT_NETWORKING=$network_type_to_test
 mkdir -p $PWD/keys
 eval $(ssh-agent)
 ssh-keygen -N "" -t rsa -b 4096 -f $bosh_ssh_key
-chmod go-r $BAT_VCAP_PRIVATE_KEY
+chmod go-r $bosh_ssh_key
 ssh-add $bosh_ssh_key
 
 echo "using bosh CLI version..."
