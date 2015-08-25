@@ -33,6 +33,8 @@ jobs:
 
       - task: sleep
         file: bosh-cpi-release/ci/tasks/create-jumpbox.yml
+        config:
+          tags: ["vsphere"]
 
   - name: build-candidate
     serial: true
