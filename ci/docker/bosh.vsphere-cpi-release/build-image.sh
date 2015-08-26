@@ -2,7 +2,7 @@
 
 set -e
 
-DOCKER_IMAGE=${DOCKER_IMAGE:-bosh/vsphere-cpi-release}
+DOCKER_IMAGE=${DOCKER_IMAGE:-boshcpi/vsphere-cpi-release}
 
 docker login
 

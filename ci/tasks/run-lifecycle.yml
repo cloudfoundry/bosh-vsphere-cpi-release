@@ -1,6 +1,6 @@
 ---
 platform: linux
-image: docker:///bosh/vsphere-cpi-release
+image: docker:///boshcpi/vsphere-cpi-release
 inputs:
 - name: bosh-src
 - name: bosh-cpi-release
