@@ -6,7 +6,7 @@ BOSH_PACKAGES_DIR=${BOSH_PACKAGES_DIR:-/var/vcap/packages}
 
 mkdir -p ${BOSH_INSTALL_TARGET}/{bin,gem_home}
 
-export PATH=$BOSH_PACKAGES_DIR/vsphere_cpi_ruby/bin:$PATH
+export PATH=${BOSH_INSTALL_TARGET}/bin:$PATH
 export GEM_HOME=${BOSH_INSTALL_TARGET}/gem_home
 
 cd vsphere_cpi
@@ -18,11 +18,13 @@ EOF
 # force bundler to use a clean config
 export BUNDLE_CONFIG=`pwd`/.cpi_bundle_config
 
-bundle install \
+bundle_cmd="$BOSH_PACKAGES_DIR/vsphere_cpi_ruby/bin/bundle"
+
+$bundle_cmd install \
   --local           \
   --no-prune        \
-  --path ${GEM_HOME} \
-  --binstubs ${BOSH_INSTALL_TARGET}/bin
+  --binstubs ${BOSH_INSTALL_TARGET}/bin \
+  --path ${GEM_HOME}
 
 cp Gemfile ${BOSH_INSTALL_TARGET}
 cp Gemfile.lock ${BOSH_INSTALL_TARGET}
