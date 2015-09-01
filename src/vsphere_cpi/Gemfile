@@ -8,6 +8,5 @@ group :development, :test do
   gem 'rspec', '~> 3.0'
   gem 'rspec-its'
   gem 'rspec-instafail'
-  gem 'sqlite3'
   gem 'fakefs'
 end
