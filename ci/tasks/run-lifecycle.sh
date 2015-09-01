@@ -42,7 +42,7 @@ popd
 echo "installed mkisofs at:" 
 which mkisofs
 
-cd bosh-cpi-release/src/bosh_vsphere_cpi
+cd bosh-cpi-release/src/vsphere_cpi
 
 export BOSH_VSPHERE_STEMCELL=../../../stemcell/stemcell.tgz
 
