@@ -1,0 +1,13 @@
+source 'https://rubygems.org'
+
+gemspec
+
+group :development, :test do
+  gem 'timecop', '~>0.7.1'
+  gem 'rake', '~>10.0'
+  gem 'rspec', '~> 3.0'
+  gem 'rspec-its'
+  gem 'rspec-instafail'
+  gem 'sqlite3'
+  gem 'fakefs'
+end
