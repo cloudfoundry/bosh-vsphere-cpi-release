@@ -47,4 +47,4 @@ cd bosh-cpi-release/src/vsphere_cpi
 export BOSH_VSPHERE_STEMCELL=../../../stemcell/stemcell.tgz
 
 bundle install
-bundle exec rspec spec/integration/lifecycle.rb
+bundle exec rspec spec/integration/lifecycle_spec.rb
