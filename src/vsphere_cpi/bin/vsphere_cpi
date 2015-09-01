@@ -1,14 +1,16 @@
 #!/usr/bin/env ruby
 
-require 'rubygems'
 require 'yaml'
-require 'logger'
-require 'cloud'
-require 'cloud/vsphere'
 require 'ostruct'
+require 'logger'
 require 'tmpdir'
 require 'bosh/cpi'
 require 'bosh/cpi/cli'
+require 'bundler'
+
+Bundler.setup(:default)
+require 'cloud'
+require 'cloud/vsphere'
 
 cpi_config = YAML.load_file(ARGV.shift)
 
