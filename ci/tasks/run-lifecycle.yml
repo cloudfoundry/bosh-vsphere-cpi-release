@@ -2,7 +2,6 @@
 platform: linux
 image: docker:///boshcpi/vsphere-cpi-release
 inputs:
-- name: bosh-src
 - name: bosh-cpi-release
 - name: stemcell
 run:

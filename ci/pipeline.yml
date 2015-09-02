@@ -58,7 +58,6 @@ jobs:
       - aggregate:
         - {trigger: true,  passed: [build-candidate], get: bosh-cpi-dev-artifacts} # used for job chaining only not for tasks
         - {trigger: false, passed: [build-candidate], get: bosh-cpi-release}
-        - {trigger: false,                            get: bosh-src}
         - {trigger: false,                            get: stemcell, resource: vsphere-ubuntu-stemcell}
 
       - task: test
@@ -320,12 +319,6 @@ resources:
       regexp:      bosh-init-([0-9.]+)-linux-amd64
       bucket:      {{s3_bosh_init_bucket}}
       region_name: us-east-1
-
-  - name: bosh-src
-    type: git
-    source:
-      uri:    https://github.com/cloudfoundry/bosh.git
-      branch: master
 
   - name: bosh-release
     type: bosh-io-release

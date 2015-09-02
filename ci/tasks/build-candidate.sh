@@ -12,6 +12,12 @@ mkdir out
 
 cd bosh-cpi-release
 
+echo "running unit tests"
+pushd src/vsphere_cpi
+  bundle install
+  bundle exec rspec spec/unit/*
+popd
+
 echo "installing the latest bosh_cli"
 gem install bosh_cli --no-ri --no-rdoc
 

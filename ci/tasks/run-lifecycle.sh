@@ -42,9 +42,9 @@ popd
 echo "installed mkisofs at:" 
 which mkisofs
 
-cd bosh-src/bosh_vsphere_cpi
+cd bosh-cpi-release/src/vsphere_cpi
 
-export BOSH_VSPHERE_STEMCELL=../../stemcell/stemcell.tgz
+export BOSH_VSPHERE_STEMCELL=../../../stemcell/stemcell.tgz
 
 bundle install
-bundle exec rake spec:lifecycle
+bundle exec rspec spec/integration/lifecycle_spec.rb
