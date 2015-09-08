@@ -1,6 +1,6 @@
 # Migration issues
 
-This document lists different migration cases, symptomps and errors that can be observed in vSphere CPI.
+This document lists different migration cases, symptoms and errors that can be observed in vSphere CPI.
 
 
 ## vMotion migrates VM (disks are in the shared datastore)
@@ -149,3 +149,37 @@ sfdisk: cannot open /dev/sdb for reading
 When VM was removed the disk was removed with it. In `Events` of datastore one there is a record `File …vmdk deleted from datastore1` and `User` is root.
 
 * Disk will be removed even if it's outside of the VM folder
+
+---
+## Local Storage
+* Local storage configuration is possible but is not a recommended topology due to the single point of failure that can cause interruptions when a connection becomes unreliable or fails - [VMware documentation](https://pubs.vmware.com/vsphere-55/index.jsp?topic=%2Fcom.vmware.vsphere.storage.doc%2FGUID-5F08F7A7-6D8E-45A6-B408-278B3A4C7D4C.html).
+* Local storage does not support sharing across multiple hosts. Only one host has access to a datastore on a local storage device. As a result, although you can use local storage to create virtual machines, it prevents you from using VMware features that require shared storage, such as HA and vMotion. However, if you use a cluster of hosts that have just local storage devices, you can implement Virtual SAN or vSphere Storage Appliance.
+* Local storage is ideal for scenarios where persistence of data volumes and HA is not required. Some of the benefits include reduced disk I/O latency and cost reduction from using inexpensive local disks. [source](http://cloudstack-administration.readthedocs.org/en/latest/storage.html)
+
+## vMotion migrates VM + disk (disks are in the local datastores)
+We triggered vMotion by migrating VM manually from one host to another. User can only select compatible hosts/disks with each other.
+
+### Symptoms
+* When a deployment is deleted, an empty directory (vm-xxxxx) remains in the local datastore of the host it was deployed on (seems to be vmware side effect).
+* The env.iso file (mentioned below in Issues) can be seen on the initial host's local datastore after migration. When the deployment is deleted, this file gets removed but an empty directory remains.
+
+### Issues
+In VM `Events` there is an event called `Task: Relocate virtual machine` and a warning is generated that states:
+```
+Event Type Description:
+The virtual machine can be migrated but might lose some functionality after migration is complete
+
+Possible Causes:
+Migrating the virtual machine to the destination resource pool is likely to succeed but some functionality might not work correctly afterward because the virtual machine did not meet all the compatability criteria.
+Action: Use the VSphere Client to check for the warnings at the time of the failure so that you can identify possible reasons for this problem.
+```
+The VSphere Client showed the following compability warning:
+```
+"Device" 'CD/DVD drive 1' uses backing '[local-ds] vm-xxxxxx/env.iso', which is not accessible.
+```
+
+### Tests
+* Changing IP address succeeds and VM changes IP
+* Changing root disk size succeeds and disk changes size.
+* Deleting deployment after migration
+* Migrating to another host and then back to the initial hosts succeeds
