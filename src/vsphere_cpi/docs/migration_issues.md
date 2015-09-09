@@ -183,3 +183,17 @@ The VSphere Client showed the following compability warning:
 * Changing root disk size succeeds and disk changes size.
 * Deleting deployment after migration
 * Migrating to another host and then back to the initial hosts succeeds
+
+## vMotion migrates VM + local ephemeral disk, then adds persistent disk
+We followed the same steps as stated in **vMotion migrates VM + disk (disks are in the local datastores)**. After the VM was manually moved, we added a persistent disk via the manifest. Then, via vMotion we attempted to manually migrate the VM + local disks again.
+
+### Symptoms
+When the persistent disk is attached, it recreates the env.iso in the current local disk and removes the env.iso from the previous local disk.
+In VM `Events`, there is an event called `Task: Reconfigure virtual machine` without any warnings/errors.
+
+### Issues
+After attaching persistent disk, vMotion prevents the ability to manually migrate the VM + disk with the following **error**:
+```
+"Currently connected device" 'CD/DVD drive 1' uses backing '[local2-ds] vm-xxxxxx/env.iso', which is not accessible.
+```
+This occurs when selecting the compute resource.
