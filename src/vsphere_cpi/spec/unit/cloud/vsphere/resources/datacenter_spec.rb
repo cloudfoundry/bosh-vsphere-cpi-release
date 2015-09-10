@@ -213,27 +213,59 @@ describe VSphereCloud::Resources::Datacenter do
   end
 
   describe '#persistent_datastores' do
-    let(:first_datastore) { instance_double('VSphereCloud::Resources::Datastore', name: 'first-datastore') }
-    let(:second_datastore) { instance_double('VSphereCloud::Resources::Datastore', name: 'second-datastore') }
+    it 'returns a unique set of persistent datastores across all clusters' do
+      first_datastore = instance_double('VSphereCloud::Resources::Datastore', name: 'first-datastore')
+      second_datastore = instance_double('VSphereCloud::Resources::Datastore', name: 'second-datastore')
+      third_datastore = instance_double('VSphereCloud::Resources::Datastore', name: 'third-datastore')
 
-    before do
       allow(datacenter).to receive(:clusters).and_return({
-       'first-cluster' => instance_double('VSphereCloud::Resources::Cluster',
-         persistent_datastores: {'first-datastore' => first_datastore},
-       ),
-       'second-cluster' => instance_double('VSphereCloud::Resources::Cluster',
-         persistent_datastores: {
-           'first-datastore' => first_datastore,
-           'second-datastore' => second_datastore
-         }
-       ),
+        'first-cluster' => instance_double('VSphereCloud::Resources::Cluster',
+          persistent_datastores: {
+            first_datastore.name => first_datastore,
+            third_datastore.name => third_datastore
+          },
+        ),
+        'second-cluster' => instance_double('VSphereCloud::Resources::Cluster',
+          persistent_datastores: {
+            first_datastore.name => first_datastore,
+            second_datastore.name => second_datastore
+          }
+        ),
+      })
+
+      expect(datacenter.persistent_datastores).to eq({
+        first_datastore.name => first_datastore,
+        second_datastore.name => second_datastore,
+        third_datastore.name => third_datastore
       })
     end
+  end
 
-    it 'returns persistent datastores in all clusters' do
-      expect(datacenter.persistent_datastores).to eq({
-        'first-datastore' => first_datastore,
-        'second-datastore' => second_datastore
+  describe '#all_datastores' do
+    it 'returns a unique set of persistent datastores across all clusters' do
+      first_datastore = instance_double('VSphereCloud::Resources::Datastore', name: 'first-datastore')
+      second_datastore = instance_double('VSphereCloud::Resources::Datastore', name: 'second-datastore')
+      third_datastore = instance_double('VSphereCloud::Resources::Datastore', name: 'third-datastore')
+
+      allow(datacenter).to receive(:clusters).and_return({
+        'first-cluster' => instance_double('VSphereCloud::Resources::Cluster',
+          all_datastores: {
+            first_datastore.name => first_datastore,
+            third_datastore.name => third_datastore
+          },
+        ),
+        'second-cluster' => instance_double('VSphereCloud::Resources::Cluster',
+          all_datastores: {
+            first_datastore.name => first_datastore,
+            second_datastore.name => second_datastore
+          }
+        ),
+      })
+
+      expect(datacenter.all_datastores).to eq({
+        first_datastore.name => first_datastore,
+        second_datastore.name => second_datastore,
+        third_datastore.name => third_datastore
       })
     end
   end

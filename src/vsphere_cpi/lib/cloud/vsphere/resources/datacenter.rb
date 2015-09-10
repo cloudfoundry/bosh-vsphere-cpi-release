@@ -70,17 +70,22 @@ module VSphereCloud
         @clusters.each do |cluster_name, cluster_config|
           clusters[cluster_name] = @cluster_provider.find(cluster_name, cluster_config)
         end
+        @logger.debug("All clusters provided: #{@clusters}")
         clusters
       end
 
       def persistent_datastores
-        datastores = {}
-        clusters.each do |_, cluster|
-          cluster.persistent_datastores.each do |_, datastore|
-            datastores[datastore.name] = datastore
-          end
+        clusters.values.inject({}) do |acc, cluster|
+          acc.merge!(cluster.persistent_datastores)
+          acc
         end
-        datastores
+      end
+
+      def all_datastores
+        clusters.values.inject({}) do |acc, cluster|
+          acc.merge!(cluster.all_datastores)
+          acc
+        end
       end
 
       def pick_persistent_datastore(size)

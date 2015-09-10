@@ -122,6 +122,7 @@ module VSphereCloud
       context 'when disk does not exist' do
         before do
           allow(datacenter).to receive(:persistent_datastores).and_return({})
+          allow(datacenter).to receive(:all_datastores).and_return({})
         end
 
         it 'raises DiskNotFound' do
@@ -138,6 +139,10 @@ module VSphereCloud
 
       before do
         allow(datacenter).to receive(:persistent_datastores).and_return({
+              'datastore-without-disk' => first_datastore,
+              'datastore-with-disk' => second_datastore,
+            })
+        allow(datacenter).to receive(:all_datastores).and_return({
               'datastore-without-disk' => first_datastore,
               'datastore-with-disk' => second_datastore,
             })

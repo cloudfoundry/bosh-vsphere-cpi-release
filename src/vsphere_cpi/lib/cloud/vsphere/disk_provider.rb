@@ -46,6 +46,15 @@ module VSphereCloud
       @logger.debug("Looking for disk #{disk_cid} in datastores: #{persistent_datastores}")
       persistent_datastores.each do |_, datastore|
         disk = @client.find_disk(disk_cid, datastore, @disk_path)
+        @logger.debug("disk #{disk_cid} found in: #{datastore}") unless disk.nil?
+        return disk unless disk.nil?
+      end
+
+      other_datastores = @datacenter.all_datastores.reject{|datastore_name, _| persistent_datastores[datastore_name] }
+      @logger.debug("disk #{disk_cid} not found in filtered persistent datastores, trying other datastores: #{other_datastores}")
+      other_datastores.each do |_, datastore|
+        disk = @client.find_disk(disk_cid, datastore, @disk_path)
+        @logger.debug("disk #{disk_cid} found in: #{datastore}") unless disk.nil?
         return disk unless disk.nil?
       end
 

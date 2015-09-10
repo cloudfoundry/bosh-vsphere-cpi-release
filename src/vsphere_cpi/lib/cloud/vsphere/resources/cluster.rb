@@ -114,14 +114,22 @@ module VSphereCloud
         @persistent_datastores ||= select_datastores(@datacenter_persistent_datastore_pattern)
       end
 
+      def all_datastores
+        @all_datastores ||= Datastore.build_from_client(
+          @client,
+          properties['datastore']
+        ).inject({}) do |acc, datastore|
+          acc[datastore.name] = datastore
+          acc
+        end
+      end
+
       private
 
       attr_reader :config, :client, :properties, :logger
 
       def select_datastores(pattern)
-        @datastores ||= Datastore.build_from_client(@client, properties['datastore'])
-        matching_datastores = @datastores.select { |datastore| datastore.name =~ pattern }
-        matching_datastores.inject({}) { |h, datastore| h[datastore.name] = datastore; h }
+        all_datastores.select { |name, datastore| name =~ pattern }
       end
 
       def pick_store(type, size)

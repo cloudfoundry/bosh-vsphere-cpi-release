@@ -32,7 +32,6 @@ describe VSphereCloud::Cloud, external_cpi: false do
     config.logger.level = Logger::DEBUG
     config.uuid = '123'
     Bosh::Clouds::Config.configure(config)
-
   end
 
   def cpi_options(options = {})
@@ -78,9 +77,9 @@ describe VSphereCloud::Cloud, external_cpi: false do
     end
   end
 
-  after(:all) { 
+  after(:all) {
     cpi = described_class.new(cpi_options)
-    cpi.delete_stemcell(@stemcell_id) if @stemcell_id 
+    cpi.delete_stemcell(@stemcell_id) if @stemcell_id
   }
 
   extend Bosh::Cpi::CompatibilityHelpers
@@ -233,6 +232,57 @@ describe VSphereCloud::Cloud, external_cpi: false do
   end
 
   describe 'vsphere specific lifecycle' do
+    context 'given cpis that are configured to use same cluster but different datastores' do
+      let(:first_datastore_cpi) { cpi }
+
+      let(:second_datastore_cpi) do
+        options = cpi_options(
+          datastore_pattern: @second_datastore_within_cluster,
+          persistent_datastore_pattern: @second_datastore_within_cluster
+        )
+        described_class.new(options)
+      end
+
+      after { clean_up_vm_and_disk }
+
+      it 'can exercise lifecycle with either cpi' do
+        @vm_id = first_datastore_cpi.create_vm(
+          'agent-007',
+          @stemcell_id,
+          resource_pool,
+          network_spec,
+          [],
+          {}
+        )
+
+        expect(@vm_id).to_not be_nil
+        expect(first_datastore_cpi.has_vm?(@vm_id)).to be(true)
+
+        @disk_id = first_datastore_cpi.create_disk(2048, {}, @vm_id)
+        expect(@disk_id).to_not be_nil
+        expect(first_datastore_cpi.has_disk?(@disk_id)).to be(true)
+
+        # second cpi can see disk in datastore outside of its datastore pattern
+        expect(second_datastore_cpi.has_disk?(@disk_id)).to be(true)
+
+        first_datastore_cpi.attach_disk(@vm_id, @disk_id)
+
+        second_datastore_cpi.detach_disk(@vm_id, @disk_id)
+
+        second_datastore_cpi.delete_vm(@vm_id)
+        expect {
+          first_datastore_cpi.vm_provider.find(@vm_id)
+        }.to raise_error(Bosh::Clouds::VMNotFound)
+        @vm_id = nil
+
+        second_datastore_cpi.delete_disk(@disk_id)
+        expect {
+          first_datastore_cpi.disk_provider.find(@disk_id)
+        }.to raise_error(Bosh::Clouds::DiskNotFound)
+        @disk_id = nil
+      end
+    end
+
     context 'when datacenter is in folder' do
       let(:client) do
         VSphereCloud::Client.new("https://#{@host}/sdk/vimService").tap do |client|
@@ -286,19 +336,15 @@ describe VSphereCloud::Cloud, external_cpi: false do
         described_class.new(options)
       end
 
-      def relocate_vm_to_second_datastore
-        vm = cpi.vm_provider.find(@vm_id)
-
-        datastore = cpi.client.cloud_searcher.get_managed_object(VimSdk::Vim::Datastore, name: @second_datastore_within_cluster)
-        relocate_spec = VimSdk::Vim::Vm::RelocateSpec.new(datastore: datastore)
-
-        task = vm.mob.relocate(relocate_spec, 'defaultPriority')
-        cpi.client.wait_for_task(task)
-      end
-
       it 'should exercise the vm lifecycle' do
         vm_lifecycle([], resource_pool) do
-          relocate_vm_to_second_datastore
+          vm = cpi.vm_provider.find(@vm_id)
+
+          datastore = cpi.client.cloud_searcher.get_managed_object(VimSdk::Vim::Datastore, name: @second_datastore_within_cluster)
+          relocate_spec = VimSdk::Vim::Vm::RelocateSpec.new(datastore: datastore)
+
+          task = vm.mob.relocate(relocate_spec, 'defaultPriority')
+          cpi.client.wait_for_task(task)
         end
       end
     end
@@ -434,7 +480,7 @@ describe VSphereCloud::Cloud, external_cpi: false do
           cpi = described_class.new(cpi_options)
           third_stemcell_vm = cpi.replicate_stemcell(vm_cluster, datastore, @stemcell_id)
         }
-        
+
         t4 = Thread.new {
           cpi = described_class.new(cpi_options)
           fourth_stemcell_vm = cpi.replicate_stemcell(vm_cluster, datastore, @stemcell_id)

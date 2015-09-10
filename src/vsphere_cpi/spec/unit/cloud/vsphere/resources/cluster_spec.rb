@@ -89,140 +89,159 @@ class VSphereCloud::Resources
       })
     end
 
-    describe '#initialize' do
-      describe 'datastores' do
-        it 'places each matching datastore in the appropriate array' do
-          ephemeral_datastores = cluster.ephemeral_datastores
-          expect(ephemeral_datastores.keys).to match_array(['ephemeral_1', 'ephemeral_2'])
-          expect(ephemeral_datastores['ephemeral_1'].name).to eq('ephemeral_1')
-          expect(ephemeral_datastores['ephemeral_2'].name).to eq('ephemeral_2')
+    describe '#ephemeral_datastores' do
+      it 'filters the full list of datastores based on the datacenter_datastore_pattern' do
+        ephemeral_datastores = cluster.ephemeral_datastores
+        expect(ephemeral_datastores.keys).to match_array(['ephemeral_1', 'ephemeral_2'])
+        expect(ephemeral_datastores['ephemeral_1'].name).to eq('ephemeral_1')
+        expect(ephemeral_datastores['ephemeral_2'].name).to eq('ephemeral_2')
+      end
 
-          persistent_datastores = cluster.persistent_datastores
-          expect(persistent_datastores.keys).to match_array(['persistent_1', 'persistent_2'])
-          expect(persistent_datastores['persistent_1'].name).to eq('persistent_1')
-          expect(persistent_datastores['persistent_2'].name).to eq('persistent_2')
+      context 'when there are no datastores' do
+        let(:fake_datastore_properties) { {} }
+
+        it 'it returns an empty list when there are no datastores' do
+          expect(cluster.ephemeral_datastores).to eq({})
         end
+      end
+    end
 
-        context 'when there are no datastores' do
-          it 'initializes ephemeral and persistentto empty hashes' do
-            allow(cloud_searcher).to receive(:get_properties).with('fake-datastore-name',
-                                                           VimSdk::Vim::Datastore,
-                                                           Datastore::PROPERTIES).and_return({})
+    describe '#persistent_datastores' do
+      it 'filters the full list of datastores based on the datacenter_persistent_datastore_pattern' do
+        persistent_datastores = cluster.persistent_datastores
+        expect(persistent_datastores.keys).to match_array(['persistent_1', 'persistent_2'])
+        expect(persistent_datastores['persistent_1'].name).to eq('persistent_1')
+        expect(persistent_datastores['persistent_2'].name).to eq('persistent_2')
+      end
 
-            expect(cluster.ephemeral_datastores).to eq({})
-            expect(cluster.persistent_datastores).to eq({})
+      context 'when there are no datastores' do
+        let(:fake_datastore_properties) { {} }
+
+        it 'it returns an empty list when there are no datastores' do
+          expect(cluster.persistent_datastores).to eq({})
+        end
+      end
+    end
+
+    describe '#all_datastores' do
+      it 'returns the full list of datastores' do
+        all_datastores = cluster.all_datastores
+        expect(all_datastores.keys).to match_array(%w(persistent_1 persistent_2 ephemeral_1 ephemeral_2 other))
+        expect(all_datastores['persistent_1'].name).to eq('persistent_1')
+        expect(all_datastores['persistent_2'].name).to eq('persistent_2')
+        expect(all_datastores['ephemeral_1'].name).to eq('ephemeral_1')
+        expect(all_datastores['ephemeral_2'].name).to eq('ephemeral_2')
+        expect(all_datastores['other'].name).to eq('other')
+      end
+    end
+
+    describe 'cluster utilization' do
+      context 'when we are using resource pools' do
+        context 'when utilization data is available' do
+          context 'when the runtime status is green' do
+            let(:fake_runtime_info) do
+              instance_double(
+                'VimSdk::Vim::ResourcePool::RuntimeInfo',
+                overall_status: 'green',
+                memory: instance_double(
+                  'VimSdk::Vim::ResourcePool::ResourceUsage',
+                  max_usage: 1024 * 1024 * 100,
+                  overall_usage: 1024 * 1024 * 75,
+                )
+              )
+            end
+
+            it 'sets resources to values in the runtime status' do
+              expect(cluster.free_memory).to eq(25)
+            end
+          end
+
+          context 'when the runtime status is not green (i.e. it is unreliable)' do
+            it 'defaults resources to zero so that it is ignored' do
+              expect(cluster.free_memory).to eq(0)
+            end
           end
         end
       end
 
-      describe 'cluster utilization' do
-        context 'when we are using resource pools' do
-          context 'when utilization data is available' do
-            context 'when the runtime status is green' do
-              let(:fake_runtime_info) do
-                instance_double(
-                  'VimSdk::Vim::ResourcePool::RuntimeInfo',
-                  overall_status: 'green',
-                  memory: instance_double(
-                    'VimSdk::Vim::ResourcePool::ResourceUsage',
-                    max_usage: 1024 * 1024 * 100,
-                    overall_usage: 1024 * 1024 * 75,
-                  )
-                )
-              end
-
-              it 'sets resources to values in the runtime status' do
-                expect(cluster.free_memory).to eq(25)
-              end
-            end
-
-            context 'when the runtime status is not green (i.e. it is unreliable)' do
-              it 'defaults resources to zero so that it is ignored' do
-                expect(cluster.free_memory).to eq(0)
-              end
-            end
-          end
+      context 'when we are using clusters directly' do
+        def generate_host_property(mob, maintenance_mode, memory_size)
+          {
+            mob => {
+              'runtime.inMaintenanceMode' => maintenance_mode ? 'true' : 'false',
+              :obj => mob,
+              'hardware.memorySize' => memory_size,
+            }
+          }
         end
 
-        context 'when we are using clusters directly' do
-          def generate_host_property(mob, maintenance_mode, memory_size)
-            {
-              mob => {
-                'runtime.inMaintenanceMode' => maintenance_mode ? 'true' : 'false',
-                :obj => mob,
-                'hardware.memorySize' => memory_size,
-              }
-            }
-          end
+        let(:inactive_host_properties) do
+          {}.merge(
+            generate_host_property(instance_double('VimSdk::Vim::ClusterComputeResource'), true, nil)
+          ).merge(
+            generate_host_property(instance_double('VimSdk::Vim::ClusterComputeResource'), true, nil)
+          )
+        end
 
-          let(:inactive_host_properties) do
-            {}.merge(
-              generate_host_property(instance_double('VimSdk::Vim::ClusterComputeResource'), true, nil)
+        before do
+          allow(cluster_config).to receive(:resource_pool).and_return(nil)
+        end
+
+        context 'when there are active host mobs' do
+          let(:active_host_1_mob) { instance_double('VimSdk::Vim::ClusterComputeResource') }
+          let(:active_host_2_mob) { instance_double('VimSdk::Vim::ClusterComputeResource') }
+          let(:active_host_mobs) { [active_host_1_mob, active_host_2_mob] }
+
+          before do
+            hosts_properties = inactive_host_properties.merge(
+              generate_host_property(active_host_1_mob, false, 100 * 1024 * 1024)
             ).merge(
-              generate_host_property(instance_double('VimSdk::Vim::ClusterComputeResource'), true, nil)
+              generate_host_property(active_host_2_mob, false, 40 * 1024 * 1024)
             )
+
+            allow(cloud_searcher).to receive(:get_properties)
+                                       .with(cluster_hosts,
+                                         VimSdk::Vim::HostSystem,
+                                         described_class::HOST_PROPERTIES,
+                                         ensure_all: true)
+                                       .and_return(hosts_properties)
           end
 
           before do
-            allow(cluster_config).to receive(:resource_pool).and_return(nil)
-          end
+            performance_counters = {
+              active_host_1_mob => {
+                'mem.usage.average' => '2500,2500',
+              },
+              active_host_2_mob => {
+                'mem.usage.average' => '7500,7500',
+              },
+            }
 
-          context 'when there are active host mobs' do
-            let(:active_host_1_mob) { instance_double('VimSdk::Vim::ClusterComputeResource') }
-            let(:active_host_2_mob) { instance_double('VimSdk::Vim::ClusterComputeResource') }
-            let(:active_host_mobs) { [active_host_1_mob, active_host_2_mob] }
-
-            before do
-              hosts_properties = inactive_host_properties.merge(
-                generate_host_property(active_host_1_mob, false, 100 * 1024 * 1024)
-              ).merge(
-                generate_host_property(active_host_2_mob, false, 40 * 1024 * 1024)
-              )
-
-              allow(cloud_searcher).to receive(:get_properties)
-                               .with(cluster_hosts,
-                                     VimSdk::Vim::HostSystem,
-                                     described_class::HOST_PROPERTIES,
-                                     ensure_all: true)
-                               .and_return(hosts_properties)
-            end
-
-            before do
-              performance_counters = {
-                active_host_1_mob => {
-                  'mem.usage.average' => '2500,2500',
-                },
-                active_host_2_mob => {
-                  'mem.usage.average' => '7500,7500',
-                },
-              }
-
-              allow(client).to receive(:get_perf_counters)
+            allow(client).to receive(:get_perf_counters)
                                .with(active_host_mobs,
-                                     described_class::HOST_COUNTERS,
-                                     max_sample: 5)
+                                 described_class::HOST_COUNTERS,
+                                 max_sample: 5)
                                .and_return(performance_counters)
 
-            end
-
-            it 'sets resources to values based on the active hosts in the cluster' do
-              expect(cluster.free_memory).to eq(85)
-            end
           end
 
-          context 'when there are no active cluster hosts' do
-            before do
-              allow(cloud_searcher).to receive(:get_properties)
-                               .with(cluster_hosts,
-                                     VimSdk::Vim::HostSystem,
-                                     described_class::HOST_PROPERTIES,
-                                     ensure_all: true)
-                               .and_return(inactive_host_properties)
-            end
+          it 'sets resources to values based on the active hosts in the cluster' do
+            expect(cluster.free_memory).to eq(85)
+          end
+        end
 
-            it 'defaults free memory to zero' do
-              expect(cluster.free_memory).to eq(0)
-            end
+        context 'when there are no active cluster hosts' do
+          before do
+            allow(cloud_searcher).to receive(:get_properties)
+                                       .with(cluster_hosts,
+                                         VimSdk::Vim::HostSystem,
+                                         described_class::HOST_PROPERTIES,
+                                         ensure_all: true)
+                                       .and_return(inactive_host_properties)
+          end
+
+          it 'defaults free memory to zero' do
+            expect(cluster.free_memory).to eq(0)
           end
         end
       end
