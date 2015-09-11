@@ -921,5 +921,68 @@ module VSphereCloud
         end
       end
     end
+
+    describe '#reboot_vm' do
+      it 'logs the powerstate if the machine was not powered on' do
+        allow(vm).to receive(:powered_on?).and_return(false)
+        allow(vm).to receive(:power_state).and_return('foo')
+        allow(vm).to receive(:reboot)
+        vsphere_cloud.reboot_vm('vm-id')
+      end
+
+      context 'when the soft reboot fails' do
+        before do
+          allow(vm).to receive(:reboot).and_raise(StandardError.new('my custom reboot error'))
+          expect(logger).to receive(:error).with(/my custom reboot error/)
+        end
+
+        context 'when the machine was powered on' do
+          before{ allow(vm).to receive(:powered_on?).and_return(true) }
+
+          it 'attempts to shut down the machine before re-powering it on' do
+            expect(vm).to receive(:power_off).ordered
+            expect(vm).to receive(:power_on).ordered
+            vsphere_cloud.reboot_vm('vm-id')
+          end
+
+          it 'retries the power-off twice before failing' do
+            allow(vm).to receive(:power_state)
+            first_error = StandardError.new('first error')
+            second_error = StandardError.new('second error')
+            expect(vm).to receive(:power_off).ordered.and_raise(first_error)
+            expect(vm).to receive(:power_off).ordered.and_raise(second_error)
+            expect {
+              vsphere_cloud.reboot_vm('vm-id')
+            }.to raise_error(second_error)
+          end
+        end
+
+        context 'when the machine was powered off' do
+          before do
+            allow(vm).to receive(:powered_on?).and_return(false)
+            allow(vm).to receive(:power_state)
+          end
+
+          it 'attempts to start the machine if it is not powered on' do
+            expect(vm).to_not receive(:power_off)
+            expect(vm).to receive(:power_on).ordered
+            vsphere_cloud.reboot_vm('vm-id')
+          end
+
+          it 'retries the power-on twice before failing' do
+            allow(vm).to receive(:powered_on?).and_return(false)
+            allow(vm).to receive(:power_state)
+            expect(vm).to_not receive(:power_off)
+            first_error = StandardError.new('first error')
+            second_error = StandardError.new('second error')
+            expect(vm).to receive(:power_on).ordered.and_raise(first_error)
+            expect(vm).to receive(:power_on).ordered.and_raise(second_error)
+            expect {
+              vsphere_cloud.reboot_vm('vm-id')
+            }.to raise_error(second_error)
+          end
+        end
+      end
+    end
   end
 end

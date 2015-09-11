@@ -163,11 +163,11 @@ module VSphereCloud
         end
       end
 
-      private
-
       def power_state
         properties['runtime.powerState']
       end
+
+      private
 
       def properties
         @properties ||= cloud_searcher.get_properties(
