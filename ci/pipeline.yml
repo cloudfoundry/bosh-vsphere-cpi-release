@@ -164,7 +164,7 @@ jobs:
             BOSH_VSPHERE_VCENTER_FOLDER_PREFIX:           {{ubuntu_BOSH_VSPHERE_VCENTER_FOLDER_PREFIX}}
 
   - name: deploy-centos-manual
-    serial_groups: [centos] # shouldn't deploy while bats are running
+    serial_groups: [centos-director-manual] # shouldn't deploy while bats are running
     plan:
       - aggregate:
         - {trigger: true,  passed: [build-candidate], get: bosh-cpi-dev-artifacts}
