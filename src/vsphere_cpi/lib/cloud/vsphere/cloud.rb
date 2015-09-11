@@ -10,6 +10,7 @@ module VSphereCloud
     class TimeoutException < StandardError; end
 
     attr_accessor :client
+    attr_reader :datacenter
 
     def initialize(options)
       @config = Config.build(options)

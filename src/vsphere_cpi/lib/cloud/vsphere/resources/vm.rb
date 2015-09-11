@@ -64,6 +64,12 @@ module VSphereCloud
         end
       end
 
+      def ephemeral_disk
+        devices.find do |device|
+          device.kind_of?(Vim::Vm::Device::VirtualDisk) && device.backing.file_name =~ /#{VSphereCloud::EphemeralDisk::DISK_NAME}.vmdk$/
+        end
+      end
+
       def pci_controller
         devices.find { |device| device.kind_of?(Vim::Vm::Device::VirtualPCIController) }
       end

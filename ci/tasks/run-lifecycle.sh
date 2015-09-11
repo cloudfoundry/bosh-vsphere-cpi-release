@@ -13,6 +13,7 @@ check_param BOSH_VSPHERE_CPI_CLUSTER
 check_param BOSH_VSPHERE_CPI_DATASTORE_PATTERN
 check_param BOSH_VSPHERE_CPI_PERSISTENT_DATASTORE_PATTERN
 check_param BOSH_VSPHERE_CPI_SECOND_DATASTORE
+check_param BOSH_VSPHERE_CPI_LOCAL_DATASTORE_PATTERN
 check_param BOSH_VSPHERE_CPI_RESOURCE_POOL
 check_param BOSH_VSPHERE_CPI_SECOND_RESOURCE_POOL
 check_param BOSH_VSPHERE_CPI_SECOND_CLUSTER
@@ -42,9 +43,9 @@ popd
 echo "installed mkisofs at:" 
 which mkisofs
 
-cd bosh-cpi-release/src/vsphere_cpi
+export BOSH_VSPHERE_STEMCELL=$PWD/stemcell/stemcell.tgz
 
-export BOSH_VSPHERE_STEMCELL=../../../stemcell/stemcell.tgz
-
-bundle install
-bundle exec rspec spec/integration/lifecycle_spec.rb
+pushd bosh-cpi-release/src/vsphere_cpi
+  bundle install
+  bundle exec rspec spec/integration/lifecycle_spec.rb
+popd

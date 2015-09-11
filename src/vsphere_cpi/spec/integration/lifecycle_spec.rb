@@ -19,6 +19,7 @@ describe VSphereCloud::Cloud, external_cpi: false do
     @template_folder = ENV.fetch('BOSH_VSPHERE_CPI_TEMPLATE_FOLDER')
     @disk_path = ENV.fetch('BOSH_VSPHERE_CPI_DISK_PATH')
     @datastore_pattern = ENV.fetch('BOSH_VSPHERE_CPI_DATASTORE_PATTERN')
+    @local_datastore_pattern = ENV.fetch('BOSH_VSPHERE_CPI_LOCAL_DATASTORE_PATTERN')
     @persistent_datastore_pattern = ENV.fetch('BOSH_VSPHERE_CPI_PERSISTENT_DATASTORE_PATTERN')
     @cluster = ENV.fetch('BOSH_VSPHERE_CPI_CLUSTER')
     @resource_pool_name = ENV.fetch('BOSH_VSPHERE_CPI_RESOURCE_POOL')
@@ -32,6 +33,19 @@ describe VSphereCloud::Cloud, external_cpi: false do
     config.logger.level = Logger::DEBUG
     config.uuid = '123'
     Bosh::Clouds::Config.configure(config)
+
+    @local_disk_cpi_options = cpi_options(
+      datastore_pattern: @local_datastore_pattern,
+      persistent_datastore_pattern: @persistent_datastore_pattern
+    )
+    LifecycleHelpers.verify_local_disk_infrastructure(@local_disk_cpi_options)
+
+    Dir.mktmpdir do |temp_dir|
+      output = `tar -C #{temp_dir} -xzf #{@stemcell_path} 2>&1`
+      raise "Corrupt image, tar exit status: #{$?.exitstatus} output: #{output}" if $?.exitstatus != 0
+      cpi = described_class.new(cpi_options)
+      @stemcell_id = cpi.create_stemcell("#{temp_dir}/image", nil)
+    end
   end
 
   def cpi_options(options = {})
@@ -67,15 +81,6 @@ describe VSphereCloud::Cloud, external_cpi: false do
   end
 
   subject(:cpi) { described_class.new(cpi_options) }
-
-  before(:all) do
-    Dir.mktmpdir do |temp_dir|
-      output = `tar -C #{temp_dir} -xzf #{@stemcell_path} 2>&1`
-      raise "Corrupt image, tar exit status: #{$?.exitstatus} output: #{output}" if $?.exitstatus != 0
-      cpi = described_class.new(cpi_options)
-      @stemcell_id = cpi.create_stemcell("#{temp_dir}/image", nil)
-    end
-  end
 
   after(:all) {
     cpi = described_class.new(cpi_options)
@@ -151,7 +156,7 @@ describe VSphereCloud::Cloud, external_cpi: false do
     }
   }
 
-  def clean_up_vm_and_disk
+  def clean_up_vm_and_disk(cpi)
     cpi.delete_vm(@vm_id) if @vm_id
     @vm_id = nil
     cpi.delete_disk(@disk_id) if @disk_id
@@ -161,7 +166,7 @@ describe VSphereCloud::Cloud, external_cpi: false do
   describe 'lifecycle' do
     before { @vm_id = nil }
     before { @disk_id = nil }
-    after { clean_up_vm_and_disk }
+    after { clean_up_vm_and_disk(cpi) }
 
     context 'without existing disks' do
       it 'should exercise the vm lifecycle' do
@@ -170,7 +175,7 @@ describe VSphereCloud::Cloud, external_cpi: false do
     end
 
     context 'without existing disks and placer' do
-      after { clean_up_vm_and_disk }
+      after { clean_up_vm_and_disk(cpi) }
 
       context 'when resource_pool is set to the first cluster' do
         it 'places vm in first cluster' do
@@ -243,7 +248,7 @@ describe VSphereCloud::Cloud, external_cpi: false do
         described_class.new(options)
       end
 
-      after { clean_up_vm_and_disk }
+      after { clean_up_vm_and_disk(first_datastore_cpi) }
 
       it 'can exercise lifecycle with either cpi' do
         @vm_id = first_datastore_cpi.create_vm(
@@ -307,7 +312,7 @@ describe VSphereCloud::Cloud, external_cpi: false do
       end
 
       after do
-        clean_up_vm_and_disk
+        clean_up_vm_and_disk(cpi)
         client.move_into_root_folder([datacenter])
         client.delete_folder(folder)
       end
@@ -318,7 +323,7 @@ describe VSphereCloud::Cloud, external_cpi: false do
     end
 
     context 'when disk is being re-attached' do
-      after { clean_up_vm_and_disk }
+      after { clean_up_vm_and_disk(cpi) }
 
       it 'does not lock cd-rom' do
         vm_lifecycle([], resource_pool)
@@ -328,7 +333,7 @@ describe VSphereCloud::Cloud, external_cpi: false do
     end
 
     context 'when vm was migrated to another datastore within first cluster' do
-      after { clean_up_vm_and_disk }
+      after { clean_up_vm_and_disk(cpi) }
       subject(:cpi) do
         options = cpi_options(
           clusters: [{ @cluster => {'resource_pool' => @resource_pool_name} }]
@@ -350,7 +355,7 @@ describe VSphereCloud::Cloud, external_cpi: false do
     end
 
     context 'when disk is in non-accessible datastore' do
-      after { clean_up_vm_and_disk }
+      after { clean_up_vm_and_disk(cpi) }
 
       let(:vm_cluster) { @cluster }
       let(:cpi_for_vm) do
@@ -438,8 +443,29 @@ describe VSphereCloud::Cloud, external_cpi: false do
       end
     end
 
+    context 'when using local storage for the ephemeral storage pattern' do
+      let(:local_disk_cpi) { described_class.new(@local_disk_cpi_options) }
+
+      after { clean_up_vm_and_disk(local_disk_cpi) }
+
+      it 'places ephemeral and persistent disks properly' do
+        @vm_id = local_disk_cpi.create_vm('agent-007', @stemcell_id, resource_pool, network_spec)
+        vm = local_disk_cpi.vm_provider.find(@vm_id)
+        ephemeral_disk = vm.ephemeral_disk
+        expect(ephemeral_disk).to_not be_nil
+        expect(ephemeral_disk.backing.datastore.name).to match(@local_datastore_pattern)
+
+        @disk_id = local_disk_cpi.create_disk(2048, {}, @vm_id)
+        expect(@disk_id).to_not be_nil
+        disk = local_disk_cpi.disk_provider.find(@disk_id)
+        expect(disk.datastore.name).to match(@persistent_datastore_pattern)
+        local_disk_cpi.attach_disk(@vm_id, @disk_id)
+        expect(local_disk_cpi.has_disk?(@disk_id)).to be(true)
+      end
+    end
+
     context 'when stemcell is replicated multiple times' do
-      after { clean_up_vm_and_disk }
+      after { clean_up_vm_and_disk(cpi) }
 
       it 'handles each thread properly' do
         datastore_name = @second_datastore_within_cluster
@@ -501,6 +527,43 @@ describe VSphereCloud::Cloud, external_cpi: false do
         expect(second_stemcell_vm.__mo_id__).to eq(found_vm.__mo_id__)
         expect(third_stemcell_vm.__mo_id__).to eq(found_vm.__mo_id__)
         expect(fourth_stemcell_vm.__mo_id__).to eq(found_vm.__mo_id__)
+      end
+    end
+  end
+end
+
+class LifecycleHelpers
+  class << self
+    def verify_local_disk_infrastructure(cpi_options)
+      pattern = cpi_options['vcenters'].first['datacenters'].first['datastore_pattern']
+      cpi_using_future_version_of_api = VSphereCloud::Cloud.new(cpi_options)
+      all_ephemeral_datastores = ephemeral_datastores(cpi_using_future_version_of_api)
+      if(all_ephemeral_datastores.empty?)
+        fail(
+          <<-EOF
+No datastores found matching `BOSH_VSPHERE_CPI_LOCAL_DATASTORE_PATTERN`(/#{pattern}/).
+Please ensure you provide a pattern that match datastores that are only accessible by a single host.
+EOF
+        )
+      end
+      nonlocal_disk_ephemeral_datastores = all_ephemeral_datastores.select { |_, datastore| datastore.mob.summary.multiple_host_access }
+      unless (nonlocal_disk_ephemeral_datastores.empty?)
+        fail(
+          <<-EOF
+Some datastores found maching `BOSH_VSPHERE_CPI_LOCAL_DATASTORE_PATTERN`(/#{pattern}/)
+are configured to allow multiple hosts to access them:
+#{nonlocal_disk_ephemeral_datastores}.
+Please ensure all datastores matching /#{pattern}/ are actually configured to only be accessible by a single host.
+        EOF
+        )
+      end
+    end
+
+    def ephemeral_datastores(cpi)
+      clusters = cpi.datacenter.clusters
+      clusters.inject({}) do |acc, kv|
+        cluster = kv.last
+        acc.merge!(cluster.ephemeral_datastores)
       end
     end
   end

@@ -2,6 +2,7 @@ require 'cloud/vsphere/resources/disk/disk_config'
 
 module VSphereCloud
   class EphemeralDisk
+    DISK_NAME = 'ephemeral_disk'
     def initialize(size_in_mb, folder_name, datastore)
       @folder_name = folder_name
       @datastore = datastore
@@ -15,7 +16,7 @@ module VSphereCloud
     private
 
     def filename
-      "[#{@datastore.name}] #{@folder_name}/ephemeral_disk.vmdk"
+      "[#{@datastore.name}] #{@folder_name}/#{DISK_NAME}.vmdk"
     end
   end
 end
