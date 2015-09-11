@@ -19,7 +19,7 @@ describe VSphereCloud::Cloud, external_cpi: false do
     @template_folder = ENV.fetch('BOSH_VSPHERE_CPI_TEMPLATE_FOLDER')
     @disk_path = ENV.fetch('BOSH_VSPHERE_CPI_DISK_PATH')
     @datastore_pattern = ENV.fetch('BOSH_VSPHERE_CPI_DATASTORE_PATTERN')
-    @local_datastore_pattern = ENV.fetch('BOSH_VSPHERE_CPI_LOCAL_DATASTORE_PATTERN')
+    @local_datastore_pattern = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_LOCAL_DATASTORE_PATTERN')
     @persistent_datastore_pattern = ENV.fetch('BOSH_VSPHERE_CPI_PERSISTENT_DATASTORE_PATTERN')
     @cluster = ENV.fetch('BOSH_VSPHERE_CPI_CLUSTER')
     @resource_pool_name = ENV.fetch('BOSH_VSPHERE_CPI_RESOURCE_POOL')
@@ -534,6 +534,15 @@ end
 
 class LifecycleHelpers
   class << self
+    MISSING_KEY_MESSAGES = {
+      'BOSH_VSPHERE_CPI_LOCAL_DATASTORE_PATTERN' => 'Please ensure you provide a pattern that match datastores that are only accessible by a single host.'
+    }
+
+    def fetch_property(property)
+      fail "Missing Environment varibale #{property}: #{MISSING_KEY_MESSAGES[property]}" unless(ENV.has_key?(property))
+      ENV[property]
+    end
+
     def verify_local_disk_infrastructure(cpi_options)
       pattern = cpi_options['vcenters'].first['datacenters'].first['datastore_pattern']
       cpi_using_future_version_of_api = VSphereCloud::Cloud.new(cpi_options)
@@ -542,7 +551,7 @@ class LifecycleHelpers
         fail(
           <<-EOF
 No datastores found matching `BOSH_VSPHERE_CPI_LOCAL_DATASTORE_PATTERN`(/#{pattern}/).
-Please ensure you provide a pattern that match datastores that are only accessible by a single host.
+#{MISSING_KEY_MESSAGES['BOSH_VSPHERE_CPI_LOCAL_DATASTORE_PATTERN']}
 EOF
         )
       end
@@ -553,7 +562,7 @@ EOF
 Some datastores found maching `BOSH_VSPHERE_CPI_LOCAL_DATASTORE_PATTERN`(/#{pattern}/)
 are configured to allow multiple hosts to access them:
 #{nonlocal_disk_ephemeral_datastores}.
-Please ensure all datastores matching /#{pattern}/ are actually configured to only be accessible by a single host.
+#{MISSING_KEY_MESSAGES['BOSH_VSPHERE_CPI_LOCAL_DATASTORE_PATTERN']}
         EOF
         )
       end
