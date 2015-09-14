@@ -46,6 +46,6 @@ which mkisofs
 export BOSH_VSPHERE_STEMCELL=$PWD/stemcell/stemcell.tgz
 
 pushd bosh-cpi-release/src/vsphere_cpi
-  ./scripts/bundle_from_local_cache
+  bundle install
   bundle exec rspec spec/integration/lifecycle_spec.rb
 popd

@@ -14,7 +14,7 @@ cd bosh-cpi-release
 
 echo "running unit tests"
 pushd src/vsphere_cpi
-  ./scripts/bundle_from_local_cache
+  bundle install
   bundle exec rspec spec/unit/*
 popd
 
