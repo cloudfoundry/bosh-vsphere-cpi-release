@@ -64,7 +64,7 @@ module VSphereCloud
         context 'when disk is in one of accessible datastores' do
           let(:datastore) { instance_double('VSphereCloud::Resources::Datastore', name: 'fake-datastore') }
           let(:accessible_datastores) { [datastore.name] }
-          let(:disk) { Resources::Disk.new('disk-cid',0, datastore, "[data-store-name] fake-disk-path/disk-cid.vmdk") }
+          let(:disk) { Resources::Disk.new('disk-cid',0, datastore, "[#{datastore.name}] fake-disk-path/disk-cid.vmdk") }
           before do
             allow(datacenter).to receive(:persistent_datastores).and_return({'fake-datastore' => datastore})
             allow(client).to receive(:find_disk).with('disk-cid', datastore, 'fake-disk-path') { disk }
@@ -74,6 +74,45 @@ module VSphereCloud
             it 'returns disk' do
               expect(disk_provider.find_and_move('disk-cid', cluster, 'fake-datacenter', accessible_datastores)).
                 to eq(disk)
+            end
+          end
+
+          context 'when disk is not in persistent datastores' do
+            let(:persistent_datastore) { instance_double('VSphereCloud::Resources::Datastore', name: 'persistent-datastore') }
+            before do
+              allow(datacenter).to receive(:persistent_datastores).and_return({persistent_datastore.name => persistent_datastore})
+              allow(datacenter).to receive(:all_datastores).and_return({
+                    persistent_datastore.name => persistent_datastore,
+                    datastore.name => datastore
+              })
+              allow(client).to receive(:find_disk).with('disk-cid', persistent_datastore, 'fake-disk-path') { nil }
+              allow(resources).to receive(:pick_persistent_datastore_in_cluster).and_return(persistent_datastore)
+            end
+
+            context 'and persistent datastore is accessible' do
+              let(:accessible_datastores) { [datastore.name, persistent_datastore.name] }
+              it 'moves disk' do
+                expect(client).to receive(:move_disk).with(
+                    'fake-host-datacenter',
+                    "[#{datastore.name}] fake-disk-path/disk-cid.vmdk",
+                    'fake-host-datacenter',
+                    "[#{persistent_datastore.name}] fake-disk-path/disk-cid.vmdk"
+                  )
+
+                disk = disk_provider.find_and_move('disk-cid', cluster, 'fake-host-datacenter', accessible_datastores)
+
+                expect(disk.cid).to eq('disk-cid')
+                expect(disk.datastore.name).to eq(persistent_datastore.name)
+                expect(disk.path).to eq("[#{persistent_datastore.name}] fake-disk-path/disk-cid.vmdk")
+              end
+            end
+
+            context 'and persistent datastore is not accessible' do
+              it 'raises an error' do
+                expect {
+                  disk_provider.find_and_move('disk-cid', cluster, 'fake-host-datacenter', accessible_datastores)
+                }.to raise_error "Datastore '#{persistent_datastore.name}' is not accessible to cluster 'fake-cluster-name'"
+              end
             end
           end
         end

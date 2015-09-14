@@ -26,7 +26,9 @@ module VSphereCloud
 
     def find_and_move(disk_cid, cluster, datacenter, accessible_datastores)
       disk = find(disk_cid)
-      return disk if accessible_datastores.include?(disk.datastore.name)
+      disk_in_persistent_datastore = @datacenter.persistent_datastores.include?(disk.datastore.name)
+      disk_in_accessible_datastore = accessible_datastores.include?(disk.datastore.name)
+      return disk if disk_in_persistent_datastore && disk_in_accessible_datastore
 
       destination_datastore = @resources.pick_persistent_datastore_in_cluster(cluster.name, disk.size_in_mb)
 

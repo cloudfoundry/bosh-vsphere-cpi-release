@@ -248,9 +248,7 @@ describe VSphereCloud::Cloud, external_cpi: false do
         described_class.new(options)
       end
 
-      after { clean_up_vm_and_disk(first_datastore_cpi) }
-
-      it 'can exercise lifecycle with either cpi' do
+      before do
         @vm_id = first_datastore_cpi.create_vm(
           'agent-007',
           @stemcell_id,
@@ -266,7 +264,13 @@ describe VSphereCloud::Cloud, external_cpi: false do
         @disk_id = first_datastore_cpi.create_disk(2048, {}, @vm_id)
         expect(@disk_id).to_not be_nil
         expect(first_datastore_cpi.has_disk?(@disk_id)).to be(true)
+        disk = first_datastore_cpi.disk_provider.find(@disk_id)
+        expect(disk.datastore.name).to match(@persistent_datastore_pattern)
+      end
 
+      after { clean_up_vm_and_disk(first_datastore_cpi) }
+
+      it 'can exercise lifecycle with the cpi configured with a new datastore pattern' do
         # second cpi can see disk in datastore outside of its datastore pattern
         expect(second_datastore_cpi.has_disk?(@disk_id)).to be(true)
 
@@ -285,6 +289,16 @@ describe VSphereCloud::Cloud, external_cpi: false do
           first_datastore_cpi.disk_provider.find(@disk_id)
         }.to raise_error(Bosh::Clouds::DiskNotFound)
         @disk_id = nil
+      end
+
+      it '#attach_disk can move the disk to the new datastore pattern' do
+        second_datastore_cpi.attach_disk(@vm_id, @disk_id)
+
+        disk = second_datastore_cpi.disk_provider.find(@disk_id)
+        expect(disk.cid).to eq(@disk_id)
+        expect(disk.datastore.name).to match(@second_datastore_within_cluster)
+
+        second_datastore_cpi.detach_disk(@vm_id, @disk_id)
       end
     end
 
