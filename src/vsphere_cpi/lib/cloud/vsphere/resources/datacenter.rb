@@ -27,7 +27,7 @@ module VSphereCloud
 
       def mob
         mob = @client.find_by_inventory_path(name)
-        raise "Datacenter: #{name} not found" if mob.nil?
+        raise "Datacenter '#{name}' not found" if mob.nil?
         mob
       end
 
@@ -100,14 +100,14 @@ module VSphereCloud
         datastores = persistent_datastores.values
         available_datastores = datastores.reject { |datastore| datastore.free_space - size < DISK_HEADROOM }
 
-        @logger.debug("Looking for a #{type} datastore with #{size}MB free space.")
+        @logger.debug("Looking for a '#{type}' datastore with #{size}MB free space.")
         @logger.debug("All datastores: #{datastores.map(&:debug_info)}")
         @logger.debug("Datastores with enough space: #{available_datastores.map(&:debug_info)}")
 
         selected_datastore = Util.weighted_random(available_datastores.map { |datastore| [datastore, datastore.free_space] })
 
         if selected_datastore.nil?
-          raise Bosh::Clouds::NoDiskSpace.new(true), "Couldn't find a #{type} datastore with #{size}MB of free space. Found:\n #{datastores.map(&:debug_info).join("\n ")}\n"
+          raise Bosh::Clouds::NoDiskSpace.new(true), "Couldn't find a '#{type}' datastore with #{size}MB of free space. Found:\n #{datastores.map(&:debug_info).join("\n ")}\n"
         end
         selected_datastore
       end

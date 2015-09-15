@@ -9,13 +9,13 @@ module VSphereCloud
 
       def find(name, config)
         cluster_mob = cluster_mobs[name]
-        raise "Can't find cluster: #{name}" if cluster_mob.nil?
+        raise "Can't find cluster '#{name}'" if cluster_mob.nil?
 
         cluster_properties = @client.cloud_searcher.get_properties(
           cluster_mob, VimSdk::Vim::ClusterComputeResource,
           Cluster::PROPERTIES, :ensure_all => true
         )
-        raise "Can't find properties for cluster: #{name}" if cluster_properties.nil?
+        raise "Can't find properties for cluster '#{name}'" if cluster_properties.nil?
 
         Cluster.new(
           @datacenter,

@@ -292,7 +292,7 @@ class VSphereCloud::Resources
         end
 
         it 'raises an exception' do
-          expect { cluster.free_memory }.to raise_error("Failed to get utilization for resource pool #{fake_resource_pool}")
+          expect { cluster.free_memory }.to raise_error("Failed to get utilization for resource pool '#{fake_resource_pool}'")
         end
       end
     end

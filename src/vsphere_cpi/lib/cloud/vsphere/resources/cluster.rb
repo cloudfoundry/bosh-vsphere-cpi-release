@@ -212,7 +212,7 @@ module VSphereCloud
       # @return [void]
       def fetch_resource_pool_utilization
         properties = @client.cloud_searcher.get_properties(resource_pool.mob, Vim::ResourcePool, 'summary')
-        raise "Failed to get utilization for resource pool #{resource_pool}" if properties.nil?
+        raise "Failed to get utilization for resource pool '#{resource_pool}'" if properties.nil?
 
         runtime_info = properties["summary"].runtime
 

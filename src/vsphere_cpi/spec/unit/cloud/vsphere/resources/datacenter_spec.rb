@@ -96,7 +96,7 @@ describe VSphereCloud::Resources::Datacenter do
     context 'when mob is not found' do
       before { allow(client).to receive(:find_by_inventory_path).with('fake-datacenter-name').and_return(nil) }
       it 'raises' do
-        expect { datacenter.mob }.to raise_error(RuntimeError, 'Datacenter: fake-datacenter-name not found')
+        expect { datacenter.mob }.to raise_error(RuntimeError, "Datacenter 'fake-datacenter-name' not found")
       end
 
     end
@@ -207,7 +207,7 @@ describe VSphereCloud::Resources::Datacenter do
                            ensure_all: true).and_return({ cluster_mob2 => {} })
 
 
-        expect { datacenter.clusters }.to raise_error(/Can't find cluster: cluster1/)
+        expect { datacenter.clusters }.to raise_error(/Can't find cluster 'cluster1'/)
       end
     end
   end
@@ -309,7 +309,7 @@ describe VSphereCloud::Resources::Datacenter do
     it 'logs a bunch of debug info since it is really hard to know what happening otherwise' do
       datacenter.pick_persistent_datastore(1024)
 
-      expect(log_output.string).to include 'Looking for a persistent datastore with 1024MB free space.'
+      expect(log_output.string).to include "Looking for a 'persistent' datastore with 1024MB free space."
       expect(log_output.string).to include 'All datastores: ["ds1 (2048MB free of 20000MB capacity)", "ds2 (3072MB free of 20000MB capacity)", "ds3 (1536MB free of 20000MB capacity)"]'
       expect(log_output.string).to include 'Datastores with enough space: ["ds1 (2048MB free of 20000MB capacity)", "ds2 (3072MB free of 20000MB capacity)"]'
     end
@@ -322,7 +322,7 @@ describe VSphereCloud::Resources::Datacenter do
           expect(error).to be_an_instance_of(Bosh::Clouds::NoDiskSpace)
           expect(error.ok_to_retry).to be(true)
           expect(error.message).to eq(<<-MSG)
-Couldn't find a persistent datastore with 10000MB of free space. Found:
+Couldn't find a 'persistent' datastore with 10000MB of free space. Found:
  ds1 (2048MB free of 20000MB capacity)
  ds2 (3072MB free of 20000MB capacity)
  ds3 (1536MB free of 20000MB capacity)

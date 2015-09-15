@@ -50,7 +50,7 @@ module VSphereCloud
             end
           end
           unless remaining_properties.empty?
-            raise MissingPropertiesException.new("The object[s] #{obj} " +
+            raise MissingPropertiesException.new("The object[s] '#{obj}' " +
               "should have the following properties: #{properties.pretty_inspect}, " +
               "but they were missing these: #{remaining_properties.pretty_inspect}.")
           end
@@ -93,8 +93,8 @@ module VSphereCloud
 
     def get_managed_object(type, options)
       result = get_managed_objects(type, options)
-      raise "Could not find #{type}: #{options.pretty_inspect}" if result.length == 0
-      raise "Found more than one #{type}: #{options.pretty_inspect}" if result.length > 1
+      raise "Could not find '#{type}': #{options.pretty_inspect}" if result.length == 0
+      raise "Found more than one '#{type}': #{options.pretty_inspect}" if result.length > 1
       result.first
     end
 

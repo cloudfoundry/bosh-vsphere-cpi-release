@@ -135,7 +135,7 @@ describe VSphereCloud::Resources::Folder do
       end
 
       it 'raise an error' do
-        expect{folder.mob}.to raise_error("Root VM Folder not found: fake-datacenter-name/vm")
+        expect{folder.mob}.to raise_error("Root VM Folder not found 'fake-datacenter-name/vm'")
       end
     end
   end

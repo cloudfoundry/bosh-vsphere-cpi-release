@@ -141,7 +141,7 @@ describe VSphereCloud::VmCreator do
       it 'raises an error' do
         expect {
           creator.create(nil, 'sc-beef', nil, [], {})
-        }.to raise_error('Could not find VM for stemcell: sc-beef')
+        }.to raise_error("Could not find VM for stemcell 'sc-beef'")
       end
     end
 

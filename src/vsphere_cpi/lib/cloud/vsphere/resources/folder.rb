@@ -18,7 +18,7 @@ module VSphereCloud
       def find_or_create_folder(path_components)
         if path_components.empty?
           folder = root_vm_folder
-          raise "Root VM Folder not found: #{@datacenter_name}/vm" if folder.nil?
+          raise "Root VM Folder not found '#{@datacenter_name}/vm'" if folder.nil?
           return folder
         end
 

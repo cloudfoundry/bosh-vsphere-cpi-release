@@ -27,7 +27,7 @@ module VSphereCloud
         }.to raise_error do |error|
           expect(error).to be_an_instance_of(Bosh::Clouds::CloudError)
           expect(error.message).to match(/not a real cluster/)
-          expect(error.message).to include('Found ["bar", "baz"]')
+          expect(error.message).to include('Found: ["bar", "baz"]')
         end
       end
     end

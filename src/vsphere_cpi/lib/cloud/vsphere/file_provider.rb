@@ -19,7 +19,7 @@ module VSphereCloud
         elsif response.code == 404
           nil
         else
-          raise "Could not fetch file: #{url}, status code: #{response.code}"
+          raise "Could not fetch file '#{url}', received status code '#{response.code}'"
         end
       end
     end
@@ -35,7 +35,7 @@ module VSphereCloud
           { 'Content-Type' => 'application/octet-stream', 'Content-Length' => contents.length })
 
         unless response.code < 400
-          raise "Could not upload file: #{url}, status code: #{response.code}"
+          raise "Could not upload file '#{url}', received status code '#{response.code}'"
         end
       end
     end

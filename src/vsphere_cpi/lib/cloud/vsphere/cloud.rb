@@ -335,7 +335,7 @@ module VSphereCloud
 
         vm.reload
         virtual_disk = vm.disk_by_cid(disk.cid)
-        raise Bosh::Clouds::DiskNotAttached.new(true), "Disk (#{disk.cid}) is not attached to VM (#{vm.cid})" if virtual_disk.nil?
+        raise Bosh::Clouds::DiskNotAttached.new(true), "Disk '#{disk.cid}' is not attached to VM '#{vm.cid}'" if virtual_disk.nil?
 
         config = Vim::Vm::ConfigSpec.new
         config.device_change = []
@@ -354,7 +354,7 @@ module VSphereCloud
           break if virtual_disk.nil?
           sleep(1.0)
         end
-        raise "Failed to detach disk: #{disk.cid} from vm: #{vm.cid}" unless virtual_disk.nil?
+        raise "Failed to detach disk '#{disk.cid}' from vm '#{vm.cid}'" unless virtual_disk.nil?
 
         @logger.info('Finished detaching disk')
       end
@@ -389,7 +389,7 @@ module VSphereCloud
     def replicate_stemcell(cluster, datastore, stemcell)
       stemcell_vm_path_components = [cluster.datacenter.name, 'vm', cluster.datacenter.template_folder.path_components, stemcell]
       stemcell_vm = client.find_by_inventory_path(stemcell_vm_path_components)
-      raise "Could not find VM for stemcell: #{stemcell} at path '#{stemcell_vm_path_components.join("/")}'" if stemcell_vm.nil?
+      raise "Could not find VM for stemcell '#{stemcell}' at path '#{stemcell_vm_path_components.join("/")}'" if stemcell_vm.nil?
       stemcell_datastore = @cloud_searcher.get_property(stemcell_vm, Vim::VirtualMachine, 'datastore', ensure_all: true)
 
       if stemcell_datastore != datastore.mob
@@ -524,7 +524,7 @@ module VSphereCloud
     end
 
     def create_nic_config_spec(v_network_name, network, controller_key, dvs_index)
-      raise "Invalid network: #{v_network_name}" if network.nil?
+      raise "Invalid network '#{v_network_name}'" if network.nil?
       if network.class == Vim::Dvs::DistributedVirtualPortgroup
         portgroup_properties = @cloud_searcher.get_properties(network,
                                                      Vim::Dvs::DistributedVirtualPortgroup,
