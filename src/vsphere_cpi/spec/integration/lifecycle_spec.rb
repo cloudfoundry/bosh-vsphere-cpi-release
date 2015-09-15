@@ -1,5 +1,4 @@
 require 'spec_helper'
-require 'bosh/cpi/compatibility_helpers/delete_vm'
 require 'tempfile'
 require 'yaml'
 
@@ -87,8 +86,17 @@ describe VSphereCloud::Cloud, external_cpi: false do
     cpi.delete_stemcell(@stemcell_id) if @stemcell_id
   }
 
-  extend Bosh::Cpi::CompatibilityHelpers
-  it_can_delete_non_existent_vm
+  describe "deleting things that do not exist" do
+    it "raises the appropriate Clouds::Error" do
+      expect {
+        cpi.delete_vm('fake-vm-cid')
+      }.to raise_error(Bosh::Clouds::VMNotFound)
+
+      expect {
+        cpi.delete_disk('fake-disk-cid')
+      }.to raise_error(Bosh::Clouds::DiskNotFound)
+    end
+  end
 
   def network_spec
     {

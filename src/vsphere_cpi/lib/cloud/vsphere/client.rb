@@ -62,7 +62,7 @@ module VSphereCloud
       raise 'Recommendations were detected, you may be running in Manual DRS mode. Aborting.' if result.recommendations.any?
 
       if result.attempted.empty?
-        raise "Could not power on VM: #{result.not_attempted.map(&:msg).join(', ')}"
+        raise "Could not power on VM '#{vm}': #{result.not_attempted.map(&:msg).join(', ')}"
       else
         task = result.attempted.first.task
         wait_for_task(task)
@@ -152,7 +152,7 @@ module VSphereCloud
         )[task]
 
         duration = Time.now - started
-        raise "Task taking too long" if duration > 3600 # 1 hour
+        raise "Task exceeded 60 minutes, task properties: #{properties}" if duration > 3600 # 1 hour
 
         # Update the polling interval based on task progress
         if properties["info.progress"] && properties["info.progress"] > 0

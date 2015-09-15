@@ -19,7 +19,7 @@ module VSphereCloud
 
     def create(agent_id, stemcell_cid, networks, persistent_disk_cids, environment)
       stemcell_vm = @cpi.stemcell_vm(stemcell_cid)
-      raise "Could not find stemcell: #{stemcell_cid}" if stemcell_vm.nil?
+      raise "Could not find VM for stemcell: #{stemcell_cid}" if stemcell_vm.nil?
 
       stemcell_size =
         @cloud_searcher.get_property(stemcell_vm, VimSdk::Vim::VirtualMachine, 'summary.storage.committed', ensure_all: true)
@@ -118,7 +118,7 @@ module VSphereCloud
       rule_config = @placer.drs_rules.first
 
       if rule_config['type'] != 'separate_vms'
-        raise "vSphere CPI only supports DRS rule of 'separate_vms' type"
+        raise "vSphere CPI only supports DRS rule of 'separate_vms' type, not '#{rule_config['type']}'"
       end
 
       drs_rule = VSphereCloud::DrsRule.new(

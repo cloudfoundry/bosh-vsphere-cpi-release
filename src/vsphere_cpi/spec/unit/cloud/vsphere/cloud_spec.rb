@@ -114,7 +114,7 @@ module VSphereCloud
 
           expect {
             vsphere_cloud.replicate_stemcell(cluster, datastore, 'fake_stemcell_id')
-          }.to raise_error(/Could not find stemcell/)
+          }.to raise_error(/Could not find VM for stemcell/)
         end
       end
 

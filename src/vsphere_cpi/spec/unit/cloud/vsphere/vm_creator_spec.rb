@@ -1,4 +1,5 @@
 require 'spec_helper'
+require 'cloud/vsphere/drs_rules/drs_rule'
 
 describe VSphereCloud::VmCreator do
   describe '#create' do
@@ -140,7 +141,7 @@ describe VSphereCloud::VmCreator do
       it 'raises an error' do
         expect {
           creator.create(nil, 'sc-beef', nil, [], {})
-        }.to raise_error('Could not find stemcell: sc-beef')
+        }.to raise_error('Could not find VM for stemcell: sc-beef')
       end
     end
 

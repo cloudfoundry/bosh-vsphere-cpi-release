@@ -72,10 +72,10 @@ module VSphereCloud
         Dir.mktmpdir do |temp_dir|
           @logger.info("Extracting stemcell to: #{temp_dir}")
           output = `tar -C #{temp_dir} -xzf #{image} 2>&1`
-          raise "Corrupt image, tar exit status: #{$?.exitstatus} output: #{output}" if $?.exitstatus != 0
+          raise "Corrupt image '#{image}', tar exit status: #{$?.exitstatus}, output: #{output}" if $?.exitstatus != 0
 
           ovf_file = Dir.entries(temp_dir).find { |entry| File.extname(entry) == '.ovf' }
-          raise 'Missing OVF' if ovf_file.nil?
+          raise "Missing OVF for stemcell '#{stemcell}'" if ovf_file.nil?
           ovf_file = File.join(temp_dir, ovf_file)
 
           name = "sc-#{SecureRandom.uuid}"
@@ -387,9 +387,9 @@ module VSphereCloud
     end
 
     def replicate_stemcell(cluster, datastore, stemcell)
-      stemcell_vm = client.find_by_inventory_path([cluster.datacenter.name, 'vm',
-                                                   cluster.datacenter.template_folder.path_components, stemcell])
-      raise "Could not find stemcell: #{stemcell}" if stemcell_vm.nil?
+      stemcell_vm_path_components = [cluster.datacenter.name, 'vm', cluster.datacenter.template_folder.path_components, stemcell]
+      stemcell_vm = client.find_by_inventory_path(stemcell_vm_path_components)
+      raise "Could not find VM for stemcell: #{stemcell} at path '#{stemcell_vm_path_components.join("/")}'" if stemcell_vm.nil?
       stemcell_datastore = @cloud_searcher.get_property(stemcell_vm, Vim::VirtualMachine, 'datastore', ensure_all: true)
 
       if stemcell_datastore != datastore.mob
@@ -482,7 +482,7 @@ module VSphereCloud
 
         unless datastore_name
           devices = vm_properties['config.hardware.device']
-          datastore = get_primary_datastore(devices)
+          datastore = get_primary_datastore(devices, vm_name)
           datastore_name = @cloud_searcher.get_property(datastore, Vim::Datastore, 'name')
         end
       end
@@ -490,17 +490,16 @@ module VSphereCloud
       { datacenter: datacenter_name, datastore: datastore_name, vm: vm_name }
     end
 
-    def get_primary_datastore(devices)
+    def get_primary_datastore(devices, vm_name = nil)
       ephemeral_disks = devices.select { |device| device.kind_of?(Vim::Vm::Device::VirtualDisk) &&
         device.backing.disk_mode != Vim::Vm::Device::VirtualDiskOption::DiskMode::INDEPENDENT_PERSISTENT }
 
-      datastore = nil
-      ephemeral_disks.each do |disk|
-        if datastore
-          raise 'Ephemeral disks should all be on the same datastore.' unless datastore.eql?(disk.backing.datastore)
-        else
-          datastore = disk.backing.datastore
-        end
+      datastore = ephemeral_disks.first.backing.datastore
+      disk_in_wrong_datastore = ephemeral_disks.find { |disk| !datastore.eql?(disk.backing.datastore) }
+      if disk_in_wrong_datastore
+        error_msg = vm_name ? "for VM '#{vm_name}'" : ""
+        raise "Ephemeral disks #{error_msg} should all be on the same datastore. " +
+            "Expected datastore '#{datastore}' to match datastore '#{disk_in_wrong_datastore.backing.datastore}'"
       end
 
       datastore
@@ -525,7 +524,7 @@ module VSphereCloud
     end
 
     def create_nic_config_spec(v_network_name, network, controller_key, dvs_index)
-      raise "Can't find network: #{v_network_name}" if network.nil?
+      raise "Invalid network: #{v_network_name}" if network.nil?
       if network.class == Vim::Dvs::DistributedVirtualPortgroup
         portgroup_properties = @cloud_searcher.get_properties(network,
                                                      Vim::Dvs::DistributedVirtualPortgroup,
