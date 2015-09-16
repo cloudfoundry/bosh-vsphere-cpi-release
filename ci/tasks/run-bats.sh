@@ -17,6 +17,12 @@ check_param BAT_STATIC_RANGE
 check_param BAT_GATEWAY
 check_param BAT_VLAN
 check_param BAT_VCAP_PASSWORD
+check_param BAT_SECOND_NETWORK_STATIC_IP
+check_param BAT_SECOND_NETWORK_CIDR
+check_param BAT_SECOND_NETWORK_RESERVED_RANGE
+check_param BAT_SECOND_NETWORK_STATIC_RANGE
+check_param BAT_SECOND_NETWORK_GATEWAY
+check_param BAT_SECOND_NETWORK_VLAN
 check_param BOSH_VSPHERE_NETMASK
 check_param BOSH_VSPHERE_GATEWAY
 check_param BOSH_VSPHERE_DNS
@@ -83,7 +89,7 @@ properties:
     name: ${BAT_STEMCELL_NAME}
     version: latest
   networks:
-  - name: static
+  - name: default
     type: manual
     static_ip: ${BAT_STATIC_IP}
     cidr: ${BAT_CIDR}
@@ -91,6 +97,14 @@ properties:
     static: [${BAT_STATIC_RANGE}]
     gateway: ${BAT_GATEWAY}
     vlan: ${BAT_VLAN}
+  - name: second
+    type: manual
+    static_ip: ${BAT_SECOND_NETWORK_STATIC_IP}
+    cidr: ${BAT_SECOND_NETWORK_CIDR}
+    reserved: [${BAT_SECOND_NETWORK_RESERVED_RANGE}]
+    static: [${BAT_SECOND_NETWORK_STATIC_RANGE}]
+    gateway: ${BAT_SECOND_NETWORK_GATEWAY}
+    vlan: ${BAT_SECOND_NETWORK_VLAN}
 EOF
 
 cd bats

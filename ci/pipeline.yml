@@ -147,6 +147,12 @@ jobs:
             BAT_GATEWAY:                                  {{VCENTER_GATEWAY}}
             BAT_VLAN:                                     {{VCENTER_VLAN}}
             BAT_VCAP_PASSWORD:                            {{BAT_VCAP_PASSWORD}}
+            BAT_SECOND_NETWORK_STATIC_IP:                 {{ubuntu_BAT_SECOND_NETWORK_STATIC_IP}}
+            BAT_SECOND_NETWORK_CIDR:                      {{ubuntu_BAT_SECOND_NETWORK_CIDR}}
+            BAT_SECOND_NETWORK_RESERVED_RANGE:            {{ubuntu_BAT_SECOND_NETWORK_RESERVED_RANGE}}
+            BAT_SECOND_NETWORK_STATIC_RANGE:              {{ubuntu_BAT_SECOND_NETWORK_STATIC_RANGE}}
+            BAT_SECOND_NETWORK_GATEWAY:                   {{ubuntu_BAT_SECOND_NETWORK_GATEWAY}}
+            BAT_SECOND_NETWORK_VLAN:                      {{ubuntu_BAT_SECOND_NETWORK_VLAN}}
             BOSH_VSPHERE_NETMASK:                         {{VCENTER_NETMASK}}
             BOSH_VSPHERE_GATEWAY:                         {{VCENTER_GATEWAY}}
             BOSH_VSPHERE_DNS:                             {{VCENTER_DNS}}
@@ -226,6 +232,12 @@ jobs:
             BAT_GATEWAY:                                  {{VCENTER_GATEWAY}}
             BAT_VLAN:                                     {{VCENTER_VLAN}}
             BAT_VCAP_PASSWORD:                            {{BAT_VCAP_PASSWORD}}
+            BAT_SECOND_NETWORK_STATIC_IP:                 {{centos_BAT_SECOND_NETWORK_STATIC_IP}}
+            BAT_SECOND_NETWORK_CIDR:                      {{centos_BAT_SECOND_NETWORK_CIDR}}
+            BAT_SECOND_NETWORK_RESERVED_RANGE:            {{centos_BAT_SECOND_NETWORK_RESERVED_RANGE}}
+            BAT_SECOND_NETWORK_STATIC_RANGE:              {{centos_BAT_SECOND_NETWORK_STATIC_RANGE}}
+            BAT_SECOND_NETWORK_GATEWAY:                   {{centos_BAT_SECOND_NETWORK_GATEWAY}}
+            BAT_SECOND_NETWORK_VLAN:                      {{centos_BAT_SECOND_NETWORK_VLAN}}
             BOSH_VSPHERE_NETMASK:                         {{VCENTER_NETMASK}}
             BOSH_VSPHERE_GATEWAY:                         {{VCENTER_GATEWAY}}
             BOSH_VSPHERE_DNS:                             {{VCENTER_DNS}}

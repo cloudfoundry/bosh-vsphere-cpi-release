@@ -22,6 +22,12 @@ params:
   BAT_GATEWAY:                                     replace-me
   BAT_VLAN:                                        replace-me
   BAT_VCAP_PASSWORD:                               replace-me
+  BAT_SECOND_NETWORK_STATIC_IP:                    replace-me
+  BAT_SECOND_NETWORK_CIDR:                         replace-me
+  BAT_SECOND_NETWORK_RESERVED_RANGE:               replace-me
+  BAT_SECOND_NETWORK_STATIC_RANGE:                 replace-me
+  BAT_SECOND_NETWORK_GATEWAY:                      replace-me
+  BAT_SECOND_NETWORK_VLAN:                         replace-me
   BOSH_SSH_PRIVATE_KEY:                            replace-me
   BOSH_VSPHERE_NETMASK:                            replace-me
   BOSH_VSPHERE_GATEWAY:                            replace-me
