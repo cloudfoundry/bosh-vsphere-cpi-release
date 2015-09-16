@@ -8,6 +8,13 @@ module VSphereCloud
     include RetryBlock
 
     class TimeoutException < StandardError; end
+    class NetworkException < StandardError
+      attr_accessor :vm_cid
+
+      def message
+        super + (vm_cid ? " for VM '#{vm_cid}'" : '')
+      end
+    end
 
     attr_accessor :client
     attr_reader :datacenter
@@ -277,8 +284,12 @@ module VSphereCloud
         @logger.debug("Reading current agent env: #{env.pretty_inspect}")
 
         devices = @cloud_searcher.get_property(vm.mob, Vim::VirtualMachine, 'config.hardware.device', ensure_all: true)
-        env['networks'] = generate_network_env(devices, networks, dvs_index)
-
+        begin
+          env['networks'] = generate_network_env(devices, networks, dvs_index)
+        rescue NetworkException => e
+          e.vm_cid = vm_cid
+          raise e
+        end
         @logger.debug("Updating agent env to: #{env.pretty_inspect}")
         location = get_vm_location(vm.mob, datacenter: @datacenter.name)
         @agent_env.set_env(vm.mob, location, env)
@@ -436,7 +447,9 @@ module VSphereCloud
       networks.each do |network_name, network|
         network_entry = network.dup
         v_network_name = network['cloud_properties']['name']
-        nic = nics[v_network_name].pop
+        network = nics[v_network_name]
+        raise NetworkException, "Could not find network '#{v_network_name}'" if network.nil?
+        nic = network.pop
         network_entry['mac'] = nic.mac_address
         network_env[network_name] = network_entry
       end

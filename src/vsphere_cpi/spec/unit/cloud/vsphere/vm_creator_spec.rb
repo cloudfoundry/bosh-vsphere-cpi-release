@@ -145,6 +145,20 @@ describe VSphereCloud::VmCreator do
       end
     end
 
+    context 'when a network for the vm does not exist' do
+      before do
+        allow(cpi).to receive(:generate_network_env).and_raise(VSphereCloud::Cloud::NetworkException, "Could not find network 'network_name'")
+        allow_any_instance_of(VSphereCloud::Resources::VM).to receive(:devices).and_return([])
+        allow(vsphere_client).to receive(:delete_vm)
+      end
+
+      it 'raises an error' do
+        expect {
+          creator.create('agent_id', 'stemcell_cid', networks, persistent_disk_cids, {})
+        }.to raise_error(VSphereCloud::Cloud::NetworkException, "Could not find network 'network_name' for VM 'vm-fake-uuid'")
+      end
+    end
+
     it 'chooses the placement based on memory, ephemeral and persistent disks' do
       expect(placer).to receive(:pick_cluster_for_vm).with(1024, 2049, persistent_disks).and_return(cluster)
       expect(placer).to receive(:pick_ephemeral_datastore).with(cluster, 2049).and_return(datastore)

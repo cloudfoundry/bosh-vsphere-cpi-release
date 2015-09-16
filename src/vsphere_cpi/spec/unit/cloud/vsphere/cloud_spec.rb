@@ -254,6 +254,17 @@ module VSphereCloud
         end
       end
 
+      context 'not passing any device that is a VirtualEthernetCard' do
+        let(:devices) { [] }
+        let(:backing) { double }
+
+        it 'responds with an appropriate error message' do
+          expect {
+            vsphere_cloud.generate_network_env(devices, networks, dvs_index)
+          }.to raise_error(Cloud::NetworkException, "Could not find network 'fake_network1'")
+        end
+      end
+
       context 'when the network is in a folder' do
 
         context 'using a standard switch' do
@@ -821,12 +832,16 @@ module VSphereCloud
         ).and_return(nic_config)
       end
 
+      let(:backing) { double(network: 'fake-network-name') }
+      let(:device) { instance_double('VimSdk::Vim::Vm::Device::VirtualEthernetCard', backing: backing, mac_address: '00:00:00:00:00:00') }
+      let(:devices) { [device] }
+      let(:path_finder) { instance_double('VSphereCloud::PathFinder') }
+
       before do
         allow(agent_env).to receive(:get_current_env).and_return(
           { 'old-key' => 'old-value' }
         )
 
-        allow(vsphere_cloud).to receive(:generate_network_env).and_return('fake-network-env')
         allow(vsphere_cloud).to receive(:get_vm_location).and_return('fake-vm-location')
 
         allow(cloud_searcher).to receive(:get_property).with(
@@ -834,7 +849,17 @@ module VSphereCloud
           VimSdk::Vim::VirtualMachine,
           'config.hardware.device',
           ensure_all: true
-        ).and_return([])
+        ).and_return(devices)
+
+        allow(device).to receive(:kind_of?).with(VimSdk::Vim::Vm::Device::VirtualEthernetCard) { true }
+        allow(PathFinder).to receive(:new).and_return(path_finder)
+        allow(path_finder).to receive(:path) { |arg| arg }
+
+        allow(vm).to receive(:shutdown)
+        allow(vm).to receive(:fix_device_unit_numbers)
+        allow(client).to receive(:reconfig_vm)
+        allow(agent_env).to receive(:set_env)
+        allow(vm).to receive(:power_on)
       end
 
       it 'shuts down and reconfigures vm' do
@@ -851,7 +876,14 @@ module VSphereCloud
           'fake-vm-location',
           {
             'old-key' => 'old-value',
-            'networks' => 'fake-network-env'
+            'networks' => {
+              'default' => {
+                'cloud_properties' => {
+                  'name' => 'fake-network-name'
+                },
+                'mac' => '00:00:00:00:00:00'
+              }
+            }
           }
         ).ordered
 
@@ -859,6 +891,17 @@ module VSphereCloud
 
         vsphere_cloud.configure_networks('vm-id', networks)
       end
+
+      context 'the network specified does not have a nic for it' do
+        let(:backing) { double(network: 'alternate-network-name') }
+
+        it 'raises an appropriate exception' do
+          expect {
+            vsphere_cloud.configure_networks('vm-id', networks)
+          }.to raise_error(VSphereCloud::Cloud::NetworkException, "Could not find network 'fake-network-name' for VM 'vm-id'")
+        end
+      end
+
     end
 
     describe '#delete_disk' do
