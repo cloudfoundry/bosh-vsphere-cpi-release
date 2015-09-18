@@ -275,7 +275,6 @@ module VSphereCloud
 
       before do
         client.instance_variable_set('@cloud_searcher', cloud_searcher)
-        expect(result).to receive(:recommendations).and_return(Array.new)
         expect(datacenter).to receive(:power_on_vm).with([vm], nil).and_return(task)
         allow(cloud_searcher).to receive(:get_properties).and_return(properties)
       end
@@ -284,6 +283,7 @@ module VSphereCloud
         let(:first_attempt) { double('RuntimeGeneratedAttemptClass') }
 
         it 'returns info.result from the remote call' do
+          expect(result).to receive(:recommendations).and_return(Array.new)
           expect(result).to receive(:attempted).twice.and_return([first_attempt])
           expect(first_attempt).to receive(:task).and_return(task)
           expect(client.power_on_vm(datacenter, vm)).to eq(result)
@@ -296,11 +296,19 @@ module VSphereCloud
         let(:msg) { "The total number of virtual CPUs present or requested in virtual machines' configuration has exceeded the limit on the host: 300." }
 
         it 'raises "Cloud not power on VM" with error details' do
+          expect(result).to receive(:recommendations).and_return(Array.new)
           expect(result).to receive(:attempted).and_return(Array.new)
           expect(result).to receive(:not_attempted).and_return([not_attempted_info])
           expect(not_attempted_info).to receive(:fault).and_return(not_attempted_info_fault)
           expect(not_attempted_info_fault).to receive(:msg).and_return(msg)
           expect { client.power_on_vm(datacenter, vm) }.to raise_error("Could not power on VM '#{vm}': #{msg}")
+        end
+      end
+
+      context 'when recommendations are detected' do
+        it 'returns info.result from the remote call' do
+          expect(result).to receive(:recommendations).and_return(['recommendation one'])
+          expect { client.power_on_vm(datacenter, vm) }.to raise_error('Recommendations were detected, you may be running in Manual DRS mode. Aborting.')
         end
       end
     end
