@@ -7,8 +7,8 @@ describe VSphereCloud::Cloud, external_cpi: false do
     @host = ENV.fetch('BOSH_VSPHERE_CPI_HOST')
     @user = ENV.fetch('BOSH_VSPHERE_CPI_USER')
     @password = ENV.fetch('BOSH_VSPHERE_CPI_PASSWORD')
-    @admin_user = ENV.fetch('BOSH_VSPHERE_CPI_ADMIN_USER') || @user
-    @admin_password = ENV.fetch('BOSH_VSPHERE_CPI_ADMIN_USER_PASSWORD') || @password
+    @admin_user = ENV.fetch('BOSH_VSPHERE_CPI_ADMIN_USER')
+    @admin_password = ENV.fetch('BOSH_VSPHERE_CPI_ADMIN_PASSWORD')
     @vlan = ENV.fetch('BOSH_VSPHERE_VLAN')
     @stemcell_path = ENV.fetch('BOSH_VSPHERE_STEMCELL')
 
