@@ -68,6 +68,8 @@ jobs:
             BOSH_VSPHERE_CPI_HOST:                         {{lifecycle_VSPHERE_HOST}}
             BOSH_VSPHERE_CPI_USER:                         {{lifecycle_VSPHERE_USER}}
             BOSH_VSPHERE_CPI_PASSWORD:                     {{lifecycle_VSPHERE_PASSWORD}}
+            BOSH_VSPHERE_CPI_ADMIN_USER:                   {{lifecycle_VSPHERE_ADMIN_USER}}
+            BOSH_VSPHERE_CPI_ADMIN_PASSWORD:               {{lifecycle_VSPHERE_ADMIN_PASSWORD}}
             BOSH_VSPHERE_VLAN:                             {{lifecycle_VSPHERE_VLAN}}
             BOSH_VSPHERE_CPI_DATACENTER:                   {{lifecycle_VSPHERE_DATACENTER}}
             BOSH_VSPHERE_CPI_CLUSTER:                      {{lifecycle_VSPHERE_CLUSTER}}

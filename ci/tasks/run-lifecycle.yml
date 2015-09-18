@@ -11,6 +11,8 @@ params:
   BOSH_VSPHERE_CPI_HOST:                          replace-me
   BOSH_VSPHERE_CPI_USER:                          replace-me
   BOSH_VSPHERE_CPI_PASSWORD:                      replace-me
+  BOSH_VSPHERE_CPI_ADMIN_USER:                    replace-me
+  BOSH_VSPHERE_CPI_ADMIN_PASSWORD:                replace-me
   BOSH_VSPHERE_VLAN:                              replace-me
   BOSH_VSPHERE_CPI_DATACENTER:                    replace-me
   BOSH_VSPHERE_CPI_CLUSTER:                       replace-me

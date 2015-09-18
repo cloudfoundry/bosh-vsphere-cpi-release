@@ -7,6 +7,8 @@ describe VSphereCloud::Cloud, external_cpi: false do
     @host = ENV.fetch('BOSH_VSPHERE_CPI_HOST')
     @user = ENV.fetch('BOSH_VSPHERE_CPI_USER')
     @password = ENV.fetch('BOSH_VSPHERE_CPI_PASSWORD')
+    @admin_user = ENV.fetch('BOSH_VSPHERE_CPI_ADMIN_USER') || @user
+    @admin_password = ENV.fetch('BOSH_VSPHERE_CPI_ADMIN_USER_PASSWORD') || @password
     @vlan = ENV.fetch('BOSH_VSPHERE_VLAN')
     @stemcell_path = ENV.fetch('BOSH_VSPHERE_STEMCELL')
 
@@ -317,9 +319,16 @@ describe VSphereCloud::Cloud, external_cpi: false do
         end
       end
 
+      # `admin_client` has more permissions than `client` for setup/teardown
+      let(:admin_client) do
+        VSphereCloud::Client.new("https://#{@host}/sdk/vimService").tap do |client|
+          client.login(@admin_user, @admin_password, 'en')
+        end
+      end
+
       let(:datacenter) { client.find_by_inventory_path(@datacenter_name) }
       let(:folder_name) { SecureRandom.uuid }
-      let(:folder) { client.create_folder(folder_name) }
+      let(:folder) { admin_client.create_folder(folder_name) }
       subject(:cpi) do
         options = cpi_options(
           datacenter_name: "#{folder_name}/#{@datacenter_name}",
@@ -328,15 +337,15 @@ describe VSphereCloud::Cloud, external_cpi: false do
       end
 
       before do
-        client.move_into_folder(folder, [datacenter])
+        admin_client.move_into_folder(folder, [datacenter])
         @vm_id = nil
         @disk_id = nil
       end
 
       after do
         clean_up_vm_and_disk(cpi)
-        client.move_into_root_folder([datacenter])
-        client.delete_folder(folder)
+        admin_client.move_into_root_folder([datacenter])
+        admin_client.delete_folder(folder)
       end
 
       it 'exercises the vm lifecycle' do

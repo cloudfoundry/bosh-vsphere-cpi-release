@@ -7,6 +7,8 @@ source bosh-cpi-release/ci/tasks/utils.sh
 check_param BOSH_VSPHERE_CPI_HOST
 check_param BOSH_VSPHERE_CPI_USER
 check_param BOSH_VSPHERE_CPI_PASSWORD
+check_param BOSH_VSPHERE_CPI_ADMIN_USER
+check_param BOSH_VSPHERE_CPI_ADMIN_PASSWORD
 check_param BOSH_VSPHERE_VLAN
 check_param BOSH_VSPHERE_CPI_DATACENTER
 check_param BOSH_VSPHERE_CPI_CLUSTER
