@@ -254,5 +254,55 @@ module VSphereCloud
         client.create_datastore_folder('[fake-datastore-name] fake-folder-name', datacenter)
       end
     end
+
+    describe '#power_on_vm' do
+      let(:cloud_searcher) { instance_double('VSphereCloud::CloudSearcher') }
+      let(:datacenter) { instance_double('VimSdk::Vim::Datacenter') }
+      let(:vm) { instance_double('VimSdk::Vim::Vm') }
+      let(:task) { instance_double('VimSdk::Vim::Task') }
+      let(:result) { double('RuntimeGeneratedResultClass') }
+
+      let(:properties) {
+        {
+          task => {
+            'info.progress' => 0,
+            'info.state' => VimSdk::Vim::TaskInfo::State::SUCCESS,
+            'info.result' => result,
+            'info.error' => nil,
+          }
+        }
+      }
+
+      before do
+        client.instance_variable_set('@cloud_searcher', cloud_searcher)
+        expect(result).to receive(:recommendations).and_return(Array.new)
+        expect(datacenter).to receive(:power_on_vm).with([vm], nil).and_return(task)
+        allow(cloud_searcher).to receive(:get_properties).and_return(properties)
+      end
+
+      context 'when the task has attempted to power on the vm' do
+        let(:first_attempt) { double('RuntimeGeneratedAttemptClass') }
+
+        it 'returns info.result from the remote call' do
+          expect(result).to receive(:attempted).twice.and_return([first_attempt])
+          expect(first_attempt).to receive(:task).and_return(task)
+          expect(client.power_on_vm(datacenter, vm)).to eq(result)
+        end
+      end
+
+      context 'when the task has not attempted to power on the vm' do
+        let(:not_attempted_info) { instance_double('VimSdk::Vim::Cluster::NotAttemptedVmInfo') }
+        let(:not_attempted_info_fault) { instance_double('VimSdk::Vim::Fault::NumVirtualCpuExceedsLimit') }
+        let(:msg) { "The total number of virtual CPUs present or requested in virtual machines' configuration has exceeded the limit on the host: 300." }
+
+        it 'raises "Cloud not power on VM" with error details' do
+          expect(result).to receive(:attempted).and_return(Array.new)
+          expect(result).to receive(:not_attempted).and_return([not_attempted_info])
+          expect(not_attempted_info).to receive(:fault).and_return(not_attempted_info_fault)
+          expect(not_attempted_info_fault).to receive(:msg).and_return(msg)
+          expect { client.power_on_vm(datacenter, vm) }.to raise_error("Could not power on VM '#{vm}': #{msg}")
+        end
+      end
+    end
   end
 end

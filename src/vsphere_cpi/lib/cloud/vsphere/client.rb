@@ -62,7 +62,7 @@ module VSphereCloud
       raise 'Recommendations were detected, you may be running in Manual DRS mode. Aborting.' if result.recommendations.any?
 
       if result.attempted.empty?
-        raise "Could not power on VM '#{vm}': #{result.not_attempted.map(&:msg).join(', ')}"
+        raise "Could not power on VM '#{vm}': #{result.not_attempted.map(&:fault).map(&:msg).join(', ')}"
       else
         task = result.attempted.first.task
         wait_for_task(task)
