@@ -123,7 +123,7 @@ jobs:
     agent: {mbus: "nats://nats:nats-password@${DIRECTOR_IP}:4222"}
 
     dns:
-      address: ${DIRECTOR_IP}
+      address: 127.0.0.1
       db: *db
 
     vcenter: &vcenter
