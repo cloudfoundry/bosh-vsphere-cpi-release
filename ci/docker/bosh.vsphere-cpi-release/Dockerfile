@@ -38,3 +38,5 @@ RUN ruby-install ruby 2.1.2
 RUN /bin/bash -l -c "source /etc/profile.d/chruby.sh ;  \
                      chruby 2.1.2 ;                     \
                      gem install bundler bosh_cli --no-ri --no-rdoc"
+
+RUN apt-get install -y jq; apt-get clean;
