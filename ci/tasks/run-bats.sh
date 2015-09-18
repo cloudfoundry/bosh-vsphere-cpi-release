@@ -89,7 +89,7 @@ properties:
     name: ${BAT_STEMCELL_NAME}
     version: latest
   networks:
-  - name: default
+  - name: static
     type: manual
     static_ip: ${BAT_STATIC_IP}
     cidr: ${BAT_CIDR}
