@@ -104,6 +104,7 @@ jobs:
             base_os:                                ubuntu
             network_type_to_test:                   manual
             DIRECTOR_IP:                            {{ubuntu_DIRECTOR_IP}}
+            BOSH_VSPHERE_DNS:                       {{VCENTER_DNS}}
             BOSH_VSPHERE_VCENTER:                   {{VCENTER_IP}}
             BOSH_VSPHERE_VCENTER_USER:              {{VCENTER_USER}}
             BOSH_VSPHERE_VCENTER_PASSWORD:          {{VCENTER_PASSWORD}}
@@ -189,6 +190,7 @@ jobs:
             base_os:                                centos
             network_type_to_test:                   manual
             DIRECTOR_IP:                            {{centos_DIRECTOR_IP}}
+            BOSH_VSPHERE_DNS:                       {{VCENTER_DNS}}
             BOSH_VSPHERE_VCENTER:                   {{VCENTER_IP}}
             BOSH_VSPHERE_VCENTER_USER:              {{VCENTER_USER}}
             BOSH_VSPHERE_VCENTER_PASSWORD:          {{VCENTER_PASSWORD}}

@@ -19,6 +19,7 @@ check_param BOSH_VSPHERE_VCENTER_DISK_PATH
 check_param BOSH_VSPHERE_VCENTER_VLAN
 check_param BOSH_VSPHERE_VCENTER_CIDR
 check_param BOSH_VSPHERE_VCENTER_GATEWAY
+check_param BOSH_VSPHERE_DNS
 
 source /etc/profile.d/chruby.sh
 chruby 2.1.2
@@ -60,7 +61,7 @@ networks:
   subnets:
   - range: ${BOSH_VSPHERE_VCENTER_CIDR}
     gateway: ${BOSH_VSPHERE_VCENTER_GATEWAY}
-    dns: [8.8.8.8]
+    dns: [${BOSH_VSPHERE_DNS}]
     cloud_properties: {name: ${BOSH_VSPHERE_VCENTER_VLAN}}
 
 jobs:
@@ -74,6 +75,7 @@ jobs:
   - {name: blobstore, release: bosh}
   - {name: director, release: bosh}
   - {name: health_monitor, release: bosh}
+  - {name: powerdns, release: bosh}
   - {name: cpi, release: ${cpi_release_name}}
 
   resource_pool: vms
@@ -119,6 +121,10 @@ jobs:
       resurrector_enabled: true
 
     agent: {mbus: "nats://nats:nats-password@${DIRECTOR_IP}:4222"}
+
+    dns:
+      address: ${DIRECTOR_IP}
+      db: *db
 
     vcenter: &vcenter
       address: ${BOSH_VSPHERE_VCENTER}
