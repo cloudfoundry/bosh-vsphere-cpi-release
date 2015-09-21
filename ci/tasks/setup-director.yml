@@ -3,19 +3,18 @@ platform: linux
 image: docker:///boshcpi/vsphere-cpi-release
 inputs:
   - name: bosh-cpi-release       # --- location of task script to run
-  - name: director-state-file
   - name: bosh-init              # --- bosh-init executable to do deploy
   - name: bosh-release
   - name: bosh-cpi-dev-artifacts
   - name: version-semver
   - name: stemcell
+  - name: vsphere-5.1-environment
 run:
   path: bosh-cpi-release/ci/tasks/deploy.sh
 tags: ["vsphere"]
 params:
   base_os:                                replace-me
   network_type_to_test:                   replace-me
-  DIRECTOR_IP:                            replace-me
   BOSH_VSPHERE_VCENTER:                   replace-me
   BOSH_VSPHERE_VCENTER_USER:              replace-me
   BOSH_VSPHERE_VCENTER_PASSWORD:          replace-me
@@ -26,6 +25,4 @@ params:
   BOSH_VSPHERE_VCENTER_DATASTORE_PATTERN: replace-me
   BOSH_VSPHERE_VCENTER_DISK_PATH:         replace-me
   BOSH_VSPHERE_VCENTER_VLAN:              replace-me
-  BOSH_VSPHERE_VCENTER_CIDR:              replace-me
-  BOSH_VSPHERE_VCENTER_GATEWAY:           replace-me
-  BOSH_VSPHERE_DNS:                       replace-me
+  BOSH_INIT_LOG_LEVEL:                    info

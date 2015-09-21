@@ -29,3 +29,8 @@ check_for_rogue_vm() {
     exit 1
   fi
 }
+
+env_attr() {
+  local json=$1
+  echo $json | jq --raw-output --arg attribute $2 '.[$attribute]'
+}

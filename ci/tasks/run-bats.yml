@@ -5,33 +5,18 @@ inputs:
   - name: bosh-cpi-release
   - name: stemcell
   - name: bats
+  - name: vsphere-5.1-environment
 run:
   path: bosh-cpi-release/ci/tasks/run-bats.sh
 tags: ["vsphere"]
 params:
   base_os:                                         replace-me
   network_type_to_test:                            replace-me
-  BAT_DIRECTOR:                                    replace-me
-  BAT_DNS_HOST:                                    replace-me
   BAT_STEMCELL_NAME:                               replace-me
-  BAT_STATIC_IP:                                   replace-me
-  BAT_SECOND_STATIC_IP:                            replace-me
-  BAT_CIDR:                                        replace-me
-  BAT_RESERVED_RANGE:                              replace-me
-  BAT_STATIC_RANGE:                                replace-me
-  BAT_GATEWAY:                                     replace-me
   BAT_VLAN:                                        replace-me
   BAT_VCAP_PASSWORD:                               replace-me
-  BAT_SECOND_NETWORK_STATIC_IP:                    replace-me
-  BAT_SECOND_NETWORK_CIDR:                         replace-me
-  BAT_SECOND_NETWORK_RESERVED_RANGE:               replace-me
-  BAT_SECOND_NETWORK_STATIC_RANGE:                 replace-me
-  BAT_SECOND_NETWORK_GATEWAY:                      replace-me
   BAT_SECOND_NETWORK_VLAN:                         replace-me
   BOSH_SSH_PRIVATE_KEY:                            replace-me
-  BOSH_VSPHERE_NETMASK:                            replace-me
-  BOSH_VSPHERE_GATEWAY:                            replace-me
-  BOSH_VSPHERE_DNS:                                replace-me
   BOSH_VSPHERE_NTP_SERVER:                         replace-me
   BOSH_VSPHERE_NET_ID:                             replace-me
   BOSH_VSPHERE_VCENTER:                            replace-me
@@ -42,6 +27,4 @@ params:
   BOSH_VSPHERE_VCENTER_RESOURCE_POOL:              replace-me
   BOSH_VSPHERE_VCENTER_DATASTORE_PATTERN:          replace-me
   BOSH_VSPHERE_VCENTER_UBOSH_DATASTORE_PATTERN:    replace-me
-  BOSH_VSPHERE_MICROBOSH_IP:                       replace-me
   BOSH_VSPHERE_VCENTER_FOLDER_PREFIX:              replace-me
-

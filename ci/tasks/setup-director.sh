@@ -6,7 +6,6 @@ source bosh-cpi-release/ci/tasks/utils.sh
 
 check_param base_os
 check_param network_type_to_test
-check_param DIRECTOR_IP
 check_param BOSH_VSPHERE_VCENTER
 check_param BOSH_VSPHERE_VCENTER_USER
 check_param BOSH_VSPHERE_VCENTER_PASSWORD
@@ -17,9 +16,18 @@ check_param BOSH_VSPHERE_VCENTER_TEMPLATE_FOLDER
 check_param BOSH_VSPHERE_VCENTER_DATASTORE_PATTERN
 check_param BOSH_VSPHERE_VCENTER_DISK_PATH
 check_param BOSH_VSPHERE_VCENTER_VLAN
-check_param BOSH_VSPHERE_VCENTER_CIDR
-check_param BOSH_VSPHERE_VCENTER_GATEWAY
-check_param BOSH_VSPHERE_DNS
+
+env_name=$(cat vsphere-5.1-environment/name)
+metadata=$(cat vsphere-5.1-environment/metadata)
+network1=$(env_attr ${metadata} network1)
+echo Using environment: \'${env_name}\'
+export DIRECTOR_IP=$(                  env_attr ${metadata} directorIP)
+export BOSH_VSPHERE_VCENTER_CIDR=$(    env_attr ${network1} vCenterCIDR)
+export BOSH_VSPHERE_VCENTER_GATEWAY=$( env_attr ${network1} vCenterGateway)
+export BOSH_VSPHERE_DNS=$(             env_attr ${metadata} DNS)
+
+echo "verifying no BOSH deployed VM exists at target IP: $DIRECTOR_IP"
+check_for_rogue_vm $DIRECTOR_IP
 
 source /etc/profile.d/chruby.sh
 chruby 2.1.2
@@ -27,11 +35,14 @@ chruby 2.1.2
 semver=`cat version-semver/number`
 cpi_release_name="bosh-vsphere-cpi"
 working_dir=$PWD
-manifest_prefix=${base_os}-${network_type_to_test}-director
-manifest_dir="${working_dir}/director-state-file"
-manifest_filename=${manifest_prefix}-manifest.yml
+manifest_dir="${working_dir}/deployment"
+mkdir ${manifest_dir}
 
-cat > "${manifest_dir}/${manifest_filename}" <<EOF
+initver=$(cat bosh-init/version)
+initexe="$PWD/bosh-init/bosh-init-${initver}-linux-amd64"
+chmod +x $initexe
+
+cat > "${manifest_dir}/director-manifest.yml" <<EOF
 ---
 name: bosh
 
@@ -151,17 +162,8 @@ cloud_provider:
     ntp: [0.pool.ntp.org, 1.pool.ntp.org]
 EOF
 
-export BOSH_INIT_LOG_LEVEL=debug
-
-initver=$(cat bosh-init/version)
-initexe="$PWD/bosh-init/bosh-init-${initver}-linux-amd64"
-chmod +x $initexe
-
-echo "deleting existing BOSH Director VM..."
-$initexe delete ${manifest_dir}/${manifest_filename}
-
-echo "verifying no BOSH deployed VM exists at target IP: $DIRECTOR_IP"
-check_for_rogue_vm $DIRECTOR_IP
-
 echo "deploying BOSH..."
-$initexe deploy ${manifest_dir}/${manifest_filename}
+$initexe deploy ${manifest_dir}/director-manifest.yml
+
+echo "final state of bosh-init deployment of director"
+cat ${manifest_dir}/director-manifest-state.json
