@@ -40,6 +40,7 @@ describe VSphereCloud::Cloud, external_cpi: false do
       persistent_datastore_pattern: @persistent_datastore_pattern
     )
     LifecycleHelpers.verify_local_disk_infrastructure(@local_disk_cpi_options)
+    LifecycleHelpers.verify_user_has_limited_permissions(cpi_options)
 
     Dir.mktmpdir do |temp_dir|
       output = `tar -C #{temp_dir} -xzf #{@stemcell_path} 2>&1`
@@ -569,6 +570,12 @@ class LifecycleHelpers
       'BOSH_VSPHERE_CPI_LOCAL_DATASTORE_PATTERN' => 'Please ensure you provide a pattern that match datastores that are only accessible by a single host.'
     }
 
+    ALLOWED_PRIVILEGES = [
+      'System.Anonymous',
+      'System.Read',
+      'System.View'
+    ]
+
     def fetch_property(property)
       fail "Missing Environment varibale #{property}: #{MISSING_KEY_MESSAGES[property]}" unless(ENV.has_key?(property))
       ENV[property]
@@ -605,6 +612,39 @@ are configured to allow multiple hosts to access them:
         cluster = kv.last
         acc.merge!(cluster.ephemeral_datastores)
       end
+    end
+
+    def verify_user_has_limited_permissions(cpi_options)
+      cpi = VSphereCloud::Cloud.new(cpi_options)
+      root_folder = root_folder(cpi)
+
+      authorization_manager = authorization_manager(cpi)
+      all_privileges = authorization_manager.privilege_list.map(&:priv_id)
+
+      privileges_response =
+        authorization_manager.has_privilege_on_entity(root_folder, current_session_id(cpi), all_privileges)
+      actual_privileges = Hash[all_privileges.zip(privileges_response)].select { |_, privelege| privelege }.keys
+
+      if actual_privileges.sort != ALLOWED_PRIVILEGES
+        disallowed_privileges = actual_privileges - ALLOWED_PRIVILEGES
+        fail "User must have limited permissions on root folder. Disallowed permissions include: #{disallowed_privileges.inspect}"
+      end
+    end
+
+    def authorization_manager(cpi)
+      service_content = cpi.client.service_content
+      service_content.authorization_manager
+    end
+
+    def root_folder(cpi)
+      service_content = cpi.client.service_content
+      service_content.root_folder
+    end
+
+    def current_session_id(cpi)
+      service_content = cpi.client.service_content
+      current_session = service_content.session_manager.current_session
+      current_session.key
     end
   end
 end
