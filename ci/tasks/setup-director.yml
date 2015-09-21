@@ -10,7 +10,7 @@ inputs:
   - name: stemcell
   - name: vsphere-5.1-environment
 run:
-  path: bosh-cpi-release/ci/tasks/deploy.sh
+  path: bosh-cpi-release/ci/tasks/setup-director.sh
 tags: ["vsphere"]
 params:
   base_os:                                replace-me
