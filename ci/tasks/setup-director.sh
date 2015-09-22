@@ -19,12 +19,12 @@ check_param BOSH_VSPHERE_VCENTER_VLAN
 
 env_name=$(cat vsphere-5.1-environment/name)
 metadata=$(cat vsphere-5.1-environment/metadata)
-network1=$(env_attr ${metadata} network1)
+network1=$(env_attr "${metadata}" "network1")
 echo Using environment: \'${env_name}\'
-export DIRECTOR_IP=$(                  env_attr ${metadata} directorIP)
-export BOSH_VSPHERE_VCENTER_CIDR=$(    env_attr ${network1} vCenterCIDR)
-export BOSH_VSPHERE_VCENTER_GATEWAY=$( env_attr ${network1} vCenterGateway)
-export BOSH_VSPHERE_DNS=$(             env_attr ${metadata} DNS)
+export DIRECTOR_IP=$(                  env_attr "${metadata}" "directorIP")
+export BOSH_VSPHERE_VCENTER_CIDR=$(    env_attr "${network1}" "vCenterCIDR")
+export BOSH_VSPHERE_VCENTER_GATEWAY=$( env_attr "${network1}" "vCenterGateway")
+export BOSH_VSPHERE_DNS=$(             env_attr "${metadata}" "DNS")
 
 echo "verifying no BOSH deployed VM exists at target IP: $DIRECTOR_IP"
 check_for_rogue_vm $DIRECTOR_IP
