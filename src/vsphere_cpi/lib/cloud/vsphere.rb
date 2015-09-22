@@ -5,6 +5,7 @@ require 'common/thread_formatter'
 require 'ruby_vim_sdk'
 
 require 'cloud/vsphere/retry_block'
+require 'cloud/vsphere/object_stringifier'
 require 'cloud/vsphere/agent_env'
 require 'cloud/vsphere/client'
 require 'cloud/vsphere/cloud'

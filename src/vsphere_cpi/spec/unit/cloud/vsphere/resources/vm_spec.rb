@@ -22,7 +22,7 @@ describe VSphereCloud::Resources::VM do
 
   let(:vm_properties) { {'runtime' => double(:runtime, host: 'vm-host')} }
 
-  describe 'accessible_datastores' do
+  describe '#accessible_datastores' do
     it 'returns accessible_datastores' do
       datastore_mob = instance_double('VimSdk::Vim::Datastore')
       host_properties = {'datastore' => [datastore_mob]}
@@ -43,7 +43,7 @@ describe VSphereCloud::Resources::VM do
     end
   end
 
-  describe 'fix_device_unit_numbers' do
+  describe '#fix_device_unit_numbers' do
     let(:vm_properties) { { 'config.hardware.device' => vm_devices } }
     let(:vm_devices) do
       vm_devices = []
@@ -78,7 +78,7 @@ describe VSphereCloud::Resources::VM do
     end
   end
 
-  describe 'shutdown' do
+  describe '#shutdown' do
     it 'sends shutdown signal' do
       allow(cloud_searcher).to receive(:get_property).
         with(vm_mob, VimSdk::Vim::VirtualMachine, 'runtime.powerState').
@@ -136,7 +136,7 @@ describe VSphereCloud::Resources::VM do
     end
   end
 
-  describe 'power_off' do
+  describe '#power_off' do
     before do
       allow(cloud_searcher).to receive(:get_property).with(
         vm_mob,
@@ -191,6 +191,12 @@ describe VSphereCloud::Resources::VM do
         expect(client).to_not receive(:power_off_vm).with(vm_mob)
         vm.power_off
       end
+    end
+  end
+
+  describe '#to_s' do
+    it 'show relevant info' do
+      expect(subject.to_s).to eq("(#{subject.class.name} (cid=\"vm-cid\"))")
     end
   end
 end

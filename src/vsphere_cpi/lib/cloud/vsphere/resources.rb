@@ -2,6 +2,8 @@ require 'cloud/vsphere/resources/datacenter'
 
 module VSphereCloud
   class Resources
+    include ObjectStringifier
+    stringify_with :datacenter
     MEMORY_HEADROOM = 128
     DISK_HEADROOM = 1024
     STALE_TIMEOUT = 60
@@ -122,7 +124,7 @@ module VSphereCloud
 
     private
 
-    attr_reader :config
+    attr_reader :config, :datacenter
 
 
     class PersistentDiskIndex

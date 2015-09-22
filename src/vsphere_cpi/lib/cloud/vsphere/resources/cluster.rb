@@ -4,6 +4,8 @@ module VSphereCloud
   class Resources
     class Cluster
       include VimSdk
+      include ObjectStringifier
+      stringify_with :name
 
       PROPERTIES = %w(name datastore resourcePool host)
       HOST_PROPERTIES = %w(hardware.memorySize runtime.inMaintenanceMode)

@@ -4,6 +4,8 @@ module VSphereCloud
   class Resources
     class Datastore
       include VimSdk
+      include ObjectStringifier
+      stringify_with :name, :mob
       PROPERTIES = %w(summary.freeSpace summary.capacity name)
 
       def self.build_from_client(client, datastore_properties)

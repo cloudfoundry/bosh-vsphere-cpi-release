@@ -7,7 +7,7 @@ module VSphereCloud
     let(:cluster_hash) { clusters.inject({}) { |h, cluster| h[cluster.name] = cluster; h } }
     let(:config) { instance_double('VSphereCloud::Config', client: client, logger: logger) }
     let(:client) { instance_double('VSphereCloud::Client') }
-    let(:datacenter) { instance_double('VSphereCloud::Resources::Datacenter', name: 'datacenter_name', clusters: cluster_hash) }
+    let(:datacenter) { instance_double('VSphereCloud::Resources::Datacenter', name: 'datacenter_name', clusters: cluster_hash, to_s: 'datacenter_as_string') }
     let(:logger) { instance_double('Logger', info: nil, debug: nil) }
 
     describe :pick_persistent_datastore_in_cluster do
@@ -150,7 +150,7 @@ module VSphereCloud
       end
     end
 
-    describe 'pick_persistent_datastore' do
+    describe '#pick_persistent_datastore' do
       let(:cluster) { instance_double(VSphereCloud::Resources::Cluster, name: 'awesome cluster') }
       let(:datastore) { instance_double(VSphereCloud::Resources::Datastore, allocate: nil) }
 
@@ -163,6 +163,12 @@ module VSphereCloud
       it 'allocates disk size in datastore' do
         resources.pick_persistent_datastore(cluster, 1024)
         expect(datastore).to have_received(:allocate).with(1024)
+      end
+    end
+
+    describe '#to_s' do
+      it 'show relevant info' do
+        expect(subject.to_s).to eq("(#{subject.class.name} (datacenter=\"datacenter_as_string\"))")
       end
     end
   end

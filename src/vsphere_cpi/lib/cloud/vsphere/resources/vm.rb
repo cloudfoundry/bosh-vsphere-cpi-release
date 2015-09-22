@@ -3,6 +3,8 @@ module VSphereCloud
     class VM
       include VimSdk
       include RetryBlock
+      include ObjectStringifier
+      stringify_with :cid
 
       attr_reader :mob, :cid
 

@@ -438,5 +438,11 @@ MSG
         expect(cluster.inspect).to eq("<Cluster: #{cluster_mob} / fake-cluster-name>")
       end
     end
+
+    describe '#to_s' do
+      it 'show relevant info' do
+        expect(subject.to_s).to eq("(#{subject.class.name} (name=\"fake-cluster-name\"))")
+      end
+    end
   end
 end

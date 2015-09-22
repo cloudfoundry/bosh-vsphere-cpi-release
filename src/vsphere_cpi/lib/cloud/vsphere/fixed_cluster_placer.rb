@@ -1,5 +1,8 @@
 module VSphereCloud
   class FixedClusterPlacer
+    include ObjectStringifier
+    stringify_with :cluster
+
     attr_reader :drs_rules
 
     def initialize(cluster, drs_rules)
@@ -21,5 +24,9 @@ module VSphereCloud
     def pick_persistent_datastore(_, _)
       raise NotImplementedError
     end
+
+    private
+
+    attr_reader :cluster
   end
 end

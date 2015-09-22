@@ -2,7 +2,7 @@ require 'spec_helper'
 
 module VSphereCloud
   describe FixedClusterPlacer do
-    let(:cluster) { instance_double(VSphereCloud::Resources::Cluster, name: 'awesome cluster', allocate: nil) }
+    let(:cluster) { instance_double(VSphereCloud::Resources::Cluster, name: 'awesome cluster', allocate: nil, to_s: 'cluster_as_string') }
     let(:datastore) { instance_double(VSphereCloud::Resources::Datastore, allocate: nil) }
     let(:drs_rules) { [] }
 
@@ -38,6 +38,12 @@ module VSphereCloud
         expect {
           fixed_cluster_placer.pick_persistent_datastore(cluster, 128)
         }.to raise_error NotImplementedError
+      end
+    end
+
+    describe '#to_s' do
+      it 'show relevant info' do
+        expect(subject.to_s).to eq("(#{subject.class.name} (cluster=\"cluster_as_string\"))")
       end
     end
   end

@@ -94,7 +94,7 @@ module VSphereCloud
 
         @agent_env.set_env(created_vm.mob, location, env)
 
-        @logger.info("Powering on VM: #{created_vm} (#{created_vm.cid})")
+        @logger.info("Powering on VM: #{created_vm}")
         created_vm.power_on
 
         create_drs_rules(created_vm.mob, cluster)
