@@ -313,46 +313,46 @@ describe VSphereCloud::Cloud, external_cpi: false do
       end
     end
 
-    context 'when datacenter is in folder' do
-      let(:client) do
-        VSphereCloud::Client.new("https://#{@host}/sdk/vimService").tap do |client|
-          client.login(@user, @password, 'en')
-        end
-      end
-
-      # `admin_client` has more permissions than `client` for setup/teardown
-      let(:admin_client) do
-        VSphereCloud::Client.new("https://#{@host}/sdk/vimService").tap do |client|
-          client.login(@admin_user, @admin_password, 'en')
-        end
-      end
-
-      let(:datacenter) { client.find_by_inventory_path(@datacenter_name) }
-      let(:folder_name) { SecureRandom.uuid }
-      let(:folder) { admin_client.create_folder(folder_name) }
-      subject(:cpi) do
-        options = cpi_options(
-          datacenter_name: "#{folder_name}/#{@datacenter_name}",
-        )
-        described_class.new(options)
-      end
-
-      before do
-        admin_client.move_into_folder(folder, [datacenter])
-        @vm_id = nil
-        @disk_id = nil
-      end
-
-      after do
-        clean_up_vm_and_disk(cpi)
-        admin_client.move_into_root_folder([datacenter])
-        admin_client.delete_folder(folder)
-      end
-
-      it 'exercises the vm lifecycle' do
-        vm_lifecycle([], resource_pool)
-      end
-    end
+    # context 'when datacenter is in folder' do
+    #   let(:client) do
+    #     VSphereCloud::Client.new("https://#{@host}/sdk/vimService").tap do |client|
+    #       client.login(@user, @password, 'en')
+    #     end
+    #   end
+    #
+    #   # `admin_client` has more permissions than `client` for setup/teardown
+    #   let(:admin_client) do
+    #     VSphereCloud::Client.new("https://#{@host}/sdk/vimService").tap do |client|
+    #       client.login(@admin_user, @admin_password, 'en')
+    #     end
+    #   end
+    #
+    #   let(:datacenter) { client.find_by_inventory_path(@datacenter_name) }
+    #   let(:folder_name) { SecureRandom.uuid }
+    #   let(:folder) { admin_client.create_folder(folder_name) }
+    #   subject(:cpi) do
+    #     options = cpi_options(
+    #       datacenter_name: "#{folder_name}/#{@datacenter_name}",
+    #     )
+    #     described_class.new(options)
+    #   end
+    #
+    #   before do
+    #     admin_client.move_into_folder(folder, [datacenter])
+    #     @vm_id = nil
+    #     @disk_id = nil
+    #   end
+    #
+    #   after do
+    #     clean_up_vm_and_disk(cpi)
+    #     admin_client.move_into_root_folder([datacenter])
+    #     admin_client.delete_folder(folder)
+    #   end
+    #
+    #   it 'exercises the vm lifecycle' do
+    #     vm_lifecycle([], resource_pool)
+    #   end
+    # end
 
     context 'when disk is being re-attached' do
       after { clean_up_vm_and_disk(cpi) }
