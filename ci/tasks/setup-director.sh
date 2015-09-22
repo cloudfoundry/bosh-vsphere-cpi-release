@@ -38,6 +38,10 @@ working_dir=$PWD
 manifest_dir="${working_dir}/deployment"
 mkdir ${manifest_dir}
 
+cp ./bosh-cpi-dev-artifacts/${cpi_release_name}-${semver}.tgz ${manifest_dir}/${cpi_release_name}.tgz
+cp ./bosh-release/release.tgz ${manifest_dir}/bosh-release.tgz
+cp ./stemcell/stemcell.tgz ${manifest_dir}/stemcell.tgz
+
 initver=$(cat bosh-init/version)
 initexe="$PWD/bosh-init/bosh-init-${initver}-linux-amd64"
 chmod +x $initexe
@@ -48,15 +52,15 @@ name: bosh
 
 releases:
 - name: bosh
-  url: file://${working_dir}/bosh-release/release.tgz
+  url: file://bosh-release.tgz
 - name: ${cpi_release_name}
-  url: file://${working_dir}/bosh-cpi-dev-artifacts/${cpi_release_name}-${semver}.tgz
+  url: file://${cpi_release_name}.tgz
 
 resource_pools:
 - name: vms
   network: private
   stemcell:
-    url: file://${working_dir}/stemcell/stemcell.tgz
+    url: file://stemcell.tgz
   cloud_properties:
     cpu: 2
     ram: 4_096
