@@ -47,6 +47,7 @@ jobs:
         params: {from: build/out/.*\.tgz}
 
   - name: lifecycle
+    serial: true
     plan:
       - aggregate:
         - {trigger: true,  passed: [build-candidate], get: bosh-cpi-dev-artifacts} # used for job chaining only not for tasks
