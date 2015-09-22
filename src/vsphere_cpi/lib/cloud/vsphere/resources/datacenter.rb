@@ -4,6 +4,8 @@ module VSphereCloud
   class Resources
     class Datacenter
       include VimSdk
+      include ObjectStringifier
+      stringify_with :name
 
       attr_accessor :config
 

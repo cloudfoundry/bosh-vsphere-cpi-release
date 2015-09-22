@@ -331,4 +331,10 @@ Couldn't find a 'persistent' datastore with 10000MB of free space. Found:
       end
     end
   end
+
+  describe '#to_s' do
+    it 'show relevant info' do
+      expect(subject.to_s).to eq("(#{subject.class.name} (name=\"fake-datacenter-name\"))")
+    end
+  end
 end
