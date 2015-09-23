@@ -570,10 +570,95 @@ class LifecycleHelpers
       'BOSH_VSPHERE_CPI_LOCAL_DATASTORE_PATTERN' => 'Please ensure you provide a pattern that match datastores that are only accessible by a single host.'
     }
 
-    ALLOWED_PRIVILEGES = [
+    ALLOWED_PRIVILEGES_ON_ROOT = [
       'System.Anonymous',
       'System.Read',
       'System.View'
+    ]
+
+    ALLOWED_PRIVILEGES_ON_DATACENTER = [
+      'System.Anonymous',
+      'System.Read',
+      'System.View',
+
+      'Folder.Create',
+      'Folder.Delete',
+      'Folder.Rename',
+      'Folder.Move',
+
+      'Datastore.AllocateSpace',
+      'Datastore.Browse',
+      'Datastore.DeleteFile',
+      'Datastore.UpdateVirtualMachineFiles',
+      'Datastore.FileManagement',
+
+      'Network.Assign',
+
+      'VirtualMachine.Inventory.Create',
+      'VirtualMachine.Inventory.CreateFromExisting',
+      'VirtualMachine.Inventory.Register',
+      'VirtualMachine.Inventory.Delete',
+      'VirtualMachine.Inventory.Unregister',
+      'VirtualMachine.Inventory.Move',
+      'VirtualMachine.Interact.PowerOn',
+      'VirtualMachine.Interact.PowerOff',
+      'VirtualMachine.Interact.Suspend',
+      'VirtualMachine.Interact.Reset',
+      'VirtualMachine.Interact.AnswerQuestion',
+      'VirtualMachine.Interact.ConsoleInteract',
+      'VirtualMachine.Interact.DeviceConnection',
+      'VirtualMachine.Interact.SetCDMedia',
+      'VirtualMachine.Interact.ToolsInstall',
+      'VirtualMachine.Interact.GuestControl',
+      'VirtualMachine.Interact.DefragmentAllDisks',
+      'VirtualMachine.GuestOperations.Query',
+      'VirtualMachine.GuestOperations.Modify',
+      'VirtualMachine.GuestOperations.Execute',
+      'VirtualMachine.Config.Rename',
+      'VirtualMachine.Config.Annotation',
+      'VirtualMachine.Config.AddExistingDisk',
+      'VirtualMachine.Config.AddNewDisk',
+      'VirtualMachine.Config.RemoveDisk',
+      'VirtualMachine.Config.RawDevice',
+      'VirtualMachine.Config.CPUCount',
+      'VirtualMachine.Config.Memory',
+      'VirtualMachine.Config.AddRemoveDevice',
+      'VirtualMachine.Config.EditDevice',
+      'VirtualMachine.Config.Settings',
+      'VirtualMachine.Config.Resource',
+      'VirtualMachine.Config.ResetGuestInfo',
+      'VirtualMachine.Config.AdvancedConfig',
+      'VirtualMachine.Config.DiskLease',
+      'VirtualMachine.Config.SwapPlacement',
+      'VirtualMachine.Config.DiskExtend',
+      'VirtualMachine.Config.ChangeTracking',
+      'VirtualMachine.Config.Unlock',
+      'VirtualMachine.Config.ReloadFromPath',
+      'VirtualMachine.Config.MksControl',
+      'VirtualMachine.Config.ManagedBy',
+      'VirtualMachine.State.CreateSnapshot',
+      'VirtualMachine.State.RevertToSnapshot',
+      'VirtualMachine.State.RemoveSnapshot',
+      'VirtualMachine.State.RenameSnapshot',
+      'VirtualMachine.Provisioning.Customize',
+      'VirtualMachine.Provisioning.Clone',
+      'VirtualMachine.Provisioning.PromoteDisks',
+      'VirtualMachine.Provisioning.DeployTemplate',
+      'VirtualMachine.Provisioning.CloneTemplate',
+      'VirtualMachine.Provisioning.MarkAsTemplate',
+      'VirtualMachine.Provisioning.MarkAsVM',
+      'VirtualMachine.Provisioning.ReadCustSpecs',
+      'VirtualMachine.Provisioning.ModifyCustSpecs',
+      'VirtualMachine.Provisioning.DiskRandomAccess',
+      'VirtualMachine.Provisioning.DiskRandomRead',
+      'VirtualMachine.Provisioning.GetVmFiles',
+      'VirtualMachine.Provisioning.PutVmFiles',
+
+      'Resource.AssignVMToPool',
+      'Resource.ColdMigrate',
+      'Resource.HotMigrate',
+
+      'VApp.Import'
     ]
 
     def fetch_property(property)
@@ -615,36 +700,59 @@ are configured to allow multiple hosts to access them:
     end
 
     def verify_user_has_limited_permissions(cpi_options)
-      cpi = VSphereCloud::Cloud.new(cpi_options)
-      root_folder = root_folder(cpi)
+      @cpi = VSphereCloud::Cloud.new(cpi_options)
 
-      authorization_manager = authorization_manager(cpi)
-      all_privileges = authorization_manager.privilege_list.map(&:priv_id)
+      root_folder_privileges = build_actual_privileges_list(root_folder)
 
-      privileges_response =
-        authorization_manager.has_privilege_on_entity(root_folder, current_session_id(cpi), all_privileges)
-      actual_privileges = Hash[all_privileges.zip(privileges_response)].select { |_, privelege| privelege }.keys
-
-      if actual_privileges.sort != ALLOWED_PRIVILEGES
-        disallowed_privileges = actual_privileges - ALLOWED_PRIVILEGES
+      if root_folder_privileges.sort != ALLOWED_PRIVILEGES_ON_ROOT.sort
+        disallowed_privileges = root_folder_privileges - ALLOWED_PRIVILEGES_ON_ROOT
         fail "User must have limited permissions on root folder. Disallowed permissions include: #{disallowed_privileges.inspect}"
+      end
+
+      cluster_mob = cpi.datacenter.clusters.first.last.mob
+      datacenter_privileges = build_actual_privileges_list(cluster_mob)
+
+      if datacenter_privileges.sort != ALLOWED_PRIVILEGES_ON_DATACENTER.sort
+        disallowed_privileges = datacenter_privileges - ALLOWED_PRIVILEGES_ON_DATACENTER
+        if disallowed_privileges.empty?
+          missing_permissions = ALLOWED_PRIVILEGES_ON_DATACENTER - datacenter_privileges
+          fail "User is missing permissions on datacenter `#{cpi.datacenter.name}`. Missing permssions: #{missing_permissions}"
+        else
+          fail "User must have limited permissions on datacenter `#{cpi.datacenter.name}`. Disallowed permissions include: #{disallowed_privileges.inspect}"
+        end
       end
     end
 
-    def authorization_manager(cpi)
-      service_content = cpi.client.service_content
-      service_content.authorization_manager
+    private
+
+    def cpi
+      @cpi
     end
 
-    def root_folder(cpi)
-      service_content = cpi.client.service_content
+    def service_content
+      @service_content ||= cpi.client.service_content
+    end
+
+    def authorization_manager
+      @authorization_manager ||= service_content.authorization_manager
+    end
+
+    def root_folder
       service_content.root_folder
     end
 
-    def current_session_id(cpi)
-      service_content = cpi.client.service_content
-      current_session = service_content.session_manager.current_session
-      current_session.key
+    def current_session_id
+      @current_session_id ||= service_content.session_manager.current_session.key
+    end
+
+    def all_privileges
+      @all_privileges = authorization_manager.privilege_list.map(&:priv_id)
+    end
+
+    def build_actual_privileges_list(entity)
+      privileges_response =
+        authorization_manager.has_privilege_on_entity(entity, current_session_id, all_privileges)
+      Hash[all_privileges.zip(privileges_response)].select { |_, privelege| privelege }.keys
     end
   end
 end
