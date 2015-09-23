@@ -98,14 +98,14 @@ module VSphereCloud
         created_vm.power_on
 
         create_drs_rules(created_vm.mob, cluster)
-      rescue Cloud::NetworkException => e
-        e.vm_cid = vm_cid
-        @logger.info("#{e} - #{e.backtrace.join("\n")}")
-        created_vm.delete if created_vm
-        raise e
       rescue => e
+        e.vm_cid = vm_cid if e.instance_of?(Cloud::NetworkException)
         @logger.info("#{e} - #{e.backtrace.join("\n")}")
-        created_vm.delete if created_vm
+        begin
+          created_vm.delete if created_vm
+        rescue => ex
+          @logger.info("Failed to delete vm '#{vm_cid}' with message:  #{ex.message}")
+        end
         raise e
       end
 

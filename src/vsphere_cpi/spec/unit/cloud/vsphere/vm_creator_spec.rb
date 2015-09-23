@@ -159,6 +159,29 @@ describe VSphereCloud::VmCreator do
       end
     end
 
+    context 'when vm fails to power on' do
+      before(:each) do
+        allow_any_instance_of(VSphereCloud::Resources::VM).to receive(:power_on).and_raise("power_on error")
+        allow(vsphere_client).to receive(:delete_vm)
+      end
+
+      it 'deletes the vm and raises an error' do
+        expect_any_instance_of(VSphereCloud::Resources::VM).to receive(:delete)
+        expect {
+          creator.create('agent_id', 'stemcell_cid', networks, persistent_disk_cids, {})
+        }.to raise_error("power_on error")
+      end
+
+      context 'when delete vm fails' do
+        before { allow(vsphere_client).to receive(:delete_vm).and_raise("delete error") }
+        it 'properly bubbles up the original error message' do
+          expect {
+            creator.create('agent_id', 'stemcell_cid', networks, persistent_disk_cids, {})
+          }.to raise_error("power_on error")
+        end
+      end
+    end
+
     it 'chooses the placement based on memory, ephemeral and persistent disks' do
       expect(placer).to receive(:pick_cluster_for_vm).with(1024, 2049, persistent_disks).and_return(cluster)
       expect(placer).to receive(:pick_ephemeral_datastore).with(cluster, 2049).and_return(datastore)
