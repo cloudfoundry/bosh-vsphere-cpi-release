@@ -34,7 +34,7 @@ jobs:
     serial: true
     plan:
       - aggregate:
-          - {trigger: false, get: bosh-cpi-release}
+          - {trigger: true, get: bosh-cpi-release}
           - {trigger: false, get: version-semver,   params: {bump: patch}}
 
       - put: version-semver
