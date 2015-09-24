@@ -76,30 +76,6 @@ module VSphereCloud
       end
     end
 
-    describe '#move_into_folder' do
-      let(:folder) { instance_double('VimSdk::Vim::Folder') }
-
-      it 'calls move_into on folder and waits for task' do
-        things_to_move = double('fake-things-to-move')
-        task = double('fake-task')
-
-        expect(folder).to receive(:move_into).with(things_to_move).and_return(task)
-        expect(client).to receive(:wait_for_task).with(task)
-        client.move_into_folder(folder, things_to_move)
-      end
-    end
-
-    describe '#move_into_root_folder' do
-      it 'moves into root folder and waits for task' do
-        things_to_move = double('fake-things-to-move')
-        task = double('fake-task')
-
-        expect(fake_service_content.root_folder).to receive(:move_into).with(things_to_move).and_return(task)
-        expect(client).to receive(:wait_for_task).with(task)
-        client.move_into_root_folder(things_to_move)
-      end
-    end
-
     describe '#delete_path' do
       let(:datacenter) { instance_double('VimSdk::Vim::Datacenter') }
       let(:task) { instance_double('VimSdk::Vim::Task') }

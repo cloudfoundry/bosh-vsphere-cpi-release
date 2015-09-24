@@ -120,16 +120,6 @@ module VSphereCloud
       @service_content.root_folder.create_folder(name)
     end
 
-    def move_into_folder(folder, objects)
-      task = folder.move_into(objects)
-      wait_for_task(task)
-    end
-
-    def move_into_root_folder(objects)
-      task = @service_content.root_folder.move_into(objects)
-      wait_for_task(task)
-    end
-
     def delete_folder(folder)
       task = folder.destroy
       wait_for_task(task)

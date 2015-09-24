@@ -47,7 +47,6 @@ jobs:
         params: {from: build/out/.*\.tgz}
 
   - name: lifecycle
-    serial: true
     plan:
       - aggregate:
         - {trigger: true,  passed: [build-candidate], get: bosh-cpi-dev-artifacts} # used for job chaining only not for tasks
@@ -58,26 +57,29 @@ jobs:
         file: bosh-cpi-release/ci/tasks/run-lifecycle.yml
         config:
           params:
-            BOSH_VSPHERE_CPI_HOST:                         {{lifecycle_VSPHERE_HOST}}
-            BOSH_VSPHERE_CPI_USER:                         {{lifecycle_VSPHERE_USER}}
-            BOSH_VSPHERE_CPI_PASSWORD:                     {{lifecycle_VSPHERE_PASSWORD}}
-            BOSH_VSPHERE_CPI_ADMIN_USER:                   {{lifecycle_VSPHERE_ADMIN_USER}}
-            BOSH_VSPHERE_CPI_ADMIN_PASSWORD:               {{lifecycle_VSPHERE_ADMIN_PASSWORD}}
-            BOSH_VSPHERE_VLAN:                             {{lifecycle_VSPHERE_VLAN}}
-            BOSH_VSPHERE_CPI_DATACENTER:                   {{lifecycle_VSPHERE_DATACENTER}}
-            BOSH_VSPHERE_CPI_CLUSTER:                      {{lifecycle_VSPHERE_CLUSTER}}
-            BOSH_VSPHERE_CPI_DATASTORE_PATTERN:            {{lifecycle_VSPHERE_DATASTORE_PATTERN}}
-            BOSH_VSPHERE_CPI_PERSISTENT_DATASTORE_PATTERN: {{lifecycle_VSPHERE_PERSISTENT_DATASTORE_PATTERN}}
-            BOSH_VSPHERE_CPI_SECOND_DATASTORE:             {{lifecycle_VSPHERE_SECOND_DATASTORE}}
-            BOSH_VSPHERE_CPI_LOCAL_DATASTORE_PATTERN:      {{lifecycle_VSPHERE_LOCAL_DATASTORE_PATTERN}}
-            BOSH_VSPHERE_CPI_RESOURCE_POOL:                {{lifecycle_VSPHERE_RESOURCE_POOL}}
-            BOSH_VSPHERE_CPI_SECOND_RESOURCE_POOL:         {{lifecycle_VSPHERE_SECOND_RESOURCE_POOL}}
-            BOSH_VSPHERE_CPI_SECOND_CLUSTER:               {{lifecycle_VSPHERE_SECOND_CLUSTER}}
-            BOSH_VSPHERE_CPI_SECOND_CLUSTER_DATASTORE:     {{lifecycle_VSPHERE_SECOND_CLUSTER_DATASTORE}}
-            BOSH_VSPHERE_CPI_SECOND_CLUSTER_RESOURCE_POOL: {{lifecycle_VSPHERE_SECOND_CLUSTER_RESOURCE_POOL}}
-            BOSH_VSPHERE_CPI_VM_FOLDER:                    {{lifecycle_VSPHERE_VM_FOLDER}}
-            BOSH_VSPHERE_CPI_TEMPLATE_FOLDER:              {{lifecycle_VSPHERE_TEMPLATE_FOLDER}}
-            BOSH_VSPHERE_CPI_DISK_PATH:                    {{lifecycle_VSPHERE_DISK_PATH}}
+            BOSH_VSPHERE_CPI_HOST:                                {{lifecycle_VSPHERE_HOST}}
+            BOSH_VSPHERE_CPI_USER:                                {{lifecycle_VSPHERE_USER}}
+            BOSH_VSPHERE_CPI_PASSWORD:                            {{lifecycle_VSPHERE_PASSWORD}}
+            BOSH_VSPHERE_VLAN:                                    {{lifecycle_VSPHERE_VLAN}}
+            BOSH_VSPHERE_CPI_DATACENTER:                          {{lifecycle_VSPHERE_DATACENTER}}
+            BOSH_VSPHERE_CPI_CLUSTER:                             {{lifecycle_VSPHERE_CLUSTER}}
+            BOSH_VSPHERE_CPI_DATASTORE_PATTERN:                   {{lifecycle_VSPHERE_DATASTORE_PATTERN}}
+            BOSH_VSPHERE_CPI_PERSISTENT_DATASTORE_PATTERN:        {{lifecycle_VSPHERE_PERSISTENT_DATASTORE_PATTERN}}
+            BOSH_VSPHERE_CPI_SECOND_DATASTORE:                    {{lifecycle_VSPHERE_SECOND_DATASTORE}}
+            BOSH_VSPHERE_CPI_LOCAL_DATASTORE_PATTERN:             {{lifecycle_VSPHERE_LOCAL_DATASTORE_PATTERN}}
+            BOSH_VSPHERE_CPI_RESOURCE_POOL:                       {{lifecycle_VSPHERE_RESOURCE_POOL}}
+            BOSH_VSPHERE_CPI_SECOND_RESOURCE_POOL:                {{lifecycle_VSPHERE_SECOND_RESOURCE_POOL}}
+            BOSH_VSPHERE_CPI_SECOND_CLUSTER:                      {{lifecycle_VSPHERE_SECOND_CLUSTER}}
+            BOSH_VSPHERE_CPI_SECOND_CLUSTER_DATASTORE:            {{lifecycle_VSPHERE_SECOND_CLUSTER_DATASTORE}}
+            BOSH_VSPHERE_CPI_SECOND_CLUSTER_RESOURCE_POOL:        {{lifecycle_VSPHERE_SECOND_CLUSTER_RESOURCE_POOL}}
+            BOSH_VSPHERE_CPI_VM_FOLDER:                           {{lifecycle_VSPHERE_VM_FOLDER}}
+            BOSH_VSPHERE_CPI_TEMPLATE_FOLDER:                     {{lifecycle_VSPHERE_TEMPLATE_FOLDER}}
+            BOSH_VSPHERE_CPI_DISK_PATH:                           {{lifecycle_VSPHERE_DISK_PATH}}
+            BOSH_VSPHERE_CPI_NESTED_DATACENTER:                   {{lifecycle_VSPHERE_NESTED_DATACENTER}}
+            BOSH_VSPHERE_CPI_NESTED_DATACENTER_DATASTORE_PATTERN: {{lifecycle_VSPHERE_NESTED_DATACENTER_DATASTORE_PATTERN}}
+            BOSH_VSPHERE_CPI_NESTED_DATACENTER_CLUSTER:           {{lifecycle_VSPHERE_NESTED_DATACENTER_CLUSTER}}
+            BOSH_VSPHERE_CPI_NESTED_DATACENTER_RESOURCE_POOL:     {{lifecycle_VSPHERE_NESTED_DATACENTER_RESOURCE_POOL}}
+            BOSH_VSPHERE_CPI_NESTED_DATACENTER_VLAN:              {{lifecycle_VSPHERE_NESTED_DATACENTER_VLAN}}
 
   - name: bats-ubuntu-manual
     plan:

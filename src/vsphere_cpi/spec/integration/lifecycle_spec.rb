@@ -4,11 +4,15 @@ require 'yaml'
 
 describe VSphereCloud::Cloud, external_cpi: false do
   before(:all) do
+    config = VSphereSpecConfig.new
+    config.logger = Logger.new(STDOUT)
+    config.logger.level = Logger::DEBUG
+    config.uuid = '123'
+    Bosh::Clouds::Config.configure(config)
+
     @host = ENV.fetch('BOSH_VSPHERE_CPI_HOST')
     @user = ENV.fetch('BOSH_VSPHERE_CPI_USER')
     @password = ENV.fetch('BOSH_VSPHERE_CPI_PASSWORD')
-    @admin_user = ENV.fetch('BOSH_VSPHERE_CPI_ADMIN_USER')
-    @admin_password = ENV.fetch('BOSH_VSPHERE_CPI_ADMIN_PASSWORD')
     @vlan = ENV.fetch('BOSH_VSPHERE_VLAN')
     @stemcell_path = ENV.fetch('BOSH_VSPHERE_STEMCELL')
 
@@ -29,11 +33,18 @@ describe VSphereCloud::Cloud, external_cpi: false do
     @second_cluster_resource_pool_name = ENV.fetch('BOSH_VSPHERE_CPI_SECOND_CLUSTER_RESOURCE_POOL')
     @second_cluster_datastore = ENV.fetch('BOSH_VSPHERE_CPI_SECOND_CLUSTER_DATASTORE')
 
-    config = VSphereSpecConfig.new
-    config.logger = Logger.new(STDOUT)
-    config.logger.level = Logger::DEBUG
-    config.uuid = '123'
-    Bosh::Clouds::Config.configure(config)
+    nested_datacenter_name = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_NESTED_DATACENTER')
+    nested_datacenter_datastore_pattern = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_NESTED_DATACENTER_DATASTORE_PATTERN')
+    nested_datacenter_cluster = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_NESTED_DATACENTER_CLUSTER')
+    nested_datacenter_resource_pool_name = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_NESTED_DATACENTER_RESOURCE_POOL')
+    @nested_datacenter_vlan = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_NESTED_DATACENTER_VLAN')
+
+    @nested_datacenter_cpi_options = cpi_options(
+      datacenter_name: nested_datacenter_name,
+      datastore_pattern: nested_datacenter_datastore_pattern,
+      persistent_datastore_pattern: nested_datacenter_datastore_pattern,
+      clusters: [{nested_datacenter_cluster => {'resource_pool' => nested_datacenter_resource_pool_name}}]
+    )
 
     @local_disk_cpi_options = cpi_options(
       datastore_pattern: @local_datastore_pattern,
@@ -41,12 +52,15 @@ describe VSphereCloud::Cloud, external_cpi: false do
     )
     LifecycleHelpers.verify_local_disk_infrastructure(@local_disk_cpi_options)
     LifecycleHelpers.verify_user_has_limited_permissions(cpi_options)
+    LifecycleHelpers.verify_nested_datacenter(@nested_datacenter_cpi_options, @nested_datacenter_vlan)
 
     Dir.mktmpdir do |temp_dir|
       output = `tar -C #{temp_dir} -xzf #{@stemcell_path} 2>&1`
       raise "Corrupt image, tar exit status: #{$?.exitstatus} output: #{output}" if $?.exitstatus != 0
       cpi = described_class.new(cpi_options)
       @stemcell_id = cpi.create_stemcell("#{temp_dir}/image", nil)
+      nested_ds_cpi = described_class.new(@nested_datacenter_cpi_options)
+      @nested_datacenter_stemcell_id = nested_ds_cpi.create_stemcell("#{temp_dir}/image", nil)
     end
   end
 
@@ -87,37 +101,14 @@ describe VSphereCloud::Cloud, external_cpi: false do
   after(:all) {
     cpi = described_class.new(cpi_options)
     cpi.delete_stemcell(@stemcell_id) if @stemcell_id
+    nested_datacenter_cpi = described_class.new(@nested_datacenter_cpi_options)
+    nested_datacenter_cpi.delete_stemcell(@nested_datacenter_stemcell_id) if @nested_datacenter_stemcell_id
   }
 
-  describe "deleting things that do not exist" do
-    it "raises the appropriate Clouds::Error" do
-      expect {
-        cpi.delete_vm('fake-vm-cid')
-      }.to raise_error(Bosh::Clouds::VMNotFound)
-
-      expect {
-        cpi.delete_disk('fake-disk-cid')
-      }.to raise_error(Bosh::Clouds::DiskNotFound)
-    end
-  end
-
-  def network_spec
-    {
-      'static' => {
-        'ip' => '169.254.1.1',
-        'netmask' => '255.255.254.0',
-        'cloud_properties' => {'name' => @vlan},
-        'default' => ['dns', 'gateway'],
-        'dns' => ['169.254.1.2'],
-        'gateway' => '169.254.1.3'
-      }
-    }
-  end
-
-  def vm_lifecycle(disk_locality, resource_pool)
+  def vm_lifecycle(disk_locality, resource_pool, network_spec, stemcell_id = @stemcell_id)
     @vm_id = cpi.create_vm(
       'agent-007',
-      @stemcell_id,
+      stemcell_id,
       resource_pool,
       network_spec,
       disk_locality,
@@ -138,9 +129,9 @@ describe VSphereCloud::Cloud, external_cpi: false do
     cpi.attach_disk(@vm_id, @disk_id)
     expect(cpi.has_disk?(@disk_id)).to be(true)
 
-    network_spec['static']['ip'] = '169.254.1.2'
-
-    cpi.configure_networks(@vm_id, network_spec)
+    modified_network_spec = network_spec.dup
+    modified_network_spec['static']['ip'] = '169.254.1.2'
+    cpi.configure_networks(@vm_id, modified_network_spec)
 
     metadata[:bosh_data] = 'bosh data'
     metadata[:instance_id] = 'instance'
@@ -159,19 +150,46 @@ describe VSphereCloud::Cloud, external_cpi: false do
     cpi.detach_disk(@vm_id, @disk_id)
   end
 
-  let(:resource_pool) {
+  let(:network_spec) do
+    {
+      'static' => {
+        'ip' => '169.254.1.1',
+        'netmask' => '255.255.254.0',
+        'cloud_properties' => {'name' => vlan},
+        'default' => ['dns', 'gateway'],
+        'dns' => ['169.254.1.2'],
+        'gateway' => '169.254.1.3'
+      }
+    }
+  end
+
+  let(:vlan) { @vlan }
+
+  let(:resource_pool) do
     {
       'ram' => 1024,
       'disk' => 2048,
       'cpu' => 1,
     }
-  }
+  end
 
   def clean_up_vm_and_disk(cpi)
     cpi.delete_vm(@vm_id) if @vm_id
     @vm_id = nil
     cpi.delete_disk(@disk_id) if @disk_id
     @disk_id = nil
+  end
+
+  describe 'deleting things that do not exist' do
+    it 'raises the appropriate Clouds::Error' do
+      expect {
+        cpi.delete_vm('fake-vm-cid')
+      }.to raise_error(Bosh::Clouds::VMNotFound)
+
+      expect {
+        cpi.delete_disk('fake-disk-cid')
+      }.to raise_error(Bosh::Clouds::DiskNotFound)
+    end
   end
 
   describe 'lifecycle' do
@@ -181,7 +199,7 @@ describe VSphereCloud::Cloud, external_cpi: false do
 
     context 'without existing disks' do
       it 'should exercise the vm lifecycle' do
-        vm_lifecycle([], resource_pool)
+        vm_lifecycle([], resource_pool, network_spec)
       end
     end
 
@@ -229,7 +247,7 @@ describe VSphereCloud::Cloud, external_cpi: false do
 
         it 'places vm in second cluster' do
           resource_pool['datacenters'] = [{'name' => @datacenter_name, 'clusters' => [{@second_cluster => {}}]}]
-          vm_lifecycle([], resource_pool)
+          vm_lifecycle([], resource_pool, network_spec)
 
           vm = cpi.vm_provider.find(@vm_id)
           expect(vm.cluster).to eq(@second_cluster)
@@ -242,7 +260,7 @@ describe VSphereCloud::Cloud, external_cpi: false do
       after { cpi.delete_disk(@existing_volume_id) if @existing_volume_id }
 
       it 'should exercise the vm lifecycle' do
-        vm_lifecycle([@existing_volume_id], resource_pool)
+        vm_lifecycle([@existing_volume_id], resource_pool, network_spec)
       end
     end
   end
@@ -313,52 +331,27 @@ describe VSphereCloud::Cloud, external_cpi: false do
       end
     end
 
-    # context 'when datacenter is in folder' do
-    #   let(:client) do
-    #     VSphereCloud::Client.new("https://#{@host}/sdk/vimService").tap do |client|
-    #       client.login(@user, @password, 'en')
-    #     end
-    #   end
-    #
-    #   # `admin_client` has more permissions than `client` for setup/teardown
-    #   let(:admin_client) do
-    #     VSphereCloud::Client.new("https://#{@host}/sdk/vimService").tap do |client|
-    #       client.login(@admin_user, @admin_password, 'en')
-    #     end
-    #   end
-    #
-    #   let(:datacenter) { client.find_by_inventory_path(@datacenter_name) }
-    #   let(:folder_name) { SecureRandom.uuid }
-    #   let(:folder) { admin_client.create_folder(folder_name) }
-    #   subject(:cpi) do
-    #     options = cpi_options(
-    #       datacenter_name: "#{folder_name}/#{@datacenter_name}",
-    #     )
-    #     described_class.new(options)
-    #   end
-    #
-    #   before do
-    #     admin_client.move_into_folder(folder, [datacenter])
-    #     @vm_id = nil
-    #     @disk_id = nil
-    #   end
-    #
-    #   after do
-    #     clean_up_vm_and_disk(cpi)
-    #     admin_client.move_into_root_folder([datacenter])
-    #     admin_client.delete_folder(folder)
-    #   end
-    #
-    #   it 'exercises the vm lifecycle' do
-    #     vm_lifecycle([], resource_pool)
-    #   end
-    # end
+    context 'when datacenter is in folder' do
+      subject(:cpi) do
+        described_class.new(@nested_datacenter_cpi_options)
+      end
+
+      let(:vlan) { @nested_datacenter_vlan }
+
+      after do
+        clean_up_vm_and_disk(cpi)
+      end
+
+      it 'exercises the vm lifecycle' do
+        vm_lifecycle([], resource_pool, network_spec, @nested_datacenter_stemcell_id)
+      end
+    end
 
     context 'when disk is being re-attached' do
       after { clean_up_vm_and_disk(cpi) }
 
       it 'does not lock cd-rom' do
-        vm_lifecycle([], resource_pool)
+        vm_lifecycle([], resource_pool, network_spec)
         cpi.attach_disk(@vm_id, @disk_id)
         cpi.detach_disk(@vm_id, @disk_id)
       end
@@ -374,7 +367,7 @@ describe VSphereCloud::Cloud, external_cpi: false do
       end
 
       it 'should exercise the vm lifecycle' do
-        vm_lifecycle([], resource_pool) do
+        vm_lifecycle([], resource_pool, network_spec) do
           vm = cpi.vm_provider.find(@vm_id)
 
           datastore = cpi.client.cloud_searcher.get_managed_object(VimSdk::Vim::Datastore, name: @second_datastore_within_cluster)
@@ -565,137 +558,132 @@ describe VSphereCloud::Cloud, external_cpi: false do
 end
 
 class LifecycleHelpers
+  MISSING_KEY_MESSAGES = {
+    'BOSH_VSPHERE_CPI_LOCAL_DATASTORE_PATTERN' => 'Please ensure you provide a pattern that match datastores that are only accessible by a single host.',
+    'BOSH_VSPHERE_CPI_NESTED_DATACENTER' => 'Please ensure you provide a datacenter that is in a sub-folder of the root folder',
+    'BOSH_VSPHERE_CPI_NESTED_DATACENTER_DATASTORE_PATTERN' => 'Please ensure you provide a datastore accessible datacenter referenced by BOSH_VSPHERE_CPI_NESTED_DATACENTER',
+    'BOSH_VSPHERE_CPI_NESTED_DATACENTER_CLUSTER' => 'Please ensure you provide a cluster within the datacenter referenced by BOSH_VSPHERE_CPI_NESTED_DATACENTER',
+    'BOSH_VSPHERE_CPI_NESTED_DATACENTER_RESOURCE_POOL' => 'Please ensure you provide a resource pool within the cluster referenced by BOSH_VSPHERE_CPI_NESTED_DATACENTER_CLUSTER',
+    'BOSH_VSPHERE_CPI_NESTED_DATACENTER_VLAN' => 'Please ensure your provide the name of the distributed switch within the datacenter referenced by BOSH_VSPHERE_CPI_NESTED_DATACENTER'
+  }
+
+  ALLOWED_PRIVILEGES_ON_ROOT = [
+    'System.Anonymous',
+    'System.Read',
+    'System.View'
+  ]
+
+  ALLOWED_PRIVILEGES_ON_DATACENTER = [
+    'System.Anonymous',
+    'System.Read',
+    'System.View',
+
+    'Folder.Create',
+    'Folder.Delete',
+    'Folder.Rename',
+    'Folder.Move',
+
+    'Datastore.AllocateSpace',
+    'Datastore.Browse',
+    'Datastore.DeleteFile',
+    'Datastore.UpdateVirtualMachineFiles',
+    'Datastore.FileManagement',
+
+    'Network.Assign',
+
+    'VirtualMachine.Inventory.Create',
+    'VirtualMachine.Inventory.CreateFromExisting',
+    'VirtualMachine.Inventory.Register',
+    'VirtualMachine.Inventory.Delete',
+    'VirtualMachine.Inventory.Unregister',
+    'VirtualMachine.Inventory.Move',
+    'VirtualMachine.Interact.PowerOn',
+    'VirtualMachine.Interact.PowerOff',
+    'VirtualMachine.Interact.Suspend',
+    'VirtualMachine.Interact.Reset',
+    'VirtualMachine.Interact.AnswerQuestion',
+    'VirtualMachine.Interact.ConsoleInteract',
+    'VirtualMachine.Interact.DeviceConnection',
+    'VirtualMachine.Interact.SetCDMedia',
+    'VirtualMachine.Interact.ToolsInstall',
+    'VirtualMachine.Interact.GuestControl',
+    'VirtualMachine.Interact.DefragmentAllDisks',
+    'VirtualMachine.GuestOperations.Query',
+    'VirtualMachine.GuestOperations.Modify',
+    'VirtualMachine.GuestOperations.Execute',
+    'VirtualMachine.Config.Rename',
+    'VirtualMachine.Config.Annotation',
+    'VirtualMachine.Config.AddExistingDisk',
+    'VirtualMachine.Config.AddNewDisk',
+    'VirtualMachine.Config.RemoveDisk',
+    'VirtualMachine.Config.RawDevice',
+    'VirtualMachine.Config.CPUCount',
+    'VirtualMachine.Config.Memory',
+    'VirtualMachine.Config.AddRemoveDevice',
+    'VirtualMachine.Config.EditDevice',
+    'VirtualMachine.Config.Settings',
+    'VirtualMachine.Config.Resource',
+    'VirtualMachine.Config.ResetGuestInfo',
+    'VirtualMachine.Config.AdvancedConfig',
+    'VirtualMachine.Config.DiskLease',
+    'VirtualMachine.Config.SwapPlacement',
+    'VirtualMachine.Config.DiskExtend',
+    'VirtualMachine.Config.ChangeTracking',
+    'VirtualMachine.Config.Unlock',
+    'VirtualMachine.Config.ReloadFromPath',
+    'VirtualMachine.Config.MksControl',
+    'VirtualMachine.Config.ManagedBy',
+    'VirtualMachine.State.CreateSnapshot',
+    'VirtualMachine.State.RevertToSnapshot',
+    'VirtualMachine.State.RemoveSnapshot',
+    'VirtualMachine.State.RenameSnapshot',
+    'VirtualMachine.Provisioning.Customize',
+    'VirtualMachine.Provisioning.Clone',
+    'VirtualMachine.Provisioning.PromoteDisks',
+    'VirtualMachine.Provisioning.DeployTemplate',
+    'VirtualMachine.Provisioning.CloneTemplate',
+    'VirtualMachine.Provisioning.MarkAsTemplate',
+    'VirtualMachine.Provisioning.MarkAsVM',
+    'VirtualMachine.Provisioning.ReadCustSpecs',
+    'VirtualMachine.Provisioning.ModifyCustSpecs',
+    'VirtualMachine.Provisioning.DiskRandomAccess',
+    'VirtualMachine.Provisioning.DiskRandomRead',
+    'VirtualMachine.Provisioning.GetVmFiles',
+    'VirtualMachine.Provisioning.PutVmFiles',
+
+    'Resource.AssignVMToPool',
+    'Resource.ColdMigrate',
+    'Resource.HotMigrate',
+
+    'VApp.Import'
+  ]
+
   class << self
-    MISSING_KEY_MESSAGES = {
-      'BOSH_VSPHERE_CPI_LOCAL_DATASTORE_PATTERN' => 'Please ensure you provide a pattern that match datastores that are only accessible by a single host.'
-    }
-
-    ALLOWED_PRIVILEGES_ON_ROOT = [
-      'System.Anonymous',
-      'System.Read',
-      'System.View'
-    ]
-
-    ALLOWED_PRIVILEGES_ON_DATACENTER = [
-      'System.Anonymous',
-      'System.Read',
-      'System.View',
-
-      'Folder.Create',
-      'Folder.Delete',
-      'Folder.Rename',
-      'Folder.Move',
-
-      'Datastore.AllocateSpace',
-      'Datastore.Browse',
-      'Datastore.DeleteFile',
-      'Datastore.UpdateVirtualMachineFiles',
-      'Datastore.FileManagement',
-
-      'Network.Assign',
-
-      'VirtualMachine.Inventory.Create',
-      'VirtualMachine.Inventory.CreateFromExisting',
-      'VirtualMachine.Inventory.Register',
-      'VirtualMachine.Inventory.Delete',
-      'VirtualMachine.Inventory.Unregister',
-      'VirtualMachine.Inventory.Move',
-      'VirtualMachine.Interact.PowerOn',
-      'VirtualMachine.Interact.PowerOff',
-      'VirtualMachine.Interact.Suspend',
-      'VirtualMachine.Interact.Reset',
-      'VirtualMachine.Interact.AnswerQuestion',
-      'VirtualMachine.Interact.ConsoleInteract',
-      'VirtualMachine.Interact.DeviceConnection',
-      'VirtualMachine.Interact.SetCDMedia',
-      'VirtualMachine.Interact.ToolsInstall',
-      'VirtualMachine.Interact.GuestControl',
-      'VirtualMachine.Interact.DefragmentAllDisks',
-      'VirtualMachine.GuestOperations.Query',
-      'VirtualMachine.GuestOperations.Modify',
-      'VirtualMachine.GuestOperations.Execute',
-      'VirtualMachine.Config.Rename',
-      'VirtualMachine.Config.Annotation',
-      'VirtualMachine.Config.AddExistingDisk',
-      'VirtualMachine.Config.AddNewDisk',
-      'VirtualMachine.Config.RemoveDisk',
-      'VirtualMachine.Config.RawDevice',
-      'VirtualMachine.Config.CPUCount',
-      'VirtualMachine.Config.Memory',
-      'VirtualMachine.Config.AddRemoveDevice',
-      'VirtualMachine.Config.EditDevice',
-      'VirtualMachine.Config.Settings',
-      'VirtualMachine.Config.Resource',
-      'VirtualMachine.Config.ResetGuestInfo',
-      'VirtualMachine.Config.AdvancedConfig',
-      'VirtualMachine.Config.DiskLease',
-      'VirtualMachine.Config.SwapPlacement',
-      'VirtualMachine.Config.DiskExtend',
-      'VirtualMachine.Config.ChangeTracking',
-      'VirtualMachine.Config.Unlock',
-      'VirtualMachine.Config.ReloadFromPath',
-      'VirtualMachine.Config.MksControl',
-      'VirtualMachine.Config.ManagedBy',
-      'VirtualMachine.State.CreateSnapshot',
-      'VirtualMachine.State.RevertToSnapshot',
-      'VirtualMachine.State.RemoveSnapshot',
-      'VirtualMachine.State.RenameSnapshot',
-      'VirtualMachine.Provisioning.Customize',
-      'VirtualMachine.Provisioning.Clone',
-      'VirtualMachine.Provisioning.PromoteDisks',
-      'VirtualMachine.Provisioning.DeployTemplate',
-      'VirtualMachine.Provisioning.CloneTemplate',
-      'VirtualMachine.Provisioning.MarkAsTemplate',
-      'VirtualMachine.Provisioning.MarkAsVM',
-      'VirtualMachine.Provisioning.ReadCustSpecs',
-      'VirtualMachine.Provisioning.ModifyCustSpecs',
-      'VirtualMachine.Provisioning.DiskRandomAccess',
-      'VirtualMachine.Provisioning.DiskRandomRead',
-      'VirtualMachine.Provisioning.GetVmFiles',
-      'VirtualMachine.Provisioning.PutVmFiles',
-
-      'Resource.AssignVMToPool',
-      'Resource.ColdMigrate',
-      'Resource.HotMigrate',
-
-      'VApp.Import'
-    ]
-
     def fetch_property(property)
       fail "Missing Environment varibale #{property}: #{MISSING_KEY_MESSAGES[property]}" unless(ENV.has_key?(property))
       ENV[property]
     end
 
     def verify_local_disk_infrastructure(cpi_options)
-      pattern = cpi_options['vcenters'].first['datacenters'].first['datastore_pattern']
-      cpi_using_future_version_of_api = VSphereCloud::Cloud.new(cpi_options)
-      all_ephemeral_datastores = ephemeral_datastores(cpi_using_future_version_of_api)
-      if(all_ephemeral_datastores.empty?)
-        fail(
-          <<-EOF
-No datastores found matching `BOSH_VSPHERE_CPI_LOCAL_DATASTORE_PATTERN`(/#{pattern}/).
-#{MISSING_KEY_MESSAGES['BOSH_VSPHERE_CPI_LOCAL_DATASTORE_PATTERN']}
-EOF
-        )
-      end
+      cpi = VSphereCloud::Cloud.new(cpi_options)
+      all_ephemeral_datastores = ephemeral_datastores(cpi)
+      datastore_pattern = cpi_options['vcenters'].first['datacenters'].first['datastore_pattern']
+      verify_datastore_pattern(
+        all_ephemeral_datastores,
+        'BOSH_VSPHERE_CPI_LOCAL_DATASTORE_PATTERN',
+        datastore_pattern
+      )
+
       nonlocal_disk_ephemeral_datastores = all_ephemeral_datastores.select { |_, datastore| datastore.mob.summary.multiple_host_access }
       unless (nonlocal_disk_ephemeral_datastores.empty?)
         fail(
           <<-EOF
-Some datastores found maching `BOSH_VSPHERE_CPI_LOCAL_DATASTORE_PATTERN`(/#{pattern}/)
+Some datastores found maching `BOSH_VSPHERE_CPI_LOCAL_DATASTORE_PATTERN`(/#{datastore_pattern}/)
 are configured to allow multiple hosts to access them:
 #{nonlocal_disk_ephemeral_datastores}.
 #{MISSING_KEY_MESSAGES['BOSH_VSPHERE_CPI_LOCAL_DATASTORE_PATTERN']}
         EOF
         )
-      end
-    end
-
-    def ephemeral_datastores(cpi)
-      clusters = cpi.datacenter.clusters
-      clusters.inject({}) do |acc, kv|
-        cluster = kv.last
-        acc.merge!(cluster.ephemeral_datastores)
       end
     end
 
@@ -723,7 +711,52 @@ are configured to allow multiple hosts to access them:
       end
     end
 
+    def verify_nested_datacenter(cpi_options, vlan)
+      cpi = VSphereCloud::Cloud.new(cpi_options)
+      datacenter_options = cpi_options['vcenters'].first['datacenters'].first
+
+      datacenter_mob = cpi.datacenter.mob
+      client = cpi.client
+      datacenter_parent = client.cloud_searcher.get_property(datacenter_mob, datacenter_mob.class, 'parent', :ensure_all => true)
+      root_folder = client.service_content.root_folder
+
+      fail 'Datacenter is not in subfolder' if root_folder.to_str == datacenter_parent.to_str
+
+      verify_datastore_pattern(
+        ephemeral_datastores(cpi),
+        'BOSH_VSPHERE_CPI_NESTED_DATACENTER_DATASTORE_PATTERN',
+        datacenter_options['datastore_pattern']
+      )
+
+      begin
+        cpi.datacenter.clusters.first.last.resource_pool.mob
+      rescue
+        cluster_tuple = datacenter_options['clusters'].first.first
+        cluster_name = cluster_tuple.first
+        resource_pool_name = cluster_tuple.last['resource_pool']
+        fail "No resource pool named '#{resource_pool_name}' found in cluster named '#{cluster_name}'"
+      end
+
+      datacenter_name = cpi.datacenter.name
+      network = client.find_by_inventory_path([datacenter_name, 'network', vlan])
+      fail "No network named '#{vlan}' found in datacenter named '#{datacenter_name}'" if network.nil?
+    end
+
     private
+
+    def verify_datastore_pattern(datastores, env_var_name, pattern)
+      if (datastores.empty?)
+        fail( "No datastores found matching '#{env_var_name}' (/#{pattern}/).\n#{MISSING_KEY_MESSAGES[env_var_name]}")
+      end
+    end
+
+    def ephemeral_datastores(cpi)
+      clusters = cpi.datacenter.clusters
+      clusters.inject({}) do |acc, kv|
+        cluster = kv.last
+        acc.merge!(cluster.ephemeral_datastores)
+      end
+    end
 
     def cpi
       @cpi

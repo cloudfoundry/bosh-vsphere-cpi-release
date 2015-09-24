@@ -8,23 +8,26 @@ run:
   path: bosh-cpi-release/ci/tasks/run-lifecycle.sh
 tags: ["vsphere"]
 params:
-  BOSH_VSPHERE_CPI_HOST:                          replace-me
-  BOSH_VSPHERE_CPI_USER:                          replace-me
-  BOSH_VSPHERE_CPI_PASSWORD:                      replace-me
-  BOSH_VSPHERE_CPI_ADMIN_USER:                    replace-me
-  BOSH_VSPHERE_CPI_ADMIN_PASSWORD:                replace-me
-  BOSH_VSPHERE_VLAN:                              replace-me
-  BOSH_VSPHERE_CPI_DATACENTER:                    replace-me
-  BOSH_VSPHERE_CPI_CLUSTER:                       replace-me
-  BOSH_VSPHERE_CPI_DATASTORE_PATTERN:             replace-me
-  BOSH_VSPHERE_CPI_PERSISTENT_DATASTORE_PATTERN:  replace-me
-  BOSH_VSPHERE_CPI_SECOND_DATASTORE:              replace-me
-  BOSH_VSPHERE_CPI_LOCAL_DATASTORE_PATTERN:       replace-me
-  BOSH_VSPHERE_CPI_RESOURCE_POOL:                 replace-me
-  BOSH_VSPHERE_CPI_SECOND_RESOURCE_POOL:          replace-me
-  BOSH_VSPHERE_CPI_SECOND_CLUSTER:                replace-me
-  BOSH_VSPHERE_CPI_SECOND_CLUSTER_DATASTORE:      replace-me
-  BOSH_VSPHERE_CPI_SECOND_CLUSTER_RESOURCE_POOL:  replace-me
-  BOSH_VSPHERE_CPI_VM_FOLDER:                     replace-me
-  BOSH_VSPHERE_CPI_TEMPLATE_FOLDER:               replace-me
-  BOSH_VSPHERE_CPI_DISK_PATH:                     replace-me
+  BOSH_VSPHERE_CPI_HOST:                                replace-me
+  BOSH_VSPHERE_CPI_USER:                                replace-me
+  BOSH_VSPHERE_CPI_PASSWORD:                            replace-me
+  BOSH_VSPHERE_VLAN:                                    replace-me
+  BOSH_VSPHERE_CPI_DATACENTER:                          replace-me
+  BOSH_VSPHERE_CPI_CLUSTER:                             replace-me
+  BOSH_VSPHERE_CPI_DATASTORE_PATTERN:                   replace-me
+  BOSH_VSPHERE_CPI_PERSISTENT_DATASTORE_PATTERN:        replace-me
+  BOSH_VSPHERE_CPI_SECOND_DATASTORE:                    replace-me
+  BOSH_VSPHERE_CPI_LOCAL_DATASTORE_PATTERN:             replace-me
+  BOSH_VSPHERE_CPI_RESOURCE_POOL:                       replace-me
+  BOSH_VSPHERE_CPI_SECOND_RESOURCE_POOL:                replace-me
+  BOSH_VSPHERE_CPI_SECOND_CLUSTER:                      replace-me
+  BOSH_VSPHERE_CPI_SECOND_CLUSTER_DATASTORE:            replace-me
+  BOSH_VSPHERE_CPI_SECOND_CLUSTER_RESOURCE_POOL:        replace-me
+  BOSH_VSPHERE_CPI_VM_FOLDER:                           replace-me
+  BOSH_VSPHERE_CPI_TEMPLATE_FOLDER:                     replace-me
+  BOSH_VSPHERE_CPI_DISK_PATH:                           replace-me
+  BOSH_VSPHERE_CPI_NESTED_DATACENTER:                   replace-me
+  BOSH_VSPHERE_CPI_NESTED_DATACENTER_DATASTORE_PATTERN: replace-me
+  BOSH_VSPHERE_CPI_NESTED_DATACENTER_CLUSTER:           replace-me
+  BOSH_VSPHERE_CPI_NESTED_DATACENTER_RESOURCE_POOL:     replace-me
+  BOSH_VSPHERE_CPI_NESTED_DATACENTER_VLAN:              replace-me
