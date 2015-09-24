@@ -59,8 +59,6 @@ describe VSphereCloud::Cloud, external_cpi: false do
       raise "Corrupt image, tar exit status: #{$?.exitstatus} output: #{output}" if $?.exitstatus != 0
       cpi = described_class.new(cpi_options)
       @stemcell_id = cpi.create_stemcell("#{temp_dir}/image", nil)
-      nested_ds_cpi = described_class.new(@nested_datacenter_cpi_options)
-      @nested_datacenter_stemcell_id = nested_ds_cpi.create_stemcell("#{temp_dir}/image", nil)
     end
   end
 
@@ -101,8 +99,6 @@ describe VSphereCloud::Cloud, external_cpi: false do
   after(:all) {
     cpi = described_class.new(cpi_options)
     cpi.delete_stemcell(@stemcell_id) if @stemcell_id
-    nested_datacenter_cpi = described_class.new(@nested_datacenter_cpi_options)
-    nested_datacenter_cpi.delete_stemcell(@nested_datacenter_stemcell_id) if @nested_datacenter_stemcell_id
   }
 
   def vm_lifecycle(disk_locality, resource_pool, network_spec, stemcell_id = @stemcell_id)
@@ -338,8 +334,17 @@ describe VSphereCloud::Cloud, external_cpi: false do
 
       let(:vlan) { @nested_datacenter_vlan }
 
+      before do
+        Dir.mktmpdir do |temp_dir|
+          output = `tar -C #{temp_dir} -xzf #{@stemcell_path} 2>&1`
+          raise "Corrupt image, tar exit status: #{$?.exitstatus} output: #{output}" if $?.exitstatus != 0
+          @nested_datacenter_stemcell_id = cpi.create_stemcell("#{temp_dir}/image", nil)
+        end
+      end
+
       after do
         clean_up_vm_and_disk(cpi)
+        cpi.delete_stemcell(@nested_datacenter_stemcell_id) if @nested_datacenter_stemcell_id
       end
 
       it 'exercises the vm lifecycle' do
