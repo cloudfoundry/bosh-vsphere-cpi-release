@@ -104,7 +104,7 @@ module VSphereCloud
         begin
           created_vm.delete if created_vm
         rescue => ex
-          @logger.info("Failed to delete vm '#{vm_cid}' with message:  #{ex.message}")
+          @logger.info("Failed to delete vm '#{vm_cid}' with message:  #{ex.inspect}")
         end
         raise e
       end
