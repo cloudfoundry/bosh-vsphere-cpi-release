@@ -4,6 +4,7 @@ set -e
 
 source bosh-cpi-release/ci/tasks/utils.sh
 
+check_param BOSH_VSPHERE_VERSION
 check_param BOSH_VSPHERE_CPI_HOST
 check_param BOSH_VSPHERE_CPI_USER
 check_param BOSH_VSPHERE_CPI_PASSWORD

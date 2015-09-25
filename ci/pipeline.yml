@@ -75,6 +75,7 @@ jobs:
         file: bosh-cpi-release/ci/tasks/run-lifecycle.yml
         config:
           params:
+            BOSH_VSPHERE_VERSION:                                 {{lifecycle_VSPHERE_VERSION}}
             BOSH_VSPHERE_CPI_HOST:                                {{lifecycle_VSPHERE_HOST}}
             BOSH_VSPHERE_CPI_USER:                                {{lifecycle_VSPHERE_USER}}
             BOSH_VSPHERE_CPI_PASSWORD:                            {{lifecycle_VSPHERE_PASSWORD}}

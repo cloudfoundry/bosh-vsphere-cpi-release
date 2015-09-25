@@ -39,6 +39,9 @@ describe VSphereCloud::Cloud, external_cpi: false do
     nested_datacenter_resource_pool_name = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_NESTED_DATACENTER_RESOURCE_POOL')
     @nested_datacenter_vlan = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_NESTED_DATACENTER_VLAN')
 
+    @vsphere_version = LifecycleHelpers.fetch_optional_property('BOSH_VSPHERE_VERSION')
+    LifecycleHelpers.verify_vsphere_version(cpi_options, @vsphere_version)
+
     @nested_datacenter_cpi_options = cpi_options(
       datacenter_name: nested_datacenter_name,
       datastore_pattern: nested_datacenter_datastore_pattern,
@@ -667,6 +670,17 @@ class LifecycleHelpers
     def fetch_property(property)
       fail "Missing Environment varibale #{property}: #{MISSING_KEY_MESSAGES[property]}" unless(ENV.has_key?(property))
       ENV[property]
+    end
+
+    def fetch_optional_property(property)
+      ENV[property]
+    end
+
+    def verify_vsphere_version(cpi_options, expected_version)
+      return if expected_version.nil?
+      cpi = VSphereCloud::Cloud.new(cpi_options)
+      actual_version = cpi.client.service_content.about.version
+      fail("vSphere version #{expected_version} required. Found #{actual_version}.") if expected_version != actual_version
     end
 
     def verify_local_disk_infrastructure(cpi_options)
