@@ -42,4 +42,4 @@ git add .
 
 git config --global user.email cf-bosh-eng@pivotal.io
 git config --global user.name CI
-git commit -m ":airplane: New final release v $integer_version"
+git commit -m ":airplane: New final release v $integer_version" -m "[ci skip]"
