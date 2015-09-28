@@ -118,6 +118,15 @@ jobs:
       - task: show_env
         file: bosh-cpi-release/ci/tasks/show_env.yml
 
+      - task: verify-environment
+        file: bosh-cpi-release/ci/tasks/verify_env.yml
+        config:
+          params:
+            BOSH_VSPHERE_VCENTER:                   {{VCENTER_IP}}
+            BOSH_VSPHERE_VCENTER_USER:              {{VCENTER_USER}}
+            BOSH_VSPHERE_VCENTER_PASSWORD:          {{VCENTER_PASSWORD}}
+            BOSH_VSPHERE_VERSION:                   {{VSPHERE_VERSION}}
+
       - task: setup-director
         file: bosh-cpi-release/ci/tasks/setup-director.yml
         config:
@@ -181,6 +190,15 @@ jobs:
 
       - task: show_env
         file: bosh-cpi-release/ci/tasks/show_env.yml
+
+      - task: verify-environment
+        file: bosh-cpi-release/ci/tasks/verify_env.yml
+        config:
+          params:
+            BOSH_VSPHERE_VCENTER:                   {{VCENTER_IP}}
+            BOSH_VSPHERE_VCENTER_USER:              {{VCENTER_USER}}
+            BOSH_VSPHERE_VCENTER_PASSWORD:          {{VCENTER_PASSWORD}}
+            BOSH_VSPHERE_VERSION:                   {{VSPHERE_VERSION}}
 
       - task: setup-director
         file: bosh-cpi-release/ci/tasks/setup-director.yml

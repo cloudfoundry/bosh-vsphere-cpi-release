@@ -1,0 +1,13 @@
+---
+platform: linux
+image: docker:///boshcpi/vsphere-cpi-release
+inputs:
+  - name: bosh-cpi-release
+run:
+  path: bosh-cpi-release/ci/tasks/verify-env.sh
+tags: ["vsphere"]
+params:
+  BOSH_VSPHERE_VCENTER:                   replace-me
+  BOSH_VSPHERE_VCENTER_USER:              replace-me
+  BOSH_VSPHERE_VCENTER_PASSWORD:          replace-me
+  BOSH_VSPHERE_VERSION:                   replace-me
