@@ -119,7 +119,7 @@ jobs:
         file: bosh-cpi-release/ci/tasks/show_env.yml
 
       - task: verify-environment
-        file: bosh-cpi-release/ci/tasks/verify_env.yml
+        file: bosh-cpi-release/ci/tasks/verify-env.yml
         config:
           params:
             BOSH_VSPHERE_VCENTER:                   {{VCENTER_IP}}
@@ -192,7 +192,7 @@ jobs:
         file: bosh-cpi-release/ci/tasks/show_env.yml
 
       - task: verify-environment
-        file: bosh-cpi-release/ci/tasks/verify_env.yml
+        file: bosh-cpi-release/ci/tasks/verify-env.yml
         config:
           params:
             BOSH_VSPHERE_VCENTER:                   {{VCENTER_IP}}
