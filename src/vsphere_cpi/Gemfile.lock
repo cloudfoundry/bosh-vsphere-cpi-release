@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    bosh_vsphere_cpi (2.0.0)
+    bosh_vsphere_cpi (2.1.0)
       bosh_common
       bosh_cpi
       builder (~> 3.1.4)
@@ -13,11 +13,11 @@ PATH
 GEM
   remote: https://rubygems.org/
   specs:
-    bosh_common (1.3063.0)
+    bosh_common (1.3087.0)
       logging (~> 1.8.2)
       semi_semantic (~> 1.1.0)
-    bosh_cpi (1.3063.0)
-      bosh_common (~> 1.3063.0)
+    bosh_cpi (1.3087.0)
+      bosh_common (~> 1.3087.0)
       logging (~> 1.8.2)
       membrane (~> 1.1.0)
     builder (3.1.4)
@@ -44,7 +44,7 @@ GEM
     rspec-expectations (3.3.1)
       diff-lcs (>= 1.2.0, < 2.0)
       rspec-support (~> 3.3.0)
-    rspec-instafail (0.3.0)
+    rspec-instafail (0.4.0)
       rspec
     rspec-its (1.2.0)
       rspec-core (>= 3.0.0)
