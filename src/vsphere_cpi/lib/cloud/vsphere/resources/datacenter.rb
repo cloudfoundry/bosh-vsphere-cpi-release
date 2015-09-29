@@ -76,6 +76,11 @@ module VSphereCloud
         clusters
       end
 
+      def find_cluster(cluster_name)
+        cluster_config = @clusters[cluster_name]
+        @cluster_provider.find(cluster_name, cluster_config)
+      end
+
       def persistent_datastores
         clusters.values.inject({}) do |acc, cluster|
           acc.merge!(cluster.persistent_datastores)

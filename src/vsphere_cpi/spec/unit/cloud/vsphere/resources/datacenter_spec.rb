@@ -212,6 +212,33 @@ describe VSphereCloud::Resources::Datacenter do
     end
   end
 
+  describe '#find_cluster' do
+    context 'when cluster exists' do
+      it 'return the cluster' do
+        cluster = datacenter.find_cluster('cluster1')
+        expect(cluster.name).to eq('cluster1')
+      end
+    end
+
+    context 'when cluster does not exist' do
+      it 'raises an exception' do
+        allow(cloud_searcher).to receive(:get_managed_objects).with(
+          VimSdk::Vim::ClusterComputeResource,
+          root: datacenter_mob, include_name: true
+        ).and_return({'cluster2' => cluster_mob2})
+
+        allow(cloud_searcher).to receive(:get_properties).with(
+          [cluster_mob2],
+          VimSdk::Vim::ClusterComputeResource,
+          VSphereCloud::Resources::Cluster::PROPERTIES,
+          ensure_all: true
+        ).and_return({ cluster_mob2 => {} })
+
+        expect {datacenter.find_cluster('cluster1')}.to raise_error(/Can't find cluster 'cluster1'/)
+      end
+    end
+  end
+
   describe '#persistent_datastores' do
     it 'returns a unique set of persistent datastores across all clusters' do
       first_datastore = instance_double('VSphereCloud::Resources::Datastore', name: 'first-datastore')

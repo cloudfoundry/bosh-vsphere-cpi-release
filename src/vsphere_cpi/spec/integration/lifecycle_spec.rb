@@ -10,28 +10,29 @@ describe VSphereCloud::Cloud, external_cpi: false do
     config.uuid = '123'
     Bosh::Clouds::Config.configure(config)
 
-    @host = ENV.fetch('BOSH_VSPHERE_CPI_HOST')
-    @user = ENV.fetch('BOSH_VSPHERE_CPI_USER')
-    @password = ENV.fetch('BOSH_VSPHERE_CPI_PASSWORD')
-    @vlan = ENV.fetch('BOSH_VSPHERE_VLAN')
-    @stemcell_path = ENV.fetch('BOSH_VSPHERE_STEMCELL')
+    @host = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_HOST')
+    @user = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_USER')
+    @password = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_PASSWORD')
+    @vlan = LifecycleHelpers.fetch_property('BOSH_VSPHERE_VLAN')
+    @stemcell_path = LifecycleHelpers.fetch_property('BOSH_VSPHERE_STEMCELL')
 
-    @second_datastore_within_cluster = ENV.fetch('BOSH_VSPHERE_CPI_SECOND_DATASTORE')
-    @second_resource_pool_within_cluster = ENV.fetch('BOSH_VSPHERE_CPI_SECOND_RESOURCE_POOL')
+    @second_datastore_within_cluster = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_SECOND_DATASTORE')
+    @second_resource_pool_within_cluster = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_SECOND_RESOURCE_POOL')
 
     @datacenter_name = ENV.fetch('BOSH_VSPHERE_CPI_DATACENTER')
     @vm_folder = ENV.fetch('BOSH_VSPHERE_CPI_VM_FOLDER')
     @template_folder = ENV.fetch('BOSH_VSPHERE_CPI_TEMPLATE_FOLDER')
     @disk_path = ENV.fetch('BOSH_VSPHERE_CPI_DISK_PATH')
-    @datastore_pattern = ENV.fetch('BOSH_VSPHERE_CPI_DATASTORE_PATTERN')
-    @local_datastore_pattern = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_LOCAL_DATASTORE_PATTERN')
-    @persistent_datastore_pattern = ENV.fetch('BOSH_VSPHERE_CPI_PERSISTENT_DATASTORE_PATTERN')
-    @cluster = ENV.fetch('BOSH_VSPHERE_CPI_CLUSTER')
-    @resource_pool_name = ENV.fetch('BOSH_VSPHERE_CPI_RESOURCE_POOL')
 
-    @second_cluster = ENV.fetch('BOSH_VSPHERE_CPI_SECOND_CLUSTER')
-    @second_cluster_resource_pool_name = ENV.fetch('BOSH_VSPHERE_CPI_SECOND_CLUSTER_RESOURCE_POOL')
-    @second_cluster_datastore = ENV.fetch('BOSH_VSPHERE_CPI_SECOND_CLUSTER_DATASTORE')
+    @datastore_pattern = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_DATASTORE_PATTERN')
+    @local_datastore_pattern = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_LOCAL_DATASTORE_PATTERN')
+    @persistent_datastore_pattern = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_PERSISTENT_DATASTORE_PATTERN')
+    @cluster = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_CLUSTER')
+    @resource_pool_name = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_RESOURCE_POOL')
+
+    @second_cluster = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_SECOND_CLUSTER')
+    @second_cluster_resource_pool_name = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_SECOND_CLUSTER_RESOURCE_POOL')
+    @second_cluster_datastore = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_SECOND_CLUSTER_DATASTORE')
 
     nested_datacenter_name = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_NESTED_DATACENTER')
     nested_datacenter_datastore_pattern = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_NESTED_DATACENTER_DATASTORE_PATTERN')
@@ -53,9 +54,48 @@ describe VSphereCloud::Cloud, external_cpi: false do
       datastore_pattern: @local_datastore_pattern,
       persistent_datastore_pattern: @persistent_datastore_pattern
     )
-    LifecycleHelpers.verify_local_disk_infrastructure(@local_disk_cpi_options)
+
+
+    LifecycleHelpers.verify_stemcell(@stemcell_path)
+
+    datacenter = described_class.new(cpi_options).datacenter
+
+    LifecycleHelpers.verify_vlan(cpi_options, @vlan)
+    LifecycleHelpers.verify_cluster(datacenter, @cluster, 'BOSH_VSPHERE_CPI_CLUSTER')
+    LifecycleHelpers.verify_cluster(datacenter, @second_cluster, 'BOSH_VSPHERE_CPI_SECOND_CLUSTER')
     LifecycleHelpers.verify_user_has_limited_permissions(cpi_options)
+    LifecycleHelpers.verify_local_disk_infrastructure(@local_disk_cpi_options)
     LifecycleHelpers.verify_nested_datacenter(@nested_datacenter_cpi_options, @nested_datacenter_vlan)
+
+    LifecycleHelpers.verify_datastore_within_cluster(
+      datacenter,
+      'BOSH_VSPHERE_CPI_DATASTORE_PATTERN',
+      @datastore_pattern,
+      @cluster
+    )
+
+    LifecycleHelpers.verify_datastore_within_cluster(
+      datacenter,
+      'BOSH_VSPHERE_CPI_PERSISTENT_DATASTORE_PATTERN',
+      @persistent_datastore_pattern,
+      @cluster
+    )
+
+    LifecycleHelpers.verify_datastore_within_cluster(
+      second_datastore_cpi.datacenter,
+      'BOSH_VSPHERE_CPI_SECOND_DATASTORE',
+      @second_datastore_within_cluster,
+      @cluster
+    )
+
+    LifecycleHelpers.verify_datastore_within_cluster(
+      datacenter,
+      'BOSH_VSPHERE_CPI_SECOND_CLUSTER_DATASTORE',
+      @second_cluster_datastore,
+      @second_cluster
+    )
+
+    #verify: resource pools
 
     Dir.mktmpdir do |temp_dir|
       output = `tar -C #{temp_dir} -xzf #{@stemcell_path} 2>&1`
@@ -172,6 +212,14 @@ describe VSphereCloud::Cloud, external_cpi: false do
     }
   end
 
+  def second_datastore_cpi
+    options = cpi_options(
+      datastore_pattern: @second_datastore_within_cluster,
+      persistent_datastore_pattern: @second_datastore_within_cluster
+    )
+    described_class.new(options)
+  end
+
   def clean_up_vm_and_disk(cpi)
     cpi.delete_vm(@vm_id) if @vm_id
     @vm_id = nil
@@ -180,7 +228,7 @@ describe VSphereCloud::Cloud, external_cpi: false do
   end
 
   describe 'deleting things that do not exist' do
-    it 'raises the appropriate Clouds::Error' do
+    it 'raises the appropriate Clouds::Error', focus: true do
       expect {
         cpi.delete_vm('fake-vm-cid')
       }.to raise_error(Bosh::Clouds::VMNotFound)
@@ -267,14 +315,6 @@ describe VSphereCloud::Cloud, external_cpi: false do
   describe 'vsphere specific lifecycle' do
     context 'given cpis that are configured to use same cluster but different datastores' do
       let(:first_datastore_cpi) { cpi }
-
-      let(:second_datastore_cpi) do
-        options = cpi_options(
-          datastore_pattern: @second_datastore_within_cluster,
-          persistent_datastore_pattern: @second_datastore_within_cluster
-        )
-        described_class.new(options)
-      end
 
       before do
         @vm_id = first_datastore_cpi.create_vm(
@@ -568,11 +608,24 @@ end
 class LifecycleHelpers
   MISSING_KEY_MESSAGES = {
     'BOSH_VSPHERE_CPI_LOCAL_DATASTORE_PATTERN' => 'Please ensure you provide a pattern that match datastores that are only accessible by a single host.',
-    'BOSH_VSPHERE_CPI_NESTED_DATACENTER' => 'Please ensure you provide a datacenter that is in a sub-folder of the root folder',
-    'BOSH_VSPHERE_CPI_NESTED_DATACENTER_DATASTORE_PATTERN' => 'Please ensure you provide a datastore accessible datacenter referenced by BOSH_VSPHERE_CPI_NESTED_DATACENTER',
-    'BOSH_VSPHERE_CPI_NESTED_DATACENTER_CLUSTER' => 'Please ensure you provide a cluster within the datacenter referenced by BOSH_VSPHERE_CPI_NESTED_DATACENTER',
-    'BOSH_VSPHERE_CPI_NESTED_DATACENTER_RESOURCE_POOL' => 'Please ensure you provide a resource pool within the cluster referenced by BOSH_VSPHERE_CPI_NESTED_DATACENTER_CLUSTER',
-    'BOSH_VSPHERE_CPI_NESTED_DATACENTER_VLAN' => 'Please ensure your provide the name of the distributed switch within the datacenter referenced by BOSH_VSPHERE_CPI_NESTED_DATACENTER'
+    'BOSH_VSPHERE_CPI_NESTED_DATACENTER' => 'Please ensure you provide a datacenter that is in a sub-folder of the root folder.',
+    'BOSH_VSPHERE_CPI_NESTED_DATACENTER_DATASTORE_PATTERN' => 'Please ensure you provide a datastore accessible datacenter referenced by BOSH_VSPHERE_CPI_NESTED_DATACENTER.',
+    'BOSH_VSPHERE_CPI_NESTED_DATACENTER_CLUSTER' => 'Please ensure you provide a cluster within the datacenter referenced by BOSH_VSPHERE_CPI_NESTED_DATACENTER.',
+    'BOSH_VSPHERE_CPI_NESTED_DATACENTER_RESOURCE_POOL' => 'Please ensure you provide a resource pool within the cluster referenced by BOSH_VSPHERE_CPI_NESTED_DATACENTER_CLUSTER.',
+    'BOSH_VSPHERE_CPI_NESTED_DATACENTER_VLAN' => 'Please ensure you provide the name of the distributed switch within the datacenter referenced by BOSH_VSPHERE_CPI_NESTED_DATACENTER.',
+    'BOSH_VSPHERE_CPI_HOST' => 'Please ensure you provide a vSphere hostname to connect to.',
+    'BOSH_VSPHERE_CPI_USER' => 'Please ensure you provide a vSphere username to authenticate with.',
+    'BOSH_VSPHERE_CPI_PASSWORD' => 'Please ensure you provide a vSphere password to authenticate with.',
+    'BOSH_VSPHERE_VLAN' => 'Please ensure you provide a VLAN network name.',
+    'BOSH_VSPHERE_STEMCELL' => 'Please ensure you provide a path to a stemcell file.',
+    'BOSH_VSPHERE_CPI_CLUSTER' => 'Please ensure you provide the name of the first cluster.',
+    'BOSH_VSPHERE_CPI_SECOND_CLUSTER' => 'Please ensure you provide the name of the second cluster.',
+    'BOSH_VSPHERE_CPI_DATASTORE_PATTERN' => 'Please ensure you provide a pattern of a first datastore attached to the first cluster.',
+    'BOSH_VSPHERE_CPI_SECOND_DATASTORE' => 'Please ensure you provide a pattern of a second datastore attached to the first cluster.',
+    'BOSH_VSPHERE_CPI_RESOURCE_POOL' => 'Please ensure you provide a name of a resource pool within the first cluster.',
+    'BOSH_VSPHERE_CPI_SECOND_CLUSTER_RESOURCE_POOL' => 'Please ensure you provide a name of a resource pool within the second cluster.',
+    'BOSH_VSPHERE_CPI_SECOND_CLUSTER_DATASTORE' => 'Please ensure you provide a pattern of a second datastore attached to the second cluster.',
+    'BOSH_VSPHERE_CPI_PERSISTENT_DATASTORE_PATTERN' => 'Please ensure you provide a pattern of a persistent datastore attached to the first cluster.',
   }
 
   ALLOWED_PRIVILEGES_ON_ROOT = [
@@ -683,6 +736,20 @@ class LifecycleHelpers
       fail("vSphere version #{expected_version} required. Found #{actual_version}.") if expected_version != actual_version
     end
 
+    def verify_datastore_within_cluster(datacenter, datastore_variable_name, datastore_pattern, cluster_name)
+      cluster = datacenter.find_cluster(cluster_name)
+      datastores = cluster.all_datastores.select{|ds_name| ds_name =~ /#{datastore_pattern}/}
+      verify_datastore_pattern(datastores, datastore_variable_name, datastore_pattern)
+    end
+
+    def verify_cluster(datacenter, cluster_name, env_var_name)
+      begin
+        datacenter.find_cluster(cluster_name)
+      rescue RuntimeError => e
+        fail("#{e.message}}\n#{env_var_name}: #{MISSING_KEY_MESSAGES[env_var_name]}")
+      end
+    end
+
     def verify_local_disk_infrastructure(cpi_options)
       cpi = VSphereCloud::Cloud.new(cpi_options)
       all_ephemeral_datastores = ephemeral_datastores(cpi)
@@ -756,12 +823,29 @@ are configured to allow multiple hosts to access them:
         fail "No resource pool named '#{resource_pool_name}' found in cluster named '#{cluster_name}'"
       end
 
-      datacenter_name = cpi.datacenter.name
-      network = client.find_by_inventory_path([datacenter_name, 'network', vlan])
-      fail "No network named '#{vlan}' found in datacenter named '#{datacenter_name}'" if network.nil?
+      verify_vlan_helper(cpi, vlan)
+    end
+
+    def verify_stemcell(path)
+      fail "Invalid Environment variable 'BOSH_VSPHERE_STEMCELL': File not found: '#{path}'" unless File.exists?(path)
+    end
+
+    def verify_vlan(cpi_options, vlan)
+      cpi = VSphereCloud::Cloud.new(cpi_options)
+      begin
+        verify_vlan_helper(cpi, vlan)
+      rescue RuntimeError => e
+        fail "Invalid Environment variable 'BOSH_VSPHERE_VLAN': #{e.message}"
+      end
     end
 
     private
+
+    def verify_vlan_helper(cpi, vlan)
+      datacenter_name = cpi.datacenter.name
+      network = cpi.client.find_by_inventory_path([datacenter_name, 'network', vlan])
+      fail "No network named '#{vlan}' found in datacenter named '#{datacenter_name}'" if network.nil?
+    end
 
     def verify_datastore_pattern(datastores, env_var_name, pattern)
       if (datastores.empty?)
