@@ -18,6 +18,7 @@ params:
   BOSH_VSPHERE_VCENTER:                   replace-me
   BOSH_VSPHERE_VCENTER_USER:              replace-me
   BOSH_VSPHERE_VCENTER_PASSWORD:          replace-me
+  BOSH_VSPHERE_VERSION:                   replace-me
   BOSH_VSPHERE_VCENTER_DC:                replace-me
   BOSH_VSPHERE_VCENTER_CLUSTER:           replace-me
   BOSH_VSPHERE_VCENTER_VM_FOLDER:         replace-me

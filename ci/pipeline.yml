@@ -118,15 +118,6 @@ jobs:
       - task: show_env
         file: bosh-cpi-release/ci/tasks/show_env.yml
 
-      - task: verify-environment
-        file: bosh-cpi-release/ci/tasks/verify-env.yml
-        config:
-          params:
-            BOSH_VSPHERE_VCENTER:                   {{VCENTER_IP}}
-            BOSH_VSPHERE_VCENTER_USER:              {{VCENTER_USER}}
-            BOSH_VSPHERE_VCENTER_PASSWORD:          {{VCENTER_PASSWORD}}
-            BOSH_VSPHERE_VERSION:                   {{VSPHERE_VERSION}}
-
       - task: setup-director
         file: bosh-cpi-release/ci/tasks/setup-director.yml
         config:
@@ -136,6 +127,7 @@ jobs:
             BOSH_VSPHERE_VCENTER:                   {{VCENTER_IP}}
             BOSH_VSPHERE_VCENTER_USER:              {{VCENTER_USER}}
             BOSH_VSPHERE_VCENTER_PASSWORD:          {{VCENTER_PASSWORD}}
+            BOSH_VSPHERE_VERSION:                   {{VSPHERE_VERSION}}
             BOSH_VSPHERE_VCENTER_DC:                {{VCENTER_DC}}
             BOSH_VSPHERE_VCENTER_CLUSTER:           {{VCENTER_CLUSTER}}
             BOSH_VSPHERE_VCENTER_VM_FOLDER:         {{ubuntu_VCENTER_VM_FOLDER}}
@@ -191,15 +183,6 @@ jobs:
       - task: show_env
         file: bosh-cpi-release/ci/tasks/show_env.yml
 
-      - task: verify-environment
-        file: bosh-cpi-release/ci/tasks/verify-env.yml
-        config:
-          params:
-            BOSH_VSPHERE_VCENTER:                   {{VCENTER_IP}}
-            BOSH_VSPHERE_VCENTER_USER:              {{VCENTER_USER}}
-            BOSH_VSPHERE_VCENTER_PASSWORD:          {{VCENTER_PASSWORD}}
-            BOSH_VSPHERE_VERSION:                   {{VSPHERE_VERSION}}
-
       - task: setup-director
         file: bosh-cpi-release/ci/tasks/setup-director.yml
         config:
@@ -209,6 +192,7 @@ jobs:
             BOSH_VSPHERE_VCENTER:                   {{VCENTER_IP}}
             BOSH_VSPHERE_VCENTER_USER:              {{VCENTER_USER}}
             BOSH_VSPHERE_VCENTER_PASSWORD:          {{VCENTER_PASSWORD}}
+            BOSH_VSPHERE_VERSION:                   {{VSPHERE_VERSION}}
             BOSH_VSPHERE_VCENTER_DC:                {{VCENTER_DC}}
             BOSH_VSPHERE_VCENTER_CLUSTER:           {{VCENTER_CLUSTER}}
             BOSH_VSPHERE_VCENTER_VM_FOLDER:         {{centos_VCENTER_VM_FOLDER}}

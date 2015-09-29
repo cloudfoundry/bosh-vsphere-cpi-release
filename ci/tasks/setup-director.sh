@@ -9,6 +9,7 @@ check_param network_type_to_test
 check_param BOSH_VSPHERE_VCENTER
 check_param BOSH_VSPHERE_VCENTER_USER
 check_param BOSH_VSPHERE_VCENTER_PASSWORD
+check_param BOSH_VSPHERE_VERSION
 check_param BOSH_VSPHERE_VCENTER_DC
 check_param BOSH_VSPHERE_VCENTER_CLUSTER
 check_param BOSH_VSPHERE_VCENTER_VM_FOLDER
@@ -31,6 +32,14 @@ check_for_rogue_vm $DIRECTOR_IP
 
 source /etc/profile.d/chruby.sh
 chruby 2.1.2
+
+echo "verifying target vSphere version matches $BOSH_VSPHERE_VERSION"
+
+pushd bosh-cpi-release/src/vsphere_cpi
+  bundle install
+  bundle exec rspec spec/integration/bats_env_spec.rb
+popd
+
 
 semver=`cat version-semver/number`
 cpi_release_name="bosh-vsphere-cpi"
