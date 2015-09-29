@@ -10,33 +10,18 @@ check_param BAT_STEMCELL_NAME
 check_param BAT_VLAN
 check_param BAT_VCAP_PASSWORD
 check_param BAT_SECOND_NETWORK_VLAN
-check_param BOSH_VSPHERE_NTP_SERVER
-check_param BOSH_VSPHERE_NET_ID
-check_param BOSH_VSPHERE_VCENTER
-check_param BOSH_VSPHERE_VCENTER_USER
-check_param BOSH_VSPHERE_VCENTER_PASSWORD
-check_param BOSH_VSPHERE_VCENTER_DC
-check_param BOSH_VSPHERE_VCENTER_CLUSTER
-check_param BOSH_VSPHERE_VCENTER_RESOURCE_POOL
-check_param BOSH_VSPHERE_VCENTER_DATASTORE_PATTERN
-check_param BOSH_VSPHERE_VCENTER_UBOSH_DATASTORE_PATTERN
-check_param BOSH_VSPHERE_VCENTER_FOLDER_PREFIX
 
 metadata=$(cat vsphere-5.1-environment/metadata)
 network1=$(env_attr "${metadata}" "network1")
 network2=$(env_attr "${metadata}" "network2")
 export BAT_DIRECTOR=$(                      env_attr "${metadata}" "directorIP")
 export BAT_DNS_HOST=$(                      env_attr "${metadata}" "directorIP")
-export BOSH_VSPHERE_DNS=$(                  env_attr "${metadata}" "DNS")
-export BOSH_VSPHERE_MICROBOSH_IP=$(         env_attr "${metadata}" "directorIP")
 export BAT_STATIC_IP=$(                     env_attr "${network1}" "staticIP-1")
 export BAT_SECOND_STATIC_IP=$(              env_attr "${network1}" "staticIP-2")
 export BAT_CIDR=$(                          env_attr "${network1}" "vCenterCIDR")
 export BAT_RESERVED_RANGE=$(                env_attr "${network1}" "reservedRange")
 export BAT_STATIC_RANGE=$(                  env_attr "${network1}" "staticRange")
 export BAT_GATEWAY=$(                       env_attr "${network1}" "vCenterGateway")
-export BOSH_VSPHERE_NETMASK=$(              env_attr "${network1}" "vCenterNetmask")
-export BOSH_VSPHERE_GATEWAY=$(              env_attr "${network1}" "vCenterGateway")
 export BAT_SECOND_NETWORK_STATIC_IP=$(      env_attr "${network2}" "staticIP-1")
 export BAT_SECOND_NETWORK_CIDR=$(           env_attr "${network2}" "vCenterCIDR")
 export BAT_SECOND_NETWORK_RESERVED_RANGE=$( env_attr "${network2}" "reservedRange")

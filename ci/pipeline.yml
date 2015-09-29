@@ -146,17 +146,6 @@ jobs:
             BAT_VLAN:                                     {{VCENTER_VLAN}}
             BAT_VCAP_PASSWORD:                            {{BAT_VCAP_PASSWORD}}
             BAT_SECOND_NETWORK_VLAN:                      {{ubuntu_BAT_SECOND_NETWORK_VLAN}}
-            BOSH_VSPHERE_NTP_SERVER:                      {{VCENTER_NTP_SERVER}}
-            BOSH_VSPHERE_NET_ID:                          {{VCENTER_VLAN}}
-            BOSH_VSPHERE_VCENTER:                         {{VCENTER_IP}}
-            BOSH_VSPHERE_VCENTER_USER:                    {{VCENTER_USER}}
-            BOSH_VSPHERE_VCENTER_PASSWORD:                {{VCENTER_PASSWORD}}
-            BOSH_VSPHERE_VCENTER_DC:                      {{VCENTER_DC}}
-            BOSH_VSPHERE_VCENTER_CLUSTER:                 {{VCENTER_CLUSTER}}
-            BOSH_VSPHERE_VCENTER_RESOURCE_POOL:           {{VCENTER_RESOURCE_POOL}}
-            BOSH_VSPHERE_VCENTER_DATASTORE_PATTERN:       {{VCENTER_DATASTORE_PATTERN}}
-            BOSH_VSPHERE_VCENTER_UBOSH_DATASTORE_PATTERN: {{VCENTER_DATASTORE_PATTERN}}
-            BOSH_VSPHERE_VCENTER_FOLDER_PREFIX:           {{ubuntu_BOSH_VSPHERE_VCENTER_FOLDER_PREFIX}}
 
       - task: teardown-director
         file: bosh-cpi-release/ci/tasks/teardown-director.yml
@@ -211,17 +200,6 @@ jobs:
             BAT_VLAN:                                     {{VCENTER_VLAN}}
             BAT_VCAP_PASSWORD:                            {{BAT_VCAP_PASSWORD}}
             BAT_SECOND_NETWORK_VLAN:                      {{centos_BAT_SECOND_NETWORK_VLAN}}
-            BOSH_VSPHERE_NTP_SERVER:                      {{VCENTER_NTP_SERVER}}
-            BOSH_VSPHERE_NET_ID:                          {{VCENTER_VLAN}}
-            BOSH_VSPHERE_VCENTER:                         {{VCENTER_IP}}
-            BOSH_VSPHERE_VCENTER_USER:                    {{VCENTER_USER}}
-            BOSH_VSPHERE_VCENTER_PASSWORD:                {{VCENTER_PASSWORD}}
-            BOSH_VSPHERE_VCENTER_DC:                      {{VCENTER_DC}}
-            BOSH_VSPHERE_VCENTER_CLUSTER:                 {{VCENTER_CLUSTER}}
-            BOSH_VSPHERE_VCENTER_RESOURCE_POOL:           {{VCENTER_RESOURCE_POOL}}
-            BOSH_VSPHERE_VCENTER_DATASTORE_PATTERN:       {{VCENTER_DATASTORE_PATTERN}}
-            BOSH_VSPHERE_VCENTER_UBOSH_DATASTORE_PATTERN: {{VCENTER_DATASTORE_PATTERN}}
-            BOSH_VSPHERE_VCENTER_FOLDER_PREFIX:           {{centos_BOSH_VSPHERE_VCENTER_FOLDER_PREFIX}}
 
       - task: teardown-director
         file: bosh-cpi-release/ci/tasks/teardown-director.yml
