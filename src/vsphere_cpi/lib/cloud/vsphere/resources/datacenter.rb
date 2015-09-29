@@ -68,12 +68,11 @@ module VSphereCloud
       end
 
       def clusters
-        clusters = {}
-        @clusters.each do |cluster_name, cluster_config|
-          clusters[cluster_name] = @cluster_provider.find(cluster_name, cluster_config)
-        end
         @logger.debug("All clusters provided: #{@clusters}")
-        clusters
+        @clusters.keys.inject({}) do |acc, cluster_name|
+          acc[cluster_name] = find_cluster(cluster_name)
+          acc
+        end
       end
 
       def find_cluster(cluster_name)

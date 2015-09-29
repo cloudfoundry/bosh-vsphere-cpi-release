@@ -19,10 +19,10 @@ describe VSphereCloud::Cloud, external_cpi: false do
     @second_datastore_within_cluster = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_SECOND_DATASTORE')
     @second_resource_pool_within_cluster = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_SECOND_RESOURCE_POOL')
 
-    @datacenter_name = ENV.fetch('BOSH_VSPHERE_CPI_DATACENTER')
-    @vm_folder = ENV.fetch('BOSH_VSPHERE_CPI_VM_FOLDER')
-    @template_folder = ENV.fetch('BOSH_VSPHERE_CPI_TEMPLATE_FOLDER')
-    @disk_path = ENV.fetch('BOSH_VSPHERE_CPI_DISK_PATH')
+    @datacenter_name = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_DATACENTER')
+    @vm_folder = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_VM_FOLDER')
+    @template_folder = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_TEMPLATE_FOLDER')
+    @disk_path = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_DISK_PATH')
 
     @datastore_pattern = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_DATASTORE_PATTERN')
     @local_datastore_pattern = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_LOCAL_DATASTORE_PATTERN')
@@ -55,17 +55,15 @@ describe VSphereCloud::Cloud, external_cpi: false do
       persistent_datastore_pattern: @persistent_datastore_pattern
     )
 
-
-    LifecycleHelpers.verify_stemcell(@stemcell_path)
-
     datacenter = described_class.new(cpi_options).datacenter
 
-    LifecycleHelpers.verify_vlan(cpi_options, @vlan)
+    LifecycleHelpers.verify_vlan(cpi_options, @vlan, 'BOSH_VSPHERE_VLAN')
     LifecycleHelpers.verify_cluster(datacenter, @cluster, 'BOSH_VSPHERE_CPI_CLUSTER')
     LifecycleHelpers.verify_cluster(datacenter, @second_cluster, 'BOSH_VSPHERE_CPI_SECOND_CLUSTER')
     LifecycleHelpers.verify_user_has_limited_permissions(cpi_options)
     LifecycleHelpers.verify_local_disk_infrastructure(@local_disk_cpi_options)
     LifecycleHelpers.verify_nested_datacenter(@nested_datacenter_cpi_options, @nested_datacenter_vlan)
+    LifecycleHelpers.verify_vlan(@nested_datacenter_cpi_options, @nested_datacenter_vlan, 'BOSH_VSPHERE_CPI_NESTED_DATACENTER_VLAN')
 
     LifecycleHelpers.verify_datastore_within_cluster(
       datacenter,
@@ -98,10 +96,9 @@ describe VSphereCloud::Cloud, external_cpi: false do
     #verify: resource pools
 
     Dir.mktmpdir do |temp_dir|
-      output = `tar -C #{temp_dir} -xzf #{@stemcell_path} 2>&1`
-      raise "Corrupt image, tar exit status: #{$?.exitstatus} output: #{output}" if $?.exitstatus != 0
       cpi = described_class.new(cpi_options)
-      @stemcell_id = cpi.create_stemcell("#{temp_dir}/image", nil)
+      stemcell_image = LifecycleHelpers.stemcell_image(@stemcell_path, temp_dir)
+      @stemcell_id = cpi.create_stemcell(stemcell_image, nil)
     end
   end
 
@@ -623,9 +620,14 @@ class LifecycleHelpers
     'BOSH_VSPHERE_CPI_DATASTORE_PATTERN' => 'Please ensure you provide a pattern of a first datastore attached to the first cluster.',
     'BOSH_VSPHERE_CPI_SECOND_DATASTORE' => 'Please ensure you provide a pattern of a second datastore attached to the first cluster.',
     'BOSH_VSPHERE_CPI_RESOURCE_POOL' => 'Please ensure you provide a name of a resource pool within the first cluster.',
+    'BOSH_VSPHERE_CPI_SECOND_RESOURCE_POOL' => 'Please ensure you provide a name of the second resource pool within the first cluster.',
     'BOSH_VSPHERE_CPI_SECOND_CLUSTER_RESOURCE_POOL' => 'Please ensure you provide a name of a resource pool within the second cluster.',
     'BOSH_VSPHERE_CPI_SECOND_CLUSTER_DATASTORE' => 'Please ensure you provide a pattern of a second datastore attached to the second cluster.',
     'BOSH_VSPHERE_CPI_PERSISTENT_DATASTORE_PATTERN' => 'Please ensure you provide a pattern of a persistent datastore attached to the first cluster.',
+    'BOSH_VSPHERE_CPI_DISK_PATH' => 'Please ensure you provide a disk path.',
+    'BOSH_VSPHERE_CPI_TEMPLATE_FOLDER' => 'Please ensure you provide a template folder.',
+    'BOSH_VSPHERE_CPI_VM_FOLDER' => 'Please ensure you provide a VM folder.',
+    'BOSH_VSPHERE_CPI_DATACENTER' => 'Please ensure you provide a datacenter name.',
   }
 
   ALLOWED_PRIVILEGES_ON_ROOT = [
@@ -746,7 +748,7 @@ class LifecycleHelpers
       begin
         datacenter.find_cluster(cluster_name)
       rescue RuntimeError => e
-        fail("#{e.message}}\n#{env_var_name}: #{MISSING_KEY_MESSAGES[env_var_name]}")
+        fail("#{e.message}\n#{env_var_name}: #{MISSING_KEY_MESSAGES[env_var_name]}")
       end
     end
 
@@ -822,30 +824,23 @@ are configured to allow multiple hosts to access them:
         resource_pool_name = cluster_tuple.last['resource_pool']
         fail "No resource pool named '#{resource_pool_name}' found in cluster named '#{cluster_name}'"
       end
-
-      verify_vlan_helper(cpi, vlan)
     end
 
-    def verify_stemcell(path)
-      fail "Invalid Environment variable 'BOSH_VSPHERE_STEMCELL': File not found: '#{path}'" unless File.exists?(path)
+    def stemcell_image(stemcell_path, destination_dir)
+      raise "Invalid Environment variable 'BOSH_VSPHERE_STEMCELL': File not found: '#{stemcell_path}'" unless File.exists?(stemcell_path)
+      output = `tar -C #{destination_dir} -xzf #{stemcell_path} 2>&1`
+      fail "Corrupt image, tar exit status: #{$?.exitstatus} output: #{output}" if $?.exitstatus != 0
+      "#{destination_dir}/image"
     end
 
-    def verify_vlan(cpi_options, vlan)
+    def verify_vlan(cpi_options, vlan, env_var_name)
       cpi = VSphereCloud::Cloud.new(cpi_options)
-      begin
-        verify_vlan_helper(cpi, vlan)
-      rescue RuntimeError => e
-        fail "Invalid Environment variable 'BOSH_VSPHERE_VLAN': #{e.message}"
-      end
+      datacenter_name = cpi.datacenter.name
+      network = cpi.client.find_by_inventory_path([datacenter_name, 'network', vlan])
+      fail "Invalid Environment variable '#{env_var_name}': No network named '#{vlan}' found in datacenter named '#{datacenter_name}'" if network.nil?
     end
 
     private
-
-    def verify_vlan_helper(cpi, vlan)
-      datacenter_name = cpi.datacenter.name
-      network = cpi.client.find_by_inventory_path([datacenter_name, 'network', vlan])
-      fail "No network named '#{vlan}' found in datacenter named '#{datacenter_name}'" if network.nil?
-    end
 
     def verify_datastore_pattern(datastores, env_var_name, pattern)
       if (datastores.empty?)
