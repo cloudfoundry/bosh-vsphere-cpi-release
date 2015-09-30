@@ -55,15 +55,24 @@ describe VSphereCloud::Cloud, external_cpi: false do
       clusters: [{@cluster => {'resource_pool' => @resource_pool_name}}]
     )
 
+    @second_resource_pool_cpi_options = cpi_options(
+      clusters: [{@cluster => {'resource_pool' => @second_resource_pool_within_cluster}}]
+    )
+
     LifecycleHelpers.verify_vsphere_version(cpi_options, @vsphere_version)
     LifecycleHelpers.verify_datacenter_exists(cpi_options, 'BOSH_VSPHERE_CPI_DATACENTER')
     LifecycleHelpers.verify_vlan(cpi_options, @vlan, 'BOSH_VSPHERE_VLAN')
+    LifecycleHelpers.verify_user_has_limited_permissions(cpi_options)
+
     datacenter = described_class.new(cpi_options).datacenter
     LifecycleHelpers.verify_cluster(datacenter, @cluster, 'BOSH_VSPHERE_CPI_CLUSTER')
     LifecycleHelpers.verify_resource_pool(datacenter.find_cluster(@cluster), @resource_pool_name, 'BOSH_VSPHERE_CPI_RESOURCE_POOL')
     LifecycleHelpers.verify_cluster(datacenter, @second_cluster, 'BOSH_VSPHERE_CPI_SECOND_CLUSTER')
     LifecycleHelpers.verify_resource_pool(datacenter.find_cluster(@second_cluster), @second_cluster_resource_pool_name, 'BOSH_VSPHERE_CPI_SECOND_CLUSTER_RESOURCE_POOL')
-    LifecycleHelpers.verify_user_has_limited_permissions(cpi_options)
+
+    second_resource_pool_datacenter = described_class.new(@second_resource_pool_cpi_options).datacenter
+    LifecycleHelpers.verify_resource_pool(second_resource_pool_datacenter.find_cluster(@cluster), @second_resource_pool_within_cluster, 'BOSH_VSPHERE_CPI_SECOND_RESOURCE_POOL')
+
     LifecycleHelpers.verify_datastore_within_cluster(
       described_class.new(@local_disk_cpi_options).datacenter,
       'BOSH_VSPHERE_CPI_LOCAL_DATASTORE_PATTERN',
@@ -269,7 +278,7 @@ describe VSphereCloud::Cloud, external_cpi: false do
     before { @disk_id = nil }
     after { clean_up_vm_and_disk(cpi) }
 
-    context 'without existing disks', focus: true do
+    context 'without existing disks' do
       it 'should exercise the vm lifecycle' do
         vm_lifecycle([], resource_pool, network_spec)
       end
@@ -801,9 +810,8 @@ are configured to allow multiple hosts to access them:
     end
 
     def verify_user_has_limited_permissions(cpi_options)
-      @cpi = VSphereCloud::Cloud.new(cpi_options)
-
-      root_folder_privileges = build_actual_privileges_list(root_folder)
+      cpi = VSphereCloud::Cloud.new(cpi_options)
+      root_folder_privileges = build_actual_privileges_list(cpi, cpi.client.service_content.root_folder)
 
       if root_folder_privileges.sort != ALLOWED_PRIVILEGES_ON_ROOT.sort
         disallowed_privileges = root_folder_privileges - ALLOWED_PRIVILEGES_ON_ROOT
@@ -811,7 +819,7 @@ are configured to allow multiple hosts to access them:
       end
 
       cluster_mob = cpi.datacenter.clusters.first.last.mob
-      datacenter_privileges = build_actual_privileges_list(cluster_mob)
+      datacenter_privileges = build_actual_privileges_list(cpi, cluster_mob)
 
       if datacenter_privileges.sort != ALLOWED_PRIVILEGES_ON_DATACENTER.sort
         disallowed_privileges = datacenter_privileges - ALLOWED_PRIVILEGES_ON_DATACENTER
@@ -884,33 +892,11 @@ are configured to allow multiple hosts to access them:
       cluster.all_datastores.select { |ds_name| ds_name =~ /#{pattern}/ }
     end
 
-    def cpi
-      @cpi
-    end
-
-    def service_content
-      @service_content ||= cpi.client.service_content
-    end
-
-    def authorization_manager
-      @authorization_manager ||= service_content.authorization_manager
-    end
-
-    def root_folder
-      service_content.root_folder
-    end
-
-    def current_session_id
-      @current_session_id ||= service_content.session_manager.current_session.key
-    end
-
-    def all_privileges
-      @all_privileges = authorization_manager.privilege_list.map(&:priv_id)
-    end
-
-    def build_actual_privileges_list(entity)
+    def build_actual_privileges_list(cpi, entity)
+      all_privileges = cpi.client.service_content.authorization_manager.privilege_list.map(&:priv_id)
+      current_session_id = cpi.client.service_content.session_manager.current_session.key
       privileges_response =
-        authorization_manager.has_privilege_on_entity(entity, current_session_id, all_privileges)
+        cpi.client.service_content.authorization_manager.has_privilege_on_entity(entity, current_session_id, all_privileges)
       Hash[all_privileges.zip(privileges_response)].select { |_, privelege| privelege }.keys
     end
   end
