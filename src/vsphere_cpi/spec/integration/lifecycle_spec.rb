@@ -20,8 +20,8 @@ describe VSphereCloud::Cloud, external_cpi: false do
     @second_resource_pool_within_cluster = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_SECOND_RESOURCE_POOL')
 
     @datacenter_name = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_DATACENTER')
-    @vm_folder = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_VM_FOLDER')
-    @template_folder = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_TEMPLATE_FOLDER')
+    @vm_folder = ENV.fetch('BOSH_VSPHERE_CPI_VM_FOLDER', '')
+    @template_folder = ENV.fetch('BOSH_VSPHERE_CPI_TEMPLATE_FOLDER', '')
     @disk_path = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_DISK_PATH')
 
     @datastore_pattern = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_DATASTORE_PATTERN')
@@ -36,33 +36,54 @@ describe VSphereCloud::Cloud, external_cpi: false do
 
     nested_datacenter_name = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_NESTED_DATACENTER')
     nested_datacenter_datastore_pattern = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_NESTED_DATACENTER_DATASTORE_PATTERN')
-    nested_datacenter_cluster = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_NESTED_DATACENTER_CLUSTER')
+    nested_datacenter_cluster_name = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_NESTED_DATACENTER_CLUSTER')
     nested_datacenter_resource_pool_name = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_NESTED_DATACENTER_RESOURCE_POOL')
     @nested_datacenter_vlan = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_NESTED_DATACENTER_VLAN')
 
     @vsphere_version = LifecycleHelpers.fetch_optional_property('BOSH_VSPHERE_VERSION')
-    LifecycleHelpers.verify_vsphere_version(cpi_options, @vsphere_version)
 
     @nested_datacenter_cpi_options = cpi_options(
       datacenter_name: nested_datacenter_name,
       datastore_pattern: nested_datacenter_datastore_pattern,
       persistent_datastore_pattern: nested_datacenter_datastore_pattern,
-      clusters: [{nested_datacenter_cluster => {'resource_pool' => nested_datacenter_resource_pool_name}}]
+      clusters: [{nested_datacenter_cluster_name => {'resource_pool' => nested_datacenter_resource_pool_name}}]
     )
 
     @local_disk_cpi_options = cpi_options(
       datastore_pattern: @local_datastore_pattern,
-      persistent_datastore_pattern: @persistent_datastore_pattern
+      persistent_datastore_pattern: @persistent_datastore_pattern,
+      clusters: [{@cluster => {'resource_pool' => @resource_pool_name}}]
     )
 
-    datacenter = described_class.new(cpi_options).datacenter
-
+    LifecycleHelpers.verify_vsphere_version(cpi_options, @vsphere_version)
+    LifecycleHelpers.verify_datacenter_exists(cpi_options, 'BOSH_VSPHERE_CPI_DATACENTER')
     LifecycleHelpers.verify_vlan(cpi_options, @vlan, 'BOSH_VSPHERE_VLAN')
+    datacenter = described_class.new(cpi_options).datacenter
     LifecycleHelpers.verify_cluster(datacenter, @cluster, 'BOSH_VSPHERE_CPI_CLUSTER')
+    LifecycleHelpers.verify_resource_pool(datacenter.find_cluster(@cluster), @resource_pool_name, 'BOSH_VSPHERE_CPI_RESOURCE_POOL')
     LifecycleHelpers.verify_cluster(datacenter, @second_cluster, 'BOSH_VSPHERE_CPI_SECOND_CLUSTER')
+    LifecycleHelpers.verify_resource_pool(datacenter.find_cluster(@second_cluster), @second_cluster_resource_pool_name, 'BOSH_VSPHERE_CPI_SECOND_CLUSTER_RESOURCE_POOL')
     LifecycleHelpers.verify_user_has_limited_permissions(cpi_options)
-    LifecycleHelpers.verify_local_disk_infrastructure(@local_disk_cpi_options)
-    LifecycleHelpers.verify_nested_datacenter(@nested_datacenter_cpi_options, @nested_datacenter_vlan)
+    LifecycleHelpers.verify_datastore_within_cluster(
+      described_class.new(@local_disk_cpi_options).datacenter,
+      'BOSH_VSPHERE_CPI_LOCAL_DATASTORE_PATTERN',
+      @local_datastore_pattern,
+      @cluster
+    )
+
+    LifecycleHelpers.verify_local_disk_infrastructure(@local_disk_cpi_options, 'BOSH_VSPHERE_CPI_LOCAL_DATASTORE_PATTERN')
+    LifecycleHelpers.verify_datacenter_exists(@nested_datacenter_cpi_options, 'BOSH_VSPHERE_CPI_NESTED_DATACENTER')
+    LifecycleHelpers.verify_datacenter_is_nested(@nested_datacenter_cpi_options, nested_datacenter_name, 'BOSH_VSPHERE_CPI_NESTED_DATACENTER')
+    nested_datacenter = described_class.new(@nested_datacenter_cpi_options).datacenter
+    LifecycleHelpers.verify_cluster(nested_datacenter, nested_datacenter_cluster_name, 'BOSH_VSPHERE_CPI_NESTED_DATACENTER_CLUSTER')
+    LifecycleHelpers.verify_datastore_within_cluster(
+      nested_datacenter,
+      'BOSH_VSPHERE_CPI_NESTED_DATACENTER_DATASTORE_PATTERN',
+      nested_datacenter_datastore_pattern,
+      nested_datacenter_cluster_name
+    )
+
+    LifecycleHelpers.verify_resource_pool(nested_datacenter.find_cluster(nested_datacenter_cluster_name), nested_datacenter_resource_pool_name, 'BOSH_VSPHERE_CPI_NESTED_DATACENTER_DATASTORE_PATTERN')
     LifecycleHelpers.verify_vlan(@nested_datacenter_cpi_options, @nested_datacenter_vlan, 'BOSH_VSPHERE_CPI_NESTED_DATACENTER_VLAN')
 
     LifecycleHelpers.verify_datastore_within_cluster(
@@ -86,6 +107,15 @@ describe VSphereCloud::Cloud, external_cpi: false do
       @cluster
     )
 
+    LifecycleHelpers.verify_non_overlapping_datastores(
+      described_class.new(cpi_options),
+      @datastore_pattern,
+      'BOSH_VSPHERE_CPI_DATASTORE_PATTERN',
+      second_datastore_cpi,
+      @second_datastore_within_cluster,
+      'BOSH_VSPHERE_CPI_SECOND_DATASTORE'
+    )
+
     LifecycleHelpers.verify_datastore_within_cluster(
       datacenter,
       'BOSH_VSPHERE_CPI_SECOND_CLUSTER_DATASTORE',
@@ -93,7 +123,7 @@ describe VSphereCloud::Cloud, external_cpi: false do
       @second_cluster
     )
 
-    #verify: resource pools
+    fail 'passed'
 
     Dir.mktmpdir do |temp_dir|
       cpi = described_class.new(cpi_options)
@@ -180,7 +210,7 @@ describe VSphereCloud::Cloud, external_cpi: false do
     }.to raise_error Bosh::Clouds::NotImplemented
 
     expect {
-      cpi.delete_snapshot(123)
+      cpi.delete_snapshot('some snapshot_id')
     }.to raise_error Bosh::Clouds::NotImplemented
 
     cpi.detach_disk(@vm_id, @disk_id)
@@ -225,7 +255,7 @@ describe VSphereCloud::Cloud, external_cpi: false do
   end
 
   describe 'deleting things that do not exist' do
-    it 'raises the appropriate Clouds::Error', focus: true do
+    it 'raises the appropriate Clouds::Error' do
       expect {
         cpi.delete_vm('fake-vm-cid')
       }.to raise_error(Bosh::Clouds::VMNotFound)
@@ -241,7 +271,7 @@ describe VSphereCloud::Cloud, external_cpi: false do
     before { @disk_id = nil }
     after { clean_up_vm_and_disk(cpi) }
 
-    context 'without existing disks' do
+    context 'without existing disks', focus: true do
       it 'should exercise the vm lifecycle' do
         vm_lifecycle([], resource_pool, network_spec)
       end
@@ -722,9 +752,11 @@ class LifecycleHelpers
   ]
 
   class << self
-    def fetch_property(property)
-      fail "Missing Environment varibale #{property}: #{MISSING_KEY_MESSAGES[property]}" unless(ENV.has_key?(property))
-      ENV[property]
+    def fetch_property(key)
+      fail "Missing Environment varibale #{key}: #{MISSING_KEY_MESSAGES[key]}" unless(ENV.has_key?(key))
+      value = ENV[key]
+      fail "Environment variable #{key} must not be blank: #{MISSING_KEY_MESSAGES[key]}" if(value =~ /^\s*$/)
+      value
     end
 
     def fetch_optional_property(property)
@@ -738,10 +770,10 @@ class LifecycleHelpers
       fail("vSphere version #{expected_version} required. Found #{actual_version}.") if expected_version != actual_version
     end
 
-    def verify_datastore_within_cluster(datacenter, datastore_variable_name, datastore_pattern, cluster_name)
+    def verify_datastore_within_cluster(datacenter, env_var_name, datastore_pattern, cluster_name)
       cluster = datacenter.find_cluster(cluster_name)
-      datastores = cluster.all_datastores.select{|ds_name| ds_name =~ /#{datastore_pattern}/}
-      verify_datastore_pattern(datastores, datastore_variable_name, datastore_pattern)
+      datastores = matching_datastores_in_cluster(cluster, datastore_pattern)
+      fail("Invalid Environment variable '#{env_var_name}': No datastores found matching /#{datastore_pattern}/. #{MISSING_KEY_MESSAGES[env_var_name]}") if (datastores.empty?)
     end
 
     def verify_cluster(datacenter, cluster_name, env_var_name)
@@ -752,24 +784,19 @@ class LifecycleHelpers
       end
     end
 
-    def verify_local_disk_infrastructure(cpi_options)
-      cpi = VSphereCloud::Cloud.new(cpi_options)
-      all_ephemeral_datastores = ephemeral_datastores(cpi)
+    def verify_local_disk_infrastructure(cpi_options, env_var_name)
       datastore_pattern = cpi_options['vcenters'].first['datacenters'].first['datastore_pattern']
-      verify_datastore_pattern(
-        all_ephemeral_datastores,
-        'BOSH_VSPHERE_CPI_LOCAL_DATASTORE_PATTERN',
-        datastore_pattern
-      )
 
+      cpi = VSphereCloud::Cloud.new(cpi_options)
+      all_ephemeral_datastores = matching_datastores(cpi, datastore_pattern)
       nonlocal_disk_ephemeral_datastores = all_ephemeral_datastores.select { |_, datastore| datastore.mob.summary.multiple_host_access }
       unless (nonlocal_disk_ephemeral_datastores.empty?)
         fail(
           <<-EOF
-Some datastores found maching `BOSH_VSPHERE_CPI_LOCAL_DATASTORE_PATTERN`(/#{datastore_pattern}/)
+Some datastores found maching `#{env_var_name}`(/#{datastore_pattern}/)
 are configured to allow multiple hosts to access them:
 #{nonlocal_disk_ephemeral_datastores}.
-#{MISSING_KEY_MESSAGES['BOSH_VSPHERE_CPI_LOCAL_DATASTORE_PATTERN']}
+#{MISSING_KEY_MESSAGES[env_var_name]}
         EOF
         )
       end
@@ -799,31 +826,20 @@ are configured to allow multiple hosts to access them:
       end
     end
 
-    def verify_nested_datacenter(cpi_options, vlan)
+    def verify_datacenter_is_nested(cpi_options, datacenter_name, env_var_name)
       cpi = VSphereCloud::Cloud.new(cpi_options)
-      datacenter_options = cpi_options['vcenters'].first['datacenters'].first
-
       datacenter_mob = cpi.datacenter.mob
       client = cpi.client
       datacenter_parent = client.cloud_searcher.get_property(datacenter_mob, datacenter_mob.class, 'parent', :ensure_all => true)
       root_folder = client.service_content.root_folder
 
-      fail 'Datacenter is not in subfolder' if root_folder.to_str == datacenter_parent.to_str
+      fail "Invalid Environment variable '#{env_var_name}': Datacenter '#{datacenter_name}'  is not in subfolder" if root_folder.to_str == datacenter_parent.to_str
+    end
 
-      verify_datastore_pattern(
-        ephemeral_datastores(cpi),
-        'BOSH_VSPHERE_CPI_NESTED_DATACENTER_DATASTORE_PATTERN',
-        datacenter_options['datastore_pattern']
-      )
-
-      begin
-        cpi.datacenter.clusters.first.last.resource_pool.mob
-      rescue
-        cluster_tuple = datacenter_options['clusters'].first.first
-        cluster_name = cluster_tuple.first
-        resource_pool_name = cluster_tuple.last['resource_pool']
-        fail "No resource pool named '#{resource_pool_name}' found in cluster named '#{cluster_name}'"
-      end
+    def verify_resource_pool(cluster, resource_pool_name, env_var_name)
+      cluster.resource_pool.mob
+    rescue
+      fail "Invalid Environment variable '#{env_var_name}': No resource pool named '#{resource_pool_name}' found in cluster named '#{cluster.name}'"
     end
 
     def stemcell_image(stemcell_path, destination_dir)
@@ -840,20 +856,34 @@ are configured to allow multiple hosts to access them:
       fail "Invalid Environment variable '#{env_var_name}': No network named '#{vlan}' found in datacenter named '#{datacenter_name}'" if network.nil?
     end
 
-    private
+    def verify_datacenter_exists(cpi_options, env_var_name)
+      cpi = VSphereCloud::Cloud.new(cpi_options)
+      cpi.datacenter.mob
+    rescue => e
+      fail "Invalid Environment variable '#{env_var_name}': #{e.message}"
+    end
 
-    def verify_datastore_pattern(datastores, env_var_name, pattern)
-      if (datastores.empty?)
-        fail( "No datastores found matching '#{env_var_name}' (/#{pattern}/).\n#{MISSING_KEY_MESSAGES[env_var_name]}")
+    def verify_non_overlapping_datastores(cpi_1, pattern_1, env_var_name_1, cpi_2, pattern_2, env_var_name_2)
+      datastore_ids_1 = matching_datastores(cpi_1, pattern_1).map { |k, v| [k, v.mob.to_s] }
+      datastore_ids_2 = matching_datastores(cpi_2, pattern_2).map { |k, v| [k, v.mob.to_s] }
+      overlapping_datastore_ids = datastore_ids_1 & datastore_ids_2
+      if (!overlapping_datastore_ids.empty?)
+        fail("There were overlapping datastores (#{overlapping_datastore_ids.map(&:first).inspect}) found matching /#{pattern_1}/ and /#{pattern_2}/ which came from Environment varibales '#{env_var_name_1}' and '#{env_var_name_2}' respectively.")
       end
     end
 
-    def ephemeral_datastores(cpi)
+    private
+
+    def matching_datastores(cpi, pattern)
       clusters = cpi.datacenter.clusters
       clusters.inject({}) do |acc, kv|
         cluster = kv.last
-        acc.merge!(cluster.ephemeral_datastores)
+        acc.merge!(matching_datastores_in_cluster(cluster, pattern))
       end
+    end
+
+    def matching_datastores_in_cluster(cluster, pattern)
+      cluster.all_datastores.select { |ds_name| ds_name =~ /#{pattern}/ }
     end
 
     def cpi
