@@ -123,8 +123,6 @@ describe VSphereCloud::Cloud, external_cpi: false do
       @second_cluster
     )
 
-    fail 'passed'
-
     Dir.mktmpdir do |temp_dir|
       cpi = described_class.new(cpi_options)
       stemcell_image = LifecycleHelpers.stemcell_image(@stemcell_path, temp_dir)
