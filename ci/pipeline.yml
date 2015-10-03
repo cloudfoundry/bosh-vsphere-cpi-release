@@ -7,7 +7,7 @@ groups:
       - build-candidate
       - bats-ubuntu-manual
       - bats-centos-manual
-      - lifecycle
+      - lifecycle-5.1
       - lifecycle-6.0
       - promote-candidate
 
@@ -65,7 +65,7 @@ jobs:
       - put: bosh-cpi-dev-artifacts
         params: {from: build/out/.*\.tgz}
 
-  - name: lifecycle
+  - name: lifecycle-5.1
     plan:
       - aggregate:
         - {trigger: true,  passed: [build-candidate], get: bosh-cpi-dev-artifacts} # used for job chaining only not for tasks
@@ -251,8 +251,8 @@ jobs:
     serial: true
     plan:
     - aggregate:
-      - {trigger: false, passed: [lifecycle, lifecycle-6.0, bats-ubuntu-manual, bats-centos-manual], get: bosh-cpi-dev-artifacts}
-      - {trigger: false, passed: [lifecycle, lifecycle-6.0, bats-ubuntu-manual, bats-centos-manual], get: bosh-cpi-release}
+      - {trigger: false, passed: [lifecycle-5.1, lifecycle-6.0, bats-ubuntu-manual, bats-centos-manual], get: bosh-cpi-dev-artifacts}
+      - {trigger: false, passed: [lifecycle-5.1, lifecycle-6.0, bats-ubuntu-manual, bats-centos-manual], get: bosh-cpi-release}
       - {trigger: false, get: release-version-semver, params: {bump: major}}
 
     - task: promote
