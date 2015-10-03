@@ -8,6 +8,7 @@ groups:
       - bats-ubuntu-manual
       - bats-centos-manual
       - lifecycle
+      - lifecycle-6.0
       - promote-candidate
 
   - name: ubuntu
@@ -47,7 +48,7 @@ jobs:
             path: echo
             args: ["Finished setting up container."]
           tags: ["vsphere"]
-        
+
   - name: build-candidate
     serial: true
     plan:
@@ -99,6 +100,44 @@ jobs:
             BOSH_VSPHERE_CPI_NESTED_DATACENTER_CLUSTER:           {{lifecycle_VSPHERE_NESTED_DATACENTER_CLUSTER}}
             BOSH_VSPHERE_CPI_NESTED_DATACENTER_RESOURCE_POOL:     {{lifecycle_VSPHERE_NESTED_DATACENTER_RESOURCE_POOL}}
             BOSH_VSPHERE_CPI_NESTED_DATACENTER_VLAN:              {{lifecycle_VSPHERE_NESTED_DATACENTER_VLAN}}
+
+  - name: lifecycle-6.0
+    plan:
+      - aggregate:
+        - {trigger: true,  passed: [build-candidate], get: bosh-cpi-dev-artifacts} # used for job chaining only not for tasks
+        - {trigger: false, passed: [build-candidate], get: bosh-cpi-release}
+        - {trigger: false,                            get: stemcell, resource: vsphere-ubuntu-stemcell}
+
+      - task: test
+        file: bosh-cpi-release/ci/tasks/run-lifecycle.yml
+        config:
+          params:
+            BOSH_VSPHERE_VERSION:                                 {{lifecycle_vsphere_6_VSPHERE_VERSION}}
+            BOSH_VSPHERE_CPI_HOST:                                {{lifecycle_vsphere_6_VSPHERE_HOST}}
+            BOSH_VSPHERE_CPI_USER:                                {{lifecycle_vsphere_6_VSPHERE_USER}}
+            BOSH_VSPHERE_CPI_PASSWORD:                            {{lifecycle_vsphere_6_VSPHERE_PASSWORD}}
+            BOSH_VSPHERE_VLAN:                                    {{lifecycle_vsphere_6_VSPHERE_VLAN}}
+            BOSH_VSPHERE_CPI_DATACENTER:                          {{lifecycle_vsphere_6_VSPHERE_DATACENTER}}
+            BOSH_VSPHERE_CPI_CLUSTER:                             {{lifecycle_vsphere_6_VSPHERE_CLUSTER}}
+            BOSH_VSPHERE_CPI_DATASTORE_PATTERN:                   {{lifecycle_vsphere_6_VSPHERE_DATASTORE_PATTERN}}
+            BOSH_VSPHERE_CPI_PERSISTENT_DATASTORE_PATTERN:        {{lifecycle_vsphere_6_VSPHERE_PERSISTENT_DATASTORE_PATTERN}}
+            BOSH_VSPHERE_CPI_SECOND_DATASTORE:                    {{lifecycle_vsphere_6_VSPHERE_SECOND_DATASTORE}}
+            BOSH_VSPHERE_CPI_LOCAL_DATASTORE_PATTERN:             {{lifecycle_vsphere_6_VSPHERE_LOCAL_DATASTORE_PATTERN}}
+            BOSH_VSPHERE_CPI_RESOURCE_POOL:                       {{lifecycle_vsphere_6_VSPHERE_RESOURCE_POOL}}
+            BOSH_VSPHERE_CPI_SECOND_RESOURCE_POOL:                {{lifecycle_vsphere_6_VSPHERE_SECOND_RESOURCE_POOL}}
+            BOSH_VSPHERE_CPI_SECOND_CLUSTER:                      {{lifecycle_vsphere_6_VSPHERE_SECOND_CLUSTER}}
+            BOSH_VSPHERE_CPI_SECOND_CLUSTER_DATASTORE:            {{lifecycle_vsphere_6_VSPHERE_SECOND_CLUSTER_DATASTORE}}
+            BOSH_VSPHERE_CPI_SECOND_CLUSTER_RESOURCE_POOL:        {{lifecycle_vsphere_6_VSPHERE_SECOND_CLUSTER_RESOURCE_POOL}}
+            BOSH_VSPHERE_CPI_VM_FOLDER:                           {{lifecycle_vsphere_6_VSPHERE_VM_FOLDER}}
+            BOSH_VSPHERE_CPI_TEMPLATE_FOLDER:                     {{lifecycle_vsphere_6_VSPHERE_TEMPLATE_FOLDER}}
+            BOSH_VSPHERE_CPI_DISK_PATH:                           {{lifecycle_vsphere_6_VSPHERE_DISK_PATH}}
+            BOSH_VSPHERE_CPI_NESTED_DATACENTER:                   {{lifecycle_vsphere_6_VSPHERE_NESTED_DATACENTER}}
+            BOSH_VSPHERE_CPI_NESTED_DATACENTER_DATASTORE_PATTERN: {{lifecycle_vsphere_6_VSPHERE_NESTED_DATACENTER_DATASTORE_PATTERN}}
+            BOSH_VSPHERE_CPI_NESTED_DATACENTER_CLUSTER:           {{lifecycle_vsphere_6_VSPHERE_NESTED_DATACENTER_CLUSTER}}
+            BOSH_VSPHERE_CPI_NESTED_DATACENTER_RESOURCE_POOL:     {{lifecycle_vsphere_6_VSPHERE_NESTED_DATACENTER_RESOURCE_POOL}}
+            BOSH_VSPHERE_CPI_NESTED_DATACENTER_VLAN:              {{lifecycle_vsphere_6_VSPHERE_NESTED_DATACENTER_VLAN}}
+
+
 
   - name: bats-ubuntu-manual
     plan:
@@ -212,8 +251,8 @@ jobs:
     serial: true
     plan:
     - aggregate:
-      - {trigger: false,  passed: [lifecycle, bats-ubuntu-manual, bats-centos-manual], get: bosh-cpi-dev-artifacts}
-      - {trigger: false, passed: [lifecycle, bats-ubuntu-manual, bats-centos-manual], get: bosh-cpi-release}
+      - {trigger: false, passed: [lifecycle, lifecycle-6.0, bats-ubuntu-manual, bats-centos-manual], get: bosh-cpi-dev-artifacts}
+      - {trigger: false, passed: [lifecycle, lifecycle-6.0, bats-ubuntu-manual, bats-centos-manual], get: bosh-cpi-release}
       - {trigger: false, get: release-version-semver, params: {bump: major}}
 
     - task: promote
