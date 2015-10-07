@@ -494,9 +494,7 @@ describe VSphereCloud::Cloud, external_cpi: false do
 
       def datastores_accessible_from_cluster(cluster_name)
         cluster = cpi.client.cloud_searcher.get_managed_object(VimSdk::Vim::ClusterComputeResource, name: cluster_name)
-        expect(cluster.host.size).to eq(1)
-        host = cluster.host.first
-        host.datastore.map(&:name)
+        cluster.datastore.map(&:name)
       end
 
       def create_vm_with_cpi(cpi_for_vm)
