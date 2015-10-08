@@ -116,6 +116,16 @@ describe VSphereCloud::Cloud, external_cpi: false do
       @cluster
     )
 
+    cpi_instance = described_class.new(cpi_options)
+    LifecycleHelpers.verify_non_overlapping_datastores(
+      cpi_instance,
+      @datastore_pattern,
+      'BOSH_VSPHERE_CPI_DATASTORE_PATTERN',
+      cpi_instance,
+      @persistent_datastore_pattern,
+      'BOSH_VSPHERE_CPI_PERSISTENT_DATASTORE_PATTERN'
+    )
+
     LifecycleHelpers.verify_non_overlapping_datastores(
       described_class.new(cpi_options),
       @datastore_pattern,
