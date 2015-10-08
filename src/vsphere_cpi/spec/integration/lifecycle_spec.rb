@@ -142,6 +142,12 @@ describe VSphereCloud::Cloud, external_cpi: false do
       @second_cluster
     )
 
+    LifecycleHelpers.verify_datastore_pattern_available_to_all_hosts(
+      cpi_options,
+      'BOSH_VSPHERE_CPI_PERSISTENT_DATASTORE_PATTERN',
+      @persistent_datastore_pattern,
+    )
+
     Dir.mktmpdir do |temp_dir|
       cpi = described_class.new(cpi_options)
       stemcell_image = LifecycleHelpers.stemcell_image(@stemcell_path, temp_dir)

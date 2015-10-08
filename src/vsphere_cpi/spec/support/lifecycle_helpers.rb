@@ -19,7 +19,7 @@ class LifecycleHelpers
     'BOSH_VSPHERE_CPI_SECOND_RESOURCE_POOL' => 'Please ensure you provide a name of the second resource pool within the first cluster.',
     'BOSH_VSPHERE_CPI_SECOND_CLUSTER_RESOURCE_POOL' => 'Please ensure you provide a name of a resource pool within the second cluster.',
     'BOSH_VSPHERE_CPI_SECOND_CLUSTER_DATASTORE' => 'Please ensure you provide a pattern of a second datastore attached to the second cluster.',
-    'BOSH_VSPHERE_CPI_PERSISTENT_DATASTORE_PATTERN' => 'Please ensure you provide a pattern of a persistent datastore attached to the first cluster.',
+    'BOSH_VSPHERE_CPI_PERSISTENT_DATASTORE_PATTERN' => 'Please ensure you provide a pattern of a persistent datastore attached to all hosts in all provided clusters.',
     'BOSH_VSPHERE_CPI_DISK_PATH' => 'Please ensure you provide a disk path.',
     'BOSH_VSPHERE_CPI_TEMPLATE_FOLDER' => 'Please ensure you provide a template folder.',
     'BOSH_VSPHERE_CPI_VM_FOLDER' => 'Please ensure you provide a VM folder.',
@@ -143,11 +143,9 @@ class LifecycleHelpers
     end
 
     def verify_cluster(datacenter, cluster_name, env_var_name)
-      begin
-        datacenter.find_cluster(cluster_name)
-      rescue RuntimeError => e
-        fail("#{e.message}\n#{env_var_name}: #{MISSING_KEY_MESSAGES[env_var_name]}")
-      end
+      datacenter.find_cluster(cluster_name)
+    rescue RuntimeError => e
+      fail("#{e.message}\n#{env_var_name}: #{MISSING_KEY_MESSAGES[env_var_name]}")
     end
 
     def verify_local_disk_infrastructure(cpi_options, env_var_name)
@@ -234,6 +232,17 @@ are configured to allow multiple hosts to access them:
       overlapping_datastore_ids = datastore_ids_1 & datastore_ids_2
       if (!overlapping_datastore_ids.empty?)
         fail("There were overlapping datastores (#{overlapping_datastore_ids.map(&:first).inspect}) found matching /#{pattern_1}/ and /#{pattern_2}/ which came from Environment varibales '#{env_var_name_1}' and '#{env_var_name_2}' respectively.")
+      end
+    end
+
+    def verify_datastore_pattern_available_to_all_hosts(cpi_options, env_var_name, datastore_pattern)
+      cpi = VSphereCloud::Cloud.new(cpi_options)
+      datastore_pattern_regex =  Regexp.new(datastore_pattern)
+      cpi.datacenter.clusters.values.each do |cluster|
+        cluster.mob.host.each do |host_mob|
+          datastore_names = host_mob.datastore.map(&:name)
+          fail("host: '#{host_mob.name}' does not have any datastores matching pattern /#{datastore_pattern}/. Found datastores are #{datastore_names.inspect}. The datasore pattern came from the environment varible:'#{env_var_name}'. #{MISSING_KEY_MESSAGES[env_var_name]}") unless datastore_names.any?{ |name| name =~ datastore_pattern_regex }
+        end
       end
     end
 
