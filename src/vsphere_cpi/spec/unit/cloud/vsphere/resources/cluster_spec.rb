@@ -344,7 +344,7 @@ class VSphereCloud::Resources
           cluster.pick_persistent(10001)
 
           expect(log_output.string).to include 'Looking for a persistent datastore in fake-cluster-name with 10001MB free space.'
-          expect(log_output.string).to include 'All datastores: ["persistent_1 (10000MB free of 20000MB capacity)", "persistent_2 (20000MB free of 40000MB capacity)"]'
+          expect(log_output.string).to include 'All datastores within cluster ' + cluster.name + ': ["persistent_1 (10000MB free of 20000MB capacity)", "persistent_2 (20000MB free of 40000MB capacity)"]'
           expect(log_output.string).to include 'Datastores with enough space: ["persistent_2 (20000MB free of 40000MB capacity)"]'
         end
 

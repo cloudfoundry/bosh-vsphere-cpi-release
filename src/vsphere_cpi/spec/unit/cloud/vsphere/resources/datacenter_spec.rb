@@ -337,7 +337,7 @@ describe VSphereCloud::Resources::Datacenter do
       datacenter.pick_persistent_datastore(1024)
 
       expect(log_output.string).to include "Looking for a 'persistent' datastore with 1024MB free space."
-      expect(log_output.string).to include 'All datastores: ["ds1 (2048MB free of 20000MB capacity)", "ds2 (3072MB free of 20000MB capacity)", "ds3 (1536MB free of 20000MB capacity)"]'
+      expect(log_output.string).to include 'All datastores within datacenter ' + datacenter.name + ': ["ds1 (2048MB free of 20000MB capacity)", "ds2 (3072MB free of 20000MB capacity)", "ds3 (1536MB free of 20000MB capacity)"]'
       expect(log_output.string).to include 'Datastores with enough space: ["ds1 (2048MB free of 20000MB capacity)", "ds2 (3072MB free of 20000MB capacity)"]'
     end
 
