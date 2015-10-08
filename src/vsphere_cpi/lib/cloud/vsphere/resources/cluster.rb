@@ -139,7 +139,7 @@ module VSphereCloud
         available_datastores = datastores.reject { |datastore| datastore.free_space - size < DISK_HEADROOM }
 
         @logger.debug("Looking for a #{type} datastore in #{self.name} with #{size}MB free space.")
-        @logger.debug("All datastores: #{datastores.map(&:debug_info)}")
+        @logger.debug("All datastores within cluster #{self.name}: #{datastores.map(&:debug_info)}")
         @logger.debug("Datastores with enough space: #{available_datastores.map(&:debug_info)}")
 
         selected_datastore = Util.weighted_random(available_datastores.map { |datastore| [datastore, datastore.free_space] })
