@@ -7,4 +7,4 @@ inputs:
 - name: setup-director
 run:
   path: bosh-cpi-release/ci/tasks/teardown-director.sh
-tags: ["vsphere"]
+tags: ["vsphere-v5.1"]

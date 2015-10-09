@@ -59,7 +59,7 @@ jobs:
           run:
             path: echo
             args: ["Finished setting up container."]
-          tags: ["vsphere"]
+          tags: ["vsphere-v5.1"]
 
   - name: build-candidate
     serial: true
@@ -123,6 +123,7 @@ jobs:
       - task: test
         file: bosh-cpi-release/ci/tasks/run-lifecycle.yml
         config:
+          tags: ["vsphere-v6.0"]
           params:
             BOSH_VSPHERE_VERSION:                                 {{lifecycle_vsphere_6_0_version}}
             BOSH_VSPHERE_CPI_HOST:                                {{lifecycle_vsphere_6_0_host}}
