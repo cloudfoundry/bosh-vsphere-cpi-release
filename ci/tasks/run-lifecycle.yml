@@ -6,7 +6,7 @@ inputs:
 - name: stemcell
 run:
   path: bosh-cpi-release/ci/tasks/run-lifecycle.sh
-tags: ["vsphere-v5.1"]
+tags: ["vsphere"]
 params:
   BOSH_VSPHERE_VERSION:                                 replace-me
   BOSH_VSPHERE_CPI_HOST:                                replace-me
