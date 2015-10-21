@@ -50,6 +50,9 @@ echo "installed mkisofs at:"
 which mkisofs
 
 export BOSH_VSPHERE_STEMCELL=$PWD/stemcell/stemcell.tgz
+export BOSH_VSPHERE_VCENTER=$(BOSH_VSPHERE_CPI_HOST)
+export BOSH_VSPHERE_VCENTER_USER=$(BOSH_VSPHERE_CPI_USER)
+export BOSH_VSPHERE_VCENTER_PASSWORD=$(BOSH_VSPHERE_CPI_PASSWORD)
 
 pushd bosh-cpi-release/src/vsphere_cpi
   bundle install
