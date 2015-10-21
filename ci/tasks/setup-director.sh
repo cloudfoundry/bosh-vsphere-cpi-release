@@ -100,7 +100,7 @@ jobs:
   - {name: director, release: bosh}
   - {name: health_monitor, release: bosh}
   - {name: powerdns, release: bosh}
-  - {name: cpi, release: ${cpi_release_name}}
+  - {name: vsphere_cpi, release: ${cpi_release_name}}
 
   resource_pool: vms
   persistent_disk_pool: disks
@@ -137,7 +137,7 @@ jobs:
       address: 127.0.0.1
       name: my-bosh
       db: *db
-      cpi_job: cpi
+      cpi_job: vsphere_cpi
 
     hm:
       http: {user: hm, password: hm-password}
@@ -164,7 +164,7 @@ jobs:
         clusters: [${BOSH_VSPHERE_VCENTER_CLUSTER}]
 
 cloud_provider:
-  template: {name: cpi, release: ${cpi_release_name}}
+  template: {name: vsphere_cpi, release: ${cpi_release_name}}
 
   mbus: "https://mbus:mbus-password@${DIRECTOR_IP}:6868"
 
