@@ -46,12 +46,12 @@ pushd iso_image_install
   BOSH_INSTALL_TARGET=$PWD ./packaging &> mkisofs_compilation.log
   export PATH=$PWD/bin:$PATH
 popd
-echo "installed mkisofs at:" 
+echo "installed mkisofs at:"
 which mkisofs
 
 export BOSH_VSPHERE_STEMCELL=$PWD/stemcell/stemcell.tgz
 
 pushd bosh-cpi-release/src/vsphere_cpi
   bundle install
-  bundle exec rspec spec/integration/lifecycle_spec.rb
+  bundle exec rspec spec/integration
 popd
