@@ -39,6 +39,7 @@ RUN ruby-install ruby 2.1.2
 # Install Bundler, Bosh CLI, and CPI Dependencies
 RUN /bin/bash -l -c "source /etc/profile.d/chruby.sh ;  \
                      chruby 2.1.2 ;                     \
+                     gem update --system ; \
                      gem install bundler bosh_cli --no-ri --no-rdoc ; \
                      cd /tmp ; \
                      git clone https://github.com/cloudfoundry-incubator/bosh-vsphere-cpi-release.git ; \
