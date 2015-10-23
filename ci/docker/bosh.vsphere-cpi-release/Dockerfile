@@ -15,6 +15,8 @@ RUN apt-get install -y mysql-client libmysqlclient-dev; apt-get clean
 
 RUN apt-get install -y postgresql-9.3 postgresql-client-9.3 libpq-dev; apt-get clean
 
+RUN apt-get install -y jq; apt-get clean
+
 # chruby
 RUN mkdir /tmp/chruby && \
     cd /tmp && \
@@ -34,9 +36,11 @@ RUN mkdir /tmp/ruby-install && \
 # ruby
 RUN ruby-install ruby 2.1.2
 
-# Bundler and BOSH CLI
+# Install Bundler, Bosh CLI, and CPI Dependencies
 RUN /bin/bash -l -c "source /etc/profile.d/chruby.sh ;  \
                      chruby 2.1.2 ;                     \
-                     gem install bundler bosh_cli --no-ri --no-rdoc"
-
-RUN apt-get install -y jq; apt-get clean;
+                     gem install bundler bosh_cli --no-ri --no-rdoc ; \
+                     cd /tmp ; \
+                     git clone https://github.com/cloudfoundry-incubator/bosh-vsphere-cpi-release.git ; \
+                     cd bosh-vsphere-cpi-release/src/vsphere_cpi ; \
+                     bundle install"
