@@ -207,6 +207,128 @@ module VSphereCloud
       end
     end
 
+    describe '#create_disk' do
+      let(:file_manager) do
+        instance_double('VimSdk::Vim::FileManager',
+          make_directory: nil
+        )
+      end
+
+      before do
+        allow(fake_service_content).to receive(:file_manager).and_return(file_manager)
+      end
+
+      let(:datacenter) do
+        instance_double('Resources::Datacenter', mob: 'fake-mob')
+      end
+
+      let(:datastore) do
+        instance_double('Resources::Datastore', name: 'fake-datastore')
+      end
+
+      let(:disk_folder) { instance_double('VimSdk::Vim::Folder') }
+      let(:disk_spec) do
+        instance_double('VimSdk::Vim::VirtualDiskManager::FileBackedVirtualDiskSpec')
+      end
+
+      before do
+        allow(disk_spec).to receive(:capacity_kb=)
+        allow(disk_spec).to receive(:adapter_type=)
+      end
+
+      let(:disk_manager) do
+        instance_double('VimSdk::Vim::VirtualDiskManager',
+          create_virtual_disk: nil,
+        )
+      end
+
+      before do
+        allow(fake_service_content).to receive(:virtual_disk_manager).and_return(disk_manager)
+      end
+
+      before do
+        allow(
+          VimSdk::Vim::VirtualDiskManager::FileBackedVirtualDiskSpec
+        ).to receive(:new).and_return(disk_spec)
+      end
+
+      before do
+        allow(client).to receive(:wait_for_task)
+      end
+
+      context 'when specifying `eagerZeroedThick`' do
+        it 'creates a disk' do
+          expect(disk_spec).to receive(:disk_type=).with('eagerZeroedThick')
+          client.create_disk(datacenter, datastore, 'disk_cid', disk_folder, 10, 'eagerZeroedThick')
+        end
+      end
+
+      context 'when specifying preallocated' do
+        it 'creates a disk' do
+          expect(disk_spec).to receive(:disk_type=).with('preallocated')
+          client.create_disk(datacenter, datastore, 'disk_cid', disk_folder, 10, 'preallocated')
+        end
+      end
+
+      context 'when specifying `raw`' do
+        it 'creates a disk' do
+          expect(disk_spec).to receive(:disk_type=).with('raw')
+          client.create_disk(datacenter, datastore, 'disk_cid', disk_folder, 10, 'raw')
+        end
+      end
+
+      context 'when specifying `rdm`' do
+        it 'creates a disk' do
+          expect(disk_spec).to receive(:disk_type=).with('rdm')
+          client.create_disk(datacenter, datastore, 'disk_cid', disk_folder, 10, 'rdm')
+        end
+      end
+
+      context 'when specifying `rdmp`' do
+        it 'creates a disk' do
+          expect(disk_spec).to receive(:disk_type=).with('rdmp')
+          client.create_disk(datacenter, datastore, 'disk_cid', disk_folder, 10, 'rdmp')
+        end
+      end
+
+      context 'when specifying `seSparse`' do
+        it 'creates a disk' do
+          expect(disk_spec).to receive(:disk_type=).with('seSparse')
+          client.create_disk(datacenter, datastore, 'disk_cid', disk_folder, 10, 'seSparse')
+        end
+      end
+
+      context 'when specifying `thick`' do
+        it 'creates a disk' do
+          expect(disk_spec).to receive(:disk_type=).with('thick')
+          client.create_disk(datacenter, datastore, 'disk_cid', disk_folder, 10, 'thick')
+        end
+      end
+
+      context 'when specifying `thin`' do
+        it 'creates a disk' do
+          expect(disk_spec).to receive(:disk_type=).with('thin')
+          client.create_disk(datacenter, datastore, 'disk_cid', disk_folder, 10, 'thin')
+        end
+      end
+
+      context 'when no disk type is specified' do
+        it 'creates a disk with preallocated type' do
+          expect(disk_spec).to receive(:disk_type=).with(Client::DEFAULT_DISK_TYPE)
+          client.create_disk(datacenter, datastore, 'disk_cid', disk_folder, 10)
+        end
+
+      end
+
+      context 'when an invalid disk type is specified' do
+        it 'returns an error' do
+          expect {
+            client.create_disk(datacenter, datastore, 'disk_cid', disk_folder, 10, 'foo-type')
+          }.to raise_error("Invalid disk type: 'foo-type'")
+        end
+      end
+    end
+
     describe '#delete_folder' do
       let(:folder) { instance_double('VimSdk::Vim::Folder') }
 
