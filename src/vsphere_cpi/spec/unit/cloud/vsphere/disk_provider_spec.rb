@@ -25,6 +25,19 @@ module VSphereCloud
     let(:datastore) { Resources::Datastore.new('fake-datastore', 'mob', 2048, 1024) }
     let(:disk) { Resources::Disk.new('disk-cid', 24, datastore, 'fake-disk-path') }
 
+    describe 'allowed disk types' do
+      it 'supports all documented disk types' do
+        expect(DiskProvider::SUPPORTED_DISK_TYPES).to include('eagerZeroedThick')
+        expect(DiskProvider::SUPPORTED_DISK_TYPES).to include('preallocated')
+        expect(DiskProvider::SUPPORTED_DISK_TYPES).to include('raw')
+        expect(DiskProvider::SUPPORTED_DISK_TYPES).to include('rdm')
+        expect(DiskProvider::SUPPORTED_DISK_TYPES).to include('rdmp')
+        expect(DiskProvider::SUPPORTED_DISK_TYPES).to include('seSparse')
+        expect(DiskProvider::SUPPORTED_DISK_TYPES).to include('thick')
+        expect(DiskProvider::SUPPORTED_DISK_TYPES).to include('thin')
+      end
+    end
+
     describe '#create' do
       before do
         allow(SecureRandom).to receive(:uuid).and_return('cid')
@@ -38,11 +51,10 @@ module VSphereCloud
           expect(datacenter).to receive(:pick_persistent_datastore).with(24).and_return(datastore)
 
           expect(client).to receive(:create_disk)
-                              .with(datacenter, datastore, 'disk-cid', 'fake-disk-path', 24)
+                              .with(datacenter, datastore, 'disk-cid', 'fake-disk-path', 24, DiskProvider::DEFAULT_DISK_TYPE)
                               .and_return(disk)
-          expect(disk_provider.create(24, nil)).to eq(disk)
+          expect(disk_provider.create(24, nil, nil)).to eq(disk)
         end
-      end
 
       context 'when cluster is provided' do
         it 'creates disk in vm cluster' do
@@ -50,9 +62,40 @@ module VSphereCloud
           expect(resources).to receive(:pick_persistent_datastore_in_cluster).with('fake-cluster-name', 24).and_return(datastore)
 
           expect(client).to receive(:create_disk)
-                              .with(datacenter, datastore, 'disk-cid', 'fake-disk-path', 24)
+                              .with(datacenter, datastore, 'disk-cid', 'fake-disk-path', 24, DiskProvider::DEFAULT_DISK_TYPE)
                               .and_return(disk)
-          expect(disk_provider.create(24, cluster)).to eq(disk)
+          expect(disk_provider.create(24, nil, cluster)).to eq(disk)
+        end
+      end
+
+      context 'when disk type is nil' do
+        it 'creates disk using VirtualDiskManager' do
+          expect(datacenter).to receive(:pick_persistent_datastore).with(24).and_return(datastore)
+
+          expect(client).to receive(:create_disk)
+              .with(datacenter, datastore, 'disk-cid', 'fake-disk-path', 24, 'preallocated')
+              .and_return(disk)
+          expect(disk_provider.create(24, nil, nil)).to eq(disk)
+        end
+      end
+
+      context 'when disk type is invalid' do
+        it 'creates disk using VirtualDiskManager' do
+
+          expect{
+            disk_provider.create(24, 'invalid-type', nil)
+          }.to raise_error("Invalid disk type: 'invalid-type'")
+        end
+      end
+
+      context 'when disk type is valid' do
+        it 'creates disk using VirtualDiskManager' do
+          allow(datacenter).to receive(:pick_persistent_datastore).and_return(datastore)
+          expect(client).to receive(:create_disk)
+              .with(datacenter, datastore, 'disk-cid', 'fake-disk-path', 24, 'thin')
+              .and_return(disk)
+
+          expect(disk_provider.create(24, 'thin', nil)).to eq(disk)
         end
       end
     end
@@ -216,5 +259,6 @@ module VSphereCloud
         end
       end
     end
+  end
   end
 end

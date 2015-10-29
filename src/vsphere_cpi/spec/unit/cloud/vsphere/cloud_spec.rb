@@ -946,8 +946,8 @@ module VSphereCloud
       end
 
       it 'creates disk with disk provider' do
-        expect(disk_provider).to receive(:create).with(1024, nil).and_return(disk)
-        vsphere_cloud.create_disk(1024, {})
+        expect(disk_provider).to receive(:create).with(1024, 'foo-type', nil).and_return(disk)
+        vsphere_cloud.create_disk(1024, {'type' => 'foo-type'})
       end
 
       context 'when vm_cid is provided' do
@@ -959,7 +959,7 @@ module VSphereCloud
 
         it 'creates disk in vm cluster' do
           allow(vm_provider).to receive(:find).with('fake-vm-cid').and_return(vm)
-          expect(disk_provider).to receive(:create).with(1024, cluster).and_return(disk)
+          expect(disk_provider).to receive(:create).with(1024, nil, cluster).and_return(disk)
           vsphere_cloud.create_disk(1024, {}, 'fake-vm-cid')
         end
       end

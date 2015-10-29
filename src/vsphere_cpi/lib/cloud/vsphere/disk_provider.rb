@@ -3,6 +3,20 @@ require 'cloud/vsphere/resources/disk'
 
 module VSphereCloud
   class DiskProvider
+  # https://pubs.vmware.com/vsphere-55/index.jsp?topic=%2Fcom.vmware.wssdk.apiref.doc%2Fvim.VirtualDiskManager.VirtualDiskType.html
+  SUPPORTED_DISK_TYPES = %w{
+      eagerZeroedThick
+      preallocated
+      raw
+      rdm
+      rdmp
+      seSparse
+      thick
+      thin
+    }
+
+    DEFAULT_DISK_TYPE = 'preallocated'
+
     def initialize(virtual_disk_manager, datacenter, resources, disk_path, client, logger)
       @virtual_disk_manager = virtual_disk_manager
       @datacenter = datacenter
@@ -12,7 +26,16 @@ module VSphereCloud
       @logger = logger
     end
 
-    def create(disk_size_in_mb, cluster)
+    def create(disk_size_in_mb, disk_type, cluster)
+      type = disk_type
+      if type.nil?
+        type = DEFAULT_DISK_TYPE
+      end
+
+      unless SUPPORTED_DISK_TYPES.include?(type)
+        raise "Invalid disk type: '#{disk_type}'"
+      end
+
       if cluster
         datastore = @resources.pick_persistent_datastore_in_cluster(cluster.name, disk_size_in_mb)
       else
@@ -21,7 +44,7 @@ module VSphereCloud
       disk_cid = "disk-#{SecureRandom.uuid}"
       @logger.debug("Creating disk '#{disk_cid}' in datastore '#{datastore.name}'")
 
-      @client.create_disk(@datacenter, datastore, disk_cid, @disk_path, disk_size_in_mb)
+      @client.create_disk(@datacenter, datastore, disk_cid, @disk_path, disk_size_in_mb, type)
     end
 
     def find_and_move(disk_cid, cluster, datacenter, accessible_datastores)

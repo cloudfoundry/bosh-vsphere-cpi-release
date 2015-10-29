@@ -381,7 +381,8 @@ module VSphereCloud
           cluster = @datacenter.clusters[vm.cluster]
         end
 
-        disk = disk_provider.create(size_in_mb, cluster)
+        disk_type = cloud_properties['type']
+        disk = disk_provider.create(size_in_mb, disk_type, cluster)
         @logger.info("Created disk: #{disk.inspect}")
         disk.cid
       end

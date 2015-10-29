@@ -2,25 +2,11 @@ module VSphereCloud
   class Client
     include VimSdk
 
-    ALLOWED_DISK_TYPES = %w{
-      eagerZeroedThick
-      preallocated
-      raw
-      rdm
-      rdmp
-      seSparse
-      thick
-      thin
-    }
-
-    DEFAULT_DISK_TYPE = 'preallocated'
-
     class TaskException < StandardError; end
     class FileNotFoundException < TaskException; end
     class DuplicateName < TaskException; end
     class AlreadyLoggedInException < StandardError; end
     class NotLoggedInException < StandardError; end
-    class InvalidDiskType < StandardError; end
 
     attr_reader :cloud_searcher, :service_content, :service_instance, :soap_stub
 
@@ -222,9 +208,9 @@ module VSphereCloud
       disk_size_in_mb.nil? ? nil : Resources::Disk.new(disk_cid, disk_size_in_mb, datastore, disk_path)
     end
 
-    def create_disk(datacenter, datastore, disk_cid, disk_folder, disk_size_in_mb, disk_type=DEFAULT_DISK_TYPE)
-      unless ALLOWED_DISK_TYPES.include?(disk_type)
-        raise InvalidDiskType.new("Invalid disk type: '#{disk_type}'")
+    def create_disk(datacenter, datastore, disk_cid, disk_folder, disk_size_in_mb, disk_type)
+      if disk_type.nil?
+        raise 'no disk type specified'
       end
 
       disk_path = "[#{datastore.name}] #{disk_folder}/#{disk_cid}.vmdk"

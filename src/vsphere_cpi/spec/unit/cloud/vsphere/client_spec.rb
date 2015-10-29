@@ -256,77 +256,21 @@ module VSphereCloud
         allow(client).to receive(:wait_for_task)
       end
 
-      context 'when specifying `eagerZeroedThick`' do
+      context 'when specifying a valid disk type' do
         it 'creates a disk' do
           expect(disk_spec).to receive(:disk_type=).with('eagerZeroedThick')
           client.create_disk(datacenter, datastore, 'disk_cid', disk_folder, 10, 'eagerZeroedThick')
         end
       end
 
-      context 'when specifying preallocated' do
-        it 'creates a disk' do
-          expect(disk_spec).to receive(:disk_type=).with('preallocated')
-          client.create_disk(datacenter, datastore, 'disk_cid', disk_folder, 10, 'preallocated')
-        end
-      end
-
-      context 'when specifying `raw`' do
-        it 'creates a disk' do
-          expect(disk_spec).to receive(:disk_type=).with('raw')
-          client.create_disk(datacenter, datastore, 'disk_cid', disk_folder, 10, 'raw')
-        end
-      end
-
-      context 'when specifying `rdm`' do
-        it 'creates a disk' do
-          expect(disk_spec).to receive(:disk_type=).with('rdm')
-          client.create_disk(datacenter, datastore, 'disk_cid', disk_folder, 10, 'rdm')
-        end
-      end
-
-      context 'when specifying `rdmp`' do
-        it 'creates a disk' do
-          expect(disk_spec).to receive(:disk_type=).with('rdmp')
-          client.create_disk(datacenter, datastore, 'disk_cid', disk_folder, 10, 'rdmp')
-        end
-      end
-
-      context 'when specifying `seSparse`' do
-        it 'creates a disk' do
-          expect(disk_spec).to receive(:disk_type=).with('seSparse')
-          client.create_disk(datacenter, datastore, 'disk_cid', disk_folder, 10, 'seSparse')
-        end
-      end
-
-      context 'when specifying `thick`' do
-        it 'creates a disk' do
-          expect(disk_spec).to receive(:disk_type=).with('thick')
-          client.create_disk(datacenter, datastore, 'disk_cid', disk_folder, 10, 'thick')
-        end
-      end
-
-      context 'when specifying `thin`' do
-        it 'creates a disk' do
-          expect(disk_spec).to receive(:disk_type=).with('thin')
-          client.create_disk(datacenter, datastore, 'disk_cid', disk_folder, 10, 'thin')
-        end
-      end
-
-      context 'when no disk type is specified' do
-        it 'creates a disk with preallocated type' do
-          expect(disk_spec).to receive(:disk_type=).with(Client::DEFAULT_DISK_TYPE)
-          client.create_disk(datacenter, datastore, 'disk_cid', disk_folder, 10)
-        end
-
-      end
-
-      context 'when an invalid disk type is specified' do
-        it 'returns an error' do
+      context 'when the type is nil' do
+        it 'raises an error' do
           expect {
-            client.create_disk(datacenter, datastore, 'disk_cid', disk_folder, 10, 'foo-type')
-          }.to raise_error("Invalid disk type: 'foo-type'")
+            client.create_disk(datacenter, datastore, 'disk_cid', disk_folder, 10, nil)
+          }.to raise_error 'no disk type specified'
         end
       end
+
     end
 
     describe '#delete_folder' do
