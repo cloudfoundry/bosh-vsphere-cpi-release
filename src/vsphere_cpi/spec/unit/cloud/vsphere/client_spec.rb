@@ -1,5 +1,4 @@
 require 'spec_helper'
-# require 'cloud/vsphere/client'
 
 module VSphereCloud
   describe Client do
@@ -36,7 +35,7 @@ module VSphereCloud
         end
 
         it 'does not escape slashes into %2f' +
-           'because we want to allow users to specify nested objects' do
+            'because we want to allow users to specify nested objects' do
           expect(fake_search_index).to receive(:find_by_inventory_path).with('foo/bar')
           client.find_by_inventory_path("foo/bar")
         end
@@ -49,7 +48,7 @@ module VSphereCloud
         end
 
         it 'does not escape slashes into %2f' +
-           'because we want to allow users to specify nested objects' do
+            'because we want to allow users to specify nested objects' do
           expect(fake_search_index).to receive(:find_by_inventory_path).with('foo/bar/baz')
           client.find_by_inventory_path(['foo', 'bar/baz'])
         end
@@ -62,7 +61,7 @@ module VSphereCloud
         end
 
         it 'does not escape slashes into %2f' +
-           'because we want to allow users to specify nested objects' do
+            'because we want to allow users to specify nested objects' do
           expect(fake_search_index).to receive(:find_by_inventory_path).with('foo/bar/baz/jaz')
           client.find_by_inventory_path(['foo', ['bar', 'baz/jaz']])
         end
@@ -90,8 +89,8 @@ module VSphereCloud
           expect(client).to receive(:wait_for_task).with(task)
 
           expect(file_manager).to receive(:delete_file).
-            with('[some-datastore] some/path', datacenter).
-            and_return(task)
+              with('[some-datastore] some/path', datacenter).
+              and_return(task)
 
           client.delete_path(datacenter, '[some-datastore] some/path')
         end
@@ -100,11 +99,11 @@ module VSphereCloud
       context 'when file manager raises "File not found" error' do
         it 'does not raise error' do
           expect(client).to receive(:wait_for_task).with(task).
-            and_raise(RuntimeError.new('File [some-datastore] some/path was not found'))
+              and_raise(RuntimeError.new('File [some-datastore] some/path was not found'))
 
           expect(file_manager).to receive(:delete_file).
-            with('[some-datastore] some/path', datacenter).
-            and_return(task)
+              with('[some-datastore] some/path', datacenter).
+              and_return(task)
 
           expect {
             client.delete_path(datacenter, '[some-datastore] some/path')
@@ -116,14 +115,14 @@ module VSphereCloud
         it 'raises that error' do
           error = RuntimeError.new('Invalid datastore path some/path')
           expect(client).to receive(:wait_for_task).with(task).
-            and_raise(error)
+              and_raise(error)
           expect(file_manager).to receive(:delete_file).
-            with('some/path', datacenter).
-            and_return(task)
+              with('some/path', datacenter).
+              and_return(task)
 
           expect {
             client.delete_path(datacenter, 'some/path')
-          }.to raise_error
+          }.to raise_error(error)
         end
       end
     end
@@ -144,11 +143,11 @@ module VSphereCloud
           expect(client).to receive(:wait_for_task).with(flat_vmdk_task)
 
           expect(file_manager).to receive(:delete_file).
-            with('[some-datastore] some/path.vmdk', datacenter).
-            and_return(vmdk_task)
+              with('[some-datastore] some/path.vmdk', datacenter).
+              and_return(vmdk_task)
           expect(file_manager).to receive(:delete_file).
-            with('[some-datastore] some/path-flat.vmdk', datacenter).
-            and_return(flat_vmdk_task)
+              with('[some-datastore] some/path-flat.vmdk', datacenter).
+              and_return(flat_vmdk_task)
 
           client.delete_disk(datacenter, '[some-datastore] some/path')
         end
@@ -157,15 +156,15 @@ module VSphereCloud
       context 'when file manager raises "File not found" error for the .vmdk' do
         it 'does not raise error' do
           expect(client).to receive(:wait_for_task).with(vmdk_task).
-            and_raise(RuntimeError.new('File [some-datastore] some/path.vmdk was not found'))
+              and_raise(RuntimeError.new('File [some-datastore] some/path.vmdk was not found'))
           expect(client).to receive(:wait_for_task).with(flat_vmdk_task)
 
           expect(file_manager).to receive(:delete_file).
-            with('[some-datastore] some/path.vmdk', datacenter).
-            and_return(vmdk_task)
+              with('[some-datastore] some/path.vmdk', datacenter).
+              and_return(vmdk_task)
           expect(file_manager).to receive(:delete_file).
-            with('[some-datastore] some/path-flat.vmdk', datacenter).
-            and_return(flat_vmdk_task)
+              with('[some-datastore] some/path-flat.vmdk', datacenter).
+              and_return(flat_vmdk_task)
 
           expect {
             client.delete_disk(datacenter, '[some-datastore] some/path')
@@ -177,14 +176,14 @@ module VSphereCloud
         it 'does not raise error' do
           expect(client).to receive(:wait_for_task).with(vmdk_task)
           expect(client).to receive(:wait_for_task).with(flat_vmdk_task).
-            and_raise(RuntimeError.new('File [some-datastore] some/path-flat.vmdk was not found'))
+              and_raise(RuntimeError.new('File [some-datastore] some/path-flat.vmdk was not found'))
 
           expect(file_manager).to receive(:delete_file).
-            with('[some-datastore] some/path.vmdk', datacenter).
-            and_return(vmdk_task)
+              with('[some-datastore] some/path.vmdk', datacenter).
+              and_return(vmdk_task)
           expect(file_manager).to receive(:delete_file).
-            with('[some-datastore] some/path-flat.vmdk', datacenter).
-            and_return(flat_vmdk_task)
+              with('[some-datastore] some/path-flat.vmdk', datacenter).
+              and_return(flat_vmdk_task)
 
           expect {
             client.delete_disk(datacenter, '[some-datastore] some/path')
@@ -196,14 +195,14 @@ module VSphereCloud
         it 'raises that error' do
           error = RuntimeError.new('Invalid datastore path some/path.vmdk')
           expect(client).to receive(:wait_for_task).with(vmdk_task).
-            and_raise(error)
+              and_raise(error)
           expect(file_manager).to receive(:delete_file).
-            with('some/path.vmdk', datacenter).
-            and_return(vmdk_task)
+              with('some/path.vmdk', datacenter).
+              and_return(vmdk_task)
 
           expect {
             client.delete_disk(datacenter, 'some/path.vmdk')
-          }.to raise_error
+          }.to raise_error(error)
         end
       end
     end
