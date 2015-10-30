@@ -7,7 +7,7 @@ describe VSphereCloud::Client do
 
       client, datacenter, datastore, disk_folder = setup
 
-      client.create_disk(datacenter, datastore, disk_cid, disk_folder, 128)
+      client.create_disk(datacenter, datastore, disk_cid, disk_folder, 128, DiskProvider::DEFAULT_DISK_TYPE)
       disk = client.find_disk(disk_cid, datastore, disk_folder)
 
       expect(disk.cid).to eq(disk_cid)
@@ -19,7 +19,7 @@ describe VSphereCloud::Client do
 
       client, datacenter, datastore, disk_folder = setup
 
-      client.create_disk(datacenter, datastore, disk_cid, disk_folder, 128)
+      client.create_disk(datacenter, datastore, disk_cid, disk_folder, 128, DiskProvider::DEFAULT_DISK_TYPE)
       disk = client.find_disk("not-the-#{disk_cid}", datastore, disk_folder)
 
       expect(disk).to be_nil
@@ -30,7 +30,7 @@ describe VSphereCloud::Client do
 
       client, datacenter, datastore, disk_folder = setup
 
-      client.create_disk(datacenter, datastore, disk_cid, disk_folder, 128)
+      client.create_disk(datacenter, datastore, disk_cid, disk_folder, 128, DiskProvider::DEFAULT_DISK_TYPE)
       disk = client.find_disk(disk_cid, datastore, "the-wrong-disk-folder")
 
       expect(disk).to be_nil
