@@ -7,10 +7,6 @@ module VSphereCloud
   SUPPORTED_DISK_TYPES = %w{
       eagerZeroedThick
       preallocated
-      raw
-      rdm
-      rdmp
-      seSparse
       thick
       thin
     }
@@ -33,7 +29,7 @@ module VSphereCloud
       end
 
       unless SUPPORTED_DISK_TYPES.include?(type)
-        raise "Invalid disk type: '#{disk_type}'"
+        raise "Disk type: '#{disk_type}' is not supported"
       end
 
       if cluster

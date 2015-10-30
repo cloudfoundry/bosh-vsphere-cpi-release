@@ -29,10 +29,6 @@ module VSphereCloud
       it 'supports all documented disk types' do
         expect(DiskProvider::SUPPORTED_DISK_TYPES).to include('eagerZeroedThick')
         expect(DiskProvider::SUPPORTED_DISK_TYPES).to include('preallocated')
-        expect(DiskProvider::SUPPORTED_DISK_TYPES).to include('raw')
-        expect(DiskProvider::SUPPORTED_DISK_TYPES).to include('rdm')
-        expect(DiskProvider::SUPPORTED_DISK_TYPES).to include('rdmp')
-        expect(DiskProvider::SUPPORTED_DISK_TYPES).to include('seSparse')
         expect(DiskProvider::SUPPORTED_DISK_TYPES).to include('thick')
         expect(DiskProvider::SUPPORTED_DISK_TYPES).to include('thin')
       end
@@ -84,7 +80,7 @@ module VSphereCloud
 
           expect{
             disk_provider.create(24, 'invalid-type', nil)
-          }.to raise_error("Invalid disk type: 'invalid-type'")
+          }.to raise_error("Disk type: 'invalid-type' is not supported")
         end
       end
 
