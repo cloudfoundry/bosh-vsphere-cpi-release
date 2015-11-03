@@ -187,6 +187,15 @@ describe VSphereCloud::Cloud, external_cpi: false do
     }
   end
 
+  class VMWithIPNotFound < StandardError; end
+
+  def wait_for_ip(client, ip)
+    vm = client.find_vm_by_ip(ip)
+    raise VMWithIPNotFound if vm.nil?
+
+    true
+  end
+
   subject(:cpi) { described_class.new(cpi_options) }
 
   after(:all) {
@@ -242,7 +251,7 @@ describe VSphereCloud::Cloud, external_cpi: false do
   let(:network_spec) do
     {
       'static' => {
-        'ip' => '169.254.1.1',
+        'ip' => "169.254.1.#{rand 255}",
         'netmask' => '255.255.254.0',
         'cloud_properties' => {'name' => vlan},
         'default' => ['dns', 'gateway'],
@@ -275,6 +284,57 @@ describe VSphereCloud::Cloud, external_cpi: false do
     @vm_id = nil
     cpi.delete_disk(@disk_id) if @disk_id
     @disk_id = nil
+  end
+
+  describe 'avoiding the creation of vms with duplicate IP addresses' do
+
+    let(:network_spec) do
+      {
+        'static' => {
+          'ip' => '169.254.1.1',
+          'netmask' => '255.255.254.0',
+          'cloud_properties' => {'name' => vlan},
+          'default' => ['dns', 'gateway'],
+          'dns' => ['169.254.1.2'],
+          'gateway' => '169.254.1.3'
+        }
+      }
+    end
+
+
+    it 'raises an error in create_vm if the ip address is in use' do
+      begin
+        test_vm_id = cpi.create_vm(
+          'agent-007',
+          @stemcell_id,
+          resource_pool,
+          network_spec,
+          [],
+          {'key' => 'value'}
+        )
+
+        # wait for vsphere tools to be detected by vCenter :(
+        Bosh::Common.retryable(tries: 20, on: VMWithIPNotFound) do
+          wait_for_ip(cpi.client, network_spec['static']['ip'])
+        end
+
+        duplicate_ip_vm_id = nil
+        expect {
+          duplicate_ip_vm_id = cpi.create_vm(
+            'agent-elba',
+            @stemcell_id,
+            resource_pool,
+            network_spec,
+            [],
+            {'key' => 'value'}
+          )
+        }.to raise_error "VM with ip '#{network_spec['static']['ip']}' exists: #{test_vm_id}"
+      ensure
+        cpi.delete_vm(test_vm_id) if test_vm_id
+        cpi.delete_vm(duplicate_ip_vm_id) if duplicate_ip_vm_id
+      end
+
+    end
   end
 
   describe 'deleting things that do not exist' do

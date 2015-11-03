@@ -13,7 +13,7 @@ module VSphereCloud
     def initialize(host, options={})
       @soap_stub = SoapStub.new(host, options[:soap_log]).create
 
-      @service_instance =Vim::ServiceInstance.new('ServiceInstance', @soap_stub)
+      @service_instance = Vim::ServiceInstance.new('ServiceInstance', @soap_stub)
       @service_content = @service_instance.content
 
       @metrics_cache  = {}
@@ -128,6 +128,10 @@ module VSphereCloud
     def find_by_inventory_path(path)
       full_path = Array(path).join("/")
       @service_content.search_index.find_by_inventory_path(full_path)
+    end
+
+    def find_vm_by_ip(ip)
+      @service_content.search_index.find_by_ip(nil, ip, true)
     end
 
     def wait_for_task(task)

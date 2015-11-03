@@ -18,6 +18,9 @@ module VSphereCloud
     end
 
     def create(agent_id, stemcell_cid, networks, persistent_disk_cids, environment)
+      desired_ips = extract_ips(networks)
+      desired_ips.each { |ip| fail_if_ip_in_use(ip) }
+
       stemcell_vm = @cpi.stemcell_vm(stemcell_cid)
       raise "Could not find VM for stemcell '#{stemcell_cid}'" if stemcell_vm.nil?
 
@@ -110,6 +113,25 @@ module VSphereCloud
       end
 
       vm_cid
+    end
+
+    def extract_ips(networks)
+      desired_ips = []
+      networks.map do |_, network_spec|
+        if network_spec.keys.include?('ip')
+          desired_ips << network_spec['ip']
+        end
+      end
+
+      desired_ips
+    end
+
+    def fail_if_ip_in_use(ip)
+      @logger.info("Checking if ip '#{ip}' is in use")
+      vm = @client.find_vm_by_ip(ip)
+      unless vm.nil?
+        raise "VM with ip '#{ip}' exists: #{vm.name}"
+      end
     end
 
     def create_drs_rules(vm, cluster)
