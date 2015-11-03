@@ -274,7 +274,7 @@ jobs:
           aws_access_key_id:     {{s3_vsphere_cpi_blobwriter_access_key}}
           aws_secret_access_key: {{s3_vsphere_cpi_blobwriter_secret_key}}
 
-    - put: bosh-cpi-release
+    - put: bosh-cpi-release-out
       params: {repository: promote/bosh-cpi-release, rebase: true, tag_prefix: "v", tag: promote/integer_version}
 
     - put: release-version-semver
@@ -290,12 +290,16 @@ resources:
       access_key_id:     {{s3_vsphere_cpi_blobwriter_access_key}}
       secret_access_key: {{s3_vsphere_cpi_blobwriter_secret_key}}
 
-  - name: bosh-cpi-release
+  - &bosh-cpi-release-resource
+    name: bosh-cpi-release
     type: git
     source:
       uri:         git@github.com:cloudfoundry-incubator/bosh-vsphere-cpi-release.git
       branch:      master
       private_key: {{github_deployment_key__bosh-vsphere-cpi-release}}
+
+  - <<: *bosh-cpi-release-resource
+    name: bosh-cpi-release-out
 
   - name: version-semver
     type: semver
