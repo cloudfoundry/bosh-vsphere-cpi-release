@@ -117,9 +117,11 @@ module VSphereCloud
 
     def extract_ips(networks)
       desired_ips = []
-      networks.map do |_, network_spec|
-        if network_spec.keys.include?('ip')
-          desired_ips << network_spec['ip']
+      unless networks.nil?
+        networks.map do |_, network_spec|
+          if network_spec.keys.include?('ip')
+            desired_ips << network_spec['ip']
+          end
         end
       end
 

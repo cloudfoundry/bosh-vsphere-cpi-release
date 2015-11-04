@@ -2,20 +2,20 @@ require 'spec_helper'
 require 'cloud/vsphere/drs_rules/drs_rule'
 
 describe VSphereCloud::VmCreator do
+  subject(:creator) do
+    described_class.new(1024, 1024, 3, nested_hardware_virtualization, placer, vsphere_client, cloud_searcher, logger, cpi, agent_env, file_provider, disk_provider)
+  end
+  let(:nested_hardware_virtualization) { false }
+  let(:placer) { instance_double('VSphereCloud::FixedClusterPlacer', drs_rules: []) }
+  let(:vsphere_client) { instance_double('VSphereCloud::Client', cloud_searcher: cloud_searcher) }
+  let(:logger) { double('logger', debug: nil, info: nil) }
+  let(:cpi) { instance_double('VSphereCloud::Cloud') }
+  let(:agent_env) { instance_double('VSphereCloud::AgentEnv') }
+  let(:file_provider) { instance_double('VSphereCloud::FileProvider') }
+  let(:cloud_searcher) { instance_double('VSphereCloud::CloudSearcher') }
+  let(:disk_provider) { instance_double(VSphereCloud::DiskProvider) }
+
   describe '#create' do
-    subject(:creator) do
-      described_class.new(1024, 1024, 3, nested_hardware_virtualization, placer, vsphere_client, cloud_searcher, logger, cpi, agent_env, file_provider, disk_provider)
-    end
-
-    let(:nested_hardware_virtualization) { false }
-    let(:placer) { instance_double('VSphereCloud::FixedClusterPlacer', drs_rules: []) }
-    let(:vsphere_client) { instance_double('VSphereCloud::Client', cloud_searcher: cloud_searcher) }
-    let(:logger) { double('logger', debug: nil, info: nil) }
-    let(:cpi) { instance_double('VSphereCloud::Cloud') }
-    let(:agent_env) { instance_double('VSphereCloud::AgentEnv') }
-    let(:file_provider) { instance_double('VSphereCloud::FileProvider') }
-    let(:cloud_searcher) { instance_double('VSphereCloud::CloudSearcher') }
-
     let(:networks) do
       {
         'network_name' => {
@@ -26,7 +26,7 @@ describe VSphereCloud::VmCreator do
       }
     end
 
-    let(:disk_provider) { instance_double(VSphereCloud::DiskProvider) }
+
     let(:persistent_disk_cids) { ['disk1_cid'] }
     let(:persistent_disks) { [VSphereCloud::Resources::Disk.new('disk1_cid', 1024, 'disk1_datastore', 'disk1_path')] }
     let(:disk_spec) { double('disk spec') }
@@ -269,6 +269,47 @@ describe VSphereCloud::VmCreator do
           end
         end
       end
+    end
+  end
+  describe '#extract_ips' do
+
+    it 'returns an empty list of ips if nil is passed in' do
+      desired_ips = creator.extract_ips(nil)
+      expect(desired_ips).to eq([])
+    end
+
+    it 'returns an empty list of ips if an empty array is passed in' do
+      desired_ips = creator.extract_ips([])
+      expect(desired_ips).to eq([])
+    end
+
+    it 'returns an empty list of ips if a list of networks with no ips is passed in' do
+      desired_ips = creator.extract_ips({
+        'network_name' => {
+          'cloud_properties' => {
+            'name' => 'network_name',
+          },
+        },
+      })
+      expect(desired_ips).to eq([])
+    end
+
+    it 'returns a list of desired ips if a list of networks with ips is pased in' do
+      desired_ips = creator.extract_ips({
+        'network_1' => {
+          'cloud_properties' => {
+            'name' => 'network_1',
+          },
+        },
+        'network_3' => {
+          'ip' => 'network_3_ip'
+        },
+        'network_2' => {
+          'ip' => 'network_2_ip'
+        },
+      })
+      # Order of the output does not matter
+      expect(desired_ips.sort).to eq(['network_2_ip', 'network_3_ip'])
     end
   end
 end
