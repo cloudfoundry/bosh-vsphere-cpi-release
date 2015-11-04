@@ -140,7 +140,7 @@ describe VSphereCloud::VmCreator do
 
       it 'raises an error' do
         expect {
-          creator.create(nil, 'sc-beef', nil, [], {})
+          creator.create(nil, 'sc-beef', [], [], {})
         }.to raise_error("Could not find VM for stemcell 'sc-beef'")
       end
     end
@@ -269,47 +269,6 @@ describe VSphereCloud::VmCreator do
           end
         end
       end
-    end
-  end
-  describe '#extract_ips' do
-
-    it 'returns an empty list of ips if nil is passed in' do
-      desired_ips = creator.extract_ips(nil)
-      expect(desired_ips).to eq([])
-    end
-
-    it 'returns an empty list of ips if an empty array is passed in' do
-      desired_ips = creator.extract_ips([])
-      expect(desired_ips).to eq([])
-    end
-
-    it 'returns an empty list of ips if a list of networks with no ips is passed in' do
-      desired_ips = creator.extract_ips({
-        'network_name' => {
-          'cloud_properties' => {
-            'name' => 'network_name',
-          },
-        },
-      })
-      expect(desired_ips).to eq([])
-    end
-
-    it 'returns a list of desired ips if a list of networks with ips is pased in' do
-      desired_ips = creator.extract_ips({
-        'network_1' => {
-          'cloud_properties' => {
-            'name' => 'network_1',
-          },
-        },
-        'network_3' => {
-          'ip' => 'network_3_ip'
-        },
-        'network_2' => {
-          'ip' => 'network_2_ip'
-        },
-      })
-      # Order of the output does not matter
-      expect(desired_ips.sort).to eq(['network_2_ip', 'network_3_ip'])
     end
   end
 end

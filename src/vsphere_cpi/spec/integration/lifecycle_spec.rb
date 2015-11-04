@@ -10,6 +10,8 @@ describe VSphereCloud::Cloud, external_cpi: false do
     config.uuid = '123'
     Bosh::Clouds::Config.configure(config)
 
+    @logger = Logger.new(STDOUT)
+
     @host = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_HOST')
     @user = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_USER')
     @password = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_PASSWORD')
@@ -188,12 +190,11 @@ describe VSphereCloud::Cloud, external_cpi: false do
     }
   end
 
-  class VMWithIPNotFound < StandardError; end
+  class VMWareToolsNotFound < StandardError; end
 
-  def wait_for_ip(client, ip)
-    vm = client.find_vm_by_ip(ip)
-    raise VMWithIPNotFound if vm.nil?
-
+  def wait_for_vmware_tools(cpi, vm_name)
+    vm_mob = cpi.vm_provider.find(vm_name).mob
+    raise VMWareToolsNotFound if vm_mob.guest.ip_address.nil?
     true
   end
 
@@ -258,12 +259,19 @@ describe VSphereCloud::Cloud, external_cpi: false do
           {'key' => 'value'}
         )
 
+        desired_ip = network_spec['static']['ip']
+        network_name = network_spec['static']['cloud_properties']['name']
         # wait for vsphere tools to be detected by vCenter :(
-        Bosh::Common.retryable(tries: 20, on: VMWithIPNotFound) do
-          wait_for_ip(@cpi.client, network_spec['static']['ip'])
+
+        start_time = Time.now
+        @logger.info("Waiting for VMWare Tools on the VM...")
+        Bosh::Common.retryable(tries: 20, on: VMWareToolsNotFound) do
+          wait_for_vmware_tools(@cpi, test_vm_id)
         end
+        @logger.info("Finished waiting for VMWare Tools. Took #{Time.now - start_time} seconds.")
 
         duplicate_ip_vm_id = nil
+        expected_ip_conflicts = [{vm_name: test_vm_id, network_name: network_name, ip: desired_ip}]
         expect {
           duplicate_ip_vm_id = @cpi.create_vm(
             'agent-elba',
@@ -273,7 +281,7 @@ describe VSphereCloud::Cloud, external_cpi: false do
             [],
             {'key' => 'value'}
           )
-        }.to raise_error "VM with ip '#{network_spec['static']['ip']}' exists: #{test_vm_id}"
+        }.to raise_error "Cannot create new VM because of IP conflicts with other VMs on the same networks: #{expected_ip_conflicts}"
       ensure
         @cpi.delete_vm(test_vm_id) if test_vm_id
         @cpi.delete_vm(duplicate_ip_vm_id) if duplicate_ip_vm_id
