@@ -148,10 +148,11 @@ describe VSphereCloud::Cloud, external_cpi: false do
       @persistent_datastore_pattern,
     )
 
+    @cpi = described_class.new(cpi_options)
+
     Dir.mktmpdir do |temp_dir|
-      cpi = described_class.new(cpi_options)
       stemcell_image = LifecycleHelpers.stemcell_image(@stemcell_path, temp_dir)
-      @stemcell_id = cpi.create_stemcell(stemcell_image, nil)
+      @stemcell_id = @cpi.create_stemcell(stemcell_image, nil)
     end
   end
 
@@ -196,57 +197,9 @@ describe VSphereCloud::Cloud, external_cpi: false do
     true
   end
 
-  subject(:cpi) { described_class.new(cpi_options) }
-
   after(:all) {
-    cpi = described_class.new(cpi_options)
-    cpi.delete_stemcell(@stemcell_id) if @stemcell_id
+    @cpi.delete_stemcell(@stemcell_id) if @stemcell_id
   }
-
-  def vm_lifecycle(disk_locality, resource_pool, network_spec, stemcell_id = @stemcell_id)
-    @vm_id = cpi.create_vm(
-      'agent-007',
-      stemcell_id,
-      resource_pool,
-      network_spec,
-      disk_locality,
-      {'key' => 'value'}
-    )
-
-    expect(@vm_id).to_not be_nil
-    expect(cpi.has_vm?(@vm_id)).to be(true)
-
-    yield if block_given?
-
-    metadata = {deployment: 'deployment', job: 'cpi_spec', index: '0'}
-    cpi.set_vm_metadata(@vm_id, metadata)
-
-    @disk_id = cpi.create_disk(2048, {}, @vm_id)
-    expect(@disk_id).to_not be_nil
-
-    cpi.attach_disk(@vm_id, @disk_id)
-    expect(cpi.has_disk?(@disk_id)).to be(true)
-
-    modified_network_spec = network_spec.dup
-    modified_network_spec['static']['ip'] = '169.254.1.2'
-    cpi.configure_networks(@vm_id, modified_network_spec)
-
-    metadata[:bosh_data] = 'bosh data'
-    metadata[:instance_id] = 'instance'
-    metadata[:agent_id] = 'agent'
-    metadata[:director_name] = 'Director'
-    metadata[:director_uuid] = '6d06b0cc-2c08-43c5-95be-f1b2dd247e18'
-
-    expect {
-      cpi.snapshot_disk(@disk_id, metadata)
-    }.to raise_error Bosh::Clouds::NotImplemented
-
-    expect {
-      cpi.delete_snapshot('some snapshot_id')
-    }.to raise_error Bosh::Clouds::NotImplemented
-
-    cpi.detach_disk(@vm_id, @disk_id)
-  end
 
   let(:network_spec) do
     {
@@ -279,13 +232,6 @@ describe VSphereCloud::Cloud, external_cpi: false do
     described_class.new(options)
   end
 
-  def clean_up_vm_and_disk(cpi)
-    cpi.delete_vm(@vm_id) if @vm_id
-    @vm_id = nil
-    cpi.delete_disk(@disk_id) if @disk_id
-    @disk_id = nil
-  end
-
   describe 'avoiding the creation of vms with duplicate IP addresses' do
 
     let(:network_spec) do
@@ -301,10 +247,9 @@ describe VSphereCloud::Cloud, external_cpi: false do
       }
     end
 
-
     it 'raises an error in create_vm if the ip address is in use' do
       begin
-        test_vm_id = cpi.create_vm(
+        test_vm_id = @cpi.create_vm(
           'agent-007',
           @stemcell_id,
           resource_pool,
@@ -315,12 +260,12 @@ describe VSphereCloud::Cloud, external_cpi: false do
 
         # wait for vsphere tools to be detected by vCenter :(
         Bosh::Common.retryable(tries: 20, on: VMWithIPNotFound) do
-          wait_for_ip(cpi.client, network_spec['static']['ip'])
+          wait_for_ip(@cpi.client, network_spec['static']['ip'])
         end
 
         duplicate_ip_vm_id = nil
         expect {
-          duplicate_ip_vm_id = cpi.create_vm(
+          duplicate_ip_vm_id = @cpi.create_vm(
             'agent-elba',
             @stemcell_id,
             resource_pool,
@@ -330,8 +275,8 @@ describe VSphereCloud::Cloud, external_cpi: false do
           )
         }.to raise_error "VM with ip '#{network_spec['static']['ip']}' exists: #{test_vm_id}"
       ensure
-        cpi.delete_vm(test_vm_id) if test_vm_id
-        cpi.delete_vm(duplicate_ip_vm_id) if duplicate_ip_vm_id
+        @cpi.delete_vm(test_vm_id) if test_vm_id
+        @cpi.delete_vm(duplicate_ip_vm_id) if duplicate_ip_vm_id
       end
 
     end
@@ -340,91 +285,91 @@ describe VSphereCloud::Cloud, external_cpi: false do
   describe 'deleting things that do not exist' do
     it 'raises the appropriate Clouds::Error' do
       expect {
-        cpi.delete_vm('fake-vm-cid')
+        @cpi.delete_vm('fake-vm-cid')
       }.to raise_error(Bosh::Clouds::VMNotFound)
 
       expect {
-        cpi.delete_disk('fake-disk-cid')
+        @cpi.delete_disk('fake-disk-cid')
       }.to raise_error(Bosh::Clouds::DiskNotFound)
     end
   end
 
   describe 'lifecycle' do
-    before { @vm_id = nil }
-    before { @disk_id = nil }
-    after { clean_up_vm_and_disk(cpi) }
-
     context 'without existing disks' do
       it 'should exercise the vm lifecycle' do
-        vm_lifecycle([], resource_pool, network_spec)
+        vm_lifecycle(@cpi, [], resource_pool, network_spec)
       end
     end
 
     context 'without existing disks and placer' do
-      after { clean_up_vm_and_disk(cpi) }
-
       context 'when resource_pool is set to the first cluster' do
         it 'places vm in first cluster' do
-          resource_pool['datacenters'] = [{'name' => @datacenter_name, 'clusters' => [{@cluster => {'resource_pool' => @resource_pool_name}}]}]
-          @vm_id = cpi.create_vm(
-            'agent-007',
-            @stemcell_id,
-            resource_pool,
-            network_spec
-          )
+          begin
+            resource_pool['datacenters'] = [{'name' => @datacenter_name, 'clusters' => [{@cluster => {'resource_pool' => @resource_pool_name}}]}]
+            vm_id = @cpi.create_vm(
+              'agent-007',
+              @stemcell_id,
+              resource_pool,
+              network_spec
+            )
 
-          vm = cpi.vm_provider.find(@vm_id)
-          expect(vm.cluster).to eq(@cluster)
-          expect(vm.resource_pool).to eq(@resource_pool_name)
+            vm = @cpi.vm_provider.find(vm_id)
+            expect(vm.cluster).to eq(@cluster)
+            expect(vm.resource_pool).to eq(@resource_pool_name)
+
+          ensure
+            @cpi.delete_vm(vm_id) if vm_id
+          end
         end
 
         it 'places vm in the specified resource pool' do
-          resource_pool['datacenters'] = [{'name' => @datacenter_name, 'clusters' => [{@cluster => {'resource_pool' => @second_resource_pool_within_cluster}}]}]
-          @vm_id = cpi.create_vm(
-            'agent-007',
-            @stemcell_id,
-            resource_pool,
-            network_spec
-          )
+          begin
+            resource_pool['datacenters'] = [{'name' => @datacenter_name, 'clusters' => [{@cluster => {'resource_pool' => @second_resource_pool_within_cluster}}]}]
+            vm_id = @cpi.create_vm(
+              'agent-007',
+              @stemcell_id,
+              resource_pool,
+              network_spec
+            )
 
-          vm = cpi.vm_provider.find(@vm_id)
-          expect(vm.cluster).to eq(@cluster)
-          expect(vm.resource_pool).to eq(@second_resource_pool_within_cluster)
+            vm = @cpi.vm_provider.find(vm_id)
+            expect(vm.cluster).to eq(@cluster)
+            expect(vm.resource_pool).to eq(@second_resource_pool_within_cluster)
+          ensure
+            @cpi.delete_vm(vm_id) if vm_id
+          end
         end
       end
 
       context 'when resource_pool is set to the second cluster' do
-        subject(:cpi) do
+        it 'places vm in second cluster' do
           options = cpi_options(
             datastore_pattern: @second_cluster_datastore,
             persistent_datastore_pattern: @second_cluster_datastore
           )
-          described_class.new(options)
-        end
-
-        it 'places vm in second cluster' do
+          second_cluster_cpi = described_class.new(options)
           resource_pool['datacenters'] = [{'name' => @datacenter_name, 'clusters' => [{@second_cluster => {}}]}]
-          vm_lifecycle([], resource_pool, network_spec)
-
-          vm = cpi.vm_provider.find(@vm_id)
-          expect(vm.cluster).to eq(@second_cluster)
+          vm_lifecycle(second_cluster_cpi, [], resource_pool, network_spec) do |vm_id|
+            vm = second_cluster_cpi.vm_provider.find(vm_id)
+            expect(vm.cluster).to eq(@second_cluster)
+          end
         end
       end
     end
 
     context 'with existing disks' do
-      before { @existing_volume_id = cpi.create_disk(2048, {}) }
-      after { cpi.delete_disk(@existing_volume_id) if @existing_volume_id }
+      before { @existing_volume_id = @cpi.create_disk(2048, {}) }
+      after { @cpi.delete_disk(@existing_volume_id) if @existing_volume_id }
 
       it 'should exercise the vm lifecycle' do
-        vm_lifecycle([@existing_volume_id], resource_pool, network_spec)
+        vm_lifecycle(@cpi, [@existing_volume_id], resource_pool, network_spec)
       end
     end
   end
 
   describe 'vsphere specific lifecycle' do
     context 'given cpis that are configured to use same cluster but different datastores' do
-      let(:first_datastore_cpi) { cpi }
+      let(:first_datastore_cpi) { @cpi }
 
       before do
         @vm_id = first_datastore_cpi.create_vm(
@@ -446,7 +391,12 @@ describe VSphereCloud::Cloud, external_cpi: false do
         expect(disk.datastore.name).to match(@persistent_datastore_pattern)
       end
 
-      after { clean_up_vm_and_disk(first_datastore_cpi) }
+      after {
+        first_datastore_cpi.delete_vm(@vm_id) if @vm_id
+        @vm_id = nil
+        first_datastore_cpi.delete_disk(@disk_id) if @disk_id
+        @disk_id = nil
+      }
 
       it 'can exercise lifecycle with the cpi configured with a new datastore pattern' do
         # second cpi can see disk in datastore outside of its datastore pattern
@@ -481,65 +431,75 @@ describe VSphereCloud::Cloud, external_cpi: false do
     end
 
     context 'when datacenter is in folder' do
-      subject(:cpi) do
-        described_class.new(@nested_datacenter_cpi_options)
-      end
-
       let(:vlan) { @nested_datacenter_vlan }
 
-      before do
-        Dir.mktmpdir do |temp_dir|
-          output = `tar -C #{temp_dir} -xzf #{@stemcell_path} 2>&1`
-          raise "Corrupt image, tar exit status: #{$?.exitstatus} output: #{output}" if $?.exitstatus != 0
-          @nested_datacenter_stemcell_id = cpi.create_stemcell("#{temp_dir}/image", nil)
-        end
-      end
-
-      after do
-        clean_up_vm_and_disk(cpi)
-        cpi.delete_stemcell(@nested_datacenter_stemcell_id) if @nested_datacenter_stemcell_id
-      end
-
       it 'exercises the vm lifecycle' do
-        vm_lifecycle([], resource_pool, network_spec, @nested_datacenter_stemcell_id)
+        begin
+          nested_datacenter_cpi = described_class.new(@nested_datacenter_cpi_options)
+          nested_datacenter_stemcell_id = nil
+          Dir.mktmpdir do |temp_dir|
+            output = `tar -C #{temp_dir} -xzf #{@stemcell_path} 2>&1`
+            raise "Corrupt image, tar exit status: #{$?.exitstatus} output: #{output}" if $?.exitstatus != 0
+            nested_datacenter_stemcell_id = nested_datacenter_cpi.create_stemcell("#{temp_dir}/image", nil)
+          end
+
+          vm_lifecycle(nested_datacenter_cpi, [], resource_pool, network_spec, nested_datacenter_stemcell_id)
+        ensure
+          nested_datacenter_cpi.delete_stemcell(@nested_datacenter_stemcell_id) if @nested_datacenter_stemcell_id
+        end
       end
     end
 
     context 'when disk is being re-attached' do
-      after { clean_up_vm_and_disk(cpi) }
 
       it 'does not lock cd-rom' do
-        vm_lifecycle([], resource_pool, network_spec)
-        cpi.attach_disk(@vm_id, @disk_id)
-        cpi.detach_disk(@vm_id, @disk_id)
+        begin
+          vm_id = @cpi.create_vm(
+            'agent-007',
+            @stemcell_id,
+            resource_pool,
+            network_spec,
+            [],
+            {'key' => 'value'}
+          )
+
+          expect(vm_id).to_not be_nil
+          expect(@cpi.has_vm?(vm_id)).to be(true)
+
+          disk_id = @cpi.create_disk(2048, {}, vm_id)
+          expect(disk_id).to_not be_nil
+
+          @cpi.attach_disk(vm_id, disk_id)
+          @cpi.detach_disk(vm_id, disk_id)
+          @cpi.attach_disk(vm_id, disk_id)
+          @cpi.detach_disk(vm_id, disk_id)
+        ensure
+          @cpi.delete_vm(vm_id) if vm_id
+          @cpi.delete_disk(disk_id) if disk_id
+        end
       end
     end
 
     context 'when vm was migrated to another datastore within first cluster' do
-      after { clean_up_vm_and_disk(cpi) }
-      subject(:cpi) do
-        options = cpi_options(
-          clusters: [{ @cluster => {'resource_pool' => @resource_pool_name} }]
-        )
-        described_class.new(options)
-      end
 
       it 'should exercise the vm lifecycle' do
-        vm_lifecycle([], resource_pool, network_spec) do
-          vm = cpi.vm_provider.find(@vm_id)
+        options = cpi_options(
+          clusters: [{@cluster => {'resource_pool' => @resource_pool_name}}]
+        )
+        one_cluster_cpi = described_class.new(options)
+        vm_lifecycle(one_cluster_cpi, [], resource_pool, network_spec) do |vm_id|
+          vm = one_cluster_cpi.vm_provider.find(vm_id)
 
-          datastore = cpi.client.cloud_searcher.get_managed_object(VimSdk::Vim::Datastore, name: @second_datastore_within_cluster)
+          datastore = one_cluster_cpi.client.cloud_searcher.get_managed_object(VimSdk::Vim::Datastore, name: @second_datastore_within_cluster)
           relocate_spec = VimSdk::Vim::Vm::RelocateSpec.new(datastore: datastore)
 
           task = vm.mob.relocate(relocate_spec, 'defaultPriority')
-          cpi.client.wait_for_task(task)
+          one_cluster_cpi.client.wait_for_task(task)
         end
       end
     end
 
     context 'when disk is in non-accessible datastore' do
-      after { clean_up_vm_and_disk(cpi) }
-
       let(:vm_cluster) { @cluster }
       let(:cpi_for_vm) do
         options = cpi_options
@@ -549,32 +509,19 @@ describe VSphereCloud::Cloud, external_cpi: false do
         described_class.new(options)
       end
 
-      let(:cpi_for_non_accessible_datastore) do
-        options = cpi_options
-        options['vcenters'].first['datacenters'].first.merge!(
-          {
-            'datastore_pattern' => @second_cluster_datastore,
-            'persistent_datastore_pattern' => @second_cluster_datastore,
-            'clusters' => [{ @second_cluster => {'resource_pool' => @second_cluster_resource_pool_name} }]
-          }
-        )
-        puts "CPI options #{options}"
-        described_class.new(options)
-      end
-
       def find_disk_in_datastore(disk_id, datastore_name)
-        datastore_mob = cpi.client.cloud_searcher.get_managed_object(VimSdk::Vim::Datastore, name: datastore_name)
+        datastore_mob = @cpi.client.cloud_searcher.get_managed_object(VimSdk::Vim::Datastore, name: datastore_name)
         datastore = VSphereCloud::Resources::Datastore.new(datastore_name, datastore_mob, 0, 0)
-        cpi.client.find_disk(disk_id, datastore, @disk_path)
+        @cpi.client.find_disk(disk_id, datastore, @disk_path)
       end
 
       def datastores_accessible_from_cluster(cluster_name)
-        cluster = cpi.client.cloud_searcher.get_managed_object(VimSdk::Vim::ClusterComputeResource, name: cluster_name)
+        cluster = @cpi.client.cloud_searcher.get_managed_object(VimSdk::Vim::ClusterComputeResource, name: cluster_name)
         cluster.datastore.map(&:name)
       end
 
-      def create_vm_with_cpi(cpi_for_vm)
-        cpi_for_vm.create_vm(
+      def create_vm_with_cpi(cpi)
+        cpi.create_vm(
           'agent-007',
           @stemcell_id,
           resource_pool,
@@ -597,65 +544,89 @@ describe VSphereCloud::Cloud, external_cpi: false do
       end
 
       it 'creates disk in accessible datastore' do
-        accessible_datastores = datastores_accessible_from_cluster(@cluster)
-        expect(accessible_datastores).to_not include(@second_cluster_datastore)
+        begin
+          accessible_datastores = datastores_accessible_from_cluster(@cluster)
+          expect(accessible_datastores).to_not include(@second_cluster_datastore)
 
-        @vm_id = create_vm_with_cpi(cpi_for_vm)
-        expect(@vm_id).to_not be_nil
+          vm_id = create_vm_with_cpi(cpi_for_vm)
+          expect(vm_id).to_not be_nil
 
-        @disk_id = cpi.create_disk(128, {}, @vm_id)
+          disk_id = @cpi.create_disk(128, {}, vm_id)
 
-        verify_disk_is_in_datastores(@disk_id, accessible_datastores)
+          verify_disk_is_in_datastores(disk_id, accessible_datastores)
+        ensure
+          @cpi.delete_vm(vm_id) if vm_id
+          @cpi.delete_disk(disk_id) if disk_id
+        end
       end
 
       it 'migrates disk to accessible datastore' do
-        accessible_datastores = datastores_accessible_from_cluster(vm_cluster)
-        expect(accessible_datastores).to_not include(@second_cluster_datastore)
+        begin
+          options = cpi_options
+          options['vcenters'].first['datacenters'].first.merge!(
+            {
+              'datastore_pattern' => @second_cluster_datastore,
+              'persistent_datastore_pattern' => @second_cluster_datastore,
+              'clusters' => [{@second_cluster => {'resource_pool' => @second_cluster_resource_pool_name}}]
+            }
+          )
+          cpi_for_non_accessible_datastore = described_class.new(options)
 
-        @vm_id = create_vm_with_cpi(cpi_for_vm)
-        expect(@vm_id).to_not be_nil
-        @disk_id = cpi_for_non_accessible_datastore.create_disk(128, {}, nil)
-        disk = find_disk_in_datastore(@disk_id, @second_cluster_datastore)
-        expect(disk).to_not be_nil
+          accessible_datastores = datastores_accessible_from_cluster(vm_cluster)
+          expect(accessible_datastores).to_not include(@second_cluster_datastore)
 
-        cpi.attach_disk(@vm_id, @disk_id)
+          vm_id = create_vm_with_cpi(cpi_for_vm)
+          expect(vm_id).to_not be_nil
+          disk_id = cpi_for_non_accessible_datastore.create_disk(128, {}, nil)
+          disk = find_disk_in_datastore(disk_id, @second_cluster_datastore)
+          expect(disk).to_not be_nil
 
-        verify_disk_is_in_datastores(@disk_id, accessible_datastores)
+          @cpi.attach_disk(vm_id, disk_id)
+
+          verify_disk_is_in_datastores(disk_id, accessible_datastores)
+        ensure
+          @cpi.detach_disk(vm_id, disk_id) if disk_id
+          @cpi.delete_vm(vm_id) if vm_id
+          @cpi.delete_disk(disk_id) if disk_id
+        end
       end
     end
 
     context 'when using local storage for the ephemeral storage pattern' do
       let(:local_disk_cpi) { described_class.new(@local_disk_cpi_options) }
 
-      after { clean_up_vm_and_disk(local_disk_cpi) }
-
       it 'places ephemeral and persistent disks properly' do
-        @vm_id = local_disk_cpi.create_vm('agent-007', @stemcell_id, resource_pool, network_spec)
-        vm = local_disk_cpi.vm_provider.find(@vm_id)
-        ephemeral_disk = vm.ephemeral_disk
-        expect(ephemeral_disk).to_not be_nil
-        expect(ephemeral_disk.backing.datastore.name).to match(@local_datastore_pattern)
+        begin
+          vm_id = local_disk_cpi.create_vm('agent-007', @stemcell_id, resource_pool, network_spec)
+          vm = local_disk_cpi.vm_provider.find(vm_id)
+          ephemeral_disk = vm.ephemeral_disk
+          expect(ephemeral_disk).to_not be_nil
+          expect(ephemeral_disk.backing.datastore.name).to match(@local_datastore_pattern)
 
-        @disk_id = local_disk_cpi.create_disk(2048, {}, @vm_id)
-        expect(@disk_id).to_not be_nil
-        disk = local_disk_cpi.disk_provider.find(@disk_id)
-        expect(disk.datastore.name).to match(@persistent_datastore_pattern)
-        local_disk_cpi.attach_disk(@vm_id, @disk_id)
-        expect(local_disk_cpi.has_disk?(@disk_id)).to be(true)
+          disk_id = local_disk_cpi.create_disk(2048, {}, vm_id)
+          expect(disk_id).to_not be_nil
+          disk = local_disk_cpi.disk_provider.find(disk_id)
+          expect(disk.datastore.name).to match(@persistent_datastore_pattern)
+          local_disk_cpi.attach_disk(vm_id, disk_id)
+          expect(local_disk_cpi.has_disk?(disk_id)).to be(true)
+        ensure
+          local_disk_cpi.detach_disk(vm_id, disk_id)
+          local_disk_cpi.delete_vm(vm_id) if vm_id
+          local_disk_cpi.delete_disk(disk_id) if disk_id
+        end
       end
     end
 
     context 'when stemcell is replicated multiple times' do
-      after { clean_up_vm_and_disk(cpi) }
 
       it 'handles each thread properly' do
         datastore_name = @second_datastore_within_cluster
-        datastore_mob = cpi.client.cloud_searcher.get_managed_object(VimSdk::Vim::Datastore, name: datastore_name)
+        datastore_mob = @cpi.client.cloud_searcher.get_managed_object(VimSdk::Vim::Datastore, name: datastore_name)
         datastore = VSphereCloud::Resources::Datastore.new(datastore_name, datastore_mob, 0, 0)
         cluster_config = VSphereCloud::ClusterConfig.new(@cluster, {resource_pool: @resource_pool_name})
         @logger = Logger.new(StringIO.new(""))
         datacenter = VSphereCloud::Resources::Datacenter.new({
-          client: cpi.client,
+          client: @cpi.client,
           vm_folder: @vm_folder,
           template_folder: @template_folder,
           use_sub_folder: true,
@@ -667,7 +638,7 @@ describe VSphereCloud::Cloud, external_cpi: false do
           logger: @logger,
           mem_overcommit: 1.0
         })
-        vm_cluster = VSphereCloud::Resources::ClusterProvider.new(datacenter, cpi.client, @logger).find(@cluster, cluster_config)
+        vm_cluster = VSphereCloud::Resources::ClusterProvider.new(datacenter, @cpi.client, @logger).find(@cluster, cluster_config)
         first_stemcell_vm = nil
         second_stemcell_vm = nil
         third_stemcell_vm = nil
@@ -703,7 +674,7 @@ describe VSphereCloud::Cloud, external_cpi: false do
         expect(fourth_stemcell_vm).to_not be_nil
 
         local_stemcell_name = "#{@stemcell_id} %2f #{datastore.mob.__mo_id__}"
-        found_vm = cpi.client.find_by_inventory_path([datacenter.name, 'vm', datacenter.template_folder.path_components, local_stemcell_name])
+        found_vm = @cpi.client.find_by_inventory_path([datacenter.name, 'vm', datacenter.template_folder.path_components, local_stemcell_name])
         expect(first_stemcell_vm.__mo_id__).to eq(found_vm.__mo_id__)
         expect(second_stemcell_vm.__mo_id__).to eq(found_vm.__mo_id__)
         expect(third_stemcell_vm.__mo_id__).to eq(found_vm.__mo_id__)
@@ -711,4 +682,53 @@ describe VSphereCloud::Cloud, external_cpi: false do
       end
     end
   end
+
+  def vm_lifecycle(cpi, disk_locality, resource_pool, network_spec, stemcell_id = @stemcell_id)
+    vm_id = cpi.create_vm(
+      'agent-007',
+      stemcell_id,
+      resource_pool,
+      network_spec,
+      disk_locality,
+      {'key' => 'value'}
+    )
+
+    expect(vm_id).to_not be_nil
+    expect(cpi.has_vm?(vm_id)).to be(true)
+
+    yield vm_id if block_given?
+
+    metadata = {deployment: 'deployment', job: 'cpi_spec', index: '0'}
+    cpi.set_vm_metadata(vm_id, metadata)
+
+    disk_id = cpi.create_disk(2048, {}, vm_id)
+    expect(disk_id).to_not be_nil
+
+    cpi.attach_disk(vm_id, disk_id)
+    expect(cpi.has_disk?(disk_id)).to be(true)
+
+    modified_network_spec = network_spec.dup
+    modified_network_spec['static']['ip'] = '169.254.1.2'
+    cpi.configure_networks(vm_id, modified_network_spec)
+
+    metadata[:bosh_data] = 'bosh data'
+    metadata[:instance_id] = 'instance'
+    metadata[:agent_id] = 'agent'
+    metadata[:director_name] = 'Director'
+    metadata[:director_uuid] = '6d06b0cc-2c08-43c5-95be-f1b2dd247e18'
+
+    expect {
+      cpi.snapshot_disk(disk_id, metadata)
+    }.to raise_error Bosh::Clouds::NotImplemented
+
+    expect {
+      cpi.delete_snapshot('some snapshot_id')
+    }.to raise_error Bosh::Clouds::NotImplemented
+
+  ensure
+    cpi.detach_disk(vm_id, disk_id) if disk_id
+    cpi.delete_vm(vm_id) if vm_id
+    cpi.delete_disk(disk_id) if disk_id
+  end
+
 end
