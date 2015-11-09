@@ -453,7 +453,7 @@ describe VSphereCloud::Cloud, external_cpi: false do
 
           vm_lifecycle(nested_datacenter_cpi, [], resource_pool, network_spec, nested_datacenter_stemcell_id)
         ensure
-          nested_datacenter_cpi.delete_stemcell(@nested_datacenter_stemcell_id) if nested_datacenter_stemcell_id
+          nested_datacenter_cpi.delete_stemcell(nested_datacenter_stemcell_id) if nested_datacenter_stemcell_id
         end
       end
     end
