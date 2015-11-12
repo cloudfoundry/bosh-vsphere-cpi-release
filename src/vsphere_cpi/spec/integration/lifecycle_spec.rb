@@ -476,7 +476,10 @@ describe VSphereCloud::Cloud, external_cpi: false do
     end
 
     context 'given cpis that are configured to use same cluster but different datastores' do
-      let(:first_datastore_cpi) { @cpi }
+      let(:first_datastore_cpi) do
+        options = cpi_options(persistent_datastore_pattern: @datastore_pattern)
+        described_class.new(options)
+      end
 
       before do
         @vm_id = first_datastore_cpi.create_vm(
@@ -495,7 +498,7 @@ describe VSphereCloud::Cloud, external_cpi: false do
         expect(@disk_id).to_not be_nil
         expect(first_datastore_cpi.has_disk?(@disk_id)).to be(true)
         disk = first_datastore_cpi.disk_provider.find(@disk_id)
-        expect(disk.datastore.name).to match(@persistent_datastore_pattern)
+        expect(disk.datastore.name).to match(@datastore_pattern)
       end
 
       after {
@@ -527,6 +530,10 @@ describe VSphereCloud::Cloud, external_cpi: false do
       end
 
       it '#attach_disk can move the disk to the new datastore pattern' do
+        if LifecycleHelpers.any_vsan?(@cpi, @datastore_pattern) || LifecycleHelpers.is_vsan?(@cpi, @second_datastore_within_cluster)
+          skip 'Moving disks between with a vsan datastore is not yet supported'
+        end
+
         second_datastore_cpi.attach_disk(@vm_id, @disk_id)
 
         disk = second_datastore_cpi.disk_provider.find(@disk_id)
