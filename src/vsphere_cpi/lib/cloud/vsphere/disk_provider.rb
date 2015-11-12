@@ -47,7 +47,10 @@ module VSphereCloud
       disk = find(disk_cid)
       disk_in_persistent_datastore = @datacenter.persistent_datastores.include?(disk.datastore.name)
       disk_in_accessible_datastore = accessible_datastores.include?(disk.datastore.name)
-      return disk if disk_in_persistent_datastore && disk_in_accessible_datastore
+      if disk_in_persistent_datastore && disk_in_accessible_datastore
+        @logger.info("Disk #{disk_cid} found in an accessible, persistent datastore '#{disk.datastore.name}'")
+        return disk
+      end
 
       destination_datastore = @resources.pick_persistent_datastore_in_cluster(cluster.name, disk.size_in_mb)
 
