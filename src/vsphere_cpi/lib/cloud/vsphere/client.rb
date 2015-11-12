@@ -134,6 +134,27 @@ module VSphereCloud
       @service_content.search_index.find_by_ip(nil, ip, true)
     end
 
+    def find_vm_by_name(datacenter, vm_name)
+      yield_all_resources_by_name(datacenter, 'VirtualMachine') do |vm_mob, name|
+        if name == vm_name
+          return vm_mob
+        end
+      end
+
+      nil
+    end
+
+    def find_all_stemcell_replicas(datacenter, stemcell_id)
+      matches = []
+      yield_all_resources_by_name(datacenter, 'VirtualMachine') do |vm_mob, name|
+        if name =~ Regexp.new(stemcell_id)
+          matches << vm_mob
+        end
+      end
+
+      matches
+    end
+
     def wait_for_task(task)
       interval = 1.0
       started = Time.now
@@ -303,6 +324,56 @@ module VSphereCloud
       result = {}
       metrics.each { |metric| result[metric_names[metric.counter_id]] = metric }
       result
+    end
+
+    def create_filter_spec(datacenter, resource_type, property_names)
+      # Create a view to list all the resources in the root folder
+      container_view = @service_content.view_manager.create_container_view(datacenter.mob, [resource_type], true)
+
+      # Create an object spec to define the beginning of the traversal
+      object_spec = VimSdk::Vmodl::Query::PropertyCollector::ObjectSpec.new
+      object_spec.obj = container_view
+      object_spec.skip = false
+
+      # Create a traversal spec to select all objects in the 'view' of the ContainerView
+      vm_traversal_spec = VimSdk::Vmodl::Query::PropertyCollector::TraversalSpec.new
+      vm_traversal_spec.name = 'searchTraversalSpec'
+      vm_traversal_spec.path = 'view'
+      vm_traversal_spec.type = 'ContainerView'
+      object_spec.select_set << vm_traversal_spec
+
+      # Specify the properties for retrieval
+      property_spec = VimSdk::Vmodl::Query::PropertyCollector::PropertySpec.new
+      property_spec.type = resource_type
+      property_spec.path_set.concat(property_names)
+      property_spec.all = false
+
+      filter_spec = VimSdk::Vmodl::Query::PropertyCollector::FilterSpec.new
+      filter_spec.object_set << object_spec
+      filter_spec.prop_set << property_spec
+      filter_spec
+    end
+
+    def yield_all_resources_by_name(datacenter, type)
+      raise 'Requires a vSphere object type' if type.nil?
+      # Collect all the 'name' attributes of all VMs in the datacenter
+      vm_filter_spec = create_filter_spec(datacenter, type, ['name'])
+      ro = VimSdk::Vmodl::Query::PropertyCollector::RetrieveOptions.new
+      result = @service_content.property_collector.retrieve_properties_ex([vm_filter_spec], ro)
+
+      # Retrieve Properties Ex returns paginated results, so we continue retrieving
+      # more pages if the token indicates there are more pages.
+      token = "not nil"
+      until token.nil?
+        result.objects.each do |object_content|
+          # Yield the object MOB and its name
+          yield object_content.obj, object_content.prop_set.first.val
+        end
+        token = result.token
+        unless token.nil?
+          result = @service_content.property_collector.continue_retrieve_properties_ex(token)
+        end
+      end
     end
   end
 end

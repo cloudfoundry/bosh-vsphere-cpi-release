@@ -375,7 +375,106 @@ describe VSphereCloud::Cloud, external_cpi: false do
     end
   end
 
-  describe 'vsphere specific lifecycle' do
+  describe 'vSphere specific lifecycle' do
+    context 'given a cpi that is configured without specifying the vSphere resource pool' do
+      let(:second_cpi) do
+        options = cpi_options(
+          clusters: [@cluster]
+        )
+        described_class.new(options)
+      end
+
+      it 'can still find a vm created by a cpi configured with a vSphere resource pool' do
+        begin
+          vm_id = @cpi.create_vm(
+            'agent-007',
+            @stemcell_id,
+            resource_pool,
+            network_spec,
+            [],
+            {}
+          )
+
+          expect(vm_id).to_not be_nil
+          expect(second_cpi.has_vm?(vm_id)).to be(true)
+        ensure
+          @cpi.delete_vm(vm_id) if vm_id
+        end
+      end
+
+      it 'can still find the stemcell created by a cpi configured with a vSphere resource pool' do
+        expect(second_cpi.stemcell_vm(@stemcell_id)).to_not be_nil
+      end
+
+      it 'should exercise the vm lifecycle' do
+        vm_lifecycle(second_cpi, [], resource_pool, network_spec)
+      end
+
+      context 'when replicating stemcells across datastores' do
+        it 'should not replicate the stemcell if a suitable replica already exists in a subfolder' do
+          begin
+            orig_stemcell_id = nil
+            Dir.mktmpdir do |temp_dir|
+              stemcell_image = LifecycleHelpers.stemcell_image(@stemcell_path, temp_dir)
+              orig_stemcell_id = @cpi.create_stemcell(stemcell_image, nil)
+            end
+
+            second_datastore = @cpi.datacenter.all_datastores[@second_datastore_within_cluster]
+
+            replicated_stemcell = @cpi.replicate_stemcell(@cpi.datacenter.clusters[@cluster], second_datastore, orig_stemcell_id)
+            expect(replicated_stemcell).to_not be_nil
+
+            expect(@cpi.client.find_all_stemcell_replicas(@cpi.datacenter, orig_stemcell_id).size).to eq(2)
+            expect(second_cpi.client.find_all_stemcell_replicas(second_cpi.datacenter, orig_stemcell_id).size).to eq(2)
+
+            second_replicated_stemcell = second_cpi.replicate_stemcell(second_cpi.datacenter.clusters[@cluster], second_datastore, orig_stemcell_id)
+
+            expect(@cpi.client.find_all_stemcell_replicas(@cpi.datacenter, orig_stemcell_id).size).to eq(2)
+            expect(second_cpi.client.find_all_stemcell_replicas(second_cpi.datacenter, orig_stemcell_id).size).to eq(2)
+          ensure
+            @cpi.delete_stemcell(orig_stemcell_id)
+            begin
+              @logger.info("Deleting any leftover stemcells after failure using second cpi...")
+              second_cpi.delete_stemcell(orig_stemcell_id)
+            rescue
+            end
+          end
+        end
+
+        it 'should clean up any replicated stemcells regardless of folder' do
+          begin
+            orig_stemcell_id = nil
+            Dir.mktmpdir do |temp_dir|
+              stemcell_image = LifecycleHelpers.stemcell_image(@stemcell_path, temp_dir)
+              orig_stemcell_id = @cpi.create_stemcell(stemcell_image, nil)
+            end
+
+            second_datastore = second_cpi.datacenter.all_datastores[@second_datastore_within_cluster]
+
+            replicated_stemcell = second_cpi.replicate_stemcell(second_cpi.datacenter.clusters[@cluster], second_datastore, orig_stemcell_id)
+            expect(replicated_stemcell).to_not be_nil
+
+            expect(second_cpi.client.find_all_stemcell_replicas(second_cpi.datacenter, orig_stemcell_id).size).to eq(2)
+
+            @cpi.delete_stemcell(orig_stemcell_id)
+
+            expect(second_cpi.client.find_all_stemcell_replicas(second_cpi.datacenter, orig_stemcell_id)).to be_empty
+          ensure
+            begin
+              @logger.info("Deleting any leftover stemcells after failure using default cpi...")
+              @cpi.delete_stemcell(orig_stemcell_id)
+            rescue
+            end
+            begin
+              @logger.info("Deleting any leftover stemcells after failure using second cpi...")
+              second_cpi.delete_stemcell(orig_stemcell_id)
+            rescue
+            end
+          end
+        end
+      end
+    end
+
     context 'given cpis that are configured to use same cluster but different datastores' do
       let(:first_datastore_cpi) { @cpi }
 

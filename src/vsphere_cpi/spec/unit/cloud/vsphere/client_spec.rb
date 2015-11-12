@@ -353,5 +353,43 @@ module VSphereCloud
         end
       end
     end
+
+    describe '#find_vm_by_name' do
+      before do
+        allow(client).to receive(:yield_all_resources_by_name).with('fake-datacenter', 'VirtualMachine').and_yield('foo_vm', 'foo')
+      end
+      context 'when a VM with the name vm_name exists in the given datacenter' do
+        it 'returns the VM' do
+          expect(client.find_vm_by_name('fake-datacenter', 'foo')).to eq('foo_vm')
+        end
+      end
+
+      context 'when a VM with the name vm_name does not exist in the given datacenter' do
+        it 'returns the VM' do
+          expect(client.find_vm_by_name('fake-datacenter', 'nonexistent')).to be_nil
+        end
+      end
+    end
+
+    describe '#find_all_stemcell_replicas' do
+      before do
+        allow(client).to receive(:yield_all_resources_by_name).with('fake-datacenter', 'VirtualMachine')
+            .and_yield('stemcell1', 'stemcell-1234')
+            .and_yield('stemcell2', 'stemcell-1234 %2f replica1')
+            .and_yield('stemcell3', 'unmatched-stemcell')
+      end
+      context 'when stemcell replicas exist in the given datacenter' do
+        it 'returns list of matched replicas' do
+          expect(client.find_all_stemcell_replicas('fake-datacenter', 'stemcell-1234')).to match_array(['stemcell1', 'stemcell2'])
+        end
+      end
+
+      context 'when stemcell replicas do not exist in the given datacenter' do
+        it 'returns list of matched replicas' do
+          expect(client.find_all_stemcell_replicas('fake-datacenter', 'nonexistent')).to match_array([])
+        end
+      end
+    end
+
   end
 end

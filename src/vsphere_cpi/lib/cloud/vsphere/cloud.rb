@@ -133,25 +133,24 @@ module VSphereCloud
       with_thread_name("delete_stemcell(#{stemcell})") do
         Bosh::ThreadPool.new(max_threads: 32, logger: @logger).wrap do |pool|
           @logger.info("Looking for stemcell replicas in: #{@datacenter.name}")
-          templates = @cloud_searcher.get_property(@datacenter.template_folder.mob, Vim::Folder, 'childEntity', ensure_all: true)
-          template_properties = @cloud_searcher.get_properties(templates, Vim::VirtualMachine, ['name'])
-          template_properties.each_value do |properties|
-            template_name = properties['name'].gsub('%2f', '/')
-            if template_name.split('/').first.strip == stemcell
-              @logger.info("Found: #{template_name}")
-              pool.process do
-                @logger.info("Deleting: #{template_name}")
-                client.delete_vm(properties[:obj])
-                @logger.info("Deleted: #{template_name}")
-              end
+          matches = client.find_all_stemcell_replicas(@datacenter, stemcell)
+
+          matches.each do |sc|
+            sc_name = sc.name
+            @logger.info("Found: #{sc_name}")
+            pool.process do
+              @logger.info("Deleting: #{sc_name}")
+              client.delete_vm(sc)
+              @logger.info("Deleted: #{sc_name}")
             end
           end
+
         end
       end
     end
 
     def stemcell_vm(name)
-      client.find_by_inventory_path([@datacenter.name, 'vm', @datacenter.template_folder.path_components, name])
+      client.find_vm_by_name(@datacenter, name)
     end
 
     def create_vm(agent_id, stemcell, cloud_properties, networks, disk_locality = nil, environment = nil)
@@ -399,21 +398,18 @@ module VSphereCloud
     end
 
     def replicate_stemcell(cluster, datastore, stemcell)
-      stemcell_vm_path_components = [cluster.datacenter.name, 'vm', cluster.datacenter.template_folder.path_components, stemcell]
-      stemcell_vm = client.find_by_inventory_path(stemcell_vm_path_components)
-      raise "Could not find VM for stemcell '#{stemcell}' at path '#{stemcell_vm_path_components.join("/")}'" if stemcell_vm.nil?
+      stemcell_vm = client.find_vm_by_name(@datacenter, stemcell)
+      raise "Could not find VM for stemcell '#{stemcell}'" if stemcell_vm.nil?
       stemcell_datastore = @cloud_searcher.get_property(stemcell_vm, Vim::VirtualMachine, 'datastore', ensure_all: true)
 
       if stemcell_datastore != datastore.mob
         @logger.info("Stemcell lives on a different datastore, looking for a local copy of: #{stemcell}.")
         local_stemcell_name = "#{stemcell} %2f #{datastore.mob.__mo_id__}"
-        local_stemcell_path =
-          [cluster.datacenter.name, 'vm', cluster.datacenter.template_folder.path_components, local_stemcell_name]
-        replicated_stemcell_vm = client.find_by_inventory_path(local_stemcell_path)
 
+        replicated_stemcell_vm = client.find_vm_by_name(@datacenter, local_stemcell_name)
         if replicated_stemcell_vm.nil?
           @logger.info("Cluster doesn't have stemcell #{stemcell}, replicating")
-            replicated_stemcell_vm = replicate_stemcell_helper(stemcell, stemcell_vm, local_stemcell_name, cluster, datastore, replicated_stemcell_vm, local_stemcell_path)
+          replicated_stemcell_vm = replicate_stemcell_helper(stemcell, stemcell_vm, local_stemcell_name, cluster, datastore, replicated_stemcell_vm)
         else
           @logger.info("Found local stemcell replica: #{replicated_stemcell_vm}")
         end
@@ -705,7 +701,7 @@ module VSphereCloud
       placer.nil? ? @resources : placer
     end
 
-  def replicate_stemcell_helper(stemcell, stemcell_vm, local_stemcell_name, cluster, datastore, replicated_stemcell_vm, local_stemcell_path)
+  def replicate_stemcell_helper(stemcell, stemcell_vm, local_stemcell_name, cluster, datastore, replicated_stemcell_vm)
     @logger.info("Replicating #{stemcell} (#{stemcell_vm}) to #{local_stemcell_name}")
     task = clone_vm(stemcell_vm,
                     local_stemcell_name,
@@ -717,6 +713,8 @@ module VSphereCloud
       @logger.info("Replicated #{stemcell} (#{stemcell_vm}) to #{local_stemcell_name} (#{replicated_stemcell_vm})")
     rescue VSphereCloud::Client::DuplicateName => ex
       @logger.info("Stemcell is being replicated by another thread, waiting for #{local_stemcell_name} to be ready")
+      local_stemcell_path =
+        [cluster.datacenter.name, 'vm', cluster.datacenter.template_folder.path_components, local_stemcell_name]
       replicated_stemcell_vm = client.find_by_inventory_path(local_stemcell_path)
       # get_properties will ensure the existence of the snapshot by retrying.
       # This forces us to wait for a valid snapshot before returning with the
