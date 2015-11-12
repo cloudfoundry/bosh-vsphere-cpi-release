@@ -668,7 +668,7 @@ describe VSphereCloud::Cloud, external_cpi: false do
       end
 
       it 'migrates disk to accessible datastore' do
-        if LifecycleHelpers.is_vsan?(@cpi, @datastore_pattern) || LifecycleHelpers.is_vsan?(@cpi, @second_cluster_datastore)
+        if LifecycleHelpers.any_vsan?(@cpi, @datastore_pattern) || LifecycleHelpers.is_vsan?(@cpi, @second_cluster_datastore)
           skip 'Moving disks between with a vsan datastore is not yet supported'
         end
 
