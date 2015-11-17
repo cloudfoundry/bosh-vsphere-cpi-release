@@ -1,7 +1,7 @@
 # coding: utf-8
 Gem::Specification.new do |s|
   s.name        = 'bosh_vsphere_cpi'
-  s.version     = '2.1.0'
+  s.version     = '2.2.0'
   s.platform    = Gem::Platform::RUBY
   s.summary     = 'BOSH VSphere CPI'
   s.description = "BOSH VSphere CPI"
