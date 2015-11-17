@@ -205,7 +205,7 @@ describe VSphereCloud::Cloud, external_cpi: false do
   let(:network_spec) do
     {
       'static' => {
-        'ip' => "169.254.1.#{rand 255}",
+        'ip' => "169.254.1.#{rand(4..254)}",
         'netmask' => '255.255.254.0',
         'cloud_properties' => {'name' => vlan},
         'default' => ['dns', 'gateway'],
@@ -234,20 +234,6 @@ describe VSphereCloud::Cloud, external_cpi: false do
   end
 
   describe 'avoiding the creation of vms with duplicate IP addresses' do
-
-    let(:network_spec) do
-      {
-        'static' => {
-          'ip' => '169.254.1.1',
-          'netmask' => '255.255.254.0',
-          'cloud_properties' => {'name' => vlan},
-          'default' => ['dns', 'gateway'],
-          'dns' => ['169.254.1.2'],
-          'gateway' => '169.254.1.3'
-        }
-      }
-    end
-
     it 'raises an error in create_vm if the ip address is in use' do
       begin
         test_vm_id = @cpi.create_vm(
@@ -324,7 +310,6 @@ describe VSphereCloud::Cloud, external_cpi: false do
             vm = @cpi.vm_provider.find(vm_id)
             expect(vm.cluster).to eq(@cluster)
             expect(vm.resource_pool).to eq(@resource_pool_name)
-
           ensure
             @cpi.delete_vm(vm_id) if vm_id
           end
