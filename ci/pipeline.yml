@@ -41,18 +41,20 @@ jobs:
   - name: create-jumpbox
     plan:
       - aggregate:
-        - {trigger: false, get: bosh-cpi-release}
+        - {trigger: false, get: bosh-cpi-release, tags: ["vsphere-v5.1"]}
 
       - task: sleep
+        tags: ["vsphere-v5.1"]
         file: bosh-cpi-release/ci/tasks/create-jumpbox.yml
 
   - name: test-stemcell-download
     plan:
       - aggregate:
-        - {trigger: true,  get: one-hour-timer}
-        - {trigger: false, get: stemcell, resource: vsphere-ubuntu-stemcell}
+        - {trigger: true,  get: one-hour-timer, tags: ["vsphere-v5.1"]}
+        - {trigger: false, get: stemcell, resource: vsphere-ubuntu-stemcell, tags: ["vsphere-v5.1"]}
 
       - task: setup-container
+        tags: ["vsphere-v5.1"]
         config:
           platform: linux
           image: docker:///boshcpi/vsphere-cpi-release
@@ -61,22 +63,24 @@ jobs:
           run:
             path: echo
             args: ["Finished setting up container."]
-          tags: ["vsphere-v5.1"]
 
   - name: build-candidate
     serial: true
     plan:
       - aggregate:
-        - {trigger: true, get: bosh-cpi-release}
-        - {trigger: false, get: version-semver,   params: {bump: patch}}
+        - {trigger: true, get: bosh-cpi-release, tags: ["vsphere-v5.1"]}
+        - {trigger: false, get: version-semver, params: {bump: patch}, tags: ["vsphere-v5.1"]}
 
       - put: version-semver
+        tags: ["vsphere-v5.1"]
         params: {file: version-semver/number}
 
       - task: build
+        tags: ["vsphere-v5.1"]
         file: bosh-cpi-release/ci/tasks/build-candidate.yml
 
       - put: bosh-cpi-dev-artifacts
+        tags: ["vsphere-v5.1"]
         params: {from: build/out/.*\.tgz}
 
   - name: lifecycle-5.1
@@ -87,6 +91,7 @@ jobs:
         - {trigger: false,                            get: stemcell, resource: vsphere-ubuntu-stemcell, tags: ["vsphere-v5.1"]}
 
       - task: test
+        tags: ["vsphere-v5.1"]
         file: bosh-cpi-release/ci/tasks/run-lifecycle.yml
         config:
           params:
@@ -118,11 +123,12 @@ jobs:
   - name: lifecycle-6.0
     plan:
       - aggregate:
-        - {trigger: true,  passed: [build-candidate], get: bosh-cpi-dev-artifacts} # used for job chaining only not for tasks
-        - {trigger: false, passed: [build-candidate], get: bosh-cpi-release}
-        - {trigger: false,                            get: stemcell, resource: vsphere-ubuntu-stemcell}
+        - {trigger: true,  passed: [build-candidate], get: bosh-cpi-dev-artifacts, tags: ["vsphere-v5.1"]} # used for job chaining only not for tasks
+        - {trigger: false, passed: [build-candidate], get: bosh-cpi-release, tags: ["vsphere-v5.1"]}
+        - {trigger: false,                            get: stemcell, resource: vsphere-ubuntu-stemcell, tags: ["vsphere-v5.1"]}
 
       - task: test
+        tags: ["vsphere-v5.1"]
         file: bosh-cpi-release/ci/tasks/run-lifecycle.yml
         config: &lifecycle-6-params
           params:
@@ -154,11 +160,12 @@ jobs:
   - name: lifecycle-6.0-vsan
     plan:
       - aggregate:
-        - {trigger: true,  passed: [build-candidate], get: bosh-cpi-dev-artifacts} # used for job chaining only not for tasks
-        - {trigger: false, passed: [build-candidate], get: bosh-cpi-release}
-        - {trigger: false,                            get: stemcell, resource: vsphere-ubuntu-stemcell}
+        - {trigger: true,  passed: [build-candidate], get: bosh-cpi-dev-artifacts, tags: ["vsphere-v5.1"]} # used for job chaining only not for tasks
+        - {trigger: false, passed: [build-candidate], get: bosh-cpi-release, tags: ["vsphere-v5.1"]}
+        - {trigger: false,                            get: stemcell, resource: vsphere-ubuntu-stemcell, tags: ["vsphere-v5.1"]}
 
       - task: test
+        tags: ["vsphere-v5.1"]
         file: bosh-cpi-release/ci/tasks/run-lifecycle.yml
         config:
           <<: *lifecycle-6-params
@@ -169,22 +176,25 @@ jobs:
   - name: bats-ubuntu-manual
     plan:
       - aggregate:
-        - {trigger: true,  passed: [build-candidate], get: bosh-cpi-dev-artifacts}
-        - {trigger: false, passed: [build-candidate], get: version-semver}
-        - {trigger: false, passed: [build-candidate], get: bosh-cpi-release}
-        - {trigger: false,                            get: bosh-init}
-        - {trigger: false,                            get: bosh-release}
-        - {trigger: false,                            get: stemcell, resource: vsphere-ubuntu-stemcell}
-        - {trigger: false,                            get: bats}
+        - {trigger: true,  passed: [build-candidate], get: bosh-cpi-dev-artifacts, tags: ["vsphere-v5.1"]}
+        - {trigger: false, passed: [build-candidate], get: version-semver, tags: ["vsphere-v5.1"]}
+        - {trigger: false, passed: [build-candidate], get: bosh-cpi-release, tags: ["vsphere-v5.1"]}
+        - {trigger: false,                            get: bosh-init, tags: ["vsphere-v5.1"]}
+        - {trigger: false,                            get: bosh-release, tags: ["vsphere-v5.1"]}
+        - {trigger: false,                            get: stemcell, resource: vsphere-ubuntu-stemcell, tags: ["vsphere-v5.1"]}
+        - {trigger: false,                            get: bats, tags: ["vsphere-v5.1"]}
 
       - put: vsphere-5.1-environment
+        tags: ["vsphere-v5.1"]
         params:
           acquire: true
 
       - task: show_env
+        tags: ["vsphere-v5.1"]
         file: bosh-cpi-release/ci/tasks/show_env.yml
 
       - task: setup-director
+        tags: ["vsphere-v5.1"]
         file: bosh-cpi-release/ci/tasks/setup-director.yml
         config:
           params:
@@ -203,6 +213,7 @@ jobs:
             BOSH_VSPHERE_VCENTER_VLAN:              {{VCENTER_VLAN}}
 
       - task: test
+        tags: ["vsphere-v5.1"]
         file: bosh-cpi-release/ci/tasks/run-bats.yml
         config:
           params:
@@ -214,31 +225,36 @@ jobs:
             BAT_SECOND_NETWORK_VLAN:                      {{ubuntu_BAT_SECOND_NETWORK_VLAN}}
 
       - task: teardown-director
+        tags: ["vsphere-v5.1"]
         file: bosh-cpi-release/ci/tasks/teardown-director.yml
 
       - put: vsphere-5.1-environment
+        tags: ["vsphere-v5.1"]
         params:
           release: vsphere-5.1-environment
 
   - name: bats-centos-manual
     plan:
       - aggregate:
-        - {trigger: true,  passed: [build-candidate], get: bosh-cpi-dev-artifacts}
-        - {trigger: false, passed: [build-candidate], get: version-semver}
-        - {trigger: false, passed: [build-candidate], get: bosh-cpi-release}
-        - {trigger: false,                            get: bosh-init}
-        - {trigger: false,                            get: bosh-release}
-        - {trigger: false,                            get: stemcell, resource: vsphere-centos-stemcell}
-        - {trigger: false,                            get: bats}
+        - {trigger: true,  passed: [build-candidate], get: bosh-cpi-dev-artifacts, tags: ["vsphere-v5.1"]}
+        - {trigger: false, passed: [build-candidate], get: version-semver, tags: ["vsphere-v5.1"]}
+        - {trigger: false, passed: [build-candidate], get: bosh-cpi-release, tags: ["vsphere-v5.1"]}
+        - {trigger: false,                            get: bosh-init, tags: ["vsphere-v5.1"]}
+        - {trigger: false,                            get: bosh-release, tags: ["vsphere-v5.1"]}
+        - {trigger: false,                            get: stemcell, resource: vsphere-centos-stemcell, tags: ["vsphere-v5.1"]}
+        - {trigger: false,                            get: bats, tags: ["vsphere-v5.1"]}
 
       - put: vsphere-5.1-environment
+        tags: ["vsphere-v5.1"]
         params:
           acquire: true
 
       - task: show_env
+        tags: ["vsphere-v5.1"]
         file: bosh-cpi-release/ci/tasks/show_env.yml
 
       - task: setup-director
+        tags: ["vsphere-v5.1"]
         file: bosh-cpi-release/ci/tasks/setup-director.yml
         config:
           params:
@@ -257,6 +273,7 @@ jobs:
             BOSH_VSPHERE_VCENTER_VLAN:              {{VCENTER_VLAN}}
 
       - task: test
+        tags: ["vsphere-v5.1"]
         file: bosh-cpi-release/ci/tasks/run-bats.yml
         config:
           params:
@@ -268,9 +285,11 @@ jobs:
             BAT_SECOND_NETWORK_VLAN:                      {{centos_BAT_SECOND_NETWORK_VLAN}}
 
       - task: teardown-director
+        tags: ["vsphere-v5.1"]
         file: bosh-cpi-release/ci/tasks/teardown-director.yml
 
       - put: vsphere-5.1-environment
+        tags: ["vsphere-v5.1"]
         params:
           release: vsphere-5.1-environment
 
@@ -278,11 +297,12 @@ jobs:
     serial: true
     plan:
     - aggregate:
-      - {trigger: false, passed: [lifecycle-5.1, lifecycle-6.0, lifecycle-6.0-vsan, bats-ubuntu-manual, bats-centos-manual], get: bosh-cpi-dev-artifacts}
-      - {trigger: false, passed: [lifecycle-5.1, lifecycle-6.0, lifecycle-6.0-vsan, bats-ubuntu-manual, bats-centos-manual], get: bosh-cpi-release}
-      - {trigger: false, get: release-version-semver, params: {bump: major}}
+      - {trigger: false, passed: [lifecycle-5.1, lifecycle-6.0, lifecycle-6.0-vsan, bats-ubuntu-manual, bats-centos-manual], get: bosh-cpi-dev-artifacts, tags: ["vsphere-v5.1"]}
+      - {trigger: false, passed: [lifecycle-5.1, lifecycle-6.0, lifecycle-6.0-vsan, bats-ubuntu-manual, bats-centos-manual], get: bosh-cpi-release, tags: ["vsphere-v5.1"]}
+      - {trigger: false, get: release-version-semver, params: {bump: major}, tags: ["vsphere-v5.1"]}
 
     - task: promote
+      tags: ["vsphere-v5.1"]
       file: bosh-cpi-release/ci/tasks/promote-candidate.yml
       config:
         params:
@@ -290,9 +310,11 @@ jobs:
           aws_secret_access_key: {{s3_vsphere_cpi_blobwriter_secret_key}}
 
     - put: bosh-cpi-release-out
+      tags: ["vsphere-v5.1"]
       params: {repository: promote/bosh-cpi-release, rebase: true, tag_prefix: "v", tag: promote/integer_version}
 
     - put: release-version-semver
+      tags: ["vsphere-v5.1"]
       params: {file: release-version-semver/number}
 
 resources:
