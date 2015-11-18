@@ -26,16 +26,16 @@ groups:
 
   - name: vsphere-5.1
     jobs:
-    - build-candidate
-    - lifecycle-5.1
-    - promote-candidate
+      - build-candidate
+      - lifecycle-5.1
+      - promote-candidate
 
   - name: vsphere-6.0
     jobs:
-    - build-candidate
-    - lifecycle-6.0
-    - lifecycle-6.0-vsan
-    - promote-candidate
+      - build-candidate
+      - lifecycle-6.0
+      - lifecycle-6.0-vsan
+      - promote-candidate
 
 jobs:
   - name: create-jumpbox
@@ -67,8 +67,8 @@ jobs:
     serial: true
     plan:
       - aggregate:
-          - {trigger: true, get: bosh-cpi-release}
-          - {trigger: false, get: version-semver,   params: {bump: patch}}
+        - {trigger: true, get: bosh-cpi-release}
+        - {trigger: false, get: version-semver,   params: {bump: patch}}
 
       - put: version-semver
         params: {file: version-semver/number}

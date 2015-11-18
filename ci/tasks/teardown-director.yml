@@ -2,9 +2,9 @@
 platform: linux
 image: docker:///boshcpi/vsphere-cpi-release
 inputs:
-- name: bosh-cpi-release
-- name: bosh-init
-- name: setup-director
+  - name: bosh-cpi-release
+  - name: bosh-init
+  - name: setup-director
 run:
   path: bosh-cpi-release/ci/tasks/teardown-director.sh
 tags: ["vsphere-v5.1"]
