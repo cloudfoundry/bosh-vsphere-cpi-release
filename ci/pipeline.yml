@@ -82,9 +82,9 @@ jobs:
   - name: lifecycle-5.1
     plan:
       - aggregate:
-        - {trigger: true,  passed: [build-candidate], get: bosh-cpi-dev-artifacts} # used for job chaining only not for tasks
-        - {trigger: false, passed: [build-candidate], get: bosh-cpi-release}
-        - {trigger: false,                            get: stemcell, resource: vsphere-ubuntu-stemcell}
+        - {trigger: true,  passed: [build-candidate], get: bosh-cpi-dev-artifacts, tags: ["vsphere-v5.1"]} # used for job chaining only not for tasks
+        - {trigger: false, passed: [build-candidate], get: bosh-cpi-release, tags: ["vsphere-v5.1"]}
+        - {trigger: false,                            get: stemcell, resource: vsphere-ubuntu-stemcell, tags: ["vsphere-v5.1"]}
 
       - task: test
         file: bosh-cpi-release/ci/tasks/run-lifecycle.yml
