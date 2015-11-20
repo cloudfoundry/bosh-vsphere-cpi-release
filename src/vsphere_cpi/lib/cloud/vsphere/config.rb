@@ -157,10 +157,7 @@ module VSphereCloud
               'datastore_pattern' => String,
               'persistent_datastore_pattern' => String,
               optional('allow_mixed_datastores') => bool,
-              'clusters' => [enum(String,
-                dict(String, {
-                  'resource_pool' => String
-                })
+              'clusters' => [enum(String, dict(String, {optional('resource_pool') => String})
               )]
             }]
           }]

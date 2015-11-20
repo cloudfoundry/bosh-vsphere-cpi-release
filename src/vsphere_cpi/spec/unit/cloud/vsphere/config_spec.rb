@@ -14,6 +14,7 @@ module VSphereCloud
     let(:datastore_pattern) { 'fancy-datastore*' }
     let(:persistent_datastore_pattern) { 'long-lasting-datastore*' }
     let(:cluster_name) { 'grubby-cluster' }
+    let(:cluster_name_witout_resource_pool) { 'shiny-cluster' }
     let(:resource_pool) { 'wading-pool' }
     let(:datacenters) do
       [{
@@ -24,9 +25,8 @@ module VSphereCloud
          'datastore_pattern' => datastore_pattern,
          'persistent_datastore_pattern' => persistent_datastore_pattern,
          'clusters' => [
-           cluster_name => {
-             'resource_pool' => resource_pool,
-           }
+           cluster_name => {'resource_pool' => resource_pool},
+           cluster_name_witout_resource_pool => {},
          ],
        }]
     end
@@ -103,6 +103,16 @@ module VSphereCloud
           expect do
             config.validate
           end.to raise_error(RuntimeError, 'vSphere CPI only supports a single datacenter')
+        end
+      end
+
+      context 'when the configuration hash does not match the schema' do
+        before { config_hash.delete('agent') }
+
+        it 'raises' do
+          expect do
+            config.validate
+          end.to raise_error(Membrane::SchemaValidationError)
         end
       end
 
@@ -327,6 +337,30 @@ module VSphereCloud
           expect(config.datacenter_clusters['fake-cluster-2'].resource_pool).to eq('fake-resource-pool-2')
         end
       end
+
+      context 'when the clusters do not specify a resource pool' do
+        let(:client) { instance_double('VSphereCloud::Client') }
+
+        before do
+          allow(Client).to receive(:new).and_return(client)
+          allow(client).to receive(:login)
+
+          datacenters.first['clusters'] = [
+            'fake-cluster-1',
+            { 'fake-cluster-2' => { } }
+          ]
+
+        end
+
+        it 'returns the datacenter clusters' do
+          expect(config.datacenter_clusters['fake-cluster-1'].name).to eq('fake-cluster-1')
+          expect(config.datacenter_clusters['fake-cluster-1'].resource_pool).to be(nil)
+
+          expect(config.datacenter_clusters['fake-cluster-2'].name).to eq('fake-cluster-2')
+          expect(config.datacenter_clusters['fake-cluster-2'].resource_pool).to be(nil)
+        end
+      end
+
     end
 
     describe '#datacenter_use_sub_folder' do
