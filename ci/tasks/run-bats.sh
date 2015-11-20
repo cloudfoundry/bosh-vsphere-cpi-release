@@ -78,22 +78,22 @@ properties:
     name: ${BAT_STEMCELL_NAME}
     version: latest
   networks:
-  - name: static
-    type: manual
-    static_ip: ${BAT_STATIC_IP}
-    cidr: ${BAT_CIDR}
-    reserved: [${BAT_RESERVED_RANGE}]
-    static: [${BAT_STATIC_RANGE}]
-    gateway: ${BAT_GATEWAY}
-    vlan: ${BAT_VLAN}
-  - name: second
-    type: manual
-    static_ip: ${BAT_SECOND_NETWORK_STATIC_IP}
-    cidr: ${BAT_SECOND_NETWORK_CIDR}
-    reserved: [${BAT_SECOND_NETWORK_RESERVED_RANGE}]
-    static: [${BAT_SECOND_NETWORK_STATIC_RANGE}]
-    gateway: ${BAT_SECOND_NETWORK_GATEWAY}
-    vlan: ${BAT_SECOND_NETWORK_VLAN}
+    - name: static
+      type: manual
+      static_ip: ${BAT_STATIC_IP}
+      cidr: ${BAT_CIDR}
+      reserved: [${BAT_RESERVED_RANGE}]
+      static: [${BAT_STATIC_RANGE}]
+      gateway: ${BAT_GATEWAY}
+      vlan: ${BAT_VLAN}
+    - name: second
+      type: manual
+      static_ip: ${BAT_SECOND_NETWORK_STATIC_IP}
+      cidr: ${BAT_SECOND_NETWORK_CIDR}
+      reserved: [${BAT_SECOND_NETWORK_RESERVED_RANGE}]
+      static: [${BAT_SECOND_NETWORK_STATIC_RANGE}]
+      gateway: ${BAT_SECOND_NETWORK_GATEWAY}
+      vlan: ${BAT_SECOND_NETWORK_VLAN}
 EOF
 
 cd bats

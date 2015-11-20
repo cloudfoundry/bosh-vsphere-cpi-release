@@ -60,108 +60,108 @@ cat > "${manifest_dir}/director-manifest.yml" <<EOF
 name: bosh
 
 releases:
-- name: bosh
-  url: file://bosh-release.tgz
-- name: ${cpi_release_name}
-  url: file://${cpi_release_name}.tgz
+  - name: bosh
+    url: file://bosh-release.tgz
+  - name: ${cpi_release_name}
+    url: file://${cpi_release_name}.tgz
 
 resource_pools:
-- name: vms
-  network: private
-  stemcell:
-    url: file://stemcell.tgz
-  cloud_properties:
-    cpu: 2
-    ram: 4_096
-    disk: 20_000
+  - name: vms
+    network: private
+    stemcell:
+      url: file://stemcell.tgz
+    cloud_properties:
+      cpu: 2
+      ram: 4_096
+      disk: 20_000
 
 disk_pools:
-- name: disks
-  disk_size: 20_000
+  - name: disks
+    disk_size: 20_000
 
 networks:
-- name: private
-  type: manual
-  subnets:
-  - range: ${BOSH_VSPHERE_VCENTER_CIDR}
-    gateway: ${BOSH_VSPHERE_VCENTER_GATEWAY}
-    dns: [${BOSH_VSPHERE_DNS}]
-    cloud_properties: {name: ${BOSH_VSPHERE_VCENTER_VLAN}}
+  - name: private
+    type: manual
+    subnets:
+      - range: ${BOSH_VSPHERE_VCENTER_CIDR}
+        gateway: ${BOSH_VSPHERE_VCENTER_GATEWAY}
+        dns: [${BOSH_VSPHERE_DNS}]
+        cloud_properties: {name: ${BOSH_VSPHERE_VCENTER_VLAN}}
 
 jobs:
-- name: bosh
-  instances: 1
+  - name: bosh
+    instances: 1
 
-  templates:
-  - {name: nats, release: bosh}
-  - {name: redis, release: bosh}
-  - {name: postgres, release: bosh}
-  - {name: blobstore, release: bosh}
-  - {name: director, release: bosh}
-  - {name: health_monitor, release: bosh}
-  - {name: powerdns, release: bosh}
-  - {name: vsphere_cpi, release: ${cpi_release_name}}
+    templates:
+      - {name: nats, release: bosh}
+      - {name: redis, release: bosh}
+      - {name: postgres, release: bosh}
+      - {name: blobstore, release: bosh}
+      - {name: director, release: bosh}
+      - {name: health_monitor, release: bosh}
+      - {name: powerdns, release: bosh}
+      - {name: vsphere_cpi, release: ${cpi_release_name}}
 
-  resource_pool: vms
-  persistent_disk_pool: disks
+    resource_pool: vms
+    persistent_disk_pool: disks
 
-  networks:
-  - {name: private, static_ips: [${DIRECTOR_IP}]}
+    networks:
+      - {name: private, static_ips: [${DIRECTOR_IP}]}
 
-  properties:
-    nats:
-      address: 127.0.0.1
-      user: nats
-      password: nats-password
+    properties:
+      nats:
+        address: 127.0.0.1
+        user: nats
+        password: nats-password
 
-    redis:
-      listen_addresss: 127.0.0.1
-      address: 127.0.0.1
-      password: redis-password
+      redis:
+        listen_addresss: 127.0.0.1
+        address: 127.0.0.1
+        password: redis-password
 
-    postgres: &db
-      host: 127.0.0.1
-      user: postgres
-      password: postgres-password
-      database: bosh
-      adapter: postgres
+      postgres: &db
+        host: 127.0.0.1
+        user: postgres
+        password: postgres-password
+        database: bosh
+        adapter: postgres
 
-    blobstore:
-      address: ${DIRECTOR_IP}
-      port: 25250
-      provider: dav
-      director: {user: director, password: director-password}
-      agent: {user: agent, password: agent-password}
+      blobstore:
+        address: ${DIRECTOR_IP}
+        port: 25250
+        provider: dav
+        director: {user: director, password: director-password}
+        agent: {user: agent, password: agent-password}
 
-    director:
-      address: 127.0.0.1
-      name: my-bosh
-      db: *db
-      cpi_job: vsphere_cpi
+      director:
+        address: 127.0.0.1
+        name: my-bosh
+        db: *db
+        cpi_job: vsphere_cpi
 
-    hm:
-      http: {user: hm, password: hm-password}
-      director_account: {user: admin, password: admin}
-      resurrector_enabled: true
+      hm:
+        http: {user: hm, password: hm-password}
+        director_account: {user: admin, password: admin}
+        resurrector_enabled: true
 
-    agent: {mbus: "nats://nats:nats-password@${DIRECTOR_IP}:4222"}
+      agent: {mbus: "nats://nats:nats-password@${DIRECTOR_IP}:4222"}
 
-    dns:
-      address: 127.0.0.1
-      db: *db
+      dns:
+        address: 127.0.0.1
+        db: *db
 
-    vcenter: &vcenter
-      address: ${BOSH_VSPHERE_VCENTER}
-      user: ${BOSH_VSPHERE_VCENTER_USER}
-      password: ${BOSH_VSPHERE_VCENTER_PASSWORD}
-      datacenters:
-      - name: ${BOSH_VSPHERE_VCENTER_DC}
-        vm_folder: ${BOSH_VSPHERE_VCENTER_VM_FOLDER}
-        template_folder: ${BOSH_VSPHERE_VCENTER_TEMPLATE_FOLDER}
-        datastore_pattern: ${BOSH_VSPHERE_VCENTER_DATASTORE_PATTERN}
-        persistent_datastore_pattern: ${BOSH_VSPHERE_VCENTER_DATASTORE_PATTERN}
-        disk_path: ${BOSH_VSPHERE_VCENTER_DISK_PATH}
-        clusters: [${BOSH_VSPHERE_VCENTER_CLUSTER}]
+      vcenter: &vcenter
+        address: ${BOSH_VSPHERE_VCENTER}
+        user: ${BOSH_VSPHERE_VCENTER_USER}
+        password: ${BOSH_VSPHERE_VCENTER_PASSWORD}
+        datacenters:
+          - name: ${BOSH_VSPHERE_VCENTER_DC}
+            vm_folder: ${BOSH_VSPHERE_VCENTER_VM_FOLDER}
+            template_folder: ${BOSH_VSPHERE_VCENTER_TEMPLATE_FOLDER}
+            datastore_pattern: ${BOSH_VSPHERE_VCENTER_DATASTORE_PATTERN}
+            persistent_datastore_pattern: ${BOSH_VSPHERE_VCENTER_DATASTORE_PATTERN}
+            disk_path: ${BOSH_VSPHERE_VCENTER_DISK_PATH}
+            clusters: [${BOSH_VSPHERE_VCENTER_CLUSTER}]
 
 cloud_provider:
   template: {name: vsphere_cpi, release: ${cpi_release_name}}
