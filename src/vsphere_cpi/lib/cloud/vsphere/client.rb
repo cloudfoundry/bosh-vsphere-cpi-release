@@ -14,7 +14,12 @@ module VSphereCloud
       @soap_stub = SoapStub.new(host, options[:soap_log]).create
 
       @service_instance = Vim::ServiceInstance.new('ServiceInstance', @soap_stub)
-      @service_content = @service_instance.content
+
+      begin
+        @service_content = @service_instance.content
+      rescue HTTPClient::ConnectTimeoutError => e
+        raise "Please make sure the CPI has proper network access to vSphere. (#{e.class}: #{e.message})"
+      end
 
       @metrics_cache  = {}
       @lock = Mutex.new
