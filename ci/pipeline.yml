@@ -3,7 +3,7 @@ groups:
   - name: bosh-vsphere-cpi-release
     jobs:
       - create-jumpbox
-      - test-stemcell-download
+      - cache-stemcells
       - build-candidate
       - bats-ubuntu-manual
       - bats-centos-manual
@@ -47,11 +47,11 @@ jobs:
         tags: ["vsphere-v5.1"]
         file: bosh-cpi-release/ci/tasks/create-jumpbox.yml
 
-  - name: test-stemcell-download
+  - name: cache-stemcells
     plan:
       - aggregate:
-        - {trigger: true,  get: one-hour-timer, tags: ["vsphere-v5.1"]}
-        - {trigger: false, get: stemcell, resource: vsphere-ubuntu-stemcell, tags: ["vsphere-v5.1"]}
+        - {trigger: true, get: vsphere-centos-stemcell, tags: ["vsphere-v5.1"]}
+        - {trigger: true, get: vsphere-ubuntu-stemcell, tags: ["vsphere-v5.1"]}
 
       - task: setup-container
         tags: ["vsphere-v5.1"]
@@ -59,7 +59,8 @@ jobs:
           platform: linux
           image: docker:///boshcpi/vsphere-cpi-release
           inputs:
-            - name: stemcell
+            - name: vsphere-centos-stemcell
+            - name: vsphere-ubuntu-stemcell
           run:
             path: echo
             args: ["Finished setting up container."]
@@ -389,8 +390,3 @@ resources:
       uri: git@github.com:cloudfoundry/bosh-cpi-environments.git
       branch: master
       private_key: {{github_deployment_key__bosh-cpi-environments}}
-
-  - name: one-hour-timer
-    type: time
-    source:
-      interval: 1h
