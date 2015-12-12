@@ -397,19 +397,35 @@ module VSphereCloud
       end
     end
 
-    def replicate_stemcell(cluster, datastore, stemcell)
-      stemcell_vm = client.find_vm_by_name(@datacenter, stemcell)
-      raise "Could not find VM for stemcell '#{stemcell}'" if stemcell_vm.nil?
-      stemcell_datastore = @cloud_searcher.get_property(stemcell_vm, Vim::VirtualMachine, 'datastore', ensure_all: true)
+    def vm_and_datastore_for(stemcell_id)
+      stemcell_unstarted_vm = client.find_vm_by_name(@datacenter, stemcell_id)
+      raise "Could not find VM for stemcell '#{stemcell_id}'" if stemcell_unstarted_vm.nil?
+      datastore_containing_volume_in_stemcell_unstarted_vm__property = @cloud_searcher.get_property(stemcell_unstarted_vm,
+        Vim::VirtualMachine, 'datastore', ensure_all: true)
+      return stemcell_unstarted_vm, datastore_containing_volume_in_stemcell_unstarted_vm__property
+    end
 
-      if stemcell_datastore != datastore.mob
-        @logger.info("Stemcell lives on a different datastore, looking for a local copy of: #{stemcell}.")
-        local_stemcell_name = "#{stemcell} %2f #{datastore.mob.__mo_id__}"
+    def replicate_stemcell(cluster, to_datastore, stemcell_id)
+
+      stemcell_vm, datastore_containing_volume_in_stemcell_unstarted_vm__property =
+        vm_and_datastore_for(stemcell_id)
+
+      from_datastore_name =
+        datastore_containing_volume_in_stemcell_unstarted_vm__property.first.name
+      to_datastore_name = to_datastore.name
+
+      puts "NAME OF FROM DASTASTOPRE #{from_datastore_name}"
+      puts "NAME OF TO DASTASTOPRE #{to_datastore_name}"
+
+      if from_datastore_name != to_datastore_name
+        @logger.info("Stemcell lives on a different datastore, looking for a local copy of: #{stemcell_id}.")
+        local_stemcell_name = "#{stemcell_id} %2f #{to_datastore.mob.__mo_id__}"
 
         replicated_stemcell_vm = client.find_vm_by_name(@datacenter, local_stemcell_name)
         if replicated_stemcell_vm.nil?
-          @logger.info("Cluster doesn't have stemcell #{stemcell}, replicating")
-          replicated_stemcell_vm = replicate_stemcell_helper(stemcell, stemcell_vm, local_stemcell_name, cluster, datastore, replicated_stemcell_vm)
+          @logger.info("Cluster doesn't have stemcell #{stemcell_id}, replicating")
+          replicated_stemcell_vm = replicate_stemcell_helper(stemcell_id,
+            stemcell_vm, local_stemcell_name, cluster, to_datastore, replicated_stemcell_vm)
         else
           @logger.info("Found local stemcell replica: #{replicated_stemcell_vm}")
         end

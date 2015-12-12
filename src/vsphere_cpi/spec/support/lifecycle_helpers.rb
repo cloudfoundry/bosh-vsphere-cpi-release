@@ -114,7 +114,9 @@ class LifecycleHelpers
     'Resource.ColdMigrate',
     'Resource.HotMigrate',
 
-    'VApp.Import'
+    'VApp.Import',
+    'VApp.InstanceConfig',
+    'VApp.ApplicationConfig'
   ]
 
   class << self

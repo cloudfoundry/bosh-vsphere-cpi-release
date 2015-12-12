@@ -160,6 +160,21 @@ module VSphereCloud
       matches
     end
 
+    def find_all_stemcell_replicas_in_datastore(datacenter, stemcell_id, datastore_name)
+      matches = []
+      yield_all_resources_by_name(datacenter, 'VirtualMachine') do |vm_mob, name|
+        if name =~ Regexp.new(stemcell_id)
+          vm_datastore = @cloud_searcher.get_property(vm_mob,
+            Vim::VirtualMachine, 'datastore', ensure_all: true)
+          if vm_datastore.first.name == datastore_name
+            matches << vm_mob
+          end
+        end
+      end
+
+      matches
+    end
+
     def wait_for_task(task)
       interval = 1.0
       started = Time.now
