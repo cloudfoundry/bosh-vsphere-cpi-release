@@ -104,17 +104,18 @@ module VSphereCloud
 
     def move_disk(source_datacenter, source_path, dest_datacenter, dest_path)
       create_parent_folder(dest_datacenter, dest_path)
-      tasks = []
-      base_source_path = source_path.chomp(File.extname(source_path))
-      base_dest_path = dest_path.chomp(File.extname(dest_path))
-      [".vmdk", "-flat.vmdk"].each do |extension|
-        tasks << @service_content.file_manager.move_file(
-          "#{base_source_path}#{extension}", source_datacenter.mob,
-          "#{base_dest_path}#{extension}", dest_datacenter.mob, false
-        )
-      end
+      @logger.info("Moving disk: #{source_path} to #{dest_path}")
+      task = service_content.virtual_disk_manager.move_virtual_disk(
+        source_path,
+        source_datacenter.mob,
+        dest_path,
+        dest_datacenter.mob,
+        false,
+        nil
+      )
 
-      tasks.each { |task| wait_for_task(task) }
+      wait_for_task(task)
+      @logger.info('Moved disk')
     end
 
     def create_datastore_folder(folder_path, datacenter)
@@ -249,6 +250,7 @@ module VSphereCloud
 
     def find_disk(disk_cid, datastore, disk_folder)
       disk_path = "[#{datastore.name}] #{disk_folder}/#{disk_cid}.vmdk"
+      @logger.debug("Looking for disk: #{disk_path}")
       disk_size_in_mb = find_disk_size_using_browser(datastore, disk_cid, disk_folder)
       disk_size_in_mb.nil? ? nil : Resources::Disk.new(disk_cid, disk_size_in_mb, datastore, disk_path)
     end
@@ -277,8 +279,6 @@ module VSphereCloud
       Resources::Disk.new(disk_cid, disk_size_in_mb, datastore, disk_path)
     end
 
-    private
-
     def create_parent_folder(datacenter, disk_path)
       destination_folder = File.dirname(disk_path)
       create_datastore_folder(destination_folder, datacenter.mob)
@@ -299,6 +299,8 @@ module VSphereCloud
       search_spec.match_pattern = ["#{disk_cid}.vmdk"]
       search_spec.query = [query]
 
+      datastore_path = "[#{datastore.name}] #{disk_folder}"
+      @logger.debug("Trying to find disk in : #{datastore_path}")
       vm_disk_infos = wait_for_task(datastore.mob.browser.search("[#{datastore.name}] #{disk_folder}", search_spec)).file
       return nil if vm_disk_infos.empty?
 
@@ -306,6 +308,41 @@ module VSphereCloud
     rescue VimSdk::SoapError, FileNotFoundException
       nil
     end
+
+    def add_persistent_disk_property_to_vm(vm, disk)
+      vm_config = Vim::Vm::ConfigSpec.new
+      v_app_config_spec = VimSdk::Vim::VApp::VmConfigSpec.new
+
+      v_app_property_spec = VimSdk::Vim::VApp::PropertySpec.new
+      v_app_property_info = VimSdk::Vim::VApp::PropertyInfo.new
+
+      vm_disk = vm.disk_by_cid(disk.cid)
+      disk_device_key = vm_disk.key
+
+      if vm.get_vapp_property_by_key(disk_device_key) != nil
+        @logger.debug("Disk property already exists '#{disk.cid}' on vm '#{vm.cid}'")
+        return
+      end
+
+      v_app_property_info.key = disk_device_key
+      v_app_property_info.id = disk.cid
+      v_app_property_info.label = disk.cid
+      v_app_property_info.category = 'BOSH Persistent Disks'
+      v_app_property_info.type = 'string'
+      v_app_property_info.value = disk.path
+      v_app_property_info.description = 'Used by BOSH to track persistent disks. Change at your own risk.'
+      v_app_property_info.user_configurable = true
+
+      v_app_property_spec.info = v_app_property_info
+      v_app_property_spec.operation = VimSdk::Vim::Option::ArrayUpdateSpec::Operation::ADD
+      v_app_config_spec.property << v_app_property_spec
+
+      vm_config.v_app_config = v_app_config_spec
+
+      reconfig_vm(vm.mob, vm_config)
+    end
+
+    private
 
     def task_exception_for_vim_fault(fault)
       exceptions_by_fault = {

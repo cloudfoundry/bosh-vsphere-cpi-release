@@ -169,7 +169,38 @@ module VSphereCloud
         properties['runtime.powerState']
       end
 
+      def has_persistent_disk_property_mismatch?(disk)
+        found_property = get_vapp_property_by_key(disk.key)
+        return false if found_property.nil? || !verify_persistent_disk_property?(found_property)
+
+        # get full path without a datastore
+        file_path = disk.backing.file_name[/([^\]]*)\.vmdk/,1].strip
+        original_file_path =found_property.value[/([^\]]*)\.vmdk/,1].strip
+        @logger.debug("Current file path is #{file_path}")
+        @logger.debug("Original file path is #{original_file_path}")
+
+        file_path != original_file_path
+      end
+
+      def get_old_disk_filepath(disk_key)
+        property = get_vapp_property_by_key(disk_key)
+        if property.nil? || !verify_persistent_disk_property?(property)
+          @logger.debug("Can't find persistent disk property for disk #{disk_key}")
+          return nil
+        end
+
+        property.value
+      end
+
+      def get_vapp_property_by_key(key)
+        @mob.config.v_app_config.property.find { |property| property.key == key }
+      end
+
       private
+
+      def verify_persistent_disk_property?(property)
+        property.category == 'BOSH Persistent Disks'
+      end
 
       def properties
         @properties ||= cloud_searcher.get_properties(

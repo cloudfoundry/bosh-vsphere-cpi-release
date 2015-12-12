@@ -343,12 +343,14 @@ describe VSphereCloud::Cloud, external_cpi: false do
     end
 
     context 'when vm was migrated to another datastore within first cluster' do
-
-      it 'should exercise the vm lifecycle' do
+      let(:one_cluster_cpi) do
         options = cpi_options(
           clusters: [{@cluster => {'resource_pool' => @resource_pool_name}}]
         )
-        one_cluster_cpi = described_class.new(options)
+        described_class.new(options)
+      end
+
+      it 'should exercise the vm lifecycle' do
         vm_lifecycle(one_cluster_cpi, [], resource_pool, network_spec) do |vm_id|
           vm = one_cluster_cpi.vm_provider.find(vm_id)
 
@@ -357,6 +359,54 @@ describe VSphereCloud::Cloud, external_cpi: false do
 
           task = vm.mob.relocate(relocate_spec, 'defaultPriority')
           one_cluster_cpi.client.wait_for_task(task)
+        end
+      end
+
+      context 'when migration happened after attaching a persistent disk' do
+        let(:datastore_name) {
+          datastore_name = one_cluster_cpi.datacenter.all_datastores.select do |datastore|
+            datastore.match(@datastore_pattern)
+          end
+          datastore_name.first[0]
+        }
+
+        it 'can still find persistent disks after deleting vm' do
+          begin
+            vm_id = one_cluster_cpi.create_vm(
+              'agent-007',
+              @stemcell_id,
+              resource_pool,
+              network_spec,
+              [],
+              {'key' => 'value'}
+            )
+
+            expect(vm_id).to_not be_nil
+            expect(one_cluster_cpi.has_vm?(vm_id)).to be(true)
+
+            disk_id = one_cluster_cpi.create_disk(2048, {}, vm_id)
+            expect(disk_id).to_not be_nil
+
+            one_cluster_cpi.attach_disk(vm_id, disk_id)
+            expect(one_cluster_cpi.has_disk?(disk_id)).to be(true)
+
+            vm = one_cluster_cpi.vm_provider.find(vm_id)
+
+            datastore = one_cluster_cpi.client.cloud_searcher.get_managed_object(VimSdk::Vim::Datastore, name: datastore_name)
+            relocate_spec = VimSdk::Vim::Vm::RelocateSpec.new(datastore: datastore)
+
+            task = vm.mob.relocate(relocate_spec, 'defaultPriority')
+            one_cluster_cpi.client.wait_for_task(task)
+
+            one_cluster_cpi.delete_vm(vm_id)
+            vm_id = nil
+
+            expect(one_cluster_cpi.has_disk?(disk_id)).to be(true)
+          ensure
+            one_cluster_cpi.detach_disk(vm_id, disk_id) if vm_id && disk_id
+            one_cluster_cpi.delete_vm(vm_id) if vm_id
+            one_cluster_cpi.delete_disk(disk_id) if disk_id
+          end
         end
       end
     end

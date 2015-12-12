@@ -565,6 +565,7 @@ module VSphereCloud
         allow(vm).to receive(:cluster).and_return('fake-cluster-name')
         allow(vm).to receive(:accessible_datastores).and_return(['fake-datastore-name'])
         allow(vm).to receive(:system_disk).and_return(double(:system_disk, controller_key: 'fake-controller-key'))
+        allow(client).to receive(:add_persistent_disk_property_to_vm)
       end
 
       let(:datastore) { instance_double('VSphereCloud::Resources::Datastore', name: 'fake-datastore')}
@@ -610,7 +611,11 @@ module VSphereCloud
 
       context 'when vm has persistent disks' do
         let(:disk) { instance_double('VimSdk::Vim::Vm::Device::VirtualDisk', backing: double(:backing, file_name: 'fake-file_name')) }
-        before { allow(vm).to receive(:persistent_disks).and_return([disk]) }
+        before {
+          allow(vm).to receive(:persistent_disks).and_return([disk])
+          allow(vm).to receive(:has_persistent_disk_property_mismatch?)
+            .and_return(false)
+        }
 
         it 'detaches persistent disks' do
           expect(client).to receive(:reconfig_vm) do |mob, spec|
