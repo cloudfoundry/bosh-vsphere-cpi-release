@@ -278,10 +278,6 @@ describe VSphereCloud::Cloud, external_cpi: false do
       end
 
       it '#attach_disk can move the disk to the new datastore pattern' do
-        if LifecycleHelpers.any_vsan?(@cpi, @datastore_pattern) || LifecycleHelpers.is_vsan?(@cpi, @second_datastore_within_cluster)
-          skip 'Moving disks between with a vsan datastore is not yet supported'
-        end
-
         second_datastore_cpi.attach_disk(@vm_id, @disk_id)
 
         disk = second_datastore_cpi.disk_provider.find(@disk_id)
@@ -473,10 +469,6 @@ describe VSphereCloud::Cloud, external_cpi: false do
       end
 
       it 'migrates disk to accessible datastore' do
-        if LifecycleHelpers.any_vsan?(@cpi, @datastore_pattern) || LifecycleHelpers.is_vsan?(@cpi, @second_cluster_datastore)
-          skip 'Moving disks between with a vsan datastore is not yet supported'
-        end
-
         begin
           options = cpi_options
           options['vcenters'].first['datacenters'].first.merge!(
