@@ -395,128 +395,143 @@ describe VSphereCloud::Cloud, external_cpi: false do
         vm_lifecycle(second_cpi, [], resource_pool, network_spec)
       end
 
-      context 'when replicating stemcells across datastores' do
+      context 'when replicating stemcells across datastores', focus: true do
+        let(:destination_cluster) { @cpi.datacenter.clusters[@cluster] }
 
-        # new
-
-        context 'when a suitable replica does not exist in a subfolder' do
-          context 'and the vm does not exist' do
-            it 'should replicate the stemcell' do
-              begin
-                orig_stemcell_id = nil
-                Dir.mktmpdir do |temp_dir|
-                  stemcell_image = LifecycleHelpers.stemcell_image(@stemcell_path, temp_dir)
-                  orig_stemcell_id = @cpi.create_stemcell(stemcell_image, nil)
-                end
-
-                second_datastore = @cpi.datacenter.all_datastores[@second_datastore_within_cluster]
-
-                replicated_stemcell = @cpi.replicate_stemcell(@cpi.datacenter.clusters[@cluster],
-                  second_datastore, orig_stemcell_id)
-                expect(replicated_stemcell).to_not be_nil
-                expect(second_cpi.client.find_all_stemcell_replicas(second_cpi.datacenter, orig_stemcell_id).size).to eq(2)
-              ensure
-                @cpi.delete_stemcell(orig_stemcell_id)
-                begin
-                  @logger.info("Deleting any leftover stemcells after failure using second cpi...")
-                  second_cpi.delete_stemcell(orig_stemcell_id)
-                rescue
-                end
-              end
-            end
-          end
+        it 'raises an error when no stemcell exists for the given stemcell id' do
+          expect {
+            @cpi.replicate_stemcell(destination_cluster, @cpi.datacenter.all_datastores.values.first, 'abc123')
+          }.to raise_error('Could not find VM for stemcell \'abc123\'')
         end
 
-        context 'when a suitable replica already exists in a subfolder' do
-          it 'should not replicate the stemcell', focus: true do
-            begin
-              orig_stemcell_id = nil
-              Dir.mktmpdir do |temp_dir|
-                stemcell_image = LifecycleHelpers.stemcell_image(@stemcell_path, temp_dir)
-                orig_stemcell_id = @cpi.create_stemcell(stemcell_image, nil)
-              end
-
-              _, datastore_containing_volume_in_stemcell_unstarted_vm__property =
-                  @cpi.vm_and_datastore_for(orig_stemcell_id)
-              datastore = @cpi.datacenter.all_datastores[datastore_containing_volume_in_stemcell_unstarted_vm__property.first.name]
-
-              puts "DATASTORE ALL IS #{@cpi.datacenter.all_datastores}"
-              puts "DATASTORE IS #{datastore.to_s}"
-
-              @cpi.replicate_stemcell(@cpi.datacenter.clusters[@cluster],
-                datastore, orig_stemcell_id)
-
-              expect(@cpi.client.find_all_stemcell_replicas_in_datastore(@cpi.datacenter,
-                orig_stemcell_id, datastore.name).size).to eq(1)
-              expect(second_cpi.client.find_all_stemcell_replicas_in_datastore(second_cpi.datacenter,
-                orig_stemcell_id, datastore.name).size).to eq(1)
-            ensure
-              @cpi.delete_stemcell(orig_stemcell_id)
-              begin
-                @logger.info("Deleting any leftover stemcells after failure using second cpi...")
-                second_cpi.delete_stemcell(orig_stemcell_id)
-              rescue
-              end
-            end
-          end
-          it 'should replicate the stemcell if no replicated_stemcell_vm' do
-            begin
-              orig_stemcell_id = nil
-              Dir.mktmpdir do |temp_dir|
-                stemcell_image = LifecycleHelpers.stemcell_image(@stemcell_path, temp_dir)
-                orig_stemcell_id = @cpi.create_stemcell(stemcell_image, nil)
-              end
-
-              second_datastore = @cpi.datacenter.all_datastores[@second_datastore_within_cluster]
-
-              replicated_stemcell = @cpi.replicate_stemcell(@cpi.datacenter.clusters[@cluster],
-                second_datastore, orig_stemcell_id)
-
-              replicated_stemcell_vm_name = "#{orig_stemcell_id} %2f #{second_datastore.mob.__mo_id__}"
-              replicated_stemcell_vm = second_cpi.client.find_vm_by_name(second_cpi.datacenter, replicated_stemcell_vm_name)
-              second_cpi.client.delete_vm(replicated_stemcell_vm)
-
-              second_cpi.replicate_stemcell(second_cpi.datacenter.clusters[@cluster],
-                second_datastore, orig_stemcell_id)
-
-              expect(@cpi.client.find_all_stemcell_replicas_in_datastore(@cpi.datacenter, orig_stemcell_id, second_datastore.name).size).to eq(1)
-              expect(second_cpi.client.find_all_stemcell_replicas_in_datastore(second_cpi.datacenter, orig_stemcell_id, second_datastore.name).size).to eq(1)
-            ensure
-              @cpi.delete_stemcell(orig_stemcell_id)
-              begin
-                @logger.info("Deleting any leftover stemcells after failure using second cpi...")
-                second_cpi.delete_stemcell(orig_stemcell_id)
-              rescue
-              end
-            end
-          end
-        end
-
-        it 'should clean up any replicated stemcells regardless of folder' do
-          begin
-            orig_stemcell_id = nil
+        context 'when a stemcell exists for the given stemcell id' do
+          before do
+            @orig_stemcell_id = nil
             Dir.mktmpdir do |temp_dir|
               stemcell_image = LifecycleHelpers.stemcell_image(@stemcell_path, temp_dir)
-              orig_stemcell_id = @cpi.create_stemcell(stemcell_image, nil)
+              @orig_stemcell_id = @cpi.create_stemcell(stemcell_image, nil)
+              @original_stemcell_vm = @cpi.client.find_vm_by_name(@cpi.datacenter, @orig_stemcell_id)
             end
+          end
 
-            second_datastore = second_cpi.datacenter.all_datastores[@second_datastore_within_cluster]
+          after do
+            @cpi.delete_stemcell(@orig_stemcell_id)
+          end
 
-            replicated_stemcell = second_cpi.replicate_stemcell(second_cpi.datacenter.clusters[@cluster], second_datastore, orig_stemcell_id)
+          it 'creates and returns the new stemcell unless it already exists' do
+            # NOTE: using a singe rspec example to tests multiple contexts since
+            # creating the original stemcell to run the test against is very expensive
+            # and all of the contexts we are testing can be run on same setup state
 
-            @cpi.delete_stemcell(orig_stemcell_id)
+            original_datastore = @cpi.datacenter.all_datastores[@cpi.vm_datastore_name(@original_stemcell_vm)]
+            other_datastore = @cpi.datacenter.all_datastores[@second_datastore_within_cluster]
 
-            expect(second_cpi.client.find_all_stemcell_replicas(second_cpi.datacenter, orig_stemcell_id)).to be_empty
-          ensure
-            begin
-              @logger.info("Deleting any leftover stemcells after failure using default cpi...")
-              @cpi.delete_stemcell(orig_stemcell_id)
-            rescue
-            end
-            begin
-              @logger.info("Deleting any leftover stemcells after failure using second cpi...")
-              second_cpi.delete_stemcell(orig_stemcell_id)
-            rescue
+            #Test:        replicate into original datastore
+            #Expectation: returns original stemcell vm and does not create a replica
+            expect {
+              same_stemcell_vm = @cpi.replicate_stemcell(destination_cluster, original_datastore, @orig_stemcell_id)
+              expect(same_stemcell_vm.__mo_id__).to eq(@original_stemcell_vm.__mo_id__)
+            }.to_not change {
+              @cpi.client.find_all_stemcell_replicas_in_datastore(
+                @cpi.datacenter,
+                @orig_stemcell_id,
+                original_datastore.name
+              ).size
+            }
+
+            #Test:        replicate into another datastore
+            #Expectation: creates replica stemcell vm and returns it
+            replicated_stemcell_vm = nil
+            expect {
+              replicated_stemcell_vm = @cpi.replicate_stemcell(destination_cluster, other_datastore, @orig_stemcell_id)
+              expect(replicated_stemcell_vm.__mo_id__).to_not eq(@original_stemcell_vm.__mo_id__)
+            }.to change {
+              @cpi.client.find_all_stemcell_replicas_in_datastore(
+                @cpi.datacenter,
+                @orig_stemcell_id,
+                other_datastore.name
+              ).size
+            }.by(1)
+
+            #Test:        re-replicate into another datastore
+            #Expectation: returns already created replica vm (and does not create new one)
+            expect {
+              same_replicated_stemcell_vm = @cpi.replicate_stemcell(destination_cluster, other_datastore, @orig_stemcell_id)
+              expect(same_replicated_stemcell_vm.__mo_id__).to eq(replicated_stemcell_vm.__mo_id__)
+            }.to_not change {
+              @cpi.client.find_all_stemcell_replicas_in_datastore(
+                @cpi.datacenter,
+                @orig_stemcell_id,
+                other_datastore.name
+              ).size
+            }
+
+            #Test:        re-replicate into another datastore using second_cpi
+            #Expectation: returns already created replica vm (and does not create new one)
+            expect {
+              same_replicated_stemcell_vm = second_cpi.replicate_stemcell(destination_cluster, other_datastore, @orig_stemcell_id)
+              expect(same_replicated_stemcell_vm.__mo_id__).to eq(replicated_stemcell_vm.__mo_id__)
+            }.to_not change {
+              second_cpi.client.find_all_stemcell_replicas_in_datastore(
+                second_cpi.datacenter,
+                @orig_stemcell_id,
+                other_datastore.name
+              ).size
+            }
+
+            #Test:        deleting stemcell
+            #Expectation: deletes all created stemcell vms (including replicas)
+            expect {
+              @cpi.delete_stemcell(@orig_stemcell_id)
+            }.to change {
+              @cpi.client.find_all_stemcell_replicas(@cpi.datacenter, @orig_stemcell_id).size
+            }.by(-1 * [@original_stemcell_vm, replicated_stemcell_vm].size)
+
+            #Test:        re-deleting stemcell using second cpi
+            #Expectation: does not delete anything since they should already be cleaned up
+            expect {
+              second_cpi.delete_stemcell(@orig_stemcell_id)
+            }.to_not change {
+              second_cpi.client.find_all_stemcell_replicas(@cpi.datacenter, @orig_stemcell_id).size
+            }
+          end
+
+          context 'when another tread is in the process of creating the replicated stemcell' do
+            it 'waits for other thread to finish creating stemcell vm and returns it new' do
+              destination_datastore = @cpi.datacenter.all_datastores[@second_datastore_within_cluster]
+              
+              t1_replicated_stemcell_vm = nil
+              t1 = Thread.new {
+                cpi = described_class.new(cpi_options)
+                t1_replicated_stemcell_vm = cpi.replicate_stemcell(destination_cluster, destination_datastore, @orig_stemcell_id)
+              }
+
+              t2_replicated_stemcell_vm = nil
+              t2 = Thread.new {
+                cpi = described_class.new(cpi_options)
+                t2_replicated_stemcell_vm = cpi.replicate_stemcell(destination_cluster, destination_datastore, @orig_stemcell_id)
+              }
+
+              t3_replicated_stemcell_vm = nil
+              t3 = Thread.new {
+                cpi = described_class.new(cpi_options)
+                t3_replicated_stemcell_vm = cpi.replicate_stemcell(destination_cluster, destination_datastore, @orig_stemcell_id)
+              }
+
+              t1.join
+              expect(t1_replicated_stemcell_vm).to_not be_nil
+              t2.join
+              expect(t2_replicated_stemcell_vm.__mo_id__).to eq(t1_replicated_stemcell_vm.__mo_id__)
+              t3.join
+              expect(t3_replicated_stemcell_vm.__mo_id__).to eq(t1_replicated_stemcell_vm.__mo_id__)
+
+              expect(
+                @cpi.client.find_all_stemcell_replicas_in_datastore(
+                  @cpi.datacenter,
+                  @orig_stemcell_id,
+                  destination_datastore.name
+                ).size
+              ).to eq(1)
             end
           end
         end
@@ -782,71 +797,6 @@ describe VSphereCloud::Cloud, external_cpi: false do
         end
       end
     end
-
-    context 'when stemcell is replicated multiple times' do
-
-      it 'handles each thread properly' do
-        datastore_name = @second_datastore_within_cluster
-        datastore_mob = @cpi.client.cloud_searcher.get_managed_object(VimSdk::Vim::Datastore, name: datastore_name)
-        datastore = VSphereCloud::Resources::Datastore.new(datastore_name, datastore_mob, 0, 0)
-        cluster_config = VSphereCloud::ClusterConfig.new(@cluster, {resource_pool: @resource_pool_name})
-        @logger = Logger.new(StringIO.new(""))
-        datacenter = VSphereCloud::Resources::Datacenter.new({
-          client: @cpi.client,
-          vm_folder: @vm_folder,
-          template_folder: @template_folder,
-          use_sub_folder: true,
-          name: @datacenter_name,
-          disk_path: @disk_path,
-          ephemeral_pattern: Regexp.new(@datastore_pattern),
-          persistent_pattern: Regexp.new(@persistent_datastore_pattern),
-          clusters: {@cluster => cluster_config},
-          logger: @logger,
-          mem_overcommit: 1.0
-        })
-        vm_cluster = VSphereCloud::Resources::ClusterProvider.new(datacenter, @cpi.client, @logger).find(@cluster, cluster_config)
-        first_stemcell_vm = nil
-        second_stemcell_vm = nil
-        third_stemcell_vm = nil
-        fourth_stemcell_vm = nil
-
-        # creating four separate threads and cpi instances to validate concurrent stemcell replication
-        t1 = Thread.new {
-          cpi = described_class.new(cpi_options)
-          first_stemcell_vm = cpi.replicate_stemcell(vm_cluster, datastore, @stemcell_id)
-        }
-        t2 = Thread.new {
-          cpi = described_class.new(cpi_options)
-          second_stemcell_vm = cpi.replicate_stemcell(vm_cluster, datastore, @stemcell_id)
-        }
-
-        t3 = Thread.new {
-          cpi = described_class.new(cpi_options)
-          third_stemcell_vm = cpi.replicate_stemcell(vm_cluster, datastore, @stemcell_id)
-        }
-
-        t4 = Thread.new {
-          cpi = described_class.new(cpi_options)
-          fourth_stemcell_vm = cpi.replicate_stemcell(vm_cluster, datastore, @stemcell_id)
-        }
-
-        t1.join
-        expect(first_stemcell_vm).to_not be_nil
-        t2.join
-        expect(second_stemcell_vm).to_not be_nil
-        t3.join
-        expect(third_stemcell_vm).to_not be_nil
-        t4.join
-        expect(fourth_stemcell_vm).to_not be_nil
-
-        local_stemcell_name = "#{@stemcell_id} %2f #{datastore.mob.__mo_id__}"
-        found_vm = @cpi.client.find_by_inventory_path([datacenter.name, 'vm', datacenter.template_folder.path_components, local_stemcell_name])
-        expect(first_stemcell_vm.__mo_id__).to eq(found_vm.__mo_id__)
-        expect(second_stemcell_vm.__mo_id__).to eq(found_vm.__mo_id__)
-        expect(third_stemcell_vm.__mo_id__).to eq(found_vm.__mo_id__)
-        expect(fourth_stemcell_vm.__mo_id__).to eq(found_vm.__mo_id__)
-      end
-    end
   end
 
   def vm_lifecycle(cpi, disk_locality, resource_pool, network_spec, stemcell_id = @stemcell_id)
@@ -896,5 +846,4 @@ describe VSphereCloud::Cloud, external_cpi: false do
     cpi.delete_vm(vm_id) if vm_id
     cpi.delete_disk(disk_id) if disk_id
   end
-
 end

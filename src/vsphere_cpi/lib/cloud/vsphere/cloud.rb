@@ -397,47 +397,64 @@ module VSphereCloud
       end
     end
 
-    def vm_and_datastore_for(stemcell_id)
-      stemcell_unstarted_vm = client.find_vm_by_name(@datacenter, stemcell_id)
-      raise "Could not find VM for stemcell '#{stemcell_id}'" if stemcell_unstarted_vm.nil?
-      datastore_containing_volume_in_stemcell_unstarted_vm__property = @cloud_searcher.get_property(stemcell_unstarted_vm,
-        Vim::VirtualMachine, 'datastore', ensure_all: true)
-      return stemcell_unstarted_vm, datastore_containing_volume_in_stemcell_unstarted_vm__property
-    end
-
     def replicate_stemcell(cluster, to_datastore, stemcell_id)
+      original_stemcell_vm = self.client.find_vm_by_name(@datacenter, stemcell_id)
+      raise "Could not find VM for stemcell '#{stemcell_id}'" if original_stemcell_vm.nil?
 
-      stemcell_vm, datastore_containing_volume_in_stemcell_unstarted_vm__property =
-        vm_and_datastore_for(stemcell_id)
+      return original_stemcell_vm if vm_datastore_name(original_stemcell_vm) == to_datastore.name
 
-      from_datastore_name =
-        datastore_containing_volume_in_stemcell_unstarted_vm__property.first.name
-      to_datastore_name = to_datastore.name
+      @logger.info("Stemcell lives on a different datastore, looking for a local copy of: #{stemcell_id}.")
 
-      puts "NAME OF FROM DASTASTOPRE #{from_datastore_name}"
-      puts "NAME OF TO DASTASTOPRE #{to_datastore_name}"
+      name_of_replicated_stemcell = "#{stemcell_id} %2f #{to_datastore.mob.__mo_id__}"
 
-      if from_datastore_name != to_datastore_name
-        @logger.info("Stemcell lives on a different datastore, looking for a local copy of: #{stemcell_id}.")
-        local_stemcell_name = "#{stemcell_id} %2f #{to_datastore.mob.__mo_id__}"
+      replicated_stemcell_vm = client.find_vm_by_name(@datacenter, name_of_replicated_stemcell)
+      return replicated_stemcell_vm if replicated_stemcell_vm
 
-        replicated_stemcell_vm = client.find_vm_by_name(@datacenter, local_stemcell_name)
-        if replicated_stemcell_vm.nil?
-          @logger.info("Cluster doesn't have stemcell #{stemcell_id}, replicating")
-          replicated_stemcell_vm = replicate_stemcell_helper(stemcell_id,
-            stemcell_vm, local_stemcell_name, cluster, to_datastore, replicated_stemcell_vm)
-        else
-          @logger.info("Found local stemcell replica: #{replicated_stemcell_vm}")
-        end
-        result = replicated_stemcell_vm
-      else
-        @logger.info("Stemcell was already local: #{stemcell_vm}")
-        result = stemcell_vm
+      @logger.info("Cluster doesn't have stemcell #{stemcell_id}, replicating")
+      @logger.info("Replicating #{stemcell_id} (#{original_stemcell_vm}) to #{name_of_replicated_stemcell}")
+      begin
+        replicated_stemcell_vm = client.wait_for_task(clone_vm(
+          original_stemcell_vm,
+          name_of_replicated_stemcell,
+          cluster.datacenter.template_folder.mob,
+          cluster.resource_pool.mob,
+          datastore: to_datastore.mob
+        ))
+        @logger.info("Replicated #{stemcell_id} (#{original_stemcell_vm}) to #{name_of_replicated_stemcell} (#{replicated_stemcell_vm})")
+
+        @logger.info("Creating initial snapshot for linked clones on #{replicated_stemcell_vm}")
+        client.wait_for_task(replicated_stemcell_vm.create_snapshot('initial', nil, false, false))
+        @logger.info("Created initial snapshot for linked clones on #{replicated_stemcell_vm}")
+      rescue VSphereCloud::Client::DuplicateName
+        @logger.info("Stemcell is being replicated by another thread, waiting for #{name_of_replicated_stemcell} to be ready")
+        replicated_stemcell_vm = client.find_by_inventory_path([
+          cluster.datacenter.name,
+          'vm',
+          cluster.datacenter.template_folder.path_components,
+          name_of_replicated_stemcell
+        ])
+        # get_properties will ensure the existence of the snapshot by retrying.
+        # This forces us to wait for a valid snapshot before returning with the
+        # replicated stemcell vm, if a snapshot is not found then an exception is thrown.
+        client.cloud_searcher.get_properties(replicated_stemcell_vm,
+          VimSdk::Vim::VirtualMachine,
+          ['snapshot'], ensure_all: true)
+        @logger.info("Stemcell #{name_of_replicated_stemcell} has been replicated.")
       end
-      @logger.info("Using stemcell VM: #{result}")
 
-      result
+      replicated_stemcell_vm
     end
+
+
+    def vm_datastore_name(vm)
+      @cloud_searcher.get_property(
+        vm,
+        Vim::VirtualMachine,
+        'datastore',
+        ensure_all: true
+      ).first.name
+    end
+
 
     def generate_network_env(devices, networks, dvs_index)
       nics = {}
@@ -717,42 +734,8 @@ module VSphereCloud
       placer.nil? ? @resources : placer
     end
 
-  def replicate_stemcell_helper(stemcell, stemcell_vm, local_stemcell_name, cluster, datastore, replicated_stemcell_vm)
-    @logger.info("Replicating #{stemcell} (#{stemcell_vm}) to #{local_stemcell_name}")
-    task = clone_vm(stemcell_vm,
-                    local_stemcell_name,
-                    cluster.datacenter.template_folder.mob,
-                    cluster.resource_pool.mob,
-                    datastore: datastore.mob)
-    begin
-      replicated_stemcell_vm = client.wait_for_task(task)
-      @logger.info("Replicated #{stemcell} (#{stemcell_vm}) to #{local_stemcell_name} (#{replicated_stemcell_vm})")
-    rescue VSphereCloud::Client::DuplicateName => ex
-      @logger.info("Stemcell is being replicated by another thread, waiting for #{local_stemcell_name} to be ready")
-      local_stemcell_path =
-        [cluster.datacenter.name, 'vm', cluster.datacenter.template_folder.path_components, local_stemcell_name]
-      replicated_stemcell_vm = client.find_by_inventory_path(local_stemcell_path)
-      # get_properties will ensure the existence of the snapshot by retrying.
-      # This forces us to wait for a valid snapshot before returning with the
-      # replicated stemcell vm, if a snapshot is not found then an exception is thrown.
-      client.cloud_searcher.get_properties(replicated_stemcell_vm,
-                                           VimSdk::Vim::VirtualMachine,
-                                           ['snapshot'], ensure_all: true)
-      @logger.info("Stemcell #{local_stemcell_name} has been replicated.")
 
-      return replicated_stemcell_vm
-    end
-    # Despite the naming, this has nothing to do with the Cloud notion of a disk snapshot
-    # (which comes from AWS). This is a vm snapshot.
-    @logger.info("Creating initial snapshot for linked clones on #{replicated_stemcell_vm}")
-    task = replicated_stemcell_vm.create_snapshot('initial', nil, false, false)
-    client.wait_for_task(task)
-    @logger.info("Created initial snapshot for linked clones on #{replicated_stemcell_vm}")
-
-    replicated_stemcell_vm
-  end
-
-  attr_reader :config
+    attr_reader :config
 
   end
 end
