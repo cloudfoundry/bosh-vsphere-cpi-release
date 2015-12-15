@@ -3,6 +3,8 @@ require 'tempfile'
 require 'yaml'
 
 describe VSphereCloud::Cloud, external_cpi: false do
+  include LifecycleProperties
+
   before(:all) do
     config = VSphereSpecConfig.new
     config.logger = Logger.new(STDOUT)
@@ -12,143 +14,8 @@ describe VSphereCloud::Cloud, external_cpi: false do
 
     @logger = Logger.new(STDOUT)
 
-    @host = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_HOST')
-    @user = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_USER')
-    @password = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_PASSWORD')
-    @vlan = LifecycleHelpers.fetch_property('BOSH_VSPHERE_VLAN')
-    @stemcell_path = LifecycleHelpers.fetch_property('BOSH_VSPHERE_STEMCELL')
-
-    @second_datastore_within_cluster = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_SECOND_DATASTORE')
-    @second_resource_pool_within_cluster = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_SECOND_RESOURCE_POOL')
-
-    @datacenter_name = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_DATACENTER')
-    @vm_folder = ENV.fetch('BOSH_VSPHERE_CPI_VM_FOLDER', '')
-    @template_folder = ENV.fetch('BOSH_VSPHERE_CPI_TEMPLATE_FOLDER', '')
-    @disk_path = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_DISK_PATH')
-
-    @datastore_pattern = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_DATASTORE_PATTERN')
-    @local_datastore_pattern = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_LOCAL_DATASTORE_PATTERN')
-    @persistent_datastore_pattern = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_PERSISTENT_DATASTORE_PATTERN')
-    @cluster = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_CLUSTER')
-    @resource_pool_name = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_RESOURCE_POOL')
-
-    @second_cluster = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_SECOND_CLUSTER')
-    @second_cluster_resource_pool_name = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_SECOND_CLUSTER_RESOURCE_POOL')
-    @second_cluster_datastore = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_SECOND_CLUSTER_DATASTORE')
-
-    nested_datacenter_name = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_NESTED_DATACENTER')
-    nested_datacenter_datastore_pattern = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_NESTED_DATACENTER_DATASTORE_PATTERN')
-    nested_datacenter_cluster_name = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_NESTED_DATACENTER_CLUSTER')
-    nested_datacenter_resource_pool_name = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_NESTED_DATACENTER_RESOURCE_POOL')
-    @nested_datacenter_vlan = LifecycleHelpers.fetch_property('BOSH_VSPHERE_CPI_NESTED_DATACENTER_VLAN')
-
-    @vsphere_version = LifecycleHelpers.fetch_optional_property('BOSH_VSPHERE_VERSION')
-
-    @nested_datacenter_cpi_options = cpi_options(
-      datacenter_name: nested_datacenter_name,
-      datastore_pattern: nested_datacenter_datastore_pattern,
-      persistent_datastore_pattern: nested_datacenter_datastore_pattern,
-      clusters: [{nested_datacenter_cluster_name => {'resource_pool' => nested_datacenter_resource_pool_name}}]
-    )
-
-    @local_disk_cpi_options = cpi_options(
-      datastore_pattern: @local_datastore_pattern,
-      persistent_datastore_pattern: @persistent_datastore_pattern,
-      clusters: [{@cluster => {'resource_pool' => @resource_pool_name}}]
-    )
-
-    @second_resource_pool_cpi_options = cpi_options(
-      clusters: [{@cluster => {'resource_pool' => @second_resource_pool_within_cluster}}]
-    )
-
-    LifecycleHelpers.verify_vsphere_version(cpi_options, @vsphere_version)
-    LifecycleHelpers.verify_datacenter_exists(cpi_options, 'BOSH_VSPHERE_CPI_DATACENTER')
-    LifecycleHelpers.verify_vlan(cpi_options, @vlan, 'BOSH_VSPHERE_VLAN')
-    LifecycleHelpers.verify_user_has_limited_permissions(cpi_options)
-
-    datacenter = described_class.new(cpi_options).datacenter
-    LifecycleHelpers.verify_cluster(datacenter, @cluster, 'BOSH_VSPHERE_CPI_CLUSTER')
-    LifecycleHelpers.verify_resource_pool(datacenter.find_cluster(@cluster), @resource_pool_name, 'BOSH_VSPHERE_CPI_RESOURCE_POOL')
-    LifecycleHelpers.verify_cluster(datacenter, @second_cluster, 'BOSH_VSPHERE_CPI_SECOND_CLUSTER')
-    LifecycleHelpers.verify_resource_pool(datacenter.find_cluster(@second_cluster), @second_cluster_resource_pool_name, 'BOSH_VSPHERE_CPI_SECOND_CLUSTER_RESOURCE_POOL')
-
-    second_resource_pool_datacenter = described_class.new(@second_resource_pool_cpi_options).datacenter
-    LifecycleHelpers.verify_resource_pool(second_resource_pool_datacenter.find_cluster(@cluster), @second_resource_pool_within_cluster, 'BOSH_VSPHERE_CPI_SECOND_RESOURCE_POOL')
-
-    LifecycleHelpers.verify_datastore_within_cluster(
-      described_class.new(@local_disk_cpi_options).datacenter,
-      'BOSH_VSPHERE_CPI_LOCAL_DATASTORE_PATTERN',
-      @local_datastore_pattern,
-      @cluster
-    )
-
-    LifecycleHelpers.verify_local_disk_infrastructure(@local_disk_cpi_options, 'BOSH_VSPHERE_CPI_LOCAL_DATASTORE_PATTERN')
-    LifecycleHelpers.verify_datacenter_exists(@nested_datacenter_cpi_options, 'BOSH_VSPHERE_CPI_NESTED_DATACENTER')
-    LifecycleHelpers.verify_datacenter_is_nested(@nested_datacenter_cpi_options, nested_datacenter_name, 'BOSH_VSPHERE_CPI_NESTED_DATACENTER')
-    nested_datacenter = described_class.new(@nested_datacenter_cpi_options).datacenter
-    LifecycleHelpers.verify_cluster(nested_datacenter, nested_datacenter_cluster_name, 'BOSH_VSPHERE_CPI_NESTED_DATACENTER_CLUSTER')
-    LifecycleHelpers.verify_datastore_within_cluster(
-      nested_datacenter,
-      'BOSH_VSPHERE_CPI_NESTED_DATACENTER_DATASTORE_PATTERN',
-      nested_datacenter_datastore_pattern,
-      nested_datacenter_cluster_name
-    )
-
-    LifecycleHelpers.verify_resource_pool(nested_datacenter.find_cluster(nested_datacenter_cluster_name), nested_datacenter_resource_pool_name, 'BOSH_VSPHERE_CPI_NESTED_DATACENTER_DATASTORE_PATTERN')
-    LifecycleHelpers.verify_vlan(@nested_datacenter_cpi_options, @nested_datacenter_vlan, 'BOSH_VSPHERE_CPI_NESTED_DATACENTER_VLAN')
-
-    LifecycleHelpers.verify_datastore_within_cluster(
-      datacenter,
-      'BOSH_VSPHERE_CPI_DATASTORE_PATTERN',
-      @datastore_pattern,
-      @cluster
-    )
-
-    LifecycleHelpers.verify_datastore_within_cluster(
-      datacenter,
-      'BOSH_VSPHERE_CPI_PERSISTENT_DATASTORE_PATTERN',
-      @persistent_datastore_pattern,
-      @cluster
-    )
-
-    LifecycleHelpers.verify_datastore_within_cluster(
-      second_datastore_cpi.datacenter,
-      'BOSH_VSPHERE_CPI_SECOND_DATASTORE',
-      @second_datastore_within_cluster,
-      @cluster
-    )
-
-    cpi_instance = described_class.new(cpi_options)
-    LifecycleHelpers.verify_non_overlapping_datastores(
-      cpi_instance,
-      @datastore_pattern,
-      'BOSH_VSPHERE_CPI_DATASTORE_PATTERN',
-      cpi_instance,
-      @persistent_datastore_pattern,
-      'BOSH_VSPHERE_CPI_PERSISTENT_DATASTORE_PATTERN'
-    )
-
-    LifecycleHelpers.verify_non_overlapping_datastores(
-      described_class.new(cpi_options),
-      @datastore_pattern,
-      'BOSH_VSPHERE_CPI_DATASTORE_PATTERN',
-      second_datastore_cpi,
-      @second_datastore_within_cluster,
-      'BOSH_VSPHERE_CPI_SECOND_DATASTORE'
-    )
-
-    LifecycleHelpers.verify_datastore_within_cluster(
-      datacenter,
-      'BOSH_VSPHERE_CPI_SECOND_CLUSTER_DATASTORE',
-      @second_cluster_datastore,
-      @second_cluster
-    )
-
-    LifecycleHelpers.verify_datastore_pattern_available_to_all_hosts(
-      cpi_options,
-      'BOSH_VSPHERE_CPI_PERSISTENT_DATASTORE_PATTERN',
-      @persistent_datastore_pattern,
-    )
+    fetch_properties(LifecycleHelpers)
+    verify_properties(LifecycleHelpers)
 
     @cpi = described_class.new(cpi_options)
 
@@ -156,38 +23,6 @@ describe VSphereCloud::Cloud, external_cpi: false do
       stemcell_image = LifecycleHelpers.stemcell_image(@stemcell_path, temp_dir)
       @stemcell_id = @cpi.create_stemcell(stemcell_image, nil)
     end
-  end
-
-  def cpi_options(options = {})
-    datastore_pattern = options.fetch(:datastore_pattern, @datastore_pattern)
-    persistent_datastore_pattern = options.fetch(:persistent_datastore_pattern, @persistent_datastore_pattern)
-    default_clusters = [
-      { @cluster => {'resource_pool' => @resource_pool_name} },
-      { @second_cluster => {'resource_pool' => @second_cluster_resource_pool_name } },
-    ]
-    clusters = options.fetch(:clusters, default_clusters)
-    datacenter_name = options.fetch(:datacenter_name, @datacenter_name)
-
-    {
-      'agent' => {
-        'ntp' => ['10.80.0.44'],
-      },
-      'vcenters' => [{
-          'host' => @host,
-          'user' => @user,
-          'password' => @password,
-          'datacenters' => [{
-              'name' => datacenter_name,
-              'vm_folder' => @vm_folder,
-              'template_folder' => @template_folder,
-              'disk_path' => @disk_path,
-              'datastore_pattern' => datastore_pattern,
-              'persistent_datastore_pattern' => persistent_datastore_pattern,
-              'allow_mixed_datastores' => true,
-              'clusters' => clusters,
-            }]
-        }]
-    }
   end
 
   class VMWareToolsNotFound < StandardError; end
@@ -223,14 +58,6 @@ describe VSphereCloud::Cloud, external_cpi: false do
       'disk' => 2048,
       'cpu' => 1,
     }
-  end
-
-  def second_datastore_cpi
-    options = cpi_options(
-      datastore_pattern: @second_datastore_within_cluster,
-      persistent_datastore_pattern: @second_datastore_within_cluster
-    )
-    described_class.new(options)
   end
 
   describe 'avoiding the creation of vms with duplicate IP addresses' do
@@ -393,148 +220,6 @@ describe VSphereCloud::Cloud, external_cpi: false do
 
       it 'should exercise the vm lifecycle' do
         vm_lifecycle(second_cpi, [], resource_pool, network_spec)
-      end
-
-      context 'when replicating stemcells across datastores', focus: true do
-        let(:destination_cluster) { @cpi.datacenter.clusters[@cluster] }
-
-        it 'raises an error when no stemcell exists for the given stemcell id' do
-          expect {
-            @cpi.replicate_stemcell(destination_cluster, @cpi.datacenter.all_datastores.values.first, 'abc123')
-          }.to raise_error('Could not find VM for stemcell \'abc123\'')
-        end
-
-        context 'when a stemcell exists for the given stemcell id' do
-          before do
-            @orig_stemcell_id = nil
-            Dir.mktmpdir do |temp_dir|
-              stemcell_image = LifecycleHelpers.stemcell_image(@stemcell_path, temp_dir)
-              @orig_stemcell_id = @cpi.create_stemcell(stemcell_image, nil)
-              @original_stemcell_vm = @cpi.client.find_vm_by_name(@cpi.datacenter, @orig_stemcell_id)
-            end
-          end
-
-          after do
-            @cpi.delete_stemcell(@orig_stemcell_id)
-          end
-
-          it 'creates and returns the new stemcell unless it already exists' do
-            # NOTE: using a singe rspec example to tests multiple contexts since
-            # creating the original stemcell to run the test against is very expensive
-            # and all of the contexts we are testing can be run on same setup state
-
-            original_datastore = @cpi.datacenter.all_datastores[@cpi.vm_datastore_name(@original_stemcell_vm)]
-            other_datastore = @cpi.datacenter.all_datastores[@second_datastore_within_cluster]
-
-            #Test:        replicate into original datastore
-            #Expectation: returns original stemcell vm and does not create a replica
-            expect {
-              same_stemcell_vm = @cpi.replicate_stemcell(destination_cluster, original_datastore, @orig_stemcell_id)
-              expect(same_stemcell_vm.__mo_id__).to eq(@original_stemcell_vm.__mo_id__)
-            }.to_not change {
-              @cpi.client.find_all_stemcell_replicas_in_datastore(
-                @cpi.datacenter,
-                @orig_stemcell_id,
-                original_datastore.name
-              ).size
-            }
-
-            #Test:        replicate into another datastore
-            #Expectation: creates replica stemcell vm and returns it
-            replicated_stemcell_vm = nil
-            expect {
-              replicated_stemcell_vm = @cpi.replicate_stemcell(destination_cluster, other_datastore, @orig_stemcell_id)
-              expect(replicated_stemcell_vm.__mo_id__).to_not eq(@original_stemcell_vm.__mo_id__)
-            }.to change {
-              @cpi.client.find_all_stemcell_replicas_in_datastore(
-                @cpi.datacenter,
-                @orig_stemcell_id,
-                other_datastore.name
-              ).size
-            }.by(1)
-
-            #Test:        re-replicate into another datastore
-            #Expectation: returns already created replica vm (and does not create new one)
-            expect {
-              same_replicated_stemcell_vm = @cpi.replicate_stemcell(destination_cluster, other_datastore, @orig_stemcell_id)
-              expect(same_replicated_stemcell_vm.__mo_id__).to eq(replicated_stemcell_vm.__mo_id__)
-            }.to_not change {
-              @cpi.client.find_all_stemcell_replicas_in_datastore(
-                @cpi.datacenter,
-                @orig_stemcell_id,
-                other_datastore.name
-              ).size
-            }
-
-            #Test:        re-replicate into another datastore using second_cpi
-            #Expectation: returns already created replica vm (and does not create new one)
-            expect {
-              same_replicated_stemcell_vm = second_cpi.replicate_stemcell(destination_cluster, other_datastore, @orig_stemcell_id)
-              expect(same_replicated_stemcell_vm.__mo_id__).to eq(replicated_stemcell_vm.__mo_id__)
-            }.to_not change {
-              second_cpi.client.find_all_stemcell_replicas_in_datastore(
-                second_cpi.datacenter,
-                @orig_stemcell_id,
-                other_datastore.name
-              ).size
-            }
-
-            #Test:        deleting stemcell
-            #Expectation: deletes all created stemcell vms (including replicas)
-            expect {
-              @cpi.delete_stemcell(@orig_stemcell_id)
-            }.to change {
-              @cpi.client.find_all_stemcell_replicas(@cpi.datacenter, @orig_stemcell_id).size
-            }.by(-1 * [@original_stemcell_vm, replicated_stemcell_vm].size)
-
-            #Test:        re-deleting stemcell using second cpi
-            #Expectation: does not delete anything since they should already be cleaned up
-            expect {
-              second_cpi.delete_stemcell(@orig_stemcell_id)
-            }.to_not change {
-              second_cpi.client.find_all_stemcell_replicas(@cpi.datacenter, @orig_stemcell_id).size
-            }
-          end
-
-          context 'when another tread is in the process of creating the replicated stemcell' do
-            it 'waits for other thread to finish creating stemcell vm and returns it new' do
-              destination_datastore = @cpi.datacenter.all_datastores[@second_datastore_within_cluster]
-
-              t1_replicated_stemcell_vm = nil
-              t1 = Thread.new {
-                cpi = described_class.new(cpi_options)
-                t1_replicated_stemcell_vm = cpi.replicate_stemcell(destination_cluster, destination_datastore, @orig_stemcell_id)
-              }
-
-              t2_replicated_stemcell_vm = nil
-              t2 = Thread.new {
-                cpi = described_class.new(cpi_options)
-                t2_replicated_stemcell_vm = cpi.replicate_stemcell(destination_cluster, destination_datastore, @orig_stemcell_id)
-              }
-
-              t3_replicated_stemcell_vm = nil
-              t3 = Thread.new {
-                cpi = described_class.new(cpi_options)
-                t3_replicated_stemcell_vm = cpi.replicate_stemcell(destination_cluster, destination_datastore, @orig_stemcell_id)
-              }
-
-              t1.join
-              expect(t1_replicated_stemcell_vm).to_not be_nil
-              t2.join
-              expect(t2_replicated_stemcell_vm.__mo_id__).to eq(t1_replicated_stemcell_vm.__mo_id__)
-              t3.join
-              expect(t3_replicated_stemcell_vm.__mo_id__).to eq(t1_replicated_stemcell_vm.__mo_id__)
-
-              expect(
-                @cpi.client.find_all_stemcell_replicas_in_datastore(
-                  @cpi.datacenter,
-                  @orig_stemcell_id,
-                  destination_datastore.name
-                ).size
-              ).to eq(1)
-            end
-          end
-        end
       end
     end
 

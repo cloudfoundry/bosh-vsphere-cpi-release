@@ -127,8 +127,8 @@ class LifecycleHelpers
       value
     end
 
-    def fetch_optional_property(property)
-      ENV[property]
+    def fetch_optional_property(property, default = nil)
+      ENV[property] || default
     end
 
     def verify_vsphere_version(cpi_options, expected_version)
