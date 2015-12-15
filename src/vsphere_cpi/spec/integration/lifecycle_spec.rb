@@ -499,7 +499,7 @@ describe VSphereCloud::Cloud, external_cpi: false do
           context 'when another tread is in the process of creating the replicated stemcell' do
             it 'waits for other thread to finish creating stemcell vm and returns it new' do
               destination_datastore = @cpi.datacenter.all_datastores[@second_datastore_within_cluster]
-              
+
               t1_replicated_stemcell_vm = nil
               t1 = Thread.new {
                 cpi = described_class.new(cpi_options)

@@ -106,34 +106,40 @@ module VSphereCloud
       end
 
       let(:cluster) { double('fake cluster', datacenter: datacenter) }
-      let(:datastore) { double('fake datastore') }
+      let(:target_datastore) { instance_double('VSphereCloud::Resources::Datastore', :name => 'fake datastore') }
+
+      before do
+        mob = double(:mob, __mo_id__: 'fake_datastore_managed_object_id')
+        allow(target_datastore).to receive(:mob).and_return(mob)
+      end
+
 
       context 'when stemcell vm is not found at the expected location' do
         it 'raises an error' do
           allow(client).to receive(:find_vm_by_name).and_return(nil)
 
           expect {
-            vsphere_cloud.replicate_stemcell(cluster, datastore, 'fake_stemcell_id')
+            vsphere_cloud.replicate_stemcell(cluster, target_datastore, 'fake_stemcell_id')
           }.to raise_error(/Could not find VM for stemcell/)
         end
       end
 
       context 'when stemcell vm resides on a different datastore' do
+        let(:datastore_with_stemcell) { instance_double('VSphereCloud::Resources::Datastore', :name => 'datastore-with-stemcell') }
+
         before do
-          mob = double(:mob, __mo_id__: 'fake_datastore_managed_object_id')
-          allow(datastore).to receive(:mob).and_return(mob)
           allow(client).to receive(:find_vm_by_name).with(cluster.datacenter, stemcell_id).and_return(stemcell_vm)
 
-          allow(cloud_searcher).to receive(:get_property).with(stemcell_vm, anything, 'datastore', anything).and_return('fake_stemcell_datastore')
+          allow(cloud_searcher).to receive(:get_property).with(stemcell_vm, anything, 'datastore', anything).and_return([datastore_with_stemcell])
         end
 
         it 'searches for stemcell on all cluster datastores' do
           expect(client).to receive(:find_vm_by_name).with(
               cluster.datacenter,
-              "#{stemcell_id} %2f #{datastore.mob.__mo_id__}"
+              "#{stemcell_id} %2f #{target_datastore.mob.__mo_id__}"
           ).and_return(double('fake stemcell vm'))
 
-          vsphere_cloud.replicate_stemcell(cluster, datastore, stemcell_id)
+          vsphere_cloud.replicate_stemcell(cluster, target_datastore, stemcell_id)
         end
 
         context 'when the stemcell replica is not found in the datacenter' do
@@ -144,7 +150,7 @@ module VSphereCloud
           it 'replicates the stemcell' do
             allow(client).to receive(:find_vm_by_name).with(
                 cluster.datacenter,
-                "#{stemcell_id} %2f #{datastore.mob.__mo_id__}"
+                "#{stemcell_id} %2f #{target_datastore.mob.__mo_id__}"
             )
 
             resource_pool = double(:resource_pool, mob: 'fake_resource_pool_mob')
@@ -153,7 +159,7 @@ module VSphereCloud
             allow(client).to receive(:wait_for_task).with(fake_task).and_return(replicated_stemcell)
             allow(replicated_stemcell).to receive(:create_snapshot).with(any_args).and_return(fake_task)
 
-            expect(vsphere_cloud.replicate_stemcell(cluster, datastore, stemcell_id)).to eql(replicated_stemcell)
+            expect(vsphere_cloud.replicate_stemcell(cluster, target_datastore, stemcell_id)).to eql(replicated_stemcell)
           end
         end
       end
@@ -161,9 +167,8 @@ module VSphereCloud
       context 'when stemcell resides on the given datastore' do
         it 'returns the found replica' do
           allow(client).to receive(:find_vm_by_name).with(any_args).and_return(stemcell_vm)
-          allow(cloud_searcher).to receive(:get_property).with(any_args).and_return(datastore)
-          allow(datastore).to receive(:mob).and_return(datastore)
-          expect(vsphere_cloud.replicate_stemcell(cluster, datastore, stemcell_id)).to eql(stemcell_vm)
+          allow(cloud_searcher).to receive(:get_property).with(any_args).and_return([target_datastore])
+          expect(vsphere_cloud.replicate_stemcell(cluster, target_datastore, stemcell_id)).to eql(stemcell_vm)
         end
       end
     end

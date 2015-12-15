@@ -447,12 +447,22 @@ module VSphereCloud
 
 
     def vm_datastore_name(vm)
-      @cloud_searcher.get_property(
+      vm_datacenters = @cloud_searcher.get_property(
         vm,
         Vim::VirtualMachine,
         'datastore',
         ensure_all: true
-      ).first.name
+      )
+
+      if vm_datacenters.size > 1
+        raise "stemcell VM #{vm.inspect} found in multiple datacenters #{datacenters.inspect}"
+      end
+
+      if vm_datacenters.size == 0
+        raise "no datacenter found for stemcell VM #{vm.inspect}"
+      end
+
+      vm_datacenters.first.name
     end
 
 
