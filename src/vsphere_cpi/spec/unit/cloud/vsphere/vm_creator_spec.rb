@@ -28,7 +28,7 @@ describe VSphereCloud::VmCreator do
 
 
     let(:persistent_disk_cids) { ['disk1_cid'] }
-    let(:persistent_disks) { [VSphereCloud::Resources::Disk.new('disk1_cid', 1024, 'disk1_datastore', 'disk1_path')] }
+    let(:persistent_disks) { [VSphereCloud::Resources::PersistentDisk.new('disk1_cid', 1024, 'disk1_datastore', vsphere_client, 'fake-folder')] }
     let(:disk_spec) { double('disk spec') }
     let(:folder_mob) { double('folder managed object') }
     let(:datacenter_mob) { double('datacenter mob') }
@@ -46,7 +46,7 @@ describe VSphereCloud::VmCreator do
 
     let(:vm_double) { double('cloned vm') }
 
-    let(:ephemeral_disk) { instance_double('VSphereCloud::EphemeralDisk') }
+    let(:ephemeral_disk) { instance_double('VSphereCloud::Resources::EphemeralDisk') }
     let(:replicated_stemcell_mob) { instance_double('VimSdk::Vim::VirtualMachine') }
     let(:current_snapshot) { double('current snapshot') }
     let(:ephemeral_disk_config) { double('ephemeral disk config', :device => disk_device) }
@@ -103,10 +103,12 @@ describe VSphereCloud::VmCreator do
       allow(cpi).to receive(:clone_vm).and_return(clone_vm_task)
       allow(vsphere_client).to receive(:wait_for_task).with(clone_vm_task).and_return(vm_double)
       allow(ephemeral_disk).to receive(:create_spec).and_return(ephemeral_disk_config)
-      allow(VSphereCloud::EphemeralDisk).to receive(:new).with(
+      allow(VSphereCloud::Resources::EphemeralDisk).to receive(:new).with(
+        VSphereCloud::Resources::EphemeralDisk::DISK_NAME,
         1024,
-        'vm-fake-uuid',
         datastore,
+        vsphere_client,
+        'vm-fake-uuid'
       ).and_return(ephemeral_disk)
 
       devices = double(:devices)

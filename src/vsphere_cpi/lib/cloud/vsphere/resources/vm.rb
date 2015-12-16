@@ -68,7 +68,7 @@ module VSphereCloud
 
       def ephemeral_disk
         devices.find do |device|
-          device.kind_of?(Vim::Vm::Device::VirtualDisk) && device.backing.file_name =~ /#{VSphereCloud::EphemeralDisk::DISK_NAME}.vmdk$/
+          device.kind_of?(Vim::Vm::Device::VirtualDisk) && device.backing.file_name =~ /#{Resources::EphemeralDisk::DISK_NAME}.vmdk$/
         end
       end
 

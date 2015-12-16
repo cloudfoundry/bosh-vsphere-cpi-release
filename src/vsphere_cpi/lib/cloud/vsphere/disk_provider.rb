@@ -1,5 +1,4 @@
 require 'ostruct'
-require 'cloud/vsphere/resources/disk'
 
 module VSphereCloud
   class DiskProvider
@@ -62,7 +61,7 @@ module VSphereCloud
       @logger.info("Moving #{disk.path} to #{destination_path}")
       @client.move_disk(datacenter, disk.path, datacenter, destination_path)
       @logger.info('Moved disk successfully')
-      Resources::Disk.new(disk_cid, disk.size_in_mb, destination_datastore, destination_path)
+      Resources::PersistentDisk.new(disk_cid, disk.size_in_mb, destination_datastore, @client, @disk_path)
     end
 
     def find(disk_cid)

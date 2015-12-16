@@ -54,7 +54,8 @@ module VSphereCloud
       config = VimSdk::Vim::Vm::ConfigSpec.new(config_hash)
       config.device_change = []
 
-      ephemeral_disk = VSphereCloud::EphemeralDisk.new(@disk_size_in_mb, vm_cid, datastore)
+      ephemeral_disk = Resources::EphemeralDisk.new(Resources::EphemeralDisk::DISK_NAME, @disk_size_in_mb, datastore, @client, vm_cid)
+
       ephemeral_disk_config = ephemeral_disk.create_spec(replicated_stemcell_vm.system_disk.controller_key)
       config.device_change << ephemeral_disk_config
 

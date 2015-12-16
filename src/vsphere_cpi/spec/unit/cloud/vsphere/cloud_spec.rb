@@ -57,7 +57,7 @@ module VSphereCloud
       before { allow(datacenter).to receive(:persistent_datastores).and_return('fake-persistent-datastores') }
 
       context 'when disk is found' do
-        let(:disk) { instance_double('VSphereCloud::Resources::Disk', path: 'disk-path') }
+        let(:disk) { instance_double('VSphereCloud::Resources::PersistentDisk', path: 'disk-path') }
         before do
           allow(disk_provider).to receive(:find).with('fake-disk-uuid').and_return(disk)
         end
@@ -562,6 +562,7 @@ module VSphereCloud
 
       before do
         allow(datacenter).to receive(:clusters).and_return({'fake-cluster-name' => cluster})
+        allow(datastore).to receive(:mob).and_return('fake-datastore')
         allow(vm).to receive(:cluster).and_return('fake-cluster-name')
         allow(vm).to receive(:accessible_datastores).and_return(['fake-datastore-name'])
         allow(vm).to receive(:system_disk).and_return(double(:system_disk, controller_key: 'fake-controller-key'))
@@ -570,7 +571,7 @@ module VSphereCloud
 
       let(:datastore) { instance_double('VSphereCloud::Resources::Datastore', name: 'fake-datastore')}
       let(:cluster) { instance_double('VSphereCloud::Resources::Cluster') }
-      let(:disk) { VSphereCloud::Resources::Disk.new('fake-disk-cid', 1024, datastore, 'fake-disk-path') }
+      let(:disk) { Resources::PersistentDisk.new('fake-disk-cid', 1024, datastore, client, 'fake-folder') }
 
       it 'updates persistent disk' do
         expect(disk_provider).to receive(:find_and_move).
@@ -656,7 +657,7 @@ module VSphereCloud
 
       context 'when disk exists' do
         before do
-          found_disk = instance_double(VSphereCloud::Resources::Disk, cid: 'disk-cid')
+          found_disk = instance_double(VSphereCloud::Resources::PersistentDisk, cid: 'disk-cid')
           allow(disk_provider).to receive(:find).with('disk-cid').and_return(found_disk)
           allow(cloud_searcher).to receive(:get_property).with(
             vm_mob,
@@ -932,11 +933,12 @@ module VSphereCloud
 
     describe '#create_disk' do
       let(:disk) do
-        VSphereCloud::Resources::Disk.new(
+        Resources::PersistentDisk.new(
           'fake-disk-uuid',
           1024*1024,
           double(:datastore, name: 'fake-datastore'),
-          'fake-path'
+          client,
+          'fake-folder'
         )
       end
 

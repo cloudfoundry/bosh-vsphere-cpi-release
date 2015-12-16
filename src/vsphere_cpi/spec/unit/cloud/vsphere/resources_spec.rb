@@ -62,7 +62,7 @@ module VSphereCloud
       end
 
       context 'with an existing persistent disk' do
-        let(:disk) { VSphereCloud::Resources::Disk.new('disk1', 20, datastore1, 'path') }
+        let(:disk) { VSphereCloud::Resources::PersistentDisk.new('disk1', 20, datastore1, client, 'fake-folder') }
         let(:existing_persistent_disks) { [] }
 
         context 'when disk is in a cluster that satisfies requirements' do
@@ -89,8 +89,8 @@ module VSphereCloud
         end
 
         context 'with an existing persistent disks' do
-          let(:disk1) { VSphereCloud::Resources::Disk.new('disk1', 10, datastore1, 'path1') }
-          let(:disk2) { VSphereCloud::Resources::Disk.new('disk2', 20, datastore2, 'path2') }
+          let(:disk1) { VSphereCloud::Resources::PersistentDisk.new('disk1', 10, datastore1, client, 'fake-folder') }
+          let(:disk2) { VSphereCloud::Resources::PersistentDisk.new('disk2', 20, datastore2, client, 'fake-folder-2') }
           let(:existing_persistent_disks) { [disk1, disk2] }
 
           context 'when all clusters satisfy requirements' do
@@ -113,9 +113,9 @@ module VSphereCloud
             let(:cluster3) { FakeCluster.new('cluster3', [datastore1, datastore3], 1000 + Resources::MEMORY_HEADROOM) }
             let(:clusters) { [cluster1, cluster2, cluster3] }
 
-            let(:disk1) { VSphereCloud::Resources::Disk.new('disk1', 1000, datastore1, 'path1') }
-            let(:disk2) { VSphereCloud::Resources::Disk.new('disk2', 5000, datastore2, 'path2') }
-            let(:disk3) { VSphereCloud::Resources::Disk.new('disk3', 3000, datastore3, 'path3') }
+            let(:disk1) { VSphereCloud::Resources::PersistentDisk.new('disk1', 1000, datastore1, client, 'fake-folder') }
+            let(:disk2) { VSphereCloud::Resources::PersistentDisk.new('disk2', 5000, datastore2, client, 'fake-folder-2') }
+            let(:disk3) { VSphereCloud::Resources::PersistentDisk.new('disk3', 3000, datastore3, client, 'fake-folder-3') }
 
             let(:existing_persistent_disks) { [disk1, disk2, disk3] }
 

@@ -23,7 +23,7 @@ module VSphereCloud
     let(:logger) { double(:logger, info: nil, debug: nil) }
 
     let(:datastore) { Resources::Datastore.new('fake-datastore', 'mob', 2048, 1024) }
-    let(:disk) { Resources::Disk.new('disk-cid', 24, datastore, 'fake-disk-path') }
+    let(:disk) { Resources::PersistentDisk.new('disk-cid', 24, datastore, client, 'fake-disk-path') }
 
     describe 'allowed disk types' do
       it 'supports all documented disk types' do
@@ -103,7 +103,7 @@ module VSphereCloud
         context 'when disk is in one of accessible datastores' do
           let(:datastore) { instance_double('VSphereCloud::Resources::Datastore', name: 'fake-datastore') }
           let(:accessible_datastores) { [datastore.name] }
-          let(:disk) { Resources::Disk.new('disk-cid',0, datastore, "[#{datastore.name}] fake-disk-path/disk-cid.vmdk") }
+          let(:disk) { Resources::PersistentDisk.new('disk-cid',0, datastore, client, 'fake-disk-path') }
           before do
             allow(datacenter).to receive(:persistent_datastores).and_return({'fake-datastore' => datastore})
             allow(client).to receive(:find_disk).with('disk-cid', datastore, 'fake-disk-path') { disk }
@@ -160,7 +160,7 @@ module VSphereCloud
           let(:destination_datastore) { instance_double('VSphereCloud::Resources::Datastore', name: 'destination-datastore') }
           let(:accessible_datastores) { [destination_datastore.name] }
           let(:inaccessible_datastore) { instance_double('VSphereCloud::Resources::Datastore', name: 'inaccessible-datastore') }
-          let(:disk) { Resources::Disk.new('disk-cid',0, inaccessible_datastore, "[inaccessible-datastore] fake-disk-path/disk-cid.vmdk") }
+          let(:disk) { Resources::PersistentDisk.new('disk-cid',0, inaccessible_datastore, client, 'fake-disk-path') }
 
           before do
             allow(datacenter).to receive(:persistent_datastores).and_return({'fake-datastore' => inaccessible_datastore})
@@ -227,7 +227,7 @@ module VSphereCloud
       end
 
       context 'when disk exists' do
-        let(:disk) { Resources::Disk.new('disk-cid', 1024, datastore, "[data-store-name] fake-disk-path/disk-cid.vmdk") }
+        let(:disk) { Resources::PersistentDisk.new('disk-cid', 1024, datastore, client, 'fake-disk-path') }
         before do
           allow(client).to receive(:find_disk).with('disk-cid', first_datastore, 'fake-disk-path') { nil }
           allow(client).to receive(:find_disk).with('disk-cid', second_datastore, 'fake-disk-path') { disk }

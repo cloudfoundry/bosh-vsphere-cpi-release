@@ -249,10 +249,8 @@ module VSphereCloud
     end
 
     def find_disk(disk_cid, datastore, disk_folder)
-      disk_path = "[#{datastore.name}] #{disk_folder}/#{disk_cid}.vmdk"
-      @logger.debug("Looking for disk: #{disk_path}")
       disk_size_in_mb = find_disk_size_using_browser(datastore, disk_cid, disk_folder)
-      disk_size_in_mb.nil? ? nil : Resources::Disk.new(disk_cid, disk_size_in_mb, datastore, disk_path)
+      disk_size_in_mb.nil? ? nil : Resources::PersistentDisk.new(disk_cid, disk_size_in_mb, datastore, self, disk_folder)
     end
 
     def create_disk(datacenter, datastore, disk_cid, disk_folder, disk_size_in_mb, disk_type)
@@ -276,7 +274,7 @@ module VSphereCloud
       )
       wait_for_task(task)
 
-      Resources::Disk.new(disk_cid, disk_size_in_mb, datastore, disk_path)
+      Resources::PersistentDisk.new(disk_cid, disk_size_in_mb, datastore, self, disk_folder)
     end
 
     def create_parent_folder(datacenter, disk_path)
