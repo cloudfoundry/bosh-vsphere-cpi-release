@@ -17,7 +17,7 @@ module VSphereCloud
     end
 
     attr_accessor :client
-    attr_reader :datacenter
+    attr_reader :config, :datacenter
 
     def initialize(options)
       @config = Config.build(options)
@@ -323,54 +323,20 @@ module VSphereCloud
 
         vm = vm_provider.find(vm_cid)
         cluster = @datacenter.clusters[vm.cluster]
-
         disk = disk_provider.find_and_move(disk_cid, cluster, @datacenter, vm.accessible_datastores)
         vm.attach_disk(disk)
-        update_agent_env_for_disk(vm, disk)
+        add_disk_to_agent_env(vm, disk)
       end
     end
 
     def detach_disk(vm_cid, disk_cid)
       with_thread_name("detach_disk(#{vm_cid}, #{disk_cid})") do
         @logger.info("Detaching disk: #{disk_cid} from vm: #{vm_cid}")
+
         disk = disk_provider.find(disk_cid)
         vm = vm_provider.find(vm_cid)
-        vm_mob = vm.mob
-
-        location = get_vm_location(vm_mob)
-        env = @agent_env.get_current_env(vm_mob, location[:datacenter])
-        @logger.info("Reading current agent env: #{env.pretty_inspect}")
-        if env['disks']['persistent'][disk.cid]
-          env['disks']['persistent'].delete(disk.cid)
-          @logger.info("Updating agent env to: #{env.pretty_inspect}")
-
-          @agent_env.set_env(vm_mob, location, env)
-        end
-
-        vm.reload
-        virtual_disk = vm.disk_by_cid(disk.cid)
-        raise Bosh::Clouds::DiskNotAttached.new(true), "Disk '#{disk.cid}' is not attached to VM '#{vm.cid}'" if virtual_disk.nil?
-
-        config = Vim::Vm::ConfigSpec.new
-        config.device_change = []
-        config.device_change << create_delete_device_spec(virtual_disk)
-
-        @logger.info('Detaching disk')
-        client.reconfig_vm(vm_mob, config)
-
-        # detach-disk is async and task completion does not necessarily mean
-        # that changes have been applied to VC side. Query VC until we confirm
-        # that the change has been applied. This is a known issue for vsphere 4.
-        # Fixed in vsphere 5.
-        5.times do
-          vm.reload
-          virtual_disk = vm.disk_by_cid(disk.cid)
-          break if virtual_disk.nil?
-          sleep(1.0)
-        end
-        raise "Failed to detach disk '#{disk.cid}' from vm '#{vm.cid}'" unless virtual_disk.nil?
-
-        @logger.info('Finished detaching disk')
+        vm.detach_disk(disk)
+        delete_disk_from_agent_env(vm, disk)
       end
     end
 
@@ -748,7 +714,7 @@ module VSphereCloud
       placer.nil? ? @resources : placer
     end
 
-    def update_agent_env_for_disk(vm, disk)
+    def add_disk_to_agent_env(vm, disk)
       virtual_disk = disk.create_virtual_disk(vm.system_disk.controller_key)
       disk_config_spec = disk.create_virtual_device_spec(virtual_disk)
 
@@ -760,7 +726,17 @@ module VSphereCloud
       @logger.info("Updated agent env to: #{env.pretty_inspect}")
     end
 
-    attr_reader :config
+    def delete_disk_from_agent_env(vm, disk)
+      vm_mob = vm.mob
+      location = get_vm_location(vm_mob)
+      env = @agent_env.get_current_env(vm_mob, location[:datacenter])
+      @logger.info("Reading current agent env: #{env.pretty_inspect}")
+      if env['disks']['persistent'][disk.cid]
+        env['disks']['persistent'].delete(disk.cid)
+        @logger.info("Updating agent env to: #{env.pretty_inspect}")
 
+        @agent_env.set_env(vm_mob, location, env)
+      end
+    end
   end
 end

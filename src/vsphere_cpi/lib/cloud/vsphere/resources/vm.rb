@@ -215,6 +215,44 @@ module VSphereCloud
         @logger.debug('Finished adding persistent disk property to vm')
       end
 
+      def detach_disk(disk)
+        reload
+        virtual_disk = disk_by_cid(disk.cid)
+        raise Bosh::Clouds::DiskNotAttached.new(true), "Disk '#{disk.cid}' is not attached to VM '#{vm.cid}'" if virtual_disk.nil?
+
+        config = Vim::Vm::ConfigSpec.new
+        config.device_change = []
+        config.device_change << create_delete_device_spec(virtual_disk)
+
+        @logger.info('Detaching disk')
+        @client.reconfig_vm(@mob, config)
+
+        # detach-disk is async and task completion does not necessarily mean
+        # that changes have been applied to VC side. Query VC until we confirm
+        # that the change has been applied. This is a known issue for vsphere 4.
+        # Fixed in vsphere 5.
+        5.times do
+          reload
+          virtual_disk = disk_by_cid(disk.cid)
+          break if virtual_disk.nil?
+          sleep(1.0)
+        end
+        raise "Failed to detach disk '#{disk.cid}' from vm '#{@cid}'" unless virtual_disk.nil?
+
+        @logger.info('Finished detaching disk')
+      end
+
+      def create_delete_device_spec(device, options = {})
+        device_config_spec = Vim::Vm::Device::VirtualDeviceSpec.new
+        device_config_spec.device = device
+        device_config_spec.operation = Vim::Vm::Device::VirtualDeviceSpec::Operation::REMOVE
+        if options[:destroy]
+          device_config_spec.file_operation = Vim::Vm::Device::VirtualDeviceSpec::FileOperation::DESTROY
+        end
+
+        device_config_spec
+      end
+
       private
 
       def verify_persistent_disk_property?(property)
