@@ -196,6 +196,25 @@ module VSphereCloud
         @mob.config.v_app_config.property.find { |property| property.key == key }
       end
 
+      def attach_disk(disk)
+        virtual_disk = disk.create_virtual_disk(system_disk.controller_key)
+        disk_config_spec = disk.create_virtual_device_spec(virtual_disk)
+
+        vm_config = Vim::Vm::ConfigSpec.new
+        vm_config.device_change = []
+        vm_config.device_change << disk_config_spec
+        fix_device_unit_numbers(vm_config.device_change)
+
+        @logger.info('Attaching disk')
+        @client.reconfig_vm(@mob, vm_config)
+        @logger.info('Finished attaching disk')
+
+        reload
+        @logger.debug("Adding persistent disk property to vm '#{@cid}'")
+        @client.add_persistent_disk_property_to_vm(self, disk)
+        @logger.debug('Finished adding persistent disk property to vm')
+      end
+
       private
 
       def verify_persistent_disk_property?(property)

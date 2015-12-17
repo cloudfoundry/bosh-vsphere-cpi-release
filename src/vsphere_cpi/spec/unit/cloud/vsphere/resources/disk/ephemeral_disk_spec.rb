@@ -12,11 +12,12 @@ module VSphereCloud
         let(:client) { instance_double('VSphereCloud::Client') }
         let(:datastore_mob) { double(:datastore_mob) }
 
-        describe '#create_spec' do
+        describe '#create_virtual_device_spec' do
           let(:controller_key) { double(:controller_key) }
 
-          it 'creates a disk' do
-            spec = ephemeral_disk.create_spec(controller_key)
+          it 'creates a virtual device spec' do
+            ephemeral_virtual_disk = ephemeral_disk.create_virtual_disk(controller_key)
+            spec = ephemeral_disk.create_virtual_device_spec(ephemeral_virtual_disk)
 
             expect(spec.file_operation).to eq(VimSdk::Vim::Vm::Device::VirtualDeviceSpec::FileOperation::CREATE)
             expect(spec.operation).to eq(VimSdk::Vim::Vm::Device::VirtualDeviceSpec::Operation::ADD)

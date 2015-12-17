@@ -56,7 +56,8 @@ module VSphereCloud
 
       ephemeral_disk = Resources::EphemeralDisk.new(Resources::EphemeralDisk::DISK_NAME, @disk_size_in_mb, datastore, @client, vm_cid)
 
-      ephemeral_disk_config = ephemeral_disk.create_spec(replicated_stemcell_vm.system_disk.controller_key)
+      ephemeral_virtual_disk = ephemeral_disk.create_virtual_disk(replicated_stemcell_vm.system_disk.controller_key)
+      ephemeral_disk_config = ephemeral_disk.create_virtual_device_spec(ephemeral_virtual_disk)
       config.device_change << ephemeral_disk_config
 
       dvs_index = {}

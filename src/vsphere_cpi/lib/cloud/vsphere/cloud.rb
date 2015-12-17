@@ -325,28 +325,8 @@ module VSphereCloud
         cluster = @datacenter.clusters[vm.cluster]
 
         disk = disk_provider.find_and_move(disk_cid, cluster, @datacenter, vm.accessible_datastores)
-        disk_config_spec = disk.create_spec(vm.system_disk.controller_key)
-
-        vm_config = Vim::Vm::ConfigSpec.new
-        vm_config.device_change = []
-        vm_config.device_change << disk_config_spec
-        vm.fix_device_unit_numbers(vm_config.device_change)
-
-        env = @agent_env.get_current_env(vm.mob, @datacenter.name)
-        @logger.info("Reading current agent env: #{env.pretty_inspect}")
-        env['disks']['persistent'][disk_cid] = disk_config_spec.device.unit_number.to_s
-        @logger.info("Updating agent env to: #{env.pretty_inspect}")
-
-        location = get_vm_location(vm.mob, datacenter: @datacenter.name)
-        @agent_env.set_env(vm.mob, location, env)
-        @logger.info('Attaching disk')
-        client.reconfig_vm(vm.mob, vm_config)
-        @logger.info('Finished attaching disk')
-
-        vm.reload
-        @logger.debug("Adding persistent disk property to vm '#{vm_cid}'")
-        client.add_persistent_disk_property_to_vm(vm, disk)
-        @logger.debug('Finished adding persistent disk property to vm')
+        vm.attach_disk(disk)
+        update_agent_env_for_disk(vm, disk)
       end
     end
 
@@ -768,6 +748,17 @@ module VSphereCloud
       placer.nil? ? @resources : placer
     end
 
+    def update_agent_env_for_disk(vm, disk)
+      virtual_disk = disk.create_virtual_disk(vm.system_disk.controller_key)
+      disk_config_spec = disk.create_virtual_device_spec(virtual_disk)
+
+      env = @agent_env.get_current_env(vm.mob, @datacenter.name)
+      @logger.info("Reading current agent env: #{env.pretty_inspect}")
+      env['disks']['persistent'][disk.cid] = disk_config_spec.device.unit_number.to_s
+      location = get_vm_location(vm.mob, datacenter: @datacenter.name)
+      @agent_env.set_env(vm.mob, location, env)
+      @logger.info("Updated agent env to: #{env.pretty_inspect}")
+    end
 
     attr_reader :config
 
