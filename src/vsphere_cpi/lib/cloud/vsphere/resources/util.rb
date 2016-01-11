@@ -1,7 +1,7 @@
 # Copyright (c) 2009-2012 VMware, Inc.
 
 module VSphereCloud
-  class Resources
+  module Resources
 
     # Resources common utility class.
     class Util

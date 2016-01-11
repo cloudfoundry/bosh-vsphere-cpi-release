@@ -194,6 +194,124 @@ describe VSphereCloud::Resources::VM do
     end
   end
 
+  describe 'attach_disk' do
+    let(:disk) { VSphereCloud::Resources::PersistentDisk.new('fake-disk-cid', 1024, datastore, 'fake-folder') }
+    let(:datastore) { instance_double('VSphereCloud::Resources::Datastore', name: 'fake-datastore')}
+    let(:devices) { [disk] }
+
+    it 'updates persistent disk' do
+      allow(vm).to receive(:fix_device_unit_numbers)
+      allow(vm).to receive(:devices).and_return(devices)
+      allow(vm).to receive(:system_disk).and_return(disk)
+      allow(disk).to receive(:controller_key).and_return('fake-controller-key')
+      allow(datastore).to receive(:mob).and_return('fake-datastore')
+
+      expect(client).to receive(:reconfig_vm) do |reconfig_vm, vm_config|
+        expect(reconfig_vm).to eq(vm_mob)
+        expect(vm_config.device_change.size).to eq(1)
+        disk_spec = vm_config.device_change.first
+        expect(disk_spec.device.capacity_in_kb).to eq(1024 * 1024)
+        expect(disk_spec.device.backing.datastore).to eq(datastore.name)
+        expect(disk_spec.device.controller_key).to eq('fake-controller-key')
+      end
+      allow(client).to receive(:add_persistent_disk_property_to_vm)
+      vm.attach_disk(disk)
+    end
+  end
+
+  describe 'detach_disk' do
+    let(:disk) { VSphereCloud::Resources::PersistentDisk.new('fake-disk-cid', 1024, datastore, 'fake-folder') }
+    let(:datastore) { instance_double('VSphereCloud::Resources::Datastore', name: 'fake-datastore')}
+    let(:attached_disk) do
+      disk = VimSdk::Vim::Vm::Device::VirtualDisk.new
+      disk.backing = double(:backing, file_name: 'fake-disk-path/disk-cid.vmdk')
+
+      disk
+    end
+
+    context 'when disk is not attached' do
+      let(:agent_env) { instance_double('VSphereCloud::AgentEnv') }
+      let(:vm_mob) { instance_double('VimSdk::Vim::VirtualMachine') }
+      let(:vm_location) do
+        {
+          datacenter: 'fake-datacenter-name',
+          datastore: 'fake-datastore-name',
+          vm: 'fake-vm-name'
+        }
+      end
+      before do
+        allow(vm).to receive(:disk_by_cid).with('fake-disk-cid').and_return(nil)
+      end
+
+      it 'updates VM with new settings' do
+        expect {
+          vm.detach_disk(disk)
+        }.to raise_error(Bosh::Clouds::DiskNotAttached)
+      end
+    end
+
+    context 'when disk exists' do
+      let(:found_disk) { instance_double(VSphereCloud::Resources::PersistentDisk, cid: 'disk-cid')}
+
+      before do
+        allow(client).to receive(:reconfig_vm)
+        allow(vm).to receive(:disk_by_cid).with('disk-cid').and_return(attached_disk, nil)
+      end
+
+      it 'reconfigures VM with new config' do
+        expect(client).to receive(:reconfig_vm) do |config_vm, config|
+          expect(config_vm).to eq(vm_mob)
+          expect(config.device_change.first.device).to eq(attached_disk)
+          expect(config.device_change.first.operation).to eq(
+              VimSdk::Vim::Vm::Device::VirtualDeviceSpec::Operation::REMOVE
+            )
+          allow(cloud_searcher).to receive(:get_property).with(vm, VimSdk::Vim::VirtualMachine, 'config.hardware.device', anything).and_return([attached_disk], [])
+        end
+
+        vm.detach_disk(found_disk)
+      end
+    end
+
+    context 'when vm has multiple disks attached' do
+      let(:second_disk) do
+        disk = VimSdk::Vim::Vm::Device::VirtualDisk.new
+        disk.backing = double(:backing, file_name: 'second-disk-path/second-cid.vmdk')
+        disk
+      end
+      let(:found_disk) { instance_double(VSphereCloud::Resources::PersistentDisk, cid: 'disk-cid')}
+      let(:devices) { [attached_disk, second_disk] }
+
+      it 'only detaches disk that matches disk id and does not detach other disks' do
+        expect(client).to receive(:reconfig_vm) do |config_vm, config|
+          expect(config_vm).to eq(vm_mob)
+          expect(config.device_change.first.device).to eq(attached_disk)
+          expect(config.device_change.first.operation).to eq(
+              VimSdk::Vim::Vm::Device::VirtualDeviceSpec::Operation::REMOVE
+            )
+          expect(config.device_change.length).to eq 1
+          allow(cloud_searcher).to receive(:get_property).with(vm, VimSdk::Vim::VirtualMachine, 'config.hardware.device', anything).and_return([attached_disk, second_disk], [second_disk])
+        end
+        allow(vm).to receive(:disk_by_cid).with('disk-cid').and_return(attached_disk, nil)
+
+        vm.detach_disk(found_disk)
+      end
+
+      it 'waits until the expected disk was detached' do
+        expect(client).to receive(:reconfig_vm) do |config_vm, config|
+          expect(config_vm).to eq(vm_mob)
+          expect(config.device_change.first.device).to eq(attached_disk)
+          expect(config.device_change.first.operation).to eq(
+              VimSdk::Vim::Vm::Device::VirtualDeviceSpec::Operation::REMOVE
+            )
+          expect(config.device_change.length).to eq 1
+        end
+        allow(vm).to receive(:disk_by_cid).with('disk-cid').and_return(attached_disk, nil)
+
+        vm.detach_disk(found_disk)
+      end
+    end
+  end
+
   describe '#to_s' do
     it 'show relevant info' do
       expect(subject.to_s).to eq("(#{subject.class.name} (cid=\"vm-cid\"))")

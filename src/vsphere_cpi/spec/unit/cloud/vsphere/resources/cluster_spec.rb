@@ -1,6 +1,6 @@
 require 'spec_helper'
 
-class VSphereCloud::Resources
+module VSphereCloud::Resources
   describe Cluster do
     subject(:cluster) do
       VSphereCloud::Resources::Cluster.new(
@@ -328,105 +328,6 @@ class VSphereCloud::Resources
       end
     end
 
-    describe '#pick_persistent' do
-      context 'when there are no persistent datastores' do
-        let(:fake_datastore_properties) { {} }
-
-        it 'raises a Bosh::Clouds::NoDiskSpace' do
-          expect {
-            cluster.pick_persistent(1)
-          }.to raise_error(Bosh::Clouds::NoDiskSpace)
-        end
-      end
-
-      context 'when there are persistent datastores' do
-        it 'logs a bunch of debug info since it is really hard to know what happening otherwise' do
-          cluster.pick_persistent(10001)
-
-          expect(log_output.string).to include 'Looking for a persistent datastore in fake-cluster-name with 10001MB free space.'
-          expect(log_output.string).to include 'All datastores within cluster ' + cluster.name + ': ["persistent_1 (10000MB free of 20000MB capacity)", "persistent_2 (20000MB free of 40000MB capacity)"]'
-          expect(log_output.string).to include 'Datastores with enough space: ["persistent_2 (20000MB free of 40000MB capacity)"]'
-        end
-
-        context 'and there is more free space than the disk threshold' do
-          it 'picks the datastore with preference to those with the most free space' do
-            first_datastore = nil
-            expect(Util).to receive(:weighted_random) do |datastore_weights|
-              expect(datastore_weights.size).to eq(2)
-              first_datastore, first_weight = datastore_weights.first
-              expect(first_datastore.name).to eq('persistent_1')
-              expect(first_weight).to eq(10000)
-
-              second_datastore, second_weight = datastore_weights[1]
-              expect(second_datastore.name).to eq('persistent_2')
-              expect(second_weight).to eq(20000)
-
-              first_datastore
-            end
-            expect(cluster.pick_persistent(10)).to eq(first_datastore)
-          end
-        end
-
-        context 'and there is less persistent free space than the disk threshold' do
-          it 'raises a Bosh::Clouds::NoDiskSpace' do
-            expect {
-              cluster.pick_persistent(20000 - (DISK_HEADROOM - 1))
-            }.to raise_error do |error|
-              expect(error).to be_an_instance_of(Bosh::Clouds::NoDiskSpace)
-              expect(error.ok_to_retry).to be(true)
-              expect(error.message).to eq(<<-MSG)
-Couldn't find a persistent datastore with 18977MB of free space accessible from cluster 'fake-cluster-name'. Found:
- persistent_1 (10000MB free of 20000MB capacity)
- persistent_2 (20000MB free of 40000MB capacity)
-MSG
-            end
-          end
-        end
-      end
-    end
-
-    describe '#pick_ephemeral' do
-      context 'when there are no ephemeral datastores' do
-        let(:fake_datastore_properties) { {} }
-
-        it 'raises' do
-          expect{
-            cluster.pick_ephemeral(1)
-          }.to raise_error Bosh::Clouds::NoDiskSpace
-        end
-      end
-
-      context 'when there are ephemeral datastores' do
-        context 'and there is more free space than the disk threshold' do
-          it 'picks the datastore with preference to those with the most free space' do
-            first_datastore = nil
-            expect(Util).to receive(:weighted_random) do |datastore_weights|
-              expect(datastore_weights.size).to eq(2)
-              first_datastore, first_weight = datastore_weights.first
-              expect(first_datastore.name).to eq('ephemeral_1')
-              expect(first_weight).to eq(15000)
-
-              second_datastore, second_weight = datastore_weights[1]
-              expect(second_datastore.name).to eq('ephemeral_2')
-              expect(second_weight).to eq(25000)
-
-              first_datastore
-            end
-
-            expect(cluster.pick_ephemeral(10)).to eq(first_datastore)
-          end
-        end
-
-        context 'and there is less ephemeral free space than the disk threshold' do
-          it 'raises' do
-            expect {
-              cluster.pick_ephemeral(25000 - (DISK_HEADROOM - 1))
-            }.to raise_error Bosh::Clouds::NoDiskSpace
-          end
-        end
-      end
-    end
-
     describe '#name' do
       it 'returns the name from the configuration' do
         expect(cluster.name).to eq('fake-cluster-name')
@@ -436,6 +337,12 @@ MSG
     describe '#inspect' do
       it 'returns the printable form' do
         expect(cluster.inspect).to eq("<Cluster: #{cluster_mob} / fake-cluster-name>")
+      end
+    end
+
+    describe '#describe' do
+      it 'returns some debug info' do
+        expect(cluster.describe).to eq("fake-cluster-name has 0mb/39gb/29gb")
       end
     end
 

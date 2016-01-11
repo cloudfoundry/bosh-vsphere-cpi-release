@@ -1,7 +1,7 @@
 require 'cloud/vsphere/resources/resource_pool'
 
 module VSphereCloud
-  class Resources
+  module Resources
     class Cluster
       include VimSdk
       include ObjectStringifier
@@ -10,6 +10,8 @@ module VSphereCloud
       PROPERTIES = %w(name datastore resourcePool host)
       HOST_PROPERTIES = %w(hardware.memorySize runtime.inMaintenanceMode)
       HOST_COUNTERS = %w(mem.usage.average)
+
+      MEMORY_HEADROOM = 128
 
       # @!attribute mob
       #   @return [Vim::ClusterComputeResource] cluster vSphere MOB.
@@ -80,24 +82,6 @@ module VSphereCloud
         @allocated_after_sync += memory
       end
 
-      # Picks the best datastore for the specified persistent disk.
-      #
-      # @param [Integer] size persistent disk size.
-      # @return [Datastore] the best datastore for the requested size.
-      # @raise [Bosh::Clouds::NoDiskSpace] if no datastore available for the requested size
-      def pick_persistent(size)
-        pick_store(:persistent, size)
-      end
-
-      # Picks the best datastore for the specified ephemeral disk.
-      #
-      # @param [Integer] size ephemeral disk size.
-      # @return [Datastore] the best datastore for the requested size.
-      # @raise [Bosh::Clouds::NoDiskSpace] if no datastore available for the requested size
-      def pick_ephemeral(size)
-        pick_store(:ephemeral, size)
-      end
-
       # @return [String] cluster name.
       def name
         config.name
@@ -106,6 +90,13 @@ module VSphereCloud
       # @return [String] debug cluster information.
       def inspect
         "<Cluster: #{mob} / #{config.name}>"
+      end
+
+      # @return [String] more descriptive debug cluster information.
+      def describe
+        "#{name} has #{free_memory}mb/" +
+          "#{total_free_ephemeral_disk_in_mb / 1024}gb/" +
+          "#{total_free_persistent_disk_in_mb / 1024}gb"
       end
 
       def ephemeral_datastores
@@ -132,22 +123,6 @@ module VSphereCloud
 
       def select_datastores(pattern)
         all_datastores.select { |name, datastore| name =~ pattern }
-      end
-
-      def pick_store(type, size)
-        datastores = (type == :ephemeral ? ephemeral_datastores : persistent_datastores).values
-        available_datastores = datastores.reject { |datastore| datastore.free_space - size < DISK_HEADROOM }
-
-        @logger.debug("Looking for a #{type} datastore in #{self.name} with #{size}MB free space.")
-        @logger.debug("All datastores within cluster #{self.name}: #{datastores.map(&:debug_info)}")
-        @logger.debug("Datastores with enough space: #{available_datastores.map(&:debug_info)}")
-
-        selected_datastore = Util.weighted_random(available_datastores.map { |datastore| [datastore, datastore.free_space] })
-
-        if selected_datastore.nil?
-          raise Bosh::Clouds::NoDiskSpace.new(true), "Couldn't find a #{type} datastore with #{size}MB of free space accessible from cluster '#{self.name}'. Found:\n #{datastores.map(&:debug_info).join("\n ")}\n"
-        end
-        selected_datastore
       end
 
       def synced_free_memory

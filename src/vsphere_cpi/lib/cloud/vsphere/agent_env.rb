@@ -73,7 +73,7 @@ module VSphereCloud
       cdrom.backing = backing_info
 
       config = Vim::Vm::ConfigSpec.new
-      config.device_change = [create_edit_device_spec(cdrom)]
+      config.device_change = [Resources::VM.create_edit_device_spec(cdrom)]
       @client.reconfig_vm(vm, config)
     end
 
@@ -82,7 +82,7 @@ module VSphereCloud
       if cdrom.connectable.connected
         cdrom.connectable.connected = false
         config = Vim::Vm::ConfigSpec.new
-        config.device_change = [create_edit_device_spec(cdrom)]
+        config.device_change = [Resources::VM.create_edit_device_spec(cdrom)]
         @client.reconfig_vm(vm, config)
       end
     end
@@ -110,13 +110,6 @@ module VSphereCloud
 
     def genisoimage
       @genisoimage ||= which(%w{genisoimage mkisofs})
-    end
-
-    def create_edit_device_spec(device)
-      device_config_spec = Vim::Vm::Device::VirtualDeviceSpec.new
-      device_config_spec.device = device
-      device_config_spec.operation = Vim::Vm::Device::VirtualDeviceSpec::Operation::EDIT
-      device_config_spec
     end
   end
 end

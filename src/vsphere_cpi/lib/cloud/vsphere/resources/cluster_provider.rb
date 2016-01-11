@@ -1,5 +1,5 @@
 module VSphereCloud
-  class Resources
+  module Resources
     class ClusterProvider
       def initialize(datacenter, client, logger)
         @datacenter = datacenter

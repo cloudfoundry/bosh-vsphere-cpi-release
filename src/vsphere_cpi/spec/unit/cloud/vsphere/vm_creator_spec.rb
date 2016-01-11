@@ -3,17 +3,16 @@ require 'cloud/vsphere/drs_rules/drs_rule'
 
 describe VSphereCloud::VmCreator do
   subject(:creator) do
-    described_class.new(1024, 1024, 3, nested_hardware_virtualization, placer, vsphere_client, cloud_searcher, logger, cpi, agent_env, file_provider, disk_provider)
+    described_class.new(1024, 1024, 3, nested_hardware_virtualization, [], vsphere_client, cloud_searcher, logger, cpi, agent_env, file_provider, datacenter, cluster)
   end
   let(:nested_hardware_virtualization) { false }
-  let(:placer) { instance_double('VSphereCloud::FixedClusterPlacer', drs_rules: []) }
   let(:vsphere_client) { instance_double('VSphereCloud::Client', cloud_searcher: cloud_searcher) }
   let(:logger) { double('logger', debug: nil, info: nil) }
   let(:cpi) { instance_double('VSphereCloud::Cloud') }
   let(:agent_env) { instance_double('VSphereCloud::AgentEnv') }
   let(:file_provider) { instance_double('VSphereCloud::FileProvider') }
   let(:cloud_searcher) { instance_double('VSphereCloud::CloudSearcher') }
-  let(:disk_provider) { instance_double(VSphereCloud::DiskProvider) }
+  let(:datacenter) { instance_double(VSphereCloud::Resources::Datacenter) }
 
   describe '#create' do
     let(:networks) do
@@ -26,9 +25,8 @@ describe VSphereCloud::VmCreator do
       }
     end
 
-
     let(:persistent_disk_cids) { ['disk1_cid'] }
-    let(:persistent_disks) { [VSphereCloud::Resources::PersistentDisk.new('disk1_cid', 1024, 'disk1_datastore', vsphere_client, 'fake-folder')] }
+    let(:persistent_disks) { [VSphereCloud::Resources::PersistentDisk.new('disk1_cid', 1024, 'disk1_datastore', 'fake-folder')] }
     let(:disk_spec) { double('disk spec') }
     let(:folder_mob) { double('folder managed object') }
     let(:datacenter_mob) { double('datacenter mob') }
@@ -38,7 +36,7 @@ describe VSphereCloud::VmCreator do
     let(:cluster) do
       datacenter = double('datacenter', :name => 'datacenter name', :vm_folder => double('vm_folder', :mob => folder_mob), mob: datacenter_mob)
 
-      double('cluster', :datacenter => datacenter, :resource_pool => double('resource pool', :mob => resource_pool_mob), mob: cluster_mob)
+      double('cluster', :datacenter => datacenter, :resource_pool => double('resource pool', :mob => resource_pool_mob), mob: cluster_mob, ephemeral_datastores: {datastore.name => datastore})
     end
 
     let(:datastore) { double('datastore', mob: datastore_mob, name: 'fake-datastore-name') }
@@ -64,7 +62,7 @@ describe VSphereCloud::VmCreator do
         ensure_all: true
       ).and_return(1024*1024)
       persistent_disks.each do |disk|
-        allow(disk_provider).to receive(:find).with(disk.cid) { disk }
+        allow(datacenter).to receive(:find_disk).with(disk.cid) { disk }
       end
 
       allow(cpi).to receive(:replicate_stemcell).with(cluster, datastore, 'stemcell_cid').and_return(replicated_stemcell_mob)
@@ -84,11 +82,13 @@ describe VSphereCloud::VmCreator do
       allow_any_instance_of(VSphereCloud::Resources::VM).to receive(:fix_device_unit_numbers)
 
       network_mob = double('standard network managed object')
+      allow(network_mob).to receive(:name).and_return('standard network managed object')
       allow(vsphere_client).to receive(:find_by_inventory_path).
         with(['datacenter name', 'network', 'network_name']).
         and_return(network_mob)
 
-      allow(cpi).to receive(:create_nic_config_spec).with(
+      allow_any_instance_of(VSphereCloud::Resources::Nic).to receive(:create_virtual_nic).with(
+        cloud_searcher,
         'network_name',
         network_mob,
         'fake-pci-key',
@@ -96,18 +96,17 @@ describe VSphereCloud::VmCreator do
       ).and_return(add_nic_spec)
 
       virtual_nic = VimSdk::Vim::Vm::Device::VirtualEthernetCard.new
-      allow(cpi).to receive(:create_delete_device_spec).with(virtual_nic).and_return(delete_nic_spec)
+      allow(VSphereCloud::Resources::VM).to receive(:create_delete_device_spec).with(virtual_nic).and_return(delete_nic_spec)
       allow_any_instance_of(VSphereCloud::Resources::VM).to receive(:nics).and_return([virtual_nic])
 
       clone_vm_task = double('cloned vm task')
       allow(cpi).to receive(:clone_vm).and_return(clone_vm_task)
       allow(vsphere_client).to receive(:wait_for_task).with(clone_vm_task).and_return(vm_double)
-      allow(ephemeral_disk).to receive(:create_spec).and_return(ephemeral_disk_config)
+      allow(ephemeral_disk).to receive(:create_disk_attachment_spec).with('fake-controller-key').and_return(ephemeral_disk_config)
       allow(VSphereCloud::Resources::EphemeralDisk).to receive(:new).with(
         VSphereCloud::Resources::EphemeralDisk::DISK_NAME,
         1024,
         datastore,
-        vsphere_client,
         'vm-fake-uuid'
       ).and_return(ephemeral_disk)
 
@@ -129,8 +128,8 @@ describe VSphereCloud::VmCreator do
 
       allow_any_instance_of(VSphereCloud::Resources::VM).to receive(:power_on)
 
-      allow(placer).to receive(:pick_cluster_for_vm).with(1024, 2049, persistent_disks).and_return(cluster)
-      allow(placer).to receive(:pick_ephemeral_datastore).with(cluster, 2049).and_return(datastore)
+      allow(datacenter).to receive(:pick_cluster_for_vm).with(1024, 2049, persistent_disks).and_return(cluster)
+      allow(datacenter).to receive(:pick_ephemeral_datastore).with(2049, [datastore.name]).and_return(datastore)
 
       allow(SecureRandom).to receive(:uuid).and_return('fake-uuid')
     end
@@ -184,14 +183,47 @@ describe VSphereCloud::VmCreator do
       end
     end
 
-    it 'chooses the placement based on memory, ephemeral and persistent disks' do
-      expect(placer).to receive(:pick_cluster_for_vm).with(1024, 2049, persistent_disks).and_return(cluster)
-      expect(placer).to receive(:pick_ephemeral_datastore).with(cluster, 2049).and_return(datastore)
-      creator.create('agent_id', 'stemcell_cid', networks, persistent_disk_cids, {})
+    context 'with predetermined cluster' do
+      it 'chooses the placement based on memory, ephemeral and persistent disks' do
+        expect(datacenter).to_not receive(:pick_cluster_for_vm)
+        expect(datacenter).to receive(:pick_ephemeral_datastore).with(2049, [datastore.name]).and_return(datastore)
+        creator.create('agent_id', 'stemcell_cid', networks, persistent_disk_cids, {})
+      end
+
+      context 'when selected cluster has no ephemeral datastores' do
+        let(:cluster) do
+          datacenter = double('datacenter', :name => 'datacenter name', :vm_folder => double('vm_folder', :mob => folder_mob), mob: datacenter_mob)
+
+          double('cluster', datacenter: datacenter, resource_pool: double('resource pool', mob: resource_pool_mob), mob: cluster_mob, ephemeral_datastores: {}, name: 'some-cluster')
+        end
+
+        it 'chooses the placement based on memory, ephemeral and persistent disks' do
+          expect(datacenter).to_not receive(:pick_cluster_for_vm)
+          expect(datacenter).to_not receive(:pick_ephemeral_datastore)
+          expect {
+            creator.create('agent_id', 'stemcell_cid', networks, persistent_disk_cids, {})
+          }.to raise_error("Cluster 'some-cluster' has no ephemeral datastores")
+        end
+      end
+    end
+
+    context 'without predetermined cluster' do
+      subject(:creator) do
+        described_class.new(1024, 1024, 3, nested_hardware_virtualization, [], vsphere_client, cloud_searcher, logger, cpi, agent_env, file_provider, datacenter, nil)
+      end
+      it 'chooses the placement based on memory, ephemeral and persistent disks' do
+        expect(datacenter).to receive(:pick_cluster_for_vm).with(1024, 2049, persistent_disks).and_return(cluster)
+        expect(datacenter).to receive(:pick_ephemeral_datastore).with(2049, [datastore.name]).and_return(datastore)
+        creator.create('agent_id', 'stemcell_cid', networks, persistent_disk_cids, {})
+      end
     end
 
     it 'clones the vm with the correct attributes set' do
       allow(VimSdk::Vim::Vm::ConfigSpec).to receive(:new).and_call_original
+      allow(VSphereCloud::Resources::VM)
+        .to receive(:create_add_device_spec)
+        .and_return(add_nic_spec)
+
       creator.create('agent_id', 'stemcell_cid', networks, persistent_disk_cids, {})
 
       expect(VimSdk::Vim::Vm::ConfigSpec).to have_received(:new).with({memory_mb: 1024, num_cpus: 3})
@@ -205,7 +237,7 @@ describe VSphereCloud::VmCreator do
         expect(config[:snapshot]).to eq(current_snapshot)
         expect(config[:config].memory_mb).to eq(1024)
         expect(config[:config].num_cpus).to eq(3)
-        expect(config[:config].device_change).to eq([ephemeral_disk_config, add_nic_spec, delete_nic_spec])
+        expect(config[:config].device_change).to match_array([ephemeral_disk_config, add_nic_spec, delete_nic_spec])
       end
     end
 
@@ -220,14 +252,15 @@ describe VSphereCloud::VmCreator do
     end
 
     describe 'DRS rules' do
+      subject(:creator) do
+        described_class.new(1024, 1024, 3, nested_hardware_virtualization, drs_rules, vsphere_client, cloud_searcher, logger, cpi, agent_env, file_provider, datacenter, nil)
+      end
       context 'when several DRS rules are specified in cloud properties' do
-        before do
-          allow(placer).to receive(:drs_rules).and_return(
-            [
-              { 'name' => 'fake-drs-rule-1', 'type' => 'separate_vms' },
-              { 'name' => 'fake-drs-rule-2', 'type' => 'separate_vms' },
-            ]
-          )
+        let(:drs_rules) do
+          [
+            { 'name' => 'fake-drs-rule-1', 'type' => 'separate_vms' },
+            { 'name' => 'fake-drs-rule-2', 'type' => 'separate_vms' },
+          ]
         end
 
         it 'raises an error' do
@@ -239,13 +272,12 @@ describe VSphereCloud::VmCreator do
       end
 
       context 'when one DRS rule is specified' do
-        before do
-          allow(placer).to receive(:drs_rules).and_return(
-            [
-              { 'name' => 'fake-drs-rule-1', 'type' => drs_rule_type },
-            ]
-          )
+        let(:drs_rules) do
+          [
+            { 'name' => 'fake-drs-rule-1', 'type' => drs_rule_type },
+          ]
         end
+
         let(:drs_rule_type) { 'separate_vms' }
 
         context 'when DRS rule type is separate_vms' do

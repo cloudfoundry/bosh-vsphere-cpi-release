@@ -1,7 +1,7 @@
 # Copyright (c) 2009-2012 VMware, Inc.
 
 module VSphereCloud
-  class Resources
+  module Resources
     class Scorer
 
       # Run the scoring function and return the placement score for the required
@@ -21,7 +21,7 @@ module VSphereCloud
         successful_allocations = 0
         loop do
           free_memory -= requested_memory
-          if free_memory < MEMORY_HEADROOM
+          if free_memory < VSphereCloud::Resources::Cluster::MEMORY_HEADROOM
             logger.debug("#{cluster.name} memory bound")
             break
           end
@@ -59,7 +59,7 @@ module VSphereCloud
         def consume_disk(requested_size)
           unless @sizes.empty?
             @sizes.sort! { |a, b| b <=> a }
-            if @sizes[0] >= requested_size + DISK_HEADROOM
+            if @sizes[0] >= requested_size + VSphereCloud::Resources::Datastore::DISK_HEADROOM
               @sizes[0] -= requested_size
               return true
             end

@@ -1,5 +1,5 @@
 module VSphereCloud
-  class Resources
+  module Resources
     class VM
       include VimSdk
       include RetryBlock
@@ -196,9 +196,9 @@ module VSphereCloud
         @mob.config.v_app_config.property.find { |property| property.key == key }
       end
 
-      def attach_disk(disk)
-        virtual_disk = disk.create_virtual_disk(system_disk.controller_key)
-        disk_config_spec = disk.create_virtual_device_spec(virtual_disk)
+      def attach_disk(disk_resource_object)
+        disk = disk_resource_object
+        disk_config_spec = disk.create_disk_attachment_spec(system_disk.controller_key)
 
         vm_config = Vim::Vm::ConfigSpec.new
         vm_config.device_change = []
@@ -218,11 +218,11 @@ module VSphereCloud
       def detach_disk(disk)
         reload
         virtual_disk = disk_by_cid(disk.cid)
-        raise Bosh::Clouds::DiskNotAttached.new(true), "Disk '#{disk.cid}' is not attached to VM '#{vm.cid}'" if virtual_disk.nil?
+        raise Bosh::Clouds::DiskNotAttached.new(true), "Disk '#{disk.cid}' is not attached to VM '#{@cid}'" if virtual_disk.nil?
 
         config = Vim::Vm::ConfigSpec.new
         config.device_change = []
-        config.device_change << create_delete_device_spec(virtual_disk)
+        config.device_change << self.class.create_delete_device_spec(virtual_disk)
 
         @logger.info('Detaching disk')
         @client.reconfig_vm(@mob, config)
@@ -242,13 +242,29 @@ module VSphereCloud
         @logger.info('Finished detaching disk')
       end
 
-      def create_delete_device_spec(device, options = {})
+      def self.create_delete_device_spec(device, options = {})
         device_config_spec = Vim::Vm::Device::VirtualDeviceSpec.new
         device_config_spec.device = device
         device_config_spec.operation = Vim::Vm::Device::VirtualDeviceSpec::Operation::REMOVE
         if options[:destroy]
           device_config_spec.file_operation = Vim::Vm::Device::VirtualDeviceSpec::FileOperation::DESTROY
         end
+
+        device_config_spec
+      end
+
+      def self.create_add_device_spec(device)
+        device_config_spec = VimSdk::Vim::Vm::Device::VirtualDeviceSpec.new
+        device_config_spec.device = device
+        device_config_spec.operation = VimSdk::Vim::Vm::Device::VirtualDeviceSpec::Operation::ADD
+
+        device_config_spec
+      end
+
+      def self.create_edit_device_spec(device)
+        device_config_spec = Vim::Vm::Device::VirtualDeviceSpec.new
+        device_config_spec.device = device
+        device_config_spec.operation = Vim::Vm::Device::VirtualDeviceSpec::Operation::EDIT
 
         device_config_spec
       end

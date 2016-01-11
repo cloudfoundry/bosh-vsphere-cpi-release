@@ -1,5 +1,5 @@
 module VSphereCloud
-  class Resources
+  module Resources
     class Folder
       attr_reader :mob, :path, :path_components
 

@@ -39,7 +39,6 @@ module VSphereCloud
         mem_overcommit: @config.mem_overcommit
       })
 
-      @resources = Resources.new(@datacenter, config)
       @file_provider = FileProvider.new(config.rest_client, config.vcenter_host)
       @agent_env = AgentEnv.new(client, @file_provider, @cloud_searcher)
 
@@ -67,7 +66,7 @@ module VSphereCloud
     end
 
     def has_disk?(disk_cid)
-      disk_provider.find(disk_cid)
+      @datacenter.find_disk(disk_cid)
       true
     rescue Bosh::Clouds::DiskNotFound
       false
@@ -89,8 +88,12 @@ module VSphereCloud
           @logger.info("Generated name: #{name}")
 
           stemcell_size = File.size(image) / (1024 * 1024)
-          cluster = @resources.pick_cluster_for_vm(0, stemcell_size, [])
-          datastore = @resources.pick_ephemeral_datastore(cluster, stemcell_size)
+
+          cluster = @datacenter.pick_cluster_for_vm(0, stemcell_size, [])
+          if cluster.ephemeral_datastores.empty?
+            raise "Cluster '#{cluster.name}' has no ephemeral datastores"
+          end
+          datastore = @datacenter.pick_ephemeral_datastore(stemcell_size, cluster.ephemeral_datastores.keys)
           @logger.info("Deploying to: #{cluster.mob} / #{datastore.mob}")
 
           import_spec_result = import_ovf(name, ovf_file, cluster.resource_pool.mob, datastore.mob)
@@ -113,7 +116,7 @@ module VSphereCloud
 
           nics = devices.select { |device| device.kind_of?(Vim::Vm::Device::VirtualEthernetCard) }
           nics.each do |nic|
-            nic_config = create_delete_device_spec(nic)
+            nic_config = Resources::VM.create_delete_device_spec(nic)
             config.device_change << nic_config
           end
           client.reconfig_vm(vm, config)
@@ -155,8 +158,20 @@ module VSphereCloud
 
     def create_vm(agent_id, stemcell, cloud_properties, networks, disk_locality = nil, environment = nil)
       with_thread_name("create_vm(#{agent_id}, ...)") do
+        datacenter_spec = cloud_properties.fetch('datacenters', []).first
+        cluster_spec = datacenter_spec.fetch('clusters', []).first if datacenter_spec
+
+        drs_rules = []
+        cluster = nil
+        unless cluster_spec.nil?
+          cluster_name = cluster_spec.keys.first
+          spec = cluster_spec.values.first
+          cluster_config = ClusterConfig.new(cluster_name, spec)
+          cluster = Resources::ClusterProvider.new(@datacenter, @client, @logger).find(cluster_name, cluster_config)
+          drs_rules = spec.fetch('drs_rules', [])
+        end
+
         VmCreatorBuilder.new.build(
-          choose_placer(cloud_properties),
           cloud_properties,
           @client,
           @cloud_searcher,
@@ -164,7 +179,9 @@ module VSphereCloud
           self,
           @agent_env,
           @file_provider,
-          disk_provider
+          @datacenter,
+          cluster,
+          drs_rules
         ).create(agent_id, stemcell, networks, disk_locality, environment)
       end
     end
@@ -185,7 +202,7 @@ module VSphereCloud
 
           persistent_disks.each do |virtual_disk|
             @logger.info("Detaching: #{virtual_disk.backing.file_name}")
-            config.device_change << create_delete_device_spec(virtual_disk)
+            config.device_change << Resources::VM.create_delete_device_spec(virtual_disk)
 
             if vm.has_persistent_disk_property_mismatch?(virtual_disk)
               @logger.info("Property Mismatch")
@@ -204,7 +221,7 @@ module VSphereCloud
             dest_filename = original_disk_path.split(" ").last
             dest_path = "#{current_datastore} #{dest_filename}"
 
-            @client.move_disk(@datacenter, current_path, @datacenter, dest_path)
+            @datacenter.move_disk(current_path, dest_path)
           end
         end
 
@@ -282,7 +299,7 @@ module VSphereCloud
         config = Vim::Vm::ConfigSpec.new
         config.device_change = []
         vm.nics.each do |nic|
-          nic_config = create_delete_device_spec(nic)
+          nic_config = Resources::VM.create_delete_device_spec(nic)
           config.device_change << nic_config
         end
 
@@ -290,7 +307,9 @@ module VSphereCloud
         networks.each_value do |network|
           v_network_name = network['cloud_properties']['name']
           network_mob = client.find_by_inventory_path([@datacenter.name, 'network', v_network_name])
-          nic_config = create_nic_config_spec(v_network_name, network_mob, vm.pci_controller.key, dvs_index)
+
+          virtual_nic = Resources::Nic.create_virtual_nic(@cloud_searcher, v_network_name, network_mob, vm.pci_controller.key, dvs_index)
+          nic_config = Resources::VM.create_add_device_spec(virtual_nic)
           config.device_change << nic_config
         end
 
@@ -320,10 +339,9 @@ module VSphereCloud
     def attach_disk(vm_cid, disk_cid)
       with_thread_name("attach_disk(#{vm_cid}, #{disk_cid})") do
         @logger.info("Attaching disk: #{disk_cid} on vm: #{vm_cid}")
-
         vm = vm_provider.find(vm_cid)
-        cluster = @datacenter.clusters[vm.cluster]
-        disk = disk_provider.find_and_move(disk_cid, cluster, @datacenter, vm.accessible_datastores)
+        disk = @datacenter.find_disk(disk_cid)
+        disk = @datacenter.ensure_disk_is_accessible_to_vm(disk, vm)
         vm.attach_disk(disk)
         add_disk_to_agent_env(vm, disk)
       end
@@ -333,10 +351,11 @@ module VSphereCloud
       with_thread_name("detach_disk(#{vm_cid}, #{disk_cid})") do
         @logger.info("Detaching disk: #{disk_cid} from vm: #{vm_cid}")
 
-        disk = disk_provider.find(disk_cid)
+        disk = @datacenter.find_disk(disk_cid)
         vm = vm_provider.find(vm_cid)
-        vm.detach_disk(disk)
+
         delete_disk_from_agent_env(vm, disk)
+        vm.detach_disk(disk)
       end
     end
 
@@ -344,15 +363,17 @@ module VSphereCloud
       with_thread_name("create_disk(#{size_in_mb}, _)") do
         @logger.info("Creating disk with size: #{size_in_mb}")
 
-        cluster = nil
+        filtered_datastores = []
         if vm_cid
           vm = vm_provider.find(vm_cid)
-          cluster = @datacenter.clusters[vm.cluster]
+          filtered_datastores = vm.accessible_datastores
         end
 
-        disk_type = cloud_properties['type']
-        disk = disk_provider.create(size_in_mb, disk_type, cluster)
+        datastore = @datacenter.pick_persistent_datastore(size_in_mb, filtered_datastores)
+        disk_type = cloud_properties.fetch('type', Resources::PersistentDisk::DEFAULT_DISK_TYPE)
+        disk = @datacenter.create_disk(datastore, size_in_mb, disk_type)
         @logger.info("Created disk: #{disk.inspect}")
+
         disk.cid
       end
     end
@@ -360,7 +381,7 @@ module VSphereCloud
     def delete_disk(disk_cid)
       with_thread_name("delete_disk(#{disk_cid})") do
         @logger.info("Deleting disk: #{disk_cid}")
-        disk = disk_provider.find(disk_cid)
+        disk = @datacenter.find_disk(disk_cid)
         client.delete_disk(@datacenter.mob, disk.path)
 
         @logger.info('Finished deleting disk')
@@ -546,52 +567,6 @@ module VSphereCloud
       vm.clone(folder, name, clone_spec)
     end
 
-    def create_nic_config_spec(v_network_name, network, controller_key, dvs_index)
-      raise "Invalid network '#{v_network_name}'" if network.nil?
-      if network.class == Vim::Dvs::DistributedVirtualPortgroup
-        portgroup_properties = @cloud_searcher.get_properties(network,
-                                                     Vim::Dvs::DistributedVirtualPortgroup,
-                                                     ['config.key', 'config.distributedVirtualSwitch'],
-                                                     ensure_all: true)
-
-        switch = portgroup_properties['config.distributedVirtualSwitch']
-        switch_uuid = @cloud_searcher.get_property(switch, Vim::DistributedVirtualSwitch, 'uuid', ensure_all: true)
-
-        port = Vim::Dvs::PortConnection.new
-        port.switch_uuid = switch_uuid
-        port.portgroup_key = portgroup_properties['config.key']
-
-        backing_info = Vim::Vm::Device::VirtualEthernetCard::DistributedVirtualPortBackingInfo.new
-        backing_info.port = port
-
-        dvs_index[port.portgroup_key] = v_network_name
-      else
-        backing_info = Vim::Vm::Device::VirtualEthernetCard::NetworkBackingInfo.new
-        backing_info.device_name = network.name
-        backing_info.network = network
-      end
-
-      nic = Vim::Vm::Device::VirtualVmxnet3.new
-      nic.key = -1
-      nic.controller_key = controller_key
-      nic.backing = backing_info
-
-      device_config_spec = Vim::Vm::Device::VirtualDeviceSpec.new
-      device_config_spec.device = nic
-      device_config_spec.operation = Vim::Vm::Device::VirtualDeviceSpec::Operation::ADD
-      device_config_spec
-    end
-
-    def create_delete_device_spec(device, options = {})
-      device_config_spec = Vim::Vm::Device::VirtualDeviceSpec.new
-      device_config_spec.device = device
-      device_config_spec.operation = Vim::Vm::Device::VirtualDeviceSpec::Operation::REMOVE
-      if options[:destroy]
-        device_config_spec.file_operation = Vim::Vm::Device::VirtualDeviceSpec::FileOperation::DESTROY
-      end
-      device_config_spec
-    end
-
     def import_ovf(name, ovf, resource_pool, datastore)
       import_spec_params = Vim::OvfManager::CreateImportSpecParams.new
       import_spec_params.entity_name = name
@@ -685,38 +660,10 @@ module VSphereCloud
       )
     end
 
-    def disk_provider
-      DiskProvider.new(
-        @client.service_content.virtual_disk_manager,
-        @datacenter,
-        @resources,
-        @config.datacenter_disk_path,
-        @client,
-        @logger
-      )
-    end
-
     private
 
-    def choose_placer(cloud_properties)
-      datacenter_spec = cloud_properties.fetch('datacenters', []).first
-      cluster_spec = datacenter_spec.fetch('clusters', []).first if datacenter_spec
-
-      unless cluster_spec.nil?
-        cluster_name = cluster_spec.keys.first
-        spec = cluster_spec.values.first
-        cluster_config = ClusterConfig.new(cluster_name, spec)
-        cluster = Resources::ClusterProvider.new(@datacenter, @client, @logger).find(cluster_name, cluster_config)
-        drs_rules = spec.fetch('drs_rules', [])
-        placer = FixedClusterPlacer.new(cluster, drs_rules)
-      end
-
-      placer.nil? ? @resources : placer
-    end
-
     def add_disk_to_agent_env(vm, disk)
-      virtual_disk = disk.create_virtual_disk(vm.system_disk.controller_key)
-      disk_config_spec = disk.create_virtual_device_spec(virtual_disk)
+      disk_config_spec = disk.create_disk_attachment_spec(vm.system_disk.controller_key)
 
       env = @agent_env.get_current_env(vm.mob, @datacenter.name)
       @logger.info("Reading current agent env: #{env.pretty_inspect}")

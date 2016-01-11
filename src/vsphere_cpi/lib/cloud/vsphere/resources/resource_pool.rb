@@ -1,5 +1,5 @@
 module VSphereCloud
-  class Resources
+  module Resources
     class ResourcePool
       include VimSdk
 

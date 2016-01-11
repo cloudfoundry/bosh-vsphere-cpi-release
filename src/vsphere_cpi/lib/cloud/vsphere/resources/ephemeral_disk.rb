@@ -1,14 +1,16 @@
 module VSphereCloud
-  class Resources
+  module Resources
     class EphemeralDisk < Disk
       DISK_NAME = 'ephemeral_disk'
 
-      def create_virtual_device_spec(virtual_disk)
-        device_config_spec = super(virtual_disk)
+      def create_disk_attachment_spec(disk_controller_id)
+        device_config_spec = super(disk_controller_id)
         device_config_spec.file_operation = VimSdk::Vim::Vm::Device::VirtualDeviceSpec::FileOperation::CREATE
 
         device_config_spec
       end
+
+      private
 
       def create_backing_info
         backing_info = super

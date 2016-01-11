@@ -8,14 +8,14 @@ module VSphereCloud
       let(:disk) { double('disk in mb') }
       let(:cpu) { double('number of cpus') }
       let(:vm_creator) { double('vm creator') }
-      let(:resources) { double('resources') }
+      let(:drs_rules) { double('drs_rules') }
       let(:client) { double('client') }
       let(:cloud_searcher) { instance_double('VSphereCloud::CloudSearcher') }
       let(:logger) { double('logger') }
       let(:cpi) { double('cpi') }
       let(:agent_env) { double('agent_env') }
       let(:file_provider) { double('file_provider') }
-      let(:disk_provider) { double('disk_provider') }
+      let(:datacenter) { double('datacenter') }
 
       let(:cloud_properties) do
         {
@@ -30,24 +30,25 @@ module VSphereCloud
       end
 
       context 'when nested_hardware_virtualization is not specified' do
-        it 'injects the placer, memory size, disk size, number of cpu, vsphere client, logger and the cpi into the VmCreator instance' do
+        it 'injects the memory size, disk size, number of cpu, vsphere client, logger, drs rules and the cpi into the VmCreator instance' do
           expect(VSphereCloud::VmCreator).to receive(:new).with(
               memory,
               disk,
               cpu,
               false,
-              resources,
+              drs_rules,
               client,
               cloud_searcher,
               logger,
               cpi,
               agent_env,
               file_provider,
-              disk_provider
+              datacenter,
+              nil
             )
 
           expect(
-            subject.build(resources, cloud_properties, client, cloud_searcher, logger, cpi, agent_env, file_provider, disk_provider)
+            subject.build(cloud_properties, client, cloud_searcher, logger, cpi, agent_env, file_provider, datacenter, nil, drs_rules)
           ).to eq(vm_creator)
         end
       end
@@ -63,18 +64,19 @@ module VSphereCloud
               disk,
               cpu,
               true,
-              resources,
+              drs_rules,
               client,
               cloud_searcher,
               logger,
               cpi,
               agent_env,
               file_provider,
-              disk_provider
+              datacenter,
+              nil
             )
 
           expect(
-            subject.build(resources, cloud_properties, client, cloud_searcher, logger, cpi, agent_env, file_provider, disk_provider)
+            subject.build(cloud_properties, client, cloud_searcher, logger, cpi, agent_env, file_provider, datacenter, nil, drs_rules)
           ).to eq(vm_creator)
         end
       end

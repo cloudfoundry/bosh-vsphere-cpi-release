@@ -36,6 +36,8 @@ describe VSphereCloud::Resources::Datacenter do
   let(:persistent_pattern) {instance_double('Regexp')}
   let(:cloud_searcher) { instance_double('VSphereCloud::CloudSearcher') }
   let(:datastore_properties) { {} }
+  let(:datastore) { instance_double('VSphereCloud::Resources::Datastore', name: 'fake-datastore') }
+  let(:disk) { instance_double('VSphereCloud::Resources::PersistentDisk') }
 
   let(:datacenter_name) { 'fake-datacenter-name' }
   before do
@@ -304,56 +306,199 @@ describe VSphereCloud::Resources::Datacenter do
     end
   end
 
-  describe '#pick_persistent_datastore' do
-    let(:persistent_pattern) { /ds/ }
+  describe '#pick_datastore' do
     let(:datastore_properties) do
       bytes_in_mb = VSphereCloud::Resources::BYTES_IN_MB
-      disk_threshold = VSphereCloud::Resources::DISK_HEADROOM
+      disk_threshold = VSphereCloud::Resources::Datastore::DISK_HEADROOM
       {
-        'ds1' => { 'name' => 'ds1', 'summary.freeSpace' => (1024 + disk_threshold) * bytes_in_mb, 'summary.capacity' => 20000 * bytes_in_mb },
-        'ds2' => { 'name' => 'ds2', 'summary.freeSpace' => (2048 + disk_threshold) * bytes_in_mb, 'summary.capacity' => 20000 * bytes_in_mb  },
-        'ds32' => { 'name' => 'ds3', 'summary.freeSpace' => (512 + disk_threshold) * bytes_in_mb, 'summary.capacity' => 20000 * bytes_in_mb  },
+        'ds-with-enough-space' => { 'name' => 'ds1', 'summary.freeSpace' => (1024 + disk_threshold) * bytes_in_mb, 'summary.capacity' => 20000 * bytes_in_mb },
+        'another-ds-with-enough-space' => { 'name' => 'ds2', 'summary.freeSpace' => (2048 + disk_threshold) * bytes_in_mb, 'summary.capacity' => 20000 * bytes_in_mb  },
+        'ds-without-enough-space' => { 'name' => 'ds3', 'summary.freeSpace' => (512 + disk_threshold) * bytes_in_mb, 'summary.capacity' => 20000 * bytes_in_mb  },
+        'ephemeral-ds-with-enough-space' => { 'name' => 'es1', 'summary.freeSpace' => (2048 + disk_threshold) * bytes_in_mb, 'summary.capacity' => 20000 * bytes_in_mb  },
       }
     end
+    let(:persistent_pattern) { /ds/ }
+    let(:ephemeral_pattern) { /es/ }
 
-    it 'returns datastore with weighted random from datastores with enough space' do
-      first_datastore = nil
-      expect(VSphereCloud::Resources::Util).to receive(:weighted_random) do |weighted_datastores|
-        expect(weighted_datastores.size).to eq(2)
-        first_datastore, first_weight = weighted_datastores.first
-        expect(first_datastore.name).to eq('ds1')
-        expect(first_weight).to eq(1024 + VSphereCloud::Resources::DISK_HEADROOM)
+    context '#pick_persistent_datastore' do
+      context 'without filter' do
+        it 'returns datastore with weighted random from datastores with enough space' do
+          first_datastore = nil
+          expect(VSphereCloud::Resources::Util).to receive(:weighted_random) do |weighted_datastores|
+            expect(weighted_datastores.size).to eq(2)
+            first_datastore, first_weight = weighted_datastores.first
+            expect(first_datastore.name).to eq('ds1')
+            expect(first_weight).to eq(1024 + VSphereCloud::Resources::Datastore::DISK_HEADROOM)
 
-        second_datastore, second_weight = weighted_datastores[1]
-        expect(second_datastore.name).to eq('ds2')
-        expect(second_weight).to eq(2048 + VSphereCloud::Resources::DISK_HEADROOM)
+            second_datastore, second_weight = weighted_datastores[1]
+            expect(second_datastore.name).to eq('ds2')
+            expect(second_weight).to eq(2048 + VSphereCloud::Resources::Datastore::DISK_HEADROOM)
 
-        first_datastore
-      end
-      expect(datacenter.pick_persistent_datastore(1024)).to eq(first_datastore)
-    end
+            first_datastore
+          end
+          expect(datacenter.pick_persistent_datastore(1024)).to eq(first_datastore)
+        end
 
-    it 'logs a bunch of debug info since it is really hard to know what happening otherwise' do
-      datacenter.pick_persistent_datastore(1024)
+        it 'logs debug info about all persistent datastores' do
+          datacenter.pick_persistent_datastore(1024)
 
-      expect(log_output.string).to include "Looking for a 'persistent' datastore with 1024MB free space."
-      expect(log_output.string).to include 'All datastores within datacenter ' + datacenter.name + ': ["ds1 (2048MB free of 20000MB capacity)", "ds2 (3072MB free of 20000MB capacity)", "ds3 (1536MB free of 20000MB capacity)"]'
-      expect(log_output.string).to include 'Datastores with enough space: ["ds1 (2048MB free of 20000MB capacity)", "ds2 (3072MB free of 20000MB capacity)"]'
-    end
+          expect(log_output.string).to include "Looking for a 'persistent' datastore with 1024MB free space."
+          expect(log_output.string).to include 'All datastores being considered within datacenter ' + datacenter.name + ': ["ds1 (2048MB free of 20000MB capacity)", "ds2 (3072MB free of 20000MB capacity)", "ds3 (1536MB free of 20000MB capacity)"]'
+          expect(log_output.string).to include 'Datastores with enough space: ["ds1 (2048MB free of 20000MB capacity)", "ds2 (3072MB free of 20000MB capacity)"]'
+        end
 
-    context 'and there is less persistent free space than the disk threshold' do
-      it 'raises a Bosh::Clouds::NoDiskSpace' do
-        expect {
-          datacenter.pick_persistent_datastore(10000)
-        }.to raise_error do |error|
-          expect(error).to be_an_instance_of(Bosh::Clouds::NoDiskSpace)
-          expect(error.ok_to_retry).to be(true)
-          expect(error.message).to eq(<<-MSG)
+        context 'and there is less persistent free space than the disk threshold' do
+          it 'raises a Bosh::Clouds::NoDiskSpace' do
+            expect {
+              datacenter.pick_persistent_datastore(10000)
+            }.to raise_error do |error|
+              expect(error).to be_an_instance_of(Bosh::Clouds::NoDiskSpace)
+              expect(error.ok_to_retry).to be(true)
+              expect(error.message).to eq(<<-MSG)
 Couldn't find a 'persistent' datastore with 10000MB of free space. Found:
  ds1 (2048MB free of 20000MB capacity)
  ds2 (3072MB free of 20000MB capacity)
  ds3 (1536MB free of 20000MB capacity)
-          MSG
+              MSG
+            end
+          end
+        end
+      end
+
+      context 'with empty filter' do
+        let(:filter) { [] }
+
+        it 'returns datastore with weighted random from datastores with enough space' do
+          first_datastore = nil
+          expect(VSphereCloud::Resources::Util).to receive(:weighted_random) do |weighted_datastores|
+            expect(weighted_datastores.size).to eq(2)
+            first_datastore, first_weight = weighted_datastores.first
+            expect(first_datastore.name).to eq('ds1')
+            expect(first_weight).to eq(1024 + VSphereCloud::Resources::Datastore::DISK_HEADROOM)
+
+            second_datastore, second_weight = weighted_datastores[1]
+            expect(second_datastore.name).to eq('ds2')
+            expect(second_weight).to eq(2048 + VSphereCloud::Resources::Datastore::DISK_HEADROOM)
+
+            first_datastore
+          end
+          expect(datacenter.pick_persistent_datastore(1024, filter)).to eq(first_datastore)
+        end
+
+        it 'logs debug info about all persistent datastores' do
+          datacenter.pick_persistent_datastore(1024)
+
+          expect(log_output.string).to include "Looking for a 'persistent' datastore with 1024MB free space."
+          expect(log_output.string).to include 'All datastores being considered within datacenter ' + datacenter.name + ': ["ds1 (2048MB free of 20000MB capacity)", "ds2 (3072MB free of 20000MB capacity)", "ds3 (1536MB free of 20000MB capacity)"]'
+          expect(log_output.string).to include 'Datastores with enough space: ["ds1 (2048MB free of 20000MB capacity)", "ds2 (3072MB free of 20000MB capacity)"]'
+        end
+
+        context 'and there is less persistent free space than the disk threshold' do
+          it 'raises a Bosh::Clouds::NoDiskSpace' do
+            expect {
+              datacenter.pick_persistent_datastore(10000)
+            }.to raise_error do |error|
+              expect(error).to be_an_instance_of(Bosh::Clouds::NoDiskSpace)
+              expect(error.ok_to_retry).to be(true)
+              expect(error.message).to eq(<<-MSG)
+Couldn't find a 'persistent' datastore with 10000MB of free space. Found:
+ ds1 (2048MB free of 20000MB capacity)
+ ds2 (3072MB free of 20000MB capacity)
+ ds3 (1536MB free of 20000MB capacity)
+              MSG
+            end
+          end
+        end
+      end
+
+      context 'with filter' do
+        let(:filter) { %w(ds1 ds3) }
+
+        it 'returns datastore with weighted random from datastores with enough space' do
+          first_datastore = nil
+          expect(VSphereCloud::Resources::Util).to receive(:weighted_random) do |weighted_datastores|
+            expect(weighted_datastores.size).to eq(1)
+            first_datastore, first_weight = weighted_datastores.first
+            expect(first_datastore.name).to eq('ds1')
+            expect(first_weight).to eq(1024 + VSphereCloud::Resources::Datastore::DISK_HEADROOM)
+
+            first_datastore
+          end
+          expect(datacenter.pick_persistent_datastore(1024, filter)).to eq(first_datastore)
+        end
+
+        it 'logs debug info about all filtered datastores' do
+          datacenter.pick_persistent_datastore(1024, filter)
+
+          expect(log_output.string).to include "Looking for a 'persistent' datastore with 1024MB free space."
+          expect(log_output.string).to include 'All datastores being considered within datacenter ' + datacenter.name + ': ["ds1 (2048MB free of 20000MB capacity)", "ds3 (1536MB free of 20000MB capacity)"]'
+          expect(log_output.string).to include 'Datastores with enough space: ["ds1 (2048MB free of 20000MB capacity)"]'
+        end
+
+        context 'and there is less persistent free space than the disk threshold' do
+          it 'raises a Bosh::Clouds::NoDiskSpace' do
+            expect {
+              datacenter.pick_persistent_datastore(10000, filter)
+            }.to raise_error do |error|
+              expect(error).to be_an_instance_of(Bosh::Clouds::NoDiskSpace)
+              expect(error.ok_to_retry).to be(true)
+              expect(error.message).to eq(<<-MSG)
+Couldn't find a 'persistent' datastore with 10000MB of free space. Found:
+ ds1 (2048MB free of 20000MB capacity)
+ ds3 (1536MB free of 20000MB capacity)
+              MSG
+            end
+          end
+        end
+      end
+    end
+
+    context '#pick_ephemeral_datastore' do
+      it 'logs debug info about all filtered datastores' do
+        datacenter.pick_ephemeral_datastore(1024, nil)
+
+        expect(log_output.string).to include "Looking for a 'ephemeral' datastore with 1024MB free space."
+        expect(log_output.string).to include 'All datastores being considered within datacenter ' + datacenter.name + ': ["es1 (3072MB free of 20000MB capacity)"]'
+        expect(log_output.string).to include 'Datastores with enough space: ["es1 (3072MB free of 20000MB capacity)"]'
+      end
+
+      context 'with empty filter' do
+        let(:filter) { [] }
+
+        it 'returns datastore with weighted random from datastores with enough space' do
+          first_datastore = nil
+          expect(VSphereCloud::Resources::Util).to receive(:weighted_random) do |weighted_datastores|
+            expect(weighted_datastores.size).to eq(1)
+            first_datastore, first_weight = weighted_datastores.first
+            expect(first_datastore.name).to eq('es1')
+            expect(first_weight).to eq(2048 + VSphereCloud::Resources::Datastore::DISK_HEADROOM)
+
+            first_datastore
+          end
+          expect(datacenter.pick_ephemeral_datastore(1024, filter)).to eq(first_datastore)
+        end
+
+        it 'logs debug info about all ephemeral datastores' do
+          datacenter.pick_persistent_datastore(1024)
+
+          expect(log_output.string).to include "Looking for a 'persistent' datastore with 1024MB free space."
+          expect(log_output.string).to include 'All datastores being considered within datacenter ' + datacenter.name + ': ["ds1 (2048MB free of 20000MB capacity)", "ds2 (3072MB free of 20000MB capacity)", "ds3 (1536MB free of 20000MB capacity)"]'
+          expect(log_output.string).to include 'Datastores with enough space: ["ds1 (2048MB free of 20000MB capacity)", "ds2 (3072MB free of 20000MB capacity)"]'
+        end
+
+        context 'and there is less ephemeral free space than the disk threshold' do
+          it 'raises a Bosh::Clouds::NoDiskSpace' do
+            expect {
+              datacenter.pick_ephemeral_datastore(10000)
+            }.to raise_error do |error|
+              expect(error).to be_an_instance_of(Bosh::Clouds::NoDiskSpace)
+              expect(error.ok_to_retry).to be(true)
+              expect(error.message).to eq(<<-MSG)
+Couldn't find a 'ephemeral' datastore with 10000MB of free space. Found:
+ es1 (3072MB free of 20000MB capacity)
+              MSG
+            end
+          end
         end
       end
     end
@@ -362,6 +507,304 @@ Couldn't find a 'persistent' datastore with 10000MB of free space. Found:
   describe '#to_s' do
     it 'show relevant info' do
       expect(subject.to_s).to eq("(#{subject.class.name} (name=\"fake-datacenter-name\"))")
+    end
+  end
+
+  describe '#create_disk' do
+    let(:virtual_disk_manager) { instance_double('VimSdk::Vim::VirtualDiskManager') }
+
+    before do
+      allow(SecureRandom).to receive(:uuid).and_return('cid')
+      allow(virtual_disk_manager).to receive(:create_virtual_disk)
+    end
+
+    context 'when disk type is nil' do
+      it 'creates disk using VirtualDiskManager with default disk type' do
+        allow(client).to receive(:create_disk)
+                            .with(datacenter_mob, datastore, 'disk-cid', 'fake-disk-path', 24, 'preallocated')
+                            .and_return(disk)
+        expect(datacenter.create_disk(datastore, 24, nil)).to eq(disk)
+      end
+    end
+
+    context 'when disk type is invalid' do
+      it 'raises an error' do
+        expect {
+          datacenter.create_disk(datastore, 24, 'invalid-type')
+        }.to raise_error("Disk type: 'invalid-type' is not supported")
+      end
+    end
+
+    context 'when disk type is valid' do
+      it 'creates disk using VirtualDiskManager with specified disk type' do
+        allow(client).to receive(:create_disk)
+                            .with(datacenter_mob, datastore, 'disk-cid', 'fake-disk-path', 24, 'thin')
+                            .and_return(disk)
+
+        expect(datacenter.create_disk(datastore, 24, 'thin')).to eq(disk)
+      end
+    end
+  end
+
+  describe '#find_disk' do
+    let(:other_datastore) { instance_double(VSphereCloud::Resources::Datastore) }
+
+    before do
+      allow(datacenter).to receive(:persistent_datastores).and_return({
+            'datastore-with-disk' => datastore,
+            'datastore-without-disk' => other_datastore,
+          })
+      allow(datacenter).to receive(:all_datastores).and_return({
+            'datastore-with-disk' => datastore,
+            'datastore-without-disk' => other_datastore,
+          })
+    end
+
+    context 'when disk exists' do
+      before do
+        allow(client).to receive(:find_disk).with('disk-cid', datastore, 'fake-disk-path') { disk }
+        allow(client).to receive(:find_disk).with('disk-cid', other_datastore, 'fake-disk-path') { nil }
+      end
+
+      it 'returns disk' do
+        expect(datacenter.find_disk('disk-cid')).to eq(disk)
+      end
+    end
+
+    context 'when disk does not exist' do
+      before do
+        allow(client).to receive(:find_disk).with('disk-cid', datastore, 'fake-disk-path') { nil }
+        allow(client).to receive(:find_disk).with('disk-cid', other_datastore, 'fake-disk-path') { nil }
+      end
+
+      it 'raises DiskNotFound' do
+        expect {
+          datacenter.find_disk('disk-cid')
+        }.to raise_error { |error|
+            expect(error).to be_a(Bosh::Clouds::DiskNotFound)
+            expect(error.ok_to_retry).to eq(false)
+            expect(error.message).to match(/Could not find disk with id 'disk-cid'/)
+          }
+      end
+    end
+  end
+
+  describe '#move_disk' do
+    it 'forwards the call to the client with the correct args' do
+      expect(client).to receive(:move_disk).with(datacenter_mob, 'source-path', datacenter_mob, 'dest-path')
+      datacenter.move_disk('source-path', 'dest-path')
+    end
+  end
+
+  describe '#ensure_disk_is_accessible_to_vm' do
+    let(:disk) do
+      instance_double(
+        'VSphereCloud::Resources::PersistentDisk',
+        cid: 'disk-cid', size_in_mb: 24, datastore: datastore, folder: 'fake-disk-path'
+      )
+    end
+
+    context 'when disk is accessible' do
+      let(:vm) { instance_double(VSphereCloud::Resources::VM, accessible_datastores: [datastore.name]) }
+      before do
+        allow(datacenter).to receive(:persistent_datastores) do
+            {datastore.name => datastore}
+        end
+      end
+      it 'returns disk' do
+        expect(datacenter.ensure_disk_is_accessible_to_vm(disk, vm)).to eq(disk)
+      end
+    end
+
+    context 'when disk is not accessible' do
+      let(:accessible_datastore) do
+        instance_double(
+          'VSphereCloud::Resources::Datastore',
+          name: 'accessible-datastore', free_space: 2000, debug_info: ''
+        )
+      end
+      let(:vm) { instance_double(VSphereCloud::Resources::VM, accessible_datastores: [accessible_datastore.name]) }
+      let(:disk) do
+        instance_double(
+          'VSphereCloud::Resources::PersistentDisk',
+          cid: 'disk-cid', size_in_mb: 24, datastore: datastore, folder: 'fake-folder', path: 'fake-path'
+        )
+      end
+      before do
+        allow(datacenter).to receive(:persistent_datastores) do
+          {
+            datastore.name => datastore,
+            accessible_datastore.name => accessible_datastore
+          }
+        end
+      end
+
+      it 'moves and returns disk' do
+        expect(client).to receive(:move_disk).with(datacenter_mob, 'fake-path', datacenter_mob, '[accessible-datastore] fake-disk-path/disk-cid.vmdk')
+        new_disk = datacenter.ensure_disk_is_accessible_to_vm(disk, vm)
+        expect(new_disk.datastore.name).to eq('accessible-datastore')
+      end
+    end
+  end
+
+  describe '#pick_cluster_for_vm' do
+    let(:datastore1) { VSphereCloud::Resources::Datastore.new('datastore1', nil, 0, 3000 + VSphereCloud::Resources::Datastore::DISK_HEADROOM) }
+    let(:requested_memory) { 35 }
+    let(:requested_ephemeral_disk) { 500 }
+    let(:existing_persistent_disks) { [] }
+    let(:cluster1) {
+      instance_double(
+        'VSphereCloud::Resources::Cluster',
+        name: 'cluster1',
+        all_datastores: {'datastore1' => datastore1},
+        ephemeral_datastores: {'datastore1' => datastore1},
+        persistent_datastores: {'datastore1' => datastore1},
+        free_memory: 40 + VSphereCloud::Resources::Cluster::MEMORY_HEADROOM,
+        describe: "cluster1 has 168mb/3gb/3gb"
+      )
+    }
+    before do
+      allow(subject).to receive(:clusters).and_return({
+        'cluster1' => cluster1
+      })
+      allow(cluster1).to receive(:allocate)
+    end
+
+    it 'selects clusters that satisfy the requested memory and ephemeral disk size' do
+      cluster = subject.pick_cluster_for_vm(requested_memory, requested_ephemeral_disk, existing_persistent_disks)
+      expect(cluster).to eq(cluster1)
+    end
+
+    context 'when no cluster satisfies the requested memory' do
+      let(:requested_memory) { 41 }
+      it 'raises' do
+        expect {
+          subject.pick_cluster_for_vm(requested_memory, requested_ephemeral_disk, existing_persistent_disks)
+        }.to raise_error("Unable to allocate vm with 41mb RAM, 0gb ephemeral disk, and 0gb persistent disk from any cluster.\ncluster1 has 168mb/3gb/3gb.")
+      end
+    end
+
+    context 'when no cluster satisfies the requested ephemeral disk' do
+      let(:requested_ephemeral_disk) { 3100 }
+
+      it 'raises' do
+        expect {
+          subject.pick_cluster_for_vm(requested_memory, requested_ephemeral_disk, existing_persistent_disks)
+        }.to raise_error("Unable to allocate vm with 35mb RAM, 3gb ephemeral disk, and 0gb persistent disk from any cluster.\ncluster1 has 168mb/3gb/3gb.")
+      end
+    end
+
+    context 'with an existing persistent disk' do
+      let(:disk) { VSphereCloud::Resources::PersistentDisk.new('disk1', 20, datastore1, 'fake-folder') }
+      let(:existing_persistent_disks) { [] }
+
+      context 'when disk is in a cluster that satisfies requirements' do
+        it 'returns cluster that has disk' do
+          cluster = subject.pick_cluster_for_vm(requested_memory, requested_ephemeral_disk, existing_persistent_disks)
+          expect(cluster).to eq(cluster1)
+        end
+      end
+    end
+
+    context 'with multiple clusters' do
+      let(:datastore2) { VSphereCloud::Resources::Datastore.new('datastore2', nil, 0, datastore2_free_space + VSphereCloud::Resources::Datastore::DISK_HEADROOM) }
+      let(:datastore2_free_space) { 8000 }
+      let(:cluster2) {
+        instance_double(
+          'VSphereCloud::Resources::Cluster',
+          name: 'cluster2',
+          all_datastores: {'datastore2' => datastore2},
+          ephemeral_datastores: {'datastore2' => datastore2},
+          persistent_datastores: {'datastore2' => datastore2},
+          free_memory: 182 + VSphereCloud::Resources::Cluster::MEMORY_HEADROOM,
+          describe: ''
+        )
+      }
+
+      before do
+        allow(subject).to receive(:clusters).and_return({
+              'cluster1' => cluster1,
+              'cluster2' => cluster2,
+            })
+        allow(cluster2).to receive(:allocate)
+      end
+
+      it 'selects randomly from the clusters that satisfy the requested memory and ephemeral disk size' do
+        expect(VSphereCloud::Resources::Util).to receive(:weighted_random).with([
+              [cluster2, 5],
+              [cluster1, 1]
+            ]).and_return(cluster2)
+        cluster = subject.pick_cluster_for_vm(requested_memory, requested_ephemeral_disk, existing_persistent_disks)
+        expect(cluster).to eq(cluster2)
+      end
+
+      context 'with an existing persistent disks' do
+        let(:disk1) { VSphereCloud::Resources::PersistentDisk.new('disk1', 10, datastore1,'fake-folder') }
+        let(:disk2) { VSphereCloud::Resources::PersistentDisk.new('disk2', 20, datastore2, 'fake-folder-2') }
+        let(:existing_persistent_disks) { [disk1, disk2] }
+
+        before do
+          allow(cluster1).to receive(:persistent).and_return(nil)
+          allow(cluster2).to receive(:persistent).and_return(datastore1)
+        end
+
+        context 'when all clusters satisfy requirements' do
+          it 'returns cluster that has more persistent disk sizes' do
+            cluster = subject.pick_cluster_for_vm(requested_memory, requested_ephemeral_disk, existing_persistent_disks)
+            expect(cluster).to eq(cluster2)
+          end
+        end
+
+        context 'when cluster with most disks does not satisfy requirements' do
+          let(:requested_memory) { 11 }
+          it 'returns next cluster with most disks that satisfy requirement' do
+            cluster = subject.pick_cluster_for_vm(requested_memory, requested_ephemeral_disk, existing_persistent_disks)
+            expect(cluster).to eq(cluster2)
+          end
+        end
+
+        context 'when disk belongs to two clusters' do
+          let(:datastore3) { VSphereCloud::Resources::Datastore.new('datastore3', nil, 0, 5000 + VSphereCloud::Resources::Datastore::DISK_HEADROOM) }
+          let(:cluster3) {
+            instance_double(
+              'VSphereCloud::Resources::Cluster',
+              name: 'cluster3',
+              all_datastores: {'datastore3' => datastore3},
+              ephemeral_datastores: {'datastore3' => datastore3},
+              persistent_datastores: {'datastore3' => datastore3},
+              free_memory: 1000 + VSphereCloud::Resources::Cluster::MEMORY_HEADROOM,
+              describe: ''
+            )
+          }
+          let(:clusters) { [cluster1, cluster2, cluster3] }
+
+          let(:disk1) { VSphereCloud::Resources::PersistentDisk.new('disk1', 1000, datastore1, 'fake-folder') }
+          let(:disk2) { VSphereCloud::Resources::PersistentDisk.new('disk2', 5000, datastore2, 'fake-folder-2') }
+          let(:disk3) { VSphereCloud::Resources::PersistentDisk.new('disk3', 3000, datastore3, 'fake-folder-3') }
+
+          let(:existing_persistent_disks) { [disk1, disk2, disk3] }
+          before do
+            allow(subject).to receive(:clusters).and_return({
+              'cluster1' => cluster1,
+              'cluster2' => cluster2,
+              'cluster3' => cluster3,
+            })
+
+            allow(cluster3).to receive(:persistent).and_return(datastore3)
+            allow(cluster3).to receive(:allocate)
+          end
+          context 'when cluster with biggest disks size cannot fit other disks' do
+            let(:datastore2_free_space) { 5 }
+
+            context 'when next cluster with most disks can fit the disk that is not in that cluster' do
+              it 'returns next cluster with most disks that satisfy requirement' do
+                cluster = subject.pick_cluster_for_vm(requested_memory, requested_ephemeral_disk, existing_persistent_disks)
+                expect(cluster).to eq(cluster3)
+              end
+            end
+          end
+        end
+      end
     end
   end
 end

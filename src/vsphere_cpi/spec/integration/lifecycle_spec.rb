@@ -122,7 +122,7 @@ describe VSphereCloud::Cloud, external_cpi: false do
       end
     end
 
-    context 'without existing disks and placer' do
+    context 'without existing disks' do
       context 'when resource_pool is set to the first cluster' do
         it 'places vm in first cluster' do
           begin
@@ -245,7 +245,7 @@ describe VSphereCloud::Cloud, external_cpi: false do
         @disk_id = first_datastore_cpi.create_disk(2048, {}, @vm_id)
         expect(@disk_id).to_not be_nil
         expect(first_datastore_cpi.has_disk?(@disk_id)).to be(true)
-        disk = first_datastore_cpi.disk_provider.find(@disk_id)
+        disk = first_datastore_cpi.datacenter.find_disk(@disk_id)
         expect(disk.datastore.name).to match(@datastore_pattern)
       end
 
@@ -272,7 +272,7 @@ describe VSphereCloud::Cloud, external_cpi: false do
 
         second_datastore_cpi.delete_disk(@disk_id)
         expect {
-          first_datastore_cpi.disk_provider.find(@disk_id)
+          first_datastore_cpi.datacenter.find_disk(@disk_id)
         }.to raise_error(Bosh::Clouds::DiskNotFound)
         @disk_id = nil
       end
@@ -280,7 +280,7 @@ describe VSphereCloud::Cloud, external_cpi: false do
       it '#attach_disk can move the disk to the new datastore pattern' do
         second_datastore_cpi.attach_disk(@vm_id, @disk_id)
 
-        disk = second_datastore_cpi.disk_provider.find(@disk_id)
+        disk = second_datastore_cpi.datacenter.find_disk(@disk_id)
         expect(disk.cid).to eq(@disk_id)
         expect(disk.datastore.name).to match(@second_datastore_within_cluster)
 
@@ -513,7 +513,7 @@ describe VSphereCloud::Cloud, external_cpi: false do
 
           disk_id = local_disk_cpi.create_disk(2048, {}, vm_id)
           expect(disk_id).to_not be_nil
-          disk = local_disk_cpi.disk_provider.find(disk_id)
+          disk = local_disk_cpi.datacenter.find_disk(disk_id)
           expect(disk.datastore.name).to match(@persistent_datastore_pattern)
           local_disk_cpi.attach_disk(vm_id, disk_id)
           expect(local_disk_cpi.has_disk?(disk_id)).to be(true)

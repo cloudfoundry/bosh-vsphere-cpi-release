@@ -1,12 +1,14 @@
 require 'cloud/vsphere/resources'
 
 module VSphereCloud
-  class Resources
+  module Resources
     class Datastore
       include VimSdk
       include ObjectStringifier
       stringify_with :name, :mob
       PROPERTIES = %w(summary.freeSpace summary.capacity name)
+
+      DISK_HEADROOM = 1024
 
       def self.build_from_client(client, datastore_properties)
         ds_properties_map = client.cloud_searcher.get_properties(datastore_properties, Vim::Datastore, Datastore::PROPERTIES)

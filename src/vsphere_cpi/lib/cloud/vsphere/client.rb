@@ -95,6 +95,7 @@ module VSphereCloud
       end
     end
 
+    #TODO: move disk deletion?, try to use updated method of moving/deleting disk
     def delete_disk(datacenter, path)
       base_path = path.chomp(File.extname(path))
       [".vmdk", "-flat.vmdk"].each do |extension|
@@ -102,14 +103,14 @@ module VSphereCloud
       end
     end
 
-    def move_disk(source_datacenter, source_path, dest_datacenter, dest_path)
-      create_parent_folder(dest_datacenter, dest_path)
+    def move_disk(source_datacenter_mob, source_path, dest_datacenter_mob, dest_path)
+      create_parent_folder(dest_datacenter_mob, dest_path)
       @logger.info("Moving disk: #{source_path} to #{dest_path}")
       task = service_content.virtual_disk_manager.move_virtual_disk(
         source_path,
-        source_datacenter.mob,
+        source_datacenter_mob,
         dest_path,
-        dest_datacenter.mob,
+        dest_datacenter_mob,
         false,
         nil
       )
@@ -250,17 +251,17 @@ module VSphereCloud
 
     def find_disk(disk_cid, datastore, disk_folder)
       disk_size_in_mb = find_disk_size_using_browser(datastore, disk_cid, disk_folder)
-      disk_size_in_mb.nil? ? nil : Resources::PersistentDisk.new(disk_cid, disk_size_in_mb, datastore, self, disk_folder)
+      disk_size_in_mb.nil? ? nil : Resources::PersistentDisk.new(disk_cid, disk_size_in_mb, datastore, disk_folder)
     end
 
-    def create_disk(datacenter, datastore, disk_cid, disk_folder, disk_size_in_mb, disk_type)
+    def create_disk(datacenter_mob, datastore, disk_cid, disk_folder, disk_size_in_mb, disk_type)
       if disk_type.nil?
         raise 'no disk type specified'
       end
 
       disk_path = "[#{datastore.name}] #{disk_folder}/#{disk_cid}.vmdk"
 
-      create_parent_folder(datacenter, disk_path)
+      create_parent_folder(datacenter_mob, disk_path)
 
       disk_spec = VimSdk::Vim::VirtualDiskManager::FileBackedVirtualDiskSpec.new
       disk_spec.disk_type = disk_type
@@ -269,17 +270,12 @@ module VSphereCloud
 
       task = service_content.virtual_disk_manager.create_virtual_disk(
         disk_path,
-        datacenter.mob,
+        datacenter_mob,
         disk_spec
       )
       wait_for_task(task)
 
-      Resources::PersistentDisk.new(disk_cid, disk_size_in_mb, datastore, self, disk_folder)
-    end
-
-    def create_parent_folder(datacenter, disk_path)
-      destination_folder = File.dirname(disk_path)
-      create_datastore_folder(destination_folder, datacenter.mob)
+      Resources::PersistentDisk.new(disk_cid, disk_size_in_mb, datastore, disk_folder)
     end
 
     def find_disk_size_using_browser(datastore, disk_cid, disk_folder)
@@ -429,6 +425,11 @@ module VSphereCloud
           result = @service_content.property_collector.continue_retrieve_properties_ex(token)
         end
       end
+    end
+
+    def create_parent_folder(datacenter_mob, disk_path)
+      destination_folder = File.dirname(disk_path)
+      create_datastore_folder(destination_folder, datacenter_mob)
     end
   end
 end

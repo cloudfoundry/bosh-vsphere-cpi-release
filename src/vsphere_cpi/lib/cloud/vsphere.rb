@@ -12,9 +12,7 @@ require 'cloud/vsphere/cloud'
 require 'cloud/vsphere/cloud_searcher'
 require 'cloud/vsphere/config'
 require 'cloud/vsphere/cluster_config'
-require 'cloud/vsphere/disk_provider'
 require 'cloud/vsphere/file_provider'
-require 'cloud/vsphere/fixed_cluster_placer'
 require 'cloud/vsphere/lease_obtainer'
 require 'cloud/vsphere/lease_updater'
 require 'cloud/vsphere/path_finder'
@@ -25,6 +23,7 @@ require 'cloud/vsphere/resources/datastore'
 require 'cloud/vsphere/resources/disk'
 require 'cloud/vsphere/resources/ephemeral_disk'
 require 'cloud/vsphere/resources/persistent_disk'
+require 'cloud/vsphere/resources/nic'
 require 'cloud/vsphere/resources/folder'
 require 'cloud/vsphere/resources/vm'
 require 'cloud/vsphere/resources/resource_pool'
@@ -48,7 +47,7 @@ module Bosh
                      :create_disk, :has_disk?, :delete_disk,
                      :attach_disk, :detach_disk,
                      :snapshot_disk, :delete_snapshot,
-                     :current_vm_id, :get_disks, :ping, :disk_provider
+                     :current_vm_id, :get_disks, :ping
 
       def initialize(options)
         @delegate = VSphereCloud::Cloud.new(options)
