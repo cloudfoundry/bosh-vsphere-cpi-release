@@ -84,8 +84,8 @@ module VSphereCloud
       devices.find { |device| device.kind_of?(Vim::Vm::Device::VirtualCdrom) }
     end
 
-    def delete_path(datacenter, path)
-      task = @service_content.file_manager.delete_file(path, datacenter)
+    def delete_path(datacenter_mob, path)
+      task = @service_content.file_manager.delete_file(path, datacenter_mob)
       begin
         wait_for_task(task)
       rescue => e
@@ -95,11 +95,18 @@ module VSphereCloud
       end
     end
 
-    #TODO: move disk deletion?, try to use updated method of moving/deleting disk
-    def delete_disk(datacenter, path)
-      base_path = path.chomp(File.extname(path))
-      [".vmdk", "-flat.vmdk"].each do |extension|
-        delete_path(datacenter, "#{base_path}#{extension}")
+    def delete_disk(datacenter_mob, path)
+      task = service_content.virtual_disk_manager.delete_virtual_disk(
+        path,
+        datacenter_mob
+      )
+
+      begin
+        wait_for_task(task)
+      rescue => e
+        unless e.message =~ /File .* was not found/
+          raise e
+        end
       end
     end
 
