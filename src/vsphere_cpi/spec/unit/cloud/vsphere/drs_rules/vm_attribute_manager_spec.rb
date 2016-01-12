@@ -1,4 +1,4 @@
-require 'cloud/vsphere/drs_rules/vm_attribute_manager'
+require 'spec_helper'
 
 describe VSphereCloud::VMAttributeManager do
   subject(:vm_attribute_manager) { described_class.new(custom_fields_manager, logger) }

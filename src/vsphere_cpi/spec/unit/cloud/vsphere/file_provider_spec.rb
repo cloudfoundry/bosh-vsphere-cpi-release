@@ -47,7 +47,7 @@ module VSphereCloud
 
           expect {
             file_provider.fetch_file(datacenter_name, datastore_name, path)
-          }.to raise_error
+          }.to raise_error /Could not fetch file/
         end
       end
     end

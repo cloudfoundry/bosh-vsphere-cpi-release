@@ -1,4 +1,4 @@
-require 'cloud/vsphere/drs_rules/drs_lock'
+require 'spec_helper'
 require 'timecop'
 
 describe VSphereCloud::DrsLock do
@@ -57,9 +57,9 @@ describe VSphereCloud::DrsLock do
 
         expect do
           drs_lock.with_drs_lock do
-            raise
+            raise 'Failed block'
           end
-        end.to raise_error
+        end.to raise_error 'Failed block'
       end
     end
   end

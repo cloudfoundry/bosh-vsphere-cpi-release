@@ -1,4 +1,4 @@
-require 'cloud/vsphere/drs_rules/drs_rule'
+require 'spec_helper'
 
 describe VSphereCloud::DrsRule do
   subject(:drs_rule) do

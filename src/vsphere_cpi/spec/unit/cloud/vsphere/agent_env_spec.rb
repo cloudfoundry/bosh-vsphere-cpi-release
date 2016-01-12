@@ -278,7 +278,14 @@ module VSphereCloud
       end
 
       context 'when uploading environment file fails' do
-        before { it_uploads_environment_json(500) }
+        before {
+          expect(file_provider).to receive(:upload_file).with(
+              'fake-datacenter-name 1',
+              'fake-datastore-name 1',
+              'fake-vm-name/env.json',
+              '["fake-json"]'
+            ).and_raise 'Could not upload file'
+        }
 
         it 'retries and raises an error' do
           it_disconnects_cdrom.ordered
@@ -286,12 +293,12 @@ module VSphereCloud
 
           expect {
             agent_env.set_env(vm, location, env)
-          }.to raise_error
+          }.to raise_error 'Could not upload file'
         end
       end
 
       context 'when generating iso image fails' do
-        before { it_generates_environment_iso(exit_status: 1) }
+        before { it_generates_environment_iso(exit_status: 'some-exit-status') }
 
         it 'raises an error' do
           it_disconnects_cdrom.ordered
@@ -300,7 +307,7 @@ module VSphereCloud
 
           expect {
             agent_env.set_env(vm, location, env)
-          }.to raise_error
+          }.to raise_error /some-exit-status/
         end
       end
 
