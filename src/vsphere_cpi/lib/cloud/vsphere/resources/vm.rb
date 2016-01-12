@@ -213,6 +213,7 @@ module VSphereCloud
         @logger.debug("Adding persistent disk property to vm '#{@cid}'")
         @client.add_persistent_disk_property_to_vm(self, disk)
         @logger.debug('Finished adding persistent disk property to vm')
+        return disk_config_spec
       end
 
       def detach_disk(disk)

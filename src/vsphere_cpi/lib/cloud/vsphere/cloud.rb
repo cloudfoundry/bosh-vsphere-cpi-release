@@ -342,8 +342,8 @@ module VSphereCloud
         vm = vm_provider.find(vm_cid)
         disk = @datacenter.find_disk(disk_cid)
         disk = @datacenter.ensure_disk_is_accessible_to_vm(disk, vm)
-        vm.attach_disk(disk)
-        add_disk_to_agent_env(vm, disk)
+        disk_config_spec = vm.attach_disk(disk)
+        add_disk_to_agent_env(vm, disk, disk_config_spec.device.unit_number)
       end
     end
 
@@ -662,12 +662,10 @@ module VSphereCloud
 
     private
 
-    def add_disk_to_agent_env(vm, disk)
-      disk_config_spec = disk.create_disk_attachment_spec(vm.system_disk.controller_key)
-
+    def add_disk_to_agent_env(vm, disk, device_unit_number)
       env = @agent_env.get_current_env(vm.mob, @datacenter.name)
       @logger.info("Reading current agent env: #{env.pretty_inspect}")
-      env['disks']['persistent'][disk.cid] = disk_config_spec.device.unit_number.to_s
+      env['disks']['persistent'][disk.cid] = device_unit_number.to_s
       location = get_vm_location(vm.mob, datacenter: @datacenter.name)
       @agent_env.set_env(vm.mob, location, env)
       @logger.info("Updated agent env to: #{env.pretty_inspect}")

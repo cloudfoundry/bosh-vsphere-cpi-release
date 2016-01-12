@@ -1,4 +1,5 @@
 require 'spec_helper'
+require 'ostruct'
 
 module VSphereCloud
   describe Cloud do
@@ -451,7 +452,7 @@ module VSphereCloud
 
       let(:datastore) { instance_double('VSphereCloud::Resources::Datastore', name: 'fake-datastore')}
       let(:cluster) { instance_double('VSphereCloud::Resources::Cluster') }
-      let(:disk) { Resources::PersistentDisk.new('fake-disk-cid', 1024, datastore, 'fake-folder') }
+      let(:disk) { Resources::PersistentDisk.new('disk-cid', 1024, datastore, 'fake-folder') }
 
       it 'updates persistent disk' do
         expect(vm_provider).to receive(:find).with('fake-vm-cid').and_return(vm)
@@ -459,11 +460,12 @@ module VSphereCloud
           with('disk-cid').and_return(disk)
         expect(datacenter).to receive(:ensure_disk_is_accessible_to_vm).
           with(disk, vm).and_return(disk)
-        expect(vm).to receive(:attach_disk)
+        expect(vm).to receive(:attach_disk).and_return(OpenStruct.new(device: OpenStruct.new(unit_number: 'some-unit-number')))
 
         expect(agent_env).to receive(:set_env) do|env_vm, env_location, env|
           expect(env_vm).to eq(vm_mob)
           expect(env_location).to eq(vm_location)
+          expect(env['disks']['persistent']['disk-cid']).to eq('some-unit-number')
         end
 
         vsphere_cloud.attach_disk('fake-vm-cid', 'disk-cid')
