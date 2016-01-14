@@ -137,7 +137,7 @@ describe VSphereCloud::Cloud do
         }
       end
 
-      context 'when another tread is in the process of creating the replicated stemcell' do
+      context 'when another thread is in the process of creating the replicated stemcell' do
         it 'waits for other thread to finish creating stemcell vm and returns it new' do
           destination_datastore = @cpi.datacenter.all_datastores[@second_datastore_within_cluster]
 
