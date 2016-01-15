@@ -887,7 +887,7 @@ module VSphereCloud
           allow(logger).to receive(:warn)
         end
 
-        it 'should not raise an exception' do
+        it 'does not raise an error' do
           metadata = { 'key' => 'value' }
           expect do
             vsphere_cloud.set_vm_metadata(vm.cid, metadata)

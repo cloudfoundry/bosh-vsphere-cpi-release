@@ -53,18 +53,23 @@ describe VSphereCloud::Cloud do
 
   after do
     cpi.delete_stemcell(@stemcell_id) if @stemcell_id
+    cpi.delete_vm(@vm_cid)
   end
 
   describe 'set_vm_metadata' do
     context 'when called with duplicate keys with multiple threads' do
       it 'succeeds' do
-        pool = MetadataActor.pool(size: 3, args: [cpi_options])
-        expect(logger).to receive(:warn).exactly(2).times
+        futures = []
+        size = 5
+        pool = MetadataActor.pool(size: size, args: [cpi_options])
+        size.times do
+          futures << pool.future.execute(@vm_cid, metadata)
+        end
+
+        expect(logger).to receive(:warn).at_least(:once)
         expect {
-          3.times do
-            pool.async.execute(@vm_cid, metadata)
-          end
-        }
+          futures.map(&:value)
+        }.to_not raise_error
       end
     end
   end
