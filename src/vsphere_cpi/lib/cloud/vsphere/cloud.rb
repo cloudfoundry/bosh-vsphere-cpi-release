@@ -283,6 +283,8 @@ module VSphereCloud
           if e.fault.kind_of?(Vim::Fault::NoPermission)
             @logger.warn("Can't set custom fields due to lack of " +
                            "permission: #{e.message}")
+          elsif e.fault.kind_of?(Vmodl::MethodFault)
+            @logger.warn("Can't add custom field definition that already exists: #{e.message}")
           else
             raise e
           end

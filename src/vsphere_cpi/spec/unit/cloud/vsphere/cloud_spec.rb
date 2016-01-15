@@ -869,5 +869,32 @@ module VSphereCloud
         end
       end
     end
+
+    describe '#set_vm_metadata' do
+      let(:custom_fields_manager) { instance_double('VimSdk::Vim::CustomFieldsManager') }
+      let(:custom_fields) { instance_double('Array') }
+
+      before do
+        error = VimSdk::SoapError.new("message", VimSdk::Vmodl::MethodFault.new)
+
+        allow(custom_fields_manager).to receive(:field).and_return(custom_fields)
+        allow(custom_fields).to receive(:find).and_return(nil)
+        allow(custom_fields_manager).to receive(:add_field_definition).and_raise(error)
+      end
+
+      context 'when called on existing key' do
+        before do
+          allow(logger).to receive(:warn)
+        end
+
+        it 'should not raise an exception' do
+          metadata = { 'key' => 'value' }
+          expect do
+            vsphere_cloud.set_vm_metadata(vm.cid, metadata)
+            vsphere_cloud.set_vm_metadata(vm.cid, metadata)
+          end.to_not raise_error
+        end
+      end
+    end
   end
 end
