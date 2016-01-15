@@ -29,7 +29,9 @@ class LifecycleHelpers
   ALLOWED_PRIVILEGES_ON_ROOT = [
     'System.Anonymous',
     'System.Read',
-    'System.View'
+    'System.View',
+    'Global.ManageCustomFields',
+    'Global.SetCustomField'
   ]
 
   ALLOWED_PRIVILEGES_ON_DATACENTER = [

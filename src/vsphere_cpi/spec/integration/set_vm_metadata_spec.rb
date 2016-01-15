@@ -18,6 +18,7 @@ describe VSphereCloud::Cloud do
     Bosh::Clouds::Config.configure(config)
 
     fetch_properties(LifecycleHelpers)
+    verify_properties(LifecycleHelpers)
 
     Dir.mktmpdir do |temp_dir|
       stemcell_image = LifecycleHelpers.stemcell_image(@stemcell_path, temp_dir)
