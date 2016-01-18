@@ -11,7 +11,7 @@ Gem::Specification.new do |s|
   s.email       = 'support@cloudfoundry.com'
   s.required_ruby_version = Gem::Requirement.new('>= 1.9.3')
 
-  s.files        = Dir['lib/**/*'].select { |f| File.file? f } 
+  s.files        = Dir['lib/**/*'].select { |f| File.file? f }
   s.require_path = 'lib'
   s.bindir       = 'bin'
 
@@ -22,6 +22,6 @@ Gem::Specification.new do |s|
   s.add_dependency 'membrane',    '~>1.1.0'
   s.add_dependency 'builder',     '~>3.1.4'
   s.add_dependency 'nokogiri',    '~>1.6.6'
-  s.add_dependency 'httpclient',  '=2.4.0'
+  s.add_dependency 'httpclient',  '=2.7.1'
   s.add_dependency 'mono_logger', '~>1.1.0'
 end
