@@ -54,7 +54,7 @@ describe VSphereCloud::Cloud do
 
   after do
     cpi.delete_stemcell(@stemcell_id) if @stemcell_id
-    cpi.delete_vm(@vm_cid)
+    cpi.delete_vm(@vm_cid) if @vm_cid
   end
 
   describe 'set_vm_metadata' do
