@@ -67,7 +67,6 @@ describe VSphereCloud::Cloud do
           futures << pool.future.execute(@vm_cid, metadata)
         end
 
-        expect(logger).to receive(:warn).at_least(:once)
         expect {
           futures.map(&:value)
         }.to_not raise_error
