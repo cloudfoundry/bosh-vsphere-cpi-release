@@ -54,7 +54,7 @@ module VSphereCloud
 
     describe 'snapshot_disk' do
       it 'raises not implemented exception when called' do
-        expect { vsphere_cloud.snapshot_disk('123') }.to raise_error(Bosh::Clouds::NotImplemented)
+        expect { vsphere_cloud.snapshot_disk('123', {}) }.to raise_error(Bosh::Clouds::NotImplemented)
       end
     end
 
