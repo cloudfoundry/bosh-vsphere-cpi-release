@@ -1,5 +1,4 @@
 require 'spec_helper'
-require 'celluloid/backported'
 require 'securerandom'
 require 'tempfile'
 require 'yaml'
@@ -60,29 +59,23 @@ describe VSphereCloud::Cloud do
   describe 'set_vm_metadata' do
     context 'when called with duplicate keys with multiple threads' do
       it 'succeeds' do
-        futures = []
-        size = 5
-        pool = MetadataActor.pool(size: size, args: [cpi_options])
-        size.times do
-          futures << pool.future.execute(@vm_cid, metadata)
+        threads = []
+        cpis = []
+        pool_size = 5
+        pool_size.times do
+          cpis << VSphereCloud::Cloud.new(cpi_options)
+        end
+
+        pool_size.times do |i|
+          threads << Thread.new do
+            cpis[i].set_vm_metadata(@vm_cid, metadata)
+          end
         end
 
         expect {
-          futures.map(&:value)
+          threads.map(&:join)
         }.to_not raise_error
       end
-    end
-  end
-
-  class MetadataActor
-    include Celluloid
-
-    def initialize(options)
-      @cpi = VSphereCloud::Cloud.new(options)
-    end
-
-    def execute(cid, metadata)
-      @cpi.set_vm_metadata(cid, metadata)
     end
   end
 end

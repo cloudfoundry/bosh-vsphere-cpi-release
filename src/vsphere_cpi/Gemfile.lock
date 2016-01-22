@@ -21,26 +21,8 @@ GEM
       logging (~> 1.8.2)
       membrane (~> 1.1.0)
     builder (3.1.4)
-    celluloid (0.17.2)
-      celluloid-essentials
-      celluloid-extras
-      celluloid-fsm
-      celluloid-pool
-      celluloid-supervision
-      timers (>= 4.1.1)
-    celluloid-essentials (0.20.5)
-      timers (>= 4.1.1)
-    celluloid-extras (0.20.5)
-      timers (>= 4.1.1)
-    celluloid-fsm (0.20.5)
-      timers (>= 4.1.1)
-    celluloid-pool (0.20.5)
-      timers (>= 4.1.1)
-    celluloid-supervision (0.20.5)
-      timers (>= 4.1.1)
     diff-lcs (1.2.5)
     fakefs (0.6.7)
-    hitimes (1.2.3)
     httpclient (2.7.1)
     little-plugger (1.1.4)
     logging (1.8.2)
@@ -73,15 +55,12 @@ GEM
     rspec-support (3.3.0)
     semi_semantic (1.1.0)
     timecop (0.7.4)
-    timers (4.1.1)
-      hitimes
 
 PLATFORMS
   ruby
 
 DEPENDENCIES
   bosh_vsphere_cpi!
-  celluloid
   fakefs
   rake (~> 10.0)
   rspec (~> 3.0)
