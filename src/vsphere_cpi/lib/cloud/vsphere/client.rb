@@ -37,6 +37,8 @@ module VSphereCloud
       raise NotLoggedInException unless @session
       @session = nil
       @service_content.session_manager.logout
+    rescue VimSdk::SoapError => e
+      @logger.info "Failed to logout: #{e.message}"
     end
 
     def find_parent(obj, parent_type)
