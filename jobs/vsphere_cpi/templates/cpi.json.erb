@@ -60,7 +60,8 @@
       options = {
         "bucket_name" => p('blobstore.bucket_name'),
         "access_key_id" => p(['agent.blobstore.access_key_id', 'blobstore.access_key_id']),
-        "secret_access_key" => p(['agent.blobstore.secret_access_key', 'blobstore.secret_access_key'])
+        "secret_access_key" => p(['agent.blobstore.secret_access_key', 'blobstore.secret_access_key']),
+        "region" => p(['agent.blobstore.s3_region', 'blobstore.s3_region'])
       }
 
       def update_blobstore_options(options, manifest_key, rendered_key=manifest_key)
@@ -74,6 +75,7 @@
       update_blobstore_options(options, 's3_force_path_style')
       update_blobstore_options(options, 'ssl_verify_peer')
       update_blobstore_options(options, 's3_multipart_threshold')
+      update_blobstore_options(options, 's3_signature_version', 'signature_version')
 
     elsif p('blobstore.provider') == 'local'
       options = {
