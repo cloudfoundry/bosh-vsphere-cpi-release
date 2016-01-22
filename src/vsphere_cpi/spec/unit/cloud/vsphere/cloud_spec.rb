@@ -488,40 +488,13 @@ module VSphereCloud
         let(:disk) { instance_double('VimSdk::Vim::Vm::Device::VirtualDisk', backing: double(:backing, file_name: '[datastore] fake-file_name')) }
         before {
           allow(vm).to receive(:persistent_disks).and_return([disk])
-          allow(vm).to receive(:has_persistent_disk_property_mismatch?)
-            .and_return(false)
         }
 
         it 'detaches persistent disks' do
-          expect(client).to receive(:reconfig_vm) do |mob, spec|
-            expect(mob).to equal(vm_mob)
-            expect(spec.device_change.first.device).to eq(disk)
-            expect(spec.device_change.first.operation).to eq(VimSdk::Vim::Vm::Device::VirtualDeviceSpec::Operation::REMOVE)
-          end
+          expect(vm).to receive(:detach_disks).with([disk])
           expect(vm).to receive(:power_off)
           expect(vm).to receive(:delete)
           vsphere_cloud.delete_vm('vm-id')
-        end
-
-        context 'and has property mismatch' do
-          before do
-            allow(vm).to receive(:has_persistent_disk_property_mismatch?)
-                           .and_return(true)
-            allow(disk).to receive(:key).and_return('key')
-            allow(vm).to receive(:get_old_disk_filepath).and_return('[old-datastore] old-disk-path')
-
-          end
-          it 'renames the disk to its original name' do
-            expect(client).to receive(:reconfig_vm) do |mob, spec|
-              expect(mob).to equal(vm_mob)
-              expect(spec.device_change.first.device).to eq(disk)
-              expect(spec.device_change.first.operation).to eq(VimSdk::Vim::Vm::Device::VirtualDeviceSpec::Operation::REMOVE)
-            end
-            expect(vm).to receive(:power_off)
-            expect(datacenter).to receive(:move_disk).with('[datastore] fake-file_name', '[datastore] old-disk-path')
-            expect(vm).to receive(:delete)
-            vsphere_cloud.delete_vm('vm-id')
-          end
         end
       end
 
@@ -541,39 +514,8 @@ module VSphereCloud
     end
 
     describe '#detach_disk' do
-      it 'raises an error if disk is not found' do
-        allow(datacenter).to receive(:find_disk).with('non-existent-disk-cid').
-          and_raise(Bosh::Clouds::DiskNotFound.new(false))
-        expect {
-          vsphere_cloud.detach_disk('vm-id', 'non-existent-disk-cid')
-        }.to raise_error Bosh::Clouds::DiskNotFound
-      end
-
-      context 'when disk exists' do
-        before do
-          found_disk = instance_double(VSphereCloud::Resources::PersistentDisk, cid: 'disk-cid')
-          allow(datacenter).to receive(:find_disk).with('disk-cid').and_return(found_disk)
-          allow(cloud_searcher).to receive(:get_property).with(
-            vm_mob,
-            VimSdk::Vim::VirtualMachine,
-            'config.hardware.device',
-            ensure_all: true
-          ).and_return(devices)
-
-          allow(vsphere_cloud).to receive(:get_vm_location).and_return(vm_location)
-
-          allow(agent_env).to receive(:get_current_env).with(vm_mob, 'fake-datacenter-name').
-            and_return(env)
-          allow(agent_env).to receive(:set_env)
-          allow(client).to receive(:reconfig_vm) do
-            allow(cloud_searcher).to receive(:get_property).with(vm, VimSdk::Vim::VirtualMachine, 'config.hardware.device', anything).and_return([attached_disk], [])
-          end
-          allow(vm).to receive(:disk_by_cid).with('disk-cid').and_return(attached_disk, nil)
-        end
-
-        let(:env) do
-          {'disks' => {'persistent' => {'disk-cid' => 'fake-data'}}}
-        end
+      context 'disk is attached' do
+        let(:attached_disk) { instance_double(VimSdk::Vim::Vm::Device::VirtualDisk, key: 'disk-key') }
 
         let(:vm_location) do
           {
@@ -583,24 +525,27 @@ module VSphereCloud
           }
         end
 
-        let(:attached_disk) do
-          disk = VimSdk::Vim::Vm::Device::VirtualDisk.new
-          disk.backing = double(:backing, file_name: 'fake-disk-path/disk-cid.vmdk')
-          disk
+        let(:env) do
+          {'disks' => {'persistent' => {'disk-cid' => 'fake-data'}}}
         end
 
-        let(:devices) { [attached_disk] }
+        before do
+          allow(vsphere_cloud).to receive(:get_vm_location).and_return(vm_location)
+          allow(agent_env).to receive(:get_current_env).with(vm_mob, 'fake-datacenter-name').
+              and_return(env)
+          allow(agent_env).to receive(:set_env)
+          allow(vm).to receive(:disk_by_original_cid).with('disk-cid').and_return(attached_disk)
+        end
 
         it 'updates VM with new settings' do
           expect(agent_env).to receive(:set_env).with(
-            vm_mob,
-            vm_location,
-            {'disks' => {'persistent' => {}}}
-          )
-          allow(vm).to receive(:detach_disk)
+              vm_mob,
+              vm_location,
+              {'disks' => {'persistent' => {}}}
+            )
+          expect(vm).to receive(:detach_disks).with([attached_disk])
           vsphere_cloud.detach_disk('vm-id', 'disk-cid')
         end
-
         context 'when old settings do not contain disk to be detached' do
           let(:env) do
             {'disks' => {'persistent' => {}}}
@@ -608,32 +553,19 @@ module VSphereCloud
 
           it 'does not update VM with new setting' do
             expect(agent_env).to_not receive(:set_env)
-
-            allow(vm).to receive(:detach_disk)
+            expect(vm).to receive(:detach_disks).with([attached_disk])
             vsphere_cloud.detach_disk('vm-id', 'disk-cid')
           end
         end
-
-        context 'when disk is not attached' do
-          before do
-            allow(vm).to receive(:disk_by_cid).with('disk-cid').and_return(nil)
-          end
-
-          it 'updates VM with new settings' do
-            expect(agent_env).to receive(:set_env).with(
-              vm_mob,
-              vm_location,
-              {'disks' => {'persistent' => {}}}
-            )
-
-            expect(vm).to receive(:detach_disk)
-            vsphere_cloud.detach_disk('vm-id', 'disk-cid')
-          end
+      end
+      context 'disk is not attached' do
+        before do
+          allow(vm).to receive(:disk_by_original_cid).with('disk-cid').and_return(nil)
         end
-
-        it 'reconfigures VM with new config' do
-          allow(vm).to receive(:detach_disk)
-          vsphere_cloud.detach_disk('vm-id', 'disk-cid')
+        it 'raises an error' do
+          expect{
+            vsphere_cloud.detach_disk('vm-id', 'disk-cid')
+          }.to raise_error Bosh::Clouds::DiskNotAttached
         end
       end
     end

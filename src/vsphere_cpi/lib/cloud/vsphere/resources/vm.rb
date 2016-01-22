@@ -60,7 +60,7 @@ module VSphereCloud
       end
 
       def persistent_disks
-       devices.select do |device|
+        devices.select do |device|
           device.kind_of?(Vim::Vm::Device::VirtualDisk) &&
             device.backing.disk_mode == Vim::Vm::Device::VirtualDiskOption::DiskMode::INDEPENDENT_PERSISTENT
         end
@@ -77,7 +77,7 @@ module VSphereCloud
       end
 
       def fix_device_unit_numbers(device_changes)
-        controllers_available_unit_numbers = Hash.new { |h,k| h[k] = (0..15).to_a }
+        controllers_available_unit_numbers = Hash.new { |h, k| h[k] = (0..15).to_a }
         devices.each do |device|
           if device.controller_key
             available_unit_numbers = controllers_available_unit_numbers[device.controller_key]
@@ -117,7 +117,7 @@ module VSphereCloud
           if question
             choices = question.choice
             @logger.info("VM is blocked on a question: #{question.text}, " +
-              "providing default answer: #{choices.choice_info[choices.default_index].label}")
+                "providing default answer: #{choices.choice_info[choices.default_index].label}")
             @client.answer_vm(@mob, question.id, choices.choice_info[choices.default_index].key)
             power_state = cloud_searcher.get_property(@mob, Vim::VirtualMachine, 'runtime.powerState')
           else
@@ -136,6 +136,21 @@ module VSphereCloud
           d.kind_of?(Vim::Vm::Device::VirtualDisk) &&
             d.backing.file_name.end_with?("/#{disk_cid}.vmdk")
         end
+      end
+
+      def disk_by_original_cid(disk_cid)
+        devices.each do |d|
+          if d.kind_of?(Vim::Vm::Device::VirtualDisk)
+            found_property = get_vapp_property_by_key(d.key)
+            unless found_property.nil?
+              if verify_persistent_disk_property?(found_property) && found_property.label == disk_cid
+                return d
+              end
+            end
+          end
+        end
+
+        nil
       end
 
       def reboot
@@ -174,8 +189,8 @@ module VSphereCloud
         return false if found_property.nil? || !verify_persistent_disk_property?(found_property)
 
         # get full path without a datastore
-        file_path = disk.backing.file_name[/([^\]]*)\.vmdk/,1].strip
-        original_file_path =found_property.value[/([^\]]*)\.vmdk/,1].strip
+        file_path = disk.backing.file_name[/([^\]]*)\.vmdk/, 1].strip
+        original_file_path = found_property.value[/([^\]]*)\.vmdk/, 1].strip
         @logger.debug("Current file path is #{file_path}")
         @logger.debug("Original file path is #{original_file_path}")
 
@@ -216,31 +231,51 @@ module VSphereCloud
         return disk_config_spec
       end
 
-      def detach_disk(disk)
+      def detach_disks(virtual_disks)
         reload
-        virtual_disk = disk_by_cid(disk.cid)
-        raise Bosh::Clouds::DiskNotAttached.new(true), "Disk '#{disk.cid}' is not attached to VM '#{@cid}'" if virtual_disk.nil?
-
+        disks_to_move = []
+        @logger.info("Found #{virtual_disks.size} persistent disk(s)")
         config = Vim::Vm::ConfigSpec.new
         config.device_change = []
-        config.device_change << self.class.create_delete_device_spec(virtual_disk)
 
-        @logger.info('Detaching disk')
-        @client.reconfig_vm(@mob, config)
+        virtual_disks.each do |virtual_disk|
+          @logger.info("Detaching: #{virtual_disk.backing.file_name}")
+          config.device_change << Resources::VM.create_delete_device_spec(virtual_disk)
 
-        # detach-disk is async and task completion does not necessarily mean
-        # that changes have been applied to VC side. Query VC until we confirm
-        # that the change has been applied. This is a known issue for vsphere 4.
-        # Fixed in vsphere 5.
-        5.times do
-          reload
-          virtual_disk = disk_by_cid(disk.cid)
-          break if virtual_disk.nil?
-          sleep(1.0)
+          disk_property = get_vapp_property_by_key(virtual_disk.key)
+          unless disk_property.nil?
+            if has_persistent_disk_property_mismatch?(virtual_disk) && !@client.disk_path_exists?(@mob, disk_property.value)
+              @logger.info('Persistent disk was moved: moving disk to expected location')
+              disks_to_move << virtual_disk
+            end
+          end
         end
-        raise "Failed to detach disk '#{disk.cid}' from vm '#{@cid}'" unless virtual_disk.nil?
+        retry_block { @client.reconfig_vm(@mob, config) }
+        @logger.info("Detached #{virtual_disks.size} persistent disk(s)")
 
-        @logger.info('Finished detaching disk')
+        move_disks_to_old_path(disks_to_move)
+
+        @logger.info('Finished detaching disk(s)')
+
+        virtual_disks.each do |disk|
+          @logger.debug("Deleting persistent disk property #{disk.key} from vm '#{@cid}'")
+          @client.delete_persistent_disk_property_from_vm(self, disk.key)
+        end
+        @logger.debug('Finished deleting persistent disk properties from vm')
+      end
+
+      def move_disks_to_old_path(disks_to_move)
+        @logger.info("Renaming #{disks_to_move.size} persistent disk(s)")
+        disks_to_move.each do |virtual_disk|
+          current_path = virtual_disk.backing.file_name
+
+          current_datastore = current_path.split(" ").first
+          original_disk_path = get_old_disk_filepath(virtual_disk.key)
+          dest_filename = original_disk_path.split(" ").last
+          dest_path = "#{current_datastore} #{dest_filename}"
+
+          @client.move_disk(datacenter, current_path, datacenter, dest_path)
+        end
       end
 
       def self.create_delete_device_spec(device, options = {})

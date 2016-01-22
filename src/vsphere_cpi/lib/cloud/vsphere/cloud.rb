@@ -195,34 +195,7 @@ module VSphereCloud
 
         persistent_disks = vm.persistent_disks
         unless persistent_disks.empty?
-          disks_to_move = []
-          @logger.info("Found #{persistent_disks.size} persistent disk(s)")
-          config = Vim::Vm::ConfigSpec.new
-          config.device_change = []
-
-          persistent_disks.each do |virtual_disk|
-            @logger.info("Detaching: #{virtual_disk.backing.file_name}")
-            config.device_change << Resources::VM.create_delete_device_spec(virtual_disk)
-
-            if vm.has_persistent_disk_property_mismatch?(virtual_disk)
-              @logger.info("Property Mismatch")
-              disks_to_move << virtual_disk
-            end
-          end
-          retry_block { client.reconfig_vm(vm.mob, config) }
-          @logger.info("Detached #{persistent_disks.size} persistent disk(s)")
-
-          @logger.info("Renaming #{disks_to_move.size} persistent disk(s)")
-          disks_to_move.each do |disk|
-            current_path = disk.backing.file_name
-
-            current_datastore = current_path.split(" ").first
-            original_disk_path = vm.get_old_disk_filepath(disk.key)
-            dest_filename = original_disk_path.split(" ").last
-            dest_path = "#{current_datastore} #{dest_filename}"
-
-            @datacenter.move_disk(current_path, dest_path)
-          end
+          vm.detach_disks(persistent_disks)
         end
 
         # Delete env.iso and VM specific files managed by the director
@@ -353,11 +326,12 @@ module VSphereCloud
       with_thread_name("detach_disk(#{vm_cid}, #{disk_cid})") do
         @logger.info("Detaching disk: #{disk_cid} from vm: #{vm_cid}")
 
-        disk = @datacenter.find_disk(disk_cid)
         vm = vm_provider.find(vm_cid)
+        disk = vm.disk_by_original_cid(disk_cid)
+        raise Bosh::Clouds::DiskNotAttached.new(true), "Disk '#{disk_cid}' is not attached to VM '#{vm_cid}'" if disk.nil?
 
-        delete_disk_from_agent_env(vm, disk)
-        vm.detach_disk(disk)
+        delete_disk_from_agent_env(vm, disk_cid)
+        vm.detach_disks([disk])
       end
     end
 
@@ -673,13 +647,13 @@ module VSphereCloud
       @logger.info("Updated agent env to: #{env.pretty_inspect}")
     end
 
-    def delete_disk_from_agent_env(vm, disk)
+    def delete_disk_from_agent_env(vm, disk_cid)
       vm_mob = vm.mob
       location = get_vm_location(vm_mob)
       env = @agent_env.get_current_env(vm_mob, location[:datacenter])
       @logger.info("Reading current agent env: #{env.pretty_inspect}")
-      if env['disks']['persistent'][disk.cid]
-        env['disks']['persistent'].delete(disk.cid)
+      if env['disks']['persistent'][disk_cid]
+        env['disks']['persistent'].delete(disk_cid)
         @logger.info("Updating agent env to: #{env.pretty_inspect}")
 
         @agent_env.set_env(vm_mob, location, env)

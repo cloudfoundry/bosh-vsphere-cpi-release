@@ -362,5 +362,97 @@ module VSphereCloud
       end
     end
 
+    describe '#disk_path_exists?' do
+      let(:vm_mob) { double('VimSdk::Vim::Vm') }
+      let(:environment_browser) { double('VimSdk::Vim::EnvironmentBrowser') }
+      let(:datastore_browser) { double('VimSdk::Vim::Host::DatastoreBrowser') }
+      let(:task) { instance_double('VimSdk::Vim::Task') }
+      let(:vm_disk_infos) { double('VmDisksInfos') }
+      let(:properties) {
+        {
+          task => {
+            'info.progress' => 0,
+            'info.state' => VimSdk::Vim::TaskInfo::State::SUCCESS,
+            'info.result' => vm_disk_infos,
+            'info.error' => nil,
+          }
+        }
+      }
+      let(:cloud_searcher) { instance_double('VSphereCloud::CloudSearcher') }
+      before do
+        allow(environment_browser).to receive(:datastore_browser).and_return(datastore_browser)
+        allow(vm_mob).to receive(:environment_browser).and_return(environment_browser)
+        allow(logger).to receive(:debug)
+        client.instance_variable_set('@cloud_searcher', cloud_searcher)
+        allow(cloud_searcher).to receive(:get_properties).and_return(properties)
+      end
+      context 'path exists' do
+        before do
+          allow(vm_disk_infos).to receive(:file).and_return(['some-file'])
+        end
+        it 'returns true' do
+          expect(datastore_browser).to receive(:search).with('[datastore-name] disk-folder', anything).and_return(task)
+          expect(client.disk_path_exists?(vm_mob, '[datastore-name] disk-folder/disk-key.vmdk')).to be(true)
+        end
+      end
+
+      context 'path does not exist' do
+        before do
+          allow(vm_disk_infos).to receive(:file).and_return([])
+        end
+        it 'returns false if the path does not' do
+          expect(datastore_browser).to receive(:search).with('[datastore-name] disk-folder', anything).and_return(task)
+          expect(client.disk_path_exists?(vm_mob, '[datastore-name] disk-folder/disk-key.vmdk')).to be(false)
+        end
+      end
+    end
+
+    describe '#add_persistent_disk_property_to_vm' do
+      let(:vm) { instance_double('VSphereCloud::Resources::VM', cid: 'vm-cid', mob: 'vm-mob')}
+      let(:vm_disk) { instance_double('Vim::Vm::Device::VirtualDisk', key: 'disk-key') }
+      let(:disk) { instance_double('VSphereCloud::Resources::PersistentDisk', cid: 'disk-cid', path: 'some-disk-path' )}
+      before do
+        allow(vm).to receive(:disk_by_cid).with(disk.cid).and_return(vm_disk)
+        allow(vm).to receive(:get_vapp_property_by_key).with('disk-key').and_return(nil)
+        allow(logger).to receive(:debug)
+      end
+      it 'reconfigures the vm' do
+        expect(client).to receive(:reconfig_vm)
+        client.add_persistent_disk_property_to_vm(vm, disk)
+      end
+      context 'disk property already exists on vm' do
+        before do
+          allow(vm).to receive(:get_vapp_property_by_key).with('disk-key').and_return('something')
+        end
+
+        it 'does not reconfigure vm' do
+          expect(client).to_not receive(:reconfig_vm)
+          client.add_persistent_disk_property_to_vm(vm, disk)
+        end
+      end
+    end
+
+    describe '#delete_persistent_disk_property_from_vm' do
+      let(:vm) { instance_double('VSphereCloud::Resources::VM', cid: 'vm-cid', mob: 'vm-mob')}
+      let(:vm_disk) { instance_double('Vim::Vm::Device::VirtualDisk', key: 'disk-key') }
+      before do
+        allow(vm).to receive(:get_vapp_property_by_key).with(vm_disk.key).and_return('something')
+        allow(logger).to receive(:debug)
+      end
+      it 'reconfigures the vm' do
+        expect(client).to receive(:reconfig_vm)
+        client.delete_persistent_disk_property_from_vm(vm, vm_disk.key)
+      end
+      context 'disk property does not exist on vm' do
+        before do
+          allow(vm).to receive(:get_vapp_property_by_key).with(vm_disk.key).and_return(nil)
+        end
+
+        it 'does not reconfigure vm' do
+          expect(client).to_not receive(:reconfig_vm)
+          client.delete_persistent_disk_property_from_vm(vm, vm_disk.key)
+        end
+      end
+    end
   end
 end
