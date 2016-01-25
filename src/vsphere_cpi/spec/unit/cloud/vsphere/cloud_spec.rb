@@ -807,7 +807,7 @@ module VSphereCloud
       let(:custom_fields) { instance_double('Array') }
 
       before do
-        error = VimSdk::SoapError.new("message", VimSdk::Vmodl::MethodFault.new)
+        error = VimSdk::SoapError.new("message", VimSdk::Vim::Fault::DuplicateName.new)
 
         allow(custom_fields_manager).to receive(:field).and_return(custom_fields)
         allow(custom_fields).to receive(:find).and_return(nil)
