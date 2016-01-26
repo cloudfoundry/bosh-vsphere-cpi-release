@@ -120,9 +120,15 @@ describe VSphereCloud::Cloud, external_cpi: false do
       it 'should exercise the vm lifecycle' do
         vm_lifecycle(@cpi, [], resource_pool, network_spec)
       end
-    end
 
-    context 'without existing disks' do
+      it "reconfigures the VM's network without issue" do
+          vm_lifecycle(@cpi, [], resource_pool, network_spec) do |vm_id|
+            modified_network_spec = network_spec.dup
+            modified_network_spec['static']['ip'] = '169.254.1.2'
+            @cpi.configure_networks(vm_id, modified_network_spec)
+          end
+      end
+
       context 'when resource_pool is set to the first cluster' do
         it 'places vm in first cluster' do
           begin
@@ -659,10 +665,6 @@ describe VSphereCloud::Cloud, external_cpi: false do
     cpi.attach_disk(vm_id, disk_id)
     disk_attached = true
     expect(cpi.has_disk?(disk_id)).to be(true)
-
-    modified_network_spec = network_spec.dup
-    modified_network_spec['static']['ip'] = '169.254.1.2'
-    cpi.configure_networks(vm_id, modified_network_spec)
 
     metadata[:bosh_data] = 'bosh data'
     metadata[:instance_id] = 'instance'
