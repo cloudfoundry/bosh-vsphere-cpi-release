@@ -358,6 +358,69 @@ describe VSphereCloud::Cloud, external_cpi: false do
         end
       end
 
+      context 'given a resource pool that is configured with a drs rule' do
+        let(:one_cluster_cpi) do
+          options = cpi_options(
+            clusters: [{@cluster => {'resource_pool' => @resource_pool_name}}]
+          )
+          described_class.new(options)
+        end
+
+        let(:resource_pool) do
+          {
+            'ram' => 1024,
+            'disk' => 2048,
+            'cpu' => 1,
+            'datacenters' => [{
+              'name' => @datacenter_name,
+              'clusters' => [{
+                @cluster => {
+                  'drs_rules' => [{
+                    'name' => 'separate-nodes-rule',
+                    'type' => 'separate_vms'
+                  }]
+                }
+              }]
+            }]
+          }
+        end
+
+        it 'should correctly apply VM Anti-Affinity rules to created VMs' do
+          begin
+            first_vm_id = one_cluster_cpi.create_vm(
+              'agent-007',
+              @stemcell_id,
+              resource_pool,
+              network_spec,
+              [],
+              {'key' => 'value'}
+            )
+            second_vm_id = one_cluster_cpi.create_vm(
+              'agent-006',
+              @stemcell_id,
+              resource_pool,
+              network_spec,
+              [],
+              {'key' => 'value'}
+            )
+            first_vm_mob = one_cluster_cpi.vm_provider.find(first_vm_id).mob
+            cluster = first_vm_mob.resource_pool.parent
+
+            drs_rules = cluster.configuration_ex.rule
+            expect(drs_rules).not_to be_empty
+            drs_rule = drs_rules[0]
+            expect(drs_rule.name).to eq("separate-nodes-rule")
+            expect(drs_rule.vm.length).to eq(2)
+            drs_vm_names = drs_rule.vm.map { |vm_mob| vm_mob.name }
+            expect(drs_vm_names).to include(first_vm_id, second_vm_id)
+
+          ensure
+            one_cluster_cpi.delete_vm(first_vm_id) if first_vm_id
+            one_cluster_cpi.delete_vm(second_vm_id) if second_vm_id
+          end
+        end
+      end
+
       context 'when migration happened after attaching a persistent disk' do
         let(:datastore_name) {
           datastore_name = one_cluster_cpi.datacenter.all_datastores.select do |datastore|

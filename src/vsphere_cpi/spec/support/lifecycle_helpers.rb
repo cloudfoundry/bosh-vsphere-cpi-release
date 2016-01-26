@@ -50,6 +50,8 @@ class LifecycleHelpers
     'Datastore.UpdateVirtualMachineFiles',
     'Datastore.FileManagement',
 
+    'Host.Inventory.EditCluster',
+
     'Network.Assign',
 
     'VirtualMachine.Inventory.Create',
@@ -118,7 +120,11 @@ class LifecycleHelpers
 
     'VApp.Import',
     'VApp.InstanceConfig',
-    'VApp.ApplicationConfig'
+    'VApp.ApplicationConfig',
+
+    'InventoryService.Tagging.CreateTag',
+    'InventoryService.Tagging.DeleteTag',
+    'InventoryService.Tagging.EditTag',
   ]
 
   class << self
