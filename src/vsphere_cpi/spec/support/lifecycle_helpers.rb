@@ -30,14 +30,15 @@ class LifecycleHelpers
     'System.Anonymous',
     'System.Read',
     'System.View',
-    'Global.ManageCustomFields',
-    'Global.SetCustomField'
+    'Global.ManageCustomFields'
   ]
 
   ALLOWED_PRIVILEGES_ON_DATACENTER = [
     'System.Anonymous',
     'System.Read',
     'System.View',
+
+    'Global.SetCustomField',
 
     'Folder.Create',
     'Folder.Delete',

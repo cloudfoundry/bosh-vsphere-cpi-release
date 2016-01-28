@@ -11,11 +11,9 @@ module VSphereCloud
     let(:client) { instance_double('VSphereCloud::Client', service_content: service_content) }
     let(:service_content) do
       instance_double('VimSdk::Vim::ServiceInstanceContent',
-        custom_fields_manager: custom_fields_manager,
         virtual_disk_manager: virtual_disk_manager,
       )
     end
-    let(:custom_fields_manager) { instance_double('VimSdk::Vim::CustomFieldsManager') }
     let(:virtual_disk_manager) { instance_double('VimSdk::Vim::VirtualDiskManager') }
     let(:agent_env) { instance_double('VSphereCloud::AgentEnv') }
     before { allow(VSphereCloud::AgentEnv).to receive(:new).and_return(agent_env) }
@@ -803,29 +801,12 @@ module VSphereCloud
     end
 
     describe '#set_vm_metadata' do
-      let(:custom_fields_manager) { instance_double('VimSdk::Vim::CustomFieldsManager') }
-      let(:custom_fields) { instance_double('Array') }
-
-      before do
-        error = VimSdk::SoapError.new("message", VimSdk::Vim::Fault::DuplicateName.new)
-
-        allow(custom_fields_manager).to receive(:field).and_return(custom_fields)
-        allow(custom_fields).to receive(:find).and_return(nil)
-        allow(custom_fields_manager).to receive(:add_field_definition).and_raise(error)
-      end
-
-      context 'when called on existing key' do
-        before do
-          allow(logger).to receive(:warn)
-        end
-
-        it 'does not raise an error' do
-          metadata = { 'key' => 'value' }
-          expect do
-            vsphere_cloud.set_vm_metadata(vm.cid, metadata)
-            vsphere_cloud.set_vm_metadata(vm.cid, metadata)
-          end.to_not raise_error
-        end
+      it 'sets the metadata as custom fields on the VM' do
+        expect(client).to receive(:set_custom_field).with(vm_mob, 'key', 'value')
+        expect(client).to receive(:set_custom_field).with(vm_mob, 'key', 'other-value')
+        expect(client).to receive(:set_custom_field).with(vm_mob, 'other-key', 'value')
+        vsphere_cloud.set_vm_metadata(vm.cid, {'key' => 'value'})
+        vsphere_cloud.set_vm_metadata(vm.cid, {'key' => 'other-value', 'other-key' => 'value'})
       end
     end
   end

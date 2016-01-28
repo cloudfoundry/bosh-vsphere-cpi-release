@@ -454,5 +454,91 @@ module VSphereCloud
         end
       end
     end
+
+    describe "#set_custom_field" do
+      let(:custom_fields_manager) { instance_double('VimSdk::Vim::CustomFieldsManager') }
+      let(:vm_mob) { instance_double('VimSdk::Vim::VirtualMachine') }
+
+      let(:first_field) do
+        instance_double(
+          'VimSdk::Vim::CustomFieldsManager::FieldDef',
+          name: 'key', key: 1, managed_object_type: vm_mob.class
+        )
+      end
+      let(:second_field) do
+        instance_double(
+          'VimSdk::Vim::CustomFieldsManager::FieldDef',
+          name: 'other-key', key: 2, managed_object_type: vm_mob.class
+        )
+      end
+      let(:custom_fields) { [first_field, second_field] }
+
+      before do
+        allow(fake_service_content).to receive(:custom_fields_manager).and_return(custom_fields_manager)
+        allow(custom_fields_manager).to receive(:field).and_return(custom_fields)
+      end
+
+      context 'when called on existing key' do
+        before do
+          allow(logger).to receive(:warn)
+          error = VimSdk::SoapError.new("message", VimSdk::Vim::Fault::DuplicateName.new)
+          allow(custom_fields_manager).to receive(:add_field_definition).and_raise(error)
+        end
+
+        it 'does not raise an error and sets the metadata' do
+          expect(custom_fields_manager).to receive(:set_field).with(vm_mob, 1, 'value')
+          expect(custom_fields_manager).to receive(:set_field).with(vm_mob, 1, 'other-value')
+          expect(custom_fields_manager).to receive(:set_field).with(vm_mob, 2, 'value')
+          expect do
+            client.set_custom_field(vm_mob, 'key', 'value')
+            client.set_custom_field(vm_mob, 'key', 'other-value')
+            client.set_custom_field(vm_mob, 'other-key', 'value')
+          end.to_not raise_error
+        end
+      end
+    end
+
+    describe "#remove_custom_field_def" do
+      let(:custom_fields_manager) { instance_double('VimSdk::Vim::CustomFieldsManager') }
+      let(:vm_mob) { instance_double('VimSdk::Vim::VirtualMachine') }
+      before do
+        allow(fake_service_content).to receive(:custom_fields_manager).and_return(custom_fields_manager)
+      end
+
+      context 'when called on existing key' do
+        let(:field) do
+          instance_double(
+            'VimSdk::Vim::CustomFieldsManager::FieldDef',
+            name: 'key', key: 1, managed_object_type: vm_mob.class
+          )
+        end
+
+        let(:custom_fields) { [field] }
+        before do
+          allow(custom_fields_manager).to receive(:field).and_return(custom_fields)
+        end
+
+        it 'removes the field definition for the key and deletes all values attached to it' do
+          expect(custom_fields_manager).to receive(:remove_field_definition).with(1)
+          expect do
+            client.remove_custom_field_def('key', vm_mob.class)
+          end.to_not raise_error
+        end
+      end
+
+      context 'when called on non-existing key' do
+        before do
+          allow(custom_fields_manager).to receive(:field).and_return([])
+        end
+
+        it 'does not error' do
+          expect(custom_fields_manager).to_not receive(:remove_field_definition)
+          expect do
+            client.remove_custom_field_def('key', vm_mob.class)
+          end.to_not raise_error
+        end
+      end
+    end
+
   end
 end

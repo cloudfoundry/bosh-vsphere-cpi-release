@@ -382,6 +382,51 @@ module VSphereCloud
       reconfig_vm(vm.mob, vm_config)
     end
 
+    def set_custom_field(mob, name, value)
+      @fields_manager ||= @service_content.custom_fields_manager
+      name = name.to_s
+      value = value.to_s
+      field = nil
+
+      begin
+        field = @fields_manager.add_field_definition(name, mob.class, nil, nil)
+      rescue SoapError => e
+        if e.fault.kind_of?(Vim::Fault::NoPermission)
+          @logger.warn("Can't create custom field definition due to lack of permission: #{e.message}")
+        elsif e.fault.kind_of?(Vim::Fault::DuplicateName)
+          @logger.warn("Custom field definition already exists: #{e.message}")
+          custom_fields = @fields_manager.field
+          field = custom_fields.find do |field|
+            field.name == name && field.managed_object_type == mob.class
+          end
+        else
+          raise e
+        end
+      end
+
+      unless field.nil?
+        begin
+        @fields_manager.set_field(mob, field.key, value)
+        rescue SoapError => e
+          if e.fault.kind_of?(Vim::Fault::NoPermission)
+            @logger.warn("Can't set custom fields due to lack of permission: #{e.message}")
+          end
+        end
+      end
+    end
+
+    def remove_custom_field_def(name, mob_type)
+      @fields_manager ||= @service_content.custom_fields_manager
+      name = name.to_s
+      custom_fields = @fields_manager.field
+      field = custom_fields.find do |field|
+        field.name == name && field.managed_object_type == mob_type
+      end
+      unless field.nil?
+        @fields_manager.remove_field_definition(field.key)
+      end
+    end
+
     private
 
     def task_exception_for_vim_fault(fault)

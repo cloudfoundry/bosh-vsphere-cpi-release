@@ -232,35 +232,9 @@ module VSphereCloud
 
     def set_vm_metadata(vm_cid, metadata)
       with_thread_name("set_vm_metadata(#{vm_cid}, ...)") do
-        begin
-          fields_manager = client.service_content.custom_fields_manager
-          custom_fields = fields_manager.field
-          name_to_key_id = {}
-
-          metadata.each_key do |name|
-            field = custom_fields.find { |field| field.name == name.to_s &&
-              field.managed_object_type == Vim::VirtualMachine }
-            unless field
-              field = fields_manager.add_field_definition(name.to_s, Vim::VirtualMachine, nil, nil)
-            end
-            name_to_key_id[name] = field.key
-          end
-
-          vm = vm_provider.find(vm_cid)
-
-          metadata.each do |name, value|
-            value = '' if value.nil? # value is required
-            fields_manager.set_field(vm.mob, name_to_key_id[name], value)
-          end
-        rescue SoapError => e
-          if e.fault.kind_of?(Vim::Fault::NoPermission)
-            @logger.warn("Can't set custom fields due to lack of " +
-                           "permission: #{e.message}")
-          elsif e.fault.kind_of?(Vim::Fault::DuplicateName)
-            @logger.warn("Can't add custom field definition that already exists: #{e.message}")
-          else
-            raise e
-          end
+        vm = vm_provider.find(vm_cid)
+        metadata.each do |name, value|
+          client.set_custom_field(vm.mob, name, value)
         end
       end
     end
