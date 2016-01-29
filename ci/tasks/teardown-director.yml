@@ -2,8 +2,14 @@
 platform: linux
 image: docker:///boshcpi/vsphere-cpi-release
 inputs:
-  - name: bosh-cpi-release
-  - name: bosh-init
-  - name: setup-director
+  - name: bosh-cpi-release       # --- location of task script to run
+  - name: bosh-init              # --- bosh-init executable to do delete
+  - name: bosh-release
+  - name: bosh-cpi-dev-artifacts
+  - name: version-semver
+  - name: stemcell
+  - name: deployment
+outputs:
+  - name: dummy # dummy output to avoid sending the entire task over the network
 run:
   path: bosh-cpi-release/ci/tasks/teardown-director.sh

@@ -9,6 +9,8 @@ inputs:
   - name: version-semver
   - name: stemcell
   - name: vsphere-5.1-environment
+outputs:
+  - name: deployment
 run:
   path: bosh-cpi-release/ci/tasks/setup-director.sh
 params:

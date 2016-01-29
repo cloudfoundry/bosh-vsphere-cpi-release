@@ -44,18 +44,17 @@ popd
 semver=`cat version-semver/number`
 cpi_release_name="bosh-vsphere-cpi"
 working_dir=$PWD
-manifest_dir="${working_dir}/deployment"
-mkdir ${manifest_dir}
+deployment_dir=$PWD/deployment
 
-cp ./bosh-cpi-dev-artifacts/${cpi_release_name}-${semver}.tgz ${manifest_dir}/${cpi_release_name}.tgz
-cp ./bosh-release/release.tgz ${manifest_dir}/bosh-release.tgz
-cp ./stemcell/stemcell.tgz ${manifest_dir}/stemcell.tgz
+cp ./bosh-cpi-dev-artifacts/${cpi_release_name}-${semver}.tgz ${cpi_release_name}.tgz
+cp ./bosh-release/release.tgz bosh-release.tgz
+cp ./stemcell/stemcell.tgz stemcell.tgz
 
 initver=$(cat bosh-init/version)
 initexe="$PWD/bosh-init/bosh-init-${initver}-linux-amd64"
 chmod +x $initexe
 
-cat > "${manifest_dir}/director-manifest.yml" <<EOF
+cat > "director-manifest.yml" <<EOF
 ---
 name: bosh
 
@@ -175,8 +174,19 @@ cloud_provider:
     ntp: [0.pool.ntp.org, 1.pool.ntp.org]
 EOF
 
-echo "deploying BOSH..."
-$initexe deploy ${manifest_dir}/director-manifest.yml
+function finish {
+  echo "Final state of director deployment:"
+  echo "=========================================="
+  cat director-manifest-state.json
+  echo "=========================================="
 
-echo "final state of bosh-init deployment of director"
-cat ${manifest_dir}/director-manifest-state.json
+  cp director-manifest* $deployment_dir
+  cp -r $HOME/.bosh_init $deployment_dir
+}
+trap finish ERR
+
+echo "deploying BOSH..."
+$initexe deploy director-manifest.yml
+
+trap - ERR
+finish
