@@ -304,7 +304,7 @@ module VSphereCloud
 
       datastore_path = "[#{datastore.name}] #{disk_folder}"
       @logger.debug("Trying to find disk in : #{datastore_path}")
-      vm_disk_infos = wait_for_task(datastore.mob.browser.search(datastore_path, search_spec)).file
+      vm_disk_infos = wait_for_task(datastore.mob.browser.search("[#{datastore.name}] #{disk_folder}", search_spec)).file
       return nil if vm_disk_infos.empty?
 
       vm_disk_infos.first.capacity_kb / 1024
@@ -312,26 +312,13 @@ module VSphereCloud
       nil
     end
 
-    def disk_path_exists?(vm_mob, disk_path)
-      match = /\[(.+)\] (.+)\/(.+\.vmdk)/.match(disk_path)
-      search_spec_details = VimSdk::Vim::Host::DatastoreBrowser::FileInfo::Details.new
-      search_spec_details.file_type = true # actually return VmDiskInfos not FileInfos
-
-      search_spec = VimSdk::Vim::Host::DatastoreBrowser::SearchSpec.new
-      search_spec.details = search_spec_details
-      search_spec.match_pattern = [match[3]]
-
-      datastore_path = "[#{match[1]}] #{match[2]}"
-      @logger.debug("Trying to find disk in : #{datastore_path}")
-      vm_disk_infos = wait_for_task(vm_mob.environment_browser.datastore_browser.search(datastore_path, search_spec)).file
-      return false if vm_disk_infos.empty?
-
-      true
-    rescue VimSdk::SoapError, FileNotFoundException
-      false
-    end
-
     def add_persistent_disk_property_to_vm(vm, disk)
+      vm_config = Vim::Vm::ConfigSpec.new
+      v_app_config_spec = VimSdk::Vim::VApp::VmConfigSpec.new
+
+      v_app_property_spec = VimSdk::Vim::VApp::PropertySpec.new
+      v_app_property_info = VimSdk::Vim::VApp::PropertyInfo.new
+
       vm_disk = vm.disk_by_cid(disk.cid)
       disk_device_key = vm_disk.key
 
@@ -340,7 +327,6 @@ module VSphereCloud
         return
       end
 
-      v_app_property_info = VimSdk::Vim::VApp::PropertyInfo.new
       v_app_property_info.key = disk_device_key
       v_app_property_info.id = disk.cid
       v_app_property_info.label = disk.cid
@@ -350,33 +336,10 @@ module VSphereCloud
       v_app_property_info.description = 'Used by BOSH to track persistent disks. Change at your own risk.'
       v_app_property_info.user_configurable = true
 
-      v_app_property_spec = VimSdk::Vim::VApp::PropertySpec.new
       v_app_property_spec.info = v_app_property_info
       v_app_property_spec.operation = VimSdk::Vim::Option::ArrayUpdateSpec::Operation::ADD
-
-      v_app_config_spec = VimSdk::Vim::VApp::VmConfigSpec.new
       v_app_config_spec.property << v_app_property_spec
 
-      vm_config = Vim::Vm::ConfigSpec.new
-      vm_config.v_app_config = v_app_config_spec
-
-      reconfig_vm(vm.mob, vm_config)
-    end
-
-    def delete_persistent_disk_property_from_vm(vm, disk_device_key)
-      if vm.get_vapp_property_by_key(disk_device_key).nil?
-        @logger.debug("Disk property[#{disk_device_key}] does not exist on vm '#{vm.cid}'")
-        return
-      end
-
-      v_app_property_spec = VimSdk::Vim::VApp::PropertySpec.new
-      v_app_property_spec.remove_key = disk_device_key
-      v_app_property_spec.operation = VimSdk::Vim::Option::ArrayUpdateSpec::Operation::REMOVE
-
-      v_app_config_spec = VimSdk::Vim::VApp::VmConfigSpec.new
-      v_app_config_spec.property << v_app_property_spec
-
-      vm_config = Vim::Vm::ConfigSpec.new
       vm_config.v_app_config = v_app_config_spec
 
       reconfig_vm(vm.mob, vm_config)
