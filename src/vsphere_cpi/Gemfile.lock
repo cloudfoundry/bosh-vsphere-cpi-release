@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    bosh_vsphere_cpi (2.2.1)
+    bosh_vsphere_cpi (2.2.2)
       bosh_common
       bosh_cpi
       builder (~> 3.1.4)
