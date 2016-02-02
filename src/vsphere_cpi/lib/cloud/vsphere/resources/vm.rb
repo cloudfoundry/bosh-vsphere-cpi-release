@@ -132,25 +132,15 @@ module VSphereCloud
       end
 
       def disk_by_cid(disk_cid)
-        devices.find do |d|
+        disk = devices.find do |d|
           d.kind_of?(Vim::Vm::Device::VirtualDisk) &&
             d.backing.file_name.end_with?("/#{disk_cid}.vmdk")
         end
-      end
-
-      def disk_by_original_cid(disk_cid)
-        devices.each do |d|
-          if d.kind_of?(Vim::Vm::Device::VirtualDisk)
-            found_property = get_vapp_property_by_key(d.key)
-            unless found_property.nil?
-              if verify_persistent_disk_property?(found_property) && found_property.label == disk_cid
-                return d
-              end
-            end
-          end
+        if disk.nil?
+          return disk_by_original_cid(disk_cid)
+        else
+          return disk
         end
-
-        nil
       end
 
       def reboot
@@ -332,6 +322,21 @@ module VSphereCloud
       def cloud_searcher
         @client.cloud_searcher
       end
+
+      def disk_by_original_cid(disk_cid)
+        disks = devices.select { |d| d.kind_of?(Vim::Vm::Device::VirtualDisk) }
+        disks.each do |d|
+          disk_property = get_vapp_property_by_key(d.key)
+          if disk_property.nil?
+            next
+          end
+          if verify_persistent_disk_property?(disk_property) && disk_property.label == disk_cid
+            return d
+          end
+        end
+        nil
+      end
+
     end
   end
 end

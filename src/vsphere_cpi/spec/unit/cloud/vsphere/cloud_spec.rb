@@ -532,7 +532,7 @@ module VSphereCloud
           allow(agent_env).to receive(:get_current_env).with(vm_mob, 'fake-datacenter-name').
               and_return(env)
           allow(agent_env).to receive(:set_env)
-          allow(vm).to receive(:disk_by_original_cid).with('disk-cid').and_return(attached_disk)
+          allow(vm).to receive(:disk_by_cid).with('disk-cid').and_return(attached_disk)
         end
 
         it 'updates VM with new settings' do
@@ -558,7 +558,7 @@ module VSphereCloud
       end
       context 'disk is not attached' do
         before do
-          allow(vm).to receive(:disk_by_original_cid).with('disk-cid').and_return(nil)
+          allow(vm).to receive(:disk_by_cid).with('disk-cid').and_return(nil)
         end
         it 'raises an error' do
           expect{
