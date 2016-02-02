@@ -1,0 +1,165 @@
+---
+groups:
+  - name: certify-vsphere
+    jobs:
+      - e2e-test-centos
+      - e2e-test-ubuntu
+
+jobs:
+  - name: e2e-test-centos
+    plan:
+      - aggregate:
+        - {trigger: true, get: bosh-cpi-artifacts, tags: ["vsphere-v5.1"]}
+        - {trigger: true, get: bosh-release, tags: ["vsphere-v5.1"]}
+        - {trigger: true, get: stemcell, resource: vsphere-centos-stemcell, tags: ["vsphere-v5.1"]}
+        - {trigger: false, get: bosh-cpi-src, tags: ["vsphere-v5.1"]}
+        - {trigger: false, get: bosh-init, tags: ["vsphere-v5.1"]}
+
+      - put: vsphere-5.1-environment
+        tags: ["vsphere-v5.1"]
+        params:
+          acquire: true
+
+      - task: show_env
+        tags: ["vsphere-v5.1"]
+        file: bosh-cpi-src/ci/tasks/show_env.yml
+
+      - task: setup-director
+        tags: ["vsphere-v5.1"]
+        file: bosh-cpi-src/ci/tasks/setup-director.yml
+        config:
+          params:
+            base_os:                                centos
+            BOSH_VSPHERE_VCENTER:                   {{VCENTER_IP}}
+            BOSH_VSPHERE_VCENTER_USER:              {{VCENTER_USER}}
+            BOSH_VSPHERE_VCENTER_PASSWORD:          {{VCENTER_PASSWORD}}
+            BOSH_VSPHERE_VERSION:                   {{VSPHERE_VERSION}}
+            BOSH_VSPHERE_VCENTER_DC:                {{VCENTER_DC}}
+            BOSH_VSPHERE_VCENTER_CLUSTER:           {{VCENTER_CLUSTER}}
+            BOSH_VSPHERE_VCENTER_DATASTORE_PATTERN: {{VCENTER_DATASTORE_PATTERN}}
+            BOSH_VSPHERE_VCENTER_VLAN:              {{VCENTER_VLAN}}
+            BOSH_VSPHERE_VCENTER_VM_FOLDER:         {{e2e_centos_VCENTER_VM_FOLDER}}
+            BOSH_VSPHERE_VCENTER_TEMPLATE_FOLDER:   {{e2e_centos_VCENTER_TEMPLATE_FOLDER}}
+            BOSH_VSPHERE_VCENTER_DISK_PATH:         {{e2e_centos_VCENTER_DISK_PATH}}
+            BOSH_DIRECTOR_USERNAME:                 {{BOSH_DIRECTOR_USERNAME}}
+            BOSH_DIRECTOR_PASSWORD:                 {{BOSH_DIRECTOR_PASSWORD}}
+
+      - task: deploy-dummy
+        tags: ["vsphere-v5.1"]
+        file: bosh-cpi-src/ci/tasks/deploy-dummy.yml
+        config:
+          params:
+            base_os:                                centos
+            director_username:                      {{BOSH_DIRECTOR_USERNAME}}
+            director_password:                      {{BOSH_DIRECTOR_PASSWORD}}
+            stemcell_name:                          {{centos_STEMCELL_NAME}}
+            BOSH_VSPHERE_VCENTER_VLAN:              {{VCENTER_VLAN}}
+
+      - task: teardown-director
+        tags: ["vsphere-v5.1"]
+        file: bosh-cpi-src/ci/tasks/teardown-director.yml
+
+      - put: vsphere-5.1-environment
+        tags: ["vsphere-v5.1"]
+        params:
+          release: vsphere-5.1-environment
+
+  - name: e2e-test-ubuntu
+    plan:
+      - aggregate:
+        - {trigger: true, get: bosh-cpi-artifacts, tags: ["vsphere-v5.1"]}
+        - {trigger: true, get: bosh-release, tags: ["vsphere-v5.1"]}
+        - {trigger: true, get: stemcell, resource: vsphere-ubuntu-stemcell, tags: ["vsphere-v5.1"]}
+        - {trigger: false, get: bosh-cpi-src, tags: ["vsphere-v5.1"]}
+        - {trigger: false, get: bosh-init, tags: ["vsphere-v5.1"]}
+
+      - put: vsphere-5.1-environment
+        tags: ["vsphere-v5.1"]
+        params:
+          acquire: true
+
+      - task: show_env
+        tags: ["vsphere-v5.1"]
+        file: bosh-cpi-src/ci/tasks/show_env.yml
+
+      - task: setup-director
+        tags: ["vsphere-v5.1"]
+        file: bosh-cpi-src/ci/tasks/setup-director.yml
+        config:
+          params:
+            base_os:                                ubuntu
+            BOSH_VSPHERE_VCENTER:                   {{VCENTER_IP}}
+            BOSH_VSPHERE_VCENTER_USER:              {{VCENTER_USER}}
+            BOSH_VSPHERE_VCENTER_PASSWORD:          {{VCENTER_PASSWORD}}
+            BOSH_VSPHERE_VERSION:                   {{VSPHERE_VERSION}}
+            BOSH_VSPHERE_VCENTER_DC:                {{VCENTER_DC}}
+            BOSH_VSPHERE_VCENTER_CLUSTER:           {{VCENTER_CLUSTER}}
+            BOSH_VSPHERE_VCENTER_DATASTORE_PATTERN: {{VCENTER_DATASTORE_PATTERN}}
+            BOSH_VSPHERE_VCENTER_VLAN:              {{VCENTER_VLAN}}
+            BOSH_VSPHERE_VCENTER_VM_FOLDER:         {{e2e_ubuntu_VCENTER_VM_FOLDER}}
+            BOSH_VSPHERE_VCENTER_TEMPLATE_FOLDER:   {{e2e_ubuntu_VCENTER_TEMPLATE_FOLDER}}
+            BOSH_VSPHERE_VCENTER_DISK_PATH:         {{e2e_ubuntu_VCENTER_DISK_PATH}}
+            BOSH_DIRECTOR_USERNAME:                 {{BOSH_DIRECTOR_USERNAME}}
+            BOSH_DIRECTOR_PASSWORD:                 {{BOSH_DIRECTOR_PASSWORD}}
+
+      - task: deploy-dummy
+        tags: ["vsphere-v5.1"]
+        file: bosh-cpi-src/ci/tasks/deploy-dummy.yml
+        config:
+          params:
+            base_os:                                ubuntu
+            director_username:                      {{BOSH_DIRECTOR_USERNAME}}
+            director_password:                      {{BOSH_DIRECTOR_PASSWORD}}
+            stemcell_name:                          {{ubuntu_STEMCELL_NAME}}
+            BOSH_VSPHERE_VCENTER_VLAN:              {{VCENTER_VLAN}}
+
+      - task: teardown-director
+        tags: ["vsphere-v5.1"]
+        file: bosh-cpi-src/ci/tasks/teardown-director.yml
+
+      - put: vsphere-5.1-environment
+        tags: ["vsphere-v5.1"]
+        params:
+          release: vsphere-5.1-environment
+
+resources:
+  - name: bosh-cpi-artifacts
+    type: bosh-io-release
+    source:
+      repository: cloudfoundry-incubator/bosh-vsphere-cpi-release
+
+  - name: bosh-cpi-src
+    type: git
+    source:
+      uri:         https://github.com/cloudfoundry-incubator/bosh-vsphere-cpi-release
+      branch:      master
+
+  - name: bosh-init
+    type: s3
+    source:
+      regexp:      bosh-init-([0-9.]+)-linux-amd64
+      bucket:      {{s3_bosh_init_bucket}}
+      region_name: us-east-1
+
+  - name: bosh-release
+    type: bosh-io-release
+    source:
+      repository: cloudfoundry/bosh
+
+  - name: vsphere-ubuntu-stemcell
+    type: bosh-io-stemcell
+    source:
+      name: bosh-vsphere-esxi-ubuntu-trusty-go_agent
+
+  - name: vsphere-centos-stemcell
+    type: bosh-io-stemcell
+    source:
+      name: bosh-vsphere-esxi-centos-7-go_agent
+
+  - name: vsphere-5.1-environment
+    type: pool
+    source:
+      pool: vsphere-5.1
+      uri: git@github.com:cloudfoundry/bosh-cpi-environments.git
+      branch: master
+      private_key: {{github_deployment_key__bosh-cpi-environments}}

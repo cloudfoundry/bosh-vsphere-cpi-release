@@ -1,0 +1,15 @@
+---
+platform: linux
+image: docker:///boshcpi/vsphere-cpi-release
+inputs:
+  - name: stemcell
+  - name: bosh-cpi-src
+  - name: vsphere-5.1-environment
+run:
+  path: bosh-cpi-src/ci/tasks/deploy-dummy.sh
+params:
+  base_os:                      replace-me
+  director_password:            replace-me
+  director_username:            replace-me
+  stemcell_name:                replace-me
+  BOSH_VSPHERE_VCENTER_VLAN:    replace-me
