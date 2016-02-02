@@ -9,7 +9,7 @@ cpi_release_name="bosh-vsphere-cpi"
 working_dir=$PWD
 deployment_dir=$PWD/deployment
 
-cp ./bosh-cpi-artifacts/${cpi_release_name}-*.tgz ${cpi_release_name}.tgz
+cp ./bosh-cpi-artifacts/*.tgz ${cpi_release_name}.tgz
 cp ./bosh-release/release.tgz bosh-release.tgz
 cp ./stemcell/stemcell.tgz stemcell.tgz
 cp $deployment_dir/director-manifest* .
