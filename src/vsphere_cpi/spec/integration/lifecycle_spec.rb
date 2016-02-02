@@ -437,6 +437,7 @@ describe VSphereCloud::Cloud, external_cpi: false do
 
         it 'can still find persistent disks after deleting vm' do
           begin
+            disk_attached = false
             vm_id = one_cluster_cpi.create_vm(
               'agent-007',
               @stemcell_id,
@@ -454,6 +455,7 @@ describe VSphereCloud::Cloud, external_cpi: false do
 
             one_cluster_cpi.attach_disk(vm_id, disk_id)
             expect(one_cluster_cpi.has_disk?(disk_id)).to be(true)
+            disk_attached = true
 
             vm = one_cluster_cpi.vm_provider.find(vm_id)
 
@@ -465,10 +467,51 @@ describe VSphereCloud::Cloud, external_cpi: false do
 
             one_cluster_cpi.delete_vm(vm_id)
             vm_id = nil
+            disk_attached = false
 
             expect(one_cluster_cpi.has_disk?(disk_id)).to be(true)
           ensure
-            one_cluster_cpi.detach_disk(vm_id, disk_id) if vm_id && disk_id
+            one_cluster_cpi.detach_disk(vm_id, disk_id) if disk_attached
+            one_cluster_cpi.delete_vm(vm_id) if vm_id
+            one_cluster_cpi.delete_disk(disk_id) if disk_id
+          end
+        end
+
+        it 'can still find persistent disk after detaching disk from vm' do
+          begin
+            disk_attached = false
+            vm_id = one_cluster_cpi.create_vm(
+              'agent-007',
+              @stemcell_id,
+              resource_pool,
+              network_spec,
+              [],
+              {'key' => 'value'}
+            )
+
+            expect(vm_id).to_not be_nil
+            expect(one_cluster_cpi.has_vm?(vm_id)).to be(true)
+
+            disk_id = one_cluster_cpi.create_disk(2048, {}, vm_id)
+            expect(disk_id).to_not be_nil
+
+            one_cluster_cpi.attach_disk(vm_id, disk_id)
+            disk_attached = true
+            expect(one_cluster_cpi.has_disk?(disk_id)).to be(true)
+
+            vm = one_cluster_cpi.vm_provider.find(vm_id)
+
+            datastore = one_cluster_cpi.client.cloud_searcher.get_managed_object(VimSdk::Vim::Datastore, name: datastore_name)
+            relocate_spec = VimSdk::Vim::Vm::RelocateSpec.new(datastore: datastore)
+
+            task = vm.mob.relocate(relocate_spec, 'defaultPriority')
+            one_cluster_cpi.client.wait_for_task(task)
+
+            one_cluster_cpi.detach_disk(vm_id, disk_id)
+            disk_attached = false
+            expect(one_cluster_cpi.has_disk?(disk_id)).to be(true)
+          ensure
+            one_cluster_cpi.detach_disk(vm_id, disk_id) if disk_attached
             one_cluster_cpi.delete_vm(vm_id) if vm_id
             one_cluster_cpi.delete_disk(disk_id) if disk_id
           end
@@ -574,6 +617,7 @@ describe VSphereCloud::Cloud, external_cpi: false do
 
       it 'places ephemeral and persistent disks properly' do
         begin
+          disk_attached = false
           vm_id = local_disk_cpi.create_vm('agent-007', @stemcell_id, resource_pool, network_spec)
           vm = local_disk_cpi.vm_provider.find(vm_id)
           ephemeral_disk = vm.ephemeral_disk
@@ -585,9 +629,10 @@ describe VSphereCloud::Cloud, external_cpi: false do
           disk = local_disk_cpi.datacenter.find_disk(disk_id)
           expect(disk.datastore.name).to match(@persistent_datastore_pattern)
           local_disk_cpi.attach_disk(vm_id, disk_id)
+          disk_attached = true
           expect(local_disk_cpi.has_disk?(disk_id)).to be(true)
         ensure
-          local_disk_cpi.detach_disk(vm_id, disk_id)
+          local_disk_cpi.detach_disk(vm_id, disk_id) if disk_attached
           local_disk_cpi.delete_vm(vm_id) if vm_id
           local_disk_cpi.delete_disk(disk_id) if disk_id
         end
@@ -596,6 +641,7 @@ describe VSphereCloud::Cloud, external_cpi: false do
   end
 
   def vm_lifecycle(cpi, disk_locality, resource_pool, network_spec, stemcell_id = @stemcell_id)
+    disk_attached = false
     vm_id = cpi.create_vm(
       'agent-007',
       stemcell_id,
@@ -617,6 +663,7 @@ describe VSphereCloud::Cloud, external_cpi: false do
     expect(disk_id).to_not be_nil
 
     cpi.attach_disk(vm_id, disk_id)
+    disk_attached = true
     expect(cpi.has_disk?(disk_id)).to be(true)
 
     metadata[:bosh_data] = 'bosh data'
@@ -634,7 +681,7 @@ describe VSphereCloud::Cloud, external_cpi: false do
     }.to raise_error Bosh::Clouds::NotImplemented
 
   ensure
-    cpi.detach_disk(vm_id, disk_id) if disk_id
+    cpi.detach_disk(vm_id, disk_id) if disk_attached
     cpi.delete_vm(vm_id) if vm_id
     cpi.delete_disk(disk_id) if disk_id
   end
