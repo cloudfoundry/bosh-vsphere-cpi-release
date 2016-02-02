@@ -41,7 +41,7 @@ pushd "${release_dir}"
   bosh create release --name local --version 0.0.0 --with-tarball --force
 popd
 
-iso_tmp_dir="$(mktemp /tmp/iso_image.XXXXXXXXXX)"
+iso_tmp_dir="$(mktemp -d /tmp/iso_image.XXXXXXXXXX)"
 pushd "${iso_tmp_dir}"
   tar -xf ${release_dir}/dev_releases/local/local-0.0.0.tgz
   tar -xf packages/vsphere_cpi_mkisofs.tgz
