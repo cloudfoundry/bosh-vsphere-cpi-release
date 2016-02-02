@@ -207,10 +207,10 @@ jobs:
             BOSH_VSPHERE_VERSION:                   {{VSPHERE_VERSION}}
             BOSH_VSPHERE_VCENTER_DC:                {{VCENTER_DC}}
             BOSH_VSPHERE_VCENTER_CLUSTER:           {{VCENTER_CLUSTER}}
-            BOSH_VSPHERE_VCENTER_VM_FOLDER:         {{ubuntu_VCENTER_VM_FOLDER}}
-            BOSH_VSPHERE_VCENTER_TEMPLATE_FOLDER:   {{ubuntu_VCENTER_TEMPLATE_FOLDER}}
+            BOSH_VSPHERE_VCENTER_VM_FOLDER:         {{ubuntu_BATS_VCENTER_VM_FOLDER}}
+            BOSH_VSPHERE_VCENTER_TEMPLATE_FOLDER:   {{ubuntu_BATS_VCENTER_TEMPLATE_FOLDER}}
             BOSH_VSPHERE_VCENTER_DATASTORE_PATTERN: {{VCENTER_DATASTORE_PATTERN}}
-            BOSH_VSPHERE_VCENTER_DISK_PATH:         {{ubuntu_VCENTER_DISK_PATH}}
+            BOSH_VSPHERE_VCENTER_DISK_PATH:         {{ubuntu_BATS_VCENTER_DISK_PATH}}
             BOSH_VSPHERE_VCENTER_VLAN:              {{VCENTER_VLAN}}
 
       - task: test
@@ -220,7 +220,7 @@ jobs:
           params:
             base_os:                                      ubuntu
             network_type_to_test:                         manual
-            BAT_STEMCELL_NAME:                            {{ubuntu_BAT_STEMCELL_NAME}}
+            BAT_STEMCELL_NAME:                            {{ubuntu_STEMCELL_NAME}}
             BAT_VLAN:                                     {{VCENTER_VLAN}}
             BAT_VCAP_PASSWORD:                            {{BAT_VCAP_PASSWORD}}
             BAT_SECOND_NETWORK_VLAN:                      {{ubuntu_BAT_SECOND_NETWORK_VLAN}}
@@ -267,10 +267,10 @@ jobs:
             BOSH_VSPHERE_VERSION:                   {{VSPHERE_VERSION}}
             BOSH_VSPHERE_VCENTER_DC:                {{VCENTER_DC}}
             BOSH_VSPHERE_VCENTER_CLUSTER:           {{VCENTER_CLUSTER}}
-            BOSH_VSPHERE_VCENTER_VM_FOLDER:         {{centos_VCENTER_VM_FOLDER}}
-            BOSH_VSPHERE_VCENTER_TEMPLATE_FOLDER:   {{centos_VCENTER_TEMPLATE_FOLDER}}
+            BOSH_VSPHERE_VCENTER_VM_FOLDER:         {{centos_BATS_VCENTER_VM_FOLDER}}
+            BOSH_VSPHERE_VCENTER_TEMPLATE_FOLDER:   {{centos_BATS_VCENTER_TEMPLATE_FOLDER}}
             BOSH_VSPHERE_VCENTER_DATASTORE_PATTERN: {{VCENTER_DATASTORE_PATTERN}}
-            BOSH_VSPHERE_VCENTER_DISK_PATH:         {{centos_VCENTER_DISK_PATH}}
+            BOSH_VSPHERE_VCENTER_DISK_PATH:         {{centos_BATS_VCENTER_DISK_PATH}}
             BOSH_VSPHERE_VCENTER_VLAN:              {{VCENTER_VLAN}}
 
       - task: test
@@ -280,7 +280,7 @@ jobs:
           params:
             base_os:                                      centos
             network_type_to_test:                         manual
-            BAT_STEMCELL_NAME:                            {{centos_BAT_STEMCELL_NAME}}
+            BAT_STEMCELL_NAME:                            {{centos_STEMCELL_NAME}}
             BAT_VLAN:                                     {{VCENTER_VLAN}}
             BAT_VCAP_PASSWORD:                            {{BAT_VCAP_PASSWORD}}
             BAT_SECOND_NETWORK_VLAN:                      {{centos_BAT_SECOND_NETWORK_VLAN}}
