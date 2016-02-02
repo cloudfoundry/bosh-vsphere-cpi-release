@@ -2,7 +2,9 @@
 platform: linux
 image: docker:///boshcpi/vsphere-cpi-release
 inputs:
-  - name: bosh-cpi-release
+  - name: bosh-cpi-src
   - name: version-semver
+outputs:
+  - name: dev-artifacts
 run:
-  path: bosh-cpi-release/ci/tasks/build-candidate.sh
+  path: bosh-cpi-src/ci/tasks/build-candidate.sh

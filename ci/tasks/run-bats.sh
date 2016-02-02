@@ -2,7 +2,13 @@
 
 set -e
 
-source bosh-cpi-release/ci/tasks/utils.sh
+release_dir="$( cd $(dirname $0) && cd ../.. && pwd )"
+workspace_dir="$( cd ${release_dir} && cd .. && pwd )"
+bats_dir="$( cd ${workspace_dir}/bats && pwd )"
+
+source ${release_dir}/ci/tasks/utils.sh
+source /etc/profile.d/chruby.sh
+chruby 2.1.2
 
 check_param base_os
 check_param network_type_to_test
@@ -11,7 +17,7 @@ check_param BAT_VLAN
 check_param BAT_VCAP_PASSWORD
 check_param BAT_SECOND_NETWORK_VLAN
 
-metadata=$(cat vsphere-5.1-environment/metadata)
+metadata=$(cat ${workspace_dir}/vsphere-5.1-environment/metadata)
 network1=$(env_attr "${metadata}" "network1")
 network2=$(env_attr "${metadata}" "network2")
 export BAT_DIRECTOR=$(                      env_attr "${metadata}" "directorIP")
@@ -28,22 +34,19 @@ export BAT_SECOND_NETWORK_RESERVED_RANGE=$( env_attr "${network2}" "reservedRang
 export BAT_SECOND_NETWORK_STATIC_RANGE=$(   env_attr "${network2}" "staticRange")
 export BAT_SECOND_NETWORK_GATEWAY=$(        env_attr "${network2}" "vCenterGateway")
 
-source /etc/profile.d/chruby.sh
-chruby 2.1.2
-
-working_dir=$PWD
-
 cpi_release_name=bosh-vsphere-cpi
-bosh_ssh_key="$working_dir/keys/bats.pem"
-export BAT_STEMCELL="$working_dir/stemcell/stemcell.tgz"
-export BAT_DEPLOYMENT_SPEC="$working_dir/${base_os}-${network_type_to_test}-bats-config.yml"
+export BAT_STEMCELL="${workspace_dir}/stemcell/stemcell.tgz"
+export BAT_DEPLOYMENT_SPEC="${workspace_dir}/${base_os}-${network_type_to_test}-bats-config.yml"
 export BAT_INFRASTRUCTURE=vsphere
 export BAT_NETWORKING=$network_type_to_test
 
 # vsphere uses user/pass and the cdrom drive, not a reverse ssh tunnel
 # the SSH key is required for the` bosh ssh` command to work properly
-mkdir -p $PWD/keys
+mkdir -p ${workspace_dir}/keys
+bosh_ssh_key="${workspace_dir}/keys/bats.pem"
 eval $(ssh-agent)
+trap "ssh-agent -k" EXIT
+
 ssh-keygen -N "" -t rsa -b 4096 -f $bosh_ssh_key
 chmod go-r $bosh_ssh_key
 ssh-add $bosh_ssh_key
@@ -53,7 +56,7 @@ bosh version
 
 bosh -n target $BAT_DIRECTOR
 
-BOSH_UUID=`bosh status --uuid`
+BOSH_UUID="$(bosh status --uuid)"
 
 # disable host key checking for deployed VMs
 mkdir -p $HOME/.ssh
@@ -96,17 +99,15 @@ properties:
       vlan: ${BAT_SECOND_NETWORK_VLAN}
 EOF
 
-cd bats
-./write_gemfile
+pushd "${bats_dir}"
+  ./write_gemfile
 
-echo "verifying no BOSH deployed VM exists at target IP: $BAT_STATIC_IP"
-check_for_rogue_vm $BAT_STATIC_IP
+  echo "verifying no BOSH deployed VM exists at target IP: $BAT_STATIC_IP"
+  check_for_rogue_vm $BAT_STATIC_IP
 
-echo "verifying no BOSH deployed VM exists at target IP: $BAT_SECOND_STATIC_IP"
-check_for_rogue_vm $BAT_SECOND_STATIC_IP
+  echo "verifying no BOSH deployed VM exists at target IP: $BAT_SECOND_STATIC_IP"
+  check_for_rogue_vm $BAT_SECOND_STATIC_IP
 
-bundle install
-bundle exec rspec spec
-
-#kill the SSH agent we started earlier
-ssh-agent -k
+  bundle install
+  bundle exec rspec spec
+popd

@@ -3,12 +3,12 @@ platform: linux
 image: docker:///boshcpi/vsphere-cpi-release
 
 inputs:
-  - name: bosh-cpi-release
-  - name: bosh-cpi-dev-artifacts
+  - name: bosh-cpi-src
+  - name: bosh-cpi-artifacts
   - name: release-version-semver
 
 run:
-  path: bosh-cpi-release/ci/tasks/promote-candidate.sh
+  path: bosh-cpi-src/ci/tasks/promote-candidate.sh
 
 params:
   aws_access_key_id:     replace-me

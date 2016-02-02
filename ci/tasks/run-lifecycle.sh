@@ -2,7 +2,13 @@
 
 set -e
 
-source bosh-cpi-release/ci/tasks/utils.sh
+release_dir="$( cd $(dirname $0) && cd ../.. && pwd )"
+workspace_dir="$( cd ${release_dir} && cd .. && pwd )"
+stemcell_dir="$( cd ${workspace_dir}/stemcell && pwd )"
+
+source ${release_dir}/ci/tasks/utils.sh
+source /etc/profile.d/chruby.sh
+chruby 2.1.2
 
 check_param BOSH_VSPHERE_VERSION
 check_param BOSH_VSPHERE_CPI_HOST
@@ -29,32 +35,29 @@ check_param BOSH_VSPHERE_CPI_NESTED_DATACENTER_CLUSTER
 check_param BOSH_VSPHERE_CPI_NESTED_DATACENTER_RESOURCE_POOL
 check_param BOSH_VSPHERE_CPI_NESTED_DATACENTER_VLAN
 
-source /etc/profile.d/chruby.sh
-chruby 2.1.2
-
-pushd bosh-cpi-release
+pushd "${release_dir}"
   echo "using bosh CLI version..."
   bosh version
   bosh create release --name local --version 0.0.0 --with-tarball --force
 popd
 
-mkdir iso_image_install
-pushd iso_image_install
-  tar -xf ../bosh-cpi-release/dev_releases/local/local-0.0.0.tgz
+iso_tmp_dir="$(mktemp /tmp/iso_image.XXXXXXXXXX)"
+pushd "${iso_tmp_dir}"
+  tar -xf ${release_dir}/dev_releases/local/local-0.0.0.tgz
   tar -xf packages/vsphere_cpi_mkisofs.tgz
   chmod +x packaging
-  BOSH_INSTALL_TARGET=$PWD ./packaging &> mkisofs_compilation.log
-  export PATH=$PWD/bin:$PATH
+  BOSH_INSTALL_TARGET=${iso_tmp_dir} ./packaging &> mkisofs_compilation.log
+  export PATH=${iso_tmp_dir}/bin:$PATH
 popd
 echo "installed mkisofs at:"
 which mkisofs
 
-export BOSH_VSPHERE_STEMCELL=$PWD/stemcell/stemcell.tgz
+export BOSH_VSPHERE_STEMCELL=${stemcell_dir}/stemcell.tgz
 export BOSH_VSPHERE_VCENTER=${BOSH_VSPHERE_CPI_HOST}
 export BOSH_VSPHERE_VCENTER_USER=${BOSH_VSPHERE_CPI_USER}
 export BOSH_VSPHERE_VCENTER_PASSWORD=${BOSH_VSPHERE_CPI_PASSWORD}
 
-pushd bosh-cpi-release/src/vsphere_cpi
+pushd "${release_dir}/src/vsphere_cpi"
   bundle install
   bundle exec rspec spec/integration
 popd

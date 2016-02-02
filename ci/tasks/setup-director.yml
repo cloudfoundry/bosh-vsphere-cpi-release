@@ -2,17 +2,17 @@
 platform: linux
 image: docker:///boshcpi/vsphere-cpi-release
 inputs:
-  - name: bosh-cpi-release       # --- location of task script to run
+  - name: bosh-cpi-src           # --- location of task script to run
   - name: bosh-init              # --- bosh-init executable to do deploy
   - name: bosh-release
-  - name: bosh-cpi-dev-artifacts
+  - name: bosh-cpi-artifacts
   - name: version-semver
   - name: stemcell
   - name: vsphere-5.1-environment
 outputs:
   - name: deployment
 run:
-  path: bosh-cpi-release/ci/tasks/setup-director.sh
+  path: bosh-cpi-src/ci/tasks/setup-director.sh
 params:
   base_os:                                replace-me
   network_type_to_test:                   replace-me

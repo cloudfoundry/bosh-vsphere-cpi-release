@@ -2,7 +2,13 @@
 
 set -e
 
-source bosh-cpi-release/ci/tasks/utils.sh
+release_dir="$( cd $(dirname $0) && cd ../.. && pwd )"
+workspace_dir="$( cd ${release_dir} && cd .. && pwd )"
+deployment_dir="$( cd ${workspace_dir}/deployment && pwd )"
+
+source bosh-cpi-src/ci/tasks/utils.sh
+source /etc/profile.d/chruby.sh
+chruby 2.1.2
 
 check_param base_os
 check_param network_type_to_test
@@ -18,8 +24,8 @@ check_param BOSH_VSPHERE_VCENTER_DATASTORE_PATTERN
 check_param BOSH_VSPHERE_VCENTER_DISK_PATH
 check_param BOSH_VSPHERE_VCENTER_VLAN
 
-env_name=$(cat vsphere-5.1-environment/name)
-metadata=$(cat vsphere-5.1-environment/metadata)
+env_name=$(cat ${workspace_dir}/vsphere-5.1-environment/name)
+metadata=$(cat ${workspace_dir}/vsphere-5.1-environment/metadata)
 network1=$(env_attr "${metadata}" "network1")
 echo Using environment: \'${env_name}\'
 export DIRECTOR_IP=$(                  env_attr "${metadata}" "directorIP")
@@ -30,31 +36,26 @@ export BOSH_VSPHERE_DNS=$(             env_attr "${metadata}" "DNS")
 echo "verifying no BOSH deployed VM exists at target IP: $DIRECTOR_IP"
 check_for_rogue_vm $DIRECTOR_IP
 
-source /etc/profile.d/chruby.sh
-chruby 2.1.2
-
 echo "verifying target vSphere version matches $BOSH_VSPHERE_VERSION"
 
-pushd bosh-cpi-release/src/vsphere_cpi
+pushd ${release_dir}/src/vsphere_cpi
   bundle install
   bundle exec rspec spec/integration/bats_env_spec.rb
 popd
 
+pushd "${workspace_dir}"
+  semver="$(cat version-semver/number)"
+  cpi_release_name="bosh-vsphere-cpi"
 
-semver=`cat version-semver/number`
-cpi_release_name="bosh-vsphere-cpi"
-working_dir=$PWD
-deployment_dir=$PWD/deployment
+  cp bosh-cpi-artifacts/${cpi_release_name}-${semver}.tgz ${cpi_release_name}.tgz
+  cp bosh-release/release.tgz bosh-release.tgz
+  cp stemcell/stemcell.tgz stemcell.tgz
 
-cp ./bosh-cpi-dev-artifacts/${cpi_release_name}-${semver}.tgz ${cpi_release_name}.tgz
-cp ./bosh-release/release.tgz bosh-release.tgz
-cp ./stemcell/stemcell.tgz stemcell.tgz
+  initver=$(cat bosh-init/version)
+  initexe="bosh-init/bosh-init-${initver}-linux-amd64"
+  chmod +x $initexe
 
-initver=$(cat bosh-init/version)
-initexe="$PWD/bosh-init/bosh-init-${initver}-linux-amd64"
-chmod +x $initexe
-
-cat > "director-manifest.yml" <<EOF
+  cat > "director-manifest.yml" <<EOF
 ---
 name: bosh
 
@@ -174,19 +175,20 @@ cloud_provider:
     ntp: [0.pool.ntp.org, 1.pool.ntp.org]
 EOF
 
-function finish {
-  echo "Final state of director deployment:"
-  echo "=========================================="
-  cat director-manifest-state.json
-  echo "=========================================="
+  function finish {
+    echo "Final state of director deployment:"
+    echo "=========================================="
+    cat director-manifest-state.json
+    echo "=========================================="
 
-  cp director-manifest* $deployment_dir
-  cp -r $HOME/.bosh_init $deployment_dir
-}
-trap finish ERR
+    cp director-manifest* $deployment_dir
+    cp -r $HOME/.bosh_init $deployment_dir
+  }
+  trap finish ERR
 
-echo "deploying BOSH..."
-$initexe deploy director-manifest.yml
+  echo "deploying BOSH..."
+  $initexe deploy director-manifest.yml
 
-trap - ERR
-finish
+  trap - ERR
+  finish
+popd
