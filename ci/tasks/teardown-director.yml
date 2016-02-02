@@ -6,7 +6,6 @@ inputs:
   - name: bosh-init              # --- bosh-init executable to do delete
   - name: bosh-release
   - name: bosh-cpi-artifacts
-  - name: version-semver
   - name: stemcell
   - name: deployment
 outputs:

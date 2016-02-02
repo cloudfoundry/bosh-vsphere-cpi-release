@@ -6,7 +6,6 @@ inputs:
   - name: bosh-init              # --- bosh-init executable to do deploy
   - name: bosh-release
   - name: bosh-cpi-artifacts
-  - name: version-semver
   - name: stemcell
   - name: vsphere-5.1-environment
 outputs:

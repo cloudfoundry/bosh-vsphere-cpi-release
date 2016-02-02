@@ -178,7 +178,6 @@ jobs:
     plan:
       - aggregate:
         - {trigger: true,  passed: [build-candidate], get: bosh-cpi-artifacts, tags: ["vsphere-v5.1"]}
-        - {trigger: false, passed: [build-candidate], get: version-semver, tags: ["vsphere-v5.1"]}
         - {trigger: false, passed: [build-candidate], get: bosh-cpi-src, tags: ["vsphere-v5.1"]}
         - {trigger: false,                            get: bosh-init, tags: ["vsphere-v5.1"]}
         - {trigger: false,                            get: bosh-release, tags: ["vsphere-v5.1"]}
@@ -240,7 +239,6 @@ jobs:
     plan:
       - aggregate:
         - {trigger: true,  passed: [build-candidate], get: bosh-cpi-artifacts, tags: ["vsphere-v5.1"]}
-        - {trigger: false, passed: [build-candidate], get: version-semver, tags: ["vsphere-v5.1"]}
         - {trigger: false, passed: [build-candidate], get: bosh-cpi-src, tags: ["vsphere-v5.1"]}
         - {trigger: false,                            get: bosh-init, tags: ["vsphere-v5.1"]}
         - {trigger: false,                            get: bosh-release, tags: ["vsphere-v5.1"]}

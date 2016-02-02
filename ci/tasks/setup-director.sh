@@ -45,10 +45,9 @@ pushd ${release_dir}/src/vsphere_cpi
 popd
 
 pushd "${workspace_dir}"
-  semver="$(cat version-semver/number)"
   cpi_release_name="bosh-vsphere-cpi"
 
-  cp bosh-cpi-artifacts/${cpi_release_name}-${semver}.tgz ${cpi_release_name}.tgz
+  cp bosh-cpi-artifacts/${cpi_release_name}-*.tgz ${cpi_release_name}.tgz
   cp bosh-release/release.tgz bosh-release.tgz
   cp stemcell/stemcell.tgz stemcell.tgz
 
