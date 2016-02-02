@@ -22,6 +22,8 @@ check_param BOSH_VSPHERE_VCENTER_TEMPLATE_FOLDER
 check_param BOSH_VSPHERE_VCENTER_DATASTORE_PATTERN
 check_param BOSH_VSPHERE_VCENTER_DISK_PATH
 check_param BOSH_VSPHERE_VCENTER_VLAN
+check_param BOSH_DIRECTOR_USERNAME
+check_param BOSH_DIRECTOR_PASSWORD
 
 env_name=$(cat ${workspace_dir}/vsphere-5.1-environment/name)
 metadata=$(cat ${workspace_dir}/vsphere-5.1-environment/metadata)
@@ -137,10 +139,15 @@ jobs:
         name: my-bosh
         db: *db
         cpi_job: vsphere_cpi
+        user_management:
+          provider: local
+          local:
+            users:
+              - {name: ${BOSH_DIRECTOR_USERNAME}, password: ${BOSH_DIRECTOR_PASSWORD}}
 
       hm:
         http: {user: hm, password: hm-password}
-        director_account: {user: admin, password: admin}
+        director_account: {user: ${BOSH_DIRECTOR_USERNAME}, password: ${BOSH_DIRECTOR_PASSWORD}}
         resurrector_enabled: true
 
       agent: {mbus: "nats://nats:nats-password@${DIRECTOR_IP}:4222"}

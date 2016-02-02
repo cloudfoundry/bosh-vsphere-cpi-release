@@ -212,6 +212,8 @@ jobs:
             BOSH_VSPHERE_VCENTER_DATASTORE_PATTERN: {{VCENTER_DATASTORE_PATTERN}}
             BOSH_VSPHERE_VCENTER_DISK_PATH:         {{ubuntu_BATS_VCENTER_DISK_PATH}}
             BOSH_VSPHERE_VCENTER_VLAN:              {{VCENTER_VLAN}}
+            BOSH_DIRECTOR_USERNAME:                 {{BOSH_DIRECTOR_USERNAME}}
+            BOSH_DIRECTOR_PASSWORD:                 {{BOSH_DIRECTOR_PASSWORD}}
 
       - task: test
         tags: ["vsphere-v5.1"]
@@ -272,6 +274,8 @@ jobs:
             BOSH_VSPHERE_VCENTER_DATASTORE_PATTERN: {{VCENTER_DATASTORE_PATTERN}}
             BOSH_VSPHERE_VCENTER_DISK_PATH:         {{centos_BATS_VCENTER_DISK_PATH}}
             BOSH_VSPHERE_VCENTER_VLAN:              {{VCENTER_VLAN}}
+            BOSH_DIRECTOR_USERNAME:                 {{BOSH_DIRECTOR_USERNAME}}
+            BOSH_DIRECTOR_PASSWORD:                 {{BOSH_DIRECTOR_PASSWORD}}
 
       - task: test
         tags: ["vsphere-v5.1"]
