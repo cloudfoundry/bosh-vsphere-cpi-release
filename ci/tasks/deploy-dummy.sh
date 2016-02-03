@@ -12,6 +12,7 @@ chruby 2.1.2
 check_param director_password
 check_param director_username
 check_param stemcell_name
+check_param delete_deployment_when_done
 check_param BOSH_VSPHERE_VCENTER_VLAN
 
 cpi_release_name="bosh-vsphere-cpi"
@@ -99,6 +100,8 @@ bosh -n upload stemcell stemcell/stemcell.tgz --skip-if-exists
 
 bosh -d dummy-manifest.yml -n deploy
 
-bosh -n delete deployment dummy
+if [ "${delete_deployment_when_done}" = "true" ]; then
+  bosh -n delete deployment dummy
+fi
 
 bosh -n cleanup --all

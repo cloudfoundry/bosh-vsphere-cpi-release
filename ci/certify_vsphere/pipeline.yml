@@ -84,7 +84,7 @@ jobs:
         tags: ["vsphere-v5.1"]
         file: bosh-cpi-src/ci/tasks/setup-director.yml
         config:
-          params:
+          params: &ubuntu-director-params
             BOSH_VSPHERE_VCENTER:                   {{VCENTER_IP}}
             BOSH_VSPHERE_VCENTER_USER:              {{VCENTER_USER}}
             BOSH_VSPHERE_VCENTER_PASSWORD:          {{VCENTER_PASSWORD}}
@@ -108,6 +108,64 @@ jobs:
             director_password:                      {{BOSH_DIRECTOR_PASSWORD}}
             stemcell_name:                          {{ubuntu_STEMCELL_NAME}}
             BOSH_VSPHERE_VCENTER_VLAN:              {{VCENTER_VLAN}}
+
+      - task: teardown-director
+        tags: ["vsphere-v5.1"]
+        file: bosh-cpi-src/ci/tasks/teardown-director.yml
+
+      - put: vsphere-5.1-environment
+        tags: ["vsphere-v5.1"]
+        params:
+          release: vsphere-5.1-environment
+
+  - name: upgrade-test
+    plan:
+      - aggregate:
+        - {trigger: true, get: bosh-cpi-artifacts, tags: ["vsphere-v5.1"]}
+        - {trigger: true, get: bosh-release, tags: ["vsphere-v5.1"]}
+        - {trigger: true, get: stemcell, resource: vsphere-ubuntu-stemcell, tags: ["vsphere-v5.1"]}
+        - {trigger: false, get: bosh-cpi-src, tags: ["vsphere-v5.1"]}
+        - {trigger: false, get: bosh-init, tags: ["vsphere-v5.1"]}
+
+      - put: vsphere-5.1-environment
+        tags: ["vsphere-v5.1"]
+        params:
+          acquire: true
+
+      - task: show_env
+        tags: ["vsphere-v5.1"]
+        file: bosh-cpi-src/ci/tasks/show_env.yml
+
+      - task: setup-old-director
+        tags: ["vsphere-v5.1"]
+        file: bosh-cpi-src/ci/tasks/setup-old-director.yml
+        config:
+          params:
+            <<: *ubuntu-director-params
+            old_bosh_release_version: 229
+            old_vsphere_cpi_release_version: 14
+            old_bosh_stemcell_name: bosh-vsphere-esxi-ubuntu-trusty-go_agent
+            old_bosh_stemcell_version: 3143
+            old_bosh_init_version: 0.0.80
+
+      - task: deploy-dummy
+        tags: ["vsphere-v5.1"]
+        file: bosh-cpi-src/ci/tasks/deploy-dummy.yml
+        config:
+          params:
+            delete_deployment_when_done:            false
+            director_username:                      {{BOSH_DIRECTOR_USERNAME}}
+            director_password:                      {{BOSH_DIRECTOR_PASSWORD}}
+            stemcell_name:                          {{ubuntu_STEMCELL_NAME}}
+            BOSH_VSPHERE_VCENTER_VLAN:              {{VCENTER_VLAN}}
+
+      - task: test-upgrade
+        tags: ["vsphere-v5.1"]
+        file: bosh-cpi-src/ci/tasks/setup-director.yml
+        config:
+          params:
+            director_username:                      {{BOSH_DIRECTOR_USERNAME}}
+            director_password:                      {{BOSH_DIRECTOR_PASSWORD}}
 
       - task: teardown-director
         tags: ["vsphere-v5.1"]

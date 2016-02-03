@@ -1,0 +1,34 @@
+---
+platform: linux
+image: docker:///boshcpi/vsphere-cpi-release
+inputs:
+  - name: bosh-cpi-src           # --- location of task script to run
+  - name: vsphere-5.1-environment
+outputs:
+  - name: old-deployment
+run:
+  path: bosh-cpi-src/ci/tasks/setup-old-director.sh
+params:
+  BOSH_VSPHERE_VCENTER:                   replace-me
+  BOSH_VSPHERE_VCENTER_USER:              replace-me
+  BOSH_VSPHERE_VCENTER_PASSWORD:          replace-me
+  BOSH_VSPHERE_VERSION:                   replace-me
+  BOSH_VSPHERE_VCENTER_DC:                replace-me
+  BOSH_VSPHERE_VCENTER_CLUSTER:           replace-me
+  BOSH_VSPHERE_VCENTER_VM_FOLDER:         replace-me
+  BOSH_VSPHERE_VCENTER_TEMPLATE_FOLDER:   replace-me
+  BOSH_VSPHERE_VCENTER_DATASTORE_PATTERN: replace-me
+  BOSH_VSPHERE_VCENTER_DISK_PATH:         replace-me
+  BOSH_VSPHERE_VCENTER_VLAN:              replace-me
+  BOSH_DIRECTOR_USERNAME:                 replace-me
+  BOSH_DIRECTOR_PASSWORD:                 replace-me
+  BOSH_INIT_LOG_LEVEL:                    info
+  old_bosh_release_version:
+  old_bosh_release_sha1:
+  old_vsphere_cpi_release_version:
+  old_vsphere_cpi_release_sha1:
+  old_bosh_stemcell_name:
+  old_bosh_stemcell_version:
+  old_bosh_stemcell_sha1:
+  old_bosh_init_version:
+  old_bosh_init_sha1:

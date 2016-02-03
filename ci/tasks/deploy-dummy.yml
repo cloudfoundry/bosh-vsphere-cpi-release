@@ -11,4 +11,5 @@ params:
   director_password:            replace-me
   director_username:            replace-me
   stemcell_name:                replace-me
+  delete_deployment_when_done:  true
   BOSH_VSPHERE_VCENTER_VLAN:    replace-me
