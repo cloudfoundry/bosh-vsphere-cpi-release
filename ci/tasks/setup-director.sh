@@ -10,7 +10,6 @@ source bosh-cpi-src/ci/tasks/utils.sh
 source /etc/profile.d/chruby.sh
 chruby 2.1.2
 
-check_param base_os
 check_param BOSH_VSPHERE_VCENTER
 check_param BOSH_VSPHERE_VCENTER_USER
 check_param BOSH_VSPHERE_VCENTER_PASSWORD

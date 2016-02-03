@@ -8,7 +8,6 @@ inputs:
 run:
   path: bosh-cpi-src/ci/tasks/deploy-dummy.sh
 params:
-  base_os:                      replace-me
   director_password:            replace-me
   director_username:            replace-me
   stemcell_name:                replace-me

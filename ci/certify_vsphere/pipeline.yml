@@ -29,7 +29,6 @@ jobs:
         file: bosh-cpi-src/ci/tasks/setup-director.yml
         config:
           params:
-            base_os:                                centos
             BOSH_VSPHERE_VCENTER:                   {{VCENTER_IP}}
             BOSH_VSPHERE_VCENTER_USER:              {{VCENTER_USER}}
             BOSH_VSPHERE_VCENTER_PASSWORD:          {{VCENTER_PASSWORD}}
@@ -49,7 +48,6 @@ jobs:
         file: bosh-cpi-src/ci/tasks/deploy-dummy.yml
         config:
           params:
-            base_os:                                centos
             director_username:                      {{BOSH_DIRECTOR_USERNAME}}
             director_password:                      {{BOSH_DIRECTOR_PASSWORD}}
             stemcell_name:                          {{centos_STEMCELL_NAME}}
@@ -87,7 +85,6 @@ jobs:
         file: bosh-cpi-src/ci/tasks/setup-director.yml
         config:
           params:
-            base_os:                                ubuntu
             BOSH_VSPHERE_VCENTER:                   {{VCENTER_IP}}
             BOSH_VSPHERE_VCENTER_USER:              {{VCENTER_USER}}
             BOSH_VSPHERE_VCENTER_PASSWORD:          {{VCENTER_PASSWORD}}
@@ -107,7 +104,6 @@ jobs:
         file: bosh-cpi-src/ci/tasks/deploy-dummy.yml
         config:
           params:
-            base_os:                                ubuntu
             director_username:                      {{BOSH_DIRECTOR_USERNAME}}
             director_password:                      {{BOSH_DIRECTOR_PASSWORD}}
             stemcell_name:                          {{ubuntu_STEMCELL_NAME}}

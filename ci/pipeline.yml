@@ -198,7 +198,6 @@ jobs:
         file: bosh-cpi-src/ci/tasks/setup-director.yml
         config:
           params:
-            base_os:                                ubuntu
             network_type_to_test:                   manual
             BOSH_VSPHERE_VCENTER:                   {{VCENTER_IP}}
             BOSH_VSPHERE_VCENTER_USER:              {{VCENTER_USER}}
@@ -259,7 +258,6 @@ jobs:
         file: bosh-cpi-src/ci/tasks/setup-director.yml
         config:
           params:
-            base_os:                                centos
             network_type_to_test:                   manual
             BOSH_VSPHERE_VCENTER:                   {{VCENTER_IP}}
             BOSH_VSPHERE_VCENTER_USER:              {{VCENTER_USER}}

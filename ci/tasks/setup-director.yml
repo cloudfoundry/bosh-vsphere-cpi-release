@@ -13,7 +13,6 @@ outputs:
 run:
   path: bosh-cpi-src/ci/tasks/setup-director.sh
 params:
-  base_os:                                replace-me
   BOSH_VSPHERE_VCENTER:                   replace-me
   BOSH_VSPHERE_VCENTER_USER:              replace-me
   BOSH_VSPHERE_VCENTER_PASSWORD:          replace-me

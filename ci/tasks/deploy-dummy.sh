@@ -9,7 +9,6 @@ source ${release_dir}/ci/tasks/utils.sh
 source /etc/profile.d/chruby.sh
 chruby 2.1.2
 
-check_param base_os
 check_param director_password
 check_param director_username
 check_param stemcell_name
