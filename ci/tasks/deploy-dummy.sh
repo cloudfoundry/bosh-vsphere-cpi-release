@@ -25,6 +25,9 @@ export DIRECTOR_IP=$(                  env_attr "${metadata}" "directorIP")
 export BOSH_VSPHERE_VCENTER_CIDR=$(    env_attr "${network1}" "vCenterCIDR")
 export BOSH_VSPHERE_VCENTER_GATEWAY=$( env_attr "${network1}" "vCenterGateway")
 export BOSH_VSPHERE_DNS=$(             env_attr "${metadata}" "DNS")
+export STATIC_IP=$(                    env_attr "${network1}" "staticIP-1")
+export RESERVED_RANGE=$(               env_attr "${network1}" "reservedRange")
+export STATIC_RANGE=$(                 env_attr "${network1}" "staticRange")
 
 bosh -n target ${DIRECTOR_IP}
 bosh login ${director_username} ${director_password}
@@ -72,6 +75,8 @@ networks:
         gateway: ${BOSH_VSPHERE_VCENTER_GATEWAY}
         dns: [${BOSH_VSPHERE_DNS}]
         cloud_properties: {name: ${BOSH_VSPHERE_VCENTER_VLAN}}
+        reserved: [${RESERVED_RANGE}]
+        static: [${STATIC_RANGE}]
 
 jobs:
   - name: dummy
@@ -81,6 +86,7 @@ jobs:
     networks:
       - name: private
         default: [dns, gateway]
+        static_ips: [${STATIC_IP}]
 EOF
 
 git clone https://github.com/pivotal-cf-experimental/dummy-boshrelease.git
