@@ -164,6 +164,7 @@ jobs:
           params:
             director_username:                      {{BOSH_DIRECTOR_USERNAME}}
             director_password:                      {{BOSH_DIRECTOR_PASSWORD}}
+            test_deployment_name:                   dummy
 
       - task: teardown-director
         tags: ["vsphere-v5.1"]

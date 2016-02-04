@@ -16,3 +16,4 @@ run:
 params:
   director_username:
   director_password:
+  test_deployment_name:

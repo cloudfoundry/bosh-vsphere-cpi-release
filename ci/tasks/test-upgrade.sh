@@ -2,16 +2,20 @@
 
 set -e -x
 
+working_dir=$PWD
+old_deployment_dir=${working_dir}/old-deployment
+deployment_dir=${working_dir}/deployment
+release_dir=${working_dir}/bosh-cpi-src
+
+source ${release_dir}/ci/tasks/utils.sh
 source /etc/profile.d/chruby.sh
 chruby 2.1.2
 
 : ${director_username:?must be set}
 : ${director_password:?must be set}
+: ${test_deployment_name:?must be set}
 
 cpi_release_name="bosh-vsphere-cpi"
-working_dir=$PWD
-old_deployment_dir=${working_dir}/old-deployment
-deployment_dir=${working_dir}/deployment
 
 env_name=$(cat ${working_dir}/vsphere-5.1-environment/name)
 metadata=$(cat ${working_dir}/vsphere-5.1-environment/metadata)
@@ -41,5 +45,9 @@ cp -r $HOME/.bosh_init $deployment_dir
 echo "recreating existing BOSH Deployment..."
 bosh -n target ${DIRECTOR_IP}
 bosh login ${director_username} ${director_password}
-bosh -n recreate deployment dummy
+bosh download manifest ${test_deployment_name} ${test_deployment_name}-manifest
+bosh deployment ${test_deployment_name}-manifest
+bosh -n deploy --recreate
+
+bosh -n delete deployment ${test_deployment_name}
 bosh -n cleanup --all
