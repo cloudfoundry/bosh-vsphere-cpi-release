@@ -159,7 +159,7 @@ jobs:
 
       - task: test-upgrade
         tags: ["vsphere-v5.1"]
-        file: bosh-cpi-src/ci/tasks/setup-director.yml
+        file: bosh-cpi-src/ci/tasks/test-upgrade.yml
         config:
           params:
             director_username:                      {{BOSH_DIRECTOR_USERNAME}}
