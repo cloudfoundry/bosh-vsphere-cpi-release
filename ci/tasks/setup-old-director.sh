@@ -62,7 +62,7 @@ pushd "${workspace_dir}"
   curl -L https://bosh.cloudfoundry.org/d/github.com/cloudfoundry/bosh?v=${old_bosh_release_version} > bosh-release.tgz
   echo "${old_bosh_release_sha1} bosh-release.tgz" | sha1sum -c -
 
-  stemcell_url=$(curl http://bosh.io/api/v1/stemcells/${old_bosh_stemcell_name} | jq 'map(select(.version == "${version}"))[0].regular.url' --arg version ${old_bosh_stemcell_version})
+  stemcell_url=$(curl http://bosh.io/api/v1/stemcells/${old_bosh_stemcell_name} | jq 'map(select(.version == $version))[0].regular.url' --raw-output --arg version ${old_bosh_stemcell_version})
   curl -L ${stemcell_url} > stemcell.tgz
   echo "${old_bosh_stemcell_sha1} stemcell.tgz" | sha1sum -c -
 
