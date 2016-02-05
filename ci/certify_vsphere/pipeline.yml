@@ -180,9 +180,9 @@ jobs:
     plan:
       - aggregate:
         - {trigger: false, get: bosh-cpi-src, tags: ["vsphere-v5.1"]}
-        - {trigger: true,  get: bosh-cpi-artifacts, passed: [e2e-test-ubuntu, test-upgrade], tags: ["vsphere-v5.1"]}
-        - {trigger: true,  get: bosh-release,       passed: [e2e-test-ubuntu, test-upgrade], tags: ["vsphere-v5.1"]}
-        - {trigger: true,  get: stemcell,           passed: [e2e-test-ubuntu, test-upgrade], resource: vsphere-ubuntu-stemcell, tags: ["vsphere-v5.1"]}
+        - {trigger: true,  get: bosh-cpi-artifacts, passed: [e2e-test-ubuntu, upgrade-test], tags: ["vsphere-v5.1"]}
+        - {trigger: true,  get: bosh-release,       passed: [e2e-test-ubuntu, upgrade-test], tags: ["vsphere-v5.1"]}
+        - {trigger: true,  get: stemcell,           passed: [e2e-test-ubuntu, upgrade-test], resource: vsphere-ubuntu-stemcell, tags: ["vsphere-v5.1"]}
 
       - task: generate-certification
         tags: ["vsphere-v5.1"]
@@ -202,8 +202,8 @@ jobs:
     plan:
       - aggregate:
         - {trigger: false, get: bosh-cpi-src, tags: ["vsphere-v5.1"]}
-        - {trigger: true,  get: bosh-cpi-artifacts, passed: [e2e-test-centos, test-upgrade], tags: ["vsphere-v5.1"]}
-        - {trigger: true,  get: bosh-release,       passed: [e2e-test-centos, test-upgrade], tags: ["vsphere-v5.1"]}
+        - {trigger: true,  get: bosh-cpi-artifacts, passed: [e2e-test-centos, upgrade-test], tags: ["vsphere-v5.1"]}
+        - {trigger: true,  get: bosh-release,       passed: [e2e-test-centos, upgrade-test], tags: ["vsphere-v5.1"]}
         - {trigger: true,  get: stemcell,           passed: [e2e-test-centos], resource: vsphere-centos-stemcell, tags: ["vsphere-v5.1"]}
 
       - task: generate-certification
