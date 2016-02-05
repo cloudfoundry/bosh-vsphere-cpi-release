@@ -45,3 +45,8 @@ RUN /bin/bash -l -c "source /etc/profile.d/chruby.sh ;  \
                      git clone https://github.com/cloudfoundry-incubator/bosh-vsphere-cpi-release.git ; \
                      cd bosh-vsphere-cpi-release/src/vsphere_cpi ; \
                      bundle install"
+
+RUN cd /tmp && \
+    curl -o certify-artifacts -L https://s3.amazonaws.com/bosh-certification-generator-releases/certify-artifacts-linux-amd64 && \
+    chmod +x certify-artifacts && \
+    mv certify-artifacts /bin/certify-artifacts

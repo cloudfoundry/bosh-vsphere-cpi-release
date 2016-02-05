@@ -1,0 +1,16 @@
+---
+platform: linux
+image: docker:///boshcpi/vsphere-cpi-release
+inputs:
+  - name: bosh-cpi-src
+  - name: bosh-release
+  - name: bosh-cpi-artifacts
+  - name: stemcell
+outputs:
+  - name: certification-receipt
+run:
+  path: bosh-cpi-src/ci/tasks/generate-certification.sh
+params:
+  bosh_release_name: ""
+  cpi_release_name:  ""
+  stemcell_name:     ""

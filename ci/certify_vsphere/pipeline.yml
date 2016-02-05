@@ -115,9 +115,10 @@ jobs:
   - name: upgrade-test
     plan:
       - aggregate:
-        - {trigger: true, get: bosh-cpi-artifacts, tags: ["vsphere-v5.1"]}
-        - {trigger: true, get: bosh-release, tags: ["vsphere-v5.1"]}
-        - {trigger: true, get: stemcell, resource: vsphere-ubuntu-stemcell, tags: ["vsphere-v5.1"]}
+        - {trigger: true,  get: bosh-cpi-artifacts, tags: ["vsphere-v5.1"]}
+        - {trigger: true,  get: bosh-release, tags: ["vsphere-v5.1"]}
+        - {trigger: true,  get: stemcell, resource: vsphere-ubuntu-stemcell, tags: ["vsphere-v5.1"]}
+        - {trigger: false, get: vsphere-centos-stemcell, tags: ["vsphere-v5.1"]} # pass the CentOS stemcell through to gate certification on upgrade build
         - {trigger: false, get: bosh-cpi-src, tags: ["vsphere-v5.1"]}
         - {trigger: false, get: bosh-init, tags: ["vsphere-v5.1"]}
 
@@ -175,6 +176,50 @@ jobs:
         params:
           release: vsphere-5.1-environment
 
+  - name: certify-ubuntu
+    plan:
+      - aggregate:
+        - {trigger: false, get: bosh-cpi-src, tags: ["vsphere-v5.1"]}
+        - {trigger: true,  get: bosh-cpi-artifacts, passed: [e2e-test-ubuntu, test-upgrade], tags: ["vsphere-v5.1"]}
+        - {trigger: true,  get: bosh-release,       passed: [e2e-test-ubuntu, test-upgrade], tags: ["vsphere-v5.1"]}
+        - {trigger: true,  get: stemcell,           passed: [e2e-test-ubuntu, test-upgrade], resource: vsphere-ubuntu-stemcell, tags: ["vsphere-v5.1"]}
+
+      - task: generate-certification
+        tags: ["vsphere-v5.1"]
+        file: bosh-cpi-src/ci/tasks/generate-certification.yml
+        config:
+          params:
+            bosh_release_name: bosh
+            cpi_release_name: bosh-vsphere-cpi
+            stemcell_name: bosh-vsphere-esxi-ubuntu-trusty-go_agent
+
+      - put: certification
+        tags: ["vsphere-v5.1"]
+        params:
+          file: certification-receipt/*.json
+
+  - name: certify-centos
+    plan:
+      - aggregate:
+        - {trigger: false, get: bosh-cpi-src, tags: ["vsphere-v5.1"]}
+        - {trigger: true,  get: bosh-cpi-artifacts, passed: [e2e-test-centos, test-upgrade], tags: ["vsphere-v5.1"]}
+        - {trigger: true,  get: bosh-release,       passed: [e2e-test-centos, test-upgrade], tags: ["vsphere-v5.1"]}
+        - {trigger: true,  get: stemcell,           passed: [e2e-test-centos], resource: vsphere-centos-stemcell, tags: ["vsphere-v5.1"]}
+
+      - task: generate-certification
+        tags: ["vsphere-v5.1"]
+        file: bosh-cpi-src/ci/tasks/generate-certification.yml
+        config:
+          params:
+            bosh_release_name: bosh
+            cpi_release_name: bosh-vsphere-cpi
+            stemcell_name: bosh-vsphere-esxi-centos-7-go_agent
+
+      - put: certification
+        tags: ["vsphere-v5.1"]
+        params:
+          file: certification-receipt/*.json
+
 resources:
   - name: bosh-cpi-artifacts
     type: bosh-io-release
@@ -216,3 +261,12 @@ resources:
       uri: git@github.com:cloudfoundry/bosh-cpi-environments.git
       branch: master
       private_key: {{github_deployment_key__bosh-cpi-environments}}
+
+  - name: certification
+    type: s3
+    source:
+      access_key_id: {{certification__bucket_access_key}}
+      secret_access_key: {{certification__bucket_secret_key}}
+      bucket: {{certification__bucket}}
+      regexp: receipt-.*\.json
+      region_name: us-east-1
