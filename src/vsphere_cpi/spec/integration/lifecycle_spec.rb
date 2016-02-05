@@ -40,7 +40,7 @@ describe VSphereCloud::Cloud, external_cpi: false do
   let(:network_spec) do
     {
       'static' => {
-        'ip' => "169.254.1.#{rand(4..254)}",
+        'ip' => "169.254.#{rand(1..254)}.#{rand(4..254)}",
         'netmask' => '255.255.254.0',
         'cloud_properties' => {'name' => vlan},
         'default' => ['dns', 'gateway'],
