@@ -129,22 +129,14 @@ module VSphereCloud
 
       def find_disk(disk_cid)
         @logger.debug("Looking for disk #{disk_cid} in datastores: #{persistent_datastores}")
-        persistent_datastores.each do |_, datastore|
-          disk = @client.find_disk(disk_cid, datastore, @disk_path)
-          @logger.debug("disk #{disk_cid} found in: #{datastore}") unless disk.nil?
-          return disk unless disk.nil?
-        end
+
+        disk = find_disk_cid_in_datastores(disk_cid, persistent_datastores)
+        return disk unless disk.nil?
 
         other_datastores = all_datastores.reject{|datastore_name, _| persistent_datastores[datastore_name] }
         @logger.debug("disk #{disk_cid} not found in filtered persistent datastores, trying other datastores: #{other_datastores}")
-        other_datastores.each do |_, datastore|
-          disk = @client.find_disk(disk_cid, datastore, @disk_path)
-
-          if !disk.nil?
-            @logger.debug("disk #{disk_cid} found in: #{datastore}")
-            return disk
-          end
-        end
+        disk = find_disk_cid_in_datastores(disk_cid, other_datastores)
+        return disk unless disk.nil?
 
         raise Bosh::Clouds::DiskNotFound.new(false), "Could not find disk with id '#{disk_cid}'"
       end
@@ -255,6 +247,17 @@ module VSphereCloud
 
       def path(datastore_name, disk_path, disk_cid)
         "[#{datastore_name}] #{disk_path}/#{disk_cid}.vmdk"
+      end
+
+      def find_disk_cid_in_datastores(disk_cid, datastores)
+        datastores.each do |_, datastore|
+          disk = @client.find_disk(disk_cid, datastore, @disk_path)
+          unless disk.nil?
+            @logger.debug("disk #{disk_cid} found in: #{datastore}")
+            return disk
+          end
+        end
+        nil
       end
 
       class PersistentDiskIndex
