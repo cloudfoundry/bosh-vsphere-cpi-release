@@ -326,38 +326,103 @@ module VSphereCloud
     end
 
     describe '#find_vm_by_name' do
+      let(:cloud_searcher) { instance_double('VSphereCloud::CloudSearcher') }
       before do
-        allow(client).to receive(:yield_all_resources_by_name).with('fake-datacenter', 'VirtualMachine').and_yield('foo_vm', 'foo')
+        client.instance_variable_set('@cloud_searcher', cloud_searcher)
+        allow(cloud_searcher).to receive(:find_resource_by_property_path)
+          .with('fake-datacenter-mob', 'VirtualMachine', 'name') do |&block|
+            result = nil
+            if block.call('foo')
+              result = 'foo_vm'
+            end
+            result
+          end
       end
       context 'when a VM with the name vm_name exists in the given datacenter' do
         it 'returns the VM' do
-          expect(client.find_vm_by_name('fake-datacenter', 'foo')).to eq('foo_vm')
+          expect(client.find_vm_by_name('fake-datacenter-mob', 'foo')).to eq('foo_vm')
         end
       end
 
       context 'when a VM with the name vm_name does not exist in the given datacenter' do
         it 'returns the VM' do
-          expect(client.find_vm_by_name('fake-datacenter', 'nonexistent')).to be_nil
+          expect(client.find_vm_by_name('fake-datacenter-mob', 'nonexistent')).to be_nil
         end
       end
     end
 
     describe '#find_all_stemcell_replicas' do
+      let(:cloud_searcher) { instance_double('VSphereCloud::CloudSearcher') }
       before do
-        allow(client).to receive(:yield_all_resources_by_name).with('fake-datacenter', 'VirtualMachine')
-            .and_yield('stemcell1', 'stemcell-1234')
-            .and_yield('stemcell2', 'stemcell-1234 %2f replica1')
-            .and_yield('stemcell3', 'unmatched-stemcell')
+        client.instance_variable_set('@cloud_searcher', cloud_searcher)
+        allow(cloud_searcher).to receive(:find_resources_by_property_path)
+          .with('fake-datacenter-mob', 'VirtualMachine', 'name') do |&block|
+            records = {
+              'stemcell1' => 'stemcell-1234',
+              'stemcell2' => 'stemcell-1234 %2f replica1',
+              'stemcell3' => 'unmatched-stemcell'
+            }
+
+            results = []
+            records.each do |key, value|
+              if block.call(value)
+                results << key
+              end
+            end
+            results
+        end
       end
       context 'when stemcell replicas exist in the given datacenter' do
         it 'returns list of matched replicas' do
-          expect(client.find_all_stemcell_replicas('fake-datacenter', 'stemcell-1234')).to match_array(['stemcell1', 'stemcell2'])
+          expect(client.find_all_stemcell_replicas('fake-datacenter-mob', 'stemcell-1234')).to match_array(['stemcell1', 'stemcell2'])
         end
       end
 
       context 'when stemcell replicas do not exist in the given datacenter' do
         it 'returns list of matched replicas' do
-          expect(client.find_all_stemcell_replicas('fake-datacenter', 'nonexistent')).to match_array([])
+          expect(client.find_all_stemcell_replicas('fake-datacenter-mob', 'nonexistent')).to match_array([])
+        end
+      end
+    end
+
+    describe '#find_all_stemcell_replicas_in_datastore' do
+      let(:cloud_searcher) { instance_double('VSphereCloud::CloudSearcher') }
+      before do
+        client.instance_variable_set('@cloud_searcher', cloud_searcher)
+        allow(cloud_searcher).to receive(:find_resources_by_property_path)
+          .with('fake-datacenter-mob', 'VirtualMachine', 'name') do |&block|
+            records = {
+              'stemcell1' => 'stemcell-1234',
+              'stemcell2' => 'stemcell-1234 %2f replica1',
+              'stemcell3' => 'unmatched-stemcell'
+            }
+
+            results = []
+            records.each do |key, value|
+              if block.call(value)
+                results << key
+              end
+            end
+            results
+        end
+
+        allow(cloud_searcher).to receive(:get_property)
+          .with('stemcell1', VimSdk::Vim::VirtualMachine, 'datastore', ensure_all: true)
+          .and_return([instance_double('VimSdk::Vim::Datastore', name: 'replica0')])
+
+        allow(cloud_searcher).to receive(:get_property)
+          .with('stemcell2', VimSdk::Vim::VirtualMachine, 'datastore', ensure_all: true)
+          .and_return([instance_double('VimSdk::Vim::Datastore', name: 'replica1')])
+      end
+      context 'when stemcell replicas exist in the given datacenter' do
+        it 'returns list of matched replicas' do
+          expect(client.find_all_stemcell_replicas_in_datastore('fake-datacenter-mob', 'stemcell-1234', 'replica1')).to match_array(['stemcell2'])
+        end
+      end
+
+      context 'when stemcell replicas do not exist in the given datacenter' do
+        it 'returns list of matched replicas' do
+          expect(client.find_all_stemcell_replicas_in_datastore('fake-datacenter-mob', 'nonexistent', 'replica0')).to match_array([])
         end
       end
     end

@@ -28,7 +28,7 @@ module VSphereCloud
       end
 
       filter_spec = PC::FilterSpec.new(:prop_set => property_specs, :object_set => object_spec)
-      
+
       # Bosh::Common.retryable default has an exponential sleeper,
       # with 30 tries the timeout will be ~265s
       errors = [MissingPropertiesException]
@@ -72,6 +72,18 @@ module VSphereCloud
         retrieve_result = @service_content.property_collector.continue_retrieve_properties_ex(retrieve_result.token)
       end
       result
+    end
+
+    def yield_all_properties(filter_spec)
+      retrieve_result = @service_content.property_collector.retrieve_properties_ex([filter_spec],
+        PC::RetrieveOptions.new)
+      until retrieve_result.nil?
+        retrieve_result.objects.each do |object_content|
+          yield object_content
+        end
+        break if retrieve_result.token.nil?
+        retrieve_result = @service_content.property_collector.continue_retrieve_properties_ex(retrieve_result.token)
+      end
     end
 
     def get_managed_objects(type, options={})
@@ -141,6 +153,35 @@ module VSphereCloud
       false
     end
 
+    def find_resource_by_property_path(parent, type, property_path, &block)
+      raise 'Requires a vSphere object type' if type.nil?
+
+      filter_spec = get_recursive_search_filter_spec(parent, type, [property_path])
+
+      yield_all_properties(filter_spec) do |object_content|
+        found_match = block.call(object_content.prop_set.first.val)
+        if found_match
+          return object_content.obj
+        end
+      end
+      nil
+    end
+
+    def find_resources_by_property_path(parent, type, property_path, &block)
+      raise 'Requires a vSphere object type' if type.nil?
+
+      filter_spec = get_recursive_search_filter_spec(parent, type, [property_path])
+
+      results = []
+      yield_all_properties(filter_spec) do |object_content|
+        found_match = block.call(object_content.prop_set.first.val)
+        if found_match
+          results << object_content.obj
+        end
+      end
+      results
+    end
+
     private
 
     def get_object_specs(type, root, path_set)
@@ -149,6 +190,34 @@ module VSphereCloud
       property_specs = [PC::PropertySpec.new(:type => type, :all => false, :path_set => [path_set])]
       filter_spec = get_search_filter_spec(root, property_specs)
       get_all_properties(filter_spec)
+    end
+
+    def get_recursive_search_filter_spec(obj, resource_type, property_names)
+      # Create a view to list all the resources in the obj
+      container_view = @service_content.view_manager.create_container_view(obj, [resource_type], true)
+
+      # Create an object spec to define the beginning of the traversal
+      object_spec = VimSdk::Vmodl::Query::PropertyCollector::ObjectSpec.new
+      object_spec.obj = container_view
+      object_spec.skip = false
+
+      # Create a traversal spec to select all objects in the 'view' of the ContainerView
+      vm_traversal_spec = VimSdk::Vmodl::Query::PropertyCollector::TraversalSpec.new
+      vm_traversal_spec.name = 'searchTraversalSpec'
+      vm_traversal_spec.path = 'view'
+      vm_traversal_spec.type = 'ContainerView'
+      object_spec.select_set << vm_traversal_spec
+
+      # Specify the properties for retrieval
+      property_spec = VimSdk::Vmodl::Query::PropertyCollector::PropertySpec.new
+      property_spec.type = resource_type
+      property_spec.path_set.concat(property_names)
+      property_spec.all = false
+
+      filter_spec = VimSdk::Vmodl::Query::PropertyCollector::FilterSpec.new
+      filter_spec.object_set << object_spec
+      filter_spec.prop_set << property_spec
+      filter_spec
     end
 
     def get_search_filter_spec(obj, property_specs)

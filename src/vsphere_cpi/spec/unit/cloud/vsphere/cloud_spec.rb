@@ -71,7 +71,8 @@ module VSphereCloud
         double('fake datacenter',
           name: 'fake_datacenter',
           template_folder: template_folder,
-          clusters: {}
+          clusters: {},
+          mob: 'fake-datacenter-mob'
         )
       end
 
@@ -98,14 +99,14 @@ module VSphereCloud
         let(:datastore_with_stemcell) { instance_double('VSphereCloud::Resources::Datastore', :name => 'datastore-with-stemcell') }
 
         before do
-          allow(client).to receive(:find_vm_by_name).with(cluster.datacenter, stemcell_id).and_return(stemcell_vm)
+          allow(client).to receive(:find_vm_by_name).with('fake-datacenter-mob', stemcell_id).and_return(stemcell_vm)
 
           allow(cloud_searcher).to receive(:get_property).with(stemcell_vm, anything, 'datastore', anything).and_return([datastore_with_stemcell])
         end
 
         it 'searches for stemcell on all cluster datastores' do
           expect(client).to receive(:find_vm_by_name).with(
-              cluster.datacenter,
+              'fake-datacenter-mob',
               "#{stemcell_id} %2f #{target_datastore.mob.__mo_id__}"
           ).and_return(double('fake stemcell vm'))
 
@@ -119,7 +120,7 @@ module VSphereCloud
 
           it 'replicates the stemcell' do
             allow(client).to receive(:find_vm_by_name).with(
-                cluster.datacenter,
+                'fake-datacenter-mob',
                 "#{stemcell_id} %2f #{target_datastore.mob.__mo_id__}"
             )
 

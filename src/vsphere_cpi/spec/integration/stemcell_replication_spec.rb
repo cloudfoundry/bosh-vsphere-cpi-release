@@ -51,7 +51,7 @@ describe VSphereCloud::Cloud do
         Dir.mktmpdir do |temp_dir|
           stemcell_image = LifecycleHelpers.stemcell_image(@stemcell_path, temp_dir)
           @orig_stemcell_id = @cpi.create_stemcell(stemcell_image, nil)
-          @original_stemcell_vm = @cpi.client.find_vm_by_name(@cpi.datacenter, @orig_stemcell_id)
+          @original_stemcell_vm = @cpi.client.find_vm_by_name(@cpi.datacenter.mob, @orig_stemcell_id)
         end
       end
 
@@ -74,7 +74,7 @@ describe VSphereCloud::Cloud do
           expect(same_stemcell_vm.__mo_id__).to eq(@original_stemcell_vm.__mo_id__)
         }.to_not change {
           @cpi.client.find_all_stemcell_replicas_in_datastore(
-            @cpi.datacenter,
+            @cpi.datacenter.mob,
             @orig_stemcell_id,
             original_datastore.name
           ).size
@@ -88,7 +88,7 @@ describe VSphereCloud::Cloud do
           expect(replicated_stemcell_vm.__mo_id__).to_not eq(@original_stemcell_vm.__mo_id__)
         }.to change {
           @cpi.client.find_all_stemcell_replicas_in_datastore(
-            @cpi.datacenter,
+            @cpi.datacenter.mob,
             @orig_stemcell_id,
             other_datastore.name
           ).size
@@ -101,7 +101,7 @@ describe VSphereCloud::Cloud do
           expect(same_replicated_stemcell_vm.__mo_id__).to eq(replicated_stemcell_vm.__mo_id__)
         }.to_not change {
           @cpi.client.find_all_stemcell_replicas_in_datastore(
-            @cpi.datacenter,
+            @cpi.datacenter.mob,
             @orig_stemcell_id,
             other_datastore.name
           ).size
@@ -114,7 +114,7 @@ describe VSphereCloud::Cloud do
           expect(same_replicated_stemcell_vm.__mo_id__).to eq(replicated_stemcell_vm.__mo_id__)
         }.to_not change {
           second_cpi.client.find_all_stemcell_replicas_in_datastore(
-            second_cpi.datacenter,
+            second_cpi.datacenter.mob,
             @orig_stemcell_id,
             other_datastore.name
           ).size
@@ -125,7 +125,7 @@ describe VSphereCloud::Cloud do
         expect {
           @cpi.delete_stemcell(@orig_stemcell_id)
         }.to change {
-          @cpi.client.find_all_stemcell_replicas(@cpi.datacenter, @orig_stemcell_id).size
+          @cpi.client.find_all_stemcell_replicas(@cpi.datacenter.mob, @orig_stemcell_id).size
         }.by(-1 * [@original_stemcell_vm, replicated_stemcell_vm].size)
 
         #Test:        re-deleting stemcell using second cpi
@@ -133,7 +133,7 @@ describe VSphereCloud::Cloud do
         expect {
           second_cpi.delete_stemcell(@orig_stemcell_id)
         }.to_not change {
-          second_cpi.client.find_all_stemcell_replicas(@cpi.datacenter, @orig_stemcell_id).size
+          second_cpi.client.find_all_stemcell_replicas(@cpi.datacenter.mob, @orig_stemcell_id).size
         }
       end
 
@@ -168,7 +168,7 @@ describe VSphereCloud::Cloud do
 
           expect(
             @cpi.client.find_all_stemcell_replicas_in_datastore(
-              @cpi.datacenter,
+              @cpi.datacenter.mob,
               @orig_stemcell_id,
               destination_datastore.name
             ).size

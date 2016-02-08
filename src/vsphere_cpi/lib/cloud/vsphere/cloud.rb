@@ -136,7 +136,7 @@ module VSphereCloud
       with_thread_name("delete_stemcell(#{stemcell})") do
         Bosh::ThreadPool.new(max_threads: 32, logger: @logger).wrap do |pool|
           @logger.info("Looking for stemcell replicas in: #{@datacenter.name}")
-          matches = client.find_all_stemcell_replicas(@datacenter, stemcell)
+          matches = client.find_all_stemcell_replicas(@datacenter.mob, stemcell)
 
           matches.each do |sc|
             sc_name = sc.name
@@ -153,7 +153,7 @@ module VSphereCloud
     end
 
     def stemcell_vm(name)
-      client.find_vm_by_name(@datacenter, name)
+      client.find_vm_by_name(@datacenter.mob, name)
     end
 
     def create_vm(agent_id, stemcell, cloud_properties, networks, disk_locality = nil, environment = nil)
@@ -339,7 +339,7 @@ module VSphereCloud
     end
 
     def replicate_stemcell(cluster, to_datastore, stemcell_id)
-      original_stemcell_vm = self.client.find_vm_by_name(@datacenter, stemcell_id)
+      original_stemcell_vm = self.client.find_vm_by_name(@datacenter.mob, stemcell_id)
       raise "Could not find VM for stemcell '#{stemcell_id}'" if original_stemcell_vm.nil?
 
       return original_stemcell_vm if vm_datastore_name(original_stemcell_vm) == to_datastore.name
@@ -348,7 +348,7 @@ module VSphereCloud
 
       name_of_replicated_stemcell = "#{stemcell_id} %2f #{to_datastore.mob.__mo_id__}"
 
-      replicated_stemcell_vm = client.find_vm_by_name(@datacenter, name_of_replicated_stemcell)
+      replicated_stemcell_vm = client.find_vm_by_name(@datacenter.mob, name_of_replicated_stemcell)
       return replicated_stemcell_vm if replicated_stemcell_vm
 
       @logger.info("Cluster doesn't have stemcell #{stemcell_id}, replicating")
