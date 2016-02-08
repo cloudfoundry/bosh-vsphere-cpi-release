@@ -156,6 +156,14 @@ module VSphereCloud
       end
     end
 
+    def find_vm_by_disk_cid(datacenter_mob, disk_cid)
+      @cloud_searcher.find_resource_by_property_path(datacenter_mob, 'VirtualMachine', 'config.vAppConfig.property') do |vapp_properties|
+        vapp_properties.any? do |prop|
+          prop.label == disk_cid
+        end
+      end
+    end
+
     def find_all_stemcell_replicas(datacenter_mob, stemcell_id)
       @cloud_searcher.find_resources_by_property_path(datacenter_mob, 'VirtualMachine', 'name') do |name|
         name =~ Regexp.new(stemcell_id)

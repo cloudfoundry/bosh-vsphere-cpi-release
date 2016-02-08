@@ -345,8 +345,39 @@ module VSphereCloud
       end
 
       context 'when a VM with the name vm_name does not exist in the given datacenter' do
-        it 'returns the VM' do
+        it 'returns nil' do
           expect(client.find_vm_by_name('fake-datacenter-mob', 'nonexistent')).to be_nil
+        end
+      end
+    end
+
+    describe '#find_vm_by_disk_cid' do
+      let(:cloud_searcher) { instance_double('VSphereCloud::CloudSearcher') }
+      before do
+        client.instance_variable_set('@cloud_searcher', cloud_searcher)
+        allow(cloud_searcher).to receive(:find_resource_by_property_path)
+        .with('fake-datacenter-mob', 'VirtualMachine', 'config.vAppConfig.property') do |&block|
+          records = [
+            instance_double('VimSdk::Vim::VApp::PropertyInfo', label: 'disk0'),
+            instance_double('VimSdk::Vim::VApp::PropertyInfo', label: 'disk1')
+          ]
+          if block.call(records)
+            'foo_vm'
+          else
+            nil
+          end
+        end
+      end
+
+      context 'when a VM with the disk_cid exists in the given datacenter' do
+        it 'returns the VM' do
+          expect(client.find_vm_by_disk_cid('fake-datacenter-mob', 'disk1')).to eq('foo_vm')
+        end
+      end
+
+      context 'when a VM with the disk_cid does not exist in the given datacenter' do
+        it 'returns nil' do
+          expect(client.find_vm_by_disk_cid('fake-datacenter-mob', 'disk2')).to eq(nil)
         end
       end
     end
@@ -379,7 +410,7 @@ module VSphereCloud
       end
 
       context 'when stemcell replicas do not exist in the given datacenter' do
-        it 'returns list of matched replicas' do
+        it 'returns empty list of matched replicas' do
           expect(client.find_all_stemcell_replicas('fake-datacenter-mob', 'nonexistent')).to match_array([])
         end
       end
@@ -421,7 +452,7 @@ module VSphereCloud
       end
 
       context 'when stemcell replicas do not exist in the given datacenter' do
-        it 'returns list of matched replicas' do
+        it 'returns empty list of matched replicas' do
           expect(client.find_all_stemcell_replicas_in_datastore('fake-datacenter-mob', 'nonexistent', 'replica0')).to match_array([])
         end
       end
