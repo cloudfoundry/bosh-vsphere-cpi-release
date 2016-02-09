@@ -43,6 +43,16 @@ export BOSH_VSPHERE_VCENTER_CIDR=$(    env_attr "${network1}" "vCenterCIDR")
 export BOSH_VSPHERE_VCENTER_GATEWAY=$( env_attr "${network1}" "vCenterGateway")
 export BOSH_VSPHERE_DNS=$(             env_attr "${metadata}" "DNS")
 
+download_artifact() {
+  wget --retry-connrefused \
+       --waitretry=1 \
+       --read-timeout=20 \
+       --timeout=15 \
+       --tries=50 \
+       --output-document="$2" \
+       "$1"
+}
+
 echo "verifying no BOSH deployed VM exists at target IP: $DIRECTOR_IP"
 check_for_rogue_vm $DIRECTOR_IP
 
@@ -56,18 +66,26 @@ popd
 pushd "${workspace_dir}"
   cpi_release_name="bosh-vsphere-cpi"
 
-  curl -L http://bosh.io/d/github.com/cloudfoundry-incubator/bosh-vsphere-cpi-release?v=${old_vsphere_cpi_release_version} > ${cpi_release_name}.tgz
+  download_artifact \
+    http://bosh.io/d/github.com/cloudfoundry-incubator/bosh-vsphere-cpi-release?v=${old_vsphere_cpi_release_version} \
+    ${cpi_release_name}.tgz
   echo "${old_vsphere_cpi_release_sha1} ${cpi_release_name}.tgz" | sha1sum -c -
 
-  curl -L https://bosh.cloudfoundry.org/d/github.com/cloudfoundry/bosh?v=${old_bosh_release_version} > bosh-release.tgz
+  download_artifact \
+    https://bosh.cloudfoundry.org/d/github.com/cloudfoundry/bosh?v=${old_bosh_release_version} \
+    bosh-release.tgz
   echo "${old_bosh_release_sha1} bosh-release.tgz" | sha1sum -c -
 
-  stemcell_url=$(curl http://bosh.io/api/v1/stemcells/${old_bosh_stemcell_name} | jq 'map(select(.version == $version))[0].regular.url' --raw-output --arg version ${old_bosh_stemcell_version})
-  curl -L ${stemcell_url} > stemcell.tgz
+  download_artifact \
+    https://bosh.io/d/stemcells/${old_bosh_stemcell_name}?v=${old_bosh_stemcell_version} \
+    stemcell.tgz
   echo "${old_bosh_stemcell_sha1} stemcell.tgz" | sha1sum -c -
 
-  curl -L https://s3.amazonaws.com/bosh-init-artifacts/bosh-init-${old_bosh_init_version}-linux-amd64 > bosh-init
+  download_artifact \
+    https://s3.amazonaws.com/bosh-init-artifacts/bosh-init-${old_bosh_init_version}-linux-amd64 \
+    bosh-init
   echo "${old_bosh_init_sha1} bosh-init" | sha1sum -c -
+
   chmod +x bosh-init
   mv bosh-init /bin
 
