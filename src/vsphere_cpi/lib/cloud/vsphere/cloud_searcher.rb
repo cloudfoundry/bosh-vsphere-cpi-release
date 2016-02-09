@@ -159,9 +159,12 @@ module VSphereCloud
       filter_spec = get_recursive_search_filter_spec(parent, type, [property_path])
 
       yield_all_properties(filter_spec) do |object_content|
-        found_match = block.call(object_content.prop_set.first.val)
-        if found_match
-          return object_content.obj
+        prop = object_content.prop_set.first
+        unless prop.nil?
+          found_match = block.call(prop.val)
+          if found_match
+            return object_content.obj
+          end
         end
       end
       nil
@@ -174,9 +177,12 @@ module VSphereCloud
 
       results = []
       yield_all_properties(filter_spec) do |object_content|
-        found_match = block.call(object_content.prop_set.first.val)
-        if found_match
-          results << object_content.obj
+        prop = object_content.prop_set.first
+        unless prop.nil?
+          found_match = block.call(prop.val)
+          if found_match
+            results << object_content.obj
+          end
         end
       end
       results
