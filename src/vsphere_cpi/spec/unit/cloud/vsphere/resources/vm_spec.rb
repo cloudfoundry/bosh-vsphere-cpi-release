@@ -318,6 +318,36 @@ describe VSphereCloud::Resources::VM do
     end
   end
 
+  describe '#disk_path' do
+
+    let(:disk) do
+      disk = VimSdk::Vim::Vm::Device::VirtualDisk.new
+      disk.backing = VimSdk::Vim::Vm::Device::VirtualDisk::FlatVer2BackingInfo.new
+      disk.backing.file_name = '[datastore] fake-disk-path/fake-file_name.vmdk'
+      disk.key = 'first-disk-key'
+      disk
+    end
+
+    before do
+      allow(vm).to receive(:disk_by_cid).and_return(disk)
+    end
+
+    it 'returns the file name of the virtual disk' do
+      disk_path = vm.disk_path_by_cid('fake-file_name')
+      expect(disk_path).to eq('[datastore] fake-disk-path/fake-file_name.vmdk')
+    end
+
+    context 'when disk_cid does not exist' do
+      before do
+        allow(vm).to receive(:disk_by_cid).and_return(nil)
+      end
+      it 'returns nil' do
+        disk_path = vm.disk_path_by_cid('other-file_name')
+        expect(disk_path).to be_nil
+      end
+    end
+  end
+
   describe '#to_s' do
     it 'show relevant info' do
       expect(subject.to_s).to eq("(#{subject.class.name} (cid=\"vm-cid\"))")

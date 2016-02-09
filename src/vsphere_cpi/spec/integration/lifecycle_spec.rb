@@ -435,7 +435,7 @@ describe VSphereCloud::Cloud, external_cpi: false do
           datastore_name.first[0]
         }
 
-        it 'can still find persistent disks after deleting vm' do
+        it 'can still find persistent disks after vMotion and deleting vm' do
           begin
             disk_attached = false
             vm_id = one_cluster_cpi.create_vm(
@@ -464,6 +464,8 @@ describe VSphereCloud::Cloud, external_cpi: false do
 
             task = vm.mob.relocate(relocate_spec, 'defaultPriority')
             one_cluster_cpi.client.wait_for_task(task)
+
+            expect(one_cluster_cpi.has_disk?(disk_id)).to be(true)
 
             one_cluster_cpi.delete_vm(vm_id)
             vm_id = nil
@@ -477,7 +479,7 @@ describe VSphereCloud::Cloud, external_cpi: false do
           end
         end
 
-        it 'can still find persistent disk after detaching disk from vm' do
+        it 'can still find persistent disk after vMotion and after detaching disk from vm' do
           begin
             disk_attached = false
             vm_id = one_cluster_cpi.create_vm(
@@ -506,6 +508,8 @@ describe VSphereCloud::Cloud, external_cpi: false do
 
             task = vm.mob.relocate(relocate_spec, 'defaultPriority')
             one_cluster_cpi.client.wait_for_task(task)
+
+            expect(one_cluster_cpi.has_disk?(disk_id)).to be(true)
 
             one_cluster_cpi.detach_disk(vm_id, disk_id)
             disk_attached = false

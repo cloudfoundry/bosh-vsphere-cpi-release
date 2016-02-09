@@ -138,6 +138,18 @@ module VSphereCloud
         disk = find_disk_cid_in_datastores(disk_cid, other_datastores)
         return disk unless disk.nil?
 
+        @logger.debug("disk #{disk_cid} not found in all datastores, searching VM attachments")
+        vm_mob = @client.find_vm_by_disk_cid(mob, disk_cid)
+        unless vm_mob.nil?
+          vm = Resources::VM.new(vm_mob.name, vm_mob, @client, @logger)
+          disk_path = vm.disk_path_by_cid(disk_cid)
+          datastore_name, disk_folder, disk_file = /\[(.+)\] (.+)\/(.+)\.vmdk/.match(disk_path)[1..3]
+          datastore = all_datastores[datastore_name]
+          disk = @client.find_disk(disk_file, datastore, disk_folder)
+
+          @logger.debug("disk #{disk_cid} found at new location: #{disk.path}") unless disk.nil?
+          return disk unless disk.nil?
+        end
         raise Bosh::Clouds::DiskNotFound.new(false), "Could not find disk with id '#{disk_cid}'"
       end
 

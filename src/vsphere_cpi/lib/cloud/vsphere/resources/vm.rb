@@ -143,6 +143,11 @@ module VSphereCloud
         end
       end
 
+      def disk_path_by_cid(disk_cid)
+        disk = disk_by_cid(disk_cid)
+        disk.backing.file_name unless disk.nil?
+      end
+
       def reboot
         @mob.reboot_guest
       end

@@ -37,7 +37,7 @@ describe VSphereCloud::Resources::Datacenter do
   let(:cloud_searcher) { instance_double('VSphereCloud::CloudSearcher') }
   let(:datastore_properties) { {} }
   let(:datastore) { instance_double('VSphereCloud::Resources::Datastore', name: 'fake-datastore') }
-  let(:disk) { instance_double('VSphereCloud::Resources::PersistentDisk') }
+  let(:disk) { instance_double('VSphereCloud::Resources::PersistentDisk', path: 'fake-disk-path') }
 
   let(:datacenter_name) { 'fake-datacenter-name' }
   before do
@@ -551,16 +551,16 @@ Couldn't find a 'ephemeral' datastore with 10000MB of free space. Found:
 
     before do
       allow(datacenter).to receive(:persistent_datastores).and_return({
-            'datastore-with-disk' => datastore,
-            'datastore-without-disk' => other_datastore,
+            'datastore1' => datastore,
+            'datastore2' => other_datastore,
           })
       allow(datacenter).to receive(:all_datastores).and_return({
-            'datastore-with-disk' => datastore,
-            'datastore-without-disk' => other_datastore,
+            'datastore1' => datastore,
+            'datastore2' => other_datastore,
           })
     end
 
-    context 'when disk exists' do
+    context 'when disk exists in persistent datastore' do
       before do
         allow(client).to receive(:find_disk).with('disk-cid', datastore, 'fake-disk-path') { disk }
         allow(client).to receive(:find_disk).with('disk-cid', other_datastore, 'fake-disk-path') { nil }
@@ -571,10 +571,50 @@ Couldn't find a 'ephemeral' datastore with 10000MB of free space. Found:
       end
     end
 
+    context 'when disk exists in some other datastore' do
+      before do
+        allow(client).to receive(:find_disk).with('disk-cid', datastore, 'fake-disk-path') { nil }
+        allow(client).to receive(:find_disk).with('disk-cid', other_datastore, 'fake-disk-path') { disk }
+      end
+
+      it 'returns disk' do
+        expect(datacenter.find_disk('disk-cid')).to eq(disk)
+      end
+    end
+
+    context 'when disk exists but cannot be found in datastores' do
+      before do
+        allow(client).to receive(:find_disk).with('disk-cid', datastore, 'fake-disk-path') { nil }
+        allow(client).to receive(:find_disk).with('disk-cid', other_datastore, 'fake-disk-path') { nil }
+
+        vm_mob = instance_double('VimSdk::Vim::VirtualMachine', name: 'fake-vm-name')
+        allow(client).to receive(:find_vm_by_disk_cid).with(datacenter_mob, 'disk-cid').and_return(vm_mob)
+
+        vm = instance_double(
+          'VSphereCloud::Resources::VM',
+        )
+        allow(vm).to receive(:disk_path_by_cid).with('disk-cid')
+          .and_return("[datastore1] fake-disk-path/fake-file_name.vmdk")
+        allow(VSphereCloud::Resources::VM).to receive(:new)
+          .with('fake-vm-name', vm_mob, client, logger)
+          .and_return(vm)
+
+        allow(client).to receive(:find_disk)
+          .with('fake-file_name', datastore, 'fake-disk-path')
+          .and_return(disk)
+      end
+
+      it 'returns the disk' do
+        expect(datacenter.find_disk('disk-cid')).to eq(disk)
+      end
+    end
+
     context 'when disk does not exist' do
       before do
         allow(client).to receive(:find_disk).with('disk-cid', datastore, 'fake-disk-path') { nil }
         allow(client).to receive(:find_disk).with('disk-cid', other_datastore, 'fake-disk-path') { nil }
+
+        allow(client).to receive(:find_vm_by_disk_cid).with(datacenter_mob, 'disk-cid').and_return(nil)
       end
 
       it 'raises DiskNotFound' do
