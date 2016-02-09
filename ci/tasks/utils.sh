@@ -34,3 +34,8 @@ env_attr() {
   local json=$1
   echo $json | jq --raw-output --arg attribute $2 '.[$attribute]'
 }
+
+log() {
+  local message="$1"
+  echo "$(date +"%Y-%m-%d %H:%M:%S") ----- $message"
+}
