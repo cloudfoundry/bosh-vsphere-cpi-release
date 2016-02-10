@@ -17,8 +17,8 @@ chruby 2.1.2
 
 cpi_release_name="bosh-vsphere-cpi"
 
-env_name=$(cat ${working_dir}/vsphere-5.1-environment/name)
-metadata=$(cat ${working_dir}/vsphere-5.1-environment/metadata)
+env_name=$(cat ${workspace_dir}/vsphere-5.1-environment/name)
+metadata=$(cat ${workspace_dir}/vsphere-5.1-environment/metadata)
 network1=$(env_attr "${metadata}" "network1")
 
 log "Using environment: \'${env_name}\'"
