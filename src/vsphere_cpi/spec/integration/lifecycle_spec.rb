@@ -27,6 +27,17 @@ describe VSphereCloud::Cloud, external_cpi: false do
 
   class VMWareToolsNotFound < StandardError; end
 
+  def block_on_vmware_tools(cpi, vm_name)
+    # wait for vsphere tools to be detected by vCenter :(
+
+    start_time = Time.now
+    @logger.info("Waiting for VMWare Tools on the VM...")
+    Bosh::Common.retryable(tries: 20, on: VMWareToolsNotFound) do
+      wait_for_vmware_tools(cpi, vm_name)
+    end
+    @logger.info("Finished waiting for VMWare Tools. Took #{Time.now - start_time} seconds.")
+  end
+
   def wait_for_vmware_tools(cpi, vm_name)
     vm_mob = cpi.vm_provider.find(vm_name).mob
     raise VMWareToolsNotFound if vm_mob.guest.ip_address.nil?
@@ -74,14 +85,8 @@ describe VSphereCloud::Cloud, external_cpi: false do
 
         desired_ip = network_spec['static']['ip']
         network_name = network_spec['static']['cloud_properties']['name']
-        # wait for vsphere tools to be detected by vCenter :(
 
-        start_time = Time.now
-        @logger.info("Waiting for VMWare Tools on the VM...")
-        Bosh::Common.retryable(tries: 20, on: VMWareToolsNotFound) do
-          wait_for_vmware_tools(@cpi, test_vm_id)
-        end
-        @logger.info("Finished waiting for VMWare Tools. Took #{Time.now - start_time} seconds.")
+        block_on_vmware_tools(@cpi, test_vm_id)
 
         duplicate_ip_vm_id = nil
         expected_ip_conflicts = [{vm_name: test_vm_id, network_name: network_name, ip: desired_ip}]
@@ -519,6 +524,100 @@ describe VSphereCloud::Cloud, external_cpi: false do
             one_cluster_cpi.delete_vm(vm_id) if vm_id
             one_cluster_cpi.delete_disk(disk_id) if disk_id
           end
+        end
+      end
+    end
+
+    context 'when a persistent disk is attached in "independent nonpersistent" mode' do
+      before do
+        @vm_id = @cpi.create_vm(
+          'agent-007',
+          @stemcell_id,
+          resource_pool,
+          network_spec,
+          [],
+          {'key' => 'value'}
+        )
+        expect(@vm_id).to_not be_nil
+        expect(@cpi.has_vm?(@vm_id)).to be(true), 'Expected has_vm? to be true'
+
+        @disk_id = @cpi.create_disk(2048, {}, @vm_id)
+        expect(@disk_id).to_not be_nil
+
+        @cpi.attach_disk(@vm_id, @disk_id)
+
+        expect(@cpi.has_disk?(@disk_id)).to be(true), 'Expected has_disk? to be true'
+
+        @vm = @cpi.vm_provider.find(@vm_id)
+
+        virtual_disk = @vm.persistent_disks.first
+        virtual_disk.backing.disk_mode = VimSdk::Vim::Vm::Device::VirtualDiskOption::DiskMode::INDEPENDENT_NONPERSISTENT
+        edit_spec = VSphereCloud::Resources::VM.create_edit_device_spec(virtual_disk)
+
+        config = VimSdk::Vim::Vm::ConfigSpec.new
+        config.device_change << edit_spec
+
+        @vm.power_off
+        @cpi.client.reconfig_vm(@vm.mob, config)
+        @vm.power_on
+
+        # Give the agent some more time to mount the persistent disk
+        sleep(10)
+      end
+
+      after do
+        @cpi.delete_vm(@vm_id) if @vm_id
+
+        if @disk_id && @cpi.has_disk?(@disk_id)
+          @cpi.delete_disk(@disk_id)
+        end
+      end
+
+      context 'after deleting VM' do
+        it 'can still find disk' do
+          @cpi.delete_vm(@vm_id)
+          @vm_id = nil
+
+          expect(@cpi.has_disk?(@disk_id)).to be(true), 'Expected has_disk? to be true'
+        end
+
+        it 'does not lose data' do
+          block_on_vmware_tools(@cpi, @vm_id)
+
+          guest_file_manager = @cpi.client.service_content.guest_operations_manager.file_manager
+          auth = VimSdk::Vim::Vm::Guest::NamePasswordAuthentication.new
+          auth.username = 'root'
+          auth.password = 'c1oudc0w'
+          temp_path = guest_file_manager.create_temporary_file(@vm.mob, auth, 'prefix', 'suffix', '/var/vcap/store/')
+          # Give VMWare Tools time to create the file
+          sleep(10)
+          list_file_info = guest_file_manager.list_files(@vm.mob, auth, temp_path, 0, 50, '.*')
+          expect(list_file_info.files.size).to eq(1)
+          expect(list_file_info.files.first.path).to eq(temp_path)
+          @logger.info("Created temp file #{temp_path}")
+
+          @cpi.delete_vm(@vm_id)
+          expect(@cpi.has_disk?(@disk_id)).to be(true), 'Expected has_disk? to be true'
+
+          @vm_id = @cpi.create_vm(
+            'agent-007',
+            @stemcell_id,
+            resource_pool,
+            network_spec,
+            [],
+            {'key' => 'value'}
+          )
+          expect(@vm_id).to_not be_nil
+          expect(@cpi.has_vm?(@vm_id)).to be(true), 'Expected has_vm? to be true'
+
+          @cpi.attach_disk(@vm_id, @disk_id)
+
+          block_on_vmware_tools(@cpi, @vm_id)
+
+          @vm = @cpi.vm_provider.find(@vm_id)
+          list_file_info = guest_file_manager.list_files(@vm.mob, auth, temp_path, 0, 50, '.*')
+          expect(list_file_info.files.size).to eq(1)
+          expect(list_file_info.files.first.path).to eq(temp_path)
         end
       end
     end

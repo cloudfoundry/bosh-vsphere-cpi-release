@@ -475,10 +475,11 @@ module VSphereCloud
       before do
         allow(vm).to receive(:persistent_disks).and_return([])
         allow(vm).to receive(:cdrom).and_return(nil)
+        allow(vm).to receive(:disks_with_incorrect_mode).and_return([])
       end
 
       it 'deletes vm' do
-        expect(vm).to receive(:power_off)
+        expect(vm).to receive(:shutdown)
         expect(vm).to receive(:delete)
         vsphere_cloud.delete_vm('vm-id')
       end
@@ -491,9 +492,24 @@ module VSphereCloud
 
         it 'detaches persistent disks' do
           expect(vm).to receive(:detach_disks).with([disk])
-          expect(vm).to receive(:power_off)
+          expect(vm).to receive(:shutdown)
           expect(vm).to receive(:delete)
           vsphere_cloud.delete_vm('vm-id')
+        end
+
+        context 'when the VM has persistent disks with the incorrect mode' do
+          before do
+            allow(vm).to receive(:disks_with_incorrect_mode).and_return([disk])
+          end
+
+          it 'reboots the VM before powering it off' do
+            expect(vm).to receive(:shutdown)
+            expect(vm).to receive(:power_on)
+            expect(vm).to receive(:power_off)
+            expect(vm).to receive(:detach_disks).with([disk])
+            expect(vm).to receive(:delete)
+            vsphere_cloud.delete_vm('vm-id')
+          end
         end
       end
 
@@ -504,7 +520,7 @@ module VSphereCloud
         it 'cleans the agent environment, before deleting the vm' do
           expect(agent_env).to receive(:clean_env).with(vm_mob).ordered
 
-          expect(vm).to receive(:power_off)
+          expect(vm).to receive(:shutdown)
           expect(vm).to receive(:delete)
 
           vsphere_cloud.delete_vm('vm-id')

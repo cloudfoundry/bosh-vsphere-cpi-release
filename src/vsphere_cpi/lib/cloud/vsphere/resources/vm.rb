@@ -60,15 +60,29 @@ module VSphereCloud
       end
 
       def persistent_disks
-        devices.select do |device|
-          device.kind_of?(Vim::Vm::Device::VirtualDisk) &&
-            device.backing.disk_mode == Vim::Vm::Device::VirtualDiskOption::DiskMode::INDEPENDENT_PERSISTENT
+        virtual_disks = devices.select do |device|
+          device.kind_of?(Vim::Vm::Device::VirtualDisk)
+        end
+
+        # To account for disk modes that were changed outside of the CPI,
+        # we can additionally look for the device key in the vapp config to ensure
+        # all persistent disks are returned
+        persistent_device_keys = persistent_disk_device_keys_from_vapp_config
+        virtual_disks.select do |device|
+          device.backing.disk_mode == Vim::Vm::Device::VirtualDiskOption::DiskMode::INDEPENDENT_PERSISTENT ||
+            persistent_device_keys.any? { |key| device.key == key }
         end
       end
 
       def ephemeral_disk
         devices.find do |device|
           device.kind_of?(Vim::Vm::Device::VirtualDisk) && device.backing.file_name =~ /#{Resources::EphemeralDisk::DISK_NAME}.vmdk$/
+        end
+      end
+
+      def disks_with_incorrect_mode
+        persistent_disks.select do |virtual_disk|
+          virtual_disk.backing.disk_mode != Vim::Vm::Device::VirtualDiskOption::DiskMode::INDEPENDENT_PERSISTENT
         end
       end
 
@@ -96,6 +110,9 @@ module VSphereCloud
       end
 
       def shutdown
+        @logger.debug('Changing attached disks to persistent disks before shutdown')
+        ensure_persistent_disks_have_correct_mode
+
         @logger.debug('Waiting for the VM to shutdown')
         begin
           begin
@@ -153,7 +170,32 @@ module VSphereCloud
       end
 
       def power_on
-        @client.power_on_vm(datacenter, @mob)
+        power_on_thread = Thread.new do
+          @client.power_on_vm(datacenter, @mob)
+        end
+        question_answerer = Thread.new do
+          # While the client is powering on, continue looking for questions
+          # to answer and answer them automatically.
+          loop do
+            question = @mob.runtime.question
+            if question
+              if question.text =~ /msg\.disk\.redoLogPersistent/
+                @logger.info("VM is blocked on a question asking for an action for a disk's redo log. Choosing 'Commit'.")
+                @client.answer_vm(@mob, question.id, "0")
+              else
+                choices = question.choice
+                @logger.info("VM is blocked on a question: #{question.text}, " +
+                    "providing default answer: #{choices.choice_info[choices.default_index].label}")
+                @client.answer_vm(@mob, question.id, choices.choice_info[choices.default_index].key)
+              end
+            end
+            sleep 15
+          end
+        end
+
+        power_on_thread.join
+        question_answerer.exit
+        nil
       end
 
       def delete
@@ -302,6 +344,21 @@ module VSphereCloud
 
       private
 
+      def ensure_persistent_disks_have_correct_mode
+        disks = disks_with_incorrect_mode
+
+        return if disks.empty?
+
+        config = VimSdk::Vim::Vm::ConfigSpec.new
+        disks.each do |virtual_disk|
+          @logger.info("Found persistent disk '#{virtual_disk.backing.file_name}' with unsafe disk mode '#{virtual_disk.backing.disk_mode}', changing to 'independent_persistent'")
+          virtual_disk.backing.disk_mode = VimSdk::Vim::Vm::Device::VirtualDiskOption::DiskMode::INDEPENDENT_PERSISTENT
+          edit_spec = self.class.create_edit_device_spec(virtual_disk)
+          config.device_change << edit_spec
+        end
+        @client.reconfig_vm(@mob, config)
+      end
+
       def verify_persistent_disk_property?(property)
         property.category == 'BOSH Persistent Disks'
       end
@@ -322,6 +379,13 @@ module VSphereCloud
           ['datastore', 'parent'],
           ensure_all: true
         )
+      end
+
+      def persistent_disk_device_keys_from_vapp_config
+        disk_properties = @mob.config.v_app_config.property.select do |property|
+          property.category == 'BOSH Persistent Disks'
+        end
+        disk_properties.map { |property| property.key }
       end
 
       def cloud_searcher

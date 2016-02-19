@@ -79,6 +79,13 @@ describe VSphereCloud::Resources::VM do
   end
 
   describe '#shutdown' do
+    let(:vm_devices) { [] }
+    let(:vm_properties) { { 'config.hardware.device' => vm_devices } }
+
+    before do
+      allow(vm).to receive(:persistent_disk_device_keys_from_vapp_config).and_return([])
+    end
+
     it 'sends shutdown signal' do
       allow(cloud_searcher).to receive(:get_property).
         with(vm_mob, VimSdk::Vim::VirtualMachine, 'runtime.powerState').
@@ -134,6 +141,38 @@ describe VSphereCloud::Resources::VM do
         }.to_not raise_error
       end
     end
+
+    context 'when there are persistent disks with an incorrect disk mode' do
+      let(:persistent_disk_with_non_persistent_mode) do
+        disk = VimSdk::Vim::Vm::Device::VirtualDisk.new
+        disk.backing = VimSdk::Vim::Vm::Device::VirtualDisk::FlatVer2BackingInfo.new
+        disk.backing.disk_mode = VimSdk::Vim::Vm::Device::VirtualDiskOption::DiskMode::INDEPENDENT_NONPERSISTENT
+        disk.key = 9002
+        disk
+      end
+
+      let(:vm_devices) do
+        vm_devices = []
+        vm_devices << persistent_disk_with_non_persistent_mode
+        vm_devices
+      end
+
+      before do
+        allow(vm).to receive(:persistent_disk_device_keys_from_vapp_config).and_return([
+          persistent_disk_with_non_persistent_mode.key
+        ])
+      end
+
+      it 'changes them back to the correct disk mode before shutting down' do
+        allow(cloud_searcher).to receive(:get_property).
+            with(vm_mob, VimSdk::Vim::VirtualMachine, 'runtime.powerState').
+            and_return(powered_off_state)
+        expect(client).to receive(:reconfig_vm)
+        expect(vm_mob).to receive(:shutdown_guest)
+        vm.shutdown
+      end
+    end
+
   end
 
   describe '#power_off' do
@@ -345,6 +384,115 @@ describe VSphereCloud::Resources::VM do
         disk_path = vm.disk_path_by_cid('other-file_name')
         expect(disk_path).to be_nil
       end
+    end
+  end
+
+  describe '#persistent_disks' do
+    let(:vm_properties) { { 'config.hardware.device' => vm_devices } }
+    let(:persistent_disk) do
+      disk = VimSdk::Vim::Vm::Device::VirtualDisk.new
+      disk.backing = VimSdk::Vim::Vm::Device::VirtualDisk::FlatVer2BackingInfo.new
+      disk.backing.disk_mode = VimSdk::Vim::Vm::Device::VirtualDiskOption::DiskMode::INDEPENDENT_PERSISTENT
+      disk.key = 9001
+      disk
+    end
+    let(:persistent_disk_with_non_persistent_mode) do
+      disk = VimSdk::Vim::Vm::Device::VirtualDisk.new
+      disk.backing = VimSdk::Vim::Vm::Device::VirtualDisk::FlatVer2BackingInfo.new
+      disk.backing.disk_mode = VimSdk::Vim::Vm::Device::VirtualDiskOption::DiskMode::INDEPENDENT_NONPERSISTENT
+      disk.key = 9002
+      disk
+    end
+    let(:persistent_disk_with_non_independent_mode) do
+      disk = VimSdk::Vim::Vm::Device::VirtualDisk.new
+      disk.backing = VimSdk::Vim::Vm::Device::VirtualDisk::FlatVer2BackingInfo.new
+      disk.backing.disk_mode = VimSdk::Vim::Vm::Device::VirtualDiskOption::DiskMode::PERSISTENT
+      disk.key = 9003
+      disk
+    end
+    let(:ephemeral_disk) do
+      disk = VimSdk::Vim::Vm::Device::VirtualDisk.new
+      disk.backing = VimSdk::Vim::Vm::Device::VirtualDisk::FlatVer2BackingInfo.new
+      disk.backing.disk_mode = VimSdk::Vim::Vm::Device::VirtualDiskOption::DiskMode::PERSISTENT
+      disk.key = 7777
+      disk
+    end
+    let(:vm_devices) do
+      vm_devices = []
+      vm_devices << persistent_disk
+      vm_devices << persistent_disk_with_non_independent_mode
+      vm_devices << persistent_disk_with_non_persistent_mode
+      vm_devices << ephemeral_disk
+      vm_devices
+    end
+
+    before do
+      allow(vm).to receive(:persistent_disk_device_keys_from_vapp_config).and_return([
+        persistent_disk_with_non_persistent_mode.key,
+        persistent_disk_with_non_independent_mode.key
+      ])
+    end
+
+    it 'returns all persistent disks' do
+      expect(vm.persistent_disks).to include(
+        persistent_disk,
+        persistent_disk_with_non_persistent_mode,
+        persistent_disk_with_non_independent_mode
+      )
+    end
+  end
+
+  describe '#disks_with_incorrect_mode' do
+    let(:vm_properties) { { 'config.hardware.device' => vm_devices } }
+    let(:persistent_disk) do
+      disk = VimSdk::Vim::Vm::Device::VirtualDisk.new
+      disk.backing = VimSdk::Vim::Vm::Device::VirtualDisk::FlatVer2BackingInfo.new
+      disk.backing.disk_mode = VimSdk::Vim::Vm::Device::VirtualDiskOption::DiskMode::INDEPENDENT_PERSISTENT
+      disk.key = 9001
+      disk
+    end
+    let(:persistent_disk_with_non_persistent_mode) do
+      disk = VimSdk::Vim::Vm::Device::VirtualDisk.new
+      disk.backing = VimSdk::Vim::Vm::Device::VirtualDisk::FlatVer2BackingInfo.new
+      disk.backing.disk_mode = VimSdk::Vim::Vm::Device::VirtualDiskOption::DiskMode::INDEPENDENT_NONPERSISTENT
+      disk.key = 9002
+      disk
+    end
+    let(:persistent_disk_with_non_independent_mode) do
+      disk = VimSdk::Vim::Vm::Device::VirtualDisk.new
+      disk.backing = VimSdk::Vim::Vm::Device::VirtualDisk::FlatVer2BackingInfo.new
+      disk.backing.disk_mode = VimSdk::Vim::Vm::Device::VirtualDiskOption::DiskMode::PERSISTENT
+      disk.key = 9003
+      disk
+    end
+    let(:ephemeral_disk) do
+      disk = VimSdk::Vim::Vm::Device::VirtualDisk.new
+      disk.backing = VimSdk::Vim::Vm::Device::VirtualDisk::FlatVer2BackingInfo.new
+      disk.backing.disk_mode = VimSdk::Vim::Vm::Device::VirtualDiskOption::DiskMode::PERSISTENT
+      disk.key = 7777
+      disk
+    end
+    let(:vm_devices) do
+      vm_devices = []
+      vm_devices << persistent_disk
+      vm_devices << persistent_disk_with_non_independent_mode
+      vm_devices << persistent_disk_with_non_persistent_mode
+      vm_devices << ephemeral_disk
+      vm_devices
+    end
+
+    before do
+      allow(vm).to receive(:persistent_disk_device_keys_from_vapp_config).and_return([
+            persistent_disk_with_non_persistent_mode.key,
+            persistent_disk_with_non_independent_mode.key
+          ])
+    end
+
+    it 'returns all persistent disks with the incorrect disk mode' do
+      expect(vm.disks_with_incorrect_mode).to include(
+          persistent_disk_with_non_persistent_mode,
+          persistent_disk_with_non_independent_mode
+        )
     end
   end
 
