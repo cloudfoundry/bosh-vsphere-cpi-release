@@ -191,15 +191,7 @@ module VSphereCloud
         @logger.info("Deleting vm: #{vm_cid}")
 
         vm = vm_provider.find(vm_cid)
-
-        unless vm.disks_with_incorrect_mode.empty?
-          # Rebooting via vm.shutdown will ensure the disks will have the correct mode
-          vm.shutdown
-          vm.power_on
-          vm.power_off
-        else
-          vm.shutdown
-        end
+        vm.power_off
 
         persistent_disks = vm.persistent_disks
         unless persistent_disks.empty?
