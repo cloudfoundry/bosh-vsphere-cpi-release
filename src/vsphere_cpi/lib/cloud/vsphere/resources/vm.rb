@@ -104,6 +104,8 @@ module VSphereCloud
       end
 
       def shutdown
+        check_for_nonpersistent_disk_modes
+
         @logger.debug('Waiting for the VM to shutdown')
         begin
           begin
@@ -120,6 +122,8 @@ module VSphereCloud
       end
 
       def power_off
+        check_for_nonpersistent_disk_modes
+
         retry_block do
           question = properties['runtime.question']
           if question
@@ -157,6 +161,7 @@ module VSphereCloud
       end
 
       def reboot
+        check_for_nonpersistent_disk_modes
         @mob.reboot_guest
       end
 
@@ -357,6 +362,18 @@ module VSphereCloud
         nil
       end
 
+      def check_for_nonpersistent_disk_modes
+        nonpersistent_file_names = []
+        persistent_disks.each do |disk|
+          if disk.backing.disk_mode == VimSdk::Vim::Vm::Device::VirtualDiskOption::DiskMode::INDEPENDENT_NONPERSISTENT
+            nonpersistent_file_names << disk.backing.file_name
+          end
+        end
+
+        unless nonpersistent_file_names.empty?
+          raise "The following disks are attached with non-persistent disk modes: [ #{nonpersistent_file_names.join(', ')} ]. Please change the disk modes to 'independent persistent' before attempting to power off the VM to avoid data loss."
+        end
+      end
     end
   end
 end

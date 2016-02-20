@@ -528,7 +528,7 @@ describe VSphereCloud::Cloud, external_cpi: false do
       end
     end
 
-    context 'when a persistent disk is attached in "independent nonpersistent" mode' do
+    context 'when a persistent disk is attached in "persistent" (dependent) mode' do
       before do
         @vm_id = @cpi.create_vm(
           'agent-007',
@@ -551,7 +551,7 @@ describe VSphereCloud::Cloud, external_cpi: false do
         @vm = @cpi.vm_provider.find(@vm_id)
 
         virtual_disk = @vm.persistent_disks.first
-        virtual_disk.backing.disk_mode = VimSdk::Vim::Vm::Device::VirtualDiskOption::DiskMode::INDEPENDENT_NONPERSISTENT
+        virtual_disk.backing.disk_mode = VimSdk::Vim::Vm::Device::VirtualDiskOption::DiskMode::PERSISTENT
         edit_spec = VSphereCloud::Resources::VM.create_edit_device_spec(virtual_disk)
 
         config = VimSdk::Vim::Vm::ConfigSpec.new

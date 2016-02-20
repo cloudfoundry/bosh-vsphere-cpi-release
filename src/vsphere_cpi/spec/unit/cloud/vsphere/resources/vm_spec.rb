@@ -79,6 +79,13 @@ describe VSphereCloud::Resources::VM do
   end
 
   describe '#shutdown' do
+    let(:vm_properties) { { 'config.hardware.device' => vm_devices } }
+    let(:vm_devices) { [] }
+
+    before do
+      allow(vm).to receive(:persistent_disk_device_keys_from_vapp_config).and_return([])
+    end
+
     it 'sends shutdown signal' do
       allow(cloud_searcher).to receive(:get_property).
         with(vm_mob, VimSdk::Vim::VirtualMachine, 'runtime.powerState').
@@ -134,9 +141,38 @@ describe VSphereCloud::Resources::VM do
         }.to_not raise_error
       end
     end
+
+    context 'when a disk is attached with a non-persistent mode' do
+      let(:persistent_disk_with_non_persistent_mode) do
+        disk = VimSdk::Vim::Vm::Device::VirtualDisk.new
+        disk.backing = VimSdk::Vim::Vm::Device::VirtualDisk::FlatVer2BackingInfo.new
+        disk.backing.file_name = '[datastore] fake-disk-path/fake-file_name.vmdk'
+        disk.backing.disk_mode = VimSdk::Vim::Vm::Device::VirtualDiskOption::DiskMode::INDEPENDENT_NONPERSISTENT
+        disk.key = 9002
+        disk
+      end
+      let(:vm_devices) { [persistent_disk_with_non_persistent_mode] }
+
+      before do
+        allow(vm).to receive(:persistent_disk_device_keys_from_vapp_config).and_return([
+          persistent_disk_with_non_persistent_mode.key
+        ])
+      end
+
+      it 'throws an exception and does not send power off' do
+        expect(vm_mob).to_not receive(:shutdown_guest)
+        expect do
+          vm.shutdown
+        end.to raise_error("The following disks are attached with non-persistent disk modes: [ [datastore] fake-disk-path/fake-file_name.vmdk ]. Please change the disk modes to 'independent persistent' before attempting to power off the VM to avoid data loss.")
+      end
+    end
+
   end
 
   describe '#power_off' do
+    let(:vm_properties) { { 'config.hardware.device' => vm_devices } }
+    let(:vm_devices) { [] }
+
     before do
       allow(cloud_searcher).to receive(:get_property).with(
         vm_mob,
@@ -144,6 +180,7 @@ describe VSphereCloud::Resources::VM do
         ['runtime.powerState', 'runtime.question', 'config.hardware.device', 'name', 'runtime', 'resourcePool'],
         ensure: ['config.hardware.device', 'runtime']
       ).and_return({'runtime.question' => nil})
+      allow(vm).to receive(:persistent_disk_device_keys_from_vapp_config).and_return([])
     end
 
     context 'when vsphere asks question' do
@@ -156,7 +193,7 @@ describe VSphereCloud::Resources::VM do
           VimSdk::Vim::VirtualMachine,
           ['runtime.powerState', 'runtime.question', 'config.hardware.device', 'name', 'runtime', 'resourcePool'],
           ensure: ['config.hardware.device', 'runtime']
-        ).and_return({'runtime.question' => question})
+        ).and_return({'runtime.question' => question, 'config.hardware.device' => vm_devices})
         allow(cloud_searcher).to receive(:get_property).with(
           vm_mob,
           VimSdk::Vim::VirtualMachine,
@@ -184,12 +221,37 @@ describe VSphereCloud::Resources::VM do
           VimSdk::Vim::VirtualMachine,
           ['runtime.powerState', 'runtime.question', 'config.hardware.device', 'name', 'runtime', 'resourcePool'],
           ensure: ['config.hardware.device', 'runtime']
-        ).and_return({'runtime.powerState' => powered_off_state})
+        ).and_return({'runtime.powerState' => powered_off_state, 'config.hardware.device' => vm_devices})
       end
 
       it 'does not send power off' do
         expect(client).to_not receive(:power_off_vm).with(vm_mob)
         vm.power_off
+      end
+    end
+
+    context 'when a disk is attached with a non-persistent mode' do
+      let(:persistent_disk_with_non_persistent_mode) do
+        disk = VimSdk::Vim::Vm::Device::VirtualDisk.new
+        disk.backing = VimSdk::Vim::Vm::Device::VirtualDisk::FlatVer2BackingInfo.new
+        disk.backing.file_name = '[datastore] fake-disk-path/fake-file_name.vmdk'
+        disk.backing.disk_mode = VimSdk::Vim::Vm::Device::VirtualDiskOption::DiskMode::INDEPENDENT_NONPERSISTENT
+        disk.key = 9002
+        disk
+      end
+      let(:vm_devices) { [persistent_disk_with_non_persistent_mode] }
+
+      before do
+        allow(vm).to receive(:persistent_disk_device_keys_from_vapp_config).and_return([
+          persistent_disk_with_non_persistent_mode.key
+        ])
+      end
+
+      it 'throws an exception and does not send power off' do
+        expect(client).to_not receive(:power_off_vm).with(vm_mob)
+        expect do
+          vm.power_off
+        end.to raise_error("The following disks are attached with non-persistent disk modes: [ [datastore] fake-disk-path/fake-file_name.vmdk ]. Please change the disk modes to 'independent persistent' before attempting to power off the VM to avoid data loss.")
       end
     end
   end
