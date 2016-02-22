@@ -560,9 +560,6 @@ describe VSphereCloud::Cloud, external_cpi: false do
         @vm.power_off
         @cpi.client.reconfig_vm(@vm.mob, config)
         @vm.power_on
-
-        # Give the agent some more time to mount the persistent disk
-        sleep(10)
       end
 
       after do
@@ -573,52 +570,11 @@ describe VSphereCloud::Cloud, external_cpi: false do
         end
       end
 
-      context 'after deleting VM' do
-        it 'can still find disk' do
-          @cpi.delete_vm(@vm_id)
-          @vm_id = nil
+      it 'can still find disk after deleting VM' do
+        @cpi.delete_vm(@vm_id)
+        @vm_id = nil
 
-          expect(@cpi.has_disk?(@disk_id)).to be(true), 'Expected has_disk? to be true'
-        end
-
-        it 'does not lose data' do
-          block_on_vmware_tools(@cpi, @vm_id)
-
-          guest_file_manager = @cpi.client.service_content.guest_operations_manager.file_manager
-          auth = VimSdk::Vim::Vm::Guest::NamePasswordAuthentication.new
-          auth.username = 'root'
-          auth.password = 'c1oudc0w'
-          temp_path = guest_file_manager.create_temporary_file(@vm.mob, auth, 'prefix', 'suffix', '/var/vcap/store/')
-          # Give VMWare Tools time to create the file
-          sleep(10)
-          list_file_info = guest_file_manager.list_files(@vm.mob, auth, temp_path, 0, 50, '.*')
-          expect(list_file_info.files.size).to eq(1)
-          expect(list_file_info.files.first.path).to eq(temp_path)
-          @logger.info("Created temp file #{temp_path}")
-
-          @cpi.delete_vm(@vm_id)
-          expect(@cpi.has_disk?(@disk_id)).to be(true), 'Expected has_disk? to be true'
-
-          @vm_id = @cpi.create_vm(
-            'agent-007',
-            @stemcell_id,
-            resource_pool,
-            network_spec,
-            [],
-            {'key' => 'value'}
-          )
-          expect(@vm_id).to_not be_nil
-          expect(@cpi.has_vm?(@vm_id)).to be(true), 'Expected has_vm? to be true'
-
-          @cpi.attach_disk(@vm_id, @disk_id)
-
-          block_on_vmware_tools(@cpi, @vm_id)
-
-          @vm = @cpi.vm_provider.find(@vm_id)
-          list_file_info = guest_file_manager.list_files(@vm.mob, auth, temp_path, 0, 50, '.*')
-          expect(list_file_info.files.size).to eq(1)
-          expect(list_file_info.files.first.path).to eq(temp_path)
-        end
+        expect(@cpi.has_disk?(@disk_id)).to be(true), 'Expected has_disk? to be true'
       end
     end
 
