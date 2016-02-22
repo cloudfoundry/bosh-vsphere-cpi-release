@@ -634,6 +634,15 @@ describe VSphereCloud::Cloud, external_cpi: false do
         expect(@cpi.has_vm?(@vm_id)).to be(true), "Expected #{@vm_id} to still exist"
         expect(@cpi.has_disk?(@disk_id)).to be(true), 'Expected has_disk? to be true'
       end
+
+      it 'refuses to reboot the VM' do
+        expect do
+          @cpi.reboot_vm(@vm_id)
+        end.to raise_error(/The following disks are attached with non-persistent disk modes/)
+
+        expect(@cpi.has_vm?(@vm_id)).to be(true), "Expected #{@vm_id} to still exist"
+        expect(@cpi.has_disk?(@disk_id)).to be(true), 'Expected has_disk? to be true'
+      end
     end
 
     context 'when disk is in non-accessible datastore' do
