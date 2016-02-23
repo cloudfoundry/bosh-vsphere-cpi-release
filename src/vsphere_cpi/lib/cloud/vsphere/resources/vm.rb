@@ -241,6 +241,8 @@ module VSphereCloud
 
       def detach_disks(virtual_disks)
         reload
+        check_for_nonpersistent_disk_modes
+
         disks_to_move = []
         @logger.info("Found #{virtual_disks.size} persistent disk(s)")
         config = Vim::Vm::ConfigSpec.new
