@@ -282,30 +282,36 @@ describe VSphereCloud::Resources::VM do
   end
 
   describe '#detach_disks' do
-    let(:disk) do
-      instance_double(
-        'VimSdk::Vim::Vm::Device::VirtualDisk',
-        backing: double(:backing, file_name: '[datastore] fake-disk-path/fake-file_name.vmdk'),
-        key: 'first-disk-key',
-      )
+    let(:disk0) do
+      disk = VimSdk::Vim::Vm::Device::VirtualDisk.new
+      disk.backing = VimSdk::Vim::Vm::Device::VirtualDisk::FlatVer2BackingInfo.new
+      disk.backing.file_name = '[datastore] fake-disk-path/fake-file_name.vmdk'
+      disk.backing.disk_mode = VimSdk::Vim::Vm::Device::VirtualDiskOption::DiskMode::INDEPENDENT_PERSISTENT
+      disk.key = 'first-disk-key'
+      disk
     end
-    let(:first_disk_property) do
+    let(:disk1) do
+      disk = VimSdk::Vim::Vm::Device::VirtualDisk.new
+      disk.backing = VimSdk::Vim::Vm::Device::VirtualDisk::FlatVer2BackingInfo.new
+      disk.backing.file_name = '[datastore] fake-disk-path/fake-file_name2.vmdk'
+      disk.backing.disk_mode = VimSdk::Vim::Vm::Device::VirtualDiskOption::DiskMode::INDEPENDENT_PERSISTENT
+      disk.key = 'second-disk-key'
+      disk
+    end
+    let(:vm_devices) { [disk0, disk1]}
+    let(:vm_properties) { { 'config.hardware.device' => vm_devices } }
+    let(:disk0_property) do
       instance_double(
         'VimSdk::Vim::VApp::PropertyInfo',
         key: 'first-disk-key',
+        category: 'BOSH Persistent Disks',
         value: '[datastore] fake-disk-path/fake-file_name.vmdk'
       )
     end
-    let(:second_disk) do
-      instance_double(
-        'VimSdk::Vim::Vm::Device::VirtualDisk',
-        backing: double(:backing, file_name: '[datastore] fake-disk-path/fake-file_name2.vmdk'),
-        key: 'second-disk-key',
-      )
-    end
-    let(:second_disk_property) do
+    let(:disk1_property) do
       instance_double('VimSdk::Vim::VApp::PropertyInfo',
         key: 'first-disk-key',
+        category: 'BOSH Persistent Disks',
         value: '[datastore] fake-disk-path/fake-file_name2.vmdk'
       )
     end
@@ -315,29 +321,32 @@ describe VSphereCloud::Resources::VM do
     before {
       allow(vm).to receive(:has_persistent_disk_property_mismatch?).and_return(false)
       allow(vm).to receive(:datacenter).and_return(datacenter)
-      allow(vm).to receive(:get_vapp_property_by_key).with('first-disk-key').and_return(first_disk_property)
-      allow(vm).to receive(:get_vapp_property_by_key).with('second-disk-key').and_return(second_disk_property)
+      allow(vm_mob).to receive_message_chain('config.v_app_config.property').and_return([
+        disk0_property,
+        disk1_property
+      ])
     }
 
     it 'detaches the given virtual disks' do
       expect(client).to receive(:reconfig_vm) do |mob, spec|
         expect(mob).to equal(vm_mob)
-        expect(spec.device_change.first.device).to eq(disk)
+        expect(spec.device_change.first.device).to eq(disk0)
         expect(spec.device_change.first.operation).to eq(VimSdk::Vim::Vm::Device::VirtualDeviceSpec::Operation::REMOVE)
-        expect(spec.device_change[1].device).to eq(second_disk)
+        expect(spec.device_change[1].device).to eq(disk1)
         expect(spec.device_change[1].operation).to eq(VimSdk::Vim::Vm::Device::VirtualDeviceSpec::Operation::REMOVE)
       end
       expect(client).to_not receive(:move_disk)
       expect(client).to receive(:delete_persistent_disk_property_from_vm).with(vm, 'first-disk-key')
       expect(client).to receive(:delete_persistent_disk_property_from_vm).with(vm, 'second-disk-key')
-      vm.detach_disks([disk, second_disk])
+      vm.detach_disks([disk0, disk1])
     end
 
     context 'when a disk has a property mismatch' do
-      let(:first_disk_property) do
+      let(:disk0_property) do
         instance_double(
           'VimSdk::Vim::VApp::PropertyInfo',
           key: 'first-disk-key',
+          category: 'BOSH Persistent Disks',
           value: '[old-datastore] old-disk-path/old-file_name.vmdk'
         )
       end
@@ -349,7 +358,7 @@ describe VSphereCloud::Resources::VM do
       it 'renames the disk to its original name' do
         expect(client).to receive(:reconfig_vm) do |mob, spec|
           expect(mob).to equal(vm_mob)
-          expect(spec.device_change.first.device).to eq(disk)
+          expect(spec.device_change.first.device).to eq(disk0)
           expect(spec.device_change.first.operation).to eq(VimSdk::Vim::Vm::Device::VirtualDeviceSpec::Operation::REMOVE)
         end
         expect(client).to receive(:move_disk).with(
@@ -359,7 +368,7 @@ describe VSphereCloud::Resources::VM do
           '[datastore] old-disk-path/old-file-name.vmdk'
         )
         expect(client).to receive(:delete_persistent_disk_property_from_vm).with(vm, 'first-disk-key')
-        vm.detach_disks([disk])
+        vm.detach_disks([disk0])
       end
 
       context 'when original disk still exists' do
@@ -369,12 +378,12 @@ describe VSphereCloud::Resources::VM do
         it 'does not try to move the disk to its original name' do
           expect(client).to receive(:reconfig_vm) do |mob, spec|
             expect(mob).to equal(vm_mob)
-            expect(spec.device_change.first.device).to eq(disk)
+            expect(spec.device_change.first.device).to eq(disk0)
             expect(spec.device_change.first.operation).to eq(VimSdk::Vim::Vm::Device::VirtualDeviceSpec::Operation::REMOVE)
           end
           expect(client).to_not receive(:move_disk)
           expect(client).to receive(:delete_persistent_disk_property_from_vm).with(vm, 'first-disk-key')
-          vm.detach_disks([disk])
+          vm.detach_disks([disk0])
         end
       end
     end
@@ -410,8 +419,7 @@ describe VSphereCloud::Resources::VM do
     end
   end
 
-  describe '#persistent_disks' do
-    let(:vm_properties) { { 'config.hardware.device' => vm_devices } }
+  describe '#ephemeral_disk and #persistent_disks' do
     let(:persistent_disk) do
       disk = VimSdk::Vim::Vm::Device::VirtualDisk.new
       disk.backing = VimSdk::Vim::Vm::Device::VirtualDisk::FlatVer2BackingInfo.new
@@ -436,6 +444,7 @@ describe VSphereCloud::Resources::VM do
     let(:ephemeral_disk) do
       disk = VimSdk::Vim::Vm::Device::VirtualDisk.new
       disk.backing = VimSdk::Vim::Vm::Device::VirtualDisk::FlatVer2BackingInfo.new
+      disk.backing.file_name = "#{VSphereCloud::Resources::EphemeralDisk::DISK_NAME}.vmdk"
       disk.backing.disk_mode = VimSdk::Vim::Vm::Device::VirtualDiskOption::DiskMode::PERSISTENT
       disk.key = 7777
       disk
@@ -448,6 +457,7 @@ describe VSphereCloud::Resources::VM do
       vm_devices << ephemeral_disk
       vm_devices
     end
+    let(:vm_properties) { { 'config.hardware.device' => vm_devices } }
 
     before do
       allow(vm).to receive(:persistent_disk_device_keys_from_vapp_config).and_return([
@@ -462,6 +472,13 @@ describe VSphereCloud::Resources::VM do
         persistent_disk_with_non_persistent_mode,
         persistent_disk_with_non_independent_mode
       )
+      expect(vm.persistent_disks).to_not include(
+        ephemeral_disk
+      )
+    end
+
+    it 'returns the ephemeral disk' do
+      expect(vm.ephemeral_disk).to eq(ephemeral_disk)
     end
   end
 
