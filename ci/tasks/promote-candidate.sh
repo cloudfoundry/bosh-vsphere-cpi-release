@@ -2,39 +2,40 @@
 
 set -e -x
 
-release_dir="$( cd $(dirname $0) && cd ../.. && pwd )"
-workspace_dir="$( cd ${release_dir} && cd .. && pwd )"
-dev_artifacts_dir="$( cd ${workspace_dir}/bosh-cpi-artifacts && pwd )"
-
-source ${release_dir}/ci/tasks/utils.sh
 source /etc/profile.d/chruby.sh
 chruby 2.1.2
 
-check_param aws_access_key_id
-check_param aws_secret_access_key
+: ${aws_access_key_id:?must be set}
+: ${aws_secret_access_key:?must be set}
+
+
+release_dir=$(realpath bosh-cpi-src)
+artifacts_dir=$(realpath bosh-cpi-artifacts)
 
 # Creates an integer version number from the semantic version format
 # May be changed when we decide to fully use semantic versions for releases
-integer_version="$(cut -d "." -f1 ${workspace_dir}/release-version-semver/number)"
-echo $integer_version > ${workspace_dir}/integer_version
+integer_version="$(cut -d "." -f1 release-version-semver/number)"
+echo $integer_version > integer-version/tag-file
 
-pushd "${release_dir}"
-  set +x
+# move the input release repository into its output location
+rm -rf updated-repo
+mv bosh-cpi-src updated-repo
+
+pushd updated-repo
   echo creating config/private.yml with blobstore secrets
   cat > config/private.yml << EOF
-  ---
-  blobstore:
-    s3:
-      access_key_id: $aws_access_key_id
-      secret_access_key: $aws_secret_access_key
-  EOF
-  set -x
+---
+blobstore:
+  s3:
+    access_key_id: $aws_access_key_id
+    secret_access_key: $aws_secret_access_key
+EOF
 
   echo "using bosh CLI version..."
   bosh version
 
   echo "finalizing CPI release..."
-  bosh finalize release ${dev_artifacts_dir}/*.tgz --version $integer_version
+  bosh finalize release ${artifacts_dir}/*.tgz --version $integer_version
 
   rm config/private.yml
 

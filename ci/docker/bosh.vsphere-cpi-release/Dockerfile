@@ -17,6 +17,8 @@ RUN apt-get install -y postgresql-9.3 postgresql-client-9.3 libpq-dev; apt-get c
 
 RUN apt-get install -y jq; apt-get clean
 
+RUN apt-get install -y realpath; apt-get clean
+
 # chruby
 RUN mkdir /tmp/chruby && \
     cd /tmp && \

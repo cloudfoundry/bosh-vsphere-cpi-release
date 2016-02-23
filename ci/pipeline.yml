@@ -312,7 +312,7 @@ jobs:
 
     - put: bosh-cpi-src-out
       tags: ["vsphere-v5.1"]
-      params: {repository: promote/bosh-cpi-src, rebase: true, tag_prefix: "v", tag: promote/integer_version}
+      params: {repository: updated-repo/, rebase: true, tag_prefix: "v", tag: integer-version/tag-file}
 
     - put: release-version-semver
       tags: ["vsphere-v5.1"]

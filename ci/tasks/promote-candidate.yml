@@ -7,6 +7,10 @@ inputs:
   - name: bosh-cpi-artifacts
   - name: release-version-semver
 
+outputs:
+  - name: updated-repo
+  - name: integer-version
+
 run:
   path: bosh-cpi-src/ci/tasks/promote-candidate.sh
 
