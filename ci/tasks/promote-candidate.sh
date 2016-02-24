@@ -17,9 +17,8 @@ artifacts_dir=$(realpath bosh-cpi-artifacts)
 integer_version="$(cut -d "." -f1 release-version-semver/number)"
 echo $integer_version > integer-version/tag-file
 
-# move the input release repository into its output location
-rm -rf updated-repo
-mv bosh-cpi-src updated-repo
+# copy the input release repository into its output location
+cp -a bosh-cpi-src/. updated-repo/
 
 pushd updated-repo
   echo creating config/private.yml with blobstore secrets
