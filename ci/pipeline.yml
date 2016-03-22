@@ -298,8 +298,8 @@ jobs:
     serial: true
     plan:
     - aggregate:
-      - {trigger: false, passed: [lifecycle-5.1, lifecycle-6.0, lifecycle-6.0-vsan, bats-ubuntu-manual, bats-centos-manual], get: bosh-cpi-artifacts, tags: ["vsphere-v5.1"]}
-      - {trigger: false, passed: [lifecycle-5.1, lifecycle-6.0, lifecycle-6.0-vsan, bats-ubuntu-manual, bats-centos-manual], get: bosh-cpi-src, tags: ["vsphere-v5.1"]}
+      - {trigger: false, passed: [lifecycle-5.1, lifecycle-6.0, bats-ubuntu-manual, bats-centos-manual], get: bosh-cpi-artifacts, tags: ["vsphere-v5.1"]}
+      - {trigger: false, passed: [lifecycle-5.1, lifecycle-6.0, bats-ubuntu-manual, bats-centos-manual], get: bosh-cpi-src, tags: ["vsphere-v5.1"]}
       - {trigger: false, get: release-version-semver, params: {bump: major}, tags: ["vsphere-v5.1"]}
 
     - task: promote
