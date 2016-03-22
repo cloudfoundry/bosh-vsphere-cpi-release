@@ -411,8 +411,8 @@ describe VSphereCloud::Cloud, external_cpi: false do
 
             drs_rules = cluster.configuration_ex.rule
             expect(drs_rules).not_to be_empty
-            drs_rule = drs_rules[0]
-            expect(drs_rule.name).to eq("separate-nodes-rule")
+            drs_rule = drs_rules.find { |rule| rule.name == "separate-nodes-rule" }
+            expect(drs_rule).to_not be_nil
             expect(drs_rule.vm.length).to eq(2)
             drs_vm_names = drs_rule.vm.map { |vm_mob| vm_mob.name }
             expect(drs_vm_names).to include(first_vm_id, second_vm_id)
