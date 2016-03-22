@@ -240,49 +240,7 @@ module VSphereCloud
     end
 
     def configure_networks(vm_cid, networks)
-      with_thread_name("configure_networks(#{vm_cid}, ...)") do
-        vm = vm_provider.find(vm_cid)
-        vm.shutdown
-
-        @logger.info("Configuring: #{vm_cid} to use the following network settings: #{networks.pretty_inspect}")
-        config = Vim::Vm::ConfigSpec.new
-        config.device_change = []
-        vm.nics.each do |nic|
-          nic_config = Resources::VM.create_delete_device_spec(nic)
-          config.device_change << nic_config
-        end
-
-        dvs_index = {}
-        networks.each_value do |network|
-          v_network_name = network['cloud_properties']['name']
-          network_mob = client.find_by_inventory_path([@datacenter.name, 'network', v_network_name])
-
-          virtual_nic = Resources::Nic.create_virtual_nic(@cloud_searcher, v_network_name, network_mob, vm.pci_controller.key, dvs_index)
-          nic_config = Resources::VM.create_add_device_spec(virtual_nic)
-          config.device_change << nic_config
-        end
-
-        vm.fix_device_unit_numbers(config.device_change)
-        @logger.debug('Reconfiguring the networks')
-        @client.reconfig_vm(vm.mob, config)
-
-        env = @agent_env.get_current_env(vm.mob, @datacenter.name)
-        @logger.debug("Reading current agent env: #{env.pretty_inspect}")
-
-        devices = @cloud_searcher.get_property(vm.mob, Vim::VirtualMachine, 'config.hardware.device', ensure_all: true)
-        begin
-          env['networks'] = generate_network_env(devices, networks, dvs_index)
-        rescue NetworkException => e
-          e.vm_cid = vm_cid
-          raise e
-        end
-        @logger.debug("Updating agent env to: #{env.pretty_inspect}")
-        location = get_vm_location(vm.mob, datacenter: @datacenter.name)
-        @agent_env.set_env(vm.mob, location, env)
-
-        @logger.debug('Powering the VM back on')
-        vm.power_on
-      end
+      raise Bosh::Clouds::NotSupported, "configure_networks is no longer supported"
     end
 
     def attach_disk(vm_cid, disk_cid)

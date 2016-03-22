@@ -126,14 +126,6 @@ describe VSphereCloud::Cloud, external_cpi: false do
         vm_lifecycle(@cpi, [], resource_pool, network_spec)
       end
 
-      it "reconfigures the VM's network without issue" do
-          vm_lifecycle(@cpi, [], resource_pool, network_spec) do |vm_id|
-            modified_network_spec = network_spec.dup
-            modified_network_spec['static']['ip'] = '169.254.1.2'
-            @cpi.configure_networks(vm_id, modified_network_spec)
-          end
-      end
-
       context 'when resource_pool is set to the first cluster' do
         it 'places vm in first cluster' do
           begin

@@ -570,113 +570,11 @@ module VSphereCloud
     end
 
     describe '#configure_networks' do
-      let(:networks) do
-        {
-          'default' => {
-            'cloud_properties' => {
-              'name' => 'fake-network-name'
-            }
-          }
-        }
+      it 'raises a NotSupported exception' do
+        expect {
+          vsphere_cloud.configure_networks("i-foobar", {})
+        }.to raise_error Bosh::Clouds::NotSupported
       end
-
-      before do
-        allow(vm).to receive(:nics).and_return([])
-        allow(vm).to receive(:devices).and_return([])
-        allow(vm).to receive(:pci_controller).and_return(double(:pci_controller, key: 'fake-pci-key'))
-      end
-
-      let(:network_mob) { double(:network_mob, name: 'fake-network-name') }
-      before do
-        allow(client).to receive(:find_by_inventory_path).with([
-          'fake-datacenter',
-          'network',
-          'fake-network-name'
-        ]).and_return(network_mob)
-      end
-
-      let(:nic_config) { double(:nic_config) }
-      before do
-        allow(vsphere_cloud).to receive(:create_virtual_nic).with(
-          'fake-network-name',
-          network_mob,
-          'fake-pci-key',
-          {}
-        ).and_return(nic_config)
-      end
-
-      let(:backing) { double(network: 'fake-network-name') }
-      let(:device) { instance_double('VimSdk::Vim::Vm::Device::VirtualEthernetCard', backing: backing, mac_address: '00:00:00:00:00:00') }
-      let(:devices) { [device] }
-      let(:path_finder) { instance_double('VSphereCloud::PathFinder') }
-
-      before do
-        allow(agent_env).to receive(:get_current_env).and_return(
-          { 'old-key' => 'old-value' }
-        )
-
-        allow(vsphere_cloud).to receive(:get_vm_location).and_return('fake-vm-location')
-
-        allow(cloud_searcher).to receive(:get_property).with(
-          vm_mob,
-          VimSdk::Vim::VirtualMachine,
-          'config.hardware.device',
-          ensure_all: true
-        ).and_return(devices)
-
-        allow(device).to receive(:kind_of?).with(VimSdk::Vim::Vm::Device::VirtualEthernetCard) { true }
-        allow(PathFinder).to receive(:new).and_return(path_finder)
-        allow(path_finder).to receive(:path) { |arg| arg }
-
-        allow(vm).to receive(:shutdown)
-        allow(vm).to receive(:fix_device_unit_numbers)
-        allow(client).to receive(:reconfig_vm)
-        allow(agent_env).to receive(:set_env)
-        allow(vm).to receive(:power_on)
-      end
-
-      it 'shuts down and reconfigures vm' do
-        expect(vm).to receive(:shutdown).ordered
-        expect(vm).to receive(:fix_device_unit_numbers).ordered
-        allow(VSphereCloud::Resources::VM)
-          .to receive(:create_add_device_spec).and_return(nic_config)
-
-        expect(client).to receive(:reconfig_vm) do |reconfig_vm, vm_config|
-          expect(reconfig_vm).to eq(vm_mob)
-          expect(vm_config.device_change).to eq([nic_config])
-        end.ordered
-
-        expect(agent_env).to receive(:set_env).with(
-          vm_mob,
-          'fake-vm-location',
-          {
-            'old-key' => 'old-value',
-            'networks' => {
-              'default' => {
-                'cloud_properties' => {
-                  'name' => 'fake-network-name'
-                },
-                'mac' => '00:00:00:00:00:00'
-              }
-            }
-          }
-        ).ordered
-
-        expect(vm).to receive(:power_on).ordered
-
-        vsphere_cloud.configure_networks('vm-id', networks)
-      end
-
-      context 'the network specified does not have a nic for it' do
-        let(:backing) { double(network: 'alternate-network-name') }
-
-        it 'raises an appropriate exception' do
-          expect {
-            vsphere_cloud.configure_networks('vm-id', networks)
-          }.to raise_error(VSphereCloud::Cloud::NetworkException, "Could not find network 'fake-network-name' for VM 'vm-id'")
-        end
-      end
-
     end
 
     describe '#delete_disk' do

@@ -5,7 +5,7 @@ This document lists different migration cases, symptoms and errors that can be o
 
 ## vMotion migrates VM (disks are in the shared datastore)
 
-We triggered vMotion by migrating VM manually from one host to another. 
+We triggered vMotion by migrating VM manually from one host to another.
 
 ### Symptoms
 
@@ -74,25 +74,6 @@ In datastore1 `Events` there is an event `Migrating vm-… from datastore 1` and
 
 ### Tests
 
-* Changing IP address fails with error:
-
-```
-E, [2014-08-05T17:30:39.714445 #11419] [canary_update(dummy_package/0)] ERROR -- : Error updating canary instance: #<RuntimeError: Ephemeral disks should all be on the same datastore.>
-/var/vcap/packages/director/gem_home/ruby/1.9.1/gems/bosh_vsphere_cpi-1.0000.0/lib/cloud/vsphere/cloud.rb:726:in `block in get_primary_datastore'
-/var/vcap/packages/director/gem_home/ruby/1.9.1/gems/bosh_vsphere_cpi-1.0000.0/lib/cloud/vsphere/cloud.rb:724:in `each'
-/var/vcap/packages/director/gem_home/ruby/1.9.1/gems/bosh_vsphere_cpi-1.0000.0/lib/cloud/vsphere/cloud.rb:724:in `get_primary_datastore'
-/var/vcap/packages/director/gem_home/ruby/1.9.1/gems/bosh_vsphere_cpi-1.0000.0/lib/cloud/vsphere/cloud.rb:711:in `get_vm_location'
-/var/vcap/packages/director/gem_home/ruby/1.9.1/gems/bosh_vsphere_cpi-1.0000.0/lib/cloud/vsphere/cloud.rb:361:in `block in configure_networks'
-/var/vcap/packages/director/gem_home/ruby/1.9.1/gems/bosh_common-1.0000.0/lib/common/thread_formatter.rb:46:in `with_thread_name'
-/var/vcap/packages/director/gem_home/ruby/1.9.1/gems/bosh_vsphere_cpi-1.0000.0/lib/cloud/vsphere/cloud.rb:310:in `configure_networks'
-/var/vcap/packages/director/gem_home/ruby/1.9.1/gems/bosh-director-1.0000.0/lib/bosh/director/instance_updater/network_updater.rb:28:in `update'
-/var/vcap/packages/director/gem_home/ruby/1.9.1/gems/bosh-director-1.0000.0/lib/bosh/director/instance_updater.rb:297:in `update_networks'
-/var/vcap/packages/director/gem_home/ruby/1.9.1/gems/bosh-director-1.0000.0/lib/bosh/director/instance_updater.rb:70:in `block in update'
-/var/vcap/packages/director/gem_home/ruby/1.9.1/gems/bosh-director-1.0000.0/lib/bosh/director/instance_updater.rb:37:in `step'
-/var/vcap/packages/director/gem_home/ruby/1.9.1/gems/bosh-director-1.0000.0/lib/bosh/director/instance_updater.rb:70:in `update'
-/var/vcap/packages/director/gem_home/ruby/1.9.1/gems/bosh-director-1.0000.0/lib/bosh/director/job_updater.rb:74:in `block (2 levels) in update_canary_instance'
-```
-
 * After moving ephemeral disk back and leaving persistent disk on old datastore we still see the same error as above.
 
 
@@ -104,7 +85,7 @@ In datastore1 `Events` there is an event `File … was moved` and `User` is `roo
 
 ### Issues
 
-If user only migrates the disk he will get the error `…vmdk is locked` so he has to manually power off VM to move the disk. After the disk is moved VM fails to start up in vSphere with the error `File [datastore1] SYSTEM_MICRO_VSPHERE_Disks/disk-…vmdk was not found`. 
+If user only migrates the disk he will get the error `…vmdk is locked` so he has to manually power off VM to move the disk. After the disk is moved VM fails to start up in vSphere with the error `File [datastore1] SYSTEM_MICRO_VSPHERE_Disks/disk-…vmdk was not found`.
 
 If we reattach the migrated disk in VM settings changing `bosh deploy` fails with error:
 
@@ -122,7 +103,7 @@ E, [2014-08-05T21:06:55.601512 #14766] [canary_update(dummy/0)] ERROR -- : Error
 /var/vcap/packages/director/gem_home/ruby/1.9.1/gems/bosh-director-1.0000.0/lib/bosh/director/instance_updater.rb:37:in `step'
 /var/vcap/packages/director/gem_home/ruby/1.9.1/gems/bosh-director-1.0000.0/lib/bosh/director/instance_updater.rb:72:in `update'
 /var/vcap/packages/director/gem_home/ruby/1.9.1/gems/bosh-director-1.0000.0/lib/bosh/director/job_updater.rb:74:in `block (2 levels) in update_canary_instance'
-``` 
+```
 
 
 ## Disk was removed by user
@@ -134,7 +115,7 @@ If the disk is removed from VM settings `bosh deploy` fails with error:
 ```
  Started preparing deployment > Binding existing deployment. Failed: Timed out sending `get_state' to 5727b60e-cb08-4b0b-a074-4c01df483acd after 45 seconds (00:02:15)
  ```
- 
+
 Agent keeps restarting, in agent logs:
 
 ```
