@@ -1,7 +1,0 @@
----
-platform: linux
-image: docker:///boshcpi/vsphere-cpi-release
-inputs:
-  - name: bosh-cpi-src
-run:
-  path: bosh-cpi-src/ci/tasks/create-jumpbox.sh
