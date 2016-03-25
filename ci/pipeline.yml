@@ -70,32 +70,31 @@ jobs:
       - task: test
         tags: ["vsphere-v5.1"]
         file: bosh-cpi-src/ci/tasks/run-lifecycle.yml
-        config:
-          params:
-            BOSH_VSPHERE_VERSION:                                 {{lifecycle_vsphere_5_1_version}}
-            BOSH_VSPHERE_CPI_HOST:                                {{lifecycle_vsphere_5_1_host}}
-            BOSH_VSPHERE_CPI_USER:                                {{lifecycle_vsphere_5_1_user}}
-            BOSH_VSPHERE_CPI_PASSWORD:                            {{lifecycle_vsphere_5_1_password}}
-            BOSH_VSPHERE_VLAN:                                    {{lifecycle_vsphere_5_1_vlan}}
-            BOSH_VSPHERE_CPI_DATACENTER:                          {{lifecycle_vsphere_5_1_datacenter}}
-            BOSH_VSPHERE_CPI_CLUSTER:                             {{lifecycle_vsphere_5_1_first_cluster}}
-            BOSH_VSPHERE_CPI_DATASTORE_PATTERN:                   {{lifecycle_vsphere_5_1_datastore_pattern_available_to_all_hosts_in_first_cluster}}
-            BOSH_VSPHERE_CPI_PERSISTENT_DATASTORE_PATTERN:        {{lifecycle_vsphere_5_1_persistent_datastore_pattern_available_to_all_clusters}}
-            BOSH_VSPHERE_CPI_SECOND_DATASTORE:                    {{lifecycle_vsphere_5_1_second_datastore_available_to_all_hosts_in_first_cluster}}
-            BOSH_VSPHERE_CPI_LOCAL_DATASTORE_PATTERN:             {{lifecycle_vsphere_5_1_local_datastore_pattern_available_to_a_single_host_in_first_cluster}}
-            BOSH_VSPHERE_CPI_RESOURCE_POOL:                       {{lifecycle_vsphere_5_1_first_cluster_first_resource_pool}}
-            BOSH_VSPHERE_CPI_SECOND_RESOURCE_POOL:                {{lifecycle_vsphere_5_1_first_cluster_second_resource_pool}}
-            BOSH_VSPHERE_CPI_SECOND_CLUSTER:                      {{lifecycle_vsphere_5_1_second_cluster}}
-            BOSH_VSPHERE_CPI_SECOND_CLUSTER_DATASTORE:            {{lifecycle_vsphere_5_1_datastore_pattern_available_to_all_hosts_in_second_cluster}}
-            BOSH_VSPHERE_CPI_SECOND_CLUSTER_RESOURCE_POOL:        {{lifecycle_vsphere_5_1_second_cluster_first_resource_pool}}
-            BOSH_VSPHERE_CPI_VM_FOLDER:                           {{lifecycle_vsphere_5_1_vm_folder}}
-            BOSH_VSPHERE_CPI_TEMPLATE_FOLDER:                     {{lifecycle_vsphere_5_1_template_folder}}
-            BOSH_VSPHERE_CPI_DISK_PATH:                           {{lifecycle_vsphere_5_1_disk_path}}
-            BOSH_VSPHERE_CPI_NESTED_DATACENTER:                   {{lifecycle_vsphere_5_1_nested_datacenter}}
-            BOSH_VSPHERE_CPI_NESTED_DATACENTER_DATASTORE_PATTERN: {{lifecycle_vsphere_5_1_nested_datacenter_datastore_pattern}}
-            BOSH_VSPHERE_CPI_NESTED_DATACENTER_CLUSTER:           {{lifecycle_vsphere_5_1_nested_datacenter_cluster}}
-            BOSH_VSPHERE_CPI_NESTED_DATACENTER_RESOURCE_POOL:     {{lifecycle_vsphere_5_1_nested_datacenter_resource_pool}}
-            BOSH_VSPHERE_CPI_NESTED_DATACENTER_VLAN:              {{lifecycle_vsphere_5_1_nested_datacenter_vlan}}
+        params:
+          BOSH_VSPHERE_VERSION:                                 {{lifecycle_vsphere_5_1_version}}
+          BOSH_VSPHERE_CPI_HOST:                                {{lifecycle_vsphere_5_1_host}}
+          BOSH_VSPHERE_CPI_USER:                                {{lifecycle_vsphere_5_1_user}}
+          BOSH_VSPHERE_CPI_PASSWORD:                            {{lifecycle_vsphere_5_1_password}}
+          BOSH_VSPHERE_VLAN:                                    {{lifecycle_vsphere_5_1_vlan}}
+          BOSH_VSPHERE_CPI_DATACENTER:                          {{lifecycle_vsphere_5_1_datacenter}}
+          BOSH_VSPHERE_CPI_CLUSTER:                             {{lifecycle_vsphere_5_1_first_cluster}}
+          BOSH_VSPHERE_CPI_DATASTORE_PATTERN:                   {{lifecycle_vsphere_5_1_datastore_pattern_available_to_all_hosts_in_first_cluster}}
+          BOSH_VSPHERE_CPI_PERSISTENT_DATASTORE_PATTERN:        {{lifecycle_vsphere_5_1_persistent_datastore_pattern_available_to_all_clusters}}
+          BOSH_VSPHERE_CPI_SECOND_DATASTORE:                    {{lifecycle_vsphere_5_1_second_datastore_available_to_all_hosts_in_first_cluster}}
+          BOSH_VSPHERE_CPI_LOCAL_DATASTORE_PATTERN:             {{lifecycle_vsphere_5_1_local_datastore_pattern_available_to_a_single_host_in_first_cluster}}
+          BOSH_VSPHERE_CPI_RESOURCE_POOL:                       {{lifecycle_vsphere_5_1_first_cluster_first_resource_pool}}
+          BOSH_VSPHERE_CPI_SECOND_RESOURCE_POOL:                {{lifecycle_vsphere_5_1_first_cluster_second_resource_pool}}
+          BOSH_VSPHERE_CPI_SECOND_CLUSTER:                      {{lifecycle_vsphere_5_1_second_cluster}}
+          BOSH_VSPHERE_CPI_SECOND_CLUSTER_DATASTORE:            {{lifecycle_vsphere_5_1_datastore_pattern_available_to_all_hosts_in_second_cluster}}
+          BOSH_VSPHERE_CPI_SECOND_CLUSTER_RESOURCE_POOL:        {{lifecycle_vsphere_5_1_second_cluster_first_resource_pool}}
+          BOSH_VSPHERE_CPI_VM_FOLDER:                           {{lifecycle_vsphere_5_1_vm_folder}}
+          BOSH_VSPHERE_CPI_TEMPLATE_FOLDER:                     {{lifecycle_vsphere_5_1_template_folder}}
+          BOSH_VSPHERE_CPI_DISK_PATH:                           {{lifecycle_vsphere_5_1_disk_path}}
+          BOSH_VSPHERE_CPI_NESTED_DATACENTER:                   {{lifecycle_vsphere_5_1_nested_datacenter}}
+          BOSH_VSPHERE_CPI_NESTED_DATACENTER_DATASTORE_PATTERN: {{lifecycle_vsphere_5_1_nested_datacenter_datastore_pattern}}
+          BOSH_VSPHERE_CPI_NESTED_DATACENTER_CLUSTER:           {{lifecycle_vsphere_5_1_nested_datacenter_cluster}}
+          BOSH_VSPHERE_CPI_NESTED_DATACENTER_RESOURCE_POOL:     {{lifecycle_vsphere_5_1_nested_datacenter_resource_pool}}
+          BOSH_VSPHERE_CPI_NESTED_DATACENTER_VLAN:              {{lifecycle_vsphere_5_1_nested_datacenter_vlan}}
 
   - name: lifecycle-6.0
     plan:
@@ -107,32 +106,31 @@ jobs:
       - task: test
         tags: ["vsphere-v5.1"]
         file: bosh-cpi-src/ci/tasks/run-lifecycle.yml
-        config: &lifecycle-6-params
-          params:
-            BOSH_VSPHERE_VERSION:                                 {{lifecycle_vsphere_6_0_version}}
-            BOSH_VSPHERE_CPI_HOST:                                {{lifecycle_vsphere_6_0_host}}
-            BOSH_VSPHERE_CPI_USER:                                {{lifecycle_vsphere_6_0_user}}
-            BOSH_VSPHERE_CPI_PASSWORD:                            {{lifecycle_vsphere_6_0_password}}
-            BOSH_VSPHERE_VLAN:                                    {{lifecycle_vsphere_6_0_vlan}}
-            BOSH_VSPHERE_CPI_DATACENTER:                          {{lifecycle_vsphere_6_0_datacenter}}
-            BOSH_VSPHERE_CPI_CLUSTER:                             {{lifecycle_vsphere_6_0_first_cluster}}
-            BOSH_VSPHERE_CPI_DATASTORE_PATTERN:                   {{lifecycle_vsphere_6_0_datastore_pattern_available_to_all_hosts_in_first_cluster}}
-            BOSH_VSPHERE_CPI_PERSISTENT_DATASTORE_PATTERN:        {{lifecycle_vsphere_6_0_persistent_datastore_pattern_available_to_all_clusters}}
-            BOSH_VSPHERE_CPI_SECOND_DATASTORE:                    {{lifecycle_vsphere_6_0_second_datastore_available_to_all_hosts_in_first_cluster}}
-            BOSH_VSPHERE_CPI_LOCAL_DATASTORE_PATTERN:             {{lifecycle_vsphere_6_0_local_datastore_pattern_available_to_a_single_host_in_first_cluster}}
-            BOSH_VSPHERE_CPI_RESOURCE_POOL:                       {{lifecycle_vsphere_6_0_first_cluster_first_resource_pool}}
-            BOSH_VSPHERE_CPI_SECOND_RESOURCE_POOL:                {{lifecycle_vsphere_6_0_first_cluster_second_resource_pool}}
-            BOSH_VSPHERE_CPI_SECOND_CLUSTER:                      {{lifecycle_vsphere_6_0_second_cluster}}
-            BOSH_VSPHERE_CPI_SECOND_CLUSTER_DATASTORE:            {{lifecycle_vsphere_6_0_datastore_pattern_available_to_all_hosts_in_second_cluster}}
-            BOSH_VSPHERE_CPI_SECOND_CLUSTER_RESOURCE_POOL:        {{lifecycle_vsphere_6_0_second_cluster_first_resource_pool}}
-            BOSH_VSPHERE_CPI_VM_FOLDER:                           {{lifecycle_vsphere_6_0_vm_folder}}
-            BOSH_VSPHERE_CPI_TEMPLATE_FOLDER:                     {{lifecycle_vsphere_6_0_template_folder}}
-            BOSH_VSPHERE_CPI_DISK_PATH:                           {{lifecycle_vsphere_6_0_disk_path}}
-            BOSH_VSPHERE_CPI_NESTED_DATACENTER:                   {{lifecycle_vsphere_6_0_nested_datacenter}}
-            BOSH_VSPHERE_CPI_NESTED_DATACENTER_DATASTORE_PATTERN: {{lifecycle_vsphere_6_0_nested_datacenter_datastore_pattern}}
-            BOSH_VSPHERE_CPI_NESTED_DATACENTER_CLUSTER:           {{lifecycle_vsphere_6_0_nested_datacenter_cluster}}
-            BOSH_VSPHERE_CPI_NESTED_DATACENTER_RESOURCE_POOL:     {{lifecycle_vsphere_6_0_nested_datacenter_resource_pool}}
-            BOSH_VSPHERE_CPI_NESTED_DATACENTER_VLAN:              {{lifecycle_vsphere_6_0_nested_datacenter_vlan}}
+        params: &lifecycle-6-params
+          BOSH_VSPHERE_VERSION:                                 {{lifecycle_vsphere_6_0_version}}
+          BOSH_VSPHERE_CPI_HOST:                                {{lifecycle_vsphere_6_0_host}}
+          BOSH_VSPHERE_CPI_USER:                                {{lifecycle_vsphere_6_0_user}}
+          BOSH_VSPHERE_CPI_PASSWORD:                            {{lifecycle_vsphere_6_0_password}}
+          BOSH_VSPHERE_VLAN:                                    {{lifecycle_vsphere_6_0_vlan}}
+          BOSH_VSPHERE_CPI_DATACENTER:                          {{lifecycle_vsphere_6_0_datacenter}}
+          BOSH_VSPHERE_CPI_CLUSTER:                             {{lifecycle_vsphere_6_0_first_cluster}}
+          BOSH_VSPHERE_CPI_DATASTORE_PATTERN:                   {{lifecycle_vsphere_6_0_datastore_pattern_available_to_all_hosts_in_first_cluster}}
+          BOSH_VSPHERE_CPI_PERSISTENT_DATASTORE_PATTERN:        {{lifecycle_vsphere_6_0_persistent_datastore_pattern_available_to_all_clusters}}
+          BOSH_VSPHERE_CPI_SECOND_DATASTORE:                    {{lifecycle_vsphere_6_0_second_datastore_available_to_all_hosts_in_first_cluster}}
+          BOSH_VSPHERE_CPI_LOCAL_DATASTORE_PATTERN:             {{lifecycle_vsphere_6_0_local_datastore_pattern_available_to_a_single_host_in_first_cluster}}
+          BOSH_VSPHERE_CPI_RESOURCE_POOL:                       {{lifecycle_vsphere_6_0_first_cluster_first_resource_pool}}
+          BOSH_VSPHERE_CPI_SECOND_RESOURCE_POOL:                {{lifecycle_vsphere_6_0_first_cluster_second_resource_pool}}
+          BOSH_VSPHERE_CPI_SECOND_CLUSTER:                      {{lifecycle_vsphere_6_0_second_cluster}}
+          BOSH_VSPHERE_CPI_SECOND_CLUSTER_DATASTORE:            {{lifecycle_vsphere_6_0_datastore_pattern_available_to_all_hosts_in_second_cluster}}
+          BOSH_VSPHERE_CPI_SECOND_CLUSTER_RESOURCE_POOL:        {{lifecycle_vsphere_6_0_second_cluster_first_resource_pool}}
+          BOSH_VSPHERE_CPI_VM_FOLDER:                           {{lifecycle_vsphere_6_0_vm_folder}}
+          BOSH_VSPHERE_CPI_TEMPLATE_FOLDER:                     {{lifecycle_vsphere_6_0_template_folder}}
+          BOSH_VSPHERE_CPI_DISK_PATH:                           {{lifecycle_vsphere_6_0_disk_path}}
+          BOSH_VSPHERE_CPI_NESTED_DATACENTER:                   {{lifecycle_vsphere_6_0_nested_datacenter}}
+          BOSH_VSPHERE_CPI_NESTED_DATACENTER_DATASTORE_PATTERN: {{lifecycle_vsphere_6_0_nested_datacenter_datastore_pattern}}
+          BOSH_VSPHERE_CPI_NESTED_DATACENTER_CLUSTER:           {{lifecycle_vsphere_6_0_nested_datacenter_cluster}}
+          BOSH_VSPHERE_CPI_NESTED_DATACENTER_RESOURCE_POOL:     {{lifecycle_vsphere_6_0_nested_datacenter_resource_pool}}
+          BOSH_VSPHERE_CPI_NESTED_DATACENTER_VLAN:              {{lifecycle_vsphere_6_0_nested_datacenter_vlan}}
 
   - name: lifecycle-6.0-vsan
     plan:
@@ -144,11 +142,10 @@ jobs:
       - task: test
         tags: ["vsphere-v5.1"]
         file: bosh-cpi-src/ci/tasks/run-lifecycle.yml
-        config:
+        params:
           <<: *lifecycle-6-params
-          params:
-            BOSH_VSPHERE_CPI_DATASTORE_PATTERN:                   {{lifecycle_vsphere_6_0_vsan_datastore_pattern_available_to_all_hosts_in_first_cluster}}
-            BOSH_VSPHERE_CPI_SECOND_CLUSTER_DATASTORE:            {{lifecycle_vsphere_6_0_vsan_datastore_pattern_available_to_all_hosts_in_second_cluster}}
+          BOSH_VSPHERE_CPI_DATASTORE_PATTERN:                   {{lifecycle_vsphere_6_0_vsan_datastore_pattern_available_to_all_hosts_in_first_cluster}}
+          BOSH_VSPHERE_CPI_SECOND_CLUSTER_DATASTORE:            {{lifecycle_vsphere_6_0_vsan_datastore_pattern_available_to_all_hosts_in_second_cluster}}
 
   - name: promote-candidate
     serial: true
@@ -161,10 +158,9 @@ jobs:
     - task: promote
       tags: ["vsphere-v5.1"]
       file: bosh-cpi-src/ci/tasks/promote-candidate.yml
-      config:
-        params:
-          aws_access_key_id:     {{s3_vsphere_cpi_blobwriter_access_key}}
-          aws_secret_access_key: {{s3_vsphere_cpi_blobwriter_secret_key}}
+      params:
+        aws_access_key_id:     {{s3_vsphere_cpi_blobwriter_access_key}}
+        aws_secret_access_key: {{s3_vsphere_cpi_blobwriter_secret_key}}
 
     - put: bosh-cpi-src-out
       tags: ["vsphere-v5.1"]
