@@ -134,14 +134,14 @@ module VSphereCloud
     end
 
     describe '#client' do
-      let(:client) { instance_double('VSphereCloud::Client') }
+      let(:client) { instance_double('VSphereCloud::VCenterClient') }
 
       before do
-        allow(Client).to receive(:new).with('https://some-host/sdk/vimService', soap_log: 'fake-soap-log').and_return(client)
+        allow(VCenterClient).to receive(:new).with('https://some-host/sdk/vimService', soap_log: 'fake-soap-log').and_return(client)
       end
 
       context 'when the client has not been created yet' do
-        it 'returns a new VSphereCloud::Client built from correct params' do
+        it 'returns a new VSphereCloud::VCenterClient built from correct params' do
           expect(client).to receive(:login).with(user, password, 'en')
 
           expect(config.client).to eq(client)
@@ -155,7 +155,7 @@ module VSphereCloud
         end
 
         it 'caches client for thread safety' do
-          expect(Client).to_not receive(:new)
+          expect(VCenterClient).to_not receive(:new)
           config.client
         end
       end
@@ -173,14 +173,14 @@ module VSphereCloud
       end
       let(:cookie_manager) { instance_double('WebAgent::CookieManager', parse: nil) }
       let(:ssl_config) { instance_double('HTTPClient::SSLConfig') }
-      let(:client) { instance_double('VSphereCloud::Client', login: nil, soap_stub: soap_stub) }
+      let(:client) { instance_double('VSphereCloud::VCenterClient', login: nil, soap_stub: soap_stub) }
       let(:soap_stub) { double(:stub_adapter, cookie: 'fake-cookie') }
 
       before do
         allow(HTTPClient).to receive(:new).exactly(2).times.and_return(rest_client)
         allow(rest_client).to receive(:send_timeout=).with(14400)
         allow(ssl_config).to receive(:verify_mode=).with(OpenSSL::SSL::VERIFY_NONE)
-        allow(Client).to receive(:new).with('https://some-host/sdk/vimService', soap_log: 'fake-soap-log').and_return(client)
+        allow(VCenterClient).to receive(:new).with('https://some-host/sdk/vimService', soap_log: 'fake-soap-log').and_return(client)
       end
 
       context 'when the rest client has not been created yet' do
@@ -316,10 +316,10 @@ module VSphereCloud
       end
 
       context 'when the clusters are strings in the config' do
-        let(:client) { instance_double('VSphereCloud::Client') }
+        let(:client) { instance_double('VSphereCloud::VCenterClient') }
 
         before do
-          allow(Client).to receive(:new).and_return(client)
+          allow(VCenterClient).to receive(:new).and_return(client)
           allow(client).to receive(:login)
 
           datacenters.first['clusters'] = [
@@ -339,10 +339,10 @@ module VSphereCloud
       end
 
       context 'when the clusters do not specify a resource pool' do
-        let(:client) { instance_double('VSphereCloud::Client') }
+        let(:client) { instance_double('VSphereCloud::VCenterClient') }
 
         before do
-          allow(Client).to receive(:new).and_return(client)
+          allow(VCenterClient).to receive(:new).and_return(client)
           allow(client).to receive(:login)
 
           datacenters.first['clusters'] = [

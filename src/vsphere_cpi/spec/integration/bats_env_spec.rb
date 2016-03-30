@@ -18,7 +18,7 @@ describe 'BATs environment' do
     vcenter_host = ENV['BOSH_VSPHERE_VCENTER']
     vcenter_user = ENV['BOSH_VSPHERE_VCENTER_USER']
     vcenter_password = ENV['BOSH_VSPHERE_VCENTER_PASSWORD']
-    VSphereCloud::Client.new("https://#{vcenter_host}/sdk/vimService").tap do |client|
+    VSphereCloud::VCenterClient.new("https://#{vcenter_host}/sdk/vimService").tap do |client|
       client.login(vcenter_user, vcenter_password, 'en')
     end
   end

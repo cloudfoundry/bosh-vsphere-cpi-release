@@ -1,5 +1,5 @@
 module VSphereCloud
-  class Client
+  class VCenterClient
     include VimSdk
 
     class TaskException < StandardError; end

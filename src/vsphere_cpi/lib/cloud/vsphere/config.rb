@@ -40,7 +40,7 @@ module VSphereCloud
     def client
       unless @client
         host = "https://#{vcenter['host']}/sdk/vimService"
-        @client = Client.new(host, soap_log: soap_log)
+        @client = VCenterClient.new(host, soap_log: soap_log)
 
         @client.login(vcenter['user'], vcenter['password'], 'en')
       end

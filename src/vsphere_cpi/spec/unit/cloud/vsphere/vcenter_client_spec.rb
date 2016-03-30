@@ -1,7 +1,7 @@
 require 'spec_helper'
 
 module VSphereCloud
-  describe Client do
+  describe VCenterClient do
     include FakeFS::SpecHelpers
 
     subject(:client) { described_class.new('fake-host', soap_log: 'fake-soap-log') }
