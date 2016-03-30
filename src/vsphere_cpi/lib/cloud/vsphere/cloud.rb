@@ -511,9 +511,7 @@ module VSphereCloud
         device_key = device_url.import_key
         file_items.each do |file_item|
           if device_key == file_item.device_id
-            http_client = HTTPClient.new
-            http_client.send_timeout = 14400 # 4 hours
-            http_client.ssl_config.verify_mode = OpenSSL::SSL::VERIFY_NONE
+            http_client = VSphereCloud::CpiHttpClient.build
 
             disk_file_path = File.join(File.dirname(ovf), file_item.path)
             disk_file = File.open(disk_file_path)

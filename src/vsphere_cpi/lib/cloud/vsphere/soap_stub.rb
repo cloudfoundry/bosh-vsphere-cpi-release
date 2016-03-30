@@ -8,7 +8,8 @@ module VSphereCloud
     end
 
     def create
-      http_client = HTTPClient.new
+      http_client = VSphereCloud::CpiHttpClient.build
+
       case @soap_log
         when String
           log_file = File.open(@soap_log, 'w')
@@ -17,10 +18,6 @@ module VSphereCloud
         when IO, StringIO
           http_client.debug_dev = @soap_log
       end
-      http_client.send_timeout = 14400
-      http_client.receive_timeout = 14400
-      http_client.connect_timeout = 30
-      http_client.ssl_config.verify_mode = OpenSSL::SSL::VERIFY_NONE
 
       VimSdk::Soap::StubAdapter.new(@host, 'vim.version.version8', http_client)
     end
