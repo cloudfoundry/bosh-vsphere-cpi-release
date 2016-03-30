@@ -1,6 +1,7 @@
 ---
 name: vsphere_cpi
 templates:
+  cacert.pem.erb: config/cacert.pem
   cpi.erb: bin/cpi
   cpi.json.erb: config/cpi.json
 
@@ -18,6 +19,12 @@ properties:
     description: Password to connect to vCenter server used by vspher cpi
   vcenter.datacenters:
     description: Datacenters in vCenter to use (value is an array of Hashes representing datacenters and clusters, See director.yml.erb.erb)
+  vcenter.connection_options.ca_cert:
+    description: All required custom CA certificates
+    example:
+      -----BEGIN CERTIFICATE-----
+      MII...
+      -----END CERTIFICATE-----
   ntp:
     description: List of ntp server IPs. pool.ntp.org attempts to return IPs closest to your location, but you can still specify if needed.
     default:
