@@ -324,7 +324,7 @@ module VSphereCloud
         @logger.info("Creating initial snapshot for linked clones on #{replicated_stemcell_vm}")
         client.wait_for_task(replicated_stemcell_vm.create_snapshot('initial', nil, false, false))
         @logger.info("Created initial snapshot for linked clones on #{replicated_stemcell_vm}")
-      rescue VSphereCloud::Client::DuplicateName
+      rescue VSphereCloud::VCenterClient::DuplicateName
         @logger.info("Stemcell is being replicated by another thread, waiting for #{name_of_replicated_stemcell} to be ready")
         replicated_stemcell_vm = client.find_by_inventory_path([
           cluster.datacenter.name,
