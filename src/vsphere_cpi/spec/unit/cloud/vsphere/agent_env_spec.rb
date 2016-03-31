@@ -7,7 +7,7 @@ module VSphereCloud
 
     subject(:agent_env) { described_class.new(client, file_provider, cloud_searcher) }
 
-    let(:client) { instance_double('VSphereCloud::Client') }
+    let(:client) { instance_double('VSphereCloud::VCenterClient') }
     let(:file_provider) { double('VSphereCloud::FileProvider') }
     let(:cloud_searcher) { double('VSphereCloud::CloudSearcher') }
 

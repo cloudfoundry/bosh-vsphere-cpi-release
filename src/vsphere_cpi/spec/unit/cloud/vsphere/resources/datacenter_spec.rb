@@ -18,7 +18,7 @@ describe VSphereCloud::Resources::Datacenter do
   }
   let(:log_output) { StringIO.new("") }
   let(:logger) { Logger.new(log_output) }
-  let(:client) { instance_double('VSphereCloud::Client') }
+  let(:client) { instance_double('VSphereCloud::VCenterClient') }
 
   let(:vm_folder) { instance_double('VSphereCloud::Resources::Folder') }
   let(:vm_subfolder) { instance_double('VSphereCloud::Resources::Folder') }

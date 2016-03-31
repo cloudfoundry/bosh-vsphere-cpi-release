@@ -8,7 +8,7 @@ module VSphereCloud
     let(:config) { { fake: 'config' } }
     let(:cloud_config) { instance_double('VSphereCloud::Config', logger: logger, rest_client:nil ).as_null_object }
     let(:logger) { instance_double('Logger', info: nil, debug: nil) }
-    let(:client) { instance_double('VSphereCloud::Client', service_content: service_content) }
+    let(:client) { instance_double('VSphereCloud::VCenterClient', service_content: service_content) }
     let(:service_content) do
       instance_double('VimSdk::Vim::ServiceInstanceContent',
         virtual_disk_manager: virtual_disk_manager,

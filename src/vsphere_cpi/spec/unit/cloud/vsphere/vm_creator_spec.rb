@@ -6,7 +6,7 @@ describe VSphereCloud::VmCreator do
     described_class.new(1024, 1024, 3, nested_hardware_virtualization, [], vsphere_client, cloud_searcher, logger, cpi, agent_env, file_provider, datacenter, cluster)
   end
   let(:nested_hardware_virtualization) { false }
-  let(:vsphere_client) { instance_double('VSphereCloud::Client', cloud_searcher: cloud_searcher) }
+  let(:vsphere_client) { instance_double('VSphereCloud::VCenterClient', cloud_searcher: cloud_searcher) }
   let(:logger) { double('logger', debug: nil, info: nil) }
   let(:cpi) { instance_double('VSphereCloud::Cloud') }
   let(:agent_env) { instance_double('VSphereCloud::AgentEnv') }

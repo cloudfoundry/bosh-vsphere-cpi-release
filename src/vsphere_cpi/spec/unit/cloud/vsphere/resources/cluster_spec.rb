@@ -19,7 +19,7 @@ module VSphereCloud::Resources
 
     let(:log_output) { StringIO.new("") }
     let(:logger) { Logger.new(log_output) }
-    let(:client) { instance_double('VSphereCloud::Client', cloud_searcher: cloud_searcher) }
+    let(:client) { instance_double('VSphereCloud::VCenterClient', cloud_searcher: cloud_searcher) }
     let(:cloud_searcher) { instance_double('VSphereCloud::CloudSearcher') }
 
     let(:cluster_config) do

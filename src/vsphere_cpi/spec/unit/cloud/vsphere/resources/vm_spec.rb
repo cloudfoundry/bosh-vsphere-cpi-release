@@ -4,7 +4,7 @@ require 'timecop'
 describe VSphereCloud::Resources::VM do
   subject(:vm) { described_class.new('vm-cid', vm_mob, client, logger) }
   let(:vm_mob) { instance_double('VimSdk::Vim::VirtualMachine') }
-  let(:client) { instance_double('VSphereCloud::Client', cloud_searcher: cloud_searcher) }
+  let(:client) { instance_double('VSphereCloud::VCenterClient', cloud_searcher: cloud_searcher) }
   let(:cloud_searcher) { instance_double('VSphereCloud::CloudSearcher') }
   let(:logger) { double(:logger, debug: nil, info: nil) }
 

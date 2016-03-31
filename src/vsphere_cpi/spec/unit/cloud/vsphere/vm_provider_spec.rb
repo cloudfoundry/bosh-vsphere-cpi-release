@@ -3,7 +3,7 @@ require 'spec_helper'
 describe VSphereCloud::VMProvider do
   subject(:vm_provider) { described_class.new(datacenter, client, logger) }
   let(:datacenter) { instance_double('VSphereCloud::Resources::Datacenter') }
-  let(:client) { instance_double('VSphereCloud::Client') }
+  let(:client) { instance_double('VSphereCloud::VCenterClient') }
   let(:logger) { instance_double('Logger') }
 
   describe 'find' do
