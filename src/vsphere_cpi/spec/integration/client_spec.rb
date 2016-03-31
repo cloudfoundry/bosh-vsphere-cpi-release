@@ -1,7 +1,7 @@
 require 'spec_helper'
 
 module VSphereCloud
-  describe Client do
+  describe VCenterClient do
     describe "#find_disk" do
 
       before do
