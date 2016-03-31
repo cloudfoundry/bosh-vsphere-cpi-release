@@ -8,3 +8,7 @@ Dir[Pathname(__FILE__).parent.join('support', '**/*.rb')].each { |file| require 
 class VSphereSpecConfig
   attr_accessor :logger, :uuid
 end
+
+RSpec.configure do |config|
+  config.include Support
+end
