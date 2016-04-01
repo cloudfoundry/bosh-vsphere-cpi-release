@@ -17,7 +17,7 @@ pushd "${release_dir}"
   echo "running unit tests"
   pushd src/vsphere_cpi
     bundle install
-    bundle exec rspec spec/unit/*
+    bundle exec rspec spec/unit
   popd
 
   echo "installing the latest bosh_cli"

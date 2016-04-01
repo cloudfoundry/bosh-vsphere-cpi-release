@@ -23,7 +23,7 @@ module VSphereCloud
       }
     end
     let(:logger) { double('logger', debug: nil, info: nil) }
-    let(:client) { instance_double('Client') }
+    let(:client) { instance_double(VSphereCloud::VCenterClient) }
 
     context 'when no existing VMs on a desired network report having the desired IP' do
       it 'does not detect a conflict with deployed VMs' do
@@ -35,20 +35,20 @@ module VSphereCloud
 
     context 'when existing VMs on a desired network report having the desired IP' do
       let(:deployed_vm) do
-        instance_double('VimSdk::Vim::VirtualMachine',
+        instance_double(VimSdk::Vim::VirtualMachine,
           name: 'squatter-vm',
-          guest: instance_double('VimSdk::Vim::VirtualMachine::GuestInfo', net: deployed_vm_nics)
+          guest: instance_double(VimSdk::Vim::Vm::GuestInfo, net: deployed_vm_nics)
         )
       end
 
       context 'when a deployed VM has the desired IPs on the same network' do
         let(:deployed_vm_nics) do
           [
-            instance_double('VimSdk::Vim::VirtualMachine::GuestInfo::NicInfo',
+            instance_double(VimSdk::Vim::Vm::GuestInfo::NicInfo,
               ip_address: ['169.254.1.1', 'fe80::250:56ff:fea9:793d'],
               network: 'network_1'
             ),
-            instance_double('VimSdk::Vim::VirtualMachine::GuestInfo::NicInfo',
+            instance_double(VimSdk::Vim::Vm::GuestInfo::NicInfo,
               ip_address: ['169.254.2.1', 'fe80::250:56ff:fea9:793d'],
               network: 'network_2'
             )
@@ -68,11 +68,11 @@ module VSphereCloud
       context 'when a deployed VM has the desired IPs on a different network' do
         let(:deployed_vm_nics) do
           [
-            instance_double('VimSdk::Vim::VirtualMachine::GuestInfo::NicInfo',
+            instance_double(VimSdk::Vim::Vm::GuestInfo::NicInfo,
               ip_address: ['169.254.1.1', 'fe80::250:56ff:fea9:793d'],
               network: 'network_3'
             ),
-            instance_double('VimSdk::Vim::VirtualMachine::GuestInfo::NicInfo',
+            instance_double(VimSdk::Vim::Vm::GuestInfo::NicInfo,
               ip_address: ['169.254.2.1', 'fe80::250:56ff:fea9:793d'],
               network: 'network_4'
             )

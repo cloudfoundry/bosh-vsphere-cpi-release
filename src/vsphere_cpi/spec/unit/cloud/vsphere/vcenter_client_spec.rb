@@ -20,8 +20,8 @@ module VSphereCloud
 
     describe '#initialize' do
       it 'creates soap stub' do
-        stub_adapter = instance_double('VimSdk::Soap::StubAdapter')
-        soap_stub = instance_double('VSphereCloud::SoapStub', create: stub_adapter)
+        stub_adapter = instance_double(VimSdk::Soap::StubAdapter)
+        soap_stub = instance_double(VSphereCloud::SoapStub, create: stub_adapter)
         expect(SoapStub).to receive(:new).with('fake-host', 'fake-soap-log').and_return(soap_stub)
         expect(client.soap_stub).to eq(stub_adapter)
       end
@@ -76,9 +76,9 @@ module VSphereCloud
     end
 
     describe '#delete_path' do
-      let(:datacenter) { instance_double('VimSdk::Vim::Datacenter') }
-      let(:task) { instance_double('VimSdk::Vim::Task') }
-      let(:file_manager) { instance_double('VimSdk::Vim::FileManager') }
+      let(:datacenter) { instance_double(VimSdk::Vim::Datacenter) }
+      let(:task) { instance_double(VimSdk::Vim::Task) }
+      let(:file_manager) { instance_double(VimSdk::Vim::FileManager) }
 
       before do
         allow(fake_service_content).to receive(:file_manager).and_return(file_manager)
@@ -128,9 +128,9 @@ module VSphereCloud
     end
 
     describe '#delete_disk' do
-      let(:datacenter) { instance_double('VimSdk::Vim::Datacenter') }
-      let(:vmdk_task) { instance_double('VimSdk::Vim::Task') }
-      let(:virtual_disk_manager) { instance_double('VimSdk::Vim::VirtualDiskManager') }
+      let(:datacenter) { instance_double(VimSdk::Vim::Datacenter) }
+      let(:vmdk_task) { instance_double(VimSdk::Vim::Task) }
+      let(:virtual_disk_manager) { instance_double(VimSdk::Vim::VirtualDiskManager) }
 
       before do
         allow(fake_service_content).to receive(:virtual_disk_manager).and_return(virtual_disk_manager)
@@ -180,7 +180,7 @@ module VSphereCloud
 
     describe '#create_disk' do
       let(:file_manager) do
-        instance_double('VimSdk::Vim::FileManager',
+        instance_double(VimSdk::Vim::FileManager,
           make_directory: nil
         )
       end
@@ -190,16 +190,16 @@ module VSphereCloud
       end
 
       let(:datacenter) do
-        instance_double('Resources::Datacenter', mob: 'fake-mob')
+        instance_double(Resources::Datacenter, mob: 'fake-mob')
       end
 
       let(:datastore) do
-        instance_double('Resources::Datastore', name: 'fake-datastore')
+        instance_double(Resources::Datastore, name: 'fake-datastore')
       end
 
-      let(:disk_folder) { instance_double('VimSdk::Vim::Folder') }
+      let(:disk_folder) { instance_double(VimSdk::Vim::Folder) }
       let(:disk_spec) do
-        instance_double('VimSdk::Vim::VirtualDiskManager::FileBackedVirtualDiskSpec')
+        instance_double(VimSdk::Vim::VirtualDiskManager::FileBackedVirtualDiskSpec)
       end
 
       before do
@@ -208,7 +208,7 @@ module VSphereCloud
       end
 
       let(:disk_manager) do
-        instance_double('VimSdk::Vim::VirtualDiskManager',
+        instance_double(VimSdk::Vim::VirtualDiskManager,
           create_virtual_disk: nil,
         )
       end
@@ -245,7 +245,7 @@ module VSphereCloud
     end
 
     describe '#delete_folder' do
-      let(:folder) { instance_double('VimSdk::Vim::Folder') }
+      let(:folder) { instance_double(VimSdk::Vim::Folder) }
 
       it 'calls destroy on folder and waits for task' do
         task = double('fake-task')
@@ -257,8 +257,8 @@ module VSphereCloud
     end
 
     describe '#create_datastore_folder' do
-      let(:datacenter) { instance_double('VimSdk::Vim::Datacenter') }
-      let(:file_manager) { instance_double('VimSdk::Vim::FileManager') }
+      let(:datacenter) { instance_double(VimSdk::Vim::Datacenter) }
+      let(:file_manager) { instance_double(VimSdk::Vim::FileManager) }
       before { allow(fake_service_content).to receive(:file_manager).and_return(file_manager) }
 
       it 'creates a folder in datastore' do
@@ -268,10 +268,10 @@ module VSphereCloud
     end
 
     describe '#power_on_vm' do
-      let(:cloud_searcher) { instance_double('VSphereCloud::CloudSearcher') }
-      let(:datacenter) { instance_double('VimSdk::Vim::Datacenter') }
-      let(:vm) { instance_double('VimSdk::Vim::Vm') }
-      let(:task) { instance_double('VimSdk::Vim::Task') }
+      let(:cloud_searcher) { instance_double(VSphereCloud::CloudSearcher) }
+      let(:datacenter) { instance_double(VimSdk::Vim::Datacenter) }
+      let(:vm) { instance_double(VimSdk::Vim::Vm) }
+      let(:task) { instance_double(VimSdk::Vim::Task) }
       let(:result) { double('RuntimeGeneratedResultClass') }
 
       let(:properties) {
@@ -303,8 +303,8 @@ module VSphereCloud
       end
 
       context 'when the task has not attempted to power on the vm' do
-        let(:not_attempted_info) { instance_double('VimSdk::Vim::Cluster::NotAttemptedVmInfo') }
-        let(:not_attempted_info_fault) { instance_double('VimSdk::Vim::Fault::NumVirtualCpuExceedsLimit') }
+        let(:not_attempted_info) { instance_double(VimSdk::Vim::Cluster::NotAttemptedVmInfo) }
+        let(:not_attempted_info_fault) { double('PretendNumVirtualCpuExceedsLimit') }
         let(:msg) { "The total number of virtual CPUs present or requested in virtual machines' configuration has exceeded the limit on the host: 300." }
 
         it 'raises "Cloud not power on VM" with error details' do
@@ -358,8 +358,8 @@ module VSphereCloud
         allow(cloud_searcher).to receive(:find_resource_by_property_path)
         .with('fake-datacenter-mob', 'VirtualMachine', 'config.vAppConfig.property') do |&block|
           records = [
-            instance_double('VimSdk::Vim::VApp::PropertyInfo', label: 'disk0'),
-            instance_double('VimSdk::Vim::VApp::PropertyInfo', label: 'disk1')
+            instance_double(VimSdk::Vim::VApp::PropertyInfo, label: 'disk0'),
+            instance_double(VimSdk::Vim::VApp::PropertyInfo, label: 'disk1')
           ]
           if block.call(records)
             'foo_vm'
@@ -417,7 +417,7 @@ module VSphereCloud
     end
 
     describe '#find_all_stemcell_replicas_in_datastore' do
-      let(:cloud_searcher) { instance_double('VSphereCloud::CloudSearcher') }
+      let(:cloud_searcher) { instance_double(VSphereCloud::CloudSearcher) }
       before do
         client.instance_variable_set('@cloud_searcher', cloud_searcher)
         allow(cloud_searcher).to receive(:find_resources_by_property_path)
@@ -460,9 +460,9 @@ module VSphereCloud
 
     describe '#disk_path_exists?' do
       let(:vm_mob) { double('VimSdk::Vim::Vm') }
-      let(:environment_browser) { double('VimSdk::Vim::EnvironmentBrowser') }
-      let(:datastore_browser) { double('VimSdk::Vim::Host::DatastoreBrowser') }
-      let(:task) { instance_double('VimSdk::Vim::Task') }
+      let(:environment_browser) { instance_double(VimSdk::Vim::EnvironmentBrowser) }
+      let(:datastore_browser) { instance_double(VimSdk::Vim::Host::DatastoreBrowser) }
+      let(:task) { instance_double(VimSdk::Vim::Task) }
       let(:vm_disk_infos) { double('VmDisksInfos') }
       let(:properties) {
         {
@@ -474,7 +474,7 @@ module VSphereCloud
           }
         }
       }
-      let(:cloud_searcher) { instance_double('VSphereCloud::CloudSearcher') }
+      let(:cloud_searcher) { instance_double(VSphereCloud::CloudSearcher) }
       before do
         allow(environment_browser).to receive(:datastore_browser).and_return(datastore_browser)
         allow(vm_mob).to receive(:environment_browser).and_return(environment_browser)
@@ -504,9 +504,9 @@ module VSphereCloud
     end
 
     describe '#add_persistent_disk_property_to_vm' do
-      let(:vm) { instance_double('VSphereCloud::Resources::VM', cid: 'vm-cid', mob: 'vm-mob')}
-      let(:vm_disk) { instance_double('Vim::Vm::Device::VirtualDisk', key: 'disk-key') }
-      let(:disk) { instance_double('VSphereCloud::Resources::PersistentDisk', cid: 'disk-cid', path: 'some-disk-path' )}
+      let(:vm) { instance_double(VSphereCloud::Resources::VM, cid: 'vm-cid', mob: 'vm-mob')}
+      let(:vm_disk) { instance_double(VimSdk::Vim::Vm::Device::VirtualDisk, key: 'disk-key') }
+      let(:disk) { instance_double(VSphereCloud::Resources::PersistentDisk, cid: 'disk-cid', path: 'some-disk-path' )}
       before do
         allow(vm).to receive(:disk_by_cid).with(disk.cid).and_return(vm_disk)
         allow(vm).to receive(:get_vapp_property_by_key).with('disk-key').and_return(nil)
@@ -529,8 +529,8 @@ module VSphereCloud
     end
 
     describe '#delete_persistent_disk_property_from_vm' do
-      let(:vm) { instance_double('VSphereCloud::Resources::VM', cid: 'vm-cid', mob: 'vm-mob')}
-      let(:vm_disk) { instance_double('Vim::Vm::Device::VirtualDisk', key: 'disk-key') }
+      let(:vm) { instance_double(VSphereCloud::Resources::VM, cid: 'vm-cid', mob: 'vm-mob')}
+      let(:vm_disk) { instance_double(VimSdk::Vim::Vm::Device::VirtualDisk, key: 'disk-key') }
       before do
         allow(vm).to receive(:get_vapp_property_by_key).with(vm_disk.key).and_return('something')
         allow(logger).to receive(:debug)
@@ -552,18 +552,18 @@ module VSphereCloud
     end
 
     describe "#set_custom_field" do
-      let(:custom_fields_manager) { instance_double('VimSdk::Vim::CustomFieldsManager') }
-      let(:vm_mob) { instance_double('VimSdk::Vim::VirtualMachine') }
+      let(:custom_fields_manager) { instance_double(VimSdk::Vim::CustomFieldsManager) }
+      let(:vm_mob) { instance_double(VimSdk::Vim::VirtualMachine) }
 
       let(:first_field) do
         instance_double(
-          'VimSdk::Vim::CustomFieldsManager::FieldDef',
+          VimSdk::Vim::CustomFieldsManager::FieldDef,
           name: 'key', key: 1, managed_object_type: vm_mob.class
         )
       end
       let(:second_field) do
         instance_double(
-          'VimSdk::Vim::CustomFieldsManager::FieldDef',
+          VimSdk::Vim::CustomFieldsManager::FieldDef,
           name: 'other-key', key: 2, managed_object_type: vm_mob.class
         )
       end
@@ -595,8 +595,8 @@ module VSphereCloud
     end
 
     describe "#remove_custom_field_def" do
-      let(:custom_fields_manager) { instance_double('VimSdk::Vim::CustomFieldsManager') }
-      let(:vm_mob) { instance_double('VimSdk::Vim::VirtualMachine') }
+      let(:custom_fields_manager) { instance_double(VimSdk::Vim::CustomFieldsManager) }
+      let(:vm_mob) { instance_double(VimSdk::Vim::VirtualMachine) }
       before do
         allow(fake_service_content).to receive(:custom_fields_manager).and_return(custom_fields_manager)
       end
@@ -604,7 +604,7 @@ module VSphereCloud
       context 'when called on existing key' do
         let(:field) do
           instance_double(
-            'VimSdk::Vim::CustomFieldsManager::FieldDef',
+            VimSdk::Vim::CustomFieldsManager::FieldDef,
             name: 'key', key: 1, managed_object_type: vm_mob.class
           )
         end
@@ -635,6 +635,5 @@ module VSphereCloud
         end
       end
     end
-
   end
 end
