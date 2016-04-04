@@ -1,14 +1,14 @@
 #!/usr/bin/env ruby
 
+$LOAD_PATH.unshift File.expand_path('../../lib', __FILE__)
+
 require 'yaml'
 require 'ostruct'
 require 'logger'
 require 'tmpdir'
 require 'bosh/cpi'
 require 'bosh/cpi/cli'
-require 'bundler'
 
-Bundler.setup(:default)
 require 'cloud'
 require 'cloud/vsphere'
 

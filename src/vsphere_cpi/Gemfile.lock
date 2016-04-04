@@ -1,23 +1,11 @@
-PATH
-  remote: .
-  specs:
-    bosh_vsphere_cpi (2.2.2)
-      bosh_common
-      bosh_cpi
-      builder (~> 3.1.4)
-      httpclient (= 2.7.1)
-      membrane (~> 1.1.0)
-      mono_logger (~> 1.1.0)
-      nokogiri (~> 1.6.6)
-
 GEM
   remote: https://rubygems.org/
   specs:
-    bosh_common (1.3181.0)
+    bosh_common (1.3215.0)
       logging (~> 1.8.2)
       semi_semantic (~> 1.1.0)
-    bosh_cpi (1.3181.0)
-      bosh_common (~> 1.3181.0)
+    bosh_cpi (1.3215.0)
+      bosh_common (~> 1.3215.0)
       logging (~> 1.8.2)
       membrane (~> 1.1.0)
     builder (3.1.4)
@@ -67,8 +55,14 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
-  bosh_vsphere_cpi!
+  bosh_common
+  bosh_cpi
+  builder (~> 3.1.4)
   fakefs
+  httpclient (= 2.7.1)
+  membrane (~> 1.1.0)
+  mono_logger (~> 1.1.0)
+  nokogiri (~> 1.6.6)
   rack (~> 1.6.4)
   rake (~> 10.0)
   rspec (~> 3.0)

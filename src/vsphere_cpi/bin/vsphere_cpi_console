@@ -1,5 +1,7 @@
 #!/usr/bin/env ruby
 
+$LOAD_PATH.unshift File.expand_path('../../lib', __FILE__)
+
 unless ARGV[0]
   puts 'Usage: pry.rb <director_config_yaml>'
   exit 1
