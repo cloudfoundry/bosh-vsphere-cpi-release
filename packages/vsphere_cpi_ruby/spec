@@ -2,6 +2,6 @@
 name: vsphere_cpi_ruby
 files:
 - vsphere_cpi_ruby/yaml-0.1.5.tar.gz
-- vsphere_cpi_ruby/ruby-2.1.7.tar.gz
-- vsphere_cpi_ruby/rubygems-2.1.11.tgz
-- vsphere_cpi_ruby/bundler-1.8.2.gem
+- vsphere_cpi_ruby/ruby-2.2.4.tar.gz
+- vsphere_cpi_ruby/rubygems-2.6.2.tgz
+- vsphere_cpi_ruby/bundler-1.11.2.gem

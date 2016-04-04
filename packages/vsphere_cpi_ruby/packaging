@@ -21,10 +21,10 @@ if [[ $? != 0 ]] ; then
   exit 1
 fi
 
-tar xzf vsphere_cpi_ruby/ruby-2.1.7.tar.gz
+tar xzf vsphere_cpi_ruby/ruby-2.2.4.tar.gz
 (
   set -e
-  cd ruby-2.1.7
+  cd ruby-2.2.4
   LDFLAGS="-Wl,-rpath -Wl,${BOSH_INSTALL_TARGET}" CFLAGS='-fPIC' ./configure --prefix=${BOSH_INSTALL_TARGET} --disable-install-doc --with-opt-dir=/usr/local/opt/openssl:${BOSH_INSTALL_TARGET}
   make
   make install
@@ -34,10 +34,10 @@ if [[ $? != 0 ]] ; then
   exit 1
 fi
 
-tar zxvf vsphere_cpi_ruby/rubygems-2.1.11.tgz
+tar zxvf vsphere_cpi_ruby/rubygems-2.6.2.tgz
 (
   set -e
-  cd rubygems-2.1.11
+  cd rubygems-2.6.2
 
   ${BOSH_INSTALL_TARGET}/bin/ruby setup.rb
 )
@@ -46,4 +46,4 @@ if [[ $? != 0 ]] ; then
   exit 1
 fi
 
-${BOSH_INSTALL_TARGET}/bin/gem install vsphere_cpi_ruby/bundler-1.8.2.gem --local --no-ri --no-rdoc
+${BOSH_INSTALL_TARGET}/bin/gem install vsphere_cpi_ruby/bundler-1.11.2.gem --local --no-ri --no-rdoc

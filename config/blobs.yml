@@ -11,19 +11,19 @@ vsphere_cpi_mkisofs/smake-1.2.4.tar.bz2:
   object_id: f9689428-a553-4858-be4b-42f60c033a62
   sha: 677af2a1b768d5dfd3bd71dc46f81992e798191b
   size: 426050
-vsphere_cpi_ruby/bundler-1.8.2.gem:
-  object_id: 64c10ef3-e07f-4ad0-8fda-7eb776074935
-  sha: e9b810268eea94ac5e825b5ae8a2d5fd19fb5905
-  size: 235008
-vsphere_cpi_ruby/rubygems-2.1.11.tgz:
-  object_id: c7dabcb5-41b1-484c-83ef-e1057f50b132
-  sha: ca3033432cae28deb7ced79cda271cb292b70e59
-  size: 367166
 vsphere_cpi_ruby/yaml-0.1.5.tar.gz:
   object_id: 50a4e125-464a-4968-ab5d-0834c79b4839
   sha: 8b78cb9f759c7d80db8a7328c0ebecfe34fde737
   size: 504897
-vsphere_cpi_ruby/ruby-2.1.7.tar.gz:
-  object_id: 08b59102-e51d-470a-a9c2-1d405a2b7675
-  sha: e2e195a4a58133e3ad33b955c829bb536fa3c075
-  size: 15151458
+vsphere_cpi_ruby/bundler-1.11.2.gem:
+  object_id: 01b12fdd-9e20-4fe9-a10f-4383766432e6
+  sha: 8eb956dec72da753d3d2a2126c78508b17af434e
+  size: 263168
+vsphere_cpi_ruby/ruby-2.2.4.tar.gz:
+  object_id: a2af5456-9606-48f6-9900-6860eea2b466
+  sha: 818e5e157f76d4912ba3a7c7b4fc5156105e83c3
+  size: 16638151
+vsphere_cpi_ruby/rubygems-2.6.2.tgz:
+  object_id: 0d61710e-41d2-4639-ac13-8de0ca4e72e0
+  sha: 5960628b1f90f4a05ed69c0ad59c59cb10b79e5f
+  size: 478660
