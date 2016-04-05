@@ -3,4 +3,8 @@ name: vsphere_cpi
 dependencies:
 - vsphere_cpi_ruby
 files:
-- vsphere_cpi/**/*
+- vsphere_cpi/Gemfile
+- vsphere_cpi/Gemfile.lock
+- vsphere_cpi/bin/**/*
+- vsphere_cpi/lib/**/*
+- vsphere_cpi/vendor/package/**/*

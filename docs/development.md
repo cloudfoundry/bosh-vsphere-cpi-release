@@ -9,10 +9,11 @@ gem install bundler
 With bundler installed, run the vendoring script:
 
 ```
-./scripts/vendor_gems
+cd src/vsphere_cpi
+./vendor_gems
 ```
 
-Then create the BOSH release:
+Then from the project root, create the BOSH release:
 
 ```
 bosh create release --force

@@ -2,4 +2,10 @@
 
 set -ex
 
-bundle package --all --all-platforms
+export BUNDLE_APP_CONFIG=".bundle.tmp"
+export BUNDLE_CACHE_PATH="vendor/package"
+export BUNDLE_WITHOUT="development:test"
+
+bundle package
+
+rm -rf $BUNDLE_APP_CONFIG
