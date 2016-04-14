@@ -184,6 +184,9 @@ module VSphereCloud
     def wait_for_task(task)
       interval = 1.0
       started = Time.now
+      @logger.info("Starting task '#{task.info.name}'...") unless task.nil?
+      wait_log_counter = 1
+      wait_log_interval = 1800
       loop do
         properties = @cloud_searcher.get_properties(
           [task],
@@ -193,7 +196,10 @@ module VSphereCloud
         )[task]
 
         duration = Time.now - started
-        raise "Task exceeded 60 minutes, task properties: #{properties}" if duration > 3600 # 1 hour
+        if duration > wait_log_counter * wait_log_interval
+          @logger.info("Waited on task 'fake-task' for #{duration.to_i / 60} minutes...")
+          wait_log_counter += 1
+        end
 
         # Update the polling interval based on task progress
         if properties["info.progress"] && properties["info.progress"] > 0
@@ -213,6 +219,7 @@ module VSphereCloud
           when Vim::TaskInfo::State::QUEUED
             sleep(interval)
           when Vim::TaskInfo::State::SUCCESS
+            @logger.info("Finished task '#{task.info.name}' after #{duration} seconds")
             return properties["info.result"]
           when Vim::TaskInfo::State::ERROR
             raise task_exception_for_vim_fault(properties["info.error"])

@@ -1,4 +1,5 @@
 require 'spec_helper'
+require 'timecop'
 
 module VSphereCloud
   describe VCenterClient do
@@ -271,7 +272,8 @@ module VSphereCloud
       let(:cloud_searcher) { instance_double(VSphereCloud::CloudSearcher) }
       let(:datacenter) { instance_double(VimSdk::Vim::Datacenter) }
       let(:vm) { instance_double(VimSdk::Vim::Vm) }
-      let(:task) { instance_double(VimSdk::Vim::Task) }
+      let(:fake_task_info) { instance_double(VimSdk::Vim::TaskInfo, name: 'fake-task') }
+      let(:task) { instance_double(VimSdk::Vim::Task, info: fake_task_info) }
       let(:result) { double('RuntimeGeneratedResultClass') }
 
       let(:properties) {
@@ -289,6 +291,7 @@ module VSphereCloud
         client.instance_variable_set('@cloud_searcher', cloud_searcher)
         expect(datacenter).to receive(:power_on_vm).with([vm], nil).and_return(task)
         allow(cloud_searcher).to receive(:get_properties).and_return(properties)
+        allow(logger).to receive(:info)
       end
 
       context 'when the task has attempted to power on the vm' do
@@ -462,7 +465,8 @@ module VSphereCloud
       let(:vm_mob) { double('VimSdk::Vim::Vm') }
       let(:environment_browser) { instance_double(VimSdk::Vim::EnvironmentBrowser) }
       let(:datastore_browser) { instance_double(VimSdk::Vim::Host::DatastoreBrowser) }
-      let(:task) { instance_double(VimSdk::Vim::Task) }
+      let(:fake_task_info) { instance_double(VimSdk::Vim::TaskInfo, name: 'fake-task') }
+      let(:task) { instance_double(VimSdk::Vim::Task, info: fake_task_info) }
       let(:vm_disk_infos) { double('VmDisksInfos') }
       let(:properties) {
         {
@@ -479,6 +483,7 @@ module VSphereCloud
         allow(environment_browser).to receive(:datastore_browser).and_return(datastore_browser)
         allow(vm_mob).to receive(:environment_browser).and_return(environment_browser)
         allow(logger).to receive(:debug)
+        allow(logger).to receive(:info)
         client.instance_variable_set('@cloud_searcher', cloud_searcher)
         allow(cloud_searcher).to receive(:get_properties).and_return(properties)
       end
@@ -633,6 +638,121 @@ module VSphereCloud
             client.remove_custom_field_def('key', vm_mob.class)
           end.to_not raise_error
         end
+      end
+    end
+
+    describe "#wait_for_task" do
+      let(:cloud_searcher) { instance_double(VSphereCloud::CloudSearcher) }
+      let(:fake_task_info) { instance_double(VimSdk::Vim::TaskInfo, name: 'fake-task') }
+      let(:fake_task) { instance_double(VimSdk::Vim::Task, info: fake_task_info) }
+
+      it 'waits as a task moves from queued to running to success' do
+        client.instance_variable_set('@cloud_searcher', cloud_searcher)
+        expect(cloud_searcher).to receive(:get_properties)
+          .with(
+            [fake_task],
+            VimSdk::Vim::Task,
+            ["info.progress", "info.state", "info.result", "info.error"],
+            ensure: ["info.state"]
+          )
+          .and_return({
+            fake_task => {
+              "info.state" => VimSdk::Vim::TaskInfo::State::QUEUED,
+              "info.progress" => 0,
+              "info.result" => "",
+              "info.error" => "",
+            }
+          },
+          {
+            fake_task => {
+              "info.state" => VimSdk::Vim::TaskInfo::State::RUNNING,
+              "info.progress" => 50,
+              "info.result" => "",
+              "info.error" => "",
+            }
+          },
+          {
+            fake_task => {
+              "info.state" => VimSdk::Vim::TaskInfo::State::SUCCESS,
+              "info.progress" => 100,
+              "info.result" => "fake-result",
+              "info.error" => "",
+            }
+          })
+
+        expect(logger).to receive(:info).with("Starting task 'fake-task'...")
+        expect(logger).to receive(:info).with(/Finished task 'fake-task' after .* seconds/)
+
+        allow(client).to receive(:sleep)
+
+        result = client.wait_for_task(fake_task)
+        expect(result).to eq("fake-result")
+      end
+
+      it 'logs warnings for every 30 minutes the task is still running' do
+        client.instance_variable_set('@cloud_searcher', cloud_searcher)
+        expect(cloud_searcher).to receive(:get_properties)
+          .with(
+            [fake_task],
+            VimSdk::Vim::Task,
+            ["info.progress", "info.state", "info.result", "info.error"],
+            ensure: ["info.state"]
+          )
+          .and_return({
+            fake_task => {
+              "info.state" => VimSdk::Vim::TaskInfo::State::RUNNING,
+              "info.progress" => 100,
+              "info.result" => "",
+              "info.error" => "",
+            }
+          },
+          {
+            fake_task => {
+              "info.state" => VimSdk::Vim::TaskInfo::State::RUNNING,
+              "info.progress" => 100,
+              "info.result" => "",
+              "info.error" => "",
+            }
+          },
+          {
+            fake_task => {
+              "info.state" => VimSdk::Vim::TaskInfo::State::RUNNING,
+              "info.progress" => 100,
+              "info.result" => "",
+              "info.error" => "",
+            }
+          },
+          {
+            fake_task => {
+              "info.state" => VimSdk::Vim::TaskInfo::State::RUNNING,
+              "info.progress" => 100,
+              "info.result" => "",
+              "info.error" => "",
+            }
+          },
+          {
+            fake_task => {
+              "info.state" => VimSdk::Vim::TaskInfo::State::SUCCESS,
+              "info.progress" => 100,
+              "info.result" => "fake-result",
+              "info.error" => "",
+            }
+          })
+
+        expect(logger).to receive(:info).with("Starting task 'fake-task'...")
+        expect(logger).to receive(:info).with("Waited on task 'fake-task' for 30 minutes...")
+        expect(logger).to receive(:info).with("Waited on task 'fake-task' for 60 minutes...")
+        expect(logger).to receive(:info).with(/Finished task 'fake-task' after .* seconds/)
+
+        Timecop.freeze
+        allow(client).to receive(:sleep) do |sleep_time|
+          # pretend 15 minutes have elapsed between polling
+          Timecop.travel(sleep_time * 900)
+        end
+
+        result = client.wait_for_task(fake_task)
+        expect(result).to eq("fake-result")
+        Timecop.return
       end
     end
   end
