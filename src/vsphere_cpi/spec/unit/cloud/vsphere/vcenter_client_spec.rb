@@ -648,10 +648,13 @@ module VSphereCloud
           .with(
             [task],
             VimSdk::Vim::Task,
-            ["info.name"],
-            ensure: ["info.name"]
+            ["info.name", "info.descriptionId"],
+            ensure: []
           )
-          .and_return({ task => {"info.name" => "fake-task"} })
+          .and_return({ task => {
+            "info.descriptionId" => "fake-task",
+            "info.name" => "not-used"
+          }})
       end
 
       it 'waits as a task moves from queued to running to success' do

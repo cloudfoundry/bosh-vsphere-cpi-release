@@ -184,8 +184,8 @@ module VSphereCloud
     def wait_for_task(task)
       interval = 1.0
       started = Time.now
-      name_properties = @cloud_searcher.get_properties([task], Vim::Task, ["info.name"], ensure: ["info.name"])[task]
-      task_name = name_properties['info.name']
+      name_properties = @cloud_searcher.get_properties([task], Vim::Task, ["info.name", "info.descriptionId"], ensure: [])[task]
+      task_name = name_properties['info.descriptionId'] || name_properties['info.name'] || "Unknown Task"
       @logger.info("Starting task '#{task_name}'...") unless task_name.nil?
       wait_log_counter = 1
       wait_log_interval = 1800
