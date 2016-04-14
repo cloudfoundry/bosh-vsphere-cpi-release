@@ -290,7 +290,7 @@ module VSphereCloud
         client.instance_variable_set('@cloud_searcher', cloud_searcher)
         expect(datacenter).to receive(:power_on_vm).with([vm], nil).and_return(task)
         allow(cloud_searcher).to receive(:get_properties).and_return(properties)
-        allow(logger).to receive(:info)
+        allow(logger).to receive(:debug)
       end
 
       context 'when the task has attempted to power on the vm' do
@@ -481,7 +481,6 @@ module VSphereCloud
         allow(environment_browser).to receive(:datastore_browser).and_return(datastore_browser)
         allow(vm_mob).to receive(:environment_browser).and_return(environment_browser)
         allow(logger).to receive(:debug)
-        allow(logger).to receive(:info)
         client.instance_variable_set('@cloud_searcher', cloud_searcher)
         allow(cloud_searcher).to receive(:get_properties).and_return(properties)
       end
@@ -691,8 +690,8 @@ module VSphereCloud
             }
           })
 
-        expect(logger).to receive(:info).with("Starting task 'fake-task'...")
-        expect(logger).to receive(:info).with(/Finished task 'fake-task' after .* seconds/)
+        expect(logger).to receive(:debug).with("Starting task 'fake-task'...")
+        expect(logger).to receive(:debug).with(/Finished task 'fake-task' after .* seconds/)
 
         allow(client).to receive(:sleep)
 
@@ -750,10 +749,10 @@ module VSphereCloud
             }
           })
 
-        expect(logger).to receive(:info).with("Starting task 'fake-task'...")
-        expect(logger).to receive(:info).with("Waited on task 'fake-task' for 30 minutes...")
-        expect(logger).to receive(:info).with("Waited on task 'fake-task' for 60 minutes...")
-        expect(logger).to receive(:info).with(/Finished task 'fake-task' after .* seconds/)
+        expect(logger).to receive(:debug).with("Starting task 'fake-task'...")
+        expect(logger).to receive(:debug).with("Waited on task 'fake-task' for 30 minutes...")
+        expect(logger).to receive(:debug).with("Waited on task 'fake-task' for 60 minutes...")
+        expect(logger).to receive(:debug).with(/Finished task 'fake-task' after .* seconds/)
 
         Timecop.freeze
         allow(client).to receive(:sleep) do |sleep_time|
