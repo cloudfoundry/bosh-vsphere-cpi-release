@@ -272,8 +272,7 @@ module VSphereCloud
       let(:cloud_searcher) { instance_double(VSphereCloud::CloudSearcher) }
       let(:datacenter) { instance_double(VimSdk::Vim::Datacenter) }
       let(:vm) { instance_double(VimSdk::Vim::Vm) }
-      let(:fake_task_info) { instance_double(VimSdk::Vim::TaskInfo, name: 'fake-task') }
-      let(:task) { instance_double(VimSdk::Vim::Task, info: fake_task_info) }
+      let(:task) { instance_double(VimSdk::Vim::Task) }
       let(:result) { double('RuntimeGeneratedResultClass') }
 
       let(:properties) {
@@ -465,8 +464,7 @@ module VSphereCloud
       let(:vm_mob) { double('VimSdk::Vim::Vm') }
       let(:environment_browser) { instance_double(VimSdk::Vim::EnvironmentBrowser) }
       let(:datastore_browser) { instance_double(VimSdk::Vim::Host::DatastoreBrowser) }
-      let(:fake_task_info) { instance_double(VimSdk::Vim::TaskInfo, name: 'fake-task') }
-      let(:task) { instance_double(VimSdk::Vim::Task, info: fake_task_info) }
+      let(:task) { instance_double(VimSdk::Vim::Task) }
       let(:vm_disk_infos) { double('VmDisksInfos') }
       let(:properties) {
         {
@@ -643,20 +641,30 @@ module VSphereCloud
 
     describe "#wait_for_task" do
       let(:cloud_searcher) { instance_double(VSphereCloud::CloudSearcher) }
-      let(:fake_task_info) { instance_double(VimSdk::Vim::TaskInfo, name: 'fake-task') }
-      let(:fake_task) { instance_double(VimSdk::Vim::Task, info: fake_task_info) }
+      let(:task) { instance_double(VimSdk::Vim::Task) }
+
+      before do
+        allow(cloud_searcher).to receive(:get_properties)
+          .with(
+            [task],
+            VimSdk::Vim::Task,
+            ["info.name"],
+            ensure: ["info.name"]
+          )
+          .and_return({ task => {"info.name" => "fake-task"} })
+      end
 
       it 'waits as a task moves from queued to running to success' do
         client.instance_variable_set('@cloud_searcher', cloud_searcher)
         expect(cloud_searcher).to receive(:get_properties)
           .with(
-            [fake_task],
+            [task],
             VimSdk::Vim::Task,
             ["info.progress", "info.state", "info.result", "info.error"],
             ensure: ["info.state"]
           )
           .and_return({
-            fake_task => {
+            task => {
               "info.state" => VimSdk::Vim::TaskInfo::State::QUEUED,
               "info.progress" => 0,
               "info.result" => "",
@@ -664,7 +672,7 @@ module VSphereCloud
             }
           },
           {
-            fake_task => {
+            task => {
               "info.state" => VimSdk::Vim::TaskInfo::State::RUNNING,
               "info.progress" => 50,
               "info.result" => "",
@@ -672,7 +680,7 @@ module VSphereCloud
             }
           },
           {
-            fake_task => {
+            task => {
               "info.state" => VimSdk::Vim::TaskInfo::State::SUCCESS,
               "info.progress" => 100,
               "info.result" => "fake-result",
@@ -685,7 +693,7 @@ module VSphereCloud
 
         allow(client).to receive(:sleep)
 
-        result = client.wait_for_task(fake_task)
+        result = client.wait_for_task(task)
         expect(result).to eq("fake-result")
       end
 
@@ -693,13 +701,13 @@ module VSphereCloud
         client.instance_variable_set('@cloud_searcher', cloud_searcher)
         expect(cloud_searcher).to receive(:get_properties)
           .with(
-            [fake_task],
+            [task],
             VimSdk::Vim::Task,
             ["info.progress", "info.state", "info.result", "info.error"],
             ensure: ["info.state"]
           )
           .and_return({
-            fake_task => {
+            task => {
               "info.state" => VimSdk::Vim::TaskInfo::State::RUNNING,
               "info.progress" => 100,
               "info.result" => "",
@@ -707,7 +715,7 @@ module VSphereCloud
             }
           },
           {
-            fake_task => {
+            task => {
               "info.state" => VimSdk::Vim::TaskInfo::State::RUNNING,
               "info.progress" => 100,
               "info.result" => "",
@@ -715,7 +723,7 @@ module VSphereCloud
             }
           },
           {
-            fake_task => {
+            task => {
               "info.state" => VimSdk::Vim::TaskInfo::State::RUNNING,
               "info.progress" => 100,
               "info.result" => "",
@@ -723,7 +731,7 @@ module VSphereCloud
             }
           },
           {
-            fake_task => {
+            task => {
               "info.state" => VimSdk::Vim::TaskInfo::State::RUNNING,
               "info.progress" => 100,
               "info.result" => "",
@@ -731,7 +739,7 @@ module VSphereCloud
             }
           },
           {
-            fake_task => {
+            task => {
               "info.state" => VimSdk::Vim::TaskInfo::State::SUCCESS,
               "info.progress" => 100,
               "info.result" => "fake-result",
@@ -750,7 +758,7 @@ module VSphereCloud
           Timecop.travel(sleep_time * 900)
         end
 
-        result = client.wait_for_task(fake_task)
+        result = client.wait_for_task(task)
         expect(result).to eq("fake-result")
         Timecop.return
       end
