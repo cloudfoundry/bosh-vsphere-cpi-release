@@ -156,9 +156,9 @@ module VSphereCloud
       client.find_vm_by_name(@datacenter.mob, name)
     end
 
-    def create_vm(agent_id, stemcell, cloud_properties, networks, disk_locality = nil, environment = nil)
+    def create_vm(agent_id, stemcell_id, resource_pool, networks_spec, disk_locality = nil, environment = nil)
       with_thread_name("create_vm(#{agent_id}, ...)") do
-        datacenter_spec = cloud_properties.fetch('datacenters', []).first
+        datacenter_spec = resource_pool.fetch('datacenters', []).first
         cluster_spec = datacenter_spec.fetch('clusters', []).first if datacenter_spec
 
         drs_rules = []
@@ -172,7 +172,7 @@ module VSphereCloud
         end
 
         VmCreatorBuilder.new.build(
-          cloud_properties,
+          resource_pool,
           @client,
           @cloud_searcher,
           @logger,
@@ -182,7 +182,7 @@ module VSphereCloud
           @datacenter,
           cluster,
           drs_rules
-        ).create(agent_id, stemcell, networks, disk_locality, environment)
+        ).create(agent_id, stemcell_id, networks_spec, disk_locality, environment)
       end
     end
 
