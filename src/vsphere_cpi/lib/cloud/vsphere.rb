@@ -37,6 +37,7 @@ require 'cloud/vsphere/soap_stub'
 require 'cloud/vsphere/vm_creator_builder'
 require 'cloud/vsphere/vm_provider'
 require 'cloud/vsphere/ip_conflict_detector'
+require 'cloud/vsphere/vm_config'
 
 module Bosh
   module Clouds
