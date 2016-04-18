@@ -151,8 +151,8 @@ jobs:
     serial: true
     plan:
     - aggregate:
-      - {trigger: false, passed: [lifecycle-5.1, lifecycle-6.0], get: bosh-cpi-artifacts, tags: ["vsphere-v5.1"]}
-      - {trigger: false, passed: [lifecycle-5.1, lifecycle-6.0], get: bosh-cpi-src, tags: ["vsphere-v5.1"]}
+      - {trigger: false, passed: [lifecycle-5.1, lifecycle-6.0, lifecycle-6.0-vsan], get: bosh-cpi-artifacts, tags: ["vsphere-v5.1"]}
+      - {trigger: false, passed: [lifecycle-5.1, lifecycle-6.0, lifecycle-6.0-vsan], get: bosh-cpi-src, tags: ["vsphere-v5.1"]}
       - {trigger: false, get: release-version-semver, params: {bump: major}, tags: ["vsphere-v5.1"]}
 
     - task: promote
@@ -216,4 +216,3 @@ resources:
     type: bosh-io-stemcell
     source:
       name: bosh-vsphere-esxi-centos-7-go_agent
-
