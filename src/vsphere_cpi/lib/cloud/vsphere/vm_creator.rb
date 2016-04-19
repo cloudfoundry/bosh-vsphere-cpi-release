@@ -1,6 +1,6 @@
 module VSphereCloud
   class VmCreator
-    def initialize(memory, disk_size_in_mb, cpu, nested_hardware_virtualization, drs_rules, client, cloud_searcher, logger, cpi, agent_env, file_provider, datacenter, cluster=nil)
+    def initialize(memory, disk_size_in_mb, cpu, cpu_hot_add_enabled, mem_hot_add_enabled, nested_hardware_virtualization, drs_rules, client, cloud_searcher, logger, cpi, agent_env, file_provider, datacenter, cluster=nil)
       @drs_rules = drs_rules
       @client = client
       @cloud_searcher = cloud_searcher
@@ -9,6 +9,8 @@ module VSphereCloud
       @memory = memory
       @disk_size_in_mb = disk_size_in_mb
       @cpu = cpu
+      @cpu_hot_add_enabled = cpu_hot_add_enabled
+      @mem_hot_add_enabled = mem_hot_add_enabled
       @nested_hardware_virtualization = nested_hardware_virtualization
       @agent_env = agent_env
       @file_provider = file_provider
@@ -54,6 +56,8 @@ module VSphereCloud
 
       config_hash = {memory_mb: @memory, num_cpus: @cpu}
       config_hash.merge!(nested_hv_enabled: true) if @nested_hardware_virtualization
+      config_hash.merge!(cpu_hot_add_enabled: true) if @cpu_hot_add_enabled
+      config_hash.merge!(memory_hot_add_enabled: true) if @mem_hot_add_enabled
 
       config = VimSdk::Vim::Vm::ConfigSpec.new(config_hash)
       config.device_change = []

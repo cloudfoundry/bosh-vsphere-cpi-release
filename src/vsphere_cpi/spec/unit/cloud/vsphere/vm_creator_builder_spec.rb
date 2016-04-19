@@ -30,11 +30,13 @@ module VSphereCloud
       end
 
       context 'when nested_hardware_virtualization is not specified' do
-        it 'injects the memory size, disk size, number of cpu, vsphere client, logger, drs rules and the cpi into the VmCreator instance' do
+        it 'injects the memory size, disk size, number of cpu, cpu hot add enable, mem hot add enable, vsphere client, logger, drs rules and the cpi into the VmCreator instance' do
           expect(VSphereCloud::VmCreator).to receive(:new).with(
               memory,
               disk,
               cpu,
+              false,
+              false,
               false,
               drs_rules,
               client,
@@ -63,6 +65,8 @@ module VSphereCloud
               memory,
               disk,
               cpu,
+              false,
+              false,
               true,
               drs_rules,
               client,

@@ -3,8 +3,10 @@ require 'cloud/vsphere/drs_rules/drs_rule'
 
 describe VSphereCloud::VmCreator do
   subject(:creator) do
-    described_class.new(1024, 1024, 3, nested_hardware_virtualization, [], vsphere_client, cloud_searcher, logger, cpi, agent_env, file_provider, datacenter, cluster)
+    described_class.new(1024, 1024, 3, cpu_hot_add_enabled, mem_hot_add_enabled, nested_hardware_virtualization, [], vsphere_client, cloud_searcher, logger, cpi, agent_env, file_provider, datacenter, cluster)
   end
+  let(:cpu_hot_add_enabled) {false}
+  let(:mem_hot_add_enabled) {false}
   let(:nested_hardware_virtualization) { false }
   let(:vsphere_client) { instance_double('VSphereCloud::VCenterClient', cloud_searcher: cloud_searcher) }
   let(:logger) { double('logger', debug: nil, info: nil) }
@@ -209,7 +211,7 @@ describe VSphereCloud::VmCreator do
 
     context 'without predetermined cluster' do
       subject(:creator) do
-        described_class.new(1024, 1024, 3, nested_hardware_virtualization, [], vsphere_client, cloud_searcher, logger, cpi, agent_env, file_provider, datacenter, nil)
+        described_class.new(1024, 1024, 3, cpu_hot_add_enabled, mem_hot_add_enabled, nested_hardware_virtualization, [], vsphere_client, cloud_searcher, logger, cpi, agent_env, file_provider, datacenter, nil)
       end
       it 'chooses the placement based on memory, ephemeral and persistent disks' do
         expect(datacenter).to receive(:pick_cluster_for_vm).with(1024, 2049, persistent_disks).and_return(cluster)
@@ -253,7 +255,7 @@ describe VSphereCloud::VmCreator do
 
     describe 'DRS rules' do
       subject(:creator) do
-        described_class.new(1024, 1024, 3, nested_hardware_virtualization, drs_rules, vsphere_client, cloud_searcher, logger, cpi, agent_env, file_provider, datacenter, nil)
+        described_class.new(1024, 1024, 3, cpu_hot_add_enabled, mem_hot_add_enabled, nested_hardware_virtualization, drs_rules, vsphere_client, cloud_searcher, logger, cpi, agent_env, file_provider, datacenter, nil)
       end
       context 'when several DRS rules are specified in cloud properties' do
         let(:drs_rules) do

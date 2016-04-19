@@ -1,6 +1,8 @@
 module VimSdk::VmodlHelper
   UNDERSCORE_EXCEPTIONS = {
     "numCPUs" => "num_cpus",
+    "cpuHotAddEnabled" => "cpu_hot_add_enabled",
+    "memoryHotAddEnabled" => "memory_hot_add_enabled",
     "importVApp" => "import_vapp"
   }
 
