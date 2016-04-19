@@ -1,0 +1,31 @@
+---
+packages:
+- name: vsphere_cpi
+  version: e85cdaefc308ea1da8026feda825af97aa8b5cb4
+  fingerprint: e85cdaefc308ea1da8026feda825af97aa8b5cb4
+  sha1: 52fc3bfa04ce19cf7090e140a6528e77a63f3deb
+  dependencies:
+  - vsphere_cpi_ruby
+- name: vsphere_cpi_mkisofs
+  version: b3ebe039dae6a312784ece4da34d66053d1dfbba
+  fingerprint: b3ebe039dae6a312784ece4da34d66053d1dfbba
+  sha1: 75cf30df5a239a3b3dbb29b016a75a6f3828ddc2
+  dependencies: []
+- name: vsphere_cpi_ruby
+  version: b11a9d73a466e071628d38912aecd41016434906
+  fingerprint: b11a9d73a466e071628d38912aecd41016434906
+  sha1: 80acc1c321f332896aa364769d0f8fbb86e51285
+  dependencies: []
+jobs:
+- name: vsphere_cpi
+  version: 21f4a1e62f2dd528329953d5df2f9f869bd53ed0
+  fingerprint: 21f4a1e62f2dd528329953d5df2f9f869bd53ed0
+  sha1: 9a79dc55c090e94e7de1cf9254afc1991a3ff283
+license:
+  version: b928940bf0ad3d59a3f56c16ade77ac3e87c43dc
+  fingerprint: b928940bf0ad3d59a3f56c16ade77ac3e87c43dc
+  sha1: 3a6979a20988bac16784f1aae021c07f21d626c9
+commit_hash: f3910200
+uncommitted_changes: false
+name: bosh-vsphere-cpi
+version: '20'
