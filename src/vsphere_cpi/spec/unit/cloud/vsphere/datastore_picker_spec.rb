@@ -59,6 +59,61 @@ module VSphereCloud
       end
     end
 
+    describe '#can_accomodate_disks' do
+      let(:available_datastores) do
+        {
+          "datastore-1" => 1024,
+          "datastore-2" => 2048,
+          "filtered-ds" => 102400,
+        }
+      end
+      context 'positive cases' do
+        [
+          [1024, 1024],
+          [1024, 1024, 1024],
+        ].each do |requested_sizes|
+          it 'is able to accomodate the given disk sizes' do
+            picker = DatastorePicker.new(0)
+            picker.update(available_datastores)
+            expect(picker.can_accomodate_disks?(requested_sizes, /datastore-.*/)).to eq(true)
+          end
+        end
+      end
+      context 'negative cases' do
+        [
+          [2048, 2048],
+          [1024, 2048],
+        ].each do |requested_sizes|
+          it "is not able to accomodate the given disk sizes: #{requested_sizes}" do
+            picker = DatastorePicker.new(0)
+            picker.update(available_datastores)
+            expect(picker.can_accomodate_disks?(requested_sizes, /datastore-.*/)).to eq(false)
+          end
+        end
+      end
+      context 'given datastores with free space [300, 512]' do
+        let(:available_datastores) do
+          {
+            "datastore-1" => 300,
+            "datastore-2" => 512,
+            "filtered-ds" => 102400,
+          }
+        end
+        good_order = [256, 256, 300]
+        bad_order = [300, 256, 256]
+        it "is able to accomodate persistent disks if they are attached in this order: #{good_order}" do
+          picker = DatastorePicker.new(0)
+          picker.update(available_datastores)
+          expect(picker.can_accomodate_disks?(good_order, /datastore-.*/)).to eq(true)
+        end
+        it "is not able to accomodate persistent disks if they are attached in this order: #{bad_order}" do
+          picker = DatastorePicker.new(0)
+          picker.update(available_datastores)
+          expect(picker.can_accomodate_disks?(bad_order, /datastore-.*/)).to eq(false)
+        end
+      end
+    end
+
     describe '#pick_datastore' do
       it 'picks a datastore from a provided list of datastores given a scoring function' do
         picker = DatastorePicker.new

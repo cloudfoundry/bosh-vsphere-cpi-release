@@ -19,6 +19,28 @@ module VSphereCloud
       end
     end
 
+    def can_accomodate_disks?(requested_sizes, filter=nil)
+      filter ||= /.*/
+      biggest_first = lambda { |x,y| y<=>x }
+
+      biggest_ds_first = @available_datastores.select {|name,_| name =~ filter}.values.sort &biggest_first
+
+      requested_sizes.all? do |request_disk_size|
+        can_accomodate = false
+        biggest_ds_first.each_with_index do |ds_disk_size, index|
+          if ds_disk_size >= request_disk_size
+            can_accomodate = true
+            biggest_ds_first[index] = ds_disk_size-request_disk_size
+            break
+          else
+            ds_disk_size
+          end
+        end
+        can_accomodate
+      end
+
+    end
+
     def pick_datastore(requested_size, filter=nil, &block)
       scores = suitable_datastores(requested_size, filter).map do |name, free_space|
         [name, (block || default_scorer).call(name, free_space)]
