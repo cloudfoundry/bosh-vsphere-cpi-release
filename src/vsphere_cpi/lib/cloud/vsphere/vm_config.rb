@@ -19,14 +19,22 @@ module VSphereCloud
       @manifest_params[:datastore]
     end
 
-    def network_names
+    def ephemeral_disk_size
+      @manifest_params[:ephemeral_disk_size]
+    end
+
+    def networks
       networks_spec = @manifest_params[:networks_spec] || {}
-      names = []
+      networks_map = {}
       networks_spec.each_value do |network_spec|
         cloud_properties = network_spec['cloud_properties']
-        names << cloud_properties['name'] unless cloud_properties.nil? || cloud_properties['name'].nil?
+        unless cloud_properties.nil? || cloud_properties['name'].nil?
+          name = cloud_properties['name']
+          ip = network_spec['ip']
+          networks_map[name] = ip
+        end
       end
-      names
+      networks_map
     end
 
     def config_spec_params

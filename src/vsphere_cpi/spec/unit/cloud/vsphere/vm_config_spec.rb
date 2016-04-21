@@ -35,22 +35,42 @@ module VSphereCloud
       end
     end
 
-    describe '#network_names' do
+    describe '#ephemeral_disk_size' do
+      let(:input) { { ephemeral_disk_size: 1234 } }
+      it 'returns the provided disk size' do
+        vm_config = VmConfig.new
+        vm_config.manifest_params = input
+        expect(vm_config.ephemeral_disk_size).to eq(1234)
+      end
+    end
+
+    describe '#networks' do
       context 'when networks_spec is provided' do
         let(:input) do
           {
             networks_spec: {
-              "net1" => {"cloud_properties" => {"name" => "network-1"}},
-              "net2" => {"cloud_properties" => {"name" => "network-2"}}
+              "net1" => {
+                "ip" => "1.2.3.4",
+                "cloud_properties" => {"name" => "network-1"}
+              },
+              "net2" => {
+                "ip" => "5.6.7.8",
+                "cloud_properties" => {"name" => "network-2"}
+              }
             }
           }
         end
-        let(:output) { ["network-1", "network-2"] }
+        let(:output) do
+          {
+            "network-1" => "1.2.3.4",
+            "network-2" => "5.6.7.8"
+          }
+        end
 
         it 'returns a list of vSphere networks' do
           vm_config = VmConfig.new
           vm_config.manifest_params = input
-          expect(vm_config.network_names).to eq(output)
+          expect(vm_config.networks).to eq(output)
         end
       end
 
@@ -58,29 +78,42 @@ module VSphereCloud
         let(:input) do
           {
             networks_spec: {
-              "net1" => {"other" => "values"},
-              "net2" => {"cloud_properties" => {"other" => "properties"}},
-              "net3" => {"cloud_properties" => {"name" => "network-3"}}
+              "net1" => {
+                "ip" => "1.2.3.4",
+                "other" => "values"
+              },
+              "net2" => {
+                "ip" => "5.6.7.8",
+                "cloud_properties" => {"other" => "some-value"}
+              },
+              "net3" => {
+                "ip" => "9.9.9.9",
+                "cloud_properties" => {"name" => "network-3"}
+              }
             }
           }
         end
-        let(:output) { ["network-3"] }
+        let(:output) do
+          {
+            "network-3" => "9.9.9.9"
+          }
+        end
 
         it 'returns a list of valid vSphere networks' do
           vm_config = VmConfig.new
           vm_config.manifest_params = input
-          expect(vm_config.network_names).to eq(output)
+          expect(vm_config.networks).to eq(output)
         end
       end
 
       context 'when networks_spec is not provided' do
         let(:input) { {} }
-        let(:output) { [] }
+        let(:output) { {} }
 
-        it 'returns an empty list' do
+        it 'returns an empty hash' do
           vm_config = VmConfig.new
           vm_config.manifest_params = input
-          expect(vm_config.network_names).to eq(output)
+          expect(vm_config.networks).to eq(output)
         end
       end
     end
