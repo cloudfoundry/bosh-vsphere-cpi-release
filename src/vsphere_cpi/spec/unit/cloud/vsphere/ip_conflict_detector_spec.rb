@@ -4,22 +4,8 @@ module VSphereCloud
   describe IPConflictDetector do
     let(:network_spec) do
       {
-        'private_1' => {
-          'ip' => '169.254.1.1',
-          'netmask' => '255.255.254.0',
-          'cloud_properties' => {'name' => 'network_1'},
-          'default' => ['dns', 'gateway'],
-          'dns' => ['169.254.1.2'],
-          'gateway' => '169.254.1.3'
-        },
-        'private_2' => {
-          'ip' => '169.254.2.1',
-          'netmask' => '255.255.254.0',
-          'cloud_properties' => {'name' => 'network_2'},
-          'default' => ['dns', 'gateway'],
-          'dns' => ['169.254.2.2'],
-          'gateway' => '169.254.2.3'
-        }
+        'network_1' => '169.254.1.1',
+        'network_2' => '169.254.2.1'
       }
     end
     let(:logger) { double('logger', debug: nil, info: nil) }
