@@ -35,12 +35,39 @@ module VSphereCloud
       end
     end
 
-    describe '#ephemeral_disk_size' do
-      let(:input) { { ephemeral_disk_size: 1234 } }
-      it 'returns the provided disk size' do
+    describe '#stemcell_cid' do
+      let(:input) { { stemcell_cid: "fake-stemcell" } }
+      it 'returns the provided stemcell_cid' do
         vm_config = VmConfig.new
         vm_config.manifest_params = input
-        expect(vm_config.ephemeral_disk_size).to eq(1234)
+        expect(vm_config.stemcell_cid).to eq("fake-stemcell")
+      end
+    end
+
+    describe '#agent_id' do
+      let(:input) { { agent_id: "fake-agent" } }
+      it 'returns the provided agent_id' do
+        vm_config = VmConfig.new
+        vm_config.manifest_params = input
+        expect(vm_config.agent_id).to eq("fake-agent")
+      end
+    end
+
+    describe '#agent_env' do
+      let(:input) { { agent_env: {"fake-key" => "fake-value"} } }
+      it 'returns the provided agent_env' do
+        vm_config = VmConfig.new
+        vm_config.manifest_params = input
+        expect(vm_config.agent_env).to eq({"fake-key" => "fake-value"})
+      end
+    end
+
+    describe '#persistent_disk_cids' do
+      let(:input) { { persistent_disk_cids: ["1234", "5678"] } }
+      it 'returns the provided persistent_disk_cids' do
+        vm_config = VmConfig.new
+        vm_config.manifest_params = input
+        expect(vm_config.persistent_disk_cids).to eq(["1234", "5678"])
       end
     end
 
@@ -118,6 +145,15 @@ module VSphereCloud
       end
     end
 
+    describe '#ephemeral_disk_size' do
+      let(:input) { { resource_pool: { "disk" => 1234 } } }
+      it 'returns the provided disk size' do
+        vm_config = VmConfig.new
+        vm_config.manifest_params = input
+        expect(vm_config.ephemeral_disk_size).to eq(1234)
+      end
+    end
+
     describe '#config_spec_params' do
       context 'when number of CPUs is provided' do
         let(:input) { { resource_pool: { "cpu" => 2 } } }
@@ -130,7 +166,7 @@ module VSphereCloud
       end
 
       context 'when memory in MB is provided' do
-        let(:input) { { resource_pool: { "memory" => 4096 } } }
+        let(:input) { { resource_pool: { "ram" => 4096 } } }
         let(:output) { { memory_mb: 4096 } }
         it 'maps to memory_mb' do
           vm_config = VmConfig.new

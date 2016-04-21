@@ -20,7 +20,23 @@ module VSphereCloud
     end
 
     def ephemeral_disk_size
-      @manifest_params[:ephemeral_disk_size]
+      resource_pool["disk"]
+    end
+
+    def persistent_disk_cids
+      @manifest_params[:persistent_disk_cids]
+    end
+
+    def stemcell_cid
+      @manifest_params[:stemcell_cid]
+    end
+
+    def agent_id
+      @manifest_params[:agent_id]
+    end
+
+    def agent_env
+      @manifest_params[:agent_env]
     end
 
     def networks
@@ -40,7 +56,7 @@ module VSphereCloud
     def config_spec_params
       params = {}
       params[:num_cpus] = resource_pool["cpu"]
-      params[:memory_mb] = resource_pool["memory"]
+      params[:memory_mb] = resource_pool["ram"]
       params[:nested_hv_enabled] = true if resource_pool["nested_hardware_virtualization"]
       params.delete_if { |k, v| v.nil? }
     end
