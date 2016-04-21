@@ -28,7 +28,7 @@ module VSphereCloud
       requested_sizes.all? do |request_disk_size|
         can_accomodate = false
         biggest_ds_first.each_with_index do |ds_disk_size, index|
-          if ds_disk_size >= request_disk_size
+          if ds_disk_size - @headroom >= request_disk_size
             can_accomodate = true
             biggest_ds_first[index] = ds_disk_size-request_disk_size
             break

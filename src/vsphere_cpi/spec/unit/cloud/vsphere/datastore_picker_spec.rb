@@ -72,7 +72,7 @@ module VSphereCloud
           [1024, 1024],
           [1024, 1024, 1024],
         ].each do |requested_sizes|
-          it 'is able to accomodate the given disk sizes' do
+          it "is able to accomodate the given disk sizes: #{requested_sizes}" do
             picker = DatastorePicker.new(0)
             picker.update(available_datastores)
             expect(picker.can_accomodate_disks?(requested_sizes, /datastore-.*/)).to eq(true)
@@ -89,6 +89,16 @@ module VSphereCloud
             picker.update(available_datastores)
             expect(picker.can_accomodate_disks?(requested_sizes, /datastore-.*/)).to eq(false)
           end
+        end
+      end
+      context 'given disk headroom' do
+        it 'is able to factor in the headroom in the accomodation calculation' do
+          bad_requested_sizes = [1024, 1024, 1024]
+          good_requested_sizes = [512, 1024, 512]
+          picker = DatastorePicker.new(512)
+          picker.update(available_datastores)
+          expect(picker.can_accomodate_disks?(bad_requested_sizes, /datastore-.*/)).to eq(false)
+          expect(picker.can_accomodate_disks?(good_requested_sizes, /datastore-.*/)).to eq(true)
         end
       end
       context 'given datastores with free space [300, 512]' do
@@ -132,7 +142,7 @@ module VSphereCloud
       end
 
       context 'when there is no matching/available datastore' do
-        it 'raises and error' do
+        it 'raises an error' do
           picker = DatastorePicker.new
           expect {
             picker.pick_datastore(1)
