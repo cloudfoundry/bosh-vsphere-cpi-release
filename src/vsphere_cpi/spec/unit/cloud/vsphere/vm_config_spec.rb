@@ -414,5 +414,89 @@ module VSphereCloud
       end
     end
 
+    describe '#validate_drs_rules' do
+      context 'when no DRS rules are specified' do
+        let(:input) { {} }
+
+        it 'validation passes' do
+          vm_config = VmConfig.new(manifest_params: input)
+          expect{
+            vm_config.validate_drs_rules
+          }.to_not raise_error
+        end
+      end
+
+      context 'when several DRS rules are specified in cloud properties' do
+        let(:input) do
+          {
+            resource_pool: {
+              "datacenters" => [
+                "clusters" => [
+                  {
+                    "fake-cluster-name" => {
+                      "drs_rules" => [
+                        { "name" => "fake-rule-1", "type" => drs_rule_type },
+                        { "name" => "fake-rule-2", "type" => drs_rule_type }
+                      ]
+                    }
+                  }
+                ]
+              ]
+            }
+          }
+        end
+        let(:drs_rule_type) { 'separate_vms' }
+
+        it 'raises an error' do
+          vm_config = VmConfig.new(manifest_params: input)
+          expect{
+            vm_config.validate_drs_rules
+          }.to raise_error /vSphere CPI supports only one DRS rule per resource pool/
+        end
+      end
+
+      context 'when one DRS rule is specified' do
+        let(:input) do
+          {
+            resource_pool: {
+              "datacenters" => [
+                "clusters" => [
+                  {
+                    "fake-cluster-name" => {
+                      "drs_rules" => [
+                        { "name" => "fake-rule", "type" => drs_rule_type}
+                      ]
+                    }
+                  }
+                ]
+              ]
+            }
+          }
+        end
+
+        context 'when DRS rule type is separate_vms' do
+          let(:drs_rule_type) { 'separate_vms' }
+
+          it 'validation passes' do
+            vm_config = VmConfig.new(manifest_params: input)
+            expect{
+              vm_config.validate_drs_rules
+            }.to_not raise_error
+          end
+        end
+
+        context 'when DRS rule type is not separate_vms' do
+          let(:drs_rule_type) { 'bad_type' }
+
+          it 'raises an error' do
+            vm_config = VmConfig.new(manifest_params: input)
+            expect{
+              vm_config.validate_drs_rules
+            }.to raise_error /vSphere CPI only supports DRS rule of 'separate_vms' type/
+          end
+        end
+      end
+    end
+
   end
 end

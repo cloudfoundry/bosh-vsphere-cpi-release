@@ -86,6 +86,27 @@ module VSphereCloud
       params.delete_if { |k, v| v.nil? }
     end
 
+    def validate
+      validate_drs_rules
+    end
+
+    def validate_drs_rules
+      cluster_config = clusters_spec.values.first
+      return nil if cluster_config.nil?
+
+      drs_rules = cluster_config["drs_rules"]
+
+      if drs_rules.size > 1
+        raise 'vSphere CPI supports only one DRS rule per resource pool'
+      end
+
+      rule_config = drs_rules.first
+
+      if rule_config['type'] != 'separate_vms'
+        raise "vSphere CPI only supports DRS rule of 'separate_vms' type, not '#{rule_config['type']}'"
+      end
+    end
+
     private
 
     def resource_pool
