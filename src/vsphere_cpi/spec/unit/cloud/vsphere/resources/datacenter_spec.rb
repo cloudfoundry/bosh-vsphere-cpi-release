@@ -214,6 +214,60 @@ describe VSphereCloud::Resources::Datacenter do
     end
   end
 
+  describe '#clusters_hash' do
+    it 'returns a hash mapping from cluster name to a lightweight hash' do
+      first_datastore = instance_double(
+        'VSphereCloud::Resources::Datastore',
+        name: 'first-datastore',
+        free_space: 4000
+      )
+      second_datastore = instance_double(
+        'VSphereCloud::Resources::Datastore',
+        name: 'second-datastore',
+        free_space: 8000
+      )
+      third_datastore = instance_double(
+        'VSphereCloud::Resources::Datastore',
+        name: 'third-datastore',
+        free_space: 16000
+      )
+
+      allow(datacenter).to receive(:clusters).and_return({
+        'first-cluster' => instance_double('VSphereCloud::Resources::Cluster',
+          free_memory: 1024,
+          all_datastores: {
+            first_datastore.name => first_datastore,
+            third_datastore.name => third_datastore
+          },
+        ),
+        'second-cluster' => instance_double('VSphereCloud::Resources::Cluster',
+          free_memory: 2048,
+          all_datastores: {
+            first_datastore.name => first_datastore,
+            second_datastore.name => second_datastore
+          }
+        ),
+      })
+
+      expect(datacenter.clusters_hash).to eq({
+        'first-cluster' => {
+          memory: 1024,
+          datastores: {
+            'first-datastore' => 4000,
+            'third-datastore' => 16000
+          }
+        },
+        'second-cluster' => {
+          memory: 2048,
+          datastores: {
+            'first-datastore' => 4000,
+            'second-datastore' => 8000
+          }
+        }
+      })
+    end
+  end
+
   describe '#find_cluster' do
     context 'when cluster exists' do
       it 'return the cluster' do
@@ -237,6 +291,44 @@ describe VSphereCloud::Resources::Datacenter do
         ).and_return({ cluster_mob2 => {} })
 
         expect {datacenter.find_cluster('cluster1')}.to raise_error(/Can't find cluster 'cluster1'/)
+      end
+    end
+  end
+
+  describe '#find_datastore' do
+    context 'when datastore exists' do
+      it 'return the datastore' do
+        first_datastore = instance_double('VSphereCloud::Resources::Datastore', name: 'first-datastore')
+        second_datastore = instance_double('VSphereCloud::Resources::Datastore', name: 'second-datastore')
+        third_datastore = instance_double('VSphereCloud::Resources::Datastore', name: 'third-datastore')
+
+        allow(datacenter).to receive(:clusters).and_return({
+          'first-cluster' => instance_double('VSphereCloud::Resources::Cluster',
+            all_datastores: {
+              first_datastore.name => first_datastore,
+              third_datastore.name => third_datastore
+            },
+          ),
+          'second-cluster' => instance_double('VSphereCloud::Resources::Cluster',
+            all_datastores: {
+              first_datastore.name => first_datastore,
+              second_datastore.name => second_datastore
+            }
+          ),
+        })
+
+        datastore = datacenter.find_datastore('second-datastore')
+        expect(datastore).to eq(second_datastore)
+      end
+    end
+
+    context 'when datastore does not exist' do
+      it 'raises an exception' do
+        allow(datacenter).to receive(:clusters).and_return({})
+
+        expect{
+          datacenter.find_datastore('second-datastore')
+        }.to raise_error(/Can't find datastore 'second-datastore'/)
       end
     end
   end
@@ -295,6 +387,56 @@ describe VSphereCloud::Resources::Datacenter do
         first_datastore.name => first_datastore,
         second_datastore.name => second_datastore,
         third_datastore.name => third_datastore
+      })
+    end
+  end
+
+  describe '#disks_hash' do
+    it 'returns a hash mapping from disk cid to free space on disks grouped under datastores' do
+      first_datastore = instance_double(
+        'VSphereCloud::Resources::Datastore',
+        name: 'first-datastore'
+      )
+      second_datastore = instance_double(
+        'VSphereCloud::Resources::Datastore',
+        name: 'second-datastore'
+      )
+
+      first_disk = instance_double(
+        VSphereCloud::Resources::Disk,
+        datastore: first_datastore,
+        size_in_mb: 1000
+      )
+      second_disk = instance_double(
+        VSphereCloud::Resources::Disk,
+        datastore: second_datastore,
+        size_in_mb: 2000
+      )
+      third_disk = instance_double(
+        VSphereCloud::Resources::Disk,
+        datastore: second_datastore,
+        size_in_mb: 4000
+      )
+
+      disk_cids = ['disk1', 'disk2', 'disk3']
+      allow(datacenter).to receive(:find_disk)
+        .with('disk1')
+        .and_return(first_disk)
+      allow(datacenter).to receive(:find_disk)
+        .with('disk2')
+        .and_return(second_disk)
+      allow(datacenter).to receive(:find_disk)
+        .with('disk3')
+        .and_return(third_disk)
+
+      expect(datacenter.disks_hash(disk_cids)).to eq({
+        'first-datastore' => {
+          'disk1' => 1000
+        },
+        'second-datastore' => {
+          'disk2' => 2000,
+          'disk3' => 4000
+        }
       })
     end
   end

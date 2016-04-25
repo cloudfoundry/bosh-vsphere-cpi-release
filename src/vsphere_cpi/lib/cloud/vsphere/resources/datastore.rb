@@ -10,8 +10,8 @@ module VSphereCloud
 
       DISK_HEADROOM = 1024
 
-      def self.build_from_client(client, datastore_properties)
-        ds_properties_map = client.cloud_searcher.get_properties(datastore_properties, Vim::Datastore, Datastore::PROPERTIES)
+      def self.build_from_client(client, datastore_mob)
+        ds_properties_map = client.cloud_searcher.get_properties(datastore_mob, Vim::Datastore, Datastore::PROPERTIES)
         ds_properties_map.values.map do |ds_properties|
           Datastore.new(
             ds_properties['name'],

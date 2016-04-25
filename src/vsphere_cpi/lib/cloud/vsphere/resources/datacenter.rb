@@ -75,9 +75,30 @@ module VSphereCloud
         end
       end
 
+      def clusters_hash
+        available_clusters = {}
+        clusters.each do |cluster_name, cluster|
+          cluster_datastores = {}
+          cluster.all_datastores.each do |datastore_name, datastore|
+            cluster_datastores[datastore_name] = datastore.free_space
+          end
+          available_clusters[cluster_name] = {
+            memory: cluster.free_memory,
+            datastores: cluster_datastores
+          }
+        end
+        available_clusters
+      end
+
       def find_cluster(cluster_name)
         cluster_config = @clusters[cluster_name]
         @cluster_provider.find(cluster_name, cluster_config)
+      end
+
+      def find_datastore(datastore_name)
+        datastore = all_datastores[datastore_name]
+        raise "Can't find datastore '#{datastore_name}'" if datastore.nil?
+        datastore
       end
 
       def ephemeral_datastores
@@ -107,6 +128,17 @@ module VSphereCloud
 
       def pick_persistent_datastore(size, filter=nil)
         pick_datastore(:persistent, size, filter)
+      end
+
+      def disks_hash(cids)
+        disks = {}
+        cids.each do |cid|
+          disk = find_disk(cid)
+          datastore_name = disk.datastore.name
+          disks[datastore_name] = {} if disks[datastore_name].nil?
+          disks[datastore_name][cid] = disk.size_in_mb
+        end
+        disks
       end
 
       # TODO: do we care about datastore.allocate?
