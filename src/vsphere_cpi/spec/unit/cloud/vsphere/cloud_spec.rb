@@ -299,137 +299,140 @@ module VSphereCloud
     end
 
     describe '#create_vm' do
-      describe 'delegating to the VmCreator class to create the VM' do
-        let(:creator_builder) { instance_double('VSphereCloud::VmCreatorBuilder') }
-        before do
-          builder_class = class_double('VSphereCloud::VmCreatorBuilder').as_stubbed_const
-          allow(builder_class).to receive(:new).with(no_args).and_return(creator_builder)
-          allow(cloud_properties).to receive(:fetch).with('datacenters', []).and_return([])
-        end
-        let(:creator_instance) { instance_double('VSphereCloud::VmCreator') }
+      let(:stemcell_vm) { instance_double(Resources::VM) }
+      let(:vm_creator) { instance_double(VmCreator) }
+      let(:vm_config) { instance_double(VmConfig) }
+      let(:ip_conflict_detector) { instance_double(IPConflictDetector) }
+      let(:datastore_picker) { instance_double(DatastorePicker) }
+      let(:cluster_picker) { instance_double(ClusterPicker) }
+      let(:disk_locality) { ["fake-disk"] }
 
-        let(:networks) { double('networks hash') }
-        let(:cloud_properties) { double('cloud properties hash') }
-        let(:stemcell_cid) { double('stemcell cid string') }
-        let(:agent_id) { double('agent id string') }
+      before do
+        allow(vsphere_cloud).to receive(:stemcell_vm)
+          .with('fake-stemcell-cid')
+          .and_return(stemcell_vm)
+        allow(cloud_searcher).to receive(:get_property)
+          .with(
+            stemcell_vm,
+            VimSdk::Vim::VirtualMachine,
+            'summary.storage.committed',
+            ensure_all: true
+          )
+          .and_return(1024 * 1024 * 1024)
 
-        let(:file_provider) { instance_double('VSphereCloud::FileProvider') }
-        before { allow(VSphereCloud::FileProvider).to receive(:new).and_return(file_provider) }
+        allow(datacenter).to receive(:clusters_hash)
+          .and_return({ 'fake-cluster' => {} })
+        allow(datacenter).to receive(:ephemeral_pattern)
+          .and_return('fake-ephemeral-pattern')
+        allow(datacenter).to receive(:persistent_pattern)
+          .and_return('fake-persistent-pattern')
 
-        context 'with a fixed cluster for the VM' do
-          let(:clusters) {
-            [
-              { 'BOSH_CL' => { 'drs_rules' => 'fake-drs-rules' }, },
-              { 'BOSH_CL2' => {} }
-            ]
-          }
+        allow(DatastorePicker).to receive(:new)
+          .and_return(datastore_picker)
+        allow(ClusterPicker).to receive(:new)
+          .with('fake-ephemeral-pattern', 'fake-persistent-pattern')
+          .and_return(cluster_picker)
+        allow(IPConflictDetector).to receive(:new)
+          .with(logger, client)
+          .and_return(ip_conflict_detector)
+      end
 
-          let(:datacenters) {
-            [{
-              'name' => 'BOSH_DC',
-              'clusters' => clusters,
-            }]
-          }
+      it 'creates a new VM with provided manifest properties' do
+        expect(datacenter).to receive(:disks_hash)
+          .with(disk_locality)
+          .and_return({ 'fake-datastore' => {} })
 
-          let(:cluster) { double('cluster', mob: nil) }
-          let(:datacenter) { double('datacenter') }
+        expected_manifest_params = {
+          resource_pool: "fake-resource-pool",
+          networks_spec: "fake-networks-hash",
+          agent_id:      "fake-agent-id",
+          agent_env:     "fake-agent-env",
+          stemcell: {
+            cid: "fake-stemcell-cid",
+            size: 1024
+          },
+          available_clusters: { 'fake-cluster' => {} },
+          existing_disks: { 'fake-datastore' => {} }
+        }
+        expect(VmConfig).to receive(:new)
+          .with(
+            manifest_params: expected_manifest_params,
+            datastore_picker: datastore_picker,
+            cluster_picker: cluster_picker
+          )
+          .and_return(vm_config)
+        expect(vm_config).to receive(:validate)
 
-          before do
-            allow(Resources::Datacenter).to receive(:new).with(cloud_config).and_return(datacenter)
-            allow(cloud_properties).to receive(:fetch).with('datacenters', []).and_return(datacenters)
-            allow(cloud_config).to receive(:datacenter_name).with(no_args).and_return(datacenters.first['name'])
-            allow_any_instance_of(Resources::ClusterProvider).to receive(:find).and_return(cluster)
-          end
+        expect(VmCreator).to receive(:new)
+          .with(
+            client: client,
+            cloud_searcher: cloud_searcher,
+            logger: logger,
+            cpi: vsphere_cloud,
+            datacenter: datacenter,
+            agent_env: agent_env,
+            ip_conflict_detector: ip_conflict_detector
+          )
+          .and_return(vm_creator)
+        expect(vm_creator).to receive(:create)
+          .with(vm_config)
 
-          it 'passes disk locality and environment as nils' do
-            vm = double('created vm')
-            expect(creator_instance).to receive(:create).with(
-                                          agent_id,
-                                          stemcell_cid,
-                                          networks,
-                                          nil,
-                                          nil,
-                                        ).and_return(vm)
-            expect(creator_builder).to receive(:build).with(
-              cloud_properties, client, cloud_searcher, logger, vsphere_cloud, agent_env, file_provider, datacenter, cluster, 'fake-drs-rules'
-            ).and_return(creator_instance)
+        vsphere_cloud.create_vm(
+          "fake-agent-id",
+          "fake-stemcell-cid",
+          "fake-resource-pool",
+          "fake-networks-hash",
+          disk_locality,
+          "fake-agent-env"
+        )
+      end
 
-            expect(
-              vsphere_cloud.create_vm(
-                agent_id, stemcell_cid, cloud_properties, networks,
-              )
-            ).to eq(vm)
-          end
-        end
+      it 'creates a new VM with default disk_locality and environment' do
+        expect(datacenter).to receive(:disks_hash)
+          .with([])
+          .and_return({})
 
-        context 'when both disk locality and environment are omitted' do
-          it 'passes disk locality and environment as nils' do
-            vm = double('created vm')
-            expect(creator_instance).to receive(:create).with(
-              agent_id,
-              stemcell_cid,
-              networks,
-              nil,
-              nil,
-            ).and_return(vm)
-            expect(creator_builder).to receive(:build).with(
-              cloud_properties, client, cloud_searcher, logger, vsphere_cloud, agent_env, file_provider, datacenter, nil, []
-            ).and_return(creator_instance)
+        expected_manifest_params = {
+          resource_pool: "fake-resource-pool",
+          networks_spec: "fake-networks-hash",
+          agent_id:      "fake-agent-id",
+          agent_env:     nil,
+          stemcell: {
+            cid: "fake-stemcell-cid",
+            size: 1024
+          },
+          available_clusters: { 'fake-cluster' => {} },
+          existing_disks: {},
+        }
+        expect(VmConfig).to receive(:new)
+          .with(
+            manifest_params: expected_manifest_params,
+            datastore_picker: datastore_picker,
+            cluster_picker: cluster_picker
+          )
+          .and_return(vm_config)
+        expect(vm_config).to receive(:validate)
 
-            expect(
-              vsphere_cloud.create_vm(
-                agent_id, stemcell_cid, cloud_properties, networks,
-              )
-            ).to eq(vm)
-          end
-        end
+        expect(VmCreator).to receive(:new)
+          .with(
+            client: client,
+            cloud_searcher: cloud_searcher,
+            logger: logger,
+            cpi: vsphere_cloud,
+            datacenter: datacenter,
+            agent_env: agent_env,
+            ip_conflict_detector: ip_conflict_detector
+          )
+          .and_return(vm_creator)
+        expect(vm_creator).to receive(:create)
+          .with(vm_config)
 
-        context 'when only environment is omitted' do
-          it 'passes environment as nil' do
-            vm = double('created vm')
-            disk_cids = double('disk cids array')
-            expect(creator_instance).to receive(:create).with(
-              agent_id,
-              stemcell_cid,
-              networks,
-              disk_cids,
-              nil,
-            ).and_return(vm)
-            expect(creator_builder).to receive(:build).with(
-              cloud_properties, client, cloud_searcher, logger, vsphere_cloud, agent_env, file_provider, datacenter, nil, []
-            ).and_return(creator_instance)
-
-            expect(
-              vsphere_cloud.create_vm(
-                agent_id, stemcell_cid, cloud_properties, networks, disk_cids,
-              )
-            ).to eq(vm)
-          end
-        end
-
-        context 'when the caller passes all 6 arguments' do
-          it 'passes all 6 arguments' do
-            vm = double('created vm')
-            disk_cids = double('disk cids array')
-            environment = double('environment hash')
-            expect(creator_instance).to receive(:create).with(
-              agent_id,
-              stemcell_cid,
-              networks,
-              disk_cids,
-              environment,
-            ).and_return(vm)
-            expect(creator_builder).to receive(:build).with(
-              cloud_properties, client, cloud_searcher, logger, vsphere_cloud, agent_env, file_provider, datacenter, nil, []
-            ).and_return(creator_instance)
-
-            expect(
-              vsphere_cloud.create_vm(
-                agent_id, stemcell_cid, cloud_properties, networks, disk_cids, environment
-              )
-            ).to eq(vm)
-          end
-        end
+        vsphere_cloud.create_vm(
+          "fake-agent-id",
+          "fake-stemcell-cid",
+          "fake-resource-pool",
+          "fake-networks-hash",
+        )
       end
     end
 

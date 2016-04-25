@@ -156,33 +156,49 @@ module VSphereCloud
       client.find_vm_by_name(@datacenter.mob, name)
     end
 
-    def create_vm(agent_id, stemcell_id, resource_pool, networks_spec, disk_locality = nil, environment = nil)
+    def create_vm(agent_id, stemcell_cid, resource_pool, networks_spec, disk_locality = [], environment = nil)
       with_thread_name("create_vm(#{agent_id}, ...)") do
-        datacenter_spec = resource_pool.fetch('datacenters', []).first
-        cluster_spec = datacenter_spec.fetch('clusters', []).first if datacenter_spec
+        stemcell_vm = stemcell_vm(stemcell_cid)
+        raise "Could not find VM for stemcell '#{stemcell_cid}'" if stemcell_vm.nil?
+        stemcell_size = @cloud_searcher.get_property(
+          stemcell_vm,
+          VimSdk::Vim::VirtualMachine,
+          'summary.storage.committed',
+          ensure_all: true
+        )
+        stemcell_size /= 1024 * 1024
 
-        drs_rules = []
-        cluster = nil
-        unless cluster_spec.nil?
-          cluster_name = cluster_spec.keys.first
-          spec = cluster_spec.values.first
-          cluster_config = ClusterConfig.new(cluster_name, spec)
-          cluster = Resources::ClusterProvider.new(@datacenter, @client, @logger).find(cluster_name, cluster_config)
-          drs_rules = spec.fetch('drs_rules', [])
-        end
+        manifest_params = {
+          resource_pool: resource_pool,
+          networks_spec: networks_spec,
+          agent_id: agent_id,
+          agent_env: environment,
+          stemcell: {
+            cid: stemcell_cid,
+            size: stemcell_size
+          },
+          available_clusters: @datacenter.clusters_hash,
+          existing_disks: @datacenter.disks_hash(disk_locality || [])
+        }
 
-        VmCreatorBuilder.new.build(
-          resource_pool,
-          @client,
-          @cloud_searcher,
-          @logger,
-          self,
-          @agent_env,
-          @file_provider,
-          @datacenter,
-          cluster,
-          drs_rules
-        ).create(agent_id, stemcell_id, networks_spec, disk_locality, environment)
+        vm_config = VmConfig.new(
+          manifest_params: manifest_params,
+          datastore_picker: DatastorePicker.new,
+          cluster_picker: ClusterPicker.new(@datacenter.ephemeral_pattern, @datacenter.persistent_pattern)
+        )
+
+        vm_config.validate
+
+        vm_creator = VmCreator.new(
+          client: @client,
+          cloud_searcher: @cloud_searcher,
+          logger: @logger,
+          cpi: self,
+          datacenter: @datacenter,
+          agent_env: @agent_env,
+          ip_conflict_detector: IPConflictDetector.new(@logger, @client),
+        )
+        vm_creator.create(vm_config)
       end
     end
 
@@ -296,6 +312,8 @@ module VSphereCloud
       end
     end
 
+    # Replicating a stemcell allows the creation of linked clones which can share files with a snapshot.
+    # For details see https://www.vmware.com/support/ws5/doc/ws_clone_overview.html.
     def replicate_stemcell(cluster, to_datastore, stemcell_id)
       original_stemcell_vm = self.client.find_vm_by_name(@datacenter.mob, stemcell_id)
       raise "Could not find VM for stemcell '#{stemcell_id}'" if original_stemcell_vm.nil?

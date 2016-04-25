@@ -1,305 +1,295 @@
 require 'spec_helper'
 require 'cloud/vsphere/drs_rules/drs_rule'
 
-describe VSphereCloud::VmCreator do
-  subject(:creator) do
-    described_class.new(1024, 1024, 3, nested_hardware_virtualization, [], vsphere_client, cloud_searcher, logger, cpi, agent_env, file_provider, datacenter, cluster)
-  end
-  let(:nested_hardware_virtualization) { false }
-  let(:vsphere_client) { instance_double('VSphereCloud::VCenterClient', cloud_searcher: cloud_searcher) }
-  let(:logger) { double('logger', debug: nil, info: nil) }
-  let(:cpi) { instance_double('VSphereCloud::Cloud') }
-  let(:agent_env) { instance_double('VSphereCloud::AgentEnv') }
-  let(:file_provider) { instance_double('VSphereCloud::FileProvider') }
-  let(:cloud_searcher) { instance_double('VSphereCloud::CloudSearcher') }
-  let(:datacenter) { instance_double(VSphereCloud::Resources::Datacenter) }
+module VSphereCloud
+  describe VmCreator do
+    let(:vsphere_client) { instance_double(VCenterClient, cloud_searcher: cloud_searcher) }
+    let(:logger) { double('logger', debug: nil, info: nil) }
+    let(:cpi) { instance_double(Cloud) }
+    let(:cloud_searcher) { instance_double(CloudSearcher) }
+    let(:datacenter) do
+      instance_double(
+        Resources::Datacenter,
+        :name => 'fake-datacenter',
+        :vm_folder => instance_double(Resources::Folder, :mob => folder_mob),
+        mob: datacenter_mob
+      )
+    end
+    let(:ip_conflict_detector) { instance_double(IPConflictDetector) }
+    let(:folder_mob) { instance_double(VimSdk::Vim::Folder) }
+    let(:datacenter_mob) { instance_double(VimSdk::Vim::Datacenter) }
+    let(:agent_env) { instance_double(AgentEnv) }
 
-  describe '#create' do
-    let(:networks) do
-      {
-        'network_name' => {
-          'cloud_properties' => {
-            'name' => 'network_name',
-          },
-        },
-      }
+    subject(:creator) do
+      described_class.new(
+        client: vsphere_client,
+        cloud_searcher: cloud_searcher,
+        logger: logger,
+        cpi: cpi,
+        datacenter: datacenter,
+        agent_env: agent_env,
+        ip_conflict_detector: ip_conflict_detector
+      )
     end
 
-    let(:persistent_disk_cids) { ['disk1_cid'] }
-    let(:persistent_disks) { [VSphereCloud::Resources::PersistentDisk.new('disk1_cid', 1024, 'disk1_datastore', 'fake-folder')] }
-    let(:disk_spec) { double('disk spec') }
-    let(:folder_mob) { double('folder managed object') }
-    let(:datacenter_mob) { double('datacenter mob') }
-    let(:resource_pool_mob) { double('resource pool managed object') }
-    let(:cluster_mob) { double(:cluster_mob) }
-
-    let(:cluster) do
-      datacenter = double('datacenter', :name => 'datacenter name', :vm_folder => double('vm_folder', :mob => folder_mob), mob: datacenter_mob)
-
-      double('cluster', :datacenter => datacenter, :resource_pool => double('resource pool', :mob => resource_pool_mob), mob: cluster_mob, ephemeral_datastores: {datastore.name => datastore})
-    end
-
-    let(:datastore) { double('datastore', mob: datastore_mob, name: 'fake-datastore-name') }
-    let(:datastore_mob) { instance_double('VimSdk::Vim::Datastore') }
-
-    let(:vm_double) { double('cloned vm') }
-
-    let(:ephemeral_disk) { instance_double('VSphereCloud::Resources::EphemeralDisk') }
-    let(:replicated_stemcell_mob) { instance_double('VimSdk::Vim::VirtualMachine') }
-    let(:current_snapshot) { double('current snapshot') }
-    let(:ephemeral_disk_config) { double('ephemeral disk config', :device => disk_device) }
-    let(:disk_device) { double('disk device') }
-    let(:add_nic_spec) { double('add virtual nic spec') }
-    let(:delete_nic_spec) { double('delete virtual nic spec') }
-
-    before do
-      stemcell_vm = instance_double('VimSdk::Vim::VirtualMachine')
-      allow(cpi).to receive(:stemcell_vm).with('stemcell_cid').and_return(stemcell_vm)
-      allow(cloud_searcher).to receive(:get_property).with(
-        stemcell_vm,
-        VimSdk::Vim::VirtualMachine,
-        'summary.storage.committed',
-        ensure_all: true
-      ).and_return(1024*1024)
-      persistent_disks.each do |disk|
-        allow(datacenter).to receive(:find_disk).with(disk.cid) { disk }
+    describe '#create' do
+      let(:vm_config) do
+        instance_double(VmConfig)
       end
 
-      allow(cpi).to receive(:replicate_stemcell).with(cluster, datastore, 'stemcell_cid').and_return(replicated_stemcell_mob)
+      let(:config_spec_params) do
+        {
+          num_cpus: 2,
+          memory_mb: 4096
+        }
+      end
+      let(:networks) do
+        {
+          "fake-network-name" => "1.2.3.4"
+        }
+      end
+      let(:cluster) do
+        instance_double(
+          Resources::Cluster,
+          resource_pool: instance_double(Resources::ResourcePool, mob: resource_pool_mob),
+          mob: cluster_mob
+        )
+      end
+      let(:cluster_mob) { instance_double(VimSdk::Vim::Cluster) }
+      let(:resource_pool_mob) { instance_double(VimSdk::Vim::ResourcePool) }
+      let(:datastore) do
+        instance_double(
+          Resources::Datastore,
+          mob: datastore_mob,
+          name: 'fake-datastore-name'
+        )
+      end
+      let(:datastore_mob) { instance_double(VimSdk::Vim::Datastore) }
+      let(:replicated_stemcell_mob) { instance_double(VimSdk::Vim::VirtualMachine) }
+      let(:replicated_stemcell_vm) do
+        instance_double(
+          Resources::VM,
+          mob: replicated_stemcell_mob,
+          system_disk: double("fake-disk", controller_key: "fake-controller-key"),
+          pci_controller: double("fake-controller", key: "fake-pci-key"),
+          nics: stemcell_nics
+        )
+      end
+      let(:ephemeral_disk) { instance_double(Resources::EphemeralDisk) }
+      let(:ephemeral_disk_config) { instance_double(VimSdk::Vim::Vm::Device::VirtualDeviceSpec, :device => "fake-device") }
+      let(:network_mob) { instance_double(VimSdk::Vim::Network) }
+      let(:virtual_nic) { double('fake-nic') }
+      let(:stemcell_nics) { [double('stemcell-nic', key: 'fake-stemcell-nic')] }
+      let(:config_spec) { instance_double(VimSdk::Vim::Vm::ConfigSpec) }
+      let(:snapshot) { instance_double(VimSdk::Vim::Vm::SnapshotInfo, current_snapshot: "fake-snapshot") }
+      let(:clone_vm_task) { double('fake-task') }
+      let(:created_vm_mob) { instance_double(VimSdk::Vim::VirtualMachine) }
+      let(:created_vm) do
+        instance_double(
+          Resources::VM,
+          mob: created_vm_mob,
+          system_disk: double("fake-disk", controller_key: "fake-controller-key"),
+          devices: [double("fake-devices")]
+        )
+      end
+      let(:drs_rule) { instance_double(DrsRule) }
 
-      snapshot = double('snapshot', :current_snapshot => current_snapshot)
-      stemcell_properties = { 'snapshot' => snapshot }
-      allow(cloud_searcher).to receive(:get_properties).with(
-        replicated_stemcell_mob,
-        VimSdk::Vim::VirtualMachine,
-        ['snapshot'],
-        ensure_all: true
-      ).and_return(stemcell_properties)
-
-      system_disk = double(:system_disk, controller_key: 'fake-controller-key')
-      allow_any_instance_of(VSphereCloud::Resources::VM).to receive(:system_disk).and_return(system_disk)
-      allow_any_instance_of(VSphereCloud::Resources::VM).to receive(:pci_controller).and_return(double(:pci_controller, key: 'fake-pci-key'))
-      allow_any_instance_of(VSphereCloud::Resources::VM).to receive(:fix_device_unit_numbers)
-
-      network_mob = double('standard network managed object')
-      allow(network_mob).to receive(:name).and_return('standard network managed object')
-      allow(vsphere_client).to receive(:find_by_inventory_path).
-        with(['datacenter name', 'network', 'network_name']).
-        and_return(network_mob)
-
-      allow_any_instance_of(VSphereCloud::Resources::Nic).to receive(:create_virtual_nic).with(
-        cloud_searcher,
-        'network_name',
-        network_mob,
-        'fake-pci-key',
-        {},
-      ).and_return(add_nic_spec)
-
-      virtual_nic = VimSdk::Vim::Vm::Device::VirtualEthernetCard.new
-      allow(VSphereCloud::Resources::VM).to receive(:create_delete_device_spec).with(virtual_nic).and_return(delete_nic_spec)
-      allow_any_instance_of(VSphereCloud::Resources::VM).to receive(:nics).and_return([virtual_nic])
-
-      clone_vm_task = double('cloned vm task')
-      allow(cpi).to receive(:clone_vm).and_return(clone_vm_task)
-      allow(vsphere_client).to receive(:wait_for_task).with(clone_vm_task).and_return(vm_double)
-      allow(ephemeral_disk).to receive(:create_disk_attachment_spec).with('fake-controller-key').and_return(ephemeral_disk_config)
-      allow(VSphereCloud::Resources::EphemeralDisk).to receive(:new).with(
-        VSphereCloud::Resources::EphemeralDisk::DISK_NAME,
-        1024,
-        datastore,
-        'vm-fake-uuid'
-      ).and_return(ephemeral_disk)
-
-      devices = double(:devices)
-      allow_any_instance_of(VSphereCloud::Resources::VM).to receive(:devices).and_return(devices)
-      network_env = double(:network_env)
-      allow(cpi).to receive(:generate_network_env).with(devices, networks, {}).and_return(network_env)
-      disk_env = double(:disk_env)
-      allow(cpi).to receive(:generate_disk_env).with(system_disk, disk_device).and_return(disk_env)
-      allow(cpi).to receive(:generate_agent_env).with('vm-fake-uuid', vm_double, 'agent_id', network_env, disk_env).and_return({})
-      vm_location = double('vm location')
-      allow(cpi).to receive(:get_vm_location).with(
-        vm_double,
-        datacenter: 'datacenter name',
-        datastore: 'fake-datastore-name',
-        vm: 'vm-fake-uuid',
-      ).and_return(vm_location)
-      allow(agent_env).to receive(:set_env).with(vm_double, vm_location, {'env' => {}})
-
-      allow_any_instance_of(VSphereCloud::Resources::VM).to receive(:power_on)
-
-      allow(datacenter).to receive(:pick_cluster_for_vm).with(1024, 2049, persistent_disks).and_return(cluster)
-      allow(datacenter).to receive(:pick_ephemeral_datastore).with(2049, [datastore.name]).and_return(datastore)
-
-      allow(SecureRandom).to receive(:uuid).and_return('fake-uuid')
-    end
-
-    context 'when the stemcell vm does not exist' do
+      # Setup vm_config fake
       before do
-        allow(cpi).to receive(:stemcell_vm).with('sc-beef').and_return(nil)
+        allow(vm_config).to receive(:name).and_return("fake-vm-name")
+        allow(vm_config).to receive(:cluster_name).and_return("fake-cluster-name")
+        allow(vm_config).to receive(:datastore_name).and_return("fake-datastore-name")
+        allow(vm_config).to receive(:networks).and_return(networks)
+        allow(vm_config).to receive(:stemcell_cid).and_return("fake-stemcell-cid")
+        allow(vm_config).to receive(:ephemeral_disk_size).and_return(1024)
+        allow(vm_config).to receive(:config_spec_params).and_return(config_spec_params)
+        allow(vm_config).to receive(:agent_id).and_return("fake-agent-id")
+        allow(vm_config).to receive(:agent_env).and_return("fake-agent-env")
+        allow(vm_config).to receive(:drs_rule).and_return({ "name" => "fake-drs-rule" })
+
+        device_change = []
+        allow(config_spec).to receive(:device_change=) do |args|
+          device_change = args
+        end
+        allow(config_spec).to receive(:device_change) do
+          device_change
+        end
       end
 
-      it 'raises an error' do
-        expect {
-          creator.create(nil, 'sc-beef', [], [], {})
-        }.to raise_error("Could not find VM for stemcell 'sc-beef'")
-      end
-    end
-
-    context 'when a network for the vm does not exist' do
+      # Setup top-level dependency fakes
       before do
-        allow(cpi).to receive(:generate_network_env).and_raise(VSphereCloud::Cloud::NetworkException, "Could not find network 'network_name'")
-        allow_any_instance_of(VSphereCloud::Resources::VM).to receive(:devices).and_return([])
-        allow(vsphere_client).to receive(:delete_vm)
+        allow(datacenter).to receive(:find_cluster)
+          .with("fake-cluster-name")
+          .and_return(cluster)
+        allow(datacenter).to receive(:find_datastore)
+          .with("fake-datastore-name")
+          .and_return(datastore)
+
+        allow(cpi).to receive(:replicate_stemcell)
+          .with(cluster, datastore, "fake-stemcell-cid")
+          .and_return(replicated_stemcell_mob)
+        allow(cpi).to receive(:clone_vm)
+          .with(
+            replicated_stemcell_mob,
+            "fake-vm-name",
+            folder_mob,
+            resource_pool_mob,
+            {
+              datastore: datastore_mob,
+              linked: true,
+              snapshot: "fake-snapshot",
+              config: config_spec
+            }
+          )
+          .and_return(clone_vm_task)
+        allow(cpi).to receive(:generate_network_env)
+          .with(created_vm.devices, networks, {}) # empty hash is a placeholder for dvs_index
+          .and_return("fake-network-env")
+        allow(cpi).to receive(:generate_disk_env)
+          .with(created_vm.system_disk, "fake-device")
+          .and_return("fake-disk-env")
+        allow(cpi).to receive(:generate_agent_env)
+          .with("fake-vm-name", created_vm_mob, "fake-agent-id", "fake-network-env", "fake-disk-env")
+          .and_return({})
+        allow(cpi).to receive(:get_vm_location)
+          .with(
+            created_vm_mob,
+            datacenter: "fake-datacenter",
+            datastore: "fake-datastore-name",
+            vm: "fake-vm-name"
+          )
+          .and_return("fake-location")
+
+        allow(cloud_searcher).to receive(:get_properties)
+          .with(
+            replicated_stemcell_mob,
+            VimSdk::Vim::VirtualMachine,
+            ['snapshot'],
+            ensure_all: true
+          )
+          .and_return({'snapshot' => snapshot})
+
+        allow(vsphere_client).to receive(:wait_for_task)
+          .with(clone_vm_task)
+          .and_return(created_vm_mob)
+        allow(vsphere_client).to receive(:find_by_inventory_path)
+          .with(['fake-datacenter', 'network', 'fake-network-name'])
+          .and_return(network_mob)
+
       end
 
-      it 'raises an error' do
-        expect {
-          creator.create('agent_id', 'stemcell_cid', networks, persistent_disk_cids, {})
-        }.to raise_error(VSphereCloud::Cloud::NetworkException, "Could not find network 'network_name' for VM 'vm-fake-uuid'")
-      end
-    end
+      # Setup Resource fakes
+      before do
+        allow(Resources::VM).to receive(:new)
+          .with("fake-stemcell-cid", replicated_stemcell_mob, vsphere_client, logger)
+          .and_return(replicated_stemcell_vm)
+        allow(Resources::VM).to receive(:create_add_device_spec)
+          .with(virtual_nic)
+          .and_return("fake-added-nic")
+        allow(Resources::VM).to receive(:create_delete_device_spec)
+          .with(stemcell_nics.first)
+          .and_return("fake-deleted-nic")
 
-    context 'when vm fails to power on' do
-      before(:each) do
-        allow_any_instance_of(VSphereCloud::Resources::VM).to receive(:power_on).and_raise("power_on error")
-        allow(vsphere_client).to receive(:delete_vm)
+        allow(Resources::EphemeralDisk).to receive(:new)
+          .with(
+            Resources::EphemeralDisk::DISK_NAME,
+            1024,
+            datastore,
+            "fake-vm-name"
+          )
+          .and_return(ephemeral_disk)
+        allow(ephemeral_disk).to receive(:create_disk_attachment_spec)
+          .with("fake-controller-key")
+          .and_return(ephemeral_disk_config)
+
+        allow(Resources::Nic).to receive(:create_virtual_nic)
+          .with(
+            cloud_searcher,
+            "fake-network-name",
+            network_mob,
+            "fake-pci-key",
+            {}
+          )
+          .and_return(virtual_nic)
       end
 
-      it 'deletes the vm and raises an error' do
-        expect_any_instance_of(VSphereCloud::Resources::VM).to receive(:delete)
-        expect {
-          creator.create('agent_id', 'stemcell_cid', networks, persistent_disk_cids, {})
-        }.to raise_error("power_on error")
+      # Setup SDK fakes
+      before do
+        allow(VimSdk::Vim::Vm::ConfigSpec).to receive(:new)
+          .with(config_spec_params)
+          .and_return(config_spec)
       end
 
-      context 'when delete vm fails' do
-        before { allow(vsphere_client).to receive(:delete_vm).and_raise("delete error") }
-        it 'properly bubbles up the original error message' do
+      it 'creates a VM with the provided VM config options' do
+        expect(ip_conflict_detector).to receive(:ensure_no_conflicts).with(networks)
+
+        expect(replicated_stemcell_vm).to receive(:fix_device_unit_numbers)
+          .with([
+            ephemeral_disk_config,
+            "fake-added-nic",
+            "fake-deleted-nic"
+          ])
+
+        expect(Resources::VM).to receive(:new)
+          .with("fake-vm-name", created_vm_mob, vsphere_client, logger)
+          .and_return(created_vm)
+
+        expect(agent_env).to receive(:set_env)
+          .with(created_vm_mob, "fake-location", {'env' => "fake-agent-env"})
+
+        expect(created_vm).to receive(:power_on)
+
+        expect(DrsRule).to receive(:new)
+          .with(
+            "fake-drs-rule",
+            vsphere_client,
+            cloud_searcher,
+            cluster_mob,
+            logger,
+          )
+          .and_return(drs_rule)
+        expect(drs_rule).to receive(:add_vm)
+          .with(created_vm_mob)
+
+        creator.create(vm_config)
+      end
+
+      context 'when vm fails to power on' do
+        before(:each) do
+          allow(ip_conflict_detector).to receive(:ensure_no_conflicts).with(networks)
+
+          allow(replicated_stemcell_vm).to receive(:fix_device_unit_numbers)
+            .with([
+              ephemeral_disk_config,
+              "fake-added-nic",
+              "fake-deleted-nic"
+            ])
+
+          allow(Resources::VM).to receive(:new)
+            .with("fake-vm-name", created_vm_mob, vsphere_client, logger)
+            .and_return(created_vm)
+
+          allow(agent_env).to receive(:set_env)
+            .with(created_vm_mob, "fake-location", {'env' => "fake-agent-env"})
+
+          allow(created_vm).to receive(:power_on)
+            .and_raise("fake-power-on-error")
+        end
+
+        it 'deletes the vm and raises an error' do
+          expect(created_vm).to receive(:delete)
           expect {
-            creator.create('agent_id', 'stemcell_cid', networks, persistent_disk_cids, {})
-          }.to raise_error("power_on error")
-        end
-      end
-    end
-
-    context 'with predetermined cluster' do
-      it 'chooses the placement based on memory, ephemeral and persistent disks' do
-        expect(datacenter).to_not receive(:pick_cluster_for_vm)
-        expect(datacenter).to receive(:pick_ephemeral_datastore).with(2049, [datastore.name]).and_return(datastore)
-        creator.create('agent_id', 'stemcell_cid', networks, persistent_disk_cids, {})
-      end
-
-      context 'when selected cluster has no ephemeral datastores' do
-        let(:cluster) do
-          datacenter = double('datacenter', :name => 'datacenter name', :vm_folder => double('vm_folder', :mob => folder_mob), mob: datacenter_mob)
-
-          double('cluster', datacenter: datacenter, resource_pool: double('resource pool', mob: resource_pool_mob), mob: cluster_mob, ephemeral_datastores: {}, name: 'some-cluster')
+            creator.create(vm_config)
+          }.to raise_error("fake-power-on-error")
         end
 
-        it 'chooses the placement based on memory, ephemeral and persistent disks' do
-          expect(datacenter).to_not receive(:pick_cluster_for_vm)
-          expect(datacenter).to_not receive(:pick_ephemeral_datastore)
-          expect {
-            creator.create('agent_id', 'stemcell_cid', networks, persistent_disk_cids, {})
-          }.to raise_error("Cluster 'some-cluster' has no ephemeral datastores")
-        end
-      end
-    end
-
-    context 'without predetermined cluster' do
-      subject(:creator) do
-        described_class.new(1024, 1024, 3, nested_hardware_virtualization, [], vsphere_client, cloud_searcher, logger, cpi, agent_env, file_provider, datacenter, nil)
-      end
-      it 'chooses the placement based on memory, ephemeral and persistent disks' do
-        expect(datacenter).to receive(:pick_cluster_for_vm).with(1024, 2049, persistent_disks).and_return(cluster)
-        expect(datacenter).to receive(:pick_ephemeral_datastore).with(2049, [datastore.name]).and_return(datastore)
-        creator.create('agent_id', 'stemcell_cid', networks, persistent_disk_cids, {})
-      end
-    end
-
-    it 'clones the vm with the correct attributes set' do
-      allow(VimSdk::Vim::Vm::ConfigSpec).to receive(:new).and_call_original
-      allow(VSphereCloud::Resources::VM)
-        .to receive(:create_add_device_spec)
-        .and_return(add_nic_spec)
-
-      creator.create('agent_id', 'stemcell_cid', networks, persistent_disk_cids, {})
-
-      expect(VimSdk::Vim::Vm::ConfigSpec).to have_received(:new).with({memory_mb: 1024, num_cpus: 3})
-      expect(cpi).to have_received(:clone_vm) do |r_s_mob, vm_id, f_mob, rp_mob, config|
-        expect(r_s_mob).to eq(replicated_stemcell_mob)
-        expect(vm_id).to eq('vm-fake-uuid')
-        expect(f_mob).to eq(folder_mob)
-        expect(rp_mob).to eq(resource_pool_mob)
-        expect(config[:datastore]).to eq(datastore_mob)
-        expect(config[:linked]).to eq(true)
-        expect(config[:snapshot]).to eq(current_snapshot)
-        expect(config[:config].memory_mb).to eq(1024)
-        expect(config[:config].num_cpus).to eq(3)
-        expect(config[:config].device_change).to match_array([ephemeral_disk_config, add_nic_spec, delete_nic_spec])
-      end
-    end
-
-    context 'when nested hardware virtualization is enabled' do
-      let(:nested_hardware_virtualization) { true }
-      it 'clones the vm with the enabled' do
-        expect(VimSdk::Vim::Vm::ConfigSpec).to receive(:new).with(
-            {memory_mb: 1024, num_cpus: 3, nested_hv_enabled: true}).and_call_original
-
-        creator.create('agent_id', 'stemcell_cid', networks, persistent_disk_cids, {})
-      end
-    end
-
-    describe 'DRS rules' do
-      subject(:creator) do
-        described_class.new(1024, 1024, 3, nested_hardware_virtualization, drs_rules, vsphere_client, cloud_searcher, logger, cpi, agent_env, file_provider, datacenter, nil)
-      end
-      context 'when several DRS rules are specified in cloud properties' do
-        let(:drs_rules) do
-          [
-            { 'name' => 'fake-drs-rule-1', 'type' => 'separate_vms' },
-            { 'name' => 'fake-drs-rule-2', 'type' => 'separate_vms' },
-          ]
-        end
-
-        it 'raises an error' do
-          expect_any_instance_of(VSphereCloud::Resources::VM).to receive(:delete)
-          expect {
-            creator.create('agent_id', 'stemcell_cid', networks, persistent_disk_cids, {})
-          }.to raise_error /vSphere CPI supports only one DRS rule per resource pool/
-        end
-      end
-
-      context 'when one DRS rule is specified' do
-        let(:drs_rules) do
-          [
-            { 'name' => 'fake-drs-rule-1', 'type' => drs_rule_type },
-          ]
-        end
-
-        let(:drs_rule_type) { 'separate_vms' }
-
-        context 'when DRS rule type is separate_vms' do
-          it 'adds VM to specified drs rules' do
-            drs_rule_1 = instance_double('VSphereCloud::DrsRule')
-            expect(VSphereCloud::DrsRule).to receive(:new).
-              with('fake-drs-rule-1', vsphere_client, cloud_searcher, cluster_mob, logger).
-              and_return(drs_rule_1)
-            expect(drs_rule_1).to receive(:add_vm).with(vm_double)
-
-            creator.create('agent_id', 'stemcell_cid', networks, persistent_disk_cids, {})
-          end
-        end
-
-        context 'when DRS rule type is not separate_vms' do
-          let(:drs_rule_type) { 'bad_type' }
-
-          it 'raises an error' do
-            expect_any_instance_of(VSphereCloud::Resources::VM).to receive(:delete)
+        context 'when delete vm fails' do
+          it 'properly bubbles up the original error message' do
+            expect(created_vm).to receive(:delete)
+              .and_raise("fake-delete-error")
             expect {
-              creator.create('agent_id', 'stemcell_cid', networks, persistent_disk_cids, {})
-            }.to raise_error /vSphere CPI only supports DRS rule of 'separate_vms' type/
+              creator.create(vm_config)
+            }.to raise_error("fake-power-on-error")
           end
         end
       end
