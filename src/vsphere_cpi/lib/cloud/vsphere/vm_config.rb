@@ -44,10 +44,6 @@ module VSphereCloud
       resource_pool["disk"]
     end
 
-    def persistent_disk_cids
-      @manifest_params[:persistent_disk_cids]
-    end
-
     def stemcell_cid
       stemcell[:cid]
     end

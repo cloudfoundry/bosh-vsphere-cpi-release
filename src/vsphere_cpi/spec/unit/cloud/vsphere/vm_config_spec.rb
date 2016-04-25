@@ -42,14 +42,6 @@ module VSphereCloud
       end
     end
 
-    describe '#persistent_disk_cids' do
-      let(:input) { { persistent_disk_cids: ["1234", "5678"] } }
-      it 'returns the provided persistent_disk_cids' do
-        vm_config = VmConfig.new(manifest_params: input)
-        expect(vm_config.persistent_disk_cids).to eq(["1234", "5678"])
-      end
-    end
-
     describe '#networks' do
       context 'when networks_spec is provided' do
         let(:input) do
