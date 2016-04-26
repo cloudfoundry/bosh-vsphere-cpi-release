@@ -92,7 +92,7 @@ module VSphereCloud
           clusters = @datacenter.clusters_hash
           cluster_picker = ClusterPicker.new(@datacenter.ephemeral_pattern, @datacenter.persistent_pattern)
           cluster_picker.update(clusters)
-          cluster_name = cluster_picker.pick_cluster(0, stemcell_size, [])
+          cluster_name = cluster_picker.pick_cluster(0, stemcell_size, {})
           cluster = @datacenter.find_cluster(cluster_name)
 
           datastore_picker = DatastorePicker.new
