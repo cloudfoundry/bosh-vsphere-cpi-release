@@ -440,39 +440,91 @@ module VSphereCloud
 
     describe '#attach_disk' do
       let(:agent_env_hash) { { 'disks' => { 'persistent' => { 'disk-cid' => 'fake-device-number' } } } }
-      before { allow(agent_env).to receive(:get_current_env).and_return(agent_env_hash) }
-
       let(:vm_location) { double(:vm_location) }
-      before { allow(vsphere_cloud).to receive(:get_vm_location).and_return(vm_location) }
+      let(:datastore_with_disk) { instance_double('VSphereCloud::Resources::Datastore', name: 'datastore-with-disk')}
+      let(:datastore_without_disk) { instance_double('VSphereCloud::Resources::Datastore', name: 'datastore-without-disk')}
+      let(:disk) { Resources::PersistentDisk.new('disk-cid', 1024, datastore_with_disk, 'fake-folder') }
 
       before do
-        allow(datacenter).to receive(:clusters).and_return({'fake-cluster-name' => cluster})
-        allow(datastore).to receive(:mob).and_return('fake-datastore')
-        allow(vm).to receive(:cluster).and_return('fake-cluster-name')
-        allow(vm).to receive(:accessible_datastores).and_return(['fake-datastore-name'])
-        allow(vm).to receive(:system_disk).and_return(double(:system_disk, controller_key: 'fake-controller-key'))
-        allow(client).to receive(:add_persistent_disk_property_to_vm)
+        allow(datacenter).to receive(:persistent_pattern)
+          .and_return('fake-persistent-pattern')
+        allow(datacenter).to receive(:persistent_datastores)
+          .and_return({
+            'datastore-with-disk' => {},
+            'datastore-without-disk' => {},
+          })
+        allow(datacenter).to receive(:find_datastore)
+          .with('datastore-with-disk')
+          .and_return(datastore_with_disk)
+        allow(datacenter).to receive(:find_datastore)
+          .with('datastore-without-disk')
+          .and_return(datastore_without_disk)
+
+        allow(vm_provider).to receive(:find)
+          .with('fake-vm-cid')
+          .and_return(vm)
+        allow(datacenter).to receive(:find_disk)
+          .with('disk-cid')
+          .and_return(disk)
+
+        allow(agent_env).to receive(:get_current_env).and_return(agent_env_hash)
+
+        allow(vsphere_cloud).to receive(:get_vm_location).and_return(vm_location)
       end
 
-      let(:datastore) { instance_double('VSphereCloud::Resources::Datastore', name: 'fake-datastore')}
-      let(:cluster) { instance_double('VSphereCloud::Resources::Cluster') }
-      let(:disk) { Resources::PersistentDisk.new('disk-cid', 1024, datastore, 'fake-folder') }
-
-      it 'updates persistent disk' do
-        expect(vm_provider).to receive(:find).with('fake-vm-cid').and_return(vm)
-        expect(datacenter).to receive(:find_disk).
-          with('disk-cid').and_return(disk)
-        expect(datacenter).to receive(:ensure_disk_is_accessible_to_vm).
-          with(disk, vm).and_return(disk)
-        expect(vm).to receive(:attach_disk).and_return(OpenStruct.new(device: OpenStruct.new(unit_number: 'some-unit-number')))
-
-        expect(agent_env).to receive(:set_env) do|env_vm, env_location, env|
-          expect(env_vm).to eq(vm_mob)
-          expect(env_location).to eq(vm_location)
-          expect(env['disks']['persistent']['disk-cid']).to eq('some-unit-number')
+      context 'when disk is in a datastore accessible to VM' do
+        before do
+          allow(vm).to receive(:accessible_datastore_names).and_return(['datastore-with-disk'])
         end
 
-        vsphere_cloud.attach_disk('fake-vm-cid', 'disk-cid')
+        it 'attaches the existing persistent disk' do
+          expect(vm).to receive(:attach_disk)
+            .with(disk)
+            .and_return(OpenStruct.new(device: OpenStruct.new(unit_number: 'some-unit-number')))
+          expect(agent_env).to receive(:set_env) do|env_vm, env_location, env|
+            expect(env_vm).to eq(vm_mob)
+            expect(env_location).to eq(vm_location)
+            expect(env['disks']['persistent']['disk-cid']).to eq('some-unit-number')
+          end
+
+          vsphere_cloud.attach_disk('fake-vm-cid', 'disk-cid')
+        end
+      end
+
+      context 'when disk is not in a datastore accessible to VM' do
+        let (:datastore_picker) { instance_double(DatastorePicker) }
+        let(:moved_disk) { Resources::PersistentDisk.new('disk-cid', 1024, datastore_without_disk, 'fake-folder') }
+
+        before do
+          allow(vm).to receive(:accessible_datastore_names).and_return(['datastore-without-disk'])
+          allow(vm).to receive(:accessible_datastores_info).and_return({ 'datastore-without-disk' => {} })
+
+          allow(DatastorePicker).to receive(:new)
+            .and_return(datastore_picker)
+        end
+
+        it 'moves the disk to an accessible datastore and attaches it' do
+          expect(datastore_picker).to receive(:update)
+            .with({ 'datastore-without-disk' => {} })
+          expect(datastore_picker).to receive(:pick_datastore)
+            .with(1024, 'fake-persistent-pattern')
+            .and_return('datastore-without-disk')
+
+          expect(datacenter).to receive(:move_disk_to_datastore)
+            .with(disk, datastore_without_disk)
+            .and_return(moved_disk)
+
+          expect(vm).to receive(:attach_disk)
+            .with(moved_disk)
+            .and_return(OpenStruct.new(device: OpenStruct.new(unit_number: 'some-unit-number')))
+          expect(agent_env).to receive(:set_env) do|env_vm, env_location, env|
+            expect(env_vm).to eq(vm_mob)
+            expect(env_location).to eq(vm_location)
+            expect(env['disks']['persistent']['disk-cid']).to eq('some-unit-number')
+          end
+
+          vsphere_cloud.attach_disk('fake-vm-cid', 'disk-cid')
+        end
       end
     end
 
@@ -614,29 +666,70 @@ module VSphereCloud
     end
 
     describe '#create_disk' do
+      let(:all_datastores_hash) { { 'fake-datastore' => {}, 'fake-second-datastore' => {} } }
+      let(:vm_datastores_hash) { { 'fake-datastore' => {} } }
       let(:datastore) { double(:datastore, name: 'fake-datastore') }
       let(:disk) do
         Resources::PersistentDisk.new(
-          'fake-disk-uuid',
+          'fake-disk-cid',
           1024*1024,
           datastore,
           'fake-folder'
         )
       end
+      let (:datastore_picker) { instance_double(DatastorePicker) }
+
+      before do
+        allow(DatastorePicker).to receive(:new)
+          .and_return(datastore_picker)
+
+        allow(datacenter).to receive(:persistent_pattern)
+          .and_return('fake-persistent-pattern')
+        allow(datacenter).to receive(:datastores_hash)
+          .and_return(all_datastores_hash)
+      end
 
       it 'creates disk via datacenter' do
-        expect(datacenter).to receive(:pick_persistent_datastore).with(1024, []).and_return(datastore)
+        expect(datastore_picker).to receive(:update)
+          .with(all_datastores_hash)
+
+        expect(datastore_picker).to receive(:pick_datastore)
+          .with(1024, 'fake-persistent-pattern')
+          .and_return('fake-datastore')
+        expect(datacenter).to receive(:find_datastore)
+          .with('fake-datastore')
+          .and_return(datastore)
         expect(datacenter).to receive(:create_disk).with(datastore, 1024, 'foo-type').and_return(disk)
-        vsphere_cloud.create_disk(1024, {'type' => 'foo-type'})
+
+        disk_cid = vsphere_cloud.create_disk(1024, {'type' => 'foo-type'})
+        expect(disk_cid).to eq('fake-disk-cid')
       end
 
       context 'when vm_cid is provided' do
+        before do
+          allow(vm_provider).to receive(:find)
+            .with('fake-vm-cid')
+            .and_return(vm)
+          allow(vm).to receive(:accessible_datastores_info)
+            .and_return(vm_datastores_hash)
+        end
+
         it 'creates disk in vm cluster' do
-          allow(vm_provider).to receive(:find).with('fake-vm-cid').and_return(vm)
-          allow(vm).to receive(:accessible_datastores).and_return([datastore.name])
-          expect(datacenter).to receive(:pick_persistent_datastore).with(1024, ['fake-datastore']).and_return(datastore)
-          expect(datacenter).to receive(:create_disk).with(datastore, 1024, Resources::PersistentDisk::DEFAULT_DISK_TYPE).and_return(disk)
-          vsphere_cloud.create_disk(1024, {}, 'fake-vm-cid')
+          expect(datastore_picker).to receive(:update)
+            .with(vm_datastores_hash)
+
+          expect(datastore_picker).to receive(:pick_datastore)
+            .with(1024, 'fake-persistent-pattern')
+            .and_return('fake-datastore')
+          expect(datacenter).to receive(:find_datastore)
+            .with('fake-datastore')
+            .and_return(datastore)
+          expect(datacenter).to receive(:create_disk)
+            .with(datastore, 1024, Resources::PersistentDisk::DEFAULT_DISK_TYPE)
+            .and_return(disk)
+
+          disk_cid = vsphere_cloud.create_disk(1024, {}, 'fake-vm-cid')
+          expect(disk_cid).to eq('fake-disk-cid')
         end
       end
     end

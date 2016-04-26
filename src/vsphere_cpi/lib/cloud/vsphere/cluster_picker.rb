@@ -19,7 +19,7 @@ module VSphereCloud
       filter_on_datastore_space(clusters, req_ephemeral_size, existing_disks)
     end
 
-    def pick_cluster(req_memory, req_ephemeral_size, existing_disks, &block)
+    def pick_cluster(req_memory, req_ephemeral_size, existing_disks)
       clusters = suitable_clusters(req_memory, req_ephemeral_size, existing_disks)
 
       clusters = pick_clusters_with_least_migration_burden(clusters, existing_disks)

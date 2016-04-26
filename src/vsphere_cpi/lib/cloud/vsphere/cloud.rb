@@ -89,11 +89,17 @@ module VSphereCloud
 
           stemcell_size = File.size(image) / (1024 * 1024)
 
-          cluster = @datacenter.pick_cluster_for_vm(0, stemcell_size, [])
-          if cluster.ephemeral_datastores.empty?
-            raise "Cluster '#{cluster.name}' has no ephemeral datastores"
-          end
-          datastore = @datacenter.pick_ephemeral_datastore(stemcell_size, cluster.ephemeral_datastores.keys)
+          clusters = @datacenter.clusters_hash
+          cluster_picker = ClusterPicker.new(@datacenter.ephemeral_pattern, @datacenter.persistent_pattern)
+          cluster_picker.update(clusters)
+          cluster_name = cluster_picker.pick_cluster(0, stemcell_size, [])
+          cluster = @datacenter.find_cluster(cluster_name)
+
+          datastore_picker = DatastorePicker.new
+          datastore_picker.update(clusters[cluster_name][:datastores])
+          datastore_name = datastore_picker.pick_datastore(stemcell_size, @datacenter.ephemeral_pattern)
+          datastore = @datacenter.find_datastore(datastore_name)
+
           @logger.info("Deploying to: #{cluster.mob} / #{datastore.mob}")
 
           import_spec_result = import_ovf(name, ovf_file, cluster.resource_pool.mob, datastore.mob)
@@ -265,7 +271,18 @@ module VSphereCloud
         @logger.info("Attaching disk: #{disk_cid} on vm: #{vm_cid}")
         vm = vm_provider.find(vm_cid)
         disk = @datacenter.find_disk(disk_cid)
-        disk = @datacenter.ensure_disk_is_accessible_to_vm(disk, vm)
+
+        disk_is_accessible = vm.accessible_datastore_names.include?(disk.datastore.name)
+        disk_is_in_persistent_datastore = @datacenter.persistent_datastores.include?(disk.datastore.name)
+        unless disk_is_accessible && disk_is_in_persistent_datastore
+          datastore_picker = DatastorePicker.new
+          datastore_picker.update(vm.accessible_datastores_info)
+          datastore_name = datastore_picker.pick_datastore(disk.size_in_mb, @datacenter.persistent_pattern)
+          destination_datastore = @datacenter.find_datastore(datastore_name)
+
+          disk = @datacenter.move_disk_to_datastore(disk, destination_datastore)
+        end
+
         disk_config_spec = vm.attach_disk(disk)
         add_disk_to_agent_env(vm, disk, disk_config_spec.device.unit_number)
       end
@@ -288,13 +305,18 @@ module VSphereCloud
       with_thread_name("create_disk(#{size_in_mb}, _)") do
         @logger.info("Creating disk with size: #{size_in_mb}")
 
-        filtered_datastores = []
+        accessible_datastores = @datacenter.datastores_hash
         if vm_cid
           vm = vm_provider.find(vm_cid)
-          filtered_datastores = vm.accessible_datastores
+          # TODO: get rid of accessible_datastores_info
+          accessible_datastores = vm.accessible_datastores_info
         end
 
-        datastore = @datacenter.pick_persistent_datastore(size_in_mb, filtered_datastores)
+        datastore_picker = DatastorePicker.new
+        datastore_picker.update(accessible_datastores)
+        datastore_name = datastore_picker.pick_datastore(size_in_mb, @datacenter.persistent_pattern)
+        datastore = @datacenter.find_datastore(datastore_name)
+
         disk_type = cloud_properties.fetch('type', Resources::PersistentDisk::DEFAULT_DISK_TYPE)
         disk = @datacenter.create_disk(datastore, size_in_mb, disk_type)
         @logger.info("Created disk: #{disk.inspect}")

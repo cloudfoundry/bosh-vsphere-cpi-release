@@ -90,6 +90,16 @@ module VSphereCloud
         available_clusters
       end
 
+      def datastores_hash
+        available_datastores = {}
+        clusters.each do |cluster_name, cluster|
+          cluster.all_datastores.each do |datastore_name, datastore|
+            available_datastores[datastore_name] = datastore.free_space
+          end
+        end
+        available_datastores
+      end
+
       def find_cluster(cluster_name)
         cluster_config = @clusters[cluster_name]
         @cluster_provider.find(cluster_name, cluster_config)
@@ -120,14 +130,6 @@ module VSphereCloud
           acc.merge!(cluster.all_datastores)
           acc
         end
-      end
-
-      def pick_ephemeral_datastore(size, filter=nil)
-        pick_datastore(:ephemeral, size, filter)
-      end
-
-      def pick_persistent_datastore(size, filter=nil)
-        pick_datastore(:persistent, size, filter)
       end
 
       def disks_hash(cids)
@@ -185,109 +187,15 @@ module VSphereCloud
         raise Bosh::Clouds::DiskNotFound.new(false), "Could not find disk with id '#{disk_cid}'"
       end
 
-      # TODO: do we care about datastore.allocate?
-      def ensure_disk_is_accessible_to_vm(disk, vm)
-        disk_is_in_persistent_datastore = persistent_datastores.include?(disk.datastore.name)
-        disk_is_in_accessible_datastore = vm.accessible_datastores.include?(disk.datastore.name)
-        if disk_is_in_persistent_datastore && disk_is_in_accessible_datastore
-          @logger.info("Disk #{disk.cid} found in an accessible, persistent datastore '#{disk.datastore.name}'")
-          return disk
-        end
-
-        unless vm.accessible_datastores.include?(disk.datastore)
-          destination_datastore = pick_persistent_datastore(disk.size_in_mb, vm.accessible_datastores)
-          destination_path = path(destination_datastore.name, @disk_path, disk.cid)
-          @logger.info("Moving #{disk.path} to #{destination_path}")
-          @client.move_disk(mob, disk.path, mob, destination_path)
-          @logger.info('Moved disk successfully')
-          Resources::PersistentDisk.new(disk.cid, disk.size_in_mb, destination_datastore, @disk_path)
-        end
-      end
-
-      # Find a cluster for a vm with the requested memory and ephemeral storage, attempting
-      # to allocate it near existing persistent disks.
-      #
-      # @param [Integer] requested_memory_in_mb requested memory.
-      # @param [Integer] requested_ephemeral_disk_size_in_mb requested ephemeral storage.
-      # @param [Array<Resources::Disk>] existing_persistent_disks existing persistent disks, if any.
-      # @return [Cluster] selected cluster if the resources were placed successfully, otherwise raises.
-      def pick_cluster_for_vm(requested_memory_in_mb, requested_ephemeral_disk_size_in_mb, existing_persistent_disks)
-        # calculate locality to prioritizing clusters that contain the most persistent data.
-        cluster_objects = clusters.values
-        persistent_disk_index = PersistentDiskIndex.new(cluster_objects, existing_persistent_disks)
-
-        scored_clusters = cluster_objects.map do |cluster|
-          persistent_disk_not_in_this_cluster = existing_persistent_disks.reject do |disk|
-            persistent_disk_index.clusters_connected_to_disk(disk).include?(cluster)
-          end
-
-          score = Scorer.score(
-            @logger,
-            cluster,
-            requested_memory_in_mb,
-            requested_ephemeral_disk_size_in_mb,
-            persistent_disk_not_in_this_cluster.map(&:size_in_mb)
-          )
-
-          [cluster, score]
-        end
-
-        acceptable_clusters = scored_clusters.select { |_, score| score > 0 }
-
-        @logger.debug("Acceptable clusters: #{acceptable_clusters.inspect}")
-
-        if acceptable_clusters.empty?
-          total_persistent_size = existing_persistent_disks.map(&:size_in_mb).inject(0, :+)
-          cluster_infos = cluster_objects.map { |cluster| cluster.describe }
-
-          raise "Unable to allocate vm with #{requested_memory_in_mb}mb RAM, " +
-              "#{requested_ephemeral_disk_size_in_mb / 1024}gb ephemeral disk, " +
-              "and #{total_persistent_size / 1024}gb persistent disk from any cluster.\n#{cluster_infos.join(", ")}."
-        end
-
-        acceptable_clusters = acceptable_clusters.sort_by do |cluster, _score|
-          persistent_disk_index.disks_connected_to_cluster(cluster).map(&:size_in_mb).inject(0, :+)
-        end.reverse
-
-        if acceptable_clusters.any? { |cluster, _| persistent_disk_index.disks_connected_to_cluster(cluster).any? }
-          @logger.debug('Choosing cluster with the greatest available disk')
-          selected_cluster, _ = acceptable_clusters.first
-        else
-          @logger.debug('Choosing cluster by weighted random')
-          selected_cluster = Util.weighted_random(acceptable_clusters)
-        end
-
-        @logger.debug("Selected cluster '#{selected_cluster.name}'")
-
-        selected_cluster.allocate(requested_memory_in_mb)
-        selected_cluster
-      end
-
-      def move_disk(source_path, dest_path)
-        @client.move_disk(mob, source_path, mob, dest_path)
+      def move_disk_to_datastore(disk, destination_datastore)
+        destination_path = path(destination_datastore.name, @disk_path, disk.cid)
+        @logger.info("Moving #{disk.path} to #{destination_path}")
+        @client.move_disk(mob, disk.path, mob, destination_path)
+        @logger.info('Moved disk successfully')
+        Resources::PersistentDisk.new(disk.cid, disk.size_in_mb, destination_datastore, @disk_path)
       end
 
       private
-
-      def pick_datastore(type, size, filter=nil)
-        datastores_to_consider = (type == :ephemeral ? ephemeral_datastores : persistent_datastores).values
-
-        if filter && !filter.empty?
-          datastores_to_consider = datastores_to_consider.select { |ds| filter.include?(ds.name) }
-        end
-
-        available_datastores = datastores_to_consider.reject { |datastore| datastore.free_space - size < Resources::Datastore::DISK_HEADROOM }
-        if available_datastores.empty?
-          raise Bosh::Clouds::NoDiskSpace.new(true), "Couldn't find a '#{type}' datastore with #{size}MB of free space. Found:\n #{datastores_to_consider.map(&:debug_info).join("\n ")}\n"
-        end
-
-        @logger.debug("Looking for a '#{type}' datastore with #{size}MB free space.")
-        @logger.debug("All datastores being considered within datacenter #{self.name}: #{datastores_to_consider.map(&:debug_info)}")
-        @logger.debug("Datastores with enough space: #{available_datastores.map(&:debug_info)}")
-        selected_datastore = Util.weighted_random(available_datastores.map { |datastore| [datastore, datastore.free_space] })
-
-        selected_datastore
-      end
 
       def path(datastore_name, disk_path, disk_cid)
         "[#{datastore_name}] #{disk_path}/#{disk_cid}.vmdk"

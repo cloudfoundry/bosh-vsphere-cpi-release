@@ -28,11 +28,20 @@ module VSphereCloud
         properties['resourcePool'].name
       end
 
-      def accessible_datastores
+      def accessible_datastore_names
         host_properties['datastore'].map do |store|
-          ds = cloud_searcher.get_properties(store, Vim::Datastore, 'info', ensure_all: true)
-          ds['info'].name
+          ds = cloud_searcher.get_properties(store, Vim::Datastore, 'name', ensure_all: true)
+          ds['name']
         end
+      end
+
+      def accessible_datastores_info
+        info = {}
+        host_properties['datastore'].each do |store|
+          ds = cloud_searcher.get_properties(store, Vim::Datastore, ['name', 'summary.freeSpace'], ensure_all: true)
+          info[ds['name']] = (ds['summary.freeSpace'].to_i / BYTES_IN_MB)
+        end
+        info
       end
 
       def datacenter
