@@ -127,9 +127,9 @@ describe VSphereCloud::Cloud, external_cpi: false do
       end
 
       context 'when resource_pool is set to the first cluster' do
-        it 'places vm in first cluster' do
+        it 'places vm in first cluster when vsphere resource pool is not provided' do
           begin
-            resource_pool['datacenters'] = [{'name' => @datacenter_name, 'clusters' => [{@cluster => {'resource_pool' => @resource_pool_name}}]}]
+            resource_pool['datacenters'] = [{'name' => @datacenter_name, 'clusters' => [{@cluster => {}}]}]
             vm_id = @cpi.create_vm(
               'agent-007',
               @stemcell_id,
@@ -139,13 +139,14 @@ describe VSphereCloud::Cloud, external_cpi: false do
 
             vm = @cpi.vm_provider.find(vm_id)
             expect(vm.cluster).to eq(@cluster)
-            expect(vm.resource_pool).to eq(@resource_pool_name)
+            default_resource_pool = @resource_pool_name
+            expect(vm.resource_pool).to_not eq(default_resource_pool)
           ensure
             @cpi.delete_vm(vm_id) if vm_id
           end
         end
 
-        it 'places vm in the specified resource pool' do
+        it 'places vm in the specified resource pool when vsphere resource pool is provided' do
           begin
             resource_pool['datacenters'] = [{'name' => @datacenter_name, 'clusters' => [{@cluster => {'resource_pool' => @second_resource_pool_within_cluster}}]}]
             vm_id = @cpi.create_vm(
