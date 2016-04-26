@@ -43,29 +43,6 @@ describe VSphereCloud::Resources::VM do
     end
   end
 
-  describe '#accessible_datastores_info' do
-    it 'returns a mapping from accessible datastore names to free space' do
-      datastore_mob = instance_double('VimSdk::Vim::Datastore')
-      host_properties = {'datastore' => [datastore_mob]}
-      allow(cloud_searcher).to receive(:get_properties).with(
-        'vm-host',
-        VimSdk::Vim::HostSystem,
-        ['datastore', 'parent'],
-        ensure_all: true,
-      ).and_return(host_properties)
-      allow(cloud_searcher).to receive(:get_properties).with(
-        datastore_mob,
-        VimSdk::Vim::Datastore,
-        ['name', 'summary.freeSpace'],
-        ensure_all: true,
-      ).and_return({ 'name' => 'fake-datastore-name', 'summary.freeSpace' => "#{ 2048 * 1024 * 1024 }" })
-
-      expect(vm.accessible_datastores_info).to eq({
-        'fake-datastore-name' => 2048,
-      })
-    end
-  end
-
   describe '#fix_device_unit_numbers' do
     let(:vm_properties) { { 'config.hardware.device' => vm_devices } }
     let(:vm_devices) do

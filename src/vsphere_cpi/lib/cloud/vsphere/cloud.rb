@@ -272,11 +272,17 @@ module VSphereCloud
         vm = vm_provider.find(vm_cid)
         disk = @datacenter.find_disk(disk_cid)
 
-        disk_is_accessible = vm.accessible_datastore_names.include?(disk.datastore.name)
+        accessible_datastores = {}
+        all_datastores = @datacenter.datastores_hash
+        vm.accessible_datastore_names.each do |name|
+          accessible_datastores[name] = all_datastores[name]
+        end
+
+        disk_is_accessible = accessible_datastores.include?(disk.datastore.name)
         disk_is_in_persistent_datastore = @datacenter.persistent_datastores.include?(disk.datastore.name)
         unless disk_is_accessible && disk_is_in_persistent_datastore
           datastore_picker = DatastorePicker.new
-          datastore_picker.update(vm.accessible_datastores_info)
+          datastore_picker.update(accessible_datastores)
           datastore_name = datastore_picker.pick_datastore(disk.size_in_mb, @datacenter.persistent_pattern)
           destination_datastore = @datacenter.find_datastore(datastore_name)
 
@@ -305,11 +311,15 @@ module VSphereCloud
       with_thread_name("create_disk(#{size_in_mb}, _)") do
         @logger.info("Creating disk with size: #{size_in_mb}")
 
-        accessible_datastores = @datacenter.datastores_hash
+        all_datastores = @datacenter.datastores_hash
         if vm_cid
+          accessible_datastores = {}
           vm = vm_provider.find(vm_cid)
-          # TODO: get rid of accessible_datastores_info
-          accessible_datastores = vm.accessible_datastores_info
+          vm.accessible_datastore_names.each do |name|
+            accessible_datastores[name] = all_datastores[name]
+          end
+        else
+          accessible_datastores = all_datastores
         end
 
         datastore_picker = DatastorePicker.new

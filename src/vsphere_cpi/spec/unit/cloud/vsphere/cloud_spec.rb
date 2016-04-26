@@ -450,8 +450,13 @@ module VSphereCloud
           .and_return('fake-persistent-pattern')
         allow(datacenter).to receive(:persistent_datastores)
           .and_return({
-            'datastore-with-disk' => {},
-            'datastore-without-disk' => {},
+            'datastore-with-disk' => datastore_with_disk,
+            'datastore-without-disk' => datastore_without_disk,
+          })
+        allow(datacenter).to receive(:datastores_hash)
+          .and_return({
+            'datastore-with-disk' => 2048,
+            'datastore-without-disk' => 4096,
           })
         allow(datacenter).to receive(:find_datastore)
           .with('datastore-with-disk')
@@ -497,7 +502,6 @@ module VSphereCloud
 
         before do
           allow(vm).to receive(:accessible_datastore_names).and_return(['datastore-without-disk'])
-          allow(vm).to receive(:accessible_datastores_info).and_return({ 'datastore-without-disk' => {} })
 
           allow(DatastorePicker).to receive(:new)
             .and_return(datastore_picker)
@@ -505,7 +509,7 @@ module VSphereCloud
 
         it 'moves the disk to an accessible datastore and attaches it' do
           expect(datastore_picker).to receive(:update)
-            .with({ 'datastore-without-disk' => {} })
+            .with({ 'datastore-without-disk' => 4096 })
           expect(datastore_picker).to receive(:pick_datastore)
             .with(1024, 'fake-persistent-pattern')
             .and_return('datastore-without-disk')
@@ -666,8 +670,7 @@ module VSphereCloud
     end
 
     describe '#create_disk' do
-      let(:all_datastores_hash) { { 'fake-datastore' => {}, 'fake-second-datastore' => {} } }
-      let(:vm_datastores_hash) { { 'fake-datastore' => {} } }
+      let(:all_datastores_hash) { { 'fake-datastore' => 2048, 'fake-second-datastore' => 4096 } }
       let(:datastore) { double(:datastore, name: 'fake-datastore') }
       let(:disk) do
         Resources::PersistentDisk.new(
@@ -710,13 +713,13 @@ module VSphereCloud
           allow(vm_provider).to receive(:find)
             .with('fake-vm-cid')
             .and_return(vm)
-          allow(vm).to receive(:accessible_datastores_info)
-            .and_return(vm_datastores_hash)
+          allow(vm).to receive(:accessible_datastore_names)
+            .and_return(['fake-datastore'])
         end
 
         it 'creates disk in vm cluster' do
           expect(datastore_picker).to receive(:update)
-            .with(vm_datastores_hash)
+            .with({ 'fake-datastore' => 2048 })
 
           expect(datastore_picker).to receive(:pick_datastore)
             .with(1024, 'fake-persistent-pattern')

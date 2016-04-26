@@ -35,15 +35,6 @@ module VSphereCloud
         end
       end
 
-      def accessible_datastores_info
-        info = {}
-        host_properties['datastore'].each do |store|
-          ds = cloud_searcher.get_properties(store, Vim::Datastore, ['name', 'summary.freeSpace'], ensure_all: true)
-          info[ds['name']] = (ds['summary.freeSpace'].to_i / BYTES_IN_MB)
-        end
-        info
-      end
-
       def datacenter
         @client.find_parent(@mob, Vim::Datacenter)
       end
