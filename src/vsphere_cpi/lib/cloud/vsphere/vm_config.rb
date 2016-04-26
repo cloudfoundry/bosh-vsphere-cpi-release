@@ -18,8 +18,18 @@ module VSphereCloud
 
       @cluster_picker.update(available_clusters)
 
-      eph_disk_size = ephemeral_disk_size + config_spec_params[:memory_mb] + stemcell_size
-      @cluster_name = @cluster_picker.pick_cluster(config_spec_params[:memory_mb], eph_disk_size, existing_disks)
+      total_eph_disk_size = ephemeral_disk_size + config_spec_params[:memory_mb] + stemcell_size
+      @cluster_name = @cluster_picker.pick_cluster(config_spec_params[:memory_mb], total_eph_disk_size, existing_disks)
+    end
+
+    # TODO: Remove this once we handle placement resources better
+    def is_top_level_cluster
+      return true if clusters_spec.keys.first
+    end
+
+    # TODO: Remove this once we handle placement resources better
+    def cluster_spec
+        return clusters_spec.values.first
     end
 
     def drs_rule
@@ -37,7 +47,7 @@ module VSphereCloud
       return nil if cluster_properties.nil?
 
       @datastore_picker.update(cluster_properties[:datastores])
-      @datastore_name = @datastore_picker.pick_datastore(ephemeral_disk_size)
+      @datastore_name = @datastore_picker.pick_datastore(ephemeral_disk_size, @manifest_params[:ephemeral_datastore_pattern])
     end
 
     def ephemeral_disk_size
@@ -60,8 +70,11 @@ module VSphereCloud
       @manifest_params[:agent_env]
     end
 
-    def networks
-      networks_spec = @manifest_params[:networks_spec] || {}
+    def networks_spec
+      @manifest_params[:networks_spec] || {}
+    end
+
+    def vsphere_networks
       networks_map = {}
       networks_spec.each_value do |network_spec|
         cloud_properties = network_spec['cloud_properties']
@@ -88,9 +101,10 @@ module VSphereCloud
 
     def validate_drs_rules
       cluster_config = clusters_spec.values.first
-      return nil if cluster_config.nil?
+      return if cluster_config.nil?
 
       drs_rules = cluster_config["drs_rules"]
+      return if drs_rules.nil?
 
       if drs_rules.size > 1
         raise 'vSphere CPI supports only one DRS rule per resource pool'
@@ -106,10 +120,6 @@ module VSphereCloud
     private
 
     def resource_pool
-      @manifest_params[:resource_pool] || {}
-    end
-
-    def networks_spec
       @manifest_params[:resource_pool] || {}
     end
 

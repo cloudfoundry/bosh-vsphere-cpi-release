@@ -48,6 +48,7 @@ module VSphereCloud
           "fake-network-name" => "1.2.3.4"
         }
       end
+      let(:networks_spec) { "fake-network-spec" }
       let(:cluster) do
         instance_double(
           Resources::Cluster,
@@ -99,7 +100,8 @@ module VSphereCloud
         allow(vm_config).to receive(:name).and_return("fake-vm-name")
         allow(vm_config).to receive(:cluster_name).and_return("fake-cluster-name")
         allow(vm_config).to receive(:datastore_name).and_return("fake-datastore-name")
-        allow(vm_config).to receive(:networks).and_return(networks)
+        allow(vm_config).to receive(:vsphere_networks).and_return(networks)
+        allow(vm_config).to receive(:networks_spec).and_return(networks_spec)
         allow(vm_config).to receive(:stemcell_cid).and_return("fake-stemcell-cid")
         allow(vm_config).to receive(:ephemeral_disk_size).and_return(1024)
         allow(vm_config).to receive(:config_spec_params).and_return(config_spec_params)
@@ -114,6 +116,9 @@ module VSphereCloud
         allow(config_spec).to receive(:device_change) do
           device_change
         end
+
+        # TODO: Remove this once we handle placement resources better
+        allow(vm_config).to receive(:is_top_level_cluster).and_return(false)
       end
 
       # Setup top-level dependency fakes
@@ -143,7 +148,7 @@ module VSphereCloud
           )
           .and_return(clone_vm_task)
         allow(cpi).to receive(:generate_network_env)
-          .with(created_vm.devices, networks, {}) # empty hash is a placeholder for dvs_index
+          .with(created_vm.devices, networks_spec, {}) # empty hash is a placeholder for dvs_index
           .and_return("fake-network-env")
         allow(cpi).to receive(:generate_disk_env)
           .with(created_vm.system_disk, "fake-device")

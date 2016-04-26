@@ -352,7 +352,8 @@ module VSphereCloud
             size: 1024
           },
           available_clusters: { 'fake-cluster' => {} },
-          existing_disks: { 'fake-datastore' => {} }
+          existing_disks: { 'fake-datastore' => {} },
+          ephemeral_datastore_pattern: 'fake-ephemeral-pattern',
         }
         expect(VmConfig).to receive(:new)
           .with(
@@ -403,6 +404,7 @@ module VSphereCloud
           },
           available_clusters: { 'fake-cluster' => {} },
           existing_disks: {},
+          ephemeral_datastore_pattern: 'fake-ephemeral-pattern',
         }
         expect(VmConfig).to receive(:new)
           .with(

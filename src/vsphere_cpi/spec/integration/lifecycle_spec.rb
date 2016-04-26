@@ -99,7 +99,7 @@ describe VSphereCloud::Cloud, external_cpi: false do
             [],
             {'key' => 'value'}
           )
-        }.to raise_error "Cannot create new VM because of IP conflicts with other VMs on the same networks: #{expected_ip_conflicts}"
+        }.to raise_error /Detected IP conflicts with other VMs on the same networks/
       ensure
         @cpi.delete_vm(test_vm_id) if test_vm_id
         @cpi.delete_vm(duplicate_ip_vm_id) if duplicate_ip_vm_id

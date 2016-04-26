@@ -42,7 +42,7 @@ module VSphereCloud
       end
     end
 
-    describe '#networks' do
+    describe '#vsphere_networks' do
       context 'when networks_spec is provided' do
         let(:input) do
           {
@@ -67,7 +67,7 @@ module VSphereCloud
 
         it 'returns a list of vSphere networks' do
           vm_config = VmConfig.new(manifest_params: input)
-          expect(vm_config.networks).to eq(output)
+          expect(vm_config.vsphere_networks).to eq(output)
         end
       end
 
@@ -98,7 +98,7 @@ module VSphereCloud
 
         it 'returns a list of valid vSphere networks' do
           vm_config = VmConfig.new(manifest_params: input)
-          expect(vm_config.networks).to eq(output)
+          expect(vm_config.vsphere_networks).to eq(output)
         end
       end
 
@@ -108,8 +108,16 @@ module VSphereCloud
 
         it 'returns an empty hash' do
           vm_config = VmConfig.new(manifest_params: input)
-          expect(vm_config.networks).to eq(output)
+          expect(vm_config.vsphere_networks).to eq(output)
         end
+      end
+    end
+
+    describe '#networks_spec' do
+      let(:input) { { networks_spec: {"fake-key" => "fake-value"} } }
+      it 'returns the provided networks_spec' do
+        vm_config = VmConfig.new(manifest_params: input)
+        expect(vm_config.networks_spec).to eq({"fake-key" => "fake-value"})
       end
     end
 
@@ -242,7 +250,8 @@ module VSphereCloud
               ],
               "disk" => 4096
             },
-            available_clusters: available_clusters
+            available_clusters: available_clusters,
+            ephemeral_datastore_pattern: "fake-pattern",
           }
         end
         let(:available_clusters) do
@@ -258,7 +267,7 @@ module VSphereCloud
           expect(datastore_picker).to receive(:update)
             .with("fake-ds")
           expect(datastore_picker).to receive(:pick_datastore)
-            .with(4096)
+            .with(4096, "fake-pattern")
             .and_return("fake-ds")
 
           vm_config = VmConfig.new(
@@ -274,7 +283,7 @@ module VSphereCloud
             .with("fake-ds")
           expect(datastore_picker).to receive(:pick_datastore)
             .once
-            .with(4096)
+            .with(4096, "fake-pattern")
             .and_return("fake-ds")
 
           vm_config = VmConfig.new(
@@ -409,6 +418,29 @@ module VSphereCloud
     describe '#validate_drs_rules' do
       context 'when no DRS rules are specified' do
         let(:input) { {} }
+
+        it 'validation passes' do
+          vm_config = VmConfig.new(manifest_params: input)
+          expect{
+            vm_config.validate_drs_rules
+          }.to_not raise_error
+        end
+      end
+
+      context 'when a cluster is specified but no DRS rules are specified' do
+        let(:input) do
+          {
+            resource_pool: {
+              "datacenters" => [
+                "clusters" => [
+                  {
+                    "fake-cluster-name" => {}
+                  }
+                ]
+              ]
+            }
+          }
+        end
 
         it 'validation passes' do
           vm_config = VmConfig.new(manifest_params: input)

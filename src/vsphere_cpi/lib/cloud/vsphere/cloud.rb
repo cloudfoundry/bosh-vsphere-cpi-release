@@ -178,7 +178,8 @@ module VSphereCloud
             size: stemcell_size
           },
           available_clusters: @datacenter.clusters_hash,
-          existing_disks: @datacenter.disks_hash(disk_locality || [])
+          existing_disks: @datacenter.disks_hash(disk_locality || []),
+          ephemeral_datastore_pattern: @datacenter.ephemeral_pattern,
         }
 
         vm_config = VmConfig.new(

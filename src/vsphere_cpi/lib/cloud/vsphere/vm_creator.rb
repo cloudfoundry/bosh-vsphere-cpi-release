@@ -11,10 +11,16 @@ module VSphereCloud
     end
 
     def create(vm_config)
-      cluster = @datacenter.find_cluster(vm_config.cluster_name)
+      # TODO: Remove this once we handle placement resources better
+      if vm_config.is_top_level_cluster
+        cluster_config = ClusterConfig.new(vm_config.cluster_name, vm_config.cluster_spec)
+        cluster = Resources::ClusterProvider.new(@datacenter, @client, @logger).find(vm_config.cluster_name, cluster_config)
+      else
+        cluster = @datacenter.find_cluster(vm_config.cluster_name)
+      end
       datastore = @datacenter.find_datastore(vm_config.datastore_name)
 
-      @ip_conflict_detector.ensure_no_conflicts(vm_config.networks)
+      @ip_conflict_detector.ensure_no_conflicts(vm_config.vsphere_networks)
 
       @logger.info("Creating vm: #{vm_config.name} on #{cluster.mob} stored in #{datastore.mob}")
 
@@ -44,7 +50,7 @@ module VSphereCloud
       config_spec.device_change << ephemeral_disk_config
 
       dvs_index = {}
-      vm_config.networks.each_key do |network_name|
+      vm_config.vsphere_networks.each_key do |network_name|
         network_mob = @client.find_by_inventory_path([@datacenter.name, 'network', network_name])
         virtual_nic = Resources::Nic.create_virtual_nic(
           @cloud_searcher,
@@ -81,7 +87,7 @@ module VSphereCloud
 
       # Set agent env settings
       begin
-        network_env = @cpi.generate_network_env(created_vm.devices, vm_config.networks, dvs_index)
+        network_env = @cpi.generate_network_env(created_vm.devices, vm_config.networks_spec, dvs_index)
         disk_env = @cpi.generate_disk_env(created_vm.system_disk, ephemeral_disk_config.device)
         env = @cpi.generate_agent_env(vm_config.name, created_vm.mob, vm_config.agent_id, network_env, disk_env)
         env['env'] = vm_config.agent_env
