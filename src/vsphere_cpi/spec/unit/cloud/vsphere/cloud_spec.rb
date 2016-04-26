@@ -530,6 +530,45 @@ module VSphereCloud
           vsphere_cloud.attach_disk('fake-vm-cid', 'disk-cid')
         end
       end
+
+      context 'when disk is not in a persistent datastore' do
+        let (:datastore_picker) { instance_double(DatastorePicker) }
+        let(:moved_disk) { Resources::PersistentDisk.new('disk-cid', 1024, datastore_without_disk, 'fake-folder') }
+
+        before do
+          allow(datacenter).to receive(:persistent_datastores)
+            .and_return({
+              'datastore-without-disk' => datastore_without_disk,
+            })
+          allow(vm).to receive(:accessible_datastore_names).and_return(['datastore-with-disk', 'datastore-without-disk'])
+
+          allow(DatastorePicker).to receive(:new)
+            .and_return(datastore_picker)
+        end
+
+        it 'moves the disk to a persistent datastore and attaches it' do
+          expect(datastore_picker).to receive(:update)
+            .with({ 'datastore-with-disk' => 2048, 'datastore-without-disk' => 4096 })
+          expect(datastore_picker).to receive(:pick_datastore)
+            .with(1024, 'fake-persistent-pattern')
+            .and_return('datastore-without-disk')
+
+          expect(datacenter).to receive(:move_disk_to_datastore)
+            .with(disk, datastore_without_disk)
+            .and_return(moved_disk)
+
+          expect(vm).to receive(:attach_disk)
+            .with(moved_disk)
+            .and_return(OpenStruct.new(device: OpenStruct.new(unit_number: 'some-unit-number')))
+          expect(agent_env).to receive(:set_env) do|env_vm, env_location, env|
+            expect(env_vm).to eq(vm_mob)
+            expect(env_location).to eq(vm_location)
+            expect(env['disks']['persistent']['disk-cid']).to eq('some-unit-number')
+          end
+
+          vsphere_cloud.attach_disk('fake-vm-cid', 'disk-cid')
+        end
+      end
     end
 
     describe '#delete_vm' do
