@@ -89,9 +89,11 @@ module VSphereCloud
 
     def config_spec_params
       params = {}
-      params[:num_cpus] = resource_pool["cpu"]
-      params[:memory_mb] = resource_pool["ram"]
-      params[:nested_hv_enabled] = true if resource_pool["nested_hardware_virtualization"]
+      params[:num_cpus] = resource_pool['cpu']
+      params[:memory_mb] = resource_pool['ram']
+      params[:nested_hv_enabled] = true if resource_pool['nested_hardware_virtualization']
+      params[:cpu_hot_add_enabled] = true if resource_pool['cpu_hot_add_enabled']
+      params[:memory_hot_add_enabled] = true if resource_pool['memory_hot_add_enabled']
       params.delete_if { |k, v| v.nil? }
     end
 

@@ -765,6 +765,32 @@ describe VSphereCloud::Cloud, external_cpi: false do
         end
       end
     end
+
+    context 'when having cpu/mem hot add enabled' do
+      let (:resource_pool_with_hot_params) do
+        resource_pool.merge({
+          'cpu_hot_add_enabled' => true,
+          'memory_hot_add_enabled' => true
+        })
+      end
+
+      it 'creates a VM with those properties enabled' do
+        vm_id = @cpi.create_vm(
+          'agent-007',
+          @stemcell_id,
+          resource_pool_with_hot_params,
+          network_spec,
+          [],
+          {}
+        )
+
+        expect(vm_id).to_not be_nil
+        vm = @cpi.vm_provider.find(vm_id)
+        vm_mob = vm.mob
+        expect(vm_mob.config.cpu_hot_add_enabled).to be(true)
+        expect(vm_mob.config.memory_hot_add_enabled).to be(true)
+      end
+    end
   end
 
   def vm_lifecycle(cpi, disk_locality, resource_pool, network_spec, stemcell_id = @stemcell_id)

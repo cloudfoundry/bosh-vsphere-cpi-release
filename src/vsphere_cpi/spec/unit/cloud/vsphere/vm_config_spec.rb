@@ -413,6 +413,25 @@ module VSphereCloud
           expect(vm_config.config_spec_params).to eq(output)
         end
       end
+
+      context 'when cpu_hot_add_enabled is true' do
+        let(:input) { { resource_pool: { "cpu_hot_add_enabled" => true } } }
+        let(:output) { { cpu_hot_add_enabled: true } }
+        it 'sets it to true' do
+          vm_config = VmConfig.new(manifest_params: input)
+          expect(vm_config.config_spec_params).to eq(output)
+        end
+      end
+
+      context 'when memory_hot_add_enabled is true' do
+        let(:input) { { resource_pool: { "memory_hot_add_enabled" => true } } }
+        let(:output) { { memory_hot_add_enabled: true }  }
+        it 'sets it to true' do
+          vm_config = VmConfig.new(manifest_params: input)
+          expect(vm_config.config_spec_params).to eq(output)
+        end
+      end
+
     end
 
     describe '#validate_drs_rules' do

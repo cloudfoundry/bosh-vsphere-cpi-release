@@ -1,5 +1,6 @@
 module VimSdk::VmodlHelper
-  UNDERSCORE_EXCEPTIONS = {
+  # explicitly map fields with consecutive capital letters
+  CAPITALIZATION_EXCEPTIONS = {
     "numCPUs" => "num_cpus",
     "importVApp" => "import_vapp"
   }
@@ -11,7 +12,7 @@ module VimSdk::VmodlHelper
 
   # Borrowed mostly from activesupport
   def underscore(word)
-    exception = UNDERSCORE_EXCEPTIONS[word]
+    exception = CAPITALIZATION_EXCEPTIONS[word]
     return exception if exception
 
     word = word.dup
