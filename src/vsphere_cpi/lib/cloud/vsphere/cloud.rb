@@ -526,6 +526,36 @@ module VSphereCloud
       vm.clone(folder, name, clone_spec)
     end
 
+
+    # This method is used by micro bosh deployment cleaner
+    def get_vms
+      subfolders = []
+      with_thread_name("get_vms") do
+        @logger.info("Looking for VMs in: #{@datacenter.name} - #{@datacenter.master_vm_folder.path}")
+        subfolders += @datacenter.master_vm_folder.mob.child_entity
+        @logger.info("Looking for Stemcells in: #{@datacenter.name} - #{@datacenter.master_template_folder.path}")
+        subfolders += @datacenter.master_template_folder.mob.child_entity
+      end
+      mobs = subfolders.map { |folder| folder.child_entity }.flatten
+      mobs.map do |mob|
+        VSphereCloud::Resources::VM.new(mob.name, mob, @client, @logger)
+      end
+    end
+
+    def ping
+      "pong"
+    end
+
+    def vm_provider
+      VMProvider.new(
+        @datacenter,
+        @client,
+        @logger
+      )
+    end
+
+    private
+
     def import_ovf(name, ovf, resource_pool, datastore)
       import_spec_params = Vim::OvfManager::CreateImportSpecParams.new
       import_spec_params.entity_name = name
@@ -540,18 +570,6 @@ module VSphereCloud
                                                              resource_pool,
                                                              datastore,
                                                              import_spec_params)
-    end
-
-    def obtain_nfc_lease(resource_pool, import_spec, folder)
-      resource_pool.import_vapp(import_spec, folder, nil)
-    end
-
-    def wait_for_nfc_lease(lease)
-      loop do
-        state = @cloud_searcher.get_property(lease, Vim::HttpNfcLease, 'state')
-        return state unless state == Vim::HttpNfcLease::State::INITIALIZING
-        sleep(1.0)
-      end
     end
 
     def upload_ovf(ovf, lease, file_items)
@@ -589,35 +607,6 @@ module VSphereCloud
       lease_updater.finish
       info.entity
     end
-
-    # This method is used by micro bosh deployment cleaner
-    def get_vms
-      subfolders = []
-      with_thread_name("get_vms") do
-        @logger.info("Looking for VMs in: #{@datacenter.name} - #{@datacenter.master_vm_folder.path}")
-        subfolders += @datacenter.master_vm_folder.mob.child_entity
-        @logger.info("Looking for Stemcells in: #{@datacenter.name} - #{@datacenter.master_template_folder.path}")
-        subfolders += @datacenter.master_template_folder.mob.child_entity
-      end
-      mobs = subfolders.map { |folder| folder.child_entity }.flatten
-      mobs.map do |mob|
-        VSphereCloud::Resources::VM.new(mob.name, mob, @client, @logger)
-      end
-    end
-
-    def ping
-      "pong"
-    end
-
-    def vm_provider
-      VMProvider.new(
-        @datacenter,
-        @client,
-        @logger
-      )
-    end
-
-    private
 
     def add_disk_to_agent_env(vm, disk, device_unit_number)
       env = @agent_env.get_current_env(vm.mob, @datacenter.name)
