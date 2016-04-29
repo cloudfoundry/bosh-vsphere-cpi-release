@@ -19,7 +19,8 @@ params:
   BOSH_VSPHERE_CPI_DATASTORE_PATTERN:                   replace-me
   BOSH_VSPHERE_CPI_PERSISTENT_DATASTORE_PATTERN:        replace-me
   BOSH_VSPHERE_CPI_SECOND_DATASTORE:                    replace-me
-  BOSH_VSPHERE_CPI_LOCAL_DATASTORE_PATTERN:             replace-me
+  BOSH_VSPHERE_CPI_SINGLE_LOCAL_DATASTORE_PATTERN:      replace-me
+  BOSH_VSPHERE_CPI_MULTI_LOCAL_DATASTORE_PATTERN:       replace-me
   BOSH_VSPHERE_CPI_RESOURCE_POOL:                       replace-me
   BOSH_VSPHERE_CPI_SECOND_RESOURCE_POOL:                replace-me
   BOSH_VSPHERE_CPI_SECOND_CLUSTER:                      replace-me

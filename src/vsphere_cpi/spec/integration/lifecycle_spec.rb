@@ -766,22 +766,55 @@ describe VSphereCloud::Cloud, external_cpi: false do
       end
     end
 
-    context 'when using local storage for the ephemeral storage pattern' do
-      let(:local_disk_cpi) { described_class.new(@local_disk_cpi_options) }
+    context 'when both ephemeral and persistent storage patterns reference a single host-local datastore' do
+      let(:local_disk_cpi) { described_class.new(@single_local_ds_cpi_options) }
 
-      it 'places ephemeral and persistent disks properly' do
+      it 'places both ephemeral and persistent disks on local DS' do
         begin
           disk_attached = false
           vm_id = local_disk_cpi.create_vm('agent-007', @stemcell_id, resource_pool, network_spec)
           vm = local_disk_cpi.vm_provider.find(vm_id)
           ephemeral_disk = vm.ephemeral_disk
           expect(ephemeral_disk).to_not be_nil
-          expect(ephemeral_disk.backing.datastore.name).to match(@local_datastore_pattern)
+
+          ephemeral_ds = ephemeral_disk.backing.datastore.name
+          expect(ephemeral_ds).to match(@single_local_ds_pattern)
 
           disk_id = local_disk_cpi.create_disk(2048, {}, vm_id)
           expect(disk_id).to_not be_nil
           disk = local_disk_cpi.datacenter.find_disk(disk_id)
-          expect(disk.datastore.name).to match(@persistent_datastore_pattern)
+          expect(disk.datastore.name).to eq(ephemeral_ds)
+
+          local_disk_cpi.attach_disk(vm_id, disk_id)
+          disk_attached = true
+          expect(local_disk_cpi.has_disk?(disk_id)).to be(true)
+        ensure
+          local_disk_cpi.detach_disk(vm_id, disk_id) if disk_attached
+          local_disk_cpi.delete_vm(vm_id) if vm_id
+          local_disk_cpi.delete_disk(disk_id) if disk_id
+        end
+      end
+    end
+
+    context 'when both ephemeral and persistent storage patterns reference a multiple host-local datastores' do
+      let(:local_disk_cpi) { described_class.new(@multi_local_ds_cpi_options) }
+
+      it 'places both ephemeral and persistent disks on local DS' do
+        begin
+          disk_attached = false
+          vm_id = local_disk_cpi.create_vm('agent-007', @stemcell_id, resource_pool, network_spec)
+          vm = local_disk_cpi.vm_provider.find(vm_id)
+          ephemeral_disk = vm.ephemeral_disk
+          expect(ephemeral_disk).to_not be_nil
+
+          ephemeral_ds = ephemeral_disk.backing.datastore.name
+          expect(ephemeral_ds).to match(@multi_local_ds_pattern)
+
+          disk_id = local_disk_cpi.create_disk(2048, {}, vm_id)
+          expect(disk_id).to_not be_nil
+          disk = local_disk_cpi.datacenter.find_disk(disk_id)
+          expect(disk.datastore.name).to eq(ephemeral_ds)
+
           local_disk_cpi.attach_disk(vm_id, disk_id)
           disk_attached = true
           expect(local_disk_cpi.has_disk?(disk_id)).to be(true)

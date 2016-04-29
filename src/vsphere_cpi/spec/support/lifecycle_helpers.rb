@@ -1,6 +1,7 @@
 class LifecycleHelpers
   MISSING_KEY_MESSAGES = {
-    'BOSH_VSPHERE_CPI_LOCAL_DATASTORE_PATTERN' => 'Please ensure you provide a pattern that match datastores that are only accessible by a single host.',
+    'BOSH_VSPHERE_CPI_SINGLE_LOCAL_DATASTORE_PATTERN' => 'Please ensure you provide a pattern that match datastores that are only accessible by a single host.',
+    'BOSH_VSPHERE_CPI_MULTI_LOCAL_DATASTORE_PATTERN' => 'Please ensure you provide a pattern that match datastores that are accessible by multiple hosts.',
     'BOSH_VSPHERE_CPI_NESTED_DATACENTER' => 'Please ensure you provide a datacenter that is in a sub-folder of the root folder.',
     'BOSH_VSPHERE_CPI_NESTED_DATACENTER_DATASTORE_PATTERN' => 'Please ensure you provide a datastore accessible datacenter referenced by BOSH_VSPHERE_CPI_NESTED_DATACENTER.',
     'BOSH_VSPHERE_CPI_NESTED_DATACENTER_CLUSTER' => 'Please ensure you provide a cluster within the datacenter referenced by BOSH_VSPHERE_CPI_NESTED_DATACENTER.',
@@ -159,18 +160,15 @@ class LifecycleHelpers
       fail("#{e.message}\n#{env_var_name}: #{MISSING_KEY_MESSAGES[env_var_name]}")
     end
 
-    def verify_local_disk_infrastructure(cpi_options, env_var_name)
-      datastore_pattern = cpi_options['vcenters'].first['datacenters'].first['datastore_pattern']
-
-      cpi = VSphereCloud::Cloud.new(cpi_options)
-      all_ephemeral_datastores = matching_datastores(cpi, datastore_pattern)
-      nonlocal_disk_ephemeral_datastores = all_ephemeral_datastores.select { |_, datastore| datastore.mob.summary.multiple_host_access }
-      unless (nonlocal_disk_ephemeral_datastores.empty?)
+    def verify_local_disk_infrastructure(datacenter, env_var_name, local_datastore_pattern)
+      all_matching_datastores = matching_datastores(datacenter, local_datastore_pattern)
+      nonlocal_disk_datastores = all_matching_datastores.select { |_, datastore| datastore.mob.summary.multiple_host_access }
+      unless (nonlocal_disk_datastores.empty?)
         fail(
           <<-EOF
-Some datastores found maching `#{env_var_name}`(/#{datastore_pattern}/)
+Some datastores found maching `#{env_var_name}`(/#{local_datastore_pattern}/)
 are configured to allow multiple hosts to access them:
-#{nonlocal_disk_ephemeral_datastores}.
+#{nonlocal_disk_datastores}.
 #{MISSING_KEY_MESSAGES[env_var_name]}
         EOF
         )
@@ -238,8 +236,8 @@ are configured to allow multiple hosts to access them:
     end
 
     def verify_non_overlapping_datastores(cpi_1, pattern_1, env_var_name_1, cpi_2, pattern_2, env_var_name_2)
-      datastore_ids_1 = matching_datastores(cpi_1, pattern_1).map { |k, v| [k, v.mob.to_s] }
-      datastore_ids_2 = matching_datastores(cpi_2, pattern_2).map { |k, v| [k, v.mob.to_s] }
+      datastore_ids_1 = matching_datastores(cpi_1.datacenter, pattern_1).map { |k, v| [k, v.mob.to_s] }
+      datastore_ids_2 = matching_datastores(cpi_2.datacenter, pattern_2).map { |k, v| [k, v.mob.to_s] }
       overlapping_datastore_ids = datastore_ids_1 & datastore_ids_2
       if (!overlapping_datastore_ids.empty?)
         fail("There were overlapping datastores (#{overlapping_datastore_ids.map(&:first).inspect}) found matching /#{pattern_1}/ and /#{pattern_2}/ which came from Environment varibales '#{env_var_name_1}' and '#{env_var_name_2}' respectively.")
@@ -258,7 +256,7 @@ are configured to allow multiple hosts to access them:
     end
 
     def any_vsan?(cpi, pattern)
-      datastores = matching_datastores(cpi, pattern)
+      datastores = matching_datastores(cpi.datacenter, pattern)
       datastores.any? { |datastore_name, _| is_vsan?(cpi, datastore_name)}
     end
 
@@ -269,8 +267,8 @@ are configured to allow multiple hosts to access them:
 
     private
 
-    def matching_datastores(cpi, pattern)
-      clusters = cpi.datacenter.clusters
+    def matching_datastores(datacenter, pattern)
+      clusters = datacenter.clusters
       clusters.inject({}) do |acc, kv|
         cluster = kv.last
         acc.merge!(matching_datastores_in_cluster(cluster, pattern))

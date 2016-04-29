@@ -38,7 +38,7 @@ describe VSphereCloud::Cloud do
 
   let(:destination_cluster) { @cpi.datacenter.clusters[@cluster] }
 
-  describe 'Replicating stemcells across datastores', focus: true, external_cpi: false do
+  describe 'Replicating stemcells across datastores', external_cpi: false do
     it 'raises an error when no stemcell exists for the given stemcell id' do
       expect {
         @cpi.replicate_stemcell(destination_cluster, @cpi.datacenter.all_datastores.values.first, 'abc123')
