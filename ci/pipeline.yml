@@ -160,8 +160,8 @@ jobs:
       tags: ["vsphere-v5.1"]
       file: bosh-cpi-src/ci/tasks/promote-candidate.yml
       params:
-        aws_access_key_id:     {{s3_vsphere_cpi_blobwriter_access_key}}
-        aws_secret_access_key: {{s3_vsphere_cpi_blobwriter_secret_key}}
+        AWS_ACCESS_KEY_ID:     {{s3_vsphere_cpi_blobwriter_access_key}}
+        AWS_SECRET_ACCESS_KEY: {{s3_vsphere_cpi_blobwriter_secret_key}}
 
     - put: bosh-cpi-src-out
       tags: ["vsphere-v5.1"]

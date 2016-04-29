@@ -15,5 +15,5 @@ run:
   path: bosh-cpi-src/ci/tasks/promote-candidate.sh
 
 params:
-  aws_access_key_id:     replace-me
-  aws_secret_access_key: replace-me
+  AWS_ACCESS_KEY_ID:     ""
+  AWS_SECRET_ACCESS_KEY: ""

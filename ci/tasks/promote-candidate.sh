@@ -5,8 +5,8 @@ set -e -x
 source /etc/profile.d/chruby.sh
 chruby 2.1.2
 
-: ${aws_access_key_id:?must be set}
-: ${aws_secret_access_key:?must be set}
+: ${AWS_ACCESS_KEY_ID:?}
+: ${AWS_SECRET_ACCESS_KEY:?}
 
 
 release_dir=$(realpath bosh-cpi-src)
@@ -21,13 +21,13 @@ echo $integer_version > integer-version/tag-file
 cp -a bosh-cpi-src/. updated-repo/
 
 pushd updated-repo
-  echo creating config/private.yml with blobstore secrets
+  echo "creating config/private.yml with blobstore secrets"
   cat > config/private.yml << EOF
 ---
 blobstore:
   s3:
-    access_key_id: $aws_access_key_id
-    secret_access_key: $aws_secret_access_key
+    access_key_id: $AWS_ACCESS_KEY_ID
+    secret_access_key: $AWS_SECRET_ACCESS_KEY
 EOF
 
   echo "using bosh CLI version..."

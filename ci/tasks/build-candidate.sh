@@ -5,7 +5,6 @@ set -e
 release_dir="$( cd $(dirname $0) && cd ../.. && pwd )"
 workspace_dir="$( cd ${release_dir} && cd .. && pwd )"
 
-source ${release_dir}/ci/tasks/utils.sh
 source /etc/profile.d/chruby.sh
 chruby 2.1.2
 
