@@ -15,8 +15,6 @@ module LifecycleProperties
     @disk_path = helper.fetch_property('BOSH_VSPHERE_CPI_DISK_PATH')
 
     @datastore_pattern = helper.fetch_property('BOSH_VSPHERE_CPI_DATASTORE_PATTERN')
-    @single_local_ds_pattern = helper.fetch_property('BOSH_VSPHERE_CPI_SINGLE_LOCAL_DATASTORE_PATTERN')
-    @multi_local_ds_pattern = helper.fetch_property('BOSH_VSPHERE_CPI_MULTI_LOCAL_DATASTORE_PATTERN')
     @persistent_datastore_pattern = helper.fetch_property('BOSH_VSPHERE_CPI_PERSISTENT_DATASTORE_PATTERN')
     @cluster = helper.fetch_property('BOSH_VSPHERE_CPI_CLUSTER')
     @resource_pool_name = helper.fetch_property('BOSH_VSPHERE_CPI_RESOURCE_POOL')
@@ -40,18 +38,6 @@ module LifecycleProperties
       clusters: [{nested_datacenter_cluster_name => {'resource_pool' => nested_datacenter_resource_pool_name}}]
     )
 
-    @single_local_ds_cpi_options = cpi_options(
-      datastore_pattern: @single_local_ds_pattern,
-      persistent_datastore_pattern: @single_local_ds_pattern,
-      clusters: [{@cluster => {'resource_pool' => @resource_pool_name}}]
-    )
-
-    @multi_local_ds_cpi_options = cpi_options(
-      datastore_pattern: @multi_local_ds_pattern,
-      persistent_datastore_pattern: @multi_local_ds_pattern,
-      clusters: [{@cluster => {'resource_pool' => @resource_pool_name}}]
-    )
-
     @second_resource_pool_cpi_options = cpi_options(
       clusters: [{@cluster => {'resource_pool' => @second_resource_pool_within_cluster}}]
     )
@@ -72,36 +58,10 @@ module LifecycleProperties
     second_resource_pool_datacenter = described_class.new(@second_resource_pool_cpi_options).datacenter
     helper.verify_resource_pool(second_resource_pool_datacenter.find_cluster(@cluster), @second_resource_pool_within_cluster, 'BOSH_VSPHERE_CPI_SECOND_RESOURCE_POOL')
 
-    helper.verify_datastore_within_cluster(
-      described_class.new(cpi_options).datacenter,
-      'BOSH_VSPHERE_CPI_SINGLE_LOCAL_DATASTORE_PATTERN',
-      @single_local_ds_pattern,
-      @cluster
-    )
-
-    helper.verify_datastore_within_cluster(
-      described_class.new(cpi_options).datacenter,
-      'BOSH_VSPHERE_CPI_MULTI_LOCAL_DATASTORE_PATTERN',
-      @multi_local_ds_pattern,
-      @cluster
-    )
-
     nested_datacenter_name = helper.fetch_property('BOSH_VSPHERE_CPI_NESTED_DATACENTER')
     nested_datacenter_datastore_pattern = helper.fetch_property('BOSH_VSPHERE_CPI_NESTED_DATACENTER_DATASTORE_PATTERN')
     nested_datacenter_cluster_name = helper.fetch_property('BOSH_VSPHERE_CPI_NESTED_DATACENTER_CLUSTER')
     nested_datacenter_resource_pool_name = helper.fetch_property('BOSH_VSPHERE_CPI_NESTED_DATACENTER_RESOURCE_POOL')
-
-    helper.verify_local_disk_infrastructure(
-      datacenter,
-      'BOSH_VSPHERE_CPI_SINGLE_LOCAL_DATASTORE_PATTERN',
-      @single_local_ds_pattern,
-    )
-
-    helper.verify_local_disk_infrastructure(
-      datacenter,
-      'BOSH_VSPHERE_CPI_MULTI_LOCAL_DATASTORE_PATTERN',
-      @multi_local_ds_pattern,
-    )
 
     helper.verify_datacenter_exists(@nested_datacenter_cpi_options, 'BOSH_VSPHERE_CPI_NESTED_DATACENTER')
     helper.verify_datacenter_is_nested(@nested_datacenter_cpi_options, nested_datacenter_name, 'BOSH_VSPHERE_CPI_NESTED_DATACENTER')
