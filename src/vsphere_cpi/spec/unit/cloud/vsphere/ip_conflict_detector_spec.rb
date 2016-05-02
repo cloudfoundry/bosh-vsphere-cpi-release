@@ -4,8 +4,8 @@ module VSphereCloud
   describe IPConflictDetector do
     let(:networks) do
       {
-        'network_1' => '169.254.1.1',
-        'network_2' => '169.254.2.1'
+        'network_1' => ['169.254.1.1'],
+        'network_2' => ['169.254.2.1', '169.254.3.1']
       }
     end
     let(:logger) { double('logger', debug: nil, info: nil) }
@@ -43,6 +43,11 @@ module VSphereCloud
               VimSdk::Vim::Vm::GuestInfo::NicInfo,
               ip_address: ['169.254.2.1', 'fe80::250:56ff:fea9:793d'],
               network: 'network_2'
+            ),
+            instance_double(
+              VimSdk::Vim::Vm::GuestInfo::NicInfo,
+              ip_address: ['169.254.3.1', 'fe80::250:56ff:fea9:793d'],
+              network: 'network_2'
             )
           ]
         end
@@ -50,6 +55,7 @@ module VSphereCloud
         it 'detects conflicts with deployed VMs' do
           allow(client).to receive(:find_vm_by_ip).with('169.254.1.1').and_return(deployed_vm)
           allow(client).to receive(:find_vm_by_ip).with('169.254.2.1').and_return(deployed_vm)
+          allow(client).to receive(:find_vm_by_ip).with('169.254.3.1').and_return(deployed_vm)
 
           conflict_detector = IPConflictDetector.new(logger, client)
           expect {
@@ -60,7 +66,9 @@ module VSphereCloud
               "network_1",
               "169.254.1.1",
               "network_2",
-              "169.254.2.1"
+              "169.254.2.1",
+              "network_2",
+              "169.254.3.1"
             )
           end
         end
@@ -83,6 +91,7 @@ module VSphereCloud
         it 'does not detect conflicts with deployed VMs' do
           allow(client).to receive(:find_vm_by_ip).with('169.254.1.1').and_return(deployed_vm)
           allow(client).to receive(:find_vm_by_ip).with('169.254.2.1').and_return(deployed_vm)
+          allow(client).to receive(:find_vm_by_ip).with('169.254.3.1').and_return(deployed_vm)
           conflict_detector = IPConflictDetector.new(logger, client)
           expect {
             conflict_detector.ensure_no_conflicts(networks)

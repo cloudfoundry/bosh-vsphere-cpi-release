@@ -80,8 +80,8 @@ module VSphereCloud
         cloud_properties = network_spec['cloud_properties']
         unless cloud_properties.nil? || cloud_properties['name'].nil?
           name = cloud_properties['name']
-          ip = network_spec['ip']
-          networks_map[name] = ip
+          networks_map[name] ||= []
+          networks_map[name] << network_spec['ip']
         end
       end
       networks_map

@@ -191,6 +191,33 @@ describe VSphereCloud::Cloud, external_cpi: false do
     end
   end
 
+  context 'with multiple manual networks' do
+    let(:network_spec) do
+      {
+        'static' => {
+          'ip' => "169.254.#{rand(1..254)}.#{rand(4..254)}",
+          'netmask' => '255.255.254.0',
+          'cloud_properties' => {'name' => vlan},
+          'default' => ['dns', 'gateway'],
+          'dns' => ['169.254.1.2'],
+          'gateway' => '169.254.1.3'
+        },
+        'second' => {
+          'ip' => "169.254.#{rand(1..254)}.#{rand(4..254)}",
+          'netmask' => '255.255.254.0',
+          'cloud_properties' => {'name' => vlan},
+          'default' => ['dns', 'gateway'],
+          'dns' => ['169.254.1.2'],
+          'gateway' => '169.254.1.3'
+        }
+      }
+    end
+
+    it 'should exercise the vm lifecycle' do
+      vm_lifecycle(@cpi, [], resource_pool, network_spec)
+    end
+  end
+
   describe 'vSphere specific lifecycle' do
     context 'given a cpi that is configured without specifying the vSphere resource pool' do
       let(:second_cpi) do

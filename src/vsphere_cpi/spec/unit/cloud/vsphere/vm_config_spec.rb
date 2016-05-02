@@ -54,14 +54,18 @@ module VSphereCloud
               "net2" => {
                 "ip" => "5.6.7.8",
                 "cloud_properties" => {"name" => "network-2"}
+              },
+              "net2_second_ip" => {
+                "ip" => "9.9.9.9",
+                "cloud_properties" => {"name" => "network-2"}
               }
             }
           }
         end
         let(:output) do
           {
-            "network-1" => "1.2.3.4",
-            "network-2" => "5.6.7.8"
+            "network-1" => ["1.2.3.4"],
+            "network-2" => ["5.6.7.8", "9.9.9.9"]
           }
         end
 
@@ -92,7 +96,7 @@ module VSphereCloud
         end
         let(:output) do
           {
-            "network-3" => "9.9.9.9"
+            "network-3" => ["9.9.9.9"]
           }
         end
 

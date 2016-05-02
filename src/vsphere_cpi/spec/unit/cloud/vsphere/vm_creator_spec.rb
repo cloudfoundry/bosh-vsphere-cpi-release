@@ -45,7 +45,7 @@ module VSphereCloud
       end
       let(:networks) do
         {
-          "fake-network-name" => "1.2.3.4"
+          "fake-network-name" => ["1.2.3.4"]
         }
       end
       let(:networks_spec) { "fake-network-spec" }

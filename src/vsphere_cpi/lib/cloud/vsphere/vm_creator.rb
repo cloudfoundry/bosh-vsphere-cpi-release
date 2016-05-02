@@ -50,17 +50,19 @@ module VSphereCloud
       config_spec.device_change << ephemeral_disk_config
 
       dvs_index = {}
-      vm_config.vsphere_networks.each_key do |network_name|
-        network_mob = @client.find_by_inventory_path([@datacenter.name, 'network', network_name])
-        virtual_nic = Resources::Nic.create_virtual_nic(
-          @cloud_searcher,
-          network_name,
-          network_mob,
-          replicated_stemcell_vm.pci_controller.key,
-          dvs_index
-        )
-        nic_config = Resources::VM.create_add_device_spec(virtual_nic)
-        config_spec.device_change << nic_config
+      vm_config.vsphere_networks.each do |network_name, ips|
+        ips.each do |_|
+          network_mob = @client.find_by_inventory_path([@datacenter.name, 'network', network_name])
+          virtual_nic = Resources::Nic.create_virtual_nic(
+            @cloud_searcher,
+            network_name,
+            network_mob,
+            replicated_stemcell_vm.pci_controller.key,
+            dvs_index
+          )
+          nic_config = Resources::VM.create_add_device_spec(virtual_nic)
+          config_spec.device_change << nic_config
+        end
       end
 
       replicated_stemcell_vm.nics.each do |nic|
