@@ -795,6 +795,27 @@ describe VSphereCloud::Cloud, external_cpi: false do
     end
   end
 
+  context 'when cluster specified for VM cannot access datastore matching the given pattern' do
+    let(:cpi) do
+      options_with_cluster_datastore_mismatch = cpi_options(
+        datastore_pattern: @second_cluster_datastore,
+        persistent_datastore_pattern: @second_cluster_datastore,
+        clusters: [{ @cluster => {'resource_pool' => @resource_pool_name} }],
+      )
+      second_cluster_cpi = described_class.new(options_with_cluster_datastore_mismatch)
+    end
+
+    it 'raises an error containing target cluster and datastore' do
+      expect {
+        cpi.create_vm('agent-007', @stemcell_id, resource_pool, network_spec)
+      }.to raise_error { |error|
+        expect(error).to be_a(Bosh::Clouds::CloudError)
+        expect(error.message).to include(@second_cluster_datastore)
+        expect(error.message).to include(@cluster)
+      }
+    end
+  end
+
   describe 'host-local storage patterns', :host_local => true do
     let(:local_disk_cpi) { described_class.new(local_disk_options) }
 

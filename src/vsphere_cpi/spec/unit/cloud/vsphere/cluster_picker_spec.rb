@@ -405,7 +405,14 @@ module VSphereCloud
               existing_disks = {}
               expect {
                 picker.pick_cluster(4096, 1024, existing_disks)
-              }.to raise_error(Bosh::Clouds::CloudError)
+              }.to raise_error { |error|
+                expect(error).to be_a(Bosh::Clouds::CloudError)
+                expect(error.message).to include(ephemeral_pattern.inspect)
+                expect(error.message).to include(persistent_pattern.inspect)
+                expect(error.message).to include("cluster-1")
+                expect(error.message).to include("cluster-2")
+                expect(error.message).to include("cluster-3")
+              }
             end
           end
         end

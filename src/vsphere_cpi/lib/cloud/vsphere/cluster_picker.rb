@@ -35,7 +35,13 @@ module VSphereCloud
         return sorted_clusters.first.first
       end
 
-      raise Bosh::Clouds::CloudError, "Could not find any suitable clusters with memory: #{req_memory}, ephemeral disk size: #{req_ephemeral_size}, and persistent disks: #{existing_disks.inspect}. Available clusters: #{@available_clusters.inspect}"
+      raise Bosh::Clouds::CloudError,
+        "Could not find any suitable clusters with memory: #{req_memory}, " \
+        "ephemeral disk size: #{req_ephemeral_size}, " \
+        "and persistent disks: #{existing_disks.inspect}. " \
+        "Configured ephemeral datastore pattern: #{@ephemeral_ds_pattern.inspect}. " \
+        "Configured persistent datastore pattern: #{@persistent_ds_pattern.inspect}. " \
+        "Available clusters: #{@available_clusters.inspect}"
     end
 
     private
