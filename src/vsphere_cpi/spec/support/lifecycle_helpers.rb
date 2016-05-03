@@ -265,8 +265,6 @@ are configured to allow multiple hosts to access them:
       datastore_mob.summary.type == "vsan"
     end
 
-    private
-
     def matching_datastores(datacenter, pattern)
       clusters = datacenter.clusters
       clusters.inject({}) do |acc, kv|
@@ -278,6 +276,8 @@ are configured to allow multiple hosts to access them:
     def matching_datastores_in_cluster(cluster, pattern)
       cluster.all_datastores.select { |ds_name| ds_name =~ /#{pattern}/ }
     end
+
+    private
 
     def build_actual_privileges_list(cpi, entity)
       all_privileges = cpi.client.service_content.authorization_manager.privilege_list.map(&:priv_id)
