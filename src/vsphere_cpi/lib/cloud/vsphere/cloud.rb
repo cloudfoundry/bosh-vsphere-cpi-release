@@ -90,9 +90,15 @@ module VSphereCloud
           stemcell_size = File.size(image) / (1024 * 1024)
 
           clusters = @datacenter.clusters_hash
-          cluster_picker = ClusterPicker.new(@datacenter.ephemeral_pattern, @datacenter.persistent_pattern)
+          cluster_picker = ClusterPicker.new
           cluster_picker.update(clusters)
-          cluster_name = cluster_picker.pick_cluster(0, stemcell_size, {})
+          cluster_name = cluster_picker.pick_cluster(
+            req_memory: 0,
+            req_ephemeral_size: stemcell_size,
+            existing_disks: {},
+            ephemeral_datastore_pattern: @datacenter.ephemeral_pattern,
+            persistent_datastore_pattern: @datacenter.persistent_pattern,
+          )
           cluster = @datacenter.find_cluster(cluster_name)
 
           datastore_picker = DatastorePicker.new
@@ -186,12 +192,13 @@ module VSphereCloud
           available_clusters: @datacenter.clusters_hash,
           existing_disks: @datacenter.disks_hash(disk_locality || []),
           ephemeral_datastore_pattern: @datacenter.ephemeral_pattern,
+          persistent_datastore_pattern: @datacenter.persistent_pattern,
         }
 
         vm_config = VmConfig.new(
           manifest_params: manifest_params,
           datastore_picker: DatastorePicker.new,
-          cluster_picker: ClusterPicker.new(@datacenter.ephemeral_pattern, @datacenter.persistent_pattern)
+          cluster_picker: ClusterPicker.new
         )
 
         vm_config.validate

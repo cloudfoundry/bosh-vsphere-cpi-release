@@ -12,28 +12,41 @@ module VSphereCloud
     end
 
     def cluster_name
-      return clusters_spec.keys.first if clusters_spec.keys.first
-      return nil if @cluster_picker.nil?
       return @cluster_name if @cluster_name
+      if resource_pool_clusters_spec.keys.first
+        resource_pool_cluster_name = resource_pool_clusters_spec.keys.first
+        if available_clusters[resource_pool_cluster_name].nil?
+          raise Bosh::Clouds::CloudError, "Cluster '#{resource_pool_cluster_name}' does not match provided clusters [#{available_clusters.keys.join(', ')}]"
+        end
+        return resource_pool_cluster_name
+      end
+
+      return nil if @cluster_picker.nil?
 
       @cluster_picker.update(available_clusters)
 
       total_eph_disk_size = ephemeral_disk_size + config_spec_params[:memory_mb] + stemcell_size
-      @cluster_name = @cluster_picker.pick_cluster(config_spec_params[:memory_mb], total_eph_disk_size, existing_disks)
+      @cluster_name = @cluster_picker.pick_cluster(
+        req_memory: config_spec_params[:memory_mb],
+        req_ephemeral_size: total_eph_disk_size,
+        existing_disks: existing_disks,
+        ephemeral_datastore_pattern: ephemeral_datastore_pattern,
+        persistent_datastore_pattern: persistent_datastore_pattern,
+        )
     end
 
     # TODO: Remove this once we handle placement resources better
     def is_top_level_cluster
-      return true if clusters_spec.keys.first
+      return true if resource_pool_clusters_spec.keys.first
     end
 
     # TODO: Remove this once we handle placement resources better
     def cluster_spec
-        return clusters_spec.values.first
+        return resource_pool_clusters_spec.values.first
     end
 
     def drs_rule
-      cluster_config = clusters_spec.values.first
+      cluster_config = resource_pool_clusters_spec.values.first
       return nil if cluster_config.nil?
 
       (cluster_config["drs_rules"] || []).first
@@ -44,10 +57,9 @@ module VSphereCloud
       return @datastore_name if @datastore_name
 
       cluster_properties = available_clusters[cluster_name]
-      return nil if cluster_properties.nil?
 
       @datastore_picker.update(cluster_properties[:datastores])
-      @datastore_name = @datastore_picker.pick_datastore(ephemeral_disk_size, @manifest_params[:ephemeral_datastore_pattern])
+      @datastore_name = @datastore_picker.pick_datastore(ephemeral_disk_size, ephemeral_datastore_pattern)
     end
 
     def ephemeral_disk_size
@@ -102,7 +114,7 @@ module VSphereCloud
     end
 
     def validate_drs_rules
-      cluster_config = clusters_spec.values.first
+      cluster_config = resource_pool_clusters_spec.values.first
       return if cluster_config.nil?
 
       drs_rules = cluster_config["drs_rules"]
@@ -141,9 +153,22 @@ module VSphereCloud
       resource_pool['datacenters'] || []
     end
 
-    def clusters_spec
+    def resource_pool_clusters_spec
       datacenter_spec = datacenters_spec.first || {}
       datacenter_spec.fetch('clusters', []).first || {}
+    end
+
+    def ephemeral_datastore_pattern
+      if resource_pool.has_key? 'datastores'
+        basic_ephemeral_pattern = resource_pool['datastores'].map { |pattern| Regexp.escape(pattern) }.join('|')
+        ephemeral_pattern = Regexp.new("^(#{basic_ephemeral_pattern})$")
+        return ephemeral_pattern
+      end
+      Regexp.new(@manifest_params[:ephemeral_datastore_pattern] || "")
+    end
+
+    def persistent_datastore_pattern
+      Regexp.new(@manifest_params[:persistent_datastore_pattern] || "")
     end
   end
 end

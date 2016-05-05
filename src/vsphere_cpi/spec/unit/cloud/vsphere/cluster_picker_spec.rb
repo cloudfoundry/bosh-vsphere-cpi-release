@@ -34,52 +34,95 @@ module VSphereCloud
         end
 
         it 'returns only the cluster that can match the provided requirements' do
-          picker = ClusterPicker.new(ephemeral_pattern, persistent_pattern, 0, 0)
+          picker = ClusterPicker.new(0, 0)
           picker.update(available_clusters)
           existing_disks = {}
 
-          expect(picker.suitable_clusters(2048, 20480, existing_disks)).to eq({
+          expect(picker.suitable_clusters(
+            req_memory: 2048,
+            req_ephemeral_size: 20480,
+            existing_disks: existing_disks,
+            ephemeral_datastore_pattern: ephemeral_pattern,
+            persistent_datastore_pattern: persistent_pattern
+          )).to eq({
             "cluster-1" => available_clusters["cluster-1"]
           })
         end
 
         it 'returns all the clusters that can match the provided requirements' do
-          picker = ClusterPicker.new(ephemeral_pattern, persistent_pattern, 0, 0)
+          picker = ClusterPicker.new(0, 0)
           picker.update(available_clusters)
           existing_disks = {}
 
-          expect(picker.suitable_clusters(1024, 20480, existing_disks)).to eq({
+          expect(picker.suitable_clusters(
+            req_memory: 1024,
+            req_ephemeral_size: 20480,
+            existing_disks: existing_disks,
+            ephemeral_datastore_pattern: ephemeral_pattern,
+            persistent_datastore_pattern: persistent_pattern
+          )).to eq({
             "cluster-1" => available_clusters["cluster-1"],
             "cluster-2" => available_clusters["cluster-2"]
           })
         end
 
         it 'returns an empty hash if no cluster can match the provided requirements' do
-          picker = ClusterPicker.new(ephemeral_pattern, persistent_pattern, 0, 0)
+          picker = ClusterPicker.new(0, 0)
           picker.update(available_clusters)
           existing_disks = {}
 
-          expect(picker.suitable_clusters(2048, 20481, existing_disks)).to eq({})
+          expect(picker.suitable_clusters(
+            req_memory: 2048,
+            req_ephemeral_size: 20481,
+            existing_disks: existing_disks,
+            ephemeral_datastore_pattern: ephemeral_pattern,
+            persistent_datastore_pattern: persistent_pattern
+          )).to eq({})
         end
 
         it 'returns a cluster considering the disk headroom' do
-          picker = ClusterPicker.new(ephemeral_pattern, persistent_pattern, 0, 1024)
+          picker = ClusterPicker.new(0, 1024)
           picker.update(available_clusters)
           existing_disks = {}
 
-          expect(picker.suitable_clusters(2048, 20480, existing_disks)).to eq({})
-          expect(picker.suitable_clusters(2048, 20480-1024, existing_disks)).to eq({
+          expect(picker.suitable_clusters(
+            req_memory: 2048,
+            req_ephemeral_size: 20480,
+            existing_disks: existing_disks,
+            ephemeral_datastore_pattern: ephemeral_pattern,
+            persistent_datastore_pattern: persistent_pattern
+          )).to eq({})
+
+          expect(picker.suitable_clusters(
+            req_memory: 2048,
+            req_ephemeral_size: 20480-1024,
+            existing_disks: existing_disks,
+            ephemeral_datastore_pattern: ephemeral_pattern,
+            persistent_datastore_pattern: persistent_pattern
+          )).to eq({
             "cluster-1" => available_clusters["cluster-1"],
           })
         end
 
         it 'returns a cluster considering the memory headroom' do
-          picker = ClusterPicker.new(ephemeral_pattern, persistent_pattern, 128, 0)
+          picker = ClusterPicker.new(128, 0)
           picker.update(available_clusters)
           existing_disks = {}
 
-          expect(picker.suitable_clusters(2048, 20480, existing_disks)).to eq({})
-          expect(picker.suitable_clusters(2048-128, 20480, existing_disks)).to eq({
+          expect(picker.suitable_clusters(
+            req_memory: 2048,
+            req_ephemeral_size: 20480,
+            existing_disks: existing_disks,
+            ephemeral_datastore_pattern: ephemeral_pattern,
+            persistent_datastore_pattern: persistent_pattern
+          )).to eq({})
+          expect(picker.suitable_clusters(
+            req_memory: 2048-128,
+            req_ephemeral_size: 20480,
+            existing_disks: existing_disks,
+            ephemeral_datastore_pattern: ephemeral_pattern,
+            persistent_datastore_pattern: persistent_pattern
+          )).to eq({
             "cluster-1" => available_clusters["cluster-1"],
           })
         end
@@ -113,7 +156,7 @@ module VSphereCloud
         end
 
         it 'returns all the clusters as they all match the provided requirements' do
-          picker = ClusterPicker.new(ephemeral_pattern, persistent_pattern, 0, 0)
+          picker = ClusterPicker.new(0, 0)
           picker.update(available_clusters)
           existing_disks = {
             "persistent-ds-1" => {
@@ -121,7 +164,13 @@ module VSphereCloud
             }
           }
 
-          expect(picker.suitable_clusters(2048, 1024, existing_disks)).to eq({
+          expect(picker.suitable_clusters(
+            req_memory: 2048,
+            req_ephemeral_size: 1024,
+            existing_disks: existing_disks,
+            ephemeral_datastore_pattern: ephemeral_pattern,
+            persistent_datastore_pattern: persistent_pattern
+          )).to eq({
             "cluster-1" => available_clusters["cluster-1"],
             "cluster-2" => available_clusters["cluster-2"],
             "cluster-3" => available_clusters["cluster-3"]
@@ -129,7 +178,7 @@ module VSphereCloud
         end
 
         it 'returns only the clusters that match the provided requirements' do
-          picker = ClusterPicker.new(ephemeral_pattern, persistent_pattern, 0, 0)
+          picker = ClusterPicker.new(0, 0)
           picker.update(available_clusters)
           existing_disks = {
             "persistent-ds-1" => {
@@ -137,10 +186,38 @@ module VSphereCloud
             }
           }
 
-          expect(picker.suitable_clusters(2048, 1024, existing_disks)).to eq({
+          expect(picker.suitable_clusters(
+            req_memory: 2048,
+            req_ephemeral_size: 1024,
+            existing_disks: existing_disks,
+            ephemeral_datastore_pattern: ephemeral_pattern,
+            persistent_datastore_pattern: persistent_pattern
+          )).to eq({
             "cluster-1" => available_clusters["cluster-1"],
             "cluster-2" => available_clusters["cluster-2"]
           })
+        end
+
+        context 'with an existing disk already in the target cluster, but in a datastore that does not match the persistent disk pattern' do
+          let(:persistent_pattern) { /different-persistent-ds-.*/ }
+
+          it 'returns an empty hash' do
+            picker = ClusterPicker.new(0, 0)
+            picker.update(available_clusters)
+            existing_disks = {
+              "persistent-ds-1" => {
+                "disk-1" => 10240
+              }
+            }
+
+            expect(picker.suitable_clusters(
+              req_memory: 2048,
+              req_ephemeral_size: 1024,
+              existing_disks: existing_disks,
+              ephemeral_datastore_pattern: ephemeral_pattern,
+              persistent_datastore_pattern: persistent_pattern
+            )).to eq({})
+          end
         end
 
         context 'with two existing disks in the same datastore' do
@@ -154,9 +231,16 @@ module VSphereCloud
           end
 
           it 'returns only the clusters that match the provided requirements' do
-            picker = ClusterPicker.new(ephemeral_pattern, persistent_pattern, 0, 0)
+            picker = ClusterPicker.new(0, 0)
             picker.update(available_clusters)
-            expect(picker.suitable_clusters(2048, 1024, existing_disks)).to eq({
+
+            expect(picker.suitable_clusters(
+              req_memory: 2048,
+              req_ephemeral_size: 1024,
+              existing_disks: existing_disks,
+              ephemeral_datastore_pattern: ephemeral_pattern,
+              persistent_datastore_pattern: persistent_pattern
+            )).to eq({
               "cluster-1" => available_clusters["cluster-1"],
               "cluster-2" => available_clusters["cluster-2"]
             })
@@ -183,9 +267,15 @@ module VSphereCloud
               }
             end
             it 'returns the cluster with the multiple persistent datastores' do
-              picker = ClusterPicker.new(ephemeral_pattern, persistent_pattern, 0, 0)
+              picker = ClusterPicker.new(0, 0)
               picker.update(available_clusters)
-              expect(picker.suitable_clusters(2048, 1024, existing_disks)).to eq({
+              expect(picker.suitable_clusters(
+                req_memory: 2048,
+                req_ephemeral_size: 1024,
+                existing_disks: existing_disks,
+                ephemeral_datastore_pattern: ephemeral_pattern,
+                persistent_datastore_pattern: persistent_pattern
+              )).to eq({
                 "cluster-1" => available_clusters["cluster-1"],
               })
             end
@@ -225,9 +315,16 @@ module VSphereCloud
             end
 
             it 'returns only the clusters that match the provided requirements' do
-              picker = ClusterPicker.new(ephemeral_pattern, persistent_pattern, 0, 0)
+              picker = ClusterPicker.new(0, 0)
               picker.update(available_clusters)
-              expect(picker.suitable_clusters(2048, 1024, existing_disks)).to eq({
+
+              expect(picker.suitable_clusters(
+                req_memory: 2048,
+                req_ephemeral_size: 1024,
+                existing_disks: existing_disks,
+                ephemeral_datastore_pattern: ephemeral_pattern,
+                persistent_datastore_pattern: persistent_pattern
+              )).to eq({
                 "cluster-1" => available_clusters["cluster-1"],
               })
             end
@@ -247,9 +344,15 @@ module VSphereCloud
               end
 
               it 'returns the only cluster that can accomodate the disk from the separate datastore' do
-                picker = ClusterPicker.new(ephemeral_pattern, persistent_pattern, 0, 0)
+                picker = ClusterPicker.new(0, 0)
                 picker.update(available_clusters)
-                expect(picker.suitable_clusters(2048, 1024, existing_disks)).to eq({
+                expect(picker.suitable_clusters(
+                  req_memory: 2048,
+                  req_ephemeral_size: 1024,
+                  existing_disks: existing_disks,
+                  ephemeral_datastore_pattern: ephemeral_pattern,
+                  persistent_datastore_pattern: persistent_pattern
+                )).to eq({
                   "cluster-1" => available_clusters["cluster-1"],
                 })
               end
@@ -267,9 +370,15 @@ module VSphereCloud
               end
 
               it 'returns no clusters' do
-                picker = ClusterPicker.new(ephemeral_pattern, persistent_pattern, 0, 0)
+                picker = ClusterPicker.new(0, 0)
                 picker.update(available_clusters)
-                expect(picker.suitable_clusters(2048, 1024, existing_disks)).to eq({})
+                expect(picker.suitable_clusters(
+                  req_memory: 2048,
+                  req_ephemeral_size: 1024,
+                  existing_disks: existing_disks,
+                  ephemeral_datastore_pattern: ephemeral_pattern,
+                  persistent_datastore_pattern: persistent_pattern
+                )).to eq({})
               end
             end
           end
@@ -303,15 +412,20 @@ module VSphereCloud
             }
           end
           it 'returns the only cluster with suitable storage for both the ephemeral disk and persistent disk' do
-            picker = ClusterPicker.new(ephemeral_pattern, persistent_pattern, 0, 0)
+            picker = ClusterPicker.new(0, 0)
             picker.update(available_clusters)
-            expect(picker.suitable_clusters(2048, 5120, existing_disks)).to eq({
+            expect(picker.suitable_clusters(
+              req_memory: 2048,
+              req_ephemeral_size: 5120,
+              existing_disks: existing_disks,
+              ephemeral_datastore_pattern: ephemeral_pattern,
+              persistent_datastore_pattern: persistent_pattern
+            )).to eq({
               "cluster-2" => available_clusters["cluster-2"],
             })
           end
         end
       end
-
     end
 
     describe '#pick_clusters' do
@@ -347,19 +461,31 @@ module VSphereCloud
           end
 
           it 'picks the one cluster that matches the provided requirements' do
-            picker = ClusterPicker.new(ephemeral_pattern, persistent_pattern, 0, 0)
+            picker = ClusterPicker.new(0, 0)
             picker.update(available_clusters)
             existing_disks = {}
 
-            expect(picker.pick_cluster(2048, 20480, existing_disks)).to eq("cluster-2")
+            expect(picker.pick_cluster(
+              req_memory: 2048,
+              req_ephemeral_size: 20480,
+              existing_disks: existing_disks,
+              ephemeral_datastore_pattern: ephemeral_pattern,
+              persistent_datastore_pattern: persistent_pattern
+            )).to eq("cluster-2")
           end
 
           it 'picks the one cluster that matches the provided requirements' do
-            picker = ClusterPicker.new(ephemeral_pattern, persistent_pattern, 0, 0)
+            picker = ClusterPicker.new(0, 0)
             picker.update(available_clusters)
             existing_disks = {}
 
-            expect(picker.pick_cluster(2048, 1024, existing_disks)).to eq("cluster-2")
+            expect(picker.pick_cluster(
+              req_memory: 2048,
+              req_ephemeral_size: 1024,
+              existing_disks: existing_disks,
+              ephemeral_datastore_pattern: ephemeral_pattern,
+              persistent_datastore_pattern: persistent_pattern
+            )).to eq("cluster-2")
           end
 
           context 'when clusters have the same disk space but different memory capacities' do
@@ -390,21 +516,33 @@ module VSphereCloud
               }
             end
             it 'picks the cluster with the highest memory capacity' do
-              picker = ClusterPicker.new(ephemeral_pattern, persistent_pattern, 0, 0)
+              picker = ClusterPicker.new(0, 0)
               picker.update(available_clusters)
               existing_disks = {}
 
-              expect(picker.pick_cluster(2048, 1024, existing_disks)).to eq("cluster-2")
+              expect(picker.pick_cluster(
+                req_memory: 2048,
+                req_ephemeral_size: 1024,
+                existing_disks: existing_disks,
+                ephemeral_datastore_pattern: ephemeral_pattern,
+                persistent_datastore_pattern: persistent_pattern
+              )).to eq("cluster-2")
             end
           end
 
           context 'when there is no matching/available cluster' do
             it 'raises an error' do
-              picker = ClusterPicker.new(ephemeral_pattern, persistent_pattern, 0, 0)
+              picker = ClusterPicker.new(0, 0)
               picker.update(available_clusters)
               existing_disks = {}
               expect {
-                picker.pick_cluster(4096, 1024, existing_disks)
+                picker.pick_cluster(
+                  req_memory: 4096,
+                  req_ephemeral_size: 1024,
+                  existing_disks: existing_disks,
+                  ephemeral_datastore_pattern: ephemeral_pattern,
+                  persistent_datastore_pattern: persistent_pattern
+                )
               }.to raise_error { |error|
                 expect(error).to be_a(Bosh::Clouds::CloudError)
                 expect(error.message).to include(ephemeral_pattern.inspect)
@@ -449,10 +587,16 @@ module VSphereCloud
               }
             end
             it 'picks the cluster with more space in suitable datastores for the ephemeral disk and the biggest suitable persistent datastore' do
-              picker = ClusterPicker.new(ephemeral_pattern, persistent_pattern, 0, 0)
+              picker = ClusterPicker.new(0, 0)
               picker.update(available_clusters)
 
-              expect(picker.pick_cluster(2048, 1024, existing_disks)).to eq("cluster-1")
+              expect(picker.pick_cluster(
+                req_memory: 2048,
+                req_ephemeral_size: 1024,
+                existing_disks: existing_disks,
+                ephemeral_datastore_pattern: ephemeral_pattern,
+                persistent_datastore_pattern: persistent_pattern
+              )).to eq("cluster-1")
             end
           end
 
@@ -465,10 +609,15 @@ module VSphereCloud
               }
             end
             it 'picks the cluster that does not require a disk migration' do
-              picker = ClusterPicker.new(ephemeral_pattern, persistent_pattern, 0, 0)
+              picker = ClusterPicker.new(0, 0)
               picker.update(available_clusters)
-
-              expect(picker.pick_cluster(2048, 1024, existing_disks)).to eq("cluster-2")
+              expect(picker.pick_cluster(
+                req_memory: 2048,
+                req_ephemeral_size: 1024,
+                existing_disks: existing_disks,
+                ephemeral_datastore_pattern: ephemeral_pattern,
+                persistent_datastore_pattern: persistent_pattern
+              )).to eq("cluster-2")
             end
           end
 
@@ -503,10 +652,15 @@ module VSphereCloud
               }
             end
             it 'picks a suitable cluster that requires the smallest disk migration' do
-              picker = ClusterPicker.new(ephemeral_pattern, persistent_pattern, 0, 0)
+              picker = ClusterPicker.new(0, 0)
               picker.update(available_clusters)
-
-              expect(picker.pick_cluster(2048, 1024, existing_disks)).to eq("cluster-1")
+              expect(picker.pick_cluster(
+                req_memory: 2048,
+                req_ephemeral_size: 1024,
+                existing_disks: existing_disks,
+                ephemeral_datastore_pattern: ephemeral_pattern,
+                persistent_datastore_pattern: persistent_pattern
+              )).to eq("cluster-1")
             end
           end
 
@@ -519,10 +673,16 @@ module VSphereCloud
               }
             end
             it 'raises an error' do
-              picker = ClusterPicker.new(ephemeral_pattern, persistent_pattern, 0, 0)
+              picker = ClusterPicker.new(0, 0)
               picker.update(available_clusters)
               expect {
-                picker.pick_cluster(512, 1024, existing_disks)
+                picker.pick_cluster(
+                  req_memory: 512,
+                  req_ephemeral_size: 1024,
+                  existing_disks: existing_disks,
+                  ephemeral_datastore_pattern: ephemeral_pattern,
+                  persistent_datastore_pattern: persistent_pattern
+                )
               }.to raise_error(Bosh::Clouds::CloudError)
             end
           end

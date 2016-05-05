@@ -134,7 +134,8 @@ module VSphereCloud
     end
 
     describe '#cluster_name' do
-      context 'when datacenters and clusters are specified' do
+
+      context 'when datacenters and clusters are specified in resource_pool' do
         let(:input) do
           {
             resource_pool: {
@@ -143,7 +144,13 @@ module VSphereCloud
                   { "fake-cluster-name" => {} }
                 ]
               ]
-            }
+            },
+            available_clusters: available_clusters,
+          }
+        end
+        let(:available_clusters) do
+          {
+            "fake-cluster-name" => {},
           }
         end
 
@@ -152,7 +159,7 @@ module VSphereCloud
           expect(vm_config.cluster_name).to eq("fake-cluster-name")
         end
 
-        context 'when cluster is specified on the top level' do
+        context 'when a non-existent cluster is specified in resource_pool' do
           let(:input) do
           {
             resource_pool: {
@@ -162,18 +169,26 @@ module VSphereCloud
                 ]
               ]
             },
-            cluster: "some-alternate-cluster"
+            available_clusters: available_clusters
           }
           end
+          let(:available_clusters) do
+            {
+              "some-cluster" => {},
+              "some-other-cluster" => {},
+            }
+          end
 
-          it 'returns the provided cluster name from resource_pool' do
+          it 'raises an error' do
             vm_config = VmConfig.new(manifest_params: input)
-            expect(vm_config.cluster_name).to eq("fake-cluster-name")
+            expect {
+              vm_config.cluster_name
+            }.to raise_error Bosh::Clouds::CloudError, "Cluster 'fake-cluster-name' does not match provided clusters [some-cluster, some-other-cluster]"
           end
         end
       end
 
-      context 'when datacenters and clusters are not specified' do
+      context 'when datacenters and clusters are not specified in resource_pool' do
         let(:input) do
           {
             resource_pool: {
@@ -185,7 +200,9 @@ module VSphereCloud
               size: 2048
             },
             existing_disks: existing_disks,
-            available_clusters: available_clusters
+            available_clusters: available_clusters,
+            ephemeral_datastore_pattern: /anything/,
+            persistent_datastore_pattern: /something/,
           }
         end
         let(:available_clusters) do
@@ -204,7 +221,13 @@ module VSphereCloud
           expect(cluster_picker).to receive(:update)
             .with(available_clusters)
           expect(cluster_picker).to receive(:pick_cluster)
-            .with(1024, 1024 + 4096 + 2048, existing_disks)
+            .with(
+              req_memory: 1024,
+              req_ephemeral_size: 1024 + 4096 + 2048,
+              existing_disks: existing_disks,
+              ephemeral_datastore_pattern: /anything/,
+              persistent_datastore_pattern: /something/
+            )
             .and_return("fake-cluster")
 
           vm_config = VmConfig.new(
@@ -219,7 +242,13 @@ module VSphereCloud
             .with(available_clusters).once
           expect(cluster_picker).to receive(:pick_cluster)
             .once
-            .with(1024, 1024 + 4096 + 2048, existing_disks)
+            .with(
+              req_memory: 1024,
+              req_ephemeral_size: 1024 + 4096 + 2048,
+              existing_disks: existing_disks,
+              ephemeral_datastore_pattern: /anything/,
+              persistent_datastore_pattern: /something/
+            )
             .and_return("fake-cluster")
 
           vm_config = VmConfig.new(
@@ -239,7 +268,59 @@ module VSphereCloud
           end
         end
 
+        context 'when datastores are provided with the resource_pool' do
+          let(:input) do
+            {
+              resource_pool: {
+                "ram" => 1024,
+                "disk" => 4096,
+                "datastores" => ['fake-cluster2-ds']
+              },
+              stemcell: {
+                cid: "fake-stemcell-id",
+                size: 2048
+              },
+              existing_disks: existing_disks,
+              available_clusters: available_clusters,
+              ephemeral_datastore_pattern: /anything/,
+              persistent_datastore_pattern: /something/
+            }
+          end
+          let(:available_clusters) do
+            {
+              "fake-cluster1" => {
+                datastores: { "fake-cluster1-ds" => 1024 }
+              },
+              "fake-cluster2" => {
+                datastores: { "fake-cluster2-ds" => 1024}
+              }
+            }
+          end
+          it 'uses an ephemeral datastore pattern specified in resource_pool["datastores"]' do
+            allow(cluster_picker).to receive(:update)
+              .with(available_clusters)
+            expect(cluster_picker).to receive(:pick_cluster)
+                .with(
+                  req_memory: 1024,
+                  req_ephemeral_size: 1024 + 4096 + 2048,
+                  existing_disks: existing_disks,
+                  ephemeral_datastore_pattern: /^(fake\-cluster2\-ds)$/,
+                  persistent_datastore_pattern: /something/
+                )
+                .once
+                .and_return("fake-cluster2")
+
+            vm_config = VmConfig.new(
+              cluster_picker: cluster_picker,
+              manifest_params: input
+            )
+
+            expect(vm_config.cluster_name).to eq("fake-cluster2")
+          end
+        end
+
       end
+
     end
 
     describe '#datastore_name' do
@@ -255,13 +336,13 @@ module VSphereCloud
               "disk" => 4096
             },
             available_clusters: available_clusters,
-            ephemeral_datastore_pattern: "fake-pattern",
+            ephemeral_datastore_pattern: /fake-pattern/,
           }
         end
         let(:available_clusters) do
           {
             "fake-cluster" => {
-              datastores: "fake-ds"
+              datastores: { "fake-ds" => "hash" }
             }
           }
         end
@@ -269,9 +350,9 @@ module VSphereCloud
 
         it 'returns the picked datastore' do
           expect(datastore_picker).to receive(:update)
-            .with("fake-ds")
+            .with({ "fake-ds" => "hash" })
           expect(datastore_picker).to receive(:pick_datastore)
-            .with(4096, "fake-pattern")
+            .with(4096, /fake-pattern/)
             .and_return("fake-ds")
 
           vm_config = VmConfig.new(
@@ -284,10 +365,10 @@ module VSphereCloud
         it 'is idempotent' do
           expect(datastore_picker).to receive(:update)
             .once
-            .with("fake-ds")
+            .with({ "fake-ds" => "hash" })
           expect(datastore_picker).to receive(:pick_datastore)
             .once
-            .with(4096, "fake-pattern")
+            .with(4096, /fake-pattern/)
             .and_return("fake-ds")
 
           vm_config = VmConfig.new(
@@ -305,6 +386,167 @@ module VSphereCloud
           it 'returns nil' do
             vm_config = VmConfig.new(manifest_params: input)
             expect(vm_config.datastore_name).to eq(nil)
+          end
+        end
+
+        context 'when the resource_pool cluster does not exist in available_clusters' do
+          let(:input) do
+            {
+              resource_pool: {
+                "datacenters" => [
+                  "clusters" => [
+                    { "other-cluster" => {} }
+                  ]
+                ],
+                "disk" => 4096,
+              },
+              available_clusters: available_clusters,
+            }
+          end
+          let(:available_clusters) do
+            {
+              "fake-cluster1" => {
+                datastores: { "fake-ds1" => "hash" }
+              },
+              "fake-cluster2" => {
+                datastores: { "fake-ds2" => "hash" }
+              }
+            }
+          end
+          let (:datastore_picker) { instance_double(DatastorePicker) }
+          it 'raises an error' do
+            vm_config = VmConfig.new(
+              datastore_picker: datastore_picker,
+              manifest_params: input
+            )
+            expect {
+              vm_config.datastore_name
+            }.to raise_error Bosh::Clouds::CloudError, "Cluster 'other-cluster' does not match provided clusters [fake-cluster1, fake-cluster2]"
+          end
+        end
+      end
+
+      context 'when a list of datastores is provided in resource_pool' do
+        let(:input) do
+          {
+            resource_pool: {
+              "datacenters" => [
+                "clusters" => [
+                  { "fake-cluster" => {} }
+                ]
+              ],
+              "disk" => 4096,
+              'datastores' => ['fake-ds', 'other.*ds']
+            },
+            available_clusters: available_clusters,
+            ephemeral_datastore_pattern: /unused-pattern/,
+          }
+        end
+        let(:available_clusters) do
+          {
+            "fake-cluster" => {
+              datastores: { "fake-ds" => "hash" }
+            }
+          }
+        end
+        let (:datastore_picker) { instance_double(DatastorePicker) }
+
+        it 'returns the picked datastore' do
+          expect(datastore_picker).to receive(:update)
+            .with({ "fake-ds" => "hash" })
+          expect(datastore_picker).to receive(:pick_datastore)
+            .with(4096, /^(fake\-ds|other\.\*ds)$/)
+            .and_return("fake-ds")
+
+          vm_config = VmConfig.new(
+            datastore_picker: datastore_picker,
+            manifest_params: input
+          )
+          ds_name = vm_config.datastore_name
+          expect(ds_name).to eq("fake-ds")
+        end
+
+        context 'when multiple clusters have different datastores with the same name' do
+          let(:input) do
+            {
+              resource_pool: {
+                "datacenters" => [
+                  "clusters" => [
+                    { "fake-cluster2" => {} }
+                  ]
+                ],
+                "disk" => 4096,
+                'datastores' => ['fake-ds', 'other.*ds']
+              },
+              available_clusters: available_clusters,
+              ephemeral_datastore_pattern: /unused-pattern/,
+            }
+          end
+          let(:available_clusters) do
+            {
+              "fake-cluster1" => {
+                datastores: { "fake-ds" => 16384 }
+              },
+              "fake-cluster2" => {
+                datastores: { "fake-ds" => 8192 }
+              }
+            }
+          end
+          let (:datastore_picker) { instance_double(DatastorePicker) }
+
+          it "returns the correct cluster's datastore" do
+            expect(datastore_picker).to receive(:update)
+              .with({ "fake-ds" => 8192 })
+            expect(datastore_picker).to receive(:pick_datastore)
+              .with(4096, /^(fake\-ds|other\.\*ds)$/)
+              .and_return("fake-ds")
+
+            vm_config = VmConfig.new(
+              datastore_picker: datastore_picker,
+              manifest_params: input
+            )
+            ds_name = vm_config.datastore_name
+            expect(ds_name).to eq("fake-ds")
+          end
+        end
+
+        context "when resource_pool datastores and datacenter params don't match" do
+          let(:input) do
+            {
+              resource_pool: {
+                "datacenters" => [
+                  "clusters" => [
+                    { "fake-cluster" => {} }
+                  ]
+                ],
+                "disk" => 4096,
+                'datastores' => ['other-ds']
+              },
+              available_clusters: available_clusters,
+              ephemeral_datastore_pattern: /unused-pattern/,
+            }
+          end
+          let(:available_clusters) do
+            {
+              "fake-cluster" => {
+                datastores: { "fake-ds" => "hash" }
+              }
+            }
+          end
+
+          it 'raises a CloudError' do
+          expect(datastore_picker).to receive(:update)
+            .with({ "fake-ds" => "hash" })
+            expect(datastore_picker).to receive(:pick_datastore)
+              .with(4096, /^(other\-ds)$/)
+              .and_raise(Bosh::Clouds::CloudError)
+
+            vm_config = VmConfig.new(
+              datastore_picker: datastore_picker,
+              manifest_params: input
+            )
+
+            expect { vm_config.datastore_name }.to raise_error
           end
         end
       end

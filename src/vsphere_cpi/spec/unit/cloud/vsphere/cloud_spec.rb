@@ -330,7 +330,6 @@ module VSphereCloud
         allow(DatastorePicker).to receive(:new)
           .and_return(datastore_picker)
         allow(ClusterPicker).to receive(:new)
-          .with('fake-ephemeral-pattern', 'fake-persistent-pattern')
           .and_return(cluster_picker)
         allow(IPConflictDetector).to receive(:new)
           .with(logger, client)
@@ -354,6 +353,7 @@ module VSphereCloud
           available_clusters: { 'fake-cluster' => {} },
           existing_disks: { 'fake-datastore' => {} },
           ephemeral_datastore_pattern: 'fake-ephemeral-pattern',
+          persistent_datastore_pattern: 'fake-persistent-pattern',
         }
         expect(VmConfig).to receive(:new)
           .with(
@@ -405,6 +405,7 @@ module VSphereCloud
           available_clusters: { 'fake-cluster' => {} },
           existing_disks: {},
           ephemeral_datastore_pattern: 'fake-ephemeral-pattern',
+          persistent_datastore_pattern: 'fake-persistent-pattern',
         }
         expect(VmConfig).to receive(:new)
           .with(

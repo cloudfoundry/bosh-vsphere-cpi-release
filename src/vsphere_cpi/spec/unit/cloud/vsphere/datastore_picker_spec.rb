@@ -146,7 +146,7 @@ module VSphereCloud
           picker = DatastorePicker.new
           expect {
             picker.pick_datastore(1)
-          }.to raise_error(Bosh::Clouds::CloudError)
+          }.to raise_error Bosh::Clouds::CloudError, /Could not find any suitable datastores matching filter:.*, with size:.*\. Available datastores:.*/
         end
       end
 
