@@ -661,17 +661,6 @@ describe VSphereCloud::Cloud, external_cpi: false do
       described_class.new(options)
     end
 
-    def find_disk_in_datastore(disk_id, datastore_name)
-      datastore_mob = @cpi.client.cloud_searcher.get_managed_object(VimSdk::Vim::Datastore, name: datastore_name)
-      datastore = VSphereCloud::Resources::Datastore.new(datastore_name, datastore_mob, 0, 0)
-      @cpi.client.find_disk(disk_id, datastore, @disk_path)
-    end
-
-    def datastores_accessible_from_cluster(cluster_name)
-      cluster = @cpi.client.cloud_searcher.get_managed_object(VimSdk::Vim::ClusterComputeResource, name: cluster_name)
-      cluster.datastore.map(&:name)
-    end
-
     def create_vm_with_cpi(cpi)
       cpi.create_vm(
         'agent-007',
@@ -681,18 +670,6 @@ describe VSphereCloud::Cloud, external_cpi: false do
         [],
         {}
       )
-    end
-
-    def verify_disk_is_in_datastores(disk_id, accessible_datastores)
-      disk_is_in_accessible_datastore = false
-      accessible_datastores.each do |datastore_name|
-        disk = find_disk_in_datastore(disk_id, datastore_name)
-        unless disk.nil?
-          disk_is_in_accessible_datastore = true
-          break
-        end
-      end
-      expect(disk_is_in_accessible_datastore).to eq(true)
     end
 
     it 'creates disk in accessible datastore' do
@@ -740,6 +717,25 @@ describe VSphereCloud::Cloud, external_cpi: false do
         detach_disk(@cpi, vm_id, disk_id)
         delete_vm(@cpi, vm_id)
         delete_disk(@cpi, disk_id)
+      end
+    end
+  end
+
+  context 'when disk_pools.cloud_properties.datastores is specified' do
+    let (:options) do
+      options = cpi_options(
+        persistent_datastore_pattern: @persistent_datastore_pattern
+      )
+    end
+    let (:cloud_properties) { { 'datastores' => [@second_cluster_datastore] } }
+
+    it 'creates disk in the specified datastore' do
+      cpi = described_class.new(options)
+      begin
+        disk_id = cpi.create_disk(128, cloud_properties)
+        verify_disk_is_in_datastores(disk_id, [@second_cluster_datastore])
+      ensure
+        delete_disk(cpi, disk_id)
       end
     end
   end
@@ -1209,5 +1205,28 @@ describe VSphereCloud::Cloud, external_cpi: false do
 
   def delete_stemcell(cpi, stemcell_id)
     cpi.delete_stemcell(stemcell_id) if stemcell_id
+  end
+
+  def verify_disk_is_in_datastores(disk_id, accessible_datastores)
+    disk_is_in_accessible_datastore = false
+    accessible_datastores.each do |datastore_name|
+      disk = find_disk_in_datastore(disk_id, datastore_name)
+      unless disk.nil?
+        disk_is_in_accessible_datastore = true
+        break
+      end
+    end
+    expect(disk_is_in_accessible_datastore).to eq(true)
+  end
+
+  def find_disk_in_datastore(disk_id, datastore_name)
+    datastore_mob = @cpi.client.cloud_searcher.get_managed_object(VimSdk::Vim::Datastore, name: datastore_name)
+    datastore = VSphereCloud::Resources::Datastore.new(datastore_name, datastore_mob, 0, 0)
+    @cpi.client.find_disk(disk_id, datastore, @disk_path)
+  end
+
+  def datastores_accessible_from_cluster(cluster_name)
+    cluster = @cpi.client.cloud_searcher.get_managed_object(VimSdk::Vim::ClusterComputeResource, name: cluster_name)
+    cluster.datastore.map(&:name)
   end
 end

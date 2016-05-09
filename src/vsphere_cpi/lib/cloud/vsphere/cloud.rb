@@ -329,9 +329,15 @@ module VSphereCloud
           accessible_datastores = all_datastores
         end
 
+        persistent_pattern = @datacenter.persistent_pattern
+        if cloud_properties['datastores'] && !cloud_properties['datastores'].empty?
+          basic_pattern = cloud_properties['datastores'].map { |pattern| Regexp.escape(pattern) }.join('|')
+          persistent_pattern = Regexp.new("^(#{basic_pattern})$")
+        end
+
         datastore_picker = DatastorePicker.new
         datastore_picker.update(accessible_datastores)
-        datastore_name = datastore_picker.pick_datastore(size_in_mb, @datacenter.persistent_pattern)
+        datastore_name = datastore_picker.pick_datastore(size_in_mb, persistent_pattern)
         datastore = @datacenter.find_datastore(datastore_name)
 
         disk_type = cloud_properties.fetch('type', Resources::PersistentDisk::DEFAULT_DISK_TYPE)

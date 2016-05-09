@@ -775,6 +775,30 @@ module VSphereCloud
           expect(disk_cid).to eq('fake-disk-cid')
         end
       end
+
+      context 'when disk_pools.cloud_properties.datastores is provided' do
+        let(:all_datastores_hash) { { 'fake-cloud-prop-datastore-1' => 4096, 'fake-cloud-prop-datastore-2' => 2048 } }
+        let(:datastore) { double(:datastore, name: 'fake-cloud-prop-datastore-1') }
+        let(:cloud_properties) { { 'datastores' => ['fake-cloud-prop-datastore-1', 'fake-cloud-prop-datastore-2'] } }
+
+        it 'creates the disk in the specified datastore' do
+          expect(datastore_picker).to receive(:update)
+            .with(all_datastores_hash)
+
+          expect(datastore_picker).to receive(:pick_datastore)
+            .with(1024, /^(fake\-cloud\-prop\-datastore\-1|fake\-cloud\-prop\-datastore\-2)$/)
+            .and_return('fake-cloud-prop-datastore-1')
+          expect(datacenter).to receive(:find_datastore)
+            .with('fake-cloud-prop-datastore-1')
+            .and_return(datastore)
+          expect(datacenter).to receive(:create_disk)
+            .with(datastore, 1024, Resources::PersistentDisk::DEFAULT_DISK_TYPE)
+            .and_return(disk)
+
+          disk_cid = vsphere_cloud.create_disk(1024, cloud_properties)
+          expect(disk_cid).to eq('fake-disk-cid')
+        end
+      end
     end
 
     describe '#reboot_vm' do
