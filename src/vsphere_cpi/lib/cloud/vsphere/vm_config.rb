@@ -159,7 +159,7 @@ module VSphereCloud
     end
 
     def ephemeral_datastore_pattern
-      if resource_pool.has_key? 'datastores'
+      if resource_pool['datastores'] && !resource_pool['datastores'].empty?
         basic_ephemeral_pattern = resource_pool['datastores'].map { |pattern| Regexp.escape(pattern) }.join('|')
         ephemeral_pattern = Regexp.new("^(#{basic_ephemeral_pattern})$")
         return ephemeral_pattern

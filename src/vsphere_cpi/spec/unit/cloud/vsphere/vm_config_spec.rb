@@ -549,6 +549,89 @@ module VSphereCloud
             expect { vm_config.datastore_name }.to raise_error
           end
         end
+
+        context "when the datastores list is empty" do
+          let(:input) do
+            {
+              resource_pool: {
+                "datacenters" => [
+                  "clusters" => [
+                    { "fake-cluster" => {} }
+                  ]
+                ],
+                "disk" => 4096,
+                'datastores' => []
+              },
+              available_clusters: available_clusters,
+              ephemeral_datastore_pattern: /fallback-ds/,
+            }
+          end
+          let(:available_clusters) do
+            {
+              "fake-cluster" => {
+                datastores: { "fallback-ds" => "hash" }
+              }
+            }
+          end
+          let (:datastore_picker) { instance_double(DatastorePicker) }
+
+          it 'returns the datastore from global properties' do
+            expect(datastore_picker).to receive(:update)
+              .with({ "fallback-ds" => "hash" })
+            expect(datastore_picker).to receive(:pick_datastore)
+              .with(4096, /fallback-ds/)
+              .and_return("fallback-ds")
+
+            vm_config = VmConfig.new(
+              datastore_picker: datastore_picker,
+              manifest_params: input
+            )
+            ds_name = vm_config.datastore_name
+            expect(ds_name).to eq("fallback-ds")
+          end
+        end
+
+        context "when the datastores list is nil" do
+          let(:input) do
+            {
+              resource_pool: {
+                "datacenters" => [
+                  "clusters" => [
+                    { "fake-cluster" => {} }
+                  ]
+                ],
+                "disk" => 4096,
+                'datastores' => nil,
+              },
+              available_clusters: available_clusters,
+              ephemeral_datastore_pattern: /fallback-ds/,
+            }
+          end
+          let(:available_clusters) do
+            {
+              "fake-cluster" => {
+                datastores: { "fallback-ds" => "hash" }
+              }
+            }
+          end
+          let (:datastore_picker) { instance_double(DatastorePicker) }
+
+          it 'returns the datastore from global properties' do
+            expect(datastore_picker).to receive(:update)
+              .with({ "fallback-ds" => "hash" })
+            expect(datastore_picker).to receive(:pick_datastore)
+              .with(4096, /fallback-ds/)
+              .and_return("fallback-ds")
+
+            vm_config = VmConfig.new(
+              datastore_picker: datastore_picker,
+              manifest_params: input
+            )
+            ds_name = vm_config.datastore_name
+            expect(ds_name).to eq("fallback-ds")
+          end
+
+        end
       end
     end
 
