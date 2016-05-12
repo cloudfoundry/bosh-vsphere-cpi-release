@@ -661,17 +661,6 @@ describe VSphereCloud::Cloud, external_cpi: false do
       described_class.new(options)
     end
 
-    def create_vm_with_cpi(cpi)
-      cpi.create_vm(
-        'agent-007',
-        @stemcell_id,
-        resource_pool,
-        network_spec,
-        [],
-        {}
-      )
-    end
-
     it 'creates disk in accessible datastore' do
       begin
         accessible_datastores = datastores_accessible_from_cluster(@cluster)
@@ -724,18 +713,34 @@ describe VSphereCloud::Cloud, external_cpi: false do
   context 'when disk_pools.cloud_properties.datastores is specified' do
     let (:options) do
       options = cpi_options(
-        persistent_datastore_pattern: @persistent_datastore_pattern
+        persistent_datastore_pattern: @datastore_pattern
       )
     end
-    let (:cloud_properties) { { 'datastores' => [@second_cluster_datastore] } }
+    let (:cloud_properties) { { 'datastores' => [@persistent_datastore_pattern] } }
 
-    it 'creates disk in the specified datastore' do
+    it 'creates disk in the specified datastore and does not move it when attached' do
       cpi = described_class.new(options)
       begin
-        disk_id = cpi.create_disk(128, cloud_properties)
-        verify_disk_is_in_datastores(disk_id, [@second_cluster_datastore])
+        director_disk_id = cpi.create_disk(128, cloud_properties)
+        disk_id, _ = VSphereCloud::DiskMetadata.decode(director_disk_id)
+        verify_disk_is_in_datastores(disk_id, [@persistent_datastore_pattern])
+
+        vm_id = cpi.create_vm(
+          'agent-007',
+          @stemcell_id,
+          resource_pool,
+          network_spec,
+          [director_disk_id],
+          {}
+        )
+        expect(vm_id).to_not be_nil
+
+        cpi.attach_disk(vm_id, director_disk_id)
+        verify_disk_is_in_datastores(disk_id, [@persistent_datastore_pattern])
       ensure
-        delete_disk(cpi, disk_id)
+        detach_disk(cpi, vm_id, director_disk_id)
+        delete_vm(cpi, vm_id)
+        delete_disk(cpi, director_disk_id)
       end
     end
   end
@@ -1180,6 +1185,17 @@ describe VSphereCloud::Cloud, external_cpi: false do
     detach_disk(cpi, vm_id, disk_id)
     delete_vm(cpi, vm_id)
     delete_disk(cpi, disk_id)
+  end
+
+  def create_vm_with_cpi(cpi)
+    cpi.create_vm(
+      'agent-007',
+      @stemcell_id,
+      resource_pool,
+      network_spec,
+      [],
+      {}
+    )
   end
 
   def delete_vm(cpi, vm_id)
