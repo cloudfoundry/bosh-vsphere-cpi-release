@@ -168,7 +168,7 @@ module VSphereCloud
       client.find_vm_by_name(@datacenter.mob, name)
     end
 
-    def create_vm(agent_id, stemcell_cid, resource_pool, networks_spec, disk_locality = [], environment = nil)
+    def create_vm(agent_id, stemcell_cid, resource_pool, networks_spec, existing_disk_cids = [], environment = nil)
       with_thread_name("create_vm(#{agent_id}, ...)") do
         stemcell_vm = stemcell_vm(stemcell_cid)
         raise "Could not find VM for stemcell '#{stemcell_cid}'" if stemcell_vm.nil?
@@ -180,6 +180,11 @@ module VSphereCloud
         )
         stemcell_size /= 1024 * 1024
 
+        existing_disk_cids.map! do |director_cid|
+          disk_cid, _ = DiskMetadata.decode(director_cid)
+          disk_cid
+        end
+
         manifest_params = {
           resource_pool: resource_pool,
           networks_spec: networks_spec,
@@ -190,7 +195,7 @@ module VSphereCloud
             size: stemcell_size
           },
           available_clusters: @datacenter.clusters_hash,
-          existing_disks: @datacenter.disks_hash(disk_locality || []),
+          existing_disks: @datacenter.disks_hash(existing_disk_cids),
           ephemeral_datastore_pattern: @datacenter.ephemeral_pattern,
           persistent_datastore_pattern: @datacenter.persistent_pattern,
         }
@@ -273,24 +278,29 @@ module VSphereCloud
       raise Bosh::Clouds::NotSupported, "configure_networks is no longer supported"
     end
 
-    def attach_disk(vm_cid, disk_cid)
-      with_thread_name("attach_disk(#{vm_cid}, #{disk_cid})") do
-        @logger.info("Attaching disk: #{disk_cid} on vm: #{vm_cid}")
+    def attach_disk(vm_cid, director_disk_cid)
+      with_thread_name("attach_disk(#{vm_cid}, #{director_disk_cid})") do
         vm = vm_provider.find(vm_cid)
+        disk_cid, metadata = DiskMetadata.decode(director_disk_cid)
+        @logger.info("Attaching disk: #{disk_cid} (#{metadata}) on vm: #{vm_cid}")
+
         disk = @datacenter.find_disk(disk_cid)
 
-        accessible_datastores = {}
         all_datastores = @datacenter.datastores_hash
+
+        accessible_datastores = {}
         vm.accessible_datastore_names.each do |name|
           accessible_datastores[name] = all_datastores[name]
         end
-
         disk_is_accessible = accessible_datastores.include?(disk.datastore.name)
-        disk_is_in_persistent_datastore = @datacenter.persistent_datastores.include?(disk.datastore.name)
+
+        persistent_pattern = Regexp.new(metadata['persistent_datastores_pattern'] || @datacenter.persistent_pattern)
+        disk_is_in_persistent_datastore = disk.datastore.name =~ persistent_pattern
+
         unless disk_is_accessible && disk_is_in_persistent_datastore
           datastore_picker = DatastorePicker.new
           datastore_picker.update(accessible_datastores)
-          datastore_name = datastore_picker.pick_datastore(disk.size_in_mb, @datacenter.persistent_pattern)
+          datastore_name = datastore_picker.pick_datastore(disk.size_in_mb, persistent_pattern)
           destination_datastore = @datacenter.find_datastore(datastore_name)
 
           disk = @datacenter.move_disk_to_datastore(disk, destination_datastore)
@@ -301,8 +311,10 @@ module VSphereCloud
       end
     end
 
-    def detach_disk(vm_cid, disk_cid)
-      with_thread_name("detach_disk(#{vm_cid}, #{disk_cid})") do
+    def detach_disk(vm_cid, director_disk_cid)
+      with_thread_name("detach_disk(#{vm_cid}, #{director_disk_cid})") do
+        disk_cid, _ = DiskMetadata.decode(director_disk_cid)
+
         @logger.info("Detaching disk: #{disk_cid} from vm: #{vm_cid}")
 
         vm = vm_provider.find(vm_cid)
@@ -329,27 +341,27 @@ module VSphereCloud
           accessible_datastores = all_datastores
         end
 
-        persistent_pattern = @datacenter.persistent_pattern
-        if cloud_properties['datastores'] && !cloud_properties['datastores'].empty?
-          basic_pattern = cloud_properties['datastores'].map { |pattern| Regexp.escape(pattern) }.join('|')
-          persistent_pattern = Regexp.new("^(#{basic_pattern})$")
-        end
+        persistent_pattern = Regexp.new(disk_pool_pattern(cloud_properties) || @datacenter.persistent_pattern)
+        @logger.info("Using persistent disk datastore pattern: #{persistent_pattern.inspect}")
 
         datastore_picker = DatastorePicker.new
         datastore_picker.update(accessible_datastores)
         datastore_name = datastore_picker.pick_datastore(size_in_mb, persistent_pattern)
         datastore = @datacenter.find_datastore(datastore_name)
+        @logger.info("Using datastore #{datastore.name} to store persistent disk")
 
         disk_type = cloud_properties.fetch('type', Resources::PersistentDisk::DEFAULT_DISK_TYPE)
         disk = @datacenter.create_disk(datastore, size_in_mb, disk_type)
         @logger.info("Created disk: #{disk.inspect}")
 
-        disk.cid
+        metadata = create_disk_metadata(cloud_properties) || nil
+        DiskMetadata.encode(disk.cid, metadata)
       end
     end
 
-    def delete_disk(disk_cid)
-      with_thread_name("delete_disk(#{disk_cid})") do
+    def delete_disk(director_disk_cid)
+      with_thread_name("delete_disk(#{director_disk_cid})") do
+        disk_cid, _ = DiskMetadata.decode(director_disk_cid)
         @logger.info("Deleting disk: #{disk_cid}")
         disk = @datacenter.find_disk(disk_cid)
         client.delete_disk(@datacenter.mob, disk.path)
@@ -568,6 +580,18 @@ module VSphereCloud
     end
 
     private
+
+    def disk_pool_pattern(cloud_properties)
+      if cloud_properties['datastores'] && !cloud_properties['datastores'].empty?
+        "^(#{cloud_properties['datastores'].map { |pattern| Regexp.escape(pattern) }.join('|')})$"
+      end
+    end
+
+    def create_disk_metadata(cloud_properties)
+      if pattern = disk_pool_pattern(cloud_properties)
+        { 'persistent_datastores_pattern' => pattern }
+      end
+    end
 
     def import_ovf(name, ovf, resource_pool, datastore)
       import_spec_params = Vim::OvfManager::CreateImportSpecParams.new

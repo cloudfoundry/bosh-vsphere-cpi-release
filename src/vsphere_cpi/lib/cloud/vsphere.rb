@@ -40,6 +40,7 @@ require 'cloud/vsphere/ip_conflict_detector'
 require 'cloud/vsphere/vm_config'
 require 'cloud/vsphere/datastore_picker'
 require 'cloud/vsphere/cluster_picker'
+require 'cloud/vsphere/disk_metadata'
 
 module Bosh
   module Clouds
