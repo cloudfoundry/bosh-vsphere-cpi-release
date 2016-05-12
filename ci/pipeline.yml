@@ -7,6 +7,7 @@ groups:
       - lifecycle-5.1
       - lifecycle-6.0
       - lifecycle-6.0-vsan
+      - bats
       - promote-candidate
 
   - name: vsphere-5.1
@@ -149,12 +150,72 @@ jobs:
           BOSH_VSPHERE_CPI_DATASTORE_PATTERN:                   {{lifecycle_vsphere_6_0_vsan_datastore_pattern_available_to_all_hosts_in_first_cluster}}
           BOSH_VSPHERE_CPI_SECOND_CLUSTER_DATASTORE:            {{lifecycle_vsphere_6_0_vsan_datastore_pattern_available_to_all_hosts_in_second_cluster}}
 
+  - name: bats
+    serial: true
+    plan:
+      - aggregate:
+        - {get: cpi-release,  tags: [vsphere-v5.1], trigger: true, resource: bosh-cpi-artifacts, passed: [build-candidate]}
+        - {get: bosh-release, tags: [vsphere-v5.1], trigger: false, resource: old-bosh-release}
+        - {get: stemcell,     tags: [vsphere-v5.1], trigger: false, resource: old-stemcell}
+        - {get: pipelines,    tags: [vsphere-v5.1], trigger: false, resource: certification}
+        - {get: bosh-init,    tags: [vsphere-v5.1], trigger: false}
+        - {get: bats,         tags: [vsphere-v5.1], trigger: false}
+        # Passthrough
+        - {get: bosh-cpi-src, tags: [vsphere-v5.1], trigger: false, passed: [build-candidate]}
+
+      - {put: environment, tags: [vsphere-v5.1], params: {acquire: true}}
+
+      - task: prepare-director
+        tags: [vsphere-v5.1]
+        file: pipelines/vsphere/tasks/prepare-director.yml
+        params:
+          BOSH_DIRECTOR_USERNAME:                 {{BOSH_DIRECTOR_USERNAME}}
+          BOSH_DIRECTOR_PASSWORD:                 {{BOSH_DIRECTOR_PASSWORD}}
+          BOSH_VSPHERE_VCENTER:                   {{VCENTER_IP}}
+          BOSH_VSPHERE_VCENTER_USER:              {{VCENTER_USER}}
+          BOSH_VSPHERE_VCENTER_PASSWORD:          {{VCENTER_PASSWORD}}
+          BOSH_VSPHERE_VERSION:                   {{VSPHERE_VERSION}}
+          BOSH_VSPHERE_VCENTER_DC:                {{VCENTER_DC}}
+          BOSH_VSPHERE_VCENTER_CLUSTER:           {{VCENTER_CLUSTER}}
+          BOSH_VSPHERE_VCENTER_DATASTORE_PATTERN: {{VCENTER_DATASTORE_PATTERN}}
+          BOSH_VSPHERE_VCENTER_VLAN:              {{VCENTER_VLAN}}
+          BOSH_VSPHERE_VCENTER_VM_FOLDER:         {{VCENTER_VM_FOLDER}}
+          BOSH_VSPHERE_VCENTER_TEMPLATE_FOLDER:   {{VCENTER_TEMPLATE_FOLDER}}
+          BOSH_VSPHERE_VCENTER_DISK_PATH:         {{VCENTER_DISK_PATH}}
+          USE_REDIS:                              true
+
+      - do:
+          - task: deploy-director
+            tags: [vsphere-v5.1]
+            file: pipelines/shared/tasks/deploy-director.yml
+
+          - task: prepare-bats
+            tags: [vsphere-v5.1]
+            file: pipelines/vsphere/tasks/prepare-bats.yml
+            params:
+              BAT_VCAP_PASSWORD:      {{BAT_VCAP_PASSWORD}}
+              BOSH_DIRECTOR_USERNAME: {{BOSH_DIRECTOR_USERNAME}}
+              BOSH_DIRECTOR_PASSWORD: {{BOSH_DIRECTOR_PASSWORD}}
+              STEMCELL_NAME:          bosh-vsphere-esxi-ubuntu-trusty-go_agent
+
+          - task: run-bats
+            tags: [vsphere-v5.1]
+            file: pipelines/shared/tasks/run-bats.yml
+
+        ensure:
+          do:
+            - task: teardown
+              tags: [vsphere-v5.1]
+              file: pipelines/shared/tasks/teardown.yml
+
+            - {put: environment, tags: [vsphere-v5.1], params: {release: environment}}
+
   - name: promote-candidate
     serial: true
     plan:
     - aggregate:
-      - {trigger: false, passed: [lifecycle-5.1, lifecycle-6.0, lifecycle-6.0-vsan], get: bosh-cpi-artifacts, tags: ["vsphere-v5.1"]}
-      - {trigger: false, passed: [lifecycle-5.1, lifecycle-6.0, lifecycle-6.0-vsan], get: bosh-cpi-src, tags: ["vsphere-v5.1"]}
+      - {trigger: false, passed: [lifecycle-5.1, lifecycle-6.0, lifecycle-6.0-vsan, bats], get: bosh-cpi-artifacts, tags: ["vsphere-v5.1"]}
+      - {trigger: false, passed: [lifecycle-5.1, lifecycle-6.0, lifecycle-6.0-vsan, bats], get: bosh-cpi-src, tags: ["vsphere-v5.1"]}
       - {trigger: false, get: release-version-semver, params: {bump: major}, tags: ["vsphere-v5.1"]}
 
     - task: promote
@@ -218,3 +279,45 @@ resources:
     type: bosh-io-stemcell
     source:
       name: bosh-vsphere-esxi-centos-7-go_agent
+
+  - name: bosh-init
+    type: s3
+    source:
+      regexp: bosh-init-([0-9.]+)-linux-amd64
+      bucket: bosh-init-artifacts
+      region_name: us-east-1
+
+  - name: certification
+    type: git
+    source:
+      uri: https://github.com/cloudfoundry-incubator/bosh-cpi-certification
+      branch: master
+
+    # upgrade resources
+  - name: old-bosh-release
+    type: s3
+    source:
+      bucket: bosh-cpi-certification-fixtures
+      regexp: precompiled-bosh-(255.8)-on-ubuntu-3232.3.tgz
+      region_name: us-east-1
+
+  - name: old-stemcell
+    type: s3
+    source:
+      bucket: bosh-cpi-certification-fixtures
+      regexp: bosh-stemcell-(3232.3)-vsphere-esxi-ubuntu-trusty-go_agent.tgz
+      region_name: us-east-1
+
+  - name: bats
+    type: git
+    source:
+      uri: https://github.com/cloudfoundry/bosh-acceptance-tests.git
+      branch: master
+
+  - name: environment
+    type: pool
+    source:
+      pool: vsphere-5.1
+      uri: git@github.com:cloudfoundry/bosh-cpi-environments.git
+      branch: master
+      private_key: {{github_deployment_key__bosh-cpi-environments}}
