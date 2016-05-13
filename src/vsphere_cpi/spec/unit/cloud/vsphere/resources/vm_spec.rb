@@ -4,6 +4,7 @@ require 'timecop'
 describe VSphereCloud::Resources::VM do
   subject(:vm) { described_class.new('vm-cid', vm_mob, client, logger) }
   let(:vm_mob) { instance_double('VimSdk::Vim::VirtualMachine') }
+  let(:datacenter) { instance_double('VimSdk::Vim::Datacenter')}
   let(:client) { instance_double('VSphereCloud::VCenterClient', cloud_searcher: cloud_searcher) }
   let(:cloud_searcher) { instance_double('VSphereCloud::CloudSearcher') }
   let(:logger) { double(:logger, debug: nil, info: nil) }
@@ -18,6 +19,10 @@ describe VSphereCloud::Resources::VM do
       ['runtime.powerState', 'runtime.question', 'config.hardware.device', 'name', 'runtime', 'resourcePool'],
       ensure: ['config.hardware.device', 'runtime']
     ).and_return(vm_properties)
+
+    allow(client).to receive(:find_parent)
+      .with(vm_mob, VimSdk::Vim::Datacenter)
+      .and_return(datacenter)
   end
 
   let(:vm_properties) { {'runtime' => double(:runtime, host: 'vm-host')} }
@@ -316,11 +321,8 @@ describe VSphereCloud::Resources::VM do
       )
     end
 
-    let(:datacenter) { instance_double('VimSdk::Vim::Datacenter')}
-
     before {
       allow(vm).to receive(:has_persistent_disk_property_mismatch?).and_return(false)
-      allow(vm).to receive(:datacenter).and_return(datacenter)
       allow(vm_mob).to receive_message_chain('config.v_app_config.property').and_return([
         disk0_property,
         disk1_property

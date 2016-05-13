@@ -35,7 +35,7 @@ module VSphereCloud
         end
       end
 
-      def datacenter
+      def datacenter_mob
         @client.find_parent(@mob, Vim::Datacenter)
       end
 
@@ -166,7 +166,7 @@ module VSphereCloud
       end
 
       def power_on
-        @client.power_on_vm(datacenter, @mob)
+        @client.power_on_vm(datacenter_mob, @mob)
       end
 
       def delete
@@ -284,7 +284,7 @@ module VSphereCloud
           dest_filename = original_disk_path.split(" ").last
           dest_path = "#{current_datastore} #{dest_filename}"
 
-          @client.move_disk(datacenter, current_path, datacenter, dest_path)
+          @client.move_disk(datacenter_mob, current_path, datacenter_mob, dest_path)
         end
       end
 

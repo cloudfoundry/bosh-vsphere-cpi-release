@@ -29,7 +29,7 @@ module VSphereCloud
       @cluster_name = @cluster_picker.pick_cluster(
         req_memory: config_spec_params[:memory_mb],
         req_ephemeral_size: total_eph_disk_size,
-        existing_disks: existing_disks,
+        disk_configurations: disk_configurations,
         ephemeral_datastore_pattern: ephemeral_datastore_pattern,
         persistent_datastore_pattern: persistent_datastore_pattern,
         )
@@ -145,8 +145,8 @@ module VSphereCloud
       @manifest_params[:stemcell] || {}
     end
 
-    def existing_disks
-      @manifest_params[:existing_disks] || {}
+    def disk_configurations
+      @manifest_params[:disk_configurations] || {}
     end
 
     def datacenters_spec
@@ -164,11 +164,12 @@ module VSphereCloud
         ephemeral_pattern = Regexp.new("^(#{basic_ephemeral_pattern})$")
         return ephemeral_pattern
       end
-      Regexp.new(@manifest_params[:ephemeral_datastore_pattern] || "")
+      Regexp.new(@manifest_params[:global_ephemeral_datastore_pattern] || "")
     end
 
     def persistent_datastore_pattern
-      Regexp.new(@manifest_params[:persistent_datastore_pattern] || "")
+      disk_metadata = (disk_configurations.first || {})[:metadata] || {}
+      Regexp.new(disk_metadata['persistent_datastores_pattern'] || @manifest_params[:global_persistent_datastore_pattern] || "")
     end
   end
 end

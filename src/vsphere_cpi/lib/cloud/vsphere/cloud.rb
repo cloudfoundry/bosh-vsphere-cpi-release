@@ -25,18 +25,26 @@ module VSphereCloud
       @logger = config.logger
       @client = config.client
       @cloud_searcher = CloudSearcher.new(@client.service_content, @logger)
+      cluster_provider = Resources::ClusterProvider.new({
+        datacenter_name: @config.datacenter_name,
+        ephemeral_pattern: @config.datacenter_datastore_pattern,
+        persistent_pattern: @config.datacenter_persistent_datastore_pattern,
+        mem_overcommit: @config.mem_overcommit,
+        client: @client,
+        logger: @logger,
+      })
       @datacenter = Resources::Datacenter.new({
         client: @client,
+        ephemeral_pattern: @config.datacenter_datastore_pattern,
+        persistent_pattern: @config.datacenter_persistent_datastore_pattern,
         use_sub_folder: @config.datacenter_use_sub_folder,
         vm_folder: @config.datacenter_vm_folder,
         template_folder: @config.datacenter_template_folder,
         name: @config.datacenter_name,
         disk_path: @config.datacenter_disk_path,
-        ephemeral_pattern: @config.datacenter_datastore_pattern,
-        persistent_pattern: @config.datacenter_persistent_datastore_pattern,
         clusters: @config.datacenter_clusters,
+        cluster_provider: cluster_provider,
         logger: @config.logger,
-        mem_overcommit: @config.mem_overcommit
       })
 
       @file_provider = FileProvider.new(config.rest_client, config.vcenter_host)
@@ -114,7 +122,7 @@ module VSphereCloud
           nfc_lease = lease_obtainer.obtain(
             cluster.resource_pool,
             import_spec_result.import_spec,
-            cluster.datacenter.template_folder,
+            @datacenter.template_folder,
           )
 
           @logger.info('Uploading')
@@ -180,9 +188,16 @@ module VSphereCloud
         )
         stemcell_size /= 1024 * 1024
 
-        existing_disk_cids.map! do |director_cid|
-          disk_cid, _ = DiskMetadata.decode(director_cid)
-          disk_cid
+        disk_configurations = []
+        existing_disk_cids.each do |cid|
+          clean_cid, metadata = DiskMetadata.decode(cid)
+          disk = @datacenter.find_disk(clean_cid)
+          disk_configurations << {
+            cid: clean_cid,
+            size: disk.size_in_mb,
+            datastore_name: disk.datastore.name,
+            metadata: metadata,
+          }
         end
 
         manifest_params = {
@@ -195,9 +210,9 @@ module VSphereCloud
             size: stemcell_size
           },
           available_clusters: @datacenter.clusters_hash,
-          existing_disks: @datacenter.disks_hash(existing_disk_cids),
-          ephemeral_datastore_pattern: @datacenter.ephemeral_pattern,
-          persistent_datastore_pattern: @datacenter.persistent_pattern,
+          disk_configurations: disk_configurations,
+          global_ephemeral_datastore_pattern: @datacenter.ephemeral_pattern,
+          global_persistent_datastore_pattern: @datacenter.persistent_pattern,
         }
 
         vm_config = VmConfig.new(
@@ -391,7 +406,7 @@ module VSphereCloud
         replicated_stemcell_vm = client.wait_for_task(clone_vm(
           original_stemcell_vm,
           name_of_replicated_stemcell,
-          cluster.datacenter.template_folder.mob,
+          @datacenter.template_folder.mob,
           cluster.resource_pool.mob,
           datastore: to_datastore.mob
         ))
@@ -403,9 +418,9 @@ module VSphereCloud
       rescue VSphereCloud::VCenterClient::DuplicateName
         @logger.info("Stemcell is being replicated by another thread, waiting for #{name_of_replicated_stemcell} to be ready")
         replicated_stemcell_vm = client.find_by_inventory_path([
-          cluster.datacenter.name,
+          @datacenter.name,
           'vm',
-          cluster.datacenter.template_folder.path_components,
+          @datacenter.template_folder.path_components,
           name_of_replicated_stemcell
         ])
         # get_properties will ensure the existence of the snapshot by retrying.

@@ -17,10 +17,6 @@ module VSphereCloud
       #   @return [Vim::ClusterComputeResource] cluster vSphere MOB.
       attr_reader :mob
 
-      # @!attribute datacenter
-      #   @return [Datacenter] parent datacenter.
-      attr_reader :datacenter
-
       # @!attribute resource_pool
       #   @return [ResourcePool] resource pool.
       attr_reader :resource_pool
@@ -36,8 +32,7 @@ module VSphereCloud
       # @param [ClusterConfig] config cluster configuration as specified by the
       #   operator.
       # @param [Hash] properties prefetched vSphere properties for the cluster.
-      def initialize(datacenter, datacenter_datastore_pattern, datacenter_persistent_datastore_pattern, mem_overcommit, cluster_config, properties, logger, client)
-        @datacenter = datacenter
+      def initialize(ephemeral_pattern, persistent_pattern, mem_overcommit, cluster_config, properties, logger, client)
         @logger = logger
         @client = client
         @properties = properties
@@ -45,8 +40,8 @@ module VSphereCloud
         @config = cluster_config
         @mob = properties[:obj]
         @resource_pool = ResourcePool.new(@client, @logger, cluster_config, properties["resourcePool"])
-        @datacenter_datastore_pattern = datacenter_datastore_pattern
-        @datacenter_persistent_datastore_pattern = datacenter_persistent_datastore_pattern
+        @ephemeral_pattern = ephemeral_pattern
+        @persistent_pattern = persistent_pattern
         @mem_overcommit = mem_overcommit
         @allocated_after_sync = 0
       end
@@ -100,11 +95,11 @@ module VSphereCloud
       end
 
       def ephemeral_datastores
-        @ephemeral_datastores ||= select_datastores(@datacenter_datastore_pattern)
+        @ephemeral_datastores ||= select_datastores(@ephemeral_pattern)
       end
 
       def persistent_datastores
-        @persistent_datastores ||= select_datastores(@datacenter_persistent_datastore_pattern)
+        @persistent_datastores ||= select_datastores(@persistent_pattern)
       end
 
       def all_datastores

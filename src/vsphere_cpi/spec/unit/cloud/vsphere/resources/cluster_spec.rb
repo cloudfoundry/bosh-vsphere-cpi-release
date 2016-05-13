@@ -4,7 +4,6 @@ module VSphereCloud::Resources
   describe Cluster do
     subject(:cluster) do
       VSphereCloud::Resources::Cluster.new(
-        datacenter,
         /eph/,
         /persist/,
         1.0,
@@ -244,12 +243,6 @@ module VSphereCloud::Resources
             expect(cluster.free_memory).to eq(0)
           end
         end
-      end
-    end
-
-    describe '#datacenter' do
-      it 'returns the injected datacenter' do
-        expect(subject.datacenter).to eq(datacenter)
       end
     end
 

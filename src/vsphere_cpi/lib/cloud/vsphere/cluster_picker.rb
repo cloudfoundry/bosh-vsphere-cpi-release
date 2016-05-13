@@ -16,7 +16,7 @@ module VSphereCloud
     def suitable_clusters(
       req_memory:,
       req_ephemeral_size:,
-      existing_disks:,
+      disk_configurations:,
       ephemeral_datastore_pattern:,
       persistent_datastore_pattern:
     )
@@ -24,7 +24,7 @@ module VSphereCloud
       filter_on_datastore_space(
         clusters: clusters,
         req_ephemeral_size: req_ephemeral_size,
-        existing_disks: existing_disks,
+        disk_configurations: disk_configurations,
         ephemeral_ds_pattern: ephemeral_datastore_pattern,
         persistent_ds_pattern: persistent_datastore_pattern,
       )
@@ -33,19 +33,19 @@ module VSphereCloud
     def pick_cluster(
       req_memory:,
       req_ephemeral_size:,
-      existing_disks:,
+      disk_configurations:,
       ephemeral_datastore_pattern:,
       persistent_datastore_pattern:
     )
       clusters = suitable_clusters(
-        req_memory:req_memory,
+        req_memory: req_memory,
         req_ephemeral_size: req_ephemeral_size,
-        existing_disks: existing_disks,
+        disk_configurations: disk_configurations,
         ephemeral_datastore_pattern: ephemeral_datastore_pattern,
         persistent_datastore_pattern: persistent_datastore_pattern
       )
 
-      clusters = pick_clusters_with_least_migration_burden(clusters, existing_disks)
+      clusters = pick_clusters_with_least_migration_burden(clusters, disk_configurations)
 
       if clusters.size == 1
         return clusters.keys.first
@@ -66,7 +66,7 @@ module VSphereCloud
       raise Bosh::Clouds::CloudError,
         "Could not find any suitable clusters with memory: #{req_memory}, " \
         "ephemeral disk size: #{req_ephemeral_size}, " \
-        "and persistent disks: #{existing_disks.inspect}. " \
+        "and persistent disks: #{disk_configurations.inspect}. " \
         "Configured ephemeral datastore pattern: #{ephemeral_datastore_pattern.inspect}. " \
         "Configured persistent datastore pattern: #{persistent_datastore_pattern.inspect}. " \
         "Available clusters: #{@available_clusters.inspect}"
@@ -74,25 +74,31 @@ module VSphereCloud
 
     private
 
-    def migration_burden(properties, existing_disks)
-      existing_disks_to_migrate = existing_disks.reject do |ds_name, _|
-        properties[:datastores].include?(ds_name)
+    def disks_needing_migration(datastores, disk_configurations)
+      disk_configurations.reject do |disk_config|
+        datastores.include?(disk_config[:datastore_name])
       end
-      existing_disks_to_migrate.values.map(&:values).flatten.inject(0, :+)
     end
 
-    def pick_clusters_with_least_migration_burden(clusters, existing_disks)
-      return clusters if existing_disks.empty?
+    def migration_burden(properties, disk_configurations)
+      disks_needing_migration(properties[:datastores], disk_configurations)
+        .map{ |d| d[:size] }
+        .inject(0, :+)
+    end
+
+    def pick_clusters_with_least_migration_burden(clusters, disk_configurations)
+      return clusters if disk_configurations.empty?
 
       burdens = clusters.map do |name, properties|
-        [name, migration_burden(properties, existing_disks)]
-      end.reverse
+        [name, migration_burden(properties, disk_configurations)]
+      end
       burdens = Hash[burdens]
       min_burden = burdens.values.min
       cluster_selections = burdens.select do |name, burden|
         burden == min_burden
       end.map { |name, burden| name }
-      selected_clusters = clusters.select do |name, _|
+
+      clusters.select do |name, _|
         cluster_selections.include? name
       end
     end
@@ -127,7 +133,7 @@ module VSphereCloud
     def filter_on_datastore_space(
       clusters:,
       req_ephemeral_size:,
-      existing_disks:,
+      disk_configurations:,
       ephemeral_ds_pattern:,
       persistent_ds_pattern:
     )
@@ -135,7 +141,7 @@ module VSphereCloud
         cluster_can_accomodate_disks?(
           properties: properties,
           req_ephemeral_size: req_ephemeral_size,
-          existing_disks: existing_disks,
+          disk_configurations: disk_configurations,
           ephemeral_ds_pattern: ephemeral_ds_pattern,
           persistent_ds_pattern: persistent_ds_pattern,
         )
@@ -145,7 +151,7 @@ module VSphereCloud
     def cluster_can_accomodate_disks?(
       properties:,
       req_ephemeral_size:,
-      existing_disks:,
+      disk_configurations:,
       ephemeral_ds_pattern:,
       persistent_ds_pattern:
     )
@@ -154,20 +160,15 @@ module VSphereCloud
       suitable_eph_datastores = datastore_picker.suitable_datastores(req_ephemeral_size, ephemeral_ds_pattern)
 
       filtered_persistent_datastores = datastore_picker.suitable_datastores(0, persistent_ds_pattern)
-      persistent_disk_sizes = calc_persistent_disk_sizes(existing_disks, filtered_persistent_datastores)
+      disks_to_migrate = disks_needing_migration(filtered_persistent_datastores, disk_configurations)
+      disk_sizes = disks_to_migrate.map { |d| d[:size] }
 
       suitable_eph_datastores.any? do |name, free_space|
         updated_datastores = properties[:datastores].clone
         updated_datastores[name] = free_space - req_ephemeral_size
         datastore_picker.update(updated_datastores)
-        datastore_picker.can_accomodate_disks?(persistent_disk_sizes, persistent_ds_pattern)
+        datastore_picker.can_accomodate_disks?(disk_sizes, persistent_ds_pattern)
       end
-    end
-
-    def calc_persistent_disk_sizes(existing_disks, datastores)
-      already_included_disks = lambda { |ds_name, _| datastores.include? ds_name }
-
-      existing_disks.reject(&already_included_disks).values.map(&:values).flatten
     end
   end
 end

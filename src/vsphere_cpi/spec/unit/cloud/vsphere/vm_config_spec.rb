@@ -199,10 +199,10 @@ module VSphereCloud
               cid: "fake-stemcell-id",
               size: 2048
             },
-            existing_disks: existing_disks,
+            disk_configurations: disk_configurations,
             available_clusters: available_clusters,
-            ephemeral_datastore_pattern: /anything/,
-            persistent_datastore_pattern: /something/,
+            global_ephemeral_datastore_pattern: /anything/,
+            global_persistent_datastore_pattern: /something/,
           }
         end
         let(:available_clusters) do
@@ -210,10 +210,12 @@ module VSphereCloud
             "fake-cluster" => {}
           }
         end
-        let(:existing_disks) do
-          {
-            "persistent-ds-1" => {}
-          }
+        let(:disk_configurations) do
+          [{
+            size: 20_000,
+            cid: 'fake-cid',
+            metadata: {},
+          }]
         end
         let (:cluster_picker) { instance_double(ClusterPicker) }
 
@@ -224,7 +226,7 @@ module VSphereCloud
             .with(
               req_memory: 1024,
               req_ephemeral_size: 1024 + 4096 + 2048,
-              existing_disks: existing_disks,
+              disk_configurations: disk_configurations,
               ephemeral_datastore_pattern: /anything/,
               persistent_datastore_pattern: /something/
             )
@@ -245,7 +247,7 @@ module VSphereCloud
             .with(
               req_memory: 1024,
               req_ephemeral_size: 1024 + 4096 + 2048,
-              existing_disks: existing_disks,
+              disk_configurations: disk_configurations,
               ephemeral_datastore_pattern: /anything/,
               persistent_datastore_pattern: /something/
             )
@@ -280,10 +282,10 @@ module VSphereCloud
                 cid: "fake-stemcell-id",
                 size: 2048
               },
-              existing_disks: existing_disks,
+              disk_configurations: disk_configurations,
               available_clusters: available_clusters,
-              ephemeral_datastore_pattern: /anything/,
-              persistent_datastore_pattern: /something/
+              global_ephemeral_datastore_pattern: /anything/,
+              global_persistent_datastore_pattern: /something/
             }
           end
           let(:available_clusters) do
@@ -303,7 +305,7 @@ module VSphereCloud
                 .with(
                   req_memory: 1024,
                   req_ephemeral_size: 1024 + 4096 + 2048,
-                  existing_disks: existing_disks,
+                  disk_configurations: disk_configurations,
                   ephemeral_datastore_pattern: /^(fake\-cluster2\-ds)$/,
                   persistent_datastore_pattern: /something/
                 )
@@ -319,8 +321,64 @@ module VSphereCloud
           end
         end
 
-      end
+        context 'when disk_metadata is provided' do
+          let(:input) do
+            {
+              resource_pool: {
+                "ram" => 1024,
+                "disk" => 4096
+              },
+              stemcell: {
+                cid: "fake-stemcell-id",
+                size: 2048
+              },
+              disk_configurations: disk_configurations,
+              available_clusters: available_clusters,
+              global_ephemeral_datastore_pattern: /anything/,
+              global_persistent_datastore_pattern: /not\-used/,
+            }
+          end
+          let(:available_clusters) do
+            {
+              "fake-cluster1" => {
+                datastores: { "fake-cluster1-ds" => 1024 }
+              },
+              "fake-cluster2" => {
+                datastores: { "fake-cluster2-ds" => 1024}
+              }
+            }
+          end
+          let(:disk_configurations) do
+            [{
+              size: 20_000,
+              cid: 'fake-cid',
+              metadata: { 'persistent_datastores_pattern' => '^(fake\\-cluster1\\-ds)$' },
+            }]
+          end
 
+          it 'uses the persistent datastore pattern specified in disk_metadata' do
+            allow(cluster_picker).to receive(:update)
+              .with(available_clusters)
+            expect(cluster_picker).to receive(:pick_cluster)
+              .with(
+                req_memory: 1024,
+                req_ephemeral_size: 1024 + 4096 + 2048,
+                disk_configurations: disk_configurations,
+                ephemeral_datastore_pattern: /anything/,
+                persistent_datastore_pattern: /^(fake\-cluster1\-ds)$/
+              )
+              .once
+              .and_return("fake-cluster2")
+
+            vm_config = VmConfig.new(
+              cluster_picker: cluster_picker,
+              manifest_params: input
+            )
+
+            expect(vm_config.cluster_name).to eq("fake-cluster2")
+          end
+        end
+      end
     end
 
     describe '#datastore_name' do
@@ -336,7 +394,7 @@ module VSphereCloud
               "disk" => 4096
             },
             available_clusters: available_clusters,
-            ephemeral_datastore_pattern: /fake-pattern/,
+            global_ephemeral_datastore_pattern: /fake-pattern/,
           }
         end
         let(:available_clusters) do
@@ -439,7 +497,7 @@ module VSphereCloud
               'datastores' => ['fake-ds', 'other.*ds']
             },
             available_clusters: available_clusters,
-            ephemeral_datastore_pattern: /unused-pattern/,
+            global_ephemeral_datastore_pattern: /unused-pattern/,
           }
         end
         let(:available_clusters) do
@@ -479,7 +537,7 @@ module VSphereCloud
                 'datastores' => ['fake-ds', 'other.*ds']
               },
               available_clusters: available_clusters,
-              ephemeral_datastore_pattern: /unused-pattern/,
+              global_ephemeral_datastore_pattern: /unused-pattern/,
             }
           end
           let(:available_clusters) do
@@ -523,7 +581,7 @@ module VSphereCloud
                 'datastores' => ['other-ds']
               },
               available_clusters: available_clusters,
-              ephemeral_datastore_pattern: /unused-pattern/,
+              global_ephemeral_datastore_pattern: /unused-pattern/,
             }
           end
           let(:available_clusters) do
@@ -563,7 +621,7 @@ module VSphereCloud
                 'datastores' => []
               },
               available_clusters: available_clusters,
-              ephemeral_datastore_pattern: /fallback-ds/,
+              global_ephemeral_datastore_pattern: /fallback-ds/,
             }
           end
           let(:available_clusters) do
@@ -604,7 +662,7 @@ module VSphereCloud
                 'datastores' => nil,
               },
               available_clusters: available_clusters,
-              ephemeral_datastore_pattern: /fallback-ds/,
+              global_ephemeral_datastore_pattern: /fallback-ds/,
             }
           end
           let(:available_clusters) do

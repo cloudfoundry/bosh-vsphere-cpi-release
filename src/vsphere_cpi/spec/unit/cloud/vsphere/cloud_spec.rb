@@ -305,7 +305,15 @@ module VSphereCloud
       let(:ip_conflict_detector) { instance_double(IPConflictDetector) }
       let(:datastore_picker) { instance_double(DatastorePicker) }
       let(:cluster_picker) { instance_double(ClusterPicker) }
-      let(:existing_disk_cids) { ["fake-disk"] }
+      let(:existing_disk_cids) { ['fake-disk-cid'] }
+      let(:fake_disk) do
+        instance_double(Resources::Disk,
+          cid: 'fake-disk-cid',
+          size_in_mb: 1234,
+          datastore: fake_datastore,
+        )
+      end
+      let(:fake_datastore) { instance_double(Resources::Datastore, name: 'fake-datastore') }
 
       before do
         allow(vsphere_cloud).to receive(:stemcell_vm)
@@ -326,6 +334,9 @@ module VSphereCloud
           .and_return('fake-ephemeral-pattern')
         allow(datacenter).to receive(:persistent_pattern)
           .and_return('fake-persistent-pattern')
+        allow(datacenter).to receive(:find_disk)
+          .with('fake-disk-cid')
+          .and_return(fake_disk)
 
         allow(DatastorePicker).to receive(:new)
           .and_return(datastore_picker)
@@ -337,10 +348,6 @@ module VSphereCloud
       end
 
       it 'creates a new VM with provided manifest properties' do
-        expect(datacenter).to receive(:disks_hash)
-          .with(existing_disk_cids)
-          .and_return({ 'fake-datastore' => {} })
-
         expected_manifest_params = {
           resource_pool: "fake-resource-pool",
           networks_spec: "fake-networks-hash",
@@ -351,9 +358,14 @@ module VSphereCloud
             size: 1024
           },
           available_clusters: { 'fake-cluster' => {} },
-          existing_disks: { 'fake-datastore' => {} },
-          ephemeral_datastore_pattern: 'fake-ephemeral-pattern',
-          persistent_datastore_pattern: 'fake-persistent-pattern',
+          disk_configurations: [{
+            cid: fake_disk.cid,
+            size: fake_disk.size_in_mb,
+            datastore_name: fake_datastore.name,
+            metadata: {},
+          }],
+          global_ephemeral_datastore_pattern: 'fake-ephemeral-pattern',
+          global_persistent_datastore_pattern: 'fake-persistent-pattern',
         }
         expect(VmConfig).to receive(:new)
           .with(
@@ -389,10 +401,6 @@ module VSphereCloud
       end
 
       it 'creates a new VM with no existing disks and default environment' do
-        expect(datacenter).to receive(:disks_hash)
-          .with([])
-          .and_return({})
-
         expected_manifest_params = {
           resource_pool: "fake-resource-pool",
           networks_spec: "fake-networks-hash",
@@ -403,9 +411,9 @@ module VSphereCloud
             size: 1024
           },
           available_clusters: { 'fake-cluster' => {} },
-          existing_disks: {},
-          ephemeral_datastore_pattern: 'fake-ephemeral-pattern',
-          persistent_datastore_pattern: 'fake-persistent-pattern',
+          disk_configurations: [],
+          global_ephemeral_datastore_pattern: 'fake-ephemeral-pattern',
+          global_persistent_datastore_pattern: 'fake-persistent-pattern',
         }
         expect(VmConfig).to receive(:new)
           .with(
@@ -447,19 +455,22 @@ module VSphereCloud
         let(:existing_disk_cids) { ["fake-disk-cid.#{Base64.urlsafe_encode64(disk_metadata.to_json)}"] }
 
         before do
-          allow(VmConfig).to receive(:new)
-            .and_return(vm_config)
-          expect(vm_config).to receive(:validate)
-
           allow(VmCreator).to receive(:new)
             .and_return(vm_creator)
           allow(vm_creator).to receive(:create)
         end
 
         it 'creates the VM with disk cid parsed from the metadata-encoded director disk cid' do
-          expect(datacenter).to receive(:disks_hash)
-            .with(['fake-disk-cid'])
-            .and_return({ 'fake-datastore' => {} })
+          expect(VmConfig).to receive(:new) do |options|
+            expect(options[:manifest_params][:disk_configurations]).to eq([{
+              cid: fake_disk.cid,
+              size: fake_disk.size_in_mb,
+              datastore_name: fake_datastore.name,
+              metadata: disk_metadata,
+            }])
+            vm_config
+          end
+          expect(vm_config).to receive(:validate)
 
           vsphere_cloud.create_vm(
             "fake-agent-id",
@@ -483,7 +494,8 @@ module VSphereCloud
       before do
         allow(datacenter).to receive(:persistent_pattern)
           .and_return(/datastore\-.*/)
-        allow(datacenter).to receive(:persistent_datastores)
+        allow(datacenter).to receive(:select_datastores)
+          .with(/datastore\-.*/)
           .and_return({
             'datastore-with-disk' => datastore_with_disk,
             'datastore-without-disk' => datastore_without_disk,
@@ -773,7 +785,6 @@ module VSphereCloud
     end
 
     describe '#delete_disk' do
-      before { allow(datacenter).to receive(:persistent_datastores).and_return('fake-persistent-datastores') }
       before { allow(datacenter).to receive(:mob).and_return('datacenter-mob') }
 
       context 'when disk is found' do

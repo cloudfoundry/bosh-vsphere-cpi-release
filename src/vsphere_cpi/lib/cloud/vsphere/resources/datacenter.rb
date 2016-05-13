@@ -19,13 +19,11 @@ module VSphereCloud
         @ephemeral_pattern = attrs.fetch(:ephemeral_pattern)
         @persistent_pattern = attrs.fetch(:persistent_pattern)
         @clusters = attrs.fetch(:clusters)
+        @cluster_provider = attrs.fetch(:cluster_provider)
         @logger = attrs.fetch(:logger)
-        @mem_overcommit = attrs.fetch(:mem_overcommit)
-
-        @cluster_provider = ClusterProvider.new(self, @client, @logger)
       end
 
-      attr_reader :name, :disk_path, :ephemeral_pattern, :persistent_pattern, :mem_overcommit
+      attr_reader :name, :disk_path, :ephemeral_pattern, :persistent_pattern
 
       def mob
         mob = @client.find_by_inventory_path(name)
@@ -111,18 +109,8 @@ module VSphereCloud
         datastore
       end
 
-      def ephemeral_datastores
-        clusters.values.inject({}) do |acc, cluster|
-          acc.merge!(cluster.ephemeral_datastores)
-          acc
-        end
-      end
-
-      def persistent_datastores
-        clusters.values.inject({}) do |acc, cluster|
-          acc.merge!(cluster.persistent_datastores)
-          acc
-        end
+      def select_datastores(pattern)
+        all_datastores.select { |name, _| name =~ pattern }
       end
 
       def all_datastores
@@ -130,17 +118,6 @@ module VSphereCloud
           acc.merge!(cluster.all_datastores)
           acc
         end
-      end
-
-      def disks_hash(cids)
-        disks = {}
-        cids.each do |cid|
-          disk = find_disk(cid)
-          datastore_name = disk.datastore.name
-          disks[datastore_name] = {} if disks[datastore_name].nil?
-          disks[datastore_name][cid] = disk.size_in_mb
-        end
-        disks
       end
 
       # TODO: do we care about datastore.allocate?
@@ -161,11 +138,14 @@ module VSphereCloud
         @client.create_disk(mob, datastore, disk_cid, @disk_path, size_in_mb, disk_type)
       end
 
-      def find_disk(disk_cid)
-        @logger.debug("Looking for disk #{disk_cid} in datastores: #{persistent_datastores}")
-
-        disk = find_disk_cid_in_datastores(disk_cid, persistent_datastores)
-        return disk unless disk.nil?
+      def find_disk(disk_cid, persistent_pattern = nil)
+        persistent_datastores = {}
+        if persistent_pattern
+          @logger.debug("Looking for disk #{disk_cid} in datastores matching persistent pattern #{persistent_pattern}")
+          persistent_datastores = select_datastores(persistent_pattern)
+          disk = find_disk_cid_in_datastores(disk_cid, persistent_datastores)
+          return disk unless disk.nil?
+        end
 
         other_datastores = all_datastores.reject{|datastore_name, _| persistent_datastores[datastore_name] }
         @logger.debug("disk #{disk_cid} not found in filtered persistent datastores, trying other datastores: #{other_datastores}")

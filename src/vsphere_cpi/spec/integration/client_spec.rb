@@ -69,7 +69,7 @@ module VSphereCloud
           mem_overcommit: 1.0
         })
 
-      persistent_datastores = datacenter.persistent_datastores.values
+      persistent_datastores = datacenter.select_datastores(persistent_datastore_pattern).values
       return client, datacenter, persistent_datastores.first, disk_folder
     end
   end
