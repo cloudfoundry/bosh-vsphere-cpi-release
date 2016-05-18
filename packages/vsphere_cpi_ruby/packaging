@@ -1,3 +1,7 @@
+#!/usr/bin/env bash
+
+set -e -x
+
 openssl_version=`PATH=/usr/local/opt/openssl/bin:$PATH openssl version`
 openssl_major_version=`echo $openssl_version | cut -f2 -d\ | cut -f1 -d.`
 if [ $openssl_major_version == 0 ]; then
@@ -6,42 +10,27 @@ if [ $openssl_major_version == 0 ]; then
   exit 1
 fi
 
-(
-  set -e
-  tar xzf vsphere_cpi_ruby/yaml-0.1.5.tar.gz
-  cd yaml-0.1.5
+
+echo "Installing yaml"
+tar xzf ruby_vcloud_cpi/yaml-0.1.5.tar.gz
+pushd yaml-0.1.5 > /dev/null
   CFLAGS='-fPIC' ./configure --prefix=${BOSH_INSTALL_TARGET} --disable-shared
   make
   make install
-)
-if [[ $? != 0 ]] ; then
-  echo "Cannot install yaml"
-  exit 1
-fi
+popd > /dev/null
 
-(
-  set -e
-  tar xzf vsphere_cpi_ruby/ruby-2.2.4.tar.gz
-  cd ruby-2.2.4
+echo "Installing ruby"
+tar xzf vsphere_cpi_ruby/ruby-2.2.4.tar.gz
+pushd ruby-2.2.4 > /dev/null
   LDFLAGS="-Wl,-rpath -Wl,${BOSH_INSTALL_TARGET}" CFLAGS='-fPIC' ./configure --prefix=${BOSH_INSTALL_TARGET} --disable-install-doc --with-opt-dir=/usr/local/opt/openssl:${BOSH_INSTALL_TARGET}
   make
   make install
-)
-if [[ $? != 0 ]] ; then
-  echo "Cannot install ruby"
-  exit 1
-fi
+popd > /dev/null
 
-(
-  set -e
-  tar zxvf vsphere_cpi_ruby/rubygems-2.6.2.tgz
-  cd rubygems-2.6.2
-
+echo "Installing rubygems"
+tar zxvf vsphere_cpi_ruby/rubygems-2.6.2.tgz
+pushd rubygems-2.6.2 > /dev/null
   ${BOSH_INSTALL_TARGET}/bin/ruby setup.rb
-)
-if [[ $? != 0 ]] ; then
-  echo "Cannot install rubygems"
-  exit 1
-fi
+popd > /dev/null
 
 ${BOSH_INSTALL_TARGET}/bin/gem install vsphere_cpi_ruby/bundler-1.11.2.gem --local --no-ri --no-rdoc
