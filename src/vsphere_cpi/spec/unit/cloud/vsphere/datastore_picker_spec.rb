@@ -184,5 +184,171 @@ module VSphereCloud
         end
       end
     end
+
+    describe '#best_disk_placement' do
+
+      context 'when a single DS is available' do
+        let(:available_datastores) do
+         {
+           'ds-1' => {
+             free_space: 1024,
+           },
+         }
+        end
+        let(:already_placed_disk) do
+          {
+            size: 256,
+            existing_datastore_name: 'ds-1',
+            target_datastore_pattern: '.*',
+          }
+        end
+        let(:moved_disk) do
+          {
+            size: 512,
+            target_datastore_pattern: '.*',
+          }
+        end
+
+        it 'returns the only valid placement' do
+          picker = DatastorePicker.new(0)
+          picker.update(available_datastores)
+          disks = [already_placed_disk, moved_disk]
+
+          expect(picker.best_disk_placement(disks)).to eq({
+            'ds-1' => {
+              free_space: 1024 - 512,
+              disks: disks,
+            }
+          })
+        end
+
+        context 'when no valid placement exists' do
+          let(:large_disk) do
+            {
+              size: 999999,
+              target_datastore_pattern: '.*',
+            }
+          end
+
+          it 'raises an error' do
+            picker = DatastorePicker.new(0)
+            picker.update(available_datastores)
+            disks = [large_disk]
+
+            expect{
+              picker.best_disk_placement(disks)
+            }.to raise_error Bosh::Clouds::CloudError, /No valid placement/
+          end
+        end
+      end
+
+      context 'when a multiple DS are available' do
+        let(:available_datastores) do
+         {
+           'ds-1' => {
+             free_space: 512,
+           },
+           'ds-2' => {
+             free_space: 1024,
+           },
+         }
+        end
+        let(:disk1) do
+          {
+            size: 256,
+            target_datastore_pattern: 'ds-2',
+          }
+        end
+        let(:disk2) do
+          {
+            size: 512,
+            target_datastore_pattern: '.*',
+          }
+        end
+
+        it 'places the disks into the datastores' do
+          picker = DatastorePicker.new(0)
+          picker.update(available_datastores)
+
+          disks = [disk1, disk2]
+          expect(picker.best_disk_placement(disks)).to eq({
+            'ds-1' => {
+              free_space: 0,
+              disks: [disk2],
+            },
+            'ds-2' => {
+              free_space: 768,
+              disks: [disk1],
+            },
+          })
+        end
+
+        context 'when given existing_datastore_name' do
+          let(:disk1) do
+            {
+              size: 256,
+              existing_datastore_name: 'ds-2',
+              target_datastore_pattern: '.*',
+            }
+          end
+          let(:disk2) do
+            {
+              size: 512,
+              target_datastore_pattern: '.*',
+            }
+          end
+
+          it 'keeps the disk in its existing datastore to minimize disk migrations' do
+            picker = DatastorePicker.new(0)
+            picker.update(available_datastores)
+
+            disks = [disk1, disk2]
+            expect(picker.best_disk_placement(disks)).to eq({
+              'ds-1' => {
+                free_space: 0,
+                disks: [disk2],
+              },
+              'ds-2' => {
+                free_space: 1024,
+                disks: [disk1],
+              },
+            })
+          end
+        end
+
+        context 'when given existing_datastore_name that is not available' do
+          let(:disk1) do
+            {
+              size: 256,
+              existing_datastore_name: 'non-accessible-ds',
+              target_datastore_pattern: '.*',
+            }
+          end
+          let(:disk2) do
+            {
+              size: 512,
+              target_datastore_pattern: '.*',
+            }
+          end
+
+          it 'places the disk in an available datastore' do
+            picker = DatastorePicker.new(0)
+            picker.update(available_datastores)
+
+            disks = [disk1, disk2]
+            expect(picker.best_disk_placement(disks)).to eq({
+              'ds-1' => {
+                free_space: 256,
+                disks: [disk1],
+              },
+              'ds-2' => {
+                free_space: 512,
+                disks: [disk2],
+              },
+            })
+          end
+        end
+      end
+    end
   end
 end

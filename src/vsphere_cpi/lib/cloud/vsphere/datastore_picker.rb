@@ -51,6 +51,42 @@ module VSphereCloud
       Resources::Util.weighted_random(scores)
     end
 
+    def best_disk_placement(disks)
+      datastores = {}
+      @available_datastores.each do |name, props|
+        datastores[name] = {
+          free_space: props[:free_space],
+          disks: [],
+        }
+      end
+
+      disks.each do |disk|
+        existing_ds_name = disk[:existing_datastore_name]
+        if existing_ds_name =~ Regexp.new(disk[:target_datastore_pattern]) && datastores.keys.include?(existing_ds_name)
+          datastores[existing_ds_name][:disks].push(disk)
+          next
+        end
+
+        found_placement = false
+
+        datastores.each do |ds_name, ds_props|
+          additional_required_space = disk[:size]
+
+          next if additional_required_space > ds_props[:free_space]
+          next unless ds_name =~ Regexp.new(disk[:target_datastore_pattern])
+
+          datastores[ds_name][:disks].push(disk)
+          datastores[ds_name][:free_space] -= additional_required_space
+          found_placement = true
+          break
+        end
+
+        raise Bosh::Clouds::CloudError, "No valid placement found for disk: #{disk.inspect}" unless found_placement
+      end
+
+      datastores
+    end
+
     private
 
     def default_scorer
