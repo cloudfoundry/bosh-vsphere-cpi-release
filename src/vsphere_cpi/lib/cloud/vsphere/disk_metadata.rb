@@ -13,6 +13,7 @@ module VSphereCloud
         else
           {}
         end
+        decoded_metadata = convert_keys_to_symbols(decoded_metadata)
         [disk_cid, decoded_metadata]
       end
 
@@ -34,6 +35,16 @@ module VSphereCloud
 
       def base64_to_hash(encoded_hash)
         JSON.parse(Base64.urlsafe_decode64(encoded_hash))
+      end
+
+      def convert_keys_to_symbols(obj)
+        if obj.is_a? Hash
+          return obj.inject({}) { |memo,(k,v)| memo[k.to_sym] = convert_keys_to_symbols(v); memo }
+        end
+        if obj.is_a? Array
+          return obj.inject([]) { |memo,v| memo << convert_keys_to_symbols(v); memo }
+        end
+        return obj
       end
     end
   end

@@ -32,7 +32,7 @@ module VSphereCloud
       # @param [ClusterConfig] config cluster configuration as specified by the
       #   operator.
       # @param [Hash] properties prefetched vSphere properties for the cluster.
-      def initialize(ephemeral_pattern, persistent_pattern, mem_overcommit, cluster_config, properties, logger, client)
+      def initialize(mem_overcommit, cluster_config, properties, logger, client)
         @logger = logger
         @client = client
         @properties = properties
@@ -40,33 +40,14 @@ module VSphereCloud
         @config = cluster_config
         @mob = properties[:obj]
         @resource_pool = ResourcePool.new(@client, @logger, cluster_config, properties["resourcePool"])
-        @ephemeral_pattern = ephemeral_pattern
-        @persistent_pattern = persistent_pattern
         @mem_overcommit = mem_overcommit
         @allocated_after_sync = 0
-      end
-
-      # Returns the persistent datastore by name. This could be either from the
-      # exclusive or shared datastore pools.
-      #
-      # @param [String] datastore_name name of the datastore.
-      # @return [Datastore, nil] the requested persistent datastore.
-      def persistent(datastore_name)
-        persistent_datastores[datastore_name]
       end
 
       # @return [Integer] amount of free memory in the cluster
       def free_memory
         synced_free_memory -
           (@allocated_after_sync * @mem_overcommit).to_i
-      end
-
-      def total_free_ephemeral_disk_in_mb
-        ephemeral_datastores.values.map(&:free_space).inject(0, :+)
-      end
-
-      def total_free_persistent_disk_in_mb
-        persistent_datastores.values.map(&:free_space).inject(0, :+)
       end
 
       # Marks the memory reservation against the cached utilization data.
@@ -85,21 +66,6 @@ module VSphereCloud
       # @return [String] debug cluster information.
       def inspect
         "<Cluster: #{mob} / #{config.name}>"
-      end
-
-      # @return [String] more descriptive debug cluster information.
-      def describe
-        "#{name} has #{free_memory}mb/" +
-          "#{total_free_ephemeral_disk_in_mb / 1024}gb/" +
-          "#{total_free_persistent_disk_in_mb / 1024}gb"
-      end
-
-      def ephemeral_datastores
-        @ephemeral_datastores ||= select_datastores(@ephemeral_pattern)
-      end
-
-      def persistent_datastores
-        @persistent_datastores ||= select_datastores(@persistent_pattern)
       end
 
       def all_datastores

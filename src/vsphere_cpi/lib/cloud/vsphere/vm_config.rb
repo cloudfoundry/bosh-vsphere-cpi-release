@@ -1,7 +1,7 @@
 module VSphereCloud
   class VmConfig
 
-    def initialize(manifest_params:, cluster_picker: cluster_picker, datastore_picker: datastore_picker)
+    def initialize(manifest_params:, cluster_picker: nil, datastore_picker: nil)
       @manifest_params = manifest_params
       @cluster_picker = cluster_picker
       @datastore_picker = datastore_picker
@@ -13,26 +13,10 @@ module VSphereCloud
 
     def cluster_name
       return @cluster_name if @cluster_name
-      if resource_pool_clusters_spec.keys.first
-        resource_pool_cluster_name = resource_pool_clusters_spec.keys.first
-        if available_clusters[resource_pool_cluster_name].nil?
-          raise Bosh::Clouds::CloudError, "Cluster '#{resource_pool_cluster_name}' does not match provided clusters [#{available_clusters.keys.join(', ')}]"
-        end
-        return resource_pool_cluster_name
-      end
 
       return nil if @cluster_picker.nil?
 
-      @cluster_picker.update(available_clusters)
-
-      total_eph_disk_size = ephemeral_disk_size + config_spec_params[:memory_mb] + stemcell_size
-      @cluster_name = @cluster_picker.pick_cluster(
-        req_memory: config_spec_params[:memory_mb],
-        req_ephemeral_size: total_eph_disk_size,
-        disk_configurations: disk_configurations,
-        ephemeral_datastore_pattern: ephemeral_datastore_pattern,
-        persistent_datastore_pattern: persistent_datastore_pattern,
-        )
+      @cluster_name = cluster_placement.keys.first
     end
 
     # TODO: Remove this once we handle placement resources better
@@ -42,7 +26,7 @@ module VSphereCloud
 
     # TODO: Remove this once we handle placement resources better
     def cluster_spec
-        return resource_pool_clusters_spec.values.first
+      return resource_pool_clusters_spec.values.first
     end
 
     def drs_rule
@@ -52,14 +36,13 @@ module VSphereCloud
       (cluster_config["drs_rules"] || []).first
     end
 
-    def datastore_name
+    def ephemeral_datastore_name
+      return nil if cluster_name.nil?
       return nil if @datastore_picker.nil?
       return @datastore_name if @datastore_name
 
-      cluster_properties = available_clusters[cluster_name]
-
-      @datastore_picker.update(cluster_properties[:datastores])
-      @datastore_name = @datastore_picker.pick_datastore(ephemeral_disk_size, ephemeral_datastore_pattern)
+      ephemeral_disk = disk_configurations.find { |disk| disk[:ephemeral] }
+      cluster_placement[cluster_name][ephemeral_disk]
     end
 
     def ephemeral_disk_size
@@ -138,7 +121,21 @@ module VSphereCloud
     end
 
     def available_clusters
-      @manifest_params[:available_clusters] || {}
+      if resource_pool_cluster_name
+        if global_clusters[resource_pool_cluster_name].nil?
+          raise Bosh::Clouds::CloudError, "Cluster '#{resource_pool_cluster_name}' does not match global clusters [#{global_clusters.keys.join(', ')}]"
+        end
+        return global_clusters.select { |k,_| k == resource_pool_cluster_name }
+      end
+      global_clusters
+    end
+
+    def resource_pool_cluster_name
+      resource_pool_clusters_spec.keys.first || nil
+    end
+
+    def global_clusters
+      @manifest_params[:global_clusters] || {}
     end
 
     def stemcell
@@ -158,18 +155,21 @@ module VSphereCloud
       datacenter_spec.fetch('clusters', []).first || {}
     end
 
-    def ephemeral_datastore_pattern
-      if resource_pool['datastores'] && !resource_pool['datastores'].empty?
-        basic_ephemeral_pattern = resource_pool['datastores'].map { |pattern| Regexp.escape(pattern) }.join('|')
-        ephemeral_pattern = Regexp.new("^(#{basic_ephemeral_pattern})$")
-        return ephemeral_pattern
-      end
-      Regexp.new(@manifest_params[:global_ephemeral_datastore_pattern] || "")
-    end
+    def cluster_placement
+      return @cluster_placement if @cluster_placement
 
-    def persistent_datastore_pattern
-      disk_metadata = (disk_configurations.first || {})[:metadata] || {}
-      Regexp.new(disk_metadata['persistent_datastores_pattern'] || @manifest_params[:global_persistent_datastore_pattern] || "")
+      if available_clusters.empty?
+        raise Bosh::Clouds::CloudError, "No valid clusters were provided"
+      end
+      if resource_pool['ram'].nil?
+        raise Bosh::Clouds::CloudError, "Must specify vm_types.cloud_properties.ram"
+      end
+
+      @cluster_picker.update(available_clusters)
+      @cluster_placement = @cluster_picker.best_cluster_placement(
+        req_memory: resource_pool['ram'],
+        disk_configurations: disk_configurations,
+      )
     end
   end
 end

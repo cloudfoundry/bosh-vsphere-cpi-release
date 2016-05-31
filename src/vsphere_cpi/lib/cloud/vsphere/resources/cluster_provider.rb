@@ -4,8 +4,6 @@ module VSphereCloud
       def initialize(options)
         @datacenter_name = options.fetch(:datacenter_name)
         @mem_overcommit = options.fetch(:mem_overcommit)
-        @ephemeral_pattern = options.fetch(:ephemeral_pattern)
-        @persistent_pattern = options.fetch(:persistent_pattern)
         @client = options.fetch(:client)
         @logger = options.fetch(:logger)
       end
@@ -21,8 +19,6 @@ module VSphereCloud
         raise "Can't find properties for cluster '#{name}'" if cluster_properties.nil?
 
         Cluster.new(
-          @ephemeral_pattern,
-          @persistent_pattern,
           @mem_overcommit,
           config,
           cluster_properties,

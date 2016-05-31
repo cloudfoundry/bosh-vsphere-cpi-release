@@ -78,7 +78,9 @@ module VSphereCloud
         clusters.each do |cluster_name, cluster|
           cluster_datastores = {}
           cluster.all_datastores.each do |datastore_name, datastore|
-            cluster_datastores[datastore_name] = datastore.free_space
+            cluster_datastores[datastore_name] = {
+              free_space: datastore.free_space,
+            }
           end
           available_clusters[cluster_name] = {
             memory: cluster.free_memory,
@@ -92,7 +94,9 @@ module VSphereCloud
         available_datastores = {}
         clusters.each do |cluster_name, cluster|
           cluster.all_datastores.each do |datastore_name, datastore|
-            available_datastores[datastore_name] = datastore.free_space
+            available_datastores[datastore_name] = {
+              free_space: datastore.free_space,
+            }
           end
         end
         available_datastores
@@ -190,30 +194,6 @@ module VSphereCloud
           end
         end
         nil
-      end
-
-      class PersistentDiskIndex
-        def initialize(clusters, existing_persistent_disks)
-          @clusters_to_disks = Hash[*clusters.map do |cluster|
-              [cluster, existing_persistent_disks.select { |disk| cluster_includes_datastore?(cluster, disk.datastore) }]
-            end.flatten(1)]
-
-          @disks_to_clusters = Hash[*existing_persistent_disks.map do |disk|
-              [disk, clusters.select { |cluster| cluster_includes_datastore?(cluster, disk.datastore) }]
-            end.flatten(1)]
-        end
-
-        def cluster_includes_datastore?(cluster, datastore)
-          cluster.persistent(datastore.name) != nil
-        end
-
-        def disks_connected_to_cluster(cluster)
-          @clusters_to_disks[cluster]
-        end
-
-        def clusters_connected_to_disk(disk)
-          @disks_to_clusters[disk]
-        end
       end
     end
   end

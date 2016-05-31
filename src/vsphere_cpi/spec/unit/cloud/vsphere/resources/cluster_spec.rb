@@ -4,8 +4,6 @@ module VSphereCloud::Resources
   describe Cluster do
     subject(:cluster) do
       VSphereCloud::Resources::Cluster.new(
-        /eph/,
-        /persist/,
         1.0,
         cluster_config,
         properties,
@@ -86,40 +84,6 @@ module VSphereCloud::Resources
       ).and_return({
         'summary' => instance_double('VimSdk::Vim::ResourcePool::Summary', runtime: fake_runtime_info)
       })
-    end
-
-    describe '#ephemeral_datastores' do
-      it 'filters the full list of datastores based on the datacenter_datastore_pattern' do
-        ephemeral_datastores = cluster.ephemeral_datastores
-        expect(ephemeral_datastores.keys).to match_array(['ephemeral_1', 'ephemeral_2'])
-        expect(ephemeral_datastores['ephemeral_1'].name).to eq('ephemeral_1')
-        expect(ephemeral_datastores['ephemeral_2'].name).to eq('ephemeral_2')
-      end
-
-      context 'when there are no datastores' do
-        let(:fake_datastore_properties) { {} }
-
-        it 'it returns an empty list when there are no datastores' do
-          expect(cluster.ephemeral_datastores).to eq({})
-        end
-      end
-    end
-
-    describe '#persistent_datastores' do
-      it 'filters the full list of datastores based on the datacenter_persistent_datastore_pattern' do
-        persistent_datastores = cluster.persistent_datastores
-        expect(persistent_datastores.keys).to match_array(['persistent_1', 'persistent_2'])
-        expect(persistent_datastores['persistent_1'].name).to eq('persistent_1')
-        expect(persistent_datastores['persistent_2'].name).to eq('persistent_2')
-      end
-
-      context 'when there are no datastores' do
-        let(:fake_datastore_properties) { {} }
-
-        it 'it returns an empty list when there are no datastores' do
-          expect(cluster.persistent_datastores).to eq({})
-        end
-      end
     end
 
     describe '#all_datastores' do
@@ -246,20 +210,6 @@ module VSphereCloud::Resources
       end
     end
 
-    describe '#persistent' do
-      context 'when a matching datastore is in the persistent datastore pool' do
-        it 'returns that persistent datastore' do
-          expect(cluster.persistent('persistent_1').name).to eq('persistent_1')
-        end
-      end
-
-      context 'when no matching datastore is in the persistent pool' do
-        it 'returns nil' do
-          expect(cluster.persistent('nonexistent-datastore-name')).to be_nil
-        end
-      end
-    end
-
     describe '#free_memory' do
       let(:fake_runtime_info) do
         instance_double(
@@ -330,12 +280,6 @@ module VSphereCloud::Resources
     describe '#inspect' do
       it 'returns the printable form' do
         expect(cluster.inspect).to eq("<Cluster: #{cluster_mob} / fake-cluster-name>")
-      end
-    end
-
-    describe '#describe' do
-      it 'returns some debug info' do
-        expect(cluster.describe).to eq("fake-cluster-name has 0mb/39gb/29gb")
       end
     end
 

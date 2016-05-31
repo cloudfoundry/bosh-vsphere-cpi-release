@@ -1,11 +1,12 @@
 module VSphereCloud
   class VmCreator
-    def initialize(client:, cloud_searcher:, logger:, cpi:, datacenter:, agent_env:, ip_conflict_detector:)
+    def initialize(client:, cloud_searcher:, logger:, cpi:, datacenter:, cluster_provider:, agent_env:, ip_conflict_detector:)
       @client = client
       @cloud_searcher = cloud_searcher
       @logger = logger
       @cpi = cpi
       @datacenter = datacenter
+      @cluster_provider = cluster_provider
       @agent_env = agent_env
       @ip_conflict_detector = ip_conflict_detector
     end
@@ -13,12 +14,13 @@ module VSphereCloud
     def create(vm_config)
       # TODO: Remove this once we handle placement resources better
       if vm_config.is_top_level_cluster
+        # This ensures that cloud_properties.cluster.resource_pool is added to cluster object
         cluster_config = ClusterConfig.new(vm_config.cluster_name, vm_config.cluster_spec)
-        cluster = Resources::ClusterProvider.new(@datacenter, @client, @logger).find(vm_config.cluster_name, cluster_config)
+        cluster = @cluster_provider.find(vm_config.cluster_name, cluster_config)
       else
         cluster = @datacenter.find_cluster(vm_config.cluster_name)
       end
-      datastore = @datacenter.find_datastore(vm_config.datastore_name)
+      datastore = @datacenter.find_datastore(vm_config.ephemeral_datastore_name)
 
       @ip_conflict_detector.ensure_no_conflicts(vm_config.vsphere_networks)
 

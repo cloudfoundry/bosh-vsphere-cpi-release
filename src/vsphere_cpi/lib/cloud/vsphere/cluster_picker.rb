@@ -12,163 +12,86 @@ module VSphereCloud
       @available_clusters = available_clusters
     end
 
-
-    def suitable_clusters(
-      req_memory:,
-      req_ephemeral_size:,
-      disk_configurations:,
-      ephemeral_datastore_pattern:,
-      persistent_datastore_pattern:
-    )
-      clusters = filter_on_memory(@available_clusters, req_memory)
-      filter_on_datastore_space(
-        clusters: clusters,
-        req_ephemeral_size: req_ephemeral_size,
-        disk_configurations: disk_configurations,
-        ephemeral_ds_pattern: ephemeral_datastore_pattern,
-        persistent_ds_pattern: persistent_datastore_pattern,
-      )
-    end
-
-    def pick_cluster(
-      req_memory:,
-      req_ephemeral_size:,
-      disk_configurations:,
-      ephemeral_datastore_pattern:,
-      persistent_datastore_pattern:
-    )
-      clusters = suitable_clusters(
-        req_memory: req_memory,
-        req_ephemeral_size: req_ephemeral_size,
-        disk_configurations: disk_configurations,
-        ephemeral_datastore_pattern: ephemeral_datastore_pattern,
-        persistent_datastore_pattern: persistent_datastore_pattern
-      )
-
-      clusters = pick_clusters_with_least_migration_burden(clusters, disk_configurations)
-
-      if clusters.size == 1
-        return clusters.keys.first
+    def best_cluster_placement(req_memory:, disk_configurations:)
+      clusters = filter_on_memory(req_memory)
+      if clusters.size == 0
+        raise Bosh::Clouds::CloudError, "No valid placement found for requested memory: #{req_memory}"
       end
 
-      if clusters.size > 1
-        sorted_clusters = clusters.sort_by do |name, properties|
-          score_cluster(
-            properties: properties,
-            req_ephemeral_size: req_ephemeral_size,
-            ephemeral_ds_pattern: ephemeral_datastore_pattern,
-            persistent_ds_pattern: persistent_datastore_pattern
-          )
-        end.reverse
-        return sorted_clusters.first.first
+      placement_options = clusters.map do |cluster_name, cluster_props|
+        datastore_picker = DatastorePicker.new(@disk_headroom)
+        datastore_picker.update(cluster_props[:datastores])
+
+        begin
+          placement = datastore_picker.best_disk_placement(disk_configurations)
+          placement[:memory] = cluster_props[:memory]
+          [cluster_name, placement]
+        rescue Bosh::Clouds::CloudError
+          nil # continue if no placements exist for this cluster
+        end
+      end.compact.to_h
+
+      if placement_options.size == 0
+        raise Bosh::Clouds::CloudError, "No valid placement found for disks: #{disk_configurations.inspect}"
+      end
+      if placement_options.size == 1
+        return format_final_placement(placement_options)
       end
 
-      raise Bosh::Clouds::CloudError,
-        "Could not find any suitable clusters with memory: #{req_memory}, " \
-        "ephemeral disk size: #{req_ephemeral_size}, " \
-        "and persistent disks: #{disk_configurations.inspect}. " \
-        "Configured ephemeral datastore pattern: #{ephemeral_datastore_pattern.inspect}. " \
-        "Configured persistent datastore pattern: #{persistent_datastore_pattern.inspect}. " \
-        "Available clusters: #{@available_clusters.inspect}"
+      placement_options = placements_with_minimum_disk_migrations(placement_options)
+      if placement_options.size == 1
+        return format_final_placement(placement_options)
+      end
+
+      placement_options = placements_with_max_free_space(placement_options)
+      if placement_options.size == 1
+        return format_final_placement(placement_options)
+      end
+
+      placement_options = placements_with_max_free_memory(placement_options)
+      format_final_placement(placement_options)
     end
 
     private
 
-    def disks_needing_migration(datastores, disk_configurations)
-      disk_configurations.reject do |disk_config|
-        datastores.include?(disk_config[:datastore_name])
-      end
+    def filter_on_memory(req_memory)
+      @available_clusters.reject { |name,props| props[:memory] < req_memory }
     end
 
-    def migration_burden(properties, disk_configurations)
-      disks_needing_migration(properties[:datastores], disk_configurations)
-        .map{ |d| d[:size] }
-        .inject(0, :+)
+    def placements_with_minimum_disk_migrations(placements)
+      sorted = placements.sort_by { |_, placement| placement[:migration_size] }
+      minimum = sorted.first[1][:migration_size]
+
+      sorted.select { |_, placement| placement[:migration_size] == minimum }.to_h
     end
 
-    def pick_clusters_with_least_migration_burden(clusters, disk_configurations)
-      return clusters if disk_configurations.empty?
+    def placements_with_max_free_space(placements)
+      sorted = placements.sort_by { |_, placement| placement[:balance_score] }
+      maximum = sorted.last[1][:balance_score]
 
-      burdens = clusters.map do |name, properties|
-        [name, migration_burden(properties, disk_configurations)]
-      end
-      burdens = Hash[burdens]
-      min_burden = burdens.values.min
-      cluster_selections = burdens.select do |name, burden|
-        burden == min_burden
-      end.map { |name, burden| name }
-
-      clusters.select do |name, _|
-        cluster_selections.include? name
-      end
+      sorted.select { |_, placement| placement[:balance_score] == maximum }.to_h
     end
 
-    def score_cluster(
-      properties:,
-      req_ephemeral_size:,
-      ephemeral_ds_pattern:,
-      persistent_ds_pattern:
-    )
-      datastore_picker = DatastorePicker.new(@disk_headroom)
-      datastore_picker.update(properties[:datastores])
-      suitable_eph_datastores = datastore_picker.suitable_datastores(req_ephemeral_size, ephemeral_ds_pattern)
-      eph_score = suitable_eph_datastores.values.inject(0, :+)
+    def placements_with_max_free_memory(placements)
+      sorted = placements.sort_by { |_, placement| placement[:memory] }
+      maximum = sorted.last[1][:memory]
 
-      suitable_persistent_datastores = datastore_picker.suitable_datastores(0, persistent_ds_pattern)
-      if suitable_persistent_datastores.empty?
-        persistent_score = 0
-      else
-        persistent_score = suitable_persistent_datastores.values.sort.reverse.first
-      end
-
-      eph_score + persistent_score + properties[:memory]
+      sorted.select { |_, placement| placement[:memory] == maximum }.to_h
     end
 
-    def filter_on_memory(clusters, req_memory)
-      clusters.select do |name, properties|
-        properties[:memory] >= (req_memory + @mem_headroom)
+    def format_final_placement(cluster_placement)
+      cluster_name = cluster_placement.keys.first
+      datastore_placements = cluster_placement[cluster_name][:datastores]
+
+      final_placement = {}
+      final_placement[cluster_name] = {}
+      datastore_placements.each do |ds_name, props|
+        disks = props[:disks]
+        disks.each do |disk|
+          final_placement[cluster_name][disk] = ds_name
+        end
       end
-    end
-
-    def filter_on_datastore_space(
-      clusters:,
-      req_ephemeral_size:,
-      disk_configurations:,
-      ephemeral_ds_pattern:,
-      persistent_ds_pattern:
-    )
-      clusters.select do |_, properties|
-        cluster_can_accomodate_disks?(
-          properties: properties,
-          req_ephemeral_size: req_ephemeral_size,
-          disk_configurations: disk_configurations,
-          ephemeral_ds_pattern: ephemeral_ds_pattern,
-          persistent_ds_pattern: persistent_ds_pattern,
-        )
-      end
-    end
-
-    def cluster_can_accomodate_disks?(
-      properties:,
-      req_ephemeral_size:,
-      disk_configurations:,
-      ephemeral_ds_pattern:,
-      persistent_ds_pattern:
-    )
-      datastore_picker = DatastorePicker.new(@disk_headroom)
-      datastore_picker.update(properties[:datastores])
-      suitable_eph_datastores = datastore_picker.suitable_datastores(req_ephemeral_size, ephemeral_ds_pattern)
-
-      filtered_persistent_datastores = datastore_picker.suitable_datastores(0, persistent_ds_pattern)
-      disks_to_migrate = disks_needing_migration(filtered_persistent_datastores, disk_configurations)
-      disk_sizes = disks_to_migrate.map { |d| d[:size] }
-
-      suitable_eph_datastores.any? do |name, free_space|
-        updated_datastores = properties[:datastores].clone
-        updated_datastores[name] = free_space - req_ephemeral_size
-        datastore_picker.update(updated_datastores)
-        datastore_picker.can_accomodate_disks?(disk_sizes, persistent_ds_pattern)
-      end
+      final_placement
     end
   end
 end

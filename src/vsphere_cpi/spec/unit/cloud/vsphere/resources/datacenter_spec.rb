@@ -244,15 +244,23 @@ describe VSphereCloud::Resources::Datacenter do
         'first-cluster' => {
           memory: 1024,
           datastores: {
-            'first-datastore' => 4000,
-            'third-datastore' => 16000
+            'first-datastore' => {
+              free_space: 4000,
+            },
+            'third-datastore' => {
+              free_space: 16000,
+            },
           }
         },
         'second-cluster' => {
           memory: 2048,
           datastores: {
-            'first-datastore' => 4000,
-            'second-datastore' => 8000
+            'first-datastore' => {
+              free_space: 4000,
+            },
+            'second-datastore' => {
+              free_space: 8000,
+            },
           }
         }
       })
@@ -300,9 +308,15 @@ describe VSphereCloud::Resources::Datacenter do
       })
 
       expect(datacenter.datastores_hash).to eq({
-        'first-datastore' => 4000,
-        'second-datastore' => 8000,
-        'third-datastore' => 16000,
+        'first-datastore' => {
+          free_space: 4000,
+        },
+        'second-datastore' => {
+          free_space: 8000,
+        },
+        'third-datastore' => {
+          free_space: 16000,
+        },
       })
     end
   end

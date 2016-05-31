@@ -280,13 +280,13 @@ module VSphereCloud
 
     describe '#datacenter_datastore_pattern' do
       it 'returns the datacenter datastore pattern ' do
-        expect(config.datacenter_datastore_pattern).to eq(Regexp.new('fancy-datastore*'))
+        expect(config.datacenter_datastore_pattern).to eq('fancy-datastore*')
       end
     end
 
     describe '#datacenter_persistent_datastore_pattern' do
       it 'returns the datacenter persistent datastore pattern ' do
-        expect(config.datacenter_persistent_datastore_pattern).to eq(Regexp.new(persistent_datastore_pattern))
+        expect(config.datacenter_persistent_datastore_pattern).to eq(persistent_datastore_pattern)
       end
     end
 

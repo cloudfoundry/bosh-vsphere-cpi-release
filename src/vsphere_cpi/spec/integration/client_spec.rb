@@ -55,6 +55,12 @@ module VSphereCloud
       client = VCenterClient.new("https://#{host}/sdk/vimService", logger: logger)
       client.login(user, password, 'en')
 
+      cluster_provider = Resources::ClusterProvider.new({
+        datacenter_name: datacenter_name,
+        mem_overcommit: 1.0,
+        client: client,
+        logger: logger,
+      })
       datacenter = Resources::Datacenter.new({
           client: client,
           use_sub_folder: false,
@@ -65,8 +71,8 @@ module VSphereCloud
           ephemeral_pattern: ephemeral_datastore_pattern,
           persistent_pattern: persistent_datastore_pattern,
           clusters: cluster_configs,
+          cluster_provider: cluster_provider,
           logger: logger,
-          mem_overcommit: 1.0
         })
 
       persistent_datastores = datacenter.select_datastores(persistent_datastore_pattern).values

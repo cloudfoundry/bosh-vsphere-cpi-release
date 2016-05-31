@@ -39,7 +39,8 @@ describe VSphereCloud::Cloud, external_cpi: true do
     resource_pool_name        = ENV.fetch('BOSH_VSPHERE_CPI_RESOURCE_POOL', 'ACCEPTANCE_RP')
     second_resource_pool_name = ENV.fetch('BOSH_VSPHERE_CPI_SECOND_CLUSTER_RESOURCE_POOL', 'ACCEPTANCE_RP')
 
-    client = VSphereCloud::VCenterClient.new("https://#{host}/sdk/vimService").tap do |client|
+    logger = Logger.new(StringIO.new(""))
+    client = VSphereCloud::VCenterClient.new("https://#{host}/sdk/vimService", logger: logger).tap do |client|
       client.login(user, password, 'en')
     end
 

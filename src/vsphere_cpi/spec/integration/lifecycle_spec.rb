@@ -792,7 +792,7 @@ describe VSphereCloud::Cloud, external_cpi: false do
       }.to raise_error { |error|
         expect(error).to be_a(Bosh::Clouds::CloudError)
         expect(error.message).to include(@second_cluster_datastore)
-        expect(error.message).to include(@cluster)
+        expect(error.message).to include('No valid placement found for disks')
       }
     end
   end
@@ -813,7 +813,7 @@ describe VSphereCloud::Cloud, external_cpi: false do
       }.to raise_error { |error|
         expect(error).to be_a(Bosh::Clouds::CloudError)
         expect(error.message).to include(@second_cluster_datastore)
-        expect(error.message).to include(@cluster)
+        expect(error.message).to include('No valid placement found for disks')
       }
     end
   end
@@ -910,7 +910,7 @@ describe VSphereCloud::Cloud, external_cpi: false do
               [],
               {}
             )
-          }.to raise_error Bosh::Clouds::CloudError, /Could not find any suitable datastores matching filter/
+          }.to raise_error Bosh::Clouds::CloudError, /No valid placement found for disks/
         ensure
           delete_vm(@cpi, vm_id)
         end
