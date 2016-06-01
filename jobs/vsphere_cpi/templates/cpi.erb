@@ -27,7 +27,5 @@ export PATH=$BOSH_PACKAGES_DIR/vsphere_cpi_ruby/bin:$BOSH_PACKAGES_DIR/vsphere_c
 export BUNDLE_GEMFILE=$BOSH_PACKAGES_DIR/vsphere_cpi/Gemfile
 bundle_cmd="${BOSH_PACKAGES_DIR}/vsphere_cpi_ruby/bin/bundle"
 
-read INPUT
-
 exec $bundle_cmd exec $BOSH_PACKAGES_DIR/vsphere_cpi/bin/vsphere_cpi \
-  $BOSH_JOBS_DIR/vsphere_cpi/config/cpi.json < <(echo $INPUT)
+  $BOSH_JOBS_DIR/vsphere_cpi/config/cpi.json
