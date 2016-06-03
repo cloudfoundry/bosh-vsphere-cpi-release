@@ -66,13 +66,9 @@ describe VSphereCloud::Cloud, external_cpi: false do
           {'key' => 'value'}
         )
 
-        desired_ip = network_spec['static']['ip']
-        network_name = network_spec['static']['cloud_properties']['name']
-
         block_on_vmware_tools(@cpi, test_vm_id)
 
         duplicate_ip_vm_id = nil
-        expected_ip_conflicts = [{vm_name: test_vm_id, network_name: network_name, ip: desired_ip}]
         expect {
           duplicate_ip_vm_id = @cpi.create_vm(
             'agent-elba',
