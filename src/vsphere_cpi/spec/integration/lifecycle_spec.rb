@@ -12,7 +12,7 @@ describe VSphereCloud::Cloud, external_cpi: false do
     config.uuid = '123'
     Bosh::Clouds::Config.configure(config)
 
-    @logger = Logger.new(STDOUT)
+    @logger = config.logger
 
     fetch_properties(LifecycleHelpers)
     verify_properties(LifecycleHelpers)
@@ -27,9 +27,9 @@ describe VSphereCloud::Cloud, external_cpi: false do
 
   class VMWareToolsNotFound < StandardError; end
 
-  after(:all) {
+  after(:all) do
     delete_stemcell(@cpi, @stemcell_id)
-  }
+  end
 
   let(:network_spec) do
     {
@@ -1094,7 +1094,7 @@ describe VSphereCloud::Cloud, external_cpi: false do
           end
 
           after do
-            delete_disk(second_cluster_cpi, @disk_id)
+            delete_disk(local_disk_cpi, @disk_id)
           end
 
           it 'migrates the persistent disk to a host-local datastore in the same cluster as the VM' do
@@ -1198,21 +1198,24 @@ describe VSphereCloud::Cloud, external_cpi: false do
   def delete_vm(cpi, vm_id)
     begin
       cpi.delete_vm(vm_id) if vm_id
-    rescue Bosh::Clouds::VMNotFound
+    rescue Bosh::Clouds::VMNotFound => e
+      @logger.info("Failure: 'delete_vm' for VM ID: #{vm_id.inspect}. Error: #{e.inspect}")
     end
   end
 
   def detach_disk(cpi, vm_id, disk_id)
     begin
       cpi.detach_disk(vm_id, disk_id) if vm_id && disk_id
-    rescue Bosh::Clouds::DiskNotAttached, Bosh::Clouds::VMNotFound, Bosh::Clouds::DiskNotFound
+    rescue Bosh::Clouds::DiskNotAttached, Bosh::Clouds::VMNotFound, Bosh::Clouds::DiskNotFound => e
+      @logger.info("Failure: 'detach_disk' for VM ID: #{vm_id.inspect} and Disk ID: #{disk_id.inspect}. Error: #{e.inspect}")
     end
   end
 
   def delete_disk(cpi, disk_id)
     begin
       cpi.delete_disk(disk_id) if disk_id
-    rescue Bosh::Clouds::DiskNotFound
+    rescue Bosh::Clouds::DiskNotFound => e
+      @logger.info("Failure: 'delete_disk' for Disk ID: #{disk_id.inspect}. Error: #{e.inspect}")
     end
   end
 
