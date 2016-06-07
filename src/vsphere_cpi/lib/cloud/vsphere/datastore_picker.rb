@@ -35,7 +35,7 @@ module VSphereCloud
 
         # TODO: should we randomize (adds load balancing) or sort the datastores (fill largest first)?
         datastores.each do |ds_name, ds_props|
-          additional_required_space = disk[:size]
+          additional_required_space = disk[:size] + @headroom
 
           next if additional_required_space > ds_props[:free_space]
           next unless ds_name =~ Regexp.new(disk[:target_datastore_pattern])

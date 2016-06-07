@@ -113,6 +113,95 @@ module VSphereCloud
           })
         end
 
+        context 'when headroom is not specified' do
+          let(:available_datastores) do
+           {
+             'ds-1' => {
+               free_space: 1536,
+             },
+             'ds-2' => {
+               free_space: 2048,
+             },
+           }
+          end
+          let(:disk1) do
+            {
+              size: 256,
+              target_datastore_pattern: 'ds-2',
+            }
+          end
+          let(:disk2) do
+            {
+              size: 512,
+              target_datastore_pattern: '.*',
+            }
+          end
+
+          it 'defaults headroom to 1024' do
+            picker = DatastorePicker.new
+            picker.update(available_datastores)
+
+            disks = [disk1, disk2]
+            expect(picker.best_disk_placement(disks)).to include({
+              datastores: {
+                'ds-1' => {
+                  free_space: 0,
+                  disks: [disk2],
+                },
+                'ds-2' => {
+                  free_space: 768,
+                  disks: [disk1],
+                },
+              }
+            })
+          end
+        end
+
+        context 'when headroom is specified' do
+          let(:headroom) { 512}
+          let(:available_datastores) do
+           {
+             'ds-1' => {
+               free_space: 1536,
+             },
+             'ds-2' => {
+               free_space: 2048,
+             },
+           }
+          end
+          let(:disk1) do
+            {
+              size: 256,
+              target_datastore_pattern: 'ds-2',
+            }
+          end
+          let(:disk2) do
+            {
+              size: 512,
+              target_datastore_pattern: '.*',
+            }
+          end
+
+          it 'accounts for additional headroom' do
+            picker = DatastorePicker.new(headroom)
+            picker.update(available_datastores)
+
+            disks = [disk1, disk2]
+            expect(picker.best_disk_placement(disks)).to include({
+              datastores: {
+                'ds-1' => {
+                  free_space: 512,
+                  disks: [disk2],
+                },
+                'ds-2' => {
+                  free_space: 1280,
+                  disks: [disk1],
+                },
+              }
+            })
+          end
+        end
+
         context 'when given existing_datastore_name' do
           let(:disk1) do
             {
