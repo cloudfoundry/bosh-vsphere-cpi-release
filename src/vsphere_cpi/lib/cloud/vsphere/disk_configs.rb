@@ -7,7 +7,7 @@ module VSphereCloud
       @disk_pool = opts[:disk_pool]
     end
 
-    def find_persistent_disk(disk_cid)
+    def disk_config_from_persistent_disk(disk_cid)
       clean_cid, metadata = DiskMetadata.decode(disk_cid)
 
       disk = @datacenter.find_disk(clean_cid)
@@ -30,7 +30,7 @@ module VSphereCloud
       end
     end
 
-    def new_ephemeral_disk
+    def new_ephemeral_disk_config
       return {
         size: @resource_pool['disk'],
         ephemeral: true,
@@ -38,7 +38,7 @@ module VSphereCloud
       }
     end
 
-    def new_persistent_disk(size)
+    def new_persistent_disk_config(size)
       return {
         size: size,
         target_datastore_pattern: target_persistent_pattern,

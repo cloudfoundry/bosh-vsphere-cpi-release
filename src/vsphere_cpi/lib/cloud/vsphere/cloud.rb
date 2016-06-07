@@ -193,15 +193,15 @@ module VSphereCloud
         )
         stemcell_size /= 1024 * 1024
 
-        disk_builder = DiskConfigs.new(
+        disk_configs = DiskConfigs.new(
           datacenter: @datacenter,
           resource_pool: resource_pool,
         )
         disk_configurations = existing_disk_cids.map do |cid|
-          disk_builder.find_persistent_disk(cid)
+          disk_configs.disk_config_from_persistent_disk(cid)
         end
-        ephemeral_disk = disk_builder.new_ephemeral_disk
-        disk_configurations.push(ephemeral_disk)
+        ephemeral_disk_config = disk_configs.new_ephemeral_disk_config
+        disk_configurations.push(ephemeral_disk_config)
 
         manifest_params = {
           resource_pool: resource_pool,
@@ -303,7 +303,7 @@ module VSphereCloud
           datacenter: @datacenter,
           resource_pool: nil,
         )
-        disk_config = disk_configs.find_persistent_disk(director_disk_cid)
+        disk_config = disk_configs.disk_config_from_persistent_disk(director_disk_cid)
 
         disk_to_attach = @datacenter.find_disk(disk_config[:cid])
         @logger.info("Attaching disk: #{disk_config[:cid]} on vm: #{vm_cid}")
@@ -366,7 +366,7 @@ module VSphereCloud
           datacenter: @datacenter,
           disk_pool: cloud_properties,
         )
-        disk_config = disk_configs.new_persistent_disk(size_in_mb)
+        disk_config = disk_configs.new_persistent_disk_config(size_in_mb)
         @logger.info("Using persistent disk datastore pattern: #{disk_config[:target_datastore_pattern]}")
 
         datastore_picker = DatastorePicker.new
