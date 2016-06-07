@@ -9,6 +9,7 @@ gem 'httpclient',  '=2.7.1'
 gem 'mono_logger', '~>1.1.0'
 
 group :development, :test do
+  gem 'simplecov', :require => false
   gem 'timecop', '~>0.7.1'
   gem 'rake', '~>10.0'
   gem 'rspec', '~> 3.0'

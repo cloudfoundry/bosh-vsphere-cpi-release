@@ -1,6 +1,6 @@
 config/dev.yml
 config/private.yml
-src/**/coverage
+/coverage/
 releases/*.tgz
 releases/**/*.tgz
 dev_releases

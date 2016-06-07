@@ -6,8 +6,10 @@ release_dir="$( cd $(dirname $0) && cd ../.. && pwd )"
 workspace_dir="$( cd ${release_dir} && cd .. && pwd )"
 stemcell_dir="$( cd ${workspace_dir}/stemcell && pwd )"
 
-source /etc/profile.d/chruby.sh
-chruby 2.1.2
+if [ -f /etc/profile.d/chruby.sh ]; then
+  source /etc/profile.d/chruby.sh
+  chruby 2.1.2
+fi
 
 # required
 : ${BOSH_VSPHERE_VERSION:?}
@@ -40,23 +42,35 @@ chruby 2.1.2
 : ${BOSH_VSPHERE_CPI_SECOND_CLUSTER_LOCAL_DATASTORE:=""}
 : ${RSPEC_FLAGS:=""}
 
+install_mkisofs() {
+  pushd "${release_dir}"
+    echo "using bosh CLI version..."
+    bosh version
+    rm -rf ./dev_releases/lifecycle-test
+    bosh create release --name lifecycle-test --version 0.0.0 --with-tarball --force
+  popd
 
-pushd "${release_dir}"
-  echo "using bosh CLI version..."
-  bosh version
-  bosh create release --name local --version 0.0.0 --with-tarball --force
-popd
+  echo "Extracting mkisofs from bosh release..."
+  iso_tmp_dir="$(mktemp -d /tmp/iso_image.XXXXXXXXXX)"
+  pushd "${iso_tmp_dir}"
+    tar -xf "${release_dir}/dev_releases/lifecycle-test/lifecycle-test-0.0.0.tgz"
+    tar -xf packages/vsphere_cpi_mkisofs.tgz
+    chmod +x packaging
+    BOSH_INSTALL_TARGET="${iso_tmp_dir}" ./packaging &> mkisofs_compilation.log
+    export PATH="${iso_tmp_dir}/bin:$PATH"
+  popd
+  echo "installed mkisofs at:"
+  which mkisofs
+}
 
-iso_tmp_dir="$(mktemp -d /tmp/iso_image.XXXXXXXXXX)"
-pushd "${iso_tmp_dir}"
-  tar -xf ${release_dir}/dev_releases/local/local-0.0.0.tgz
-  tar -xf packages/vsphere_cpi_mkisofs.tgz
-  chmod +x packaging
-  BOSH_INSTALL_TARGET=${iso_tmp_dir} ./packaging &> mkisofs_compilation.log
-  export PATH=${iso_tmp_dir}/bin:$PATH
-popd
-echo "installed mkisofs at:"
-which mkisofs
+set +e
+  which mkisofs
+  util_exists=$?
+set -e
+
+if [ ${util_exists} != 0 ]; then
+  install_mkisofs
+fi
 
 export BOSH_VSPHERE_STEMCELL=${stemcell_dir}/stemcell.tgz
 export BOSH_VSPHERE_VCENTER=${BOSH_VSPHERE_CPI_HOST}

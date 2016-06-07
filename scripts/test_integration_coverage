@@ -1,0 +1,12 @@
+#!/bin/bash
+
+set -e
+
+release_dir="$( cd $(dirname $0) && cd .. && pwd )"
+
+pushd "${release_dir}" > /dev/null
+  echo "Generating coverage report for integration tests..."
+  COVERAGE=true ./ci/tasks/run-lifecycle.sh
+
+  open ./coverage/index.html
+popd > /dev/null

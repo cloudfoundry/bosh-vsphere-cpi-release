@@ -1,0 +1,15 @@
+#!/bin/bash
+
+set -e
+
+release_dir="$( cd $(dirname $0) && cd .. && pwd )"
+
+pushd "${release_dir}" > /dev/null
+  echo "Generating coverage report for unit tests..."
+  pushd src/vsphere_cpi
+    bundle install
+    COVERAGE=true bundle exec rspec spec/unit
+  popd
+
+  open ./coverage/index.html
+popd > /dev/null
