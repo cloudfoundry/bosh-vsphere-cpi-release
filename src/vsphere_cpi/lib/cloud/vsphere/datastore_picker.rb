@@ -33,10 +33,12 @@ module VSphereCloud
 
         found_placement = false
 
-        # TODO: should we randomize (adds load balancing) or sort the datastores (fill largest first)?
-        datastores.each do |ds_name, ds_props|
+        weighted_datastores = weighted_random_sort(datastores)
+        weighted_datastores.each do |ds|
           additional_required_space = disk[:size] + @headroom
 
+          ds_name = ds[0]
+          ds_props = ds[1]
           next if additional_required_space > ds_props[:free_space]
           next unless ds_name =~ Regexp.new(disk[:target_datastore_pattern])
 
@@ -75,6 +77,12 @@ module VSphereCloud
 
       placement[:balance_score] = min + mean + median
       placement
+    end
+
+    def weighted_random_sort(datastores)
+      datastores.sort do |x,y|
+        y[1][:free_space] * Random.rand <=> x[1][:free_space] * Random.rand
+      end
     end
   end
 end

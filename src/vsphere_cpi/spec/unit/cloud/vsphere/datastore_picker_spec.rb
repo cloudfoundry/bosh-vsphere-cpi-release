@@ -2,6 +2,9 @@ require 'spec_helper'
 
 module VSphereCloud
   describe DatastorePicker do
+    before do
+      allow(Random).to receive(:rand).and_return(1)
+    end
     let(:available_datastores) do
       {
         "datastore-1" => 51200,
@@ -94,24 +97,26 @@ module VSphereCloud
           }
         end
 
+        let(:picker) { DatastorePicker.new(0) }
+
         it 'places the disks into the datastores' do
-          picker = DatastorePicker.new(0)
           picker.update(available_datastores)
 
           disks = [disk1, disk2]
           expect(picker.best_disk_placement(disks)).to include({
             datastores: {
               'ds-1' => {
-                free_space: 0,
-                disks: [disk2],
+                free_space: 512,
+                disks: [],
               },
               'ds-2' => {
-                free_space: 768,
-                disks: [disk1],
+                free_space: 256,
+                disks: [disk1, disk2],
               },
             }
           })
         end
+
 
         context 'when headroom is not specified' do
           let(:available_datastores) do
@@ -220,17 +225,16 @@ module VSphereCloud
           it 'keeps the disk in its existing datastore to minimize disk migrations' do
             picker = DatastorePicker.new(0)
             picker.update(available_datastores)
-
             disks = [disk1, disk2]
             expect(picker.best_disk_placement(disks)).to include({
               datastores: {
                 'ds-1' => {
-                  free_space: 0,
-                  disks: [disk2],
+                  free_space: 512,
+                  disks: [],
                 },
                 'ds-2' => {
-                  free_space: 1024,
-                  disks: [disk1],
+                  free_space: 512,
+                  disks: [disk1, disk2],
                 },
               }
             })
@@ -262,12 +266,12 @@ module VSphereCloud
               migration_size: 256,
               datastores: {
                 'ds-1' => {
-                  disks: [disk1],
-                  free_space: 256,
+                  disks: [],
+                  free_space: 512,
                 },
                 'ds-2' => {
-                  disks: [disk2],
-                  free_space: 512,
+                  disks: [disk1, disk2],
+                  free_space: 256,
                 },
               },
             })
