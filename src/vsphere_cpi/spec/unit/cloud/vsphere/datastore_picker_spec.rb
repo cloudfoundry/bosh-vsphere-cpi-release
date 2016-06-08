@@ -5,14 +5,6 @@ module VSphereCloud
     before do
       allow(Random).to receive(:rand).and_return(1)
     end
-    let(:available_datastores) do
-      {
-        "datastore-1" => 51200,
-        "datastore-2" => 10240,
-        "datastore-3" => 20480,
-        "filtered-ds" => 10240
-      }
-    end
 
     describe '#best_disk_placement' do
 
@@ -296,6 +288,70 @@ module VSphereCloud
 
               expect(picker.best_disk_placement([])[:balance_score]).to eq(input[:balance_score])
             end
+          end
+        end
+      end
+
+      context 'simulating placement distribution of several datastores' do
+        let(:available_datastores) do
+          {
+            "datastore-1" =>  {
+              free_space: 51200,
+            },
+            "datastore-2" => {
+              free_space: 10240,
+            },
+            "datastore-3" => {
+              free_space: 20480,
+            },
+            "datastore-4" => {
+              free_space: 10240,
+            }
+          }
+        end
+        let(:disk1) do
+          {
+            size: 256,
+            target_datastore_pattern: '.*',
+          }
+        end
+        let(:disk2) do
+          {
+            size: 512,
+            target_datastore_pattern: '.*',
+          }
+        end
+        let(:disk3) do
+          {
+            size: 512,
+            target_datastore_pattern: '.*',
+          }
+        end
+        let(:disk4) do
+          {
+            size: 1024,
+            target_datastore_pattern: '.*',
+          }
+        end
+
+        it 'simulates placement' do
+          picker = DatastorePicker.new(0)
+          picker.update(available_datastores)
+          disks = [disk1, disk2, disk3, disk4]
+          allow(Random).to receive(:rand).and_call_original
+          "ds-1 => [disk1, disk2]"
+          100.times do
+            picker.best_disk_placement(disks)[:datastores].each do |ds_name, ds_props|
+              available_datastores[ds_name][:disk_counts] ||= 0
+              available_datastores[ds_name][:disk_counts] += ds_props[:disks].length
+            end
+          end
+          sorted_datastores = available_datastores.sort do |x, y|
+            y[1][:free_space] <=> x[1][:free_space]
+          end
+          puts "Summary of simulated placements"
+          sorted_datastores.each do |ds|
+            print "#{ds}\n"
           end
         end
       end
