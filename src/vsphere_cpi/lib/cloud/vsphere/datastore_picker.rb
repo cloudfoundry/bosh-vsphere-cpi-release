@@ -80,8 +80,12 @@ module VSphereCloud
     end
 
     def weighted_random_sort(datastores)
+      random_hash = {}
+      datastores.each do |ds_name, ds_props|
+        random_hash[ds_name] = Random.rand * ds_props[:free_space]
+      end
       datastores.sort do |x,y|
-        y[1][:free_space] * Random.rand <=> x[1][:free_space] * Random.rand
+        random_hash[y[0]] <=> random_hash[x[0]]
       end
     end
   end
