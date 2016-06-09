@@ -715,12 +715,13 @@ describe VSphereCloud::Cloud, external_cpi: false do
     let(:persistent_datastores) { datastore_names_matching_pattern(@persistent_datastore_pattern) }
     let(:cloud_properties) { { 'datastores' => persistent_datastores } }
 
-    it 'creates disk in the specified datastore and does not move it when attached' do
+    it 'places the disk in the specified datastore and does not move it when attached' do
       cpi = described_class.new(options)
       begin
         director_disk_id = cpi.create_disk(128, cloud_properties)
         disk_id, _ = VSphereCloud::DiskMetadata.decode(director_disk_id)
         verify_disk_is_in_datastores(disk_id, persistent_datastores)
+        expect(cpi.has_disk?(director_disk_id)).to be(true)
 
         vm_id = cpi.create_vm(
           'agent-007',
@@ -734,6 +735,7 @@ describe VSphereCloud::Cloud, external_cpi: false do
 
         cpi.attach_disk(vm_id, director_disk_id)
         verify_disk_is_in_datastores(disk_id, persistent_datastores)
+        expect(cpi.has_disk?(director_disk_id)).to be(true)
       ensure
         detach_disk(cpi, vm_id, director_disk_id)
         delete_vm(cpi, vm_id)
@@ -1116,6 +1118,54 @@ describe VSphereCloud::Cloud, external_cpi: false do
               delete_vm(local_disk_cpi, vm_id)
             end
           end
+        end
+      end
+    end
+
+    context 'when host-local datastores are specified under resource_pool and disk_pool' do
+      let(:local_disk_options) do
+        cpi_options({
+          # expect global patterns to be overridden
+          datastore_pattern: @datastore_pattern,
+          persistent_datastore_pattern: @persistent_datastore_pattern,
+          clusters: [{@cluster => {}}],
+        })
+      end
+      let(:ephemeral_datastores) { datastore_names_matching_pattern(@single_local_ds_pattern) }
+      let(:persistent_datastores) { datastore_names_matching_pattern(@multi_local_ds_pattern) }
+      let(:resource_pool) do
+        {
+          'ram' => 1024,
+          'disk' => 2048,
+          'cpu' => 1,
+          'datastores' => ephemeral_datastores,
+        }
+      end
+      let(:disk_pool) { { 'datastores' => persistent_datastores } }
+
+      it 'places both disks on the overlapping local DS' do
+        begin
+          vm_id = local_disk_cpi.create_vm('agent-007', @stemcell_id, resource_pool, network_spec)
+          vm = local_disk_cpi.vm_provider.find(vm_id)
+          ephemeral_disk = vm.ephemeral_disk
+          expect(ephemeral_disk).to_not be_nil
+
+          ephemeral_ds = ephemeral_disk.backing.datastore.name
+          expect(ephemeral_ds).to match(@single_local_ds_pattern)
+
+          disk_id = local_disk_cpi.create_disk(2048, disk_pool, vm_id)
+          expect(disk_id).to_not be_nil
+          clean_disk_cid, _ = VSphereCloud::DiskMetadata.decode(disk_id)
+          disk = local_disk_cpi.datacenter.find_disk(clean_disk_cid)
+          expect(disk.datastore.name).to match(@multi_local_ds_pattern)
+
+          local_disk_cpi.attach_disk(vm_id, disk_id)
+          expect(disk.datastore.name).to match(ephemeral_ds)
+          expect(local_disk_cpi.has_disk?(disk_id)).to be(true)
+        ensure
+          detach_disk(local_disk_cpi, vm_id, disk_id)
+          delete_vm(local_disk_cpi, vm_id)
+          delete_disk(local_disk_cpi, disk_id)
         end
       end
     end

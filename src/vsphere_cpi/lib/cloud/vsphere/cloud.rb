@@ -72,7 +72,8 @@ module VSphereCloud
     end
 
     def has_disk?(disk_cid)
-      @datacenter.find_disk(disk_cid)
+      clean_cid, _ = DiskMetadata.decode(disk_cid)
+      @datacenter.find_disk(clean_cid)
       true
     rescue Bosh::Clouds::DiskNotFound
       false

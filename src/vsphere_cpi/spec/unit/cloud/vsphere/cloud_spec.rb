@@ -52,6 +52,53 @@ module VSphereCloud
       end
     end
 
+    describe 'has disk?' do
+      let(:disk_cid) { 'disk-1234-5667-1242-1233' }
+      let(:encoded_disk_cid) do
+        metadata = {target_datastore_pattern: '^(fake\\-ds)$'}
+        expected_pattern = Base64.urlsafe_encode64(metadata.to_json)
+        "#{disk_cid}.#{expected_pattern}"
+      end
+
+      context 'when disk exists' do
+        before do
+          allow(datacenter).to receive(:find_disk).with(disk_cid).and_return("fake disk")
+        end
+
+        context 'when disk_cid contains metadata' do
+          it 'returns true' do
+            expect(vsphere_cloud.has_disk?(encoded_disk_cid)).to be(true)
+          end
+        end
+
+        context 'when disk_cid does not contain metadata' do
+          it 'returns true' do
+            expect(vsphere_cloud.has_disk?(disk_cid)).to be(true)
+          end
+        end
+      end
+
+      context 'when disk does not exist' do
+        before do
+          allow(datacenter).to receive(:find_disk)
+            .with(disk_cid)
+            .and_raise(Bosh::Clouds::DiskNotFound.new(false), "Could not find disk with id '#{disk_cid}'")
+        end
+
+        context 'when disk_cid contains metadata' do
+          it 'returns false' do
+            expect(vsphere_cloud.has_disk?(encoded_disk_cid)).to be(false)
+          end
+        end
+
+        context 'when disk_cid does not contain metadata' do
+          it 'returns false' do
+            expect(vsphere_cloud.has_disk?(disk_cid)).to be(false)
+          end
+        end
+      end
+    end
+
     describe 'snapshot_disk' do
       it 'raises not implemented exception when called' do
         expect { vsphere_cloud.snapshot_disk('123', {}) }.to raise_error(Bosh::Clouds::NotImplemented)
@@ -752,7 +799,7 @@ module VSphereCloud
           it 'extracts the vSphere cid from the director disk cid and uses it' do
             allow(vm).to receive(:disk_by_cid).and_return(attached_disk)
             allow(vm).to receive(:detach_disks)
-            metadata_hash = {persistent_datastores_pattern:'^(target\\-datastore)$'}
+            metadata_hash = {target_datastore_pattern:'^(target\\-datastore)$'}
             expected_pattern = Base64.urlsafe_encode64(metadata_hash.to_json)
 
             vsphere_cloud.detach_disk('vm-id', "disk-cid.#{expected_pattern}")
@@ -802,7 +849,7 @@ module VSphereCloud
             allow(datacenter).to receive(:find_disk).and_return(disk)
             allow(client).to receive(:delete_disk)
 
-            metadata_hash = {persistent_datastores_pattern:'^(target\\-datastore)$'}
+            metadata_hash = {target_datastore_pattern:'^(target\\-datastore)$'}
             expected_pattern = Base64.urlsafe_encode64(metadata_hash.to_json)
 
             vsphere_cloud.delete_disk("disk-cid.#{expected_pattern}")

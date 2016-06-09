@@ -6,7 +6,7 @@ module VSphereCloud
 
       context 'when given a cid with flat metadata' do
         it 'returns metadata and vsphere disk cid' do
-          metadata = {persistent_datastores_pattern: '^(fake\\-cloud\\-prop\\-datastore\\-1|fake\\-cloud\\-prop\\-datastore\\-2)$'}
+          metadata = {target_datastore_pattern: '^(fake\\-cloud\\-prop\\-datastore\\-1|fake\\-cloud\\-prop\\-datastore\\-2)$'}
           expected_pattern = Base64.urlsafe_encode64(metadata.to_json)
 
           director_disk_cid = "disk-1234-5667-1242-1233.#{expected_pattern}"
@@ -51,7 +51,7 @@ module VSphereCloud
     describe '.encode' do
       context 'when metadata is given' do
         it 'returns a director disk id having the encoded metadata suffix' do
-          metadata = {persistent_datastores_pattern: '^(fake\\-cloud\\-prop\\-datastore\\-1|fake\\-cloud\\-prop\\-datastore\\-2)$'}
+          metadata = {target_datastore_pattern: '^(fake\\-cloud\\-prop\\-datastore\\-1|fake\\-cloud\\-prop\\-datastore\\-2)$'}
           expected_encoded_metadata = Base64.urlsafe_encode64(metadata.to_json)
           disk_cid = 'disk-cid'
 
