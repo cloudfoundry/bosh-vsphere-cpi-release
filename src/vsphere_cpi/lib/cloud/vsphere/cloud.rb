@@ -23,7 +23,16 @@ module VSphereCloud
       @config = Config.build(options)
 
       @logger = config.logger
-      @client = config.client
+
+      @http_client = VSphereCloud::CpiHttpClient.new(@config.soap_log)
+
+      @client = VCenterClient.new(
+        vcenter_api_uri: @config.vcenter_api_uri,
+        http_client: @http_client,
+        logger: @logger,
+      )
+      @client.login(@config.vcenter_user, @config.vcenter_password, 'en')
+
       @cloud_searcher = CloudSearcher.new(@client.service_content, @logger)
       @cluster_provider = Resources::ClusterProvider.new({
         datacenter_name: @config.datacenter_name,
@@ -45,7 +54,7 @@ module VSphereCloud
         logger: @config.logger,
       })
 
-      @file_provider = FileProvider.new(config.rest_client, config.vcenter_host)
+      @file_provider = FileProvider.new(@http_client, config.vcenter_host)
       @agent_env = AgentEnv.new(client, @file_provider, @cloud_searcher)
 
       # We get disconnected if the connection is inactive for a long period.
@@ -631,8 +640,6 @@ module VSphereCloud
         device_key = device_url.import_key
         file_items.each do |file_item|
           if device_key == file_item.device_id
-            http_client = VSphereCloud::CpiHttpClient.build
-
             disk_file_path = File.join(File.dirname(ovf), file_item.path)
             disk_file = File.open(disk_file_path)
             disk_file_size = File.size(disk_file_path)
@@ -646,7 +653,7 @@ module VSphereCloud
 
             @logger.info("Uploading disk to: #{device_url.url}")
 
-            http_client.post(device_url.url,
+            @http_client.post(device_url.url,
                              disk_file,
                              { 'Content-Type' => 'application/x-vnd.vmware-streamVmdk', 'Content-Length' => disk_file_size })
 

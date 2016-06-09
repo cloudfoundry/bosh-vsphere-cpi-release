@@ -6,17 +6,13 @@ module VimSdk
 
       attr_reader :version
 
-      def initialize(uri, version, http_client)
-        @uri = URI.parse(uri)
+      def initialize(vcenter_api_uri, version, http_client)
+        @vcenter_api_uri = vcenter_api_uri
         @version = version
         @version_id = compute_version_id(version)
         @http_client = http_client
         @cookie = ""
         @property_collector = nil
-      end
-
-      def cookie
-        @http_client.cookie_manager.find(@uri)
       end
 
       def invoke_method(managed_object, method_info, arguments, outer_stub = nil)
@@ -26,7 +22,7 @@ module VimSdk
                    "Content-Type"    => "text/xml; charset=#{XML_ENCODING}"}
 
         request = serialize_request(managed_object, method_info, arguments)
-        response = @http_client.post(@uri, request, headers)
+        response = @http_client.post(@vcenter_api_uri, request, headers)
 
         status = response.code
         if status == 200 || status == 500

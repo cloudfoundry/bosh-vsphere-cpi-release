@@ -10,8 +10,8 @@ module VSphereCloud
 
     attr_reader :cloud_searcher, :service_content, :service_instance, :soap_stub
 
-    def initialize(host, options={})
-      @soap_stub = SoapStub.new(host, options[:soap_log]).create
+    def initialize(vcenter_api_uri:, http_client:, logger:)
+      @soap_stub = SoapStub.new(vcenter_api_uri, http_client).create
 
       @service_instance = Vim::ServiceInstance.new('ServiceInstance', @soap_stub)
 
@@ -23,7 +23,7 @@ module VSphereCloud
 
       @metrics_cache  = {}
       @lock = Mutex.new
-      @logger = options.fetch(:logger) { Bosh::Clouds::Config.logger }
+      @logger = logger
 
       @cloud_searcher = CloudSearcher.new(service_content, @logger)
     end
