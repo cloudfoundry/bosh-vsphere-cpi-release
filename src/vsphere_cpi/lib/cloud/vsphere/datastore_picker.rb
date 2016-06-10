@@ -11,7 +11,13 @@ module VSphereCloud
       @available_datastores = available_datastores
     end
 
-    # TODO: summarize the algorithm used here (e.g. first-fit)
+    # Placement Algorithm:
+    #
+    # Performs a weighted random sort on the available_datastores to improve disk load balancing.
+    # The sort multiplies each datastore's free_space by a random float 0..1 then sorts in descending order.
+    # This means the largest datastores have the highest chance of being first, but adds a bit of randomization.
+    # After the sort, disks are placed into the first datastore that has enough space for that disk.
+    #
     def best_disk_placement(disks)
       datastores = {}
       placement = { datastores: datastores, migration_size: 0, balance_score: 0 }
