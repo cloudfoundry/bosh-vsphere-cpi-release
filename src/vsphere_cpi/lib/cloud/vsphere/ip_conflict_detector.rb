@@ -13,7 +13,11 @@ module VSphereCloud
         conflict_messages << "#{conflict[:vm_name]} on network #{conflict[:network_name]} with ip #{conflict[:ip]}"
       end
 
-      raise "Detected IP conflicts with other VMs on the same networks: #{conflict_messages.join(", ")}" unless ip_conflicts.empty?
+      if ip_conflicts.empty?
+        @logger.info("No IP conflicts detected")
+      else
+        raise "Detected IP conflicts with other VMs on the same networks: #{conflict_messages.join(", ")}"
+      end
     end
 
     private
@@ -27,6 +31,7 @@ module VSphereCloud
           if vm.nil?
             next
           end
+          @logger.info("Found VM '#{vm.name}' with IP '#{ip}'. Checking if VM belongs to network '#{name}'...")
 
           vm.guest.net.each do |nic|
             if nic.ip_address.include?(ip) && nic.network == name
