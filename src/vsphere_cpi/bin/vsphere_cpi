@@ -19,7 +19,6 @@ Bosh::Clouds::Config.configure(OpenStruct.new(
   task_checkpoint: nil,
 ))
 
-
 soap_log = StringIO.new
 
 cpi_lambda = lambda do

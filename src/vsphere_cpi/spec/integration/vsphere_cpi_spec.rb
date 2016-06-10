@@ -8,22 +8,9 @@ describe VSphereCloud::Cloud, external_cpi: true do
     @workspace_dir = Dir.mktmpdir('vsphere-cloud-spec')
     @config_path = File.join(@workspace_dir, 'vsphere_cpi_config')
     File.open(@config_path, 'w') { |f| f.write(YAML.dump(config)) }
-
-    stemcell_path = ENV['BOSH_VSPHERE_STEMCELL'] || raise('Missing BOSH_VSPHERE_STEMCELL')
-
-    Dir.mktmpdir do |temp_dir|
-      output = `tar -C #{temp_dir} -xzf #{stemcell_path} 2>&1`
-      raise "Corrupt image, tar exit status: #{$?.exitstatus} output: #{output}" if $?.exitstatus != 0
-      @stemcell_id = external_cpi_result(:create_stemcell,
-        "#{temp_dir}/image",
-        nil
-      )
-    end
   end
 
   after(:all) do
-    external_cpi_result(:delete_stemcell, @stemcell_id) if @stemcell_id
-
     FileUtils.rm_rf(@workspace_dir)
   end
 
