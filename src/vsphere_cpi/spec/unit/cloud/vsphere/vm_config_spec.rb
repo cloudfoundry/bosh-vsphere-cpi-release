@@ -6,11 +6,9 @@ module VSphereCloud
       VmConfig.new(
         manifest_params: input,
         cluster_picker: cluster_picker,
-        datastore_picker: datastore_picker
       )
     end
     let(:cluster_picker) { ClusterPicker.new(0, 0) }
-    let(:datastore_picker) { DatastorePicker.new(0) }
 
     describe '#name' do
       let(:input) { {} }

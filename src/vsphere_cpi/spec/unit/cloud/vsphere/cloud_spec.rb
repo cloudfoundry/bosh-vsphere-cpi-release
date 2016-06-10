@@ -373,7 +373,6 @@ module VSphereCloud
       let(:vm_creator) { instance_double(VmCreator) }
       let(:vm_config) { instance_double(VmConfig) }
       let(:cluster_picker) { instance_double(ClusterPicker) }
-      let(:datastore_picker) { instance_double(DatastorePicker) }
       let(:ip_conflict_detector) { instance_double(IPConflictDetector) }
       let(:existing_disk_cids) { ['fake-disk-cid'] }
       let(:fake_disk) do
@@ -416,8 +415,6 @@ module VSphereCloud
         allow(IPConflictDetector).to receive(:new)
           .with(logger, vcenter_client)
           .and_return(ip_conflict_detector)
-        allow(DatastorePicker).to receive(:new)
-          .and_return(datastore_picker)
         allow(ClusterPicker).to receive(:new)
           .and_return(cluster_picker)
         allow(IPConflictDetector).to receive(:new)
@@ -454,7 +451,6 @@ module VSphereCloud
         allow(VmConfig).to receive(:new)
           .with({
             manifest_params: expected_manifest_params,
-            datastore_picker: datastore_picker,
             cluster_picker: cluster_picker,
           })
           .and_return(vm_config)
@@ -507,7 +503,6 @@ module VSphereCloud
         expect(VmConfig).to receive(:new)
           .with(
             manifest_params: expected_manifest_params,
-            datastore_picker: datastore_picker,
             cluster_picker: cluster_picker
           )
           .and_return(vm_config)

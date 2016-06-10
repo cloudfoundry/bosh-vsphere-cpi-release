@@ -228,7 +228,6 @@ module VSphereCloud
 
         vm_config = VmConfig.new(
           manifest_params: manifest_params,
-          datastore_picker: DatastorePicker.new,
           cluster_picker: ClusterPicker.new
         )
 

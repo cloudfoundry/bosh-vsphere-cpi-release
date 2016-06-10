@@ -1,10 +1,9 @@
 module VSphereCloud
   class VmConfig
 
-    def initialize(manifest_params:, cluster_picker: nil, datastore_picker: nil)
+    def initialize(manifest_params:, cluster_picker: nil)
       @manifest_params = manifest_params
       @cluster_picker = cluster_picker
-      @datastore_picker = datastore_picker
     end
 
     def name
@@ -38,7 +37,6 @@ module VSphereCloud
 
     def ephemeral_datastore_name
       return nil if cluster_name.nil?
-      return nil if @datastore_picker.nil?
       return @datastore_name if @datastore_name
 
       ephemeral_disk = disk_configurations.find { |disk| disk[:ephemeral] }
