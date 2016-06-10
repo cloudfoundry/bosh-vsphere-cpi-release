@@ -55,7 +55,7 @@ module VSphereCloud
     private
 
     def filter_on_memory(req_memory)
-      @available_clusters.reject { |name,props| props[:memory] < req_memory }
+      @available_clusters.reject { |name,props| props[:memory] < req_memory + @mem_headroom }
     end
 
     def placements_with_minimum_disk_migrations(placements)

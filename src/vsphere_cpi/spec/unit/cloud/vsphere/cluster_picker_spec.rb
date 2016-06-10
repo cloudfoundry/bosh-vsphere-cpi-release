@@ -50,7 +50,7 @@ module VSphereCloud
               memory: 2048,
               datastores: {
                 'not-matching-ds' => {
-                  free_space: 512,
+                  free_space: 1024,
                 }
               }
             }
@@ -58,7 +58,7 @@ module VSphereCloud
         end
 
         context 'based upon available memory' do
-          it 'raises a CloudError' do
+          it 'raises a CloudError when mem_headroom is provided' do
             disks = [{
               size: 0,
               target_datastore_pattern: '.*',
@@ -71,16 +71,44 @@ module VSphereCloud
               picker.best_cluster_placement(req_memory: 4096, disk_configurations: disks)
             }.to raise_error(Bosh::Clouds::CloudError, /No valid placement found for requested memory/)
           end
+
+          it 'raises a CloudError when mem_headroom is default' do
+            disks = [{
+              size: 0,
+              target_datastore_pattern: '.*',
+            }]
+
+            picker = ClusterPicker.new
+            picker.update(available_clusters)
+
+            expect {
+              picker.best_cluster_placement(req_memory: 2048 - ClusterPicker::DEFAULT_MEMORY_HEADROOM + 1, disk_configurations: disks)
+            }.to raise_error(Bosh::Clouds::CloudError, /No valid placement found for requested memory/)
+          end
         end
 
         context 'based upon available free space' do
-          it 'raises a CloudError' do
+          it 'raises a CloudError when disk_headroom is provided' do
             disks = [{
-              size: 1024,
+              size: 2048,
               target_datastore_pattern: '.*',
             }]
 
             picker = ClusterPicker.new(0, 0)
+            picker.update(available_clusters)
+
+            expect {
+              picker.best_cluster_placement(req_memory: 0, disk_configurations: disks)
+            }.to raise_error(Bosh::Clouds::CloudError, /No valid placement found for disks/)
+          end
+
+          it 'raises a CloudError when disk_headroom is default' do
+            disks = [{
+              size: 1024 - DatastorePicker::DEFAULT_DISK_HEADROOM + 1,
+              target_datastore_pattern: '.*',
+            }]
+
+            picker = ClusterPicker.new
             picker.update(available_clusters)
 
             expect {
