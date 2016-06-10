@@ -8,20 +8,29 @@ describe 'BATs environment' do
     expect(ENV.has_key?('BOSH_VSPHERE_VCENTER_PASSWORD')).to be true
 
     config = VSphereSpecConfig.new
-    config.logger = Logger.new(STDOUT)
-    config.logger.level = Logger::DEBUG
+    config.logger = logger
     config.uuid = '123'
     Bosh::Clouds::Config.configure(config)
   end
 
+  let(:logger) do
+    logger = Logger.new(STDOUT)
+    logger.level = Logger::DEBUG
+  end
   let(:client) do
     vcenter_host = ENV['BOSH_VSPHERE_VCENTER']
     vcenter_user = ENV['BOSH_VSPHERE_VCENTER_USER']
     vcenter_password = ENV['BOSH_VSPHERE_VCENTER_PASSWORD']
-    VSphereCloud::VCenterClient.new("https://#{vcenter_host}/sdk/vimService").tap do |client|
-      client.login(vcenter_user, vcenter_password, 'en')
-    end
+    client = VSphereCloud::VCenterClient.new(
+      vcenter_api_uri: URI.parse("https://#{vcenter_host}/sdk/vimService"),
+      http_client: VSphereCloud::CpiHttpClient.new(logger),
+      logger: logger,
+    )
+    client.login(vcenter_user, vcenter_password, 'en')
+
+    client
   end
+
   it 'should be using the correct version of vSphere' do
     expected_version = ENV['BOSH_VSPHERE_VERSION']
     skip 'No expected version of vSphere specified' if expected_version.nil?
