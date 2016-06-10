@@ -56,7 +56,7 @@ module VSphereCloud
           break
         end
 
-        raise Bosh::Clouds::CloudError, "No valid placement found for disk: #{disk.inspect}" unless found_placement
+        raise Bosh::Clouds::CloudError, pretty_print_placement_error(@available_datastores, [disk]) unless found_placement
       end
 
       add_balance_score(placement)
@@ -65,14 +65,30 @@ module VSphereCloud
     def pick_datastore_for_single_disk(disk)
       placement = best_disk_placement([disk])
 
+      # we should always find a matching disk because best_disk_placement raises an error if no placement was found
       placement[:datastores].each do |ds_name, props|
         return ds_name if props[:disks].include?(disk)
       end
+    end
 
-      raise Bosh::Clouds::CloudError, "Could not find disk '#{disk}' in placement '#{placement}'"
+    def self.pretty_print_disks(disk_configs)
+      disk_configs.map do |disk_config|
+        "- Size: #{disk_config[:size]}, Target DS Pattern: #{disk_config[:target_datastore_pattern]}, Current Location: #{disk_config[:existing_datastore_name] || 'N/A'}"
+      end.join("\n")
+    end
+
+    def self.pretty_print_datastores(datastores)
+      ds_string = datastores.map do |ds_name, ds_props|
+        "  - Name: #{ds_name}, free space: #{ds_props[:free_space]}"
+      end.join("\n") + "\n"
     end
 
     private
+
+    def pretty_print_placement_error(datastores, disk_configs)
+      "No valid placement found for disks:\n#{DatastorePicker.pretty_print_disks(disk_configs)}\n\n" +
+        "Possible placement options:\nDatastores:\n#{DatastorePicker.pretty_print_datastores(@available_datastores)}"
+    end
 
     def add_balance_score(placement)
       free_spaces = placement[:datastores].map { |_, ds_data| ds_data[:free_space]}.sort

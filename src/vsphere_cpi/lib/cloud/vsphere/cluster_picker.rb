@@ -15,7 +15,8 @@ module VSphereCloud
     def best_cluster_placement(req_memory:, disk_configurations:)
       clusters = filter_on_memory(req_memory)
       if clusters.size == 0
-        raise Bosh::Clouds::CloudError, "No valid placement found for requested memory: #{req_memory}"
+        raise Bosh::Clouds::CloudError,
+        "No valid placement found for requested memory: #{req_memory}\n\n#{pretty_print_cluster_memory}"
       end
 
       placement_options = clusters.map do |cluster_name, cluster_props|
@@ -32,7 +33,9 @@ module VSphereCloud
       end.compact.to_h
 
       if placement_options.size == 0
-        raise Bosh::Clouds::CloudError, "No valid placement found for disks: #{disk_configurations.inspect}"
+        disk_string = DatastorePicker.pretty_print_disks(disk_configurations)
+        raise Bosh::Clouds::CloudError,
+          "No valid placement found for disks:\n#{disk_string}\n\n#{pretty_print_cluster_disk}"
       end
       if placement_options.size == 1
         return format_final_placement(placement_options)
@@ -92,6 +95,23 @@ module VSphereCloud
         end
       end
       final_placement
+    end
+
+    def pretty_print_cluster_memory
+      cluster_string = ""
+      @available_clusters.each do |cluster_name, cluster_props|
+        cluster_string += "- Cluster name: #{cluster_name}, memory: #{cluster_props[:memory]}\n"
+      end
+      "Possible placement options:\n#{cluster_string}"
+    end
+
+    def pretty_print_cluster_disk
+      cluster_string = ""
+      @available_clusters.each do |cluster_name, cluster_info|
+        ds_string = DatastorePicker.pretty_print_datastores(cluster_info[:datastores])
+        cluster_string += "- Cluster name: #{cluster_name}\n  Datastores:\n#{ds_string}\n"
+      end
+      "Possible placement options:\n#{cluster_string}"
     end
   end
 end
