@@ -40,9 +40,12 @@ describe VSphereCloud::Cloud, external_cpi: true do
     second_resource_pool_name = ENV.fetch('BOSH_VSPHERE_CPI_SECOND_CLUSTER_RESOURCE_POOL', 'ACCEPTANCE_RP')
 
     logger = Logger.new(StringIO.new(""))
-    client = VSphereCloud::VCenterClient.new("https://#{host}/sdk/vimService", logger: logger).tap do |client|
-      client.login(user, password, 'en')
-    end
+    client = VSphereCloud::VCenterClient.new(
+      vcenter_api_uri: URI.parse("https://#{host}/sdk/vimService"),
+      http_client: VSphereCloud::CpiHttpClient.new(logger),
+      logger: logger,
+    )
+    client.login(user, password, 'en')
 
     vm_folder_name = ENV.fetch('BOSH_VSPHERE_CPI_VM_FOLDER', 'ACCEPTANCE_BOSH_VMs')
     template_folder_name = ENV.fetch('BOSH_VSPHERE_CPI_TEMPLATE_FOLDER', 'ACCEPTANCE_BOSH_Templates')
