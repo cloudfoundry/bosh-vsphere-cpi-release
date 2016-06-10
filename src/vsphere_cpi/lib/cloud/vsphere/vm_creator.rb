@@ -12,9 +12,7 @@ module VSphereCloud
     end
 
     def create(vm_config)
-      # TODO: Remove this once we handle placement resources better
-      if vm_config.is_top_level_cluster
-        # This ensures that cloud_properties.cluster.resource_pool is added to cluster object
+      if vm_config.has_custom_cluster_properties?
         cluster_config = ClusterConfig.new(vm_config.cluster_name, vm_config.cluster_spec)
         cluster = @cluster_provider.find(vm_config.cluster_name, cluster_config)
       else

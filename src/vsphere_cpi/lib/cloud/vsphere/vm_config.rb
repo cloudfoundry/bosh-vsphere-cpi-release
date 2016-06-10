@@ -18,12 +18,11 @@ module VSphereCloud
       @cluster_name = cluster_placement.keys.first
     end
 
-    # TODO: Remove this once we handle placement resources better
-    def is_top_level_cluster
-      return true if resource_pool_clusters_spec.keys.first
+    def has_custom_cluster_properties?
+      # custom properties include drs_rules and vcenter resource_pools
+      !!resource_pool_clusters_spec.keys.first
     end
 
-    # TODO: Remove this once we handle placement resources better
     def cluster_spec
       return resource_pool_clusters_spec.values.first
     end

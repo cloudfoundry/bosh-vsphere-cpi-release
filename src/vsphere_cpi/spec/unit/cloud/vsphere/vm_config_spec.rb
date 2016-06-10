@@ -328,6 +328,132 @@ module VSphereCloud
       end
     end
 
+    describe '#has_custom_cluster_properties?' do
+      context 'when drs_rules are specified under cluster' do
+        let(:input) do
+          {
+            resource_pool: {
+              "datacenters" => [
+                "clusters" => [
+                  {
+                    "fake-cluster-name" => {
+                      "drs_rules" => [
+                        { "name" => "fake-rule", "type" => "fake-type" }
+                      ]
+                    }
+                  }
+                ]
+              ]
+            }
+          }
+        end
+
+        it 'it returns true' do
+          expect(vm_config.has_custom_cluster_properties?).to be(true)
+        end
+      end
+
+      context 'when resource_pool is specified under cluster' do
+        let(:input) do
+          {
+            resource_pool: {
+              "datacenters" => [
+                "clusters" => [
+                  {
+                    "fake-cluster-name" => {
+                      "resource_pool" => "fake-resource-pool",
+                    }
+                  }
+                ]
+              ]
+            }
+          }
+        end
+
+        it 'it returns true' do
+          expect(vm_config.has_custom_cluster_properties?).to be(true)
+        end
+      end
+
+      context 'when no clusters are specified in resource_pool' do
+        let(:input) do
+          {
+            resource_pool: {},
+          }
+        end
+
+        it 'returns false' do
+          expect(vm_config.has_custom_cluster_properties?).to be(false)
+        end
+      end
+    end
+
+    describe '#cluster_spec' do
+      context 'when drs_rules are specified under cluster' do
+        let(:input) do
+          {
+            resource_pool: {
+              "datacenters" => [
+                "clusters" => [
+                  {
+                    "fake-cluster-name" => {
+                      "drs_rules" => [
+                        { "name" => "fake-rule", "type" => "fake-type" }
+                      ]
+                    }
+                  }
+                ]
+              ]
+            }
+          }
+        end
+
+        it 'it returns a hash containing drs_rules' do
+          expect(vm_config.cluster_spec).to eq({
+            "drs_rules" => [
+              { "name" => "fake-rule", "type" => "fake-type" }
+            ]
+          })
+        end
+      end
+
+      context 'when resource_pool is specified under cluster' do
+        let(:input) do
+          {
+            resource_pool: {
+              "datacenters" => [
+                "clusters" => [
+                  {
+                    "fake-cluster-name" => {
+                      "resource_pool" => "fake-resource-pool",
+                    }
+                  }
+                ]
+              ]
+            }
+          }
+        end
+
+        it 'it returns a hash containing resource_pool' do
+          expect(vm_config.cluster_spec).to eq({
+            "resource_pool" => "fake-resource-pool",
+          })
+        end
+      end
+
+      context 'when no clusters are specified in resource_pool' do
+        let(:input) do
+          {
+            resource_pool: {},
+          }
+        end
+
+        it 'returns nil' do
+          expect(vm_config.cluster_spec).to be_nil
+        end
+      end
+    end
+
     describe '#drs_rule' do
       context 'when drs_rules are specified under cluster' do
         let(:input) do
