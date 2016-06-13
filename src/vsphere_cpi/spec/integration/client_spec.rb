@@ -52,11 +52,7 @@ module VSphereCloud
       cluster_configs = {cluster_name => ClusterConfig.new(cluster_name, {'resource_pool' => resource_pool_name})}
       logger = Logger.new(StringIO.new(""))
 
-      client = VSphereCloud::VCenterClient.new(
-        vcenter_api_uri: URI.parse("https://#{host}/sdk/vimService"),
-        http_client: VSphereCloud::CpiHttpClient.new(logger),
-        logger: logger,
-      )
+      client = VCenterClient.new("https://#{host}/sdk/vimService", logger: logger)
       client.login(user, password, 'en')
 
       cluster_provider = Resources::ClusterProvider.new({
