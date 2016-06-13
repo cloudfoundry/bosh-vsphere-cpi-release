@@ -2,9 +2,9 @@ require 'spec_helper'
 
 module VSphereCloud
   describe FileProvider do
-    subject(:file_provider) { described_class.new(http_client, vcenter_host) }
+    subject(:file_provider) { described_class.new(rest_client, vcenter_host) }
 
-    let(:http_client) { double('fake-rest-client') }
+    let(:rest_client) { double('fake-rest-client') }
     let(:vcenter_host) { 'fake-vcenter-host' }
 
     let(:datacenter_name) { 'fake-datacenter-name 1' }
@@ -15,7 +15,7 @@ module VSphereCloud
       it 'gets specified file' do
         response_body = double('response_body')
         response = double('response', code: 200, body: response_body)
-        expect(http_client).to receive(:get).with(
+        expect(rest_client).to receive(:get).with(
           'https://fake-vcenter-host/folder/fake-path?'\
           'dcPath=fake-datacenter-name%201&dsName=fake-datastore-name%201'
         ).and_return(response)
@@ -27,7 +27,7 @@ module VSphereCloud
 
       context 'when the current agent environment does not exist' do
         it 'returns nil' do
-          expect(http_client).to receive(:get).with(
+          expect(rest_client).to receive(:get).with(
             'https://fake-vcenter-host/folder/fake-path?'\
             'dcPath=fake-datacenter-name%201&dsName=fake-datastore-name%201'
           ).and_return(double('response', code: 404))
@@ -40,7 +40,7 @@ module VSphereCloud
 
       context 'when vSphere cannot handle the request' do
         it 'retries then raises an error' do
-          expect(http_client).to receive(:get).with(
+          expect(rest_client).to receive(:get).with(
             'https://fake-vcenter-host/folder/fake-path?'\
             'dcPath=fake-datacenter-name%201&dsName=fake-datastore-name%201'
           ).twice.and_return(double('response', code: 500))

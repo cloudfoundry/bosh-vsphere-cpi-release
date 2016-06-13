@@ -5,18 +5,13 @@ module VSphereCloud
   describe VCenterClient do
     include FakeFS::SpecHelpers
 
-    subject(:client) do
-      described_class.new(
-        vcenter_api_uri: vcenter_api_uri,
-        http_client: http_client,
-        logger: logger,
-      )
-    end
-    let(:vcenter_api_uri) { URI.parse('https://fake-host') }
+    subject(:client) { described_class.new('fake-host', soap_log: 'fake-soap-log') }
     let(:fake_service_content) { double('service content', root_folder: double('fake-root-folder')) }
+
     let(:fake_search_index) { double(:search_index) }
+
     let(:logger) { instance_double('Logger') }
-    let(:http_client) { instance_double(CpiHttpClient) }
+    before { class_double('Bosh::Clouds::Config', logger: logger).as_stubbed_const }
 
     before do
       fake_instance = double('service instance', content: fake_service_content)
@@ -28,7 +23,7 @@ module VSphereCloud
       it 'creates soap stub' do
         stub_adapter = instance_double(VimSdk::Soap::StubAdapter)
         soap_stub = instance_double(VSphereCloud::SoapStub, create: stub_adapter)
-        expect(SoapStub).to receive(:new).with(vcenter_api_uri, http_client).and_return(soap_stub)
+        expect(SoapStub).to receive(:new).with('fake-host', 'fake-soap-log').and_return(soap_stub)
         expect(client.soap_stub).to eq(stub_adapter)
       end
     end

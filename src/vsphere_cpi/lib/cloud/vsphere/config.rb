@@ -11,6 +11,7 @@ module VSphereCloud
       @vcenter_host = nil
       @vcenter_user = nil
       @vcenter_password = nil
+      @rest_client = nil
       @default_overcommit_ratio = 1.0
 
       @is_validated = false
@@ -36,8 +37,32 @@ module VSphereCloud
       @logger ||= Bosh::Clouds::Config.logger
     end
 
+    def client
+      unless @client
+        host = "https://#{vcenter['host']}/sdk/vimService"
+        @client = VCenterClient.new(host, soap_log: soap_log)
+
+        @client.login(vcenter['user'], vcenter['password'], 'en')
+      end
+
+      @client
+    end
+
     def soap_log
       config['soap_log'] || config['cpi_log']
+    end
+
+    def rest_client
+      unless @rest_client
+        @rest_client = VSphereCloud::CpiHttpClient.build
+
+        # HACK: read the session from the SOAP client so we don't leak sessions
+        # when using the REST client
+        cookie_str = client.soap_stub.cookie
+        @rest_client.cookie_manager.parse(cookie_str, URI.parse("https://#{vcenter_host}"))
+      end
+
+      @rest_client
     end
 
     def mem_overcommit
@@ -50,10 +75,6 @@ module VSphereCloud
 
     def vcenter_host
       vcenter['host']
-    end
-
-    def vcenter_api_uri
-      URI.parse("https://#{vcenter_host}/sdk/vimService")
     end
 
     def vcenter_user
