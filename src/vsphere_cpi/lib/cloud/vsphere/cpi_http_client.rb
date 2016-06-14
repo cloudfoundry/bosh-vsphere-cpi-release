@@ -2,12 +2,6 @@ require 'httpclient'
 
 module VSphereCloud
   class CpiHttpClient
-    extend Forwardable
-
-    def_delegators :@backing_client,
-      :get,
-      :put,
-      :post
 
     attr_reader :backing_client
 
@@ -27,9 +21,82 @@ module VSphereCloud
         when String
           log_file = File.open(http_log, 'w')
           log_file.sync = true
-          @backing_client.debug_dev = log_file
+          @log_writer = log_file
         when IO, StringIO
-          @backing_client.debug_dev = http_log
+          @log_writer = http_log
+        else
+          @log_writer = File.open(File::NULL, 'w')
+      end
+    end
+
+    def get(url, additional_headers = {})
+      do_request(url, 'GET', nil, additional_headers)
+    end
+
+    def put(url, content, additional_headers = {})
+      do_request(url, 'PUT', content, additional_headers)
+    end
+
+    def post(url, content, additional_headers = {})
+      do_request(url, 'POST', content, additional_headers)
+    end
+
+    private
+
+    def do_request(url, method, content, additional_headers)
+      @log_writer << "= Request\n\n"
+      @log_writer << "#{method} #{url}\n\n"
+      @log_writer << "Date: #{Time.now}\n"
+      @log_writer << "Additional Request Headers:\n"
+      log_headers(additional_headers)
+
+      if content
+        @log_writer << "Request Body:\n"
+
+        if content.is_a?(String) && content.force_encoding('utf-8').valid_encoding?
+          @log_writer << content + "\n"
+        else
+          @log_writer << "REQUEST BODY IS BINARY DATA\n"
+        end
+      end
+
+      case method
+      when 'GET'
+        resp = @backing_client.get(url, additional_headers)
+      when 'PUT'
+        resp = @backing_client.put(url, content, additional_headers)
+      when 'POST'
+        resp = @backing_client.post(url, content, additional_headers)
+      else
+        raise "Invalid HTTP method '#{method}'"
+      end
+
+      log_response(resp)
+
+      resp
+    end
+
+    def log_headers(headers)
+      headers.each do |key, value|
+        @log_writer << "#{key}: #{value}\n"
+      end
+      @log_writer << "None\n" if headers.empty?
+    end
+
+    def log_response(resp)
+      @log_writer << "= Response\n\n"
+      @log_writer << "Status: #{resp.code} #{resp.reason}\n"
+      @log_writer << "Response Headers:\n"
+      log_headers(resp.headers)
+
+      if resp.content
+        @log_writer << "Response Body:\n"
+
+        if resp.content.is_a?(String) && resp.content.force_encoding('utf-8').valid_encoding?
+          @log_writer << resp.content + "\n"
+        else
+          @log_writer << "RESPONSE BODY IS BINARY DATA\n"
+        end
       end
     end
   end

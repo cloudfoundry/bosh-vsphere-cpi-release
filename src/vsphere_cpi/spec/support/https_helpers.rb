@@ -103,12 +103,21 @@ module Support
     @server.run
   end
 
+  def stop_server
+    @server.shutdown
+  end
+
   module HTTP
     class Server
       attr_reader :app, :host, :port
 
       def initialize
-        @app  = Support::HTTP::Application.new('success')
+        fixture_path = File.join(File.dirname(__FILE__), 'fixtures/env.iso')
+        @downloadable_file = File.open(fixture_path, 'r')
+        @app  = Support::HTTP::Application.new({
+          plain_text_response: 'success',
+          binary_response: @downloadable_file,
+        })
         @host = '127.0.0.1'
         @port = available_port
       end
@@ -128,6 +137,11 @@ module Support
         self
       rescue Timeout::Error
         raise "Failed to start #{self.class.name} on port: #{port}"
+      end
+
+      def shutdown
+        @thread.exit
+        @downloadable_file.close
       end
 
       private
@@ -205,15 +219,20 @@ module Support
     end
 
     class Application
-      def initialize(body = nil)
-        @body = body
+      def initialize(plain_text_response:, binary_response:)
+        @plain_text_response = [200, {'Content-Type' => 'text/plain'}, plain_text_response]
+        @binary_response = [200, { 'Content-Type' => 'application/octet-stream'}, binary_response]
+        @identity_response = [200, { 'Content-Type' => 'text/plain'}, self.object_id.to_s]
       end
 
       def call(env)
-        if env['PATH_INFO'] == '/__identify__'
-          [200, {}, self.object_id.to_s]
+        case env['PATH_INFO']
+        when '/download'
+          return @binary_response
+        when '/__identify__'
+          return @identity_response
         else
-          [200, {}, @body]
+          return @plain_text_response
         end
       end
     end

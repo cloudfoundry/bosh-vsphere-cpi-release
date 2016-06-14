@@ -2,6 +2,7 @@ require 'spec_helper'
 require 'open3'
 require 'tempfile'
 require 'yaml'
+require 'fileutils'
 
 describe VSphereCloud::Cloud, external_cpi: true do
   before(:all) do
@@ -104,22 +105,32 @@ describe VSphereCloud::Cloud, external_cpi: true do
     response
   end
 
-  def external_cpi_result(method, *arguments)
-    response = external_cpi_response(method, *arguments)
-    response['result']
-  end
-
   # Thin integration test so
   # We have had coverage in the lifecycle_spec
   describe 'getting vms' do
     it 'is successful' do
-      json = {
-        'method' => 'has_vm',
-        'arguments' => ['1234567'],
-        'context' => { 'director_uuid' => 'abc' }
-      }
-      output = run_vsphere_cpi(json)
-      expect(output).to match /"result":false,"error":null,"log":".*Request.*"}/
+      resp = external_cpi_response('has_vm', 'non-existant-vm-id')
+      expect(resp['error']).to be_nil
+      expect(resp['result']).to be(false)
+    end
+  end
+
+  describe 'logging' do
+    let(:temp_dir) { Dir.mktmpdir('vsphere_cpi_test') }
+    let(:stemcell_image) { LifecycleHelpers.stemcell_image(ENV.fetch('BOSH_VSPHERE_STEMCELL'), temp_dir) }
+
+    after do
+      _ = external_cpi_response('delete_stemcell', @stemcell_id) if @stemcell_id
+      FileUtils.rm_rf(temp_dir)
+    end
+
+    it 'logs http requests and responses' do
+      resp = external_cpi_response('create_stemcell', stemcell_image, nil)
+      expect(resp['error']).to be_nil
+      expect(resp['result']).to_not be_nil
+      @stemcell_id = resp['result']
+
+      expect(resp['log']).to include('200')
     end
   end
 end
