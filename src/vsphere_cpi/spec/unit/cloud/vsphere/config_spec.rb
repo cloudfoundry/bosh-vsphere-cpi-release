@@ -133,87 +133,6 @@ module VSphereCloud
       end
     end
 
-    describe '#client' do
-      let(:client) { instance_double('VSphereCloud::VCenterClient') }
-
-      before do
-        allow(VCenterClient).to receive(:new).with('https://some-host/sdk/vimService', soap_log: 'fake-soap-log').and_return(client)
-      end
-
-      context 'when the client has not been created yet' do
-        it 'returns a new VSphereCloud::VCenterClient built from correct params' do
-          expect(client).to receive(:login).with(user, password, 'en')
-
-          expect(config.client).to eq(client)
-        end
-      end
-
-      context 'when the client has already been created' do
-        before do
-          allow(client).to receive(:login).with(user, password, 'en')
-          config.client
-        end
-
-        it 'caches client for thread safety' do
-          expect(VCenterClient).to_not receive(:new)
-          config.client
-        end
-      end
-    end
-
-    describe '#rest_client' do
-      let(:rest_client) do
-        instance_double(
-          'HTTPClient',
-          ssl_config: ssl_config,
-          cookie_manager: cookie_manager,
-          :receive_timeout= => nil,
-          :connect_timeout= => nil
-        )
-      end
-      let(:cookie_manager) { instance_double('WebAgent::CookieManager', parse: nil) }
-      let(:ssl_config) { instance_double('HTTPClient::SSLConfig') }
-      let(:client) { instance_double('VSphereCloud::VCenterClient', login: nil, soap_stub: soap_stub) }
-      let(:soap_stub) { double(:stub_adapter, cookie: 'fake-cookie') }
-
-      before do
-        allow(HTTPClient).to receive(:new).exactly(2).times.and_return(rest_client)
-        allow(rest_client).to receive(:send_timeout=).with(14400)
-        allow(ssl_config).to receive(:verify_mode=).with(OpenSSL::SSL::VERIFY_NONE)
-        allow(VCenterClient).to receive(:new).with('https://some-host/sdk/vimService', soap_log: 'fake-soap-log').and_return(client)
-      end
-
-      context 'when the rest client has not been created yet' do
-        it 'sets send_timeout to 1400' do
-          expect(rest_client).to receive(:send_timeout=).with(14400)
-          config.rest_client
-        end
-
-        it 'sets SSL verify mode to none' do
-          expect(ssl_config).to receive(:verify_mode=).with(OpenSSL::SSL::VERIFY_NONE)
-          config.rest_client
-        end
-
-        it 'copies the cookie from the SOAP client to the rest client' do
-          expect(cookie_manager).to receive(:parse).with('fake-cookie', URI.parse("https://some-host"))
-          config.rest_client
-        end
-
-        it 'returns a new configured HTTPClient from hell' do
-          expect(config.rest_client).to eq(rest_client)
-        end
-      end
-
-      context 'when the rest client has already been created' do
-        before { config.rest_client }
-
-        it 'uses the cached client' do
-          expect(HTTPClient).to_not receive(:new)
-          config.rest_client
-        end
-      end
-    end
-
     describe '#mem_overcommit' do
       context 'when set in config' do
         before { config_hash.merge!({ 'mem_overcommit_ratio' => 5.0 }) }
@@ -239,6 +158,12 @@ module VSphereCloud
     describe '#vcenter_host' do
       it 'returns value from config' do
         expect(config.vcenter_host).to eq(host)
+      end
+    end
+
+    describe '#vcenter_api_uri' do
+      it 'returns vcenter API endpoint as URI' do
+        expect(config.vcenter_api_uri).to eq(URI.parse("https://#{host}/sdk/vimService"))
       end
     end
 

@@ -6,9 +6,19 @@ module VSphereCloud
     subject(:vsphere_cloud) { Cloud.new(config) }
 
     let(:config) { { fake: 'config' } }
-    let(:cloud_config) { instance_double('VSphereCloud::Config', logger: logger, rest_client:nil ).as_null_object }
+    let(:cloud_config) do
+      instance_double('VSphereCloud::Config',
+        logger: logger,
+        vcenter_host: vcenter_host,
+        vcenter_api_uri: vcenter_api_uri,
+        vcenter_user: 'fake-user',
+        vcenter_password: 'fake-password',
+        soap_log: 'fake-log-file',
+      ).as_null_object
+    end
     let(:logger) { instance_double('Logger', info: nil, debug: nil) }
-    let(:client) { instance_double('VSphereCloud::VCenterClient', service_content: service_content) }
+    let(:vcenter_client) { instance_double('VSphereCloud::VCenterClient', login: nil, service_content: service_content) }
+    let(:http_client) { instance_double('VSphereCloud::CpiHttpClient') }
     let(:service_content) do
       instance_double('VimSdk::Vim::ServiceInstanceContent',
         virtual_disk_manager: virtual_disk_manager,
@@ -16,6 +26,8 @@ module VSphereCloud
     end
     let(:virtual_disk_manager) { instance_double('VimSdk::Vim::VirtualDiskManager') }
     let(:agent_env) { instance_double('VSphereCloud::AgentEnv') }
+    let(:vcenter_host) { 'fake-host' }
+    let(:vcenter_api_uri) { URI.parse("https://#{vcenter_host}") }
     before { allow(VSphereCloud::AgentEnv).to receive(:new).and_return(agent_env) }
 
     let(:cloud_searcher) { instance_double('VSphereCloud::CloudSearcher') }
@@ -23,7 +35,16 @@ module VSphereCloud
 
     before do
       allow(Config).to receive(:build).with(config).and_return(cloud_config)
-      allow(cloud_config).to receive(:client).and_return(client)
+      allow(CpiHttpClient).to receive(:new)
+        .with('fake-log-file')
+        .and_return(http_client)
+      allow(VCenterClient).to receive(:new)
+        .with({
+          vcenter_api_uri: vcenter_api_uri,
+          http_client: http_client,
+          logger: logger,
+        })
+        .and_return(vcenter_client)
       allow_any_instance_of(Cloud).to receive(:at_exit)
     end
 
@@ -136,7 +157,7 @@ module VSphereCloud
 
       context 'when stemcell vm is not found at the expected location' do
         it 'raises an error' do
-          allow(client).to receive(:find_vm_by_name).and_return(nil)
+          allow(vcenter_client).to receive(:find_vm_by_name).and_return(nil)
 
           expect {
             vsphere_cloud.replicate_stemcell(cluster, target_datastore, 'fake_stemcell_id')
@@ -148,13 +169,13 @@ module VSphereCloud
         let(:datastore_with_stemcell) { instance_double('VSphereCloud::Resources::Datastore', :name => 'datastore-with-stemcell') }
 
         before do
-          allow(client).to receive(:find_vm_by_name).with('fake-datacenter-mob', stemcell_id).and_return(stemcell_vm)
+          allow(vcenter_client).to receive(:find_vm_by_name).with('fake-datacenter-mob', stemcell_id).and_return(stemcell_vm)
 
           allow(cloud_searcher).to receive(:get_property).with(stemcell_vm, anything, 'datastore', anything).and_return([datastore_with_stemcell])
         end
 
         it 'searches for stemcell on all cluster datastores' do
-          expect(client).to receive(:find_vm_by_name).with(
+          expect(vcenter_client).to receive(:find_vm_by_name).with(
               'fake-datacenter-mob',
               "#{stemcell_id} %2f #{target_datastore.mob.__mo_id__}"
           ).and_return(double('fake stemcell vm'))
@@ -168,7 +189,7 @@ module VSphereCloud
 
 
           it 'replicates the stemcell' do
-            allow(client).to receive(:find_vm_by_name).with(
+            allow(vcenter_client).to receive(:find_vm_by_name).with(
                 'fake-datacenter-mob',
                 "#{stemcell_id} %2f #{target_datastore.mob.__mo_id__}"
             )
@@ -176,7 +197,7 @@ module VSphereCloud
             resource_pool = double(:resource_pool, mob: 'fake_resource_pool_mob')
             allow(cluster).to receive(:resource_pool).and_return(resource_pool)
             allow(stemcell_vm).to receive(:clone).with(any_args).and_return(fake_task)
-            allow(client).to receive(:wait_for_task).with(fake_task).and_return(replicated_stemcell)
+            allow(vcenter_client).to receive(:wait_for_task).with(fake_task).and_return(replicated_stemcell)
             allow(replicated_stemcell).to receive(:create_snapshot).with(any_args).and_return(fake_task)
 
             expect(vsphere_cloud.replicate_stemcell(cluster, target_datastore, stemcell_id)).to eql(replicated_stemcell)
@@ -186,7 +207,7 @@ module VSphereCloud
 
       context 'when stemcell resides on the given datastore' do
         it 'returns the found replica' do
-          allow(client).to receive(:find_vm_by_name).with(any_args).and_return(stemcell_vm)
+          allow(vcenter_client).to receive(:find_vm_by_name).with(any_args).and_return(stemcell_vm)
           allow(cloud_searcher).to receive(:get_property).with(any_args).and_return([target_datastore])
           expect(vsphere_cloud.replicate_stemcell(cluster, target_datastore, stemcell_id)).to eql(stemcell_vm)
         end
@@ -392,10 +413,13 @@ module VSphereCloud
           .and_return(fake_disk)
 
         allow(IPConflictDetector).to receive(:new)
-          .with(logger, client)
+          .with(logger, vcenter_client)
           .and_return(ip_conflict_detector)
         allow(ClusterPicker).to receive(:new)
           .and_return(cluster_picker)
+        allow(IPConflictDetector).to receive(:new)
+          .with(logger, vcenter_client)
+          .and_return(ip_conflict_detector)
       end
 
       it 'creates a new VM with provided manifest properties' do
@@ -434,7 +458,7 @@ module VSphereCloud
 
         expect(VmCreator).to receive(:new)
           .with(
-            client: client,
+            client: vcenter_client,
             cloud_searcher: cloud_searcher,
             logger: logger,
             cpi: vsphere_cloud,
@@ -486,7 +510,7 @@ module VSphereCloud
 
         expect(VmCreator).to receive(:new)
           .with(
-            client: client,
+            client: vcenter_client,
             cloud_searcher: cloud_searcher,
             logger: logger,
             cpi: vsphere_cloud,
@@ -835,14 +859,14 @@ module VSphereCloud
         end
 
         it 'deletes disk' do
-          expect(client).to receive(:delete_disk).with('datacenter-mob', 'disk-path')
+          expect(vcenter_client).to receive(:delete_disk).with('datacenter-mob', 'disk-path')
           vsphere_cloud.delete_disk('fake-disk-uuid')
         end
 
         context 'when a persistent disk pattern is encoded into the director disk cid' do
           it 'removes the suffix before searching the disk' do
             allow(datacenter).to receive(:find_disk).and_return(disk)
-            allow(client).to receive(:delete_disk)
+            allow(vcenter_client).to receive(:delete_disk)
 
             metadata_hash = {target_datastore_pattern:'^(target\\-datastore)$'}
             expected_pattern = Base64.urlsafe_encode64(metadata_hash.to_json)
@@ -1038,9 +1062,9 @@ module VSphereCloud
 
     describe '#set_vm_metadata' do
       it 'sets the metadata as custom fields on the VM' do
-        expect(client).to receive(:set_custom_field).with(vm_mob, 'key', 'value')
-        expect(client).to receive(:set_custom_field).with(vm_mob, 'key', 'other-value')
-        expect(client).to receive(:set_custom_field).with(vm_mob, 'other-key', 'value')
+        expect(vcenter_client).to receive(:set_custom_field).with(vm_mob, 'key', 'value')
+        expect(vcenter_client).to receive(:set_custom_field).with(vm_mob, 'key', 'other-value')
+        expect(vcenter_client).to receive(:set_custom_field).with(vm_mob, 'other-key', 'value')
         vsphere_cloud.set_vm_metadata(vm.cid, {'key' => 'value'})
         vsphere_cloud.set_vm_metadata(vm.cid, {'key' => 'other-value', 'other-key' => 'value'})
       end
