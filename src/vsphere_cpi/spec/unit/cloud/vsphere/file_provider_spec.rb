@@ -41,10 +41,13 @@ module VSphereCloud
 
       context 'when vSphere cannot handle the request' do
         it 'retries then raises an error' do
-          expect(http_client).to receive(:get).with(
-            'https://fake-vcenter-host/folder/fake-path?'\
-            'dcPath=fake-datacenter-name%201&dsName=fake-datastore-name%201'
-          ).twice.and_return(double('response', code: 500))
+          expect(http_client).to receive(:get)
+            .with(
+              'https://fake-vcenter-host/folder/fake-path?'\
+              'dcPath=fake-datacenter-name%201&dsName=fake-datastore-name%201'
+            )
+            .exactly(5).times
+            .and_return(double('response', code: 500))
 
           expect {
             file_provider.fetch_file(datacenter_name, datastore_name, path)

@@ -2,6 +2,8 @@ module VSphereCloud
   class FileProvider
     include VSphereCloud::RetryBlock
 
+    NUM_RETRIES = 5
+
     def initialize(http_client:, vcenter_host:, logger:)
       @vcenter_host = vcenter_host
       @http_client = http_client
@@ -9,7 +11,7 @@ module VSphereCloud
     end
 
     def fetch_file(datacenter_name, datastore_name, path)
-      retry_block do
+      retry_block(NUM_RETRIES) do
         url ="https://#{@vcenter_host}/folder/#{path}?dcPath=#{URI.escape(datacenter_name)}" +
           "&dsName=#{URI.escape(datastore_name)}"
         @logger.info("Fetching file from #{url}...")
@@ -27,7 +29,7 @@ module VSphereCloud
     end
 
     def upload_file(datacenter_name, datastore_name, path, contents)
-      retry_block do
+      retry_block(NUM_RETRIES) do
         url = "https://#{@vcenter_host}/folder/#{path}?dcPath=#{URI.escape(datacenter_name)}" +
           "&dsName=#{URI.escape(datastore_name)}"
         @logger.info("Uploading file to #{url}...")
