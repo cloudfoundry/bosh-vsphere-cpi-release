@@ -109,28 +109,30 @@ module Support
 
   module HTTP
     class Server
-      attr_reader :app, :host, :port
+      attr_reader :host, :port
 
       def initialize
-        fixture_path = File.join(File.dirname(__FILE__), 'fixtures/env.iso')
-        @downloadable_file = File.open(fixture_path, 'r')
-        @app  = Support::HTTP::Application.new({
-          plain_text_response: 'success',
-          binary_response: @downloadable_file,
-        })
         @host = '127.0.0.1'
         @port = available_port
       end
 
       def run
+        fixtures_dir = File.join(File.dirname(__FILE__), 'fixtures')
+
         @thread = Thread.new do
-          Rack::Handler::Thin.run(app, { :Host => host, :Port => port }) do |config|
+          server_config = { :Host => host, :Port => port }
+          setup_ssl = lambda { |config|
             config.ssl = true
             config.ssl_options = {
               :private_key_file => private_key.path,
               :cert_chain_file => cert_chain.path
             }
-          end
+          }
+
+          Rack::Handler::Thin.run(Rack::Builder.new {
+            use Rack::Static, :urls => { "/download" => "env.iso" }, :root => fixtures_dir
+            run lambda { |env| [200, { 'Content-Type' => 'text/plain'}, ['success']] }
+          }, server_config, &setup_ssl)
         end
 
         Timeout.timeout(5) { @thread.join(0.1) until responsive? }
@@ -141,7 +143,6 @@ module Support
 
       def shutdown
         @thread.exit
-        @downloadable_file.close
       end
 
       private
@@ -208,32 +209,13 @@ module Support
       def responsive?
         return false if @thread && @thread.join(0)
         options = { :use_ssl => true, :verify_mode => OpenSSL::SSL::VERIFY_NONE }
-        response = Net::HTTP.start(host, port, options) { |http| http.get('/__identify__') }
+        response = Net::HTTP.start(host, port, options) { |http| http.get('/') }
 
         if response.is_a?(Net::HTTPSuccess) || response.is_a?(Net::HTTPRedirection)
-          return response.body == app.object_id.to_s
+          return response.code == '200'
         end
       rescue SystemCallError
         return false
-      end
-    end
-
-    class Application
-      def initialize(plain_text_response:, binary_response:)
-        @plain_text_response = [200, {'Content-Type' => 'text/plain'}, plain_text_response]
-        @binary_response = [200, { 'Content-Type' => 'application/octet-stream'}, binary_response]
-        @identity_response = [200, { 'Content-Type' => 'text/plain'}, self.object_id.to_s]
-      end
-
-      def call(env)
-        case env['PATH_INFO']
-        when '/download'
-          return @binary_response
-        when '/__identify__'
-          return @identity_response
-        else
-          return @plain_text_response
-        end
       end
     end
   end
