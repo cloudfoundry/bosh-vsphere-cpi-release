@@ -51,7 +51,34 @@ module VSphereCloud
 
           expect {
             file_provider.fetch_file(datacenter_name, datastore_name, path)
-          }.to raise_error /Could not fetch file/
+          }.to raise_error(/Could not fetch file/)
+        end
+      end
+    end
+
+    describe '#upload_file' do
+      let(:upload_contents) {"fake upload contents"}
+      it 'uploads specified file' do
+        response = double('response', code: 200, body: nil)
+        expect(http_client).to receive(:put).with(
+          'https://fake-vcenter-host/folder/fake-path?'\
+          'dcPath=fake-datacenter-name%201&dsName=fake-datastore-name%201',
+          upload_contents,
+          { 'Content-Type' => 'application/octet-stream', 'Content-Length' => upload_contents.length }
+        ).and_return(response)
+
+        file_provider.upload_file(datacenter_name, datastore_name, path, upload_contents)
+      end
+
+      context 'when vSphere cannot handle the request' do
+        it 'retries then raises an error' do
+          expect(http_client).to receive(:put)
+            .exactly(5).times
+            .and_return(double('response', code: 500, body: nil))
+
+          expect {
+            file_provider.upload_file(datacenter_name, datastore_name, path, upload_contents)
+          }.to raise_error(/Could not upload file/)
         end
       end
     end
