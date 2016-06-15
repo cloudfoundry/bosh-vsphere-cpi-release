@@ -87,7 +87,7 @@ module VSphereCloud
           context 'when response or request body includes binary data' do
             it 'logs the request and response headers, but not the body' do
               url = "https://localhost:#{@server.port}"
-              response = http_client.put(url, binary_file.read, { 'Content-Type' => 'application/octet-stream'})
+              response = http_client.put(url, binary_file, { 'Content-Type' => 'application/octet-stream'})
               expect(response.status).to eq(200)
 
               expected_request_header = 'Content-Type: application/octet-stream'
@@ -127,7 +127,7 @@ module VSphereCloud
           context 'when response or request body includes binary data' do
             it 'logs the request and response headers, but not the body' do
               url = "https://localhost:#{@server.port}"
-              response = http_client.post(url, binary_file.read, { 'Content-Type' => 'application/octet-stream'})
+              response = http_client.post(url, binary_file, { 'Content-Type' => 'application/octet-stream'})
               expect(response.status).to eq(200)
 
               expected_request_header = 'Content-Type: application/octet-stream'
