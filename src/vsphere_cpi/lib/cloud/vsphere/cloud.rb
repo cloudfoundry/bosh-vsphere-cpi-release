@@ -51,12 +51,13 @@ module VSphereCloud
         disk_path: @config.datacenter_disk_path,
         clusters: @config.datacenter_clusters,
         cluster_provider: @cluster_provider,
-        logger: @config.logger,
+        logger: @logger,
       })
 
       @file_provider = FileProvider.new({
         http_client: @http_client,
         vcenter_host: @config.vcenter_host,
+        logger: @logger
       })
       @agent_env = AgentEnv.new(client, @file_provider, @cloud_searcher)
 

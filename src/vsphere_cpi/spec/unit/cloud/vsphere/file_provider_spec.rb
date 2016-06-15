@@ -2,10 +2,11 @@ require 'spec_helper'
 
 module VSphereCloud
   describe FileProvider do
-    subject(:file_provider) { described_class.new(http_client: http_client, vcenter_host: vcenter_host) }
+    subject(:file_provider) { described_class.new(http_client: http_client, vcenter_host: vcenter_host, logger: logger) }
 
     let(:http_client) { double('fake-rest-client') }
     let(:vcenter_host) { 'fake-vcenter-host' }
+    let(:logger) { Logger.new(StringIO.new("")) }
 
     let(:datacenter_name) { 'fake-datacenter-name 1' }
     let(:datastore_name) { 'fake-datastore-name 1' }
