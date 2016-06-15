@@ -35,18 +35,16 @@ module VSphereCloud
       context 'when http_log is provided as a filepath' do
         subject(:http_client) { CpiHttpClient.new(log_file.path) }
         let(:log_file) { Tempfile.new('vsphere-http-log-test') }
-        let(:binary_file) do
-          fixture_path = File.join(File.dirname(__FILE__), '../../../support/fixtures/env.iso')
-          File.open(fixture_path, 'r')
-        end
+        # we had trouble getting thin to accept actual file uploads,
+        # opting for a non-utf8 string instead to approximate binary data
+        let(:non_utf8_string) { "\xc3\x28" }
 
         after do
           log_file.unlink
-          binary_file.close
         end
 
         describe "#get" do
-          context 'when response or request body includes binary data' do
+          context 'when response or request body includes non-utf8 data' do
             it 'logs the request and response headers, but not the body' do
               url = "https://localhost:#{@server.port}/download"
               response = http_client.get(url)
@@ -63,7 +61,7 @@ module VSphereCloud
             end
           end
 
-          context 'when response and request body do not include binary data' do
+          context 'when response and request body do not include non-utf8 data' do
             it 'logs the request and response' do
               url = "https://localhost:#{@server.port}"
               response = http_client.get(url)
@@ -84,10 +82,10 @@ module VSphereCloud
         end
 
         describe "#put" do
-          context 'when response or request body includes binary data' do
+          context 'when response or request body includes non-utf8 data' do
             it 'logs the request and response headers, but not the body' do
               url = "https://localhost:#{@server.port}"
-              response = http_client.put(url, binary_file, { 'Content-Type' => 'application/octet-stream'})
+              response = http_client.put(url, non_utf8_string, { 'Content-Type' => 'application/octet-stream'})
               expect(response.status).to eq(200)
 
               expected_request_header = 'Content-Type: application/octet-stream'
@@ -101,7 +99,7 @@ module VSphereCloud
             end
           end
 
-          context 'when response or request body does not include binary data' do
+          context 'when response or request body does not include non-utf8 data' do
             it 'logs the request and response' do
               url = "https://localhost:#{@server.port}"
               req_body = 'my-request-body'
@@ -124,10 +122,10 @@ module VSphereCloud
         end
 
         describe "#post" do
-          context 'when response or request body includes binary data' do
+          context 'when response or request body includes non-utf8 data' do
             it 'logs the request and response headers, but not the body' do
               url = "https://localhost:#{@server.port}"
-              response = http_client.post(url, binary_file, { 'Content-Type' => 'application/octet-stream'})
+              response = http_client.post(url, non_utf8_string, { 'Content-Type' => 'application/octet-stream'})
               expect(response.status).to eq(200)
 
               expected_request_header = 'Content-Type: application/octet-stream'
@@ -141,7 +139,7 @@ module VSphereCloud
             end
           end
 
-          context 'when response or request body does not include binary data' do
+          context 'when response or request body does not include non-utf8 data' do
             it 'logs the request and response' do
               url = "https://localhost:#{@server.port}"
               req_body = 'my-request-body'

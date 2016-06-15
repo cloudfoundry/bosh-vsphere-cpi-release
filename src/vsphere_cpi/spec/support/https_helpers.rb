@@ -117,7 +117,7 @@ module Support
       end
 
       def run
-        fixtures_dir = File.join(File.dirname(__FILE__), 'fixtures')
+        path_to_binary_file = File.join(File.dirname(__FILE__), 'fixtures', 'env.iso')
 
         @thread = Thread.new do
           server_config = { :Host => host, :Port => port }
@@ -130,7 +130,15 @@ module Support
           }
 
           Rack::Handler::Thin.run(Rack::Builder.new {
-            use Rack::Static, :urls => { "/download" => "env.iso" }, :root => fixtures_dir
+            map '/download' do
+              run lambda { |env|
+                response = Rack::Response.new
+                response.headers.merge!('Content-Type' => 'application/octet-stream')
+                File.open(path_to_binary_file, 'rb') { |file| response.write(file) }
+                response.finish
+              }
+            end
+
             run lambda { |env| [200, { 'Content-Type' => 'text/plain'}, ['success']] }
           }, server_config, &setup_ssl)
         end
