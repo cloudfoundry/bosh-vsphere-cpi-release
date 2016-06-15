@@ -54,7 +54,10 @@ module VSphereCloud
         logger: @config.logger,
       })
 
-      @file_provider = FileProvider.new(@http_client, config.vcenter_host)
+      @file_provider = FileProvider.new({
+        http_client: @http_client,
+        vcenter_host: @config.vcenter_host,
+      })
       @agent_env = AgentEnv.new(client, @file_provider, @cloud_searcher)
 
       # We get disconnected if the connection is inactive for a long period.

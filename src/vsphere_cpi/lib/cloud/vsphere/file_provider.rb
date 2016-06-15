@@ -2,7 +2,7 @@ module VSphereCloud
   class FileProvider
     include VSphereCloud::RetryBlock
 
-    def initialize(http_client, vcenter_host)
+    def initialize(http_client:, vcenter_host:)
       @vcenter_host = vcenter_host
       @http_client = http_client
     end
@@ -25,6 +25,7 @@ module VSphereCloud
     end
 
     def upload_file(datacenter_name, datastore_name, path, contents)
+
       retry_block do
         url = "https://#{@vcenter_host}/folder/#{path}?dcPath=#{URI.escape(datacenter_name)}" +
           "&dsName=#{URI.escape(datastore_name)}"
