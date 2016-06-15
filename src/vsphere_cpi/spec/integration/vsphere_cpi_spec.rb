@@ -130,7 +130,7 @@ describe VSphereCloud::Cloud, external_cpi: true do
       expect(resp['result']).to_not be_nil
       @stemcell_id = resp['result']
 
-      expect(resp['log']).to include('200')
+      expect(resp['log']).to include('200 OK', '<?xml')
     end
   end
 end
