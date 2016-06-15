@@ -5,11 +5,19 @@ module VSphereCloud
   describe AgentEnv do
     include FakeFS::SpecHelpers
 
-    subject(:agent_env) { described_class.new(client, file_provider, cloud_searcher) }
+    subject(:agent_env) do
+      described_class.new(
+        client: client,
+        file_provider: file_provider,
+        cloud_searcher: cloud_searcher,
+        logger: logger,
+      )
+    end
 
     let(:client) { instance_double('VSphereCloud::VCenterClient') }
     let(:file_provider) { double('VSphereCloud::FileProvider') }
     let(:cloud_searcher) { double('VSphereCloud::CloudSearcher') }
+    let(:logger) { Logger.new(StringIO.new("")) }
 
     let(:location) do
       {
@@ -20,7 +28,7 @@ module VSphereCloud
     end
 
     describe '#get_current_env' do
-      let(:vm) { instance_double('VimSdk::Vim::Vm') }
+      let(:vm) { instance_double('VimSdk::Vim::VirtualMachine', name: 'fake-vm-name') }
 
       before do
         allow(client).to receive(:get_cdrom_device).with(vm).and_return(cdrom_device)
@@ -73,7 +81,8 @@ module VSphereCloud
     describe '#clean_env' do
       let(:vm) do
         instance_double('VimSdk::Vim::VirtualMachine',
-          config: double(:config, hardware: double(:hardware, device: [cdrom]))
+          config: double(:config, hardware: double(:hardware, device: [cdrom])),
+          name: 'fake-vm-name',
         )
       end
 
@@ -121,7 +130,8 @@ module VSphereCloud
     describe '#set_env' do
       let(:vm) do
         instance_double('VimSdk::Vim::VirtualMachine',
-          config: double(:config, hardware: double(:hardware, device: [cdrom]))
+          config: double(:config, hardware: double(:hardware, device: [cdrom])),
+          name: 'fake-vm-name',
         )
       end
 

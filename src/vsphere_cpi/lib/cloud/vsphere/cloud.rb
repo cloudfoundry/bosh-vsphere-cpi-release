@@ -59,7 +59,12 @@ module VSphereCloud
         vcenter_host: @config.vcenter_host,
         logger: @logger
       })
-      @agent_env = AgentEnv.new(client, @file_provider, @cloud_searcher)
+      @agent_env = AgentEnv.new({
+        client: client,
+        file_provider: @file_provider,
+        cloud_searcher: @cloud_searcher,
+        logger: @logger,
+      })
 
       # We get disconnected if the connection is inactive for a long period.
       Thread.new do
