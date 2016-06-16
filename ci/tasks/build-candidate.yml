@@ -1,6 +1,8 @@
 ---
 platform: linux
-image: docker:///boshcpi/vsphere-cpi-release
+image_resource:
+  type: docker-image
+  source: {repository: boshcpi/vsphere-cpi-release}
 inputs:
   - name: bosh-cpi-src
   - name: version-semver
