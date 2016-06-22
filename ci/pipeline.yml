@@ -240,7 +240,7 @@ resources:
   - name: bosh-cpi-artifacts
     type: s3
     source:
-      regexp:            bosh-vsphere-cpi\.tgz
+      regexp:            bosh-vsphere-cpi-([\d\.]+)\.tgz
       bucket:            {{s3_vsphere_cpi_bucket}}
       region_name:       us-east-1
       access_key_id:     {{s3_vsphere_cpi_blobwriter_access_key}}
