@@ -261,6 +261,40 @@ describe VSphereCloud::Resources::VM do
     end
   end
 
+  describe '#get_vapp_property_by_key' do
+    let(:v_app_properties) do
+      [
+        double('property', category: 'Fake vSphere Field', key: 'fake-key-1'),
+        double('property', category: 'BOSH Persistent Disks', key: 'fake-key-2'),
+        double('property', category: 'BOSH Persistent Disks', key: 'fake-key-3')
+      ]
+    end
+
+    before do
+      allow(vm_mob).to receive_message_chain('config.v_app_config.property').and_return(v_app_properties)
+    end
+
+    it 'returns the property keys' do
+      expect(vm.get_vapp_property_by_key('fake-key-1')).to eq(v_app_properties[0])
+    end
+
+    context 'when given a missing key' do
+      it 'returns nil' do
+        expect(vm.get_vapp_property_by_key('missing-key')).to be_nil
+      end
+    end
+
+    context 'when v_app_config is nil' do
+      before do
+        allow(vm_mob).to receive_message_chain('config.v_app_config').and_return(nil)
+      end
+
+      it 'returns nil' do
+        expect(vm.get_vapp_property_by_key('fake-key-1')).to be_nil
+      end
+    end
+  end
+
   describe '#attach_disk' do
     let(:disk) { VSphereCloud::Resources::PersistentDisk.new('fake-disk-cid', 1024, datastore, 'fake-folder') }
     let(:datastore) { instance_double('VSphereCloud::Resources::Datastore', name: 'fake-datastore')}
@@ -462,10 +496,12 @@ describe VSphereCloud::Resources::VM do
     let(:vm_properties) { { 'config.hardware.device' => vm_devices } }
 
     before do
-      allow(vm).to receive(:persistent_disk_device_keys_from_vapp_config).and_return([
-        persistent_disk_with_non_persistent_mode.key,
-        persistent_disk_with_non_independent_mode.key
-      ])
+      v_app_properties = [
+        double('property', category: 'Fake vSphere Field', key: 'foo'),
+        double('property', category: 'BOSH Persistent Disks', key: persistent_disk_with_non_persistent_mode.key),
+        double('property', category: 'BOSH Persistent Disks', key: persistent_disk_with_non_independent_mode.key)
+      ]
+      allow(vm_mob).to receive_message_chain('config.v_app_config.property').and_return(v_app_properties)
     end
 
     it 'returns all persistent disks' do
@@ -481,6 +517,15 @@ describe VSphereCloud::Resources::VM do
 
     it 'returns the ephemeral disk' do
       expect(vm.ephemeral_disk).to eq(ephemeral_disk)
+    end
+
+    context 'when v_app_config is missing' do
+      before do
+        allow(vm_mob).to receive_message_chain('config.v_app_config').and_return(nil)
+      end
+      it 'returns the INDEPENDENT_PERSISTENT disks' do
+        expect(vm.persistent_disks).to eq([persistent_disk])
+      end
     end
   end
 

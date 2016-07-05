@@ -216,7 +216,9 @@ module VSphereCloud
       end
 
       def get_vapp_property_by_key(key)
-        @mob.config.v_app_config.property.find { |property| property.key == key }
+        v_app_config = @mob.config.v_app_config
+        return nil if v_app_config.nil?
+        v_app_config.property.find { |property| property.key == key }
       end
 
       def attach_disk(disk_resource_object)
@@ -340,7 +342,10 @@ module VSphereCloud
       end
 
       def persistent_disk_device_keys_from_vapp_config
-        disk_properties = @mob.config.v_app_config.property.select do |property|
+        v_app_config = @mob.config.v_app_config
+        return [] if v_app_config.nil?
+
+        disk_properties = v_app_config.property.select do |property|
           property.category == 'BOSH Persistent Disks'
         end
         disk_properties.map { |property| property.key }
