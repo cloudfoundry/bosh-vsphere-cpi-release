@@ -11,7 +11,6 @@ module VSphereCloud
       @vcenter_host = nil
       @vcenter_user = nil
       @vcenter_password = nil
-      @default_overcommit_ratio = 1.0
 
       @is_validated = false
     end
@@ -38,10 +37,6 @@ module VSphereCloud
 
     def soap_log
       config['soap_log'] || config['cpi_log']
-    end
-
-    def mem_overcommit
-      config.fetch('mem_overcommit_ratio', @default_overcommit_ratio)
     end
 
     def agent
@@ -120,7 +115,6 @@ module VSphereCloud
           'agent' => dict(String, Object), # passthrough to the agent
           optional('cpi_log') => enum(String, Object),
           optional('soap_log') => enum(String, Object),
-          optional('mem_overcommit_ratio') => Numeric,
           'vcenters' => [{
             'host' => String,
             'user' => String,

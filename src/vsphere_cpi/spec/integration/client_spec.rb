@@ -61,7 +61,6 @@ module VSphereCloud
 
       cluster_provider = Resources::ClusterProvider.new({
         datacenter_name: datacenter_name,
-        mem_overcommit: 1.0,
         client: client,
         logger: logger,
       })

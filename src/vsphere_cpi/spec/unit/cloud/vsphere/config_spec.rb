@@ -133,22 +133,6 @@ module VSphereCloud
       end
     end
 
-    describe '#mem_overcommit' do
-      context 'when set in config' do
-        before { config_hash.merge!({ 'mem_overcommit_ratio' => 5.0 }) }
-
-        it 'returns value set in config' do
-          expect(config.mem_overcommit).to eql(5.0)
-        end
-      end
-
-      context 'when not set in config' do
-        it 'defaults to 1.0' do
-          expect(config.mem_overcommit).to eql(1.0)
-        end
-      end
-    end
-
     describe '#agent' do
       it 'returns configuration values from config' do
         expect(config.agent).to eq(agent_config)

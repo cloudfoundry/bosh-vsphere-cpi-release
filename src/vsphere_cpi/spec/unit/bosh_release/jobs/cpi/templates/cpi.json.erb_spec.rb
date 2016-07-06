@@ -54,7 +54,6 @@ describe 'cpi.json.erb' do
       'cloud'=>{
         'plugin'=>'vsphere',
         'properties' => {
-          'mem_overcommit_ratio' => 0.7,
           'agent' => {
             'blobstore' => {
               'options' => {

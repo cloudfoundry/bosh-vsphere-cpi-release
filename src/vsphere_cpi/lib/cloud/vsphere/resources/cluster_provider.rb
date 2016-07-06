@@ -3,7 +3,6 @@ module VSphereCloud
     class ClusterProvider
       def initialize(options)
         @datacenter_name = options.fetch(:datacenter_name)
-        @mem_overcommit = options.fetch(:mem_overcommit)
         @client = options.fetch(:client)
         @logger = options.fetch(:logger)
       end
@@ -19,7 +18,6 @@ module VSphereCloud
         raise "Can't find properties for cluster '#{name}'" if cluster_properties.nil?
 
         Cluster.new(
-          @mem_overcommit,
           config,
           cluster_properties,
           @logger,

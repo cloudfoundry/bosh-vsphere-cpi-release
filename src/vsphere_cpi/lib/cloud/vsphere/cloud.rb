@@ -36,7 +36,6 @@ module VSphereCloud
       @cloud_searcher = CloudSearcher.new(@client.service_content, @logger)
       @cluster_provider = Resources::ClusterProvider.new({
         datacenter_name: @config.datacenter_name,
-        mem_overcommit: @config.mem_overcommit,
         client: @client,
         logger: @logger,
       })

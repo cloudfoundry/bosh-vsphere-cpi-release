@@ -21,10 +21,6 @@ module VSphereCloud
       #   @return [ResourcePool] resource pool.
       attr_reader :resource_pool
 
-      # @!attribute allocated_after_sync
-      #   @return [Integer] memory allocated since utilization sync in MB.
-      attr_accessor :allocated_after_sync
-
       # Creates a new Cluster resource from the specified datacenter, cluster
       # configuration, and prefetched properties.
       #
@@ -32,7 +28,7 @@ module VSphereCloud
       # @param [ClusterConfig] config cluster configuration as specified by the
       #   operator.
       # @param [Hash] properties prefetched vSphere properties for the cluster.
-      def initialize(mem_overcommit, cluster_config, properties, logger, client)
+      def initialize(cluster_config, properties, logger, client)
         @logger = logger
         @client = client
         @properties = properties
@@ -40,22 +36,18 @@ module VSphereCloud
         @config = cluster_config
         @mob = properties[:obj]
         @resource_pool = ResourcePool.new(@client, @logger, cluster_config, properties["resourcePool"])
-        @mem_overcommit = mem_overcommit
-        @allocated_after_sync = 0
       end
 
       # @return [Integer] amount of free memory in the cluster
       def free_memory
-        synced_free_memory -
-          (@allocated_after_sync * @mem_overcommit).to_i
-      end
-
-      # Marks the memory reservation against the cached utilization data.
-      #
-      # @param [Integer] memory size of memory reservation.
-      # @return [void]
-      def allocate(memory)
-        @allocated_after_sync += memory
+        return @synced_free_memory if @synced_free_memory
+        # Have to use separate mechanisms for fetching utilization depending on
+        # whether we're using resource pools or raw clusters.
+        if @config.resource_pool.nil?
+          @synced_free_memory = fetch_cluster_utilization(properties['host'])
+        else
+          @synced_free_memory = fetch_resource_pool_utilization
+        end
       end
 
       # @return [String] cluster name.
@@ -84,17 +76,6 @@ module VSphereCloud
 
       def select_datastores(pattern)
         all_datastores.select { |name, datastore| name =~ pattern }
-      end
-
-      def synced_free_memory
-        return @synced_free_memory if @synced_free_memory
-        # Have to use separate mechanisms for fetching utilization depending on
-        # whether we're using resource pools or raw clusters.
-        if @config.resource_pool.nil?
-          @synced_free_memory = fetch_cluster_utilization(properties['host'])
-        else
-          @synced_free_memory = fetch_resource_pool_utilization
-        end
       end
 
       # Fetches the raw cluster utilization from vSphere.

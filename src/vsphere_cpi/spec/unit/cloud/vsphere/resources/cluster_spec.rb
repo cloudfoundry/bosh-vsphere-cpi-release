@@ -4,7 +4,6 @@ module VSphereCloud::Resources
   describe Cluster do
     subject(:cluster) do
       VSphereCloud::Resources::Cluster.new(
-        1.0,
         cluster_config,
         properties,
         logger,
@@ -237,24 +236,6 @@ module VSphereCloud::Resources
         it 'raises an exception' do
           expect { cluster.free_memory }.to raise_error("Failed to get utilization for resource pool '#{fake_resource_pool}'")
         end
-      end
-    end
-
-    describe '#allocate' do
-      let(:fake_runtime_info) do
-        instance_double(
-          'VimSdk::Vim::ResourcePool::RuntimeInfo',
-          overall_status: 'green',
-          memory: instance_double(
-            'VimSdk::Vim::ResourcePool::ResourceUsage',
-            max_usage: 1024 * 1024 * 100,
-            overall_usage: 1024 * 1024 * 75,
-          )
-        )
-      end
-
-      it 'changes the amount of free memory in the cluster' do
-        expect { cluster.allocate(5) }.to change { cluster.free_memory }.from(25).to(20)
       end
     end
 
