@@ -34,37 +34,19 @@ module VSphereCloud
       #   @return [Integer] datastore capacity.
       attr_accessor :total_space
 
-      # @!attribute synced_free_space
+      # @!attribute free_space
       #   @return [Integer] datastore free space when fetched from vSphere.
-      attr_accessor :synced_free_space
-
-      # @!attribute allocated_after_sync
-      #   @return [Integer] allocated space since vSphere fetch.
-      attr_accessor :allocated_after_sync
+      attr_accessor :free_space
 
       # Creates a Datastore resource from the prefetched vSphere properties.
       #
       # @param [Hash] properties prefetched vSphere properties to build the
       #   model.
-      def initialize(name, mob, total_space, synced_free_space)
+      def initialize(name, mob, total_space, free_space)
         @name = name
         @mob = mob
         @total_space = total_space
-        @synced_free_space = synced_free_space
-        @allocated_after_sync = 0
-      end
-
-      # @return [Integer] free disk space available for allocation
-      def free_space
-        @synced_free_space - @allocated_after_sync
-      end
-
-      # Marks the disk space against the cached utilization data.
-      #
-      # @param [Integer] space requested disk space.
-      # @return [void]
-      def allocate(space)
-        @allocated_after_sync += space
+        @free_space = free_space
       end
 
       # @return [String] debug datastore information.

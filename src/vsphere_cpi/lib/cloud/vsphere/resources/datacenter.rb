@@ -124,7 +124,6 @@ module VSphereCloud
         end
       end
 
-      # TODO: do we care about datastore.allocate?
       def create_disk(datastore, size_in_mb, type)
         disk_type = type
 

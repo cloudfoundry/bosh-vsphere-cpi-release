@@ -25,27 +25,9 @@ describe VSphereCloud::Resources::Datastore do
     end
   end
 
-  describe '#synced_free_space' do
-    it 'returns the synced free space' do
-      expect(datastore.synced_free_space).to eq(8192)
-    end
-  end
-
-  describe '#allocated_after_sync' do
-    it 'returns the allocated after sync' do
-      expect(datastore.allocated_after_sync).to eq(0)
-    end
-  end
-
   describe '#free_space' do
     it 'returns the free space' do
       expect(datastore.free_space).to eq(8192)
-    end
-  end
-
-  describe '#allocate' do
-    it 'should allocate space' do
-      expect { datastore.allocate(1024) }.to change { datastore.free_space }.by(-1024)
     end
   end
 
