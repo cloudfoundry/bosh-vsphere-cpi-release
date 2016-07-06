@@ -1249,6 +1249,11 @@ describe VSphereCloud::Cloud, external_cpi: false do
   def wait_for_vmware_tools(cpi, vm_name)
     vm_mob = cpi.vm_provider.find(vm_name).mob
     raise VMWareToolsNotFound if vm_mob.guest.ip_address.nil?
+    nics = vm_mob.guest.net.map { |net| net.ip_config }
+    ip_available = nics.all? do |nic|
+      nic.ip_address.all? { |ip_config| ip_config.state == 'preferred' }
+    end
+    raise VMWareToolsNotFound unless ip_available
     true
   end
 
