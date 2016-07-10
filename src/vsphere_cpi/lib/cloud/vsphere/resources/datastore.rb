@@ -6,16 +6,27 @@ module VSphereCloud
       include VimSdk
       include ObjectStringifier
       stringify_with :name, :mob
-      PROPERTIES = %w(summary.freeSpace summary.capacity name)
-
+      ACCESSIBLE_PROPERTIES = %w(summary.accessible name)
+      PROPERTIES = %w(summary.freeSpace summary.capacity summary.accessible name)
       DISK_HEADROOM = 1024
 
       def self.build_from_client(client, datastore_mob)
+        ds_accessible_map = client.cloud_searcher.get_properties(datastore_mob, Vim::Datastore, Datastore::ACCESSIBLE_PROPERTIES)
+        if (ds_accessible_map['summary.accessible'] == false)
+           Datastore.new(
+            ds_accessible_map['name'],
+            ds_accessible_map[:obj],
+            ds_accessible_map['summary.accessible'],
+            0,
+            0,
+          )
+        end
         ds_properties_map = client.cloud_searcher.get_properties(datastore_mob, Vim::Datastore, Datastore::PROPERTIES)
         ds_properties_map.values.map do |ds_properties|
           Datastore.new(
             ds_properties['name'],
             ds_properties[:obj],
+            ds_properties['summary.accessible'],
             ds_properties['summary.capacity'].to_i / BYTES_IN_MB,
             ds_properties['summary.freeSpace'].to_i / BYTES_IN_MB,
           )
@@ -25,6 +36,10 @@ module VSphereCloud
       # @!attribute name
       #   @return [String] datastore name.
       attr_accessor :name
+      
+      # @!attribute name
+      #   @return [Boolean] datastore accessibility.
+      attr_accessor :accessible
 
       # @!attribute mob
       #   @return [Vim::Datastore] datastore vSphere MOB.
@@ -42,11 +57,17 @@ module VSphereCloud
       #
       # @param [Hash] properties prefetched vSphere properties to build the
       #   model.
-      def initialize(name, mob, total_space, free_space)
+      def initialize(name, mob, accessible, total_space, free_space)
         @name = name
         @mob = mob
-        @total_space = total_space
-        @free_space = free_space
+        @accessible = accessible
+        if (@accessible == true)
+          @total_space = total_space
+          @free_space = free_space
+        else
+          @total_space = 0 
+          @free_space = 0
+        end
       end
 
       # @return [String] debug datastore information.

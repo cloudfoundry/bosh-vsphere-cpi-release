@@ -45,10 +45,11 @@ module VSphereCloud::Resources
     end
     let(:fake_resource_pool_mob) { instance_double('VimSdk::Vim::ResourcePool') }
 
-    let(:ephemeral_store_properties) { {'name' => 'ephemeral_1', 'summary.freeSpace' => 15000 * BYTES_IN_MB} }
-    let(:ephemeral_store_2_properties) { {'name' => 'ephemeral_2', 'summary.freeSpace' => 25000 * BYTES_IN_MB} }
-    let(:persistent_store_properties) { {'name' => 'persistent_1', 'summary.freeSpace' => 10000 * BYTES_IN_MB, 'summary.capacity' => 20000 * BYTES_IN_MB} }
-    let(:persistent_store_2_properties) { {'name' => 'persistent_2', 'summary.freeSpace' => 20000 * BYTES_IN_MB, 'summary.capacity' => 40000 * BYTES_IN_MB} }
+    let(:ephemeral_store_properties) { {'name' => 'ephemeral_1', 'summary.accessible' => true, 'summary.freeSpace' => 15000 * BYTES_IN_MB} }
+    let(:ephemeral_store_2_properties) { {'name' => 'ephemeral_2', 'summary.accessible' => true, 'summary.freeSpace' => 25000 * BYTES_IN_MB} }
+    let(:persistent_store_properties) { {'name' => 'persistent_1', 'summary.accessible' => true, 'summary.freeSpace' => 10000 * BYTES_IN_MB, 'summary.capacity' => 20000 * BYTES_IN_MB} }
+    let(:persistent_store_2_properties) { {'name' => 'persistent_2',  'summary.accessible' => true, 'summary.freeSpace' => 20000 * BYTES_IN_MB, 'summary.capacity' => 40000 * BYTES_IN_MB} }
+    let(:inaccessible_persistent_store_properties) { {'name' => 'persistent_inaccess', 'summary.accessible' => false} }
 
     let(:other_store_properties) { { 'name' => 'other' } }
 
@@ -58,6 +59,7 @@ module VSphereCloud::Resources
         instance_double('VimSdk::Vim::Datastore') => ephemeral_store_2_properties,
         instance_double('VimSdk::Vim::Datastore') => persistent_store_properties,
         instance_double('VimSdk::Vim::Datastore') => persistent_store_2_properties,
+        instance_double('VimSdk::Vim::Datastore') => inaccessible_persistent_store_properties,
         instance_double('VimSdk::Vim::Datastore') => other_store_properties,
       }
     end
@@ -77,6 +79,10 @@ module VSphereCloud::Resources
       allow(cloud_searcher).to receive(:get_properties).with(
         'fake-datastore-name', VimSdk::Vim::Datastore, Datastore::PROPERTIES
       ).and_return(fake_datastore_properties)
+      
+      allow(cloud_searcher).to receive(:get_properties).with(
+        'fake-datastore-name', VimSdk::Vim::Datastore, Datastore::ACCESSIBLE_PROPERTIES
+      ).and_return(fake_datastore_properties)
 
       allow(cloud_searcher).to receive(:get_properties).with(
         fake_resource_pool_mob, VimSdk::Vim::ResourcePool, "summary"
@@ -86,7 +92,7 @@ module VSphereCloud::Resources
     end
 
     describe '#all_datastores' do
-      it 'returns the full list of datastores' do
+      it 'returns the full list of datastores without inaccessible stores' do
         all_datastores = cluster.all_datastores
         expect(all_datastores.keys).to match_array(%w(persistent_1 persistent_2 ephemeral_1 ephemeral_2 other))
         expect(all_datastores['persistent_1'].name).to eq('persistent_1')

@@ -2,7 +2,10 @@ require 'spec_helper'
 
 describe VSphereCloud::Resources::Datastore do
   subject(:datastore) {
-    VSphereCloud::Resources::Datastore.new('foo_lun', datastore_mob, 16 * 1024, 8 * 1024)
+    VSphereCloud::Resources::Datastore.new('foo_lun', datastore_mob,  true, 16 * 1024, 8 * 1024)
+  }
+  subject(:datastore_inaccess) {
+    VSphereCloud::Resources::Datastore.new('foo_lun', datastore_mob,  false, 16 * 1024, 8 * 1024)
   }
 
   let(:datastore_mob) { instance_double('VimSdk::Vim::Datastore', to_s: 'mob_as_string') }
@@ -23,11 +26,17 @@ describe VSphereCloud::Resources::Datastore do
     it 'returns the total space' do
       expect(datastore.total_space).to eq(16384)
     end
+    it 'returns zero total space for inaccessible datastores' do
+      expect(datastore_inaccess.total_space).to eq(0)
+    end
   end
 
   describe '#free_space' do
     it 'returns the free space' do
       expect(datastore.free_space).to eq(8192)
+    end
+    it 'returns zero free space for inaccessible datastores' do
+      expect(datastore_inaccess.free_space).to eq(0)
     end
   end
 
