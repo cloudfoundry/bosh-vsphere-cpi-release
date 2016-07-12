@@ -586,7 +586,19 @@ module VSphereCloud
       before do
         allow(datacenter).to receive(:persistent_pattern)
           .and_return(/datastore\-.*/)
-        allow(datacenter).to receive(:datastores_hash)
+        allow(datacenter).to receive(:all_datastores_hash)
+          .and_return({
+            'datastore-with-disk' => {
+              free_space: 2048,
+            },
+            'datastore-without-disk' => {
+              free_space: 4096,
+            },
+            'inaccessible-datastore' => {
+              free_space: 4096,
+            }
+          })
+        allow(datacenter).to receive(:accessible_datastores_hash)
           .and_return({
             'datastore-with-disk' => {
               free_space: 2048,
@@ -690,7 +702,7 @@ module VSphereCloud
         let(:moved_disk) { Resources::PersistentDisk.new('disk-cid', 1024, target_datastore, 'fake-folder') }
 
         before do
-          allow(datacenter).to receive(:datastores_hash)
+          allow(datacenter).to receive(:accessible_datastores_hash)
             .and_return({
               'target-datastore' => {
                 free_space: 4096,
@@ -894,12 +906,12 @@ module VSphereCloud
     end
 
     describe '#create_disk' do
-      let(:all_datastores_hash) do
+      let(:accessible_datastores_hash) do
         {
-          'fake-datastore' => {
+          'small-ds' => {
             free_space: 2048,
           },
-          'fake-second-datastore' => {
+          'large-ds' => {
             free_space: 4096,
           },
         }
@@ -916,14 +928,14 @@ module VSphereCloud
 
       before do
         allow(datacenter).to receive(:persistent_pattern)
-          .and_return('fake-datastore')
-        allow(datacenter).to receive(:datastores_hash)
-          .and_return(all_datastores_hash)
+          .and_return('small-ds')
+        allow(datacenter).to receive(:accessible_datastores_hash)
+          .and_return(accessible_datastores_hash)
       end
 
       it 'creates disk via datacenter' do
         expect(datacenter).to receive(:find_datastore)
-          .with('fake-datastore')
+          .with('small-ds')
           .and_return(datastore)
         expect(datacenter).to receive(:create_disk).with(datastore, 1024, 'foo-type').and_return(disk)
 
@@ -937,12 +949,12 @@ module VSphereCloud
             .with('fake-vm-cid')
             .and_return(vm)
           allow(vm).to receive(:accessible_datastore_names)
-            .and_return(['fake-datastore'])
+            .and_return(['small-ds'])
         end
 
         it 'creates disk in vm cluster' do
           expect(datacenter).to receive(:find_datastore)
-            .with('fake-datastore')
+            .with('small-ds')
             .and_return(datastore)
           expect(datacenter).to receive(:create_disk)
             .with(datastore, 1024, Resources::PersistentDisk::DEFAULT_DISK_TYPE)
@@ -954,40 +966,32 @@ module VSphereCloud
       end
 
       context 'when disk_pools.cloud_properties.datastores is provided' do
-        let(:all_datastores_hash) do
-          {
-            'smaller-ds' => {
-              free_space: 512,
-            },
-            'larger-ds' => {
-              free_space: 2048,
-            },
-          }
-        end
-        let(:datastore) { double(:datastore, name: 'larger-ds') }
-        let(:cloud_properties) { { 'datastores' => ['smaller-ds', 'larger-ds'] } }
+        let(:small_datastore) { double(:datastore, name: 'small-ds') }
+        let(:large_datastore) { double(:datastore, name: 'large-ds') }
+        let(:cloud_properties) { { 'datastores' => ['small-ds', 'large-ds'] } }
 
         before(:each) do
           allow(datacenter).to receive(:find_datastore)
-            .with('larger-ds')
-            .and_return(datastore)
+            .with('small-ds')
+            .and_return(small_datastore)
+          allow(datacenter).to receive(:find_datastore)
+            .with('large-ds')
+            .and_return(large_datastore)
           allow(datacenter).to receive(:create_disk)
-            .with(datastore, 1024, Resources::PersistentDisk::DEFAULT_DISK_TYPE)
+            .with(small_datastore, 1024, Resources::PersistentDisk::DEFAULT_DISK_TYPE)
+            .and_return(disk)
+          allow(datacenter).to receive(:create_disk)
+            .with(large_datastore, 1024, Resources::PersistentDisk::DEFAULT_DISK_TYPE)
             .and_return(disk)
         end
 
         it 'creates the disk in the picked datastore' do
           disk_cid = vsphere_cloud.create_disk(1024, cloud_properties)
-
-          expect(datacenter).to have_received(:find_datastore)
-            .with('larger-ds')
-          expect(datacenter).to have_received(:create_disk)
-            .with(datastore, 1024, Resources::PersistentDisk::DEFAULT_DISK_TYPE)
           expect(disk_cid).to start_with('fake-disk-cid')
         end
 
         it 'appends the datastores as base64 encoded metadata to the cid' do
-          metadata_hash = {target_datastore_pattern: '^(smaller\\-ds|larger\\-ds)$'}
+          metadata_hash = {target_datastore_pattern: '^(small\\-ds|large\\-ds)$'}
           expected_pattern = Base64.urlsafe_encode64(metadata_hash.to_json)
 
           disk_cid = vsphere_cloud.create_disk(1024, cloud_properties)

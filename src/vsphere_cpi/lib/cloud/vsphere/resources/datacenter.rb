@@ -77,7 +77,7 @@ module VSphereCloud
         available_clusters = {}
         clusters.each do |cluster_name, cluster|
           cluster_datastores = {}
-          cluster.all_datastores.each do |datastore_name, datastore|
+          cluster.accessible_datastores.each do |datastore_name, datastore|
             cluster_datastores[datastore_name] = {
               free_space: datastore.free_space,
             }
@@ -90,10 +90,22 @@ module VSphereCloud
         available_clusters
       end
 
-      def datastores_hash
+      def all_datastores_hash
         available_datastores = {}
         clusters.each do |cluster_name, cluster|
           cluster.all_datastores.each do |datastore_name, datastore|
+            available_datastores[datastore_name] = {
+              free_space: datastore.free_space,
+            }
+          end
+        end
+        available_datastores
+      end
+
+      def accessible_datastores_hash
+        available_datastores = {}
+        clusters.each do |cluster_name, cluster|
+          cluster.accessible_datastores.each do |datastore_name, datastore|
             available_datastores[datastore_name] = {
               free_space: datastore.free_space,
             }

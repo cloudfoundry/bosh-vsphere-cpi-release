@@ -88,14 +88,26 @@ module VSphereCloud::Resources
     end
 
     describe '#all_datastores' do
-      it 'returns the full list of datastores without inaccessible stores' do
+      it 'returns the full list of datastores' do
         all_datastores = cluster.all_datastores
-        expect(all_datastores.keys).to match_array(%w(persistent_1 persistent_2 ephemeral_1 ephemeral_2 other))
+        expect(all_datastores.keys).to match_array(%w(persistent_1 persistent_2 ephemeral_1 ephemeral_2 persistent_inaccess other))
         expect(all_datastores['persistent_1'].name).to eq('persistent_1')
         expect(all_datastores['persistent_2'].name).to eq('persistent_2')
         expect(all_datastores['ephemeral_1'].name).to eq('ephemeral_1')
         expect(all_datastores['ephemeral_2'].name).to eq('ephemeral_2')
+        expect(all_datastores['persistent_inaccess'].name).to eq('persistent_inaccess')
         expect(all_datastores['other'].name).to eq('other')
+      end
+    end
+
+    describe '#accessible_datastores' do
+      it 'returns the full list of datastores without inaccessible stores' do
+        accessible_datastores = cluster.accessible_datastores
+        expect(accessible_datastores.keys).to match_array(%w(persistent_1 persistent_2 ephemeral_1 ephemeral_2))
+        expect(accessible_datastores['persistent_1'].name).to eq('persistent_1')
+        expect(accessible_datastores['persistent_2'].name).to eq('persistent_2')
+        expect(accessible_datastores['ephemeral_1'].name).to eq('ephemeral_1')
+        expect(accessible_datastores['ephemeral_2'].name).to eq('ephemeral_2')
       end
     end
 

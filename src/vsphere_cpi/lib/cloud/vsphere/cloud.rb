@@ -324,12 +324,9 @@ module VSphereCloud
         disk_to_attach = @datacenter.find_disk(disk_config[:cid])
         @logger.info("Attaching disk: #{disk_config[:cid]} on vm: #{vm_cid}")
 
-        all_datastores = @datacenter.datastores_hash
-
-        accessible_datastores = {}
-        vm.accessible_datastore_names.each do |name|
-          accessible_datastores[name] = all_datastores[name]
-        end
+        accessible_datastores = @datacenter.accessible_datastores_hash
+        reachable_datastores = vm.accessible_datastore_names
+        accessible_datastores.select! { |name| reachable_datastores.include?(name) }
         disk_is_accessible = accessible_datastores.include?(disk_config[:existing_datastore_name])
 
         disk_is_in_target_datastore = disk_config[:existing_datastore_name] =~ Regexp.new(disk_config[:target_datastore_pattern])
@@ -367,15 +364,11 @@ module VSphereCloud
       with_thread_name("create_disk(#{size_in_mb}, _)") do
         @logger.info("Creating disk with size: #{size_in_mb}")
 
-        all_datastores = @datacenter.datastores_hash
+        accessible_datastores = @datacenter.accessible_datastores_hash
         if vm_cid
-          accessible_datastores = {}
           vm = vm_provider.find(vm_cid)
-          vm.accessible_datastore_names.each do |name|
-            accessible_datastores[name] = all_datastores[name]
-          end
-        else
-          accessible_datastores = all_datastores
+          reachable_datastores = vm.accessible_datastore_names
+          accessible_datastores.select! { |name| reachable_datastores.include?(name) }
         end
 
         disk_configs = DiskConfigs.new(

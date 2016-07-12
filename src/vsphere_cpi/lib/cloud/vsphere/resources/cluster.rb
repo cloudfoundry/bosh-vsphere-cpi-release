@@ -65,12 +65,14 @@ module VSphereCloud
           @client,
           properties['datastore']
         ).inject({}) do |acc, datastore|
-          if datastore.accessible == false
-            acc
-          else
-            acc[datastore.name] = datastore
-            acc
-          end
+          acc[datastore.name] = datastore
+          acc
+        end
+      end
+
+      def accessible_datastores
+        @active_datastores ||= all_datastores.select do |ds_name, resource|
+          resource.accessible
         end
       end
 
