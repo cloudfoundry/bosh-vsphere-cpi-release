@@ -1235,6 +1235,25 @@ describe VSphereCloud::Cloud, external_cpi: false do
     end
   end
 
+  describe 'inactive datastore handling' do
+    let(:inactive_cpi) { described_class.new(inactive_cpi_options) }
+
+    context 'when the user specifies an inactive datastore' do
+      let(:inactive_cpi_options) do
+        cpi_options({
+          datastore_pattern: @inactive_datastore_pattern,
+          persistent_datastore_pattern: @inactive_datastore_pattern,
+        })
+      end
+
+      it 'returns an error' do
+        expect {
+          inactive_cpi.create_vm('agent-007', @stemcell_id, resource_pool, network_spec)
+        }.to raise_error(/No valid placement found/)
+      end
+    end
+  end
+
   def block_on_vmware_tools(cpi, vm_name)
     # wait for vsphere tools to be detected by vCenter :(
 

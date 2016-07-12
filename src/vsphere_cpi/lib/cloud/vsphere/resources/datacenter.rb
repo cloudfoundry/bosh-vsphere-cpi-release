@@ -150,7 +150,7 @@ module VSphereCloud
           return disk unless disk.nil?
         end
 
-        other_datastores = all_datastores.reject{|datastore_name, _| persistent_datastores[datastore_name] }
+        other_datastores = all_datastores.reject{ |datastore_name, _| persistent_datastores[datastore_name] }
         @logger.debug("disk #{disk_cid} not found in filtered persistent datastores, trying other datastores: #{other_datastores}")
         disk = find_disk_cid_in_datastores(disk_cid, other_datastores)
         return disk unless disk.nil?

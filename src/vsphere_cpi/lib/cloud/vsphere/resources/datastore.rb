@@ -6,21 +6,10 @@ module VSphereCloud
       include VimSdk
       include ObjectStringifier
       stringify_with :name, :mob
-      ACCESSIBLE_PROPERTIES = %w(summary.accessible name)
       PROPERTIES = %w(summary.freeSpace summary.capacity summary.accessible name)
       DISK_HEADROOM = 1024
 
       def self.build_from_client(client, datastore_mob)
-        ds_accessible_map = client.cloud_searcher.get_properties(datastore_mob, Vim::Datastore, Datastore::ACCESSIBLE_PROPERTIES)
-        if (ds_accessible_map['summary.accessible'] == false)
-           Datastore.new(
-            ds_accessible_map['name'],
-            ds_accessible_map[:obj],
-            ds_accessible_map['summary.accessible'],
-            0,
-            0,
-          )
-        end
         ds_properties_map = client.cloud_searcher.get_properties(datastore_mob, Vim::Datastore, Datastore::PROPERTIES)
         ds_properties_map.values.map do |ds_properties|
           Datastore.new(
@@ -36,7 +25,7 @@ module VSphereCloud
       # @!attribute name
       #   @return [String] datastore name.
       attr_accessor :name
-      
+
       # @!attribute name
       #   @return [Boolean] datastore accessibility.
       attr_accessor :accessible
@@ -61,11 +50,11 @@ module VSphereCloud
         @name = name
         @mob = mob
         @accessible = accessible
-        if (@accessible == true)
+        if @accessible
           @total_space = total_space
           @free_space = free_space
         else
-          @total_space = 0 
+          @total_space = 0
           @free_space = 0
         end
       end

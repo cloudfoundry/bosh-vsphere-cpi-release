@@ -84,6 +84,7 @@ jobs:
           BOSH_VSPHERE_CPI_CLUSTER:                             {{lifecycle_vsphere_5_1_first_cluster}}
           BOSH_VSPHERE_CPI_DATASTORE_PATTERN:                   {{lifecycle_vsphere_5_1_datastore_pattern_available_to_all_hosts_in_first_cluster}}
           BOSH_VSPHERE_CPI_PERSISTENT_DATASTORE_PATTERN:        {{lifecycle_vsphere_5_1_persistent_datastore_pattern_available_to_all_clusters}}
+          BOSH_VSPHERE_CPI_INACTIVE_DATASTORE_PATTERN:          {{lifecycle_vsphere_5_1_inactive_datastore_pattern}}
           BOSH_VSPHERE_CPI_SECOND_DATASTORE:                    {{lifecycle_vsphere_5_1_second_datastore_available_to_all_hosts_in_first_cluster}}
           BOSH_VSPHERE_CPI_RESOURCE_POOL:                       {{lifecycle_vsphere_5_1_first_cluster_first_resource_pool}}
           BOSH_VSPHERE_CPI_SECOND_RESOURCE_POOL:                {{lifecycle_vsphere_5_1_first_cluster_second_resource_pool}}
@@ -119,6 +120,7 @@ jobs:
           BOSH_VSPHERE_CPI_CLUSTER:                             {{lifecycle_vsphere_6_0_first_cluster}}
           BOSH_VSPHERE_CPI_DATASTORE_PATTERN:                   {{lifecycle_vsphere_6_0_datastore_pattern_available_to_all_hosts_in_first_cluster}}
           BOSH_VSPHERE_CPI_PERSISTENT_DATASTORE_PATTERN:        {{lifecycle_vsphere_6_0_persistent_datastore_pattern_available_to_all_clusters}}
+          BOSH_VSPHERE_CPI_INACTIVE_DATASTORE_PATTERN:          {{lifecycle_vsphere_6_0_inactive_datastore_pattern}}
           BOSH_VSPHERE_CPI_SECOND_DATASTORE:                    {{lifecycle_vsphere_6_0_second_datastore_available_to_all_hosts_in_first_cluster}}
           BOSH_VSPHERE_CPI_SINGLE_LOCAL_DATASTORE_PATTERN:      {{lifecycle_vsphere_6_0_local_datastore_pattern_available_to_a_single_host_in_first_cluster}}
           BOSH_VSPHERE_CPI_MULTI_LOCAL_DATASTORE_PATTERN:       {{lifecycle_vsphere_6_0_local_datastore_pattern_available_to_multiple_hosts_in_first_cluster}}

@@ -20,6 +20,7 @@ params:
   BOSH_VSPHERE_CPI_CLUSTER:                             ""
   BOSH_VSPHERE_CPI_DATASTORE_PATTERN:                   ""
   BOSH_VSPHERE_CPI_PERSISTENT_DATASTORE_PATTERN:        ""
+  BOSH_VSPHERE_CPI_INACTIVE_DATASTORE_PATTERN:          ""
   BOSH_VSPHERE_CPI_SECOND_DATASTORE:                    ""
   BOSH_VSPHERE_CPI_RESOURCE_POOL:                       ""
   BOSH_VSPHERE_CPI_SECOND_RESOURCE_POOL:                ""

@@ -16,6 +16,7 @@ module LifecycleProperties
 
     @datastore_pattern = helper.fetch_property('BOSH_VSPHERE_CPI_DATASTORE_PATTERN')
     @persistent_datastore_pattern = helper.fetch_property('BOSH_VSPHERE_CPI_PERSISTENT_DATASTORE_PATTERN')
+    @inactive_datastore_pattern = helper.fetch_property('BOSH_VSPHERE_CPI_INACTIVE_DATASTORE_PATTERN')
     @cluster = helper.fetch_property('BOSH_VSPHERE_CPI_CLUSTER')
     @resource_pool_name = helper.fetch_property('BOSH_VSPHERE_CPI_RESOURCE_POOL')
 
