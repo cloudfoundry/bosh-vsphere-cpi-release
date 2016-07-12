@@ -275,7 +275,7 @@ are configured to allow multiple hosts to access them:
     end
 
     def matching_datastores_in_cluster(cluster, pattern)
-      cluster.all_datastores.select { |ds_name| ds_name =~ /#{pattern}/ }
+      cluster.accessible_datastores.select { |ds_name| ds_name =~ /#{pattern}/ }
     end
 
     private

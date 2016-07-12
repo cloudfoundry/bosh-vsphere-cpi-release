@@ -90,18 +90,6 @@ module VSphereCloud
         available_clusters
       end
 
-      def all_datastores_hash
-        available_datastores = {}
-        clusters.each do |cluster_name, cluster|
-          cluster.all_datastores.each do |datastore_name, datastore|
-            available_datastores[datastore_name] = {
-              free_space: datastore.free_space,
-            }
-          end
-        end
-        available_datastores
-      end
-
       def accessible_datastores_hash
         available_datastores = {}
         clusters.each do |cluster_name, cluster|
@@ -120,18 +108,18 @@ module VSphereCloud
       end
 
       def find_datastore(datastore_name)
-        datastore = all_datastores[datastore_name]
+        datastore = accessible_datastores[datastore_name]
         raise "Can't find datastore '#{datastore_name}'" if datastore.nil?
         datastore
       end
 
       def select_datastores(pattern)
-        all_datastores.select { |name, _| name =~ pattern }
+        accessible_datastores.select { |name, _| name =~ pattern }
       end
 
-      def all_datastores
+      def accessible_datastores
         clusters.values.inject({}) do |acc, cluster|
-          acc.merge!(cluster.all_datastores)
+          acc.merge!(cluster.accessible_datastores)
           acc
         end
       end
@@ -162,7 +150,7 @@ module VSphereCloud
           return disk unless disk.nil?
         end
 
-        other_datastores = all_datastores.reject{ |datastore_name, _| persistent_datastores[datastore_name] }
+        other_datastores = accessible_datastores.reject{ |datastore_name, _| persistent_datastores[datastore_name] }
         @logger.debug("disk #{disk_cid} not found in filtered persistent datastores, trying other datastores: #{other_datastores}")
         disk = find_disk_cid_in_datastores(disk_cid, other_datastores)
         return disk unless disk.nil?
@@ -173,7 +161,7 @@ module VSphereCloud
           vm = Resources::VM.new(vm_mob.name, vm_mob, @client, @logger)
           disk_path = vm.disk_path_by_cid(disk_cid)
           datastore_name, disk_folder, disk_file = /\[(.+)\] (.+)\/(.+)\.vmdk/.match(disk_path)[1..3]
-          datastore = all_datastores[datastore_name]
+          datastore = accessible_datastores[datastore_name]
           disk = @client.find_disk(disk_file, datastore, disk_folder)
 
           @logger.debug("disk #{disk_cid} found at new location: #{disk.path}") unless disk.nil?

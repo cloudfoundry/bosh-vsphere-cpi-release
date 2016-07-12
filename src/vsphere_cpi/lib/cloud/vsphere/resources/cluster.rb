@@ -60,19 +60,14 @@ module VSphereCloud
         "<Cluster: #{mob} / #{config.name}>"
       end
 
-      def all_datastores
-        @all_datastores ||= Datastore.build_from_client(
+      def accessible_datastores
+        @accessible_datastores ||= Datastore.build_from_client(
           @client,
           properties['datastore']
-        ).inject({}) do |acc, datastore|
+        ).select { |datastore| datastore.accessible }
+        .inject({}) do |acc, datastore|
           acc[datastore.name] = datastore
           acc
-        end
-      end
-
-      def accessible_datastores
-        @active_datastores ||= all_datastores.select do |ds_name, resource|
-          resource.accessible
         end
       end
 
@@ -81,7 +76,7 @@ module VSphereCloud
       attr_reader :config, :client, :properties, :logger
 
       def select_datastores(pattern)
-        all_datastores.select { |name, datastore| name =~ pattern }
+        accessible_datastores.select { |name, datastore| name =~ pattern }
       end
 
       # Fetches the raw cluster utilization from vSphere.

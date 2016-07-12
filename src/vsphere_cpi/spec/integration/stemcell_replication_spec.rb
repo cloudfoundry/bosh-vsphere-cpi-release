@@ -41,7 +41,7 @@ describe VSphereCloud::Cloud do
   describe 'Replicating stemcells across datastores', external_cpi: false do
     it 'raises an error when no stemcell exists for the given stemcell id' do
       expect {
-        @cpi.replicate_stemcell(destination_cluster, @cpi.datacenter.all_datastores.values.first, 'abc123')
+        @cpi.replicate_stemcell(destination_cluster, @cpi.datacenter.accessible_datastores.values.first, 'abc123')
       }.to raise_error('Could not find VM for stemcell \'abc123\'')
     end
 
@@ -64,8 +64,8 @@ describe VSphereCloud::Cloud do
         # creating the original stemcell to run the test against is very expensive
         # and all of the contexts we are testing can be run on same setup state
 
-        original_datastore = @cpi.datacenter.all_datastores[@cpi.vm_datastore_name(@original_stemcell_vm)]
-        other_datastore = @cpi.datacenter.all_datastores[@second_datastore_within_cluster]
+        original_datastore = @cpi.datacenter.accessible_datastores[@cpi.vm_datastore_name(@original_stemcell_vm)]
+        other_datastore = @cpi.datacenter.accessible_datastores[@second_datastore_within_cluster]
 
         #Test:        replicate into original datastore
         #Expectation: returns original stemcell vm and does not create a replica
@@ -139,7 +139,7 @@ describe VSphereCloud::Cloud do
 
       context 'when another thread is in the process of creating the replicated stemcell' do
         it 'waits for other thread to finish creating stemcell vm and returns it new' do
-          destination_datastore = @cpi.datacenter.all_datastores[@second_datastore_within_cluster]
+          destination_datastore = @cpi.datacenter.accessible_datastores[@second_datastore_within_cluster]
 
           t1_replicated_stemcell_vm = nil
           t1 = Thread.new {

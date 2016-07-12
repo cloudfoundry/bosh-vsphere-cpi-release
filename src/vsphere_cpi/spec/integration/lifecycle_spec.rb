@@ -428,7 +428,7 @@ describe VSphereCloud::Cloud, external_cpi: false do
 
     context 'when migration happened after attaching a persistent disk' do
       let(:datastore_name) {
-        datastore_name = one_cluster_cpi.datacenter.all_datastores.select do |datastore|
+        datastore_name = one_cluster_cpi.datacenter.accessible_datastores.select do |datastore|
           datastore.match(@datastore_pattern)
         end
         datastore_name.first[0]
@@ -712,7 +712,7 @@ describe VSphereCloud::Cloud, external_cpi: false do
         persistent_datastore_pattern: @datastore_pattern
       )
     end
-    let(:persistent_datastores) { datastore_names_matching_pattern(@persistent_datastore_pattern) }
+    let(:persistent_datastores) { datastore_names_matching_pattern(@cluster, @persistent_datastore_pattern) }
     let(:cloud_properties) { { 'datastores' => persistent_datastores } }
 
     it 'places the disk in the specified datastore and does not move it when attached' do
@@ -1131,8 +1131,8 @@ describe VSphereCloud::Cloud, external_cpi: false do
           clusters: [{@cluster => {}}],
         })
       end
-      let(:ephemeral_datastores) { datastore_names_matching_pattern(@single_local_ds_pattern) }
-      let(:persistent_datastores) { datastore_names_matching_pattern(@multi_local_ds_pattern) }
+      let(:ephemeral_datastores) { datastore_names_matching_pattern(@cluster, @single_local_ds_pattern) }
+      let(:persistent_datastores) { datastore_names_matching_pattern(@cluster, @multi_local_ds_pattern) }
       let(:resource_pool) do
         {
           'ram' => 1024,
@@ -1236,20 +1236,79 @@ describe VSphereCloud::Cloud, external_cpi: false do
   end
 
   describe 'inactive datastore handling' do
-    let(:inactive_cpi) { described_class.new(inactive_cpi_options) }
+    let(:inactive_cpi) { described_class.new(cpi_options) }
+    let(:inactive_datastores) { datastore_names_matching_pattern(@cluster, @inactive_datastore_pattern) }
 
     context 'when the user specifies an inactive datastore' do
-      let(:inactive_cpi_options) do
-        cpi_options({
-          datastore_pattern: @inactive_datastore_pattern,
-          persistent_datastore_pattern: @inactive_datastore_pattern,
-        })
+      let(:resource_pool) do
+        {
+          'ram' => 1024,
+          'disk' => 2048,
+          'cpu' => 1,
+          'datastores' => inactive_datastores,
+        }
+      end
+      let(:disk_pool) do
+        {
+          'datastores' => inactive_datastores,
+        }
       end
 
-      it 'returns an error' do
+      it 'returns an error creating a VM' do
         expect {
           inactive_cpi.create_vm('agent-007', @stemcell_id, resource_pool, network_spec)
         }.to raise_error(/No valid placement found/)
+      end
+
+      it 'returns an error creating a disk' do
+        puts disk_pool.inspect
+        expect {
+          inactive_cpi.create_disk(128, disk_pool)
+        }.to raise_error(/No valid placement found/)
+      end
+    end
+
+    context 'when the user specifies a mix of active and inactive datastores' do
+      let(:active_datastores) { datastore_names_matching_pattern(@cluster, @datastore_pattern) }
+      let(:resource_pool) do
+        {
+          'ram' => 1024,
+          'disk' => 2048,
+          'cpu' => 1,
+          'datastores' => inactive_datastores + active_datastores,
+        }
+      end
+      let(:disk_pool) do
+        {
+          'datastores' => inactive_datastores + active_datastores,
+        }
+      end
+
+      it 'places the VM in the active datastore' do
+        begin
+          vm_id = inactive_cpi.create_vm('agent-007', @stemcell_id, resource_pool, network_spec)
+          vm = inactive_cpi.vm_provider.find(vm_id)
+          ephemeral_disk = vm.ephemeral_disk
+          expect(ephemeral_disk).to_not be_nil
+
+          ephemeral_ds = ephemeral_disk.backing.datastore.name
+          expect(active_datastores).to include(ephemeral_ds)
+        ensure
+          delete_vm(inactive_cpi, vm_id)
+        end
+      end
+
+      it 'places the disk in the active datastore' do
+        begin
+          disk_id = inactive_cpi.create_disk(128, disk_pool)
+          expect(disk_id).to_not be_nil
+
+          clean_disk_cid, _ = VSphereCloud::DiskMetadata.decode(disk_id)
+          disk = inactive_cpi.datacenter.find_disk(clean_disk_cid)
+          expect(active_datastores).to include(disk.datastore.name)
+        ensure
+          delete_disk(inactive_cpi, disk_id)
+        end
       end
     end
   end
@@ -1374,7 +1433,7 @@ describe VSphereCloud::Cloud, external_cpi: false do
 
   def find_disk_in_datastore(disk_id, datastore_name)
     datastore_mob = @cpi.client.cloud_searcher.get_managed_object(VimSdk::Vim::Datastore, name: datastore_name)
-    datastore = VSphereCloud::Resources::Datastore.new(datastore_name, datastore_mob, 0, 0)
+    datastore = VSphereCloud::Resources::Datastore.new(datastore_name, datastore_mob, true, 0, 0)
     @cpi.client.find_disk(disk_id, datastore, @disk_path)
   end
 
@@ -1383,7 +1442,8 @@ describe VSphereCloud::Cloud, external_cpi: false do
     cluster.datastore.map(&:name)
   end
 
-  def datastore_names_matching_pattern(pattern)
-    @cpi.datacenter.all_datastores.keys.select { |name| name =~ Regexp.new(pattern) }
+  def datastore_names_matching_pattern(cluster_name, pattern)
+    all_datastore_names = datastores_accessible_from_cluster(cluster_name)
+    all_datastore_names.select { |name| name =~ Regexp.new(pattern) }
   end
 end

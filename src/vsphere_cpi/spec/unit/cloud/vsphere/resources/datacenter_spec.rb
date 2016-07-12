@@ -52,10 +52,6 @@ describe VSphereCloud::Resources::Datacenter do
   let(:first_cluster) do
     instance_double('VSphereCloud::Resources::Cluster',
       free_memory: 1024,
-      all_datastores: {
-        small_datastore.name => small_datastore,
-        inaccessible_datastore.name => inaccessible_datastore
-      },
       accessible_datastores: {
         small_datastore.name => small_datastore,
       },
@@ -64,10 +60,6 @@ describe VSphereCloud::Resources::Datacenter do
   let(:second_cluster) do
     instance_double('VSphereCloud::Resources::Cluster',
       free_memory: 2048,
-      all_datastores: {
-        small_datastore.name => small_datastore,
-        large_datastore.name => large_datastore
-      },
       accessible_datastores: {
         small_datastore.name => small_datastore,
         large_datastore.name => large_datastore
@@ -293,22 +285,6 @@ describe VSphereCloud::Resources::Datacenter do
     end
   end
 
-  describe '#all_datastores_hash' do
-    it 'returns a hash mapping from datastore name to free space' do
-      expect(datacenter.all_datastores_hash).to eq({
-        'small-datastore' => {
-          free_space: 4000,
-        },
-        'large-datastore' => {
-          free_space: 8000,
-        },
-        'inaccessible-datastore' => {
-          free_space: 16000,
-        },
-      })
-    end
-  end
-
   describe '#accessible_datastores_hash' do
     it 'returns a hash mapping from accessible datastore name to free space' do
       expect(datacenter.accessible_datastores_hash).to eq({
@@ -331,13 +307,13 @@ describe VSphereCloud::Resources::Datacenter do
 
         allow(datacenter).to receive(:clusters).and_return({
           'first-cluster' => instance_double('VSphereCloud::Resources::Cluster',
-            all_datastores: {
+            accessible_datastores: {
               small_datastore.name => small_datastore,
               inaccessible_datastore.name => inaccessible_datastore
             },
           ),
           'second-cluster' => instance_double('VSphereCloud::Resources::Cluster',
-            all_datastores: {
+            accessible_datastores: {
               small_datastore.name => small_datastore,
               large_datastore.name => large_datastore
             }
@@ -368,13 +344,13 @@ describe VSphereCloud::Resources::Datacenter do
     before do
       allow(datacenter).to receive(:clusters).and_return({
         'first-cluster' => instance_double('VSphereCloud::Resources::Cluster',
-          all_datastores: {
+          accessible_datastores: {
             datastoreA.name => datastoreA,
             datastoreC.name => datastoreC
           },
         ),
         'second-cluster' => instance_double('VSphereCloud::Resources::Cluster',
-          all_datastores: {
+          accessible_datastores: {
             datastoreA.name => datastoreA,
             datastoreB.name => datastoreB
           }
@@ -399,7 +375,7 @@ describe VSphereCloud::Resources::Datacenter do
     end
   end
 
-  describe '#all_datastores' do
+  describe '#accessible_datastores' do
     it 'returns a unique set of persistent datastores across all clusters' do
       small_datastore = instance_double('VSphereCloud::Resources::Datastore', name: 'small-datastore')
       large_datastore = instance_double('VSphereCloud::Resources::Datastore', name: 'large-datastore')
@@ -407,20 +383,20 @@ describe VSphereCloud::Resources::Datacenter do
 
       allow(datacenter).to receive(:clusters).and_return({
         'first-cluster' => instance_double('VSphereCloud::Resources::Cluster',
-          all_datastores: {
+          accessible_datastores: {
             small_datastore.name => small_datastore,
             inaccessible_datastore.name => inaccessible_datastore
           },
         ),
         'second-cluster' => instance_double('VSphereCloud::Resources::Cluster',
-          all_datastores: {
+          accessible_datastores: {
             small_datastore.name => small_datastore,
             large_datastore.name => large_datastore
           }
         ),
       })
 
-      expect(datacenter.all_datastores).to eq({
+      expect(datacenter.accessible_datastores).to eq({
         small_datastore.name => small_datastore,
         large_datastore.name => large_datastore,
         inaccessible_datastore.name => inaccessible_datastore
@@ -481,7 +457,7 @@ describe VSphereCloud::Resources::Datacenter do
     let(:other_datastore) { instance_double(VSphereCloud::Resources::Datastore) }
 
     before do
-      allow(datacenter).to receive(:all_datastores).and_return({
+      allow(datacenter).to receive(:accessible_datastores).and_return({
             'datastore1' => datastore,
             'datastore2' => other_datastore,
           })

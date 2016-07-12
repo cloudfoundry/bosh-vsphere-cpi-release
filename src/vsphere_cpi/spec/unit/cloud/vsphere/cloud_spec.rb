@@ -622,7 +622,7 @@ module VSphereCloud
       before do
         allow(datacenter).to receive(:persistent_pattern)
           .and_return(/datastore\-.*/)
-        allow(datacenter).to receive(:all_datastores_hash)
+        allow(datacenter).to receive(:accessible_datastores_hash)
           .and_return({
             'datastore-with-disk' => {
               free_space: 2048,
