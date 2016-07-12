@@ -30,9 +30,18 @@ module VSphereCloud
 
       def accessible_datastore_names
         host_properties['datastore'].map do |store|
-          ds = cloud_searcher.get_properties(store, Vim::Datastore, 'name', ensure_all: true)
-          ds['name']
-        end
+          ds = cloud_searcher.get_properties(
+            store,
+            Vim::Datastore,
+            ['name', 'summary.accessible'],
+            ensure_all: true
+          )
+          if ds['summary.accessible']
+            ds['name']
+          else
+            nil
+          end
+        end.compact
       end
 
       def datacenter_mob

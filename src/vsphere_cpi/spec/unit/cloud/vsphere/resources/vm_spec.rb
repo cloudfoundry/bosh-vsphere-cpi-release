@@ -30,7 +30,10 @@ describe VSphereCloud::Resources::VM do
   describe '#accessible_datastore_names' do
     it 'returns accessible datastores' do
       datastore_mob = instance_double('VimSdk::Vim::Datastore')
-      host_properties = {'datastore' => [datastore_mob]}
+      inaccessible_datastore_mob = instance_double('VimSdk::Vim::Datastore')
+      host_properties = {
+        'datastore' => [datastore_mob, inaccessible_datastore_mob]
+      }
       allow(cloud_searcher).to receive(:get_properties).with(
         'vm-host',
         VimSdk::Vim::HostSystem,
@@ -40,9 +43,21 @@ describe VSphereCloud::Resources::VM do
       allow(cloud_searcher).to receive(:get_properties).with(
         datastore_mob,
         VimSdk::Vim::Datastore,
-        'name',
+        ['name', 'summary.accessible'],
         ensure_all: true,
-      ).and_return({ 'name' => 'datastore-name' })
+      ).and_return({
+        'name' => 'datastore-name',
+        'summary.accessible' => true,
+      })
+      allow(cloud_searcher).to receive(:get_properties).with(
+        inaccessible_datastore_mob,
+        VimSdk::Vim::Datastore,
+        ['name', 'summary.accessible'],
+        ensure_all: true,
+      ).and_return({
+        'name' => 'inaccessible-datastore-name',
+        'summary.accessible' => false,
+      })
 
       expect(vm.accessible_datastore_names).to eq(['datastore-name'])
     end
