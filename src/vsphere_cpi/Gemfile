@@ -17,6 +17,5 @@ group :development, :test do
   gem 'rspec-instafail'
   gem 'fakefs'
   gem "rack", "~> 1.6.4"
-  gem "thin", "~> 1.5.1"
   gem "pry"
 end

@@ -1,5 +1,6 @@
 require 'rack'
-require 'thin'
+require 'webrick'
+require 'webrick/https'
 
 module Support
   module StringHelpers
@@ -120,16 +121,18 @@ module Support
         path_to_binary_file = File.join(File.dirname(__FILE__), 'fixtures', 'env.iso')
 
         @thread = Thread.new do
-          server_config = { :Host => host, :Port => port }
-          setup_ssl = lambda { |config|
-            config.ssl = true
-            config.ssl_options = {
-              :private_key_file => private_key.path,
-              :cert_chain_file => cert_chain.path
-            }
+          server_config = {
+            Host: host,
+            Port: port,
+            Logger: WEBrick::Log.new(File.open(File::NULL, 'w')),
+            AccessLog: [],
+            SSLEnable: true,
+            SSLVerifyClient: OpenSSL::SSL::VERIFY_NONE,
+            SSLPrivateKey: OpenSSL::PKey::RSA.new(File.open(private_key.path).read),
+            SSLCertificate: OpenSSL::X509::Certificate.new(File.open(cert_chain.path).read),
           }
 
-          Rack::Handler::Thin.run(Rack::Builder.new {
+          Rack::Handler::WEBrick.run(Rack::Builder.new {
             map '/download' do
               run lambda { |env|
                 response = Rack::Response.new
@@ -140,7 +143,7 @@ module Support
             end
 
             run lambda { |env| [200, { 'Content-Type' => 'text/plain'}, ['success']] }
-          }, server_config, &setup_ssl)
+          }, server_config)
         end
 
         Timeout.timeout(5) { @thread.join(0.1) until responsive? }
