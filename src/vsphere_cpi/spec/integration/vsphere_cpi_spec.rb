@@ -109,7 +109,7 @@ describe VSphereCloud::Cloud, external_cpi: true do
   # We have had coverage in the lifecycle_spec
   describe 'getting vms' do
     it 'is successful' do
-      resp = external_cpi_response('has_vm', 'non-existant-vm-id')
+      resp = external_cpi_response('has_vm', 'non-existent-vm-id')
       expect(resp['error']).to be_nil
       expect(resp['result']).to be(false)
     end
@@ -131,6 +131,24 @@ describe VSphereCloud::Cloud, external_cpi: true do
       @stemcell_id = resp['result']
 
       expect(resp['log']).to include('200 OK', '<?xml')
+    end
+  end
+
+  describe 'calculate vm cloud properties' do
+    let(:vm_cloud_properties) { {
+      'ram' => 1024,
+      'cpu' => 2,
+      'ephemeral_disk_size' => 2048
+    } }
+
+    it 'returns a vSphere-specific set of cloud_properties' do
+      resp = external_cpi_response('calculate_vm_cloud_properties', vm_cloud_properties)
+
+      expect(resp['result']).to eq({
+        'ram' => 1024,
+        'cpu' => 2,
+        'disk' => 2048
+      })
     end
   end
 end
