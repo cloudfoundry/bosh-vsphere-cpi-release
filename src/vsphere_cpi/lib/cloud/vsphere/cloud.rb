@@ -254,6 +254,14 @@ module VSphereCloud
       end
     end
 
+    def calculate_vm_cloud_properties(vm_properties)
+      required_properties = ['ram', 'cpu', 'ephemeral_disk_size']
+      missing_properties = required_properties.reject { |name| vm_properties.has_key?(name) }
+      raise "Missing VM cloud properties: #{missing_properties.map{ |sym| "'#{sym}'"}.join(', ')}" unless missing_properties.empty?
+      vm_properties['disk'] = vm_properties.delete 'ephemeral_disk_size'
+      vm_properties
+    end
+
     def delete_vm(vm_cid)
       with_thread_name("delete_vm(#{vm_cid})") do
         @logger.info("Deleting vm: #{vm_cid}")

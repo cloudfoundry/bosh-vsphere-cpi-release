@@ -576,6 +576,42 @@ module VSphereCloud
       end
     end
 
+    describe '#calculate_vm_cloud_properties' do
+      context 'when ram, cpu, and ephemeral_disk are specified' do
+        let(:vm_properties) { {
+          'ram' => 1024,
+          'cpu' => 2,
+          'ephemeral_disk_size' => 2048
+        } }
+        it 'returns a vSphere-specific set of cloud_properties' do
+          expect(vsphere_cloud.calculate_vm_cloud_properties(vm_properties)).to eq({
+            'ram' => 1024,
+            'cpu' => 2,
+            'disk' => 2048
+          })
+        end
+      end
+      context 'when one of the three keys is missing' do
+        let(:vm_properties) { {
+          'ram' => 1024,
+          'cpu' => 2,
+        } }
+        it 'raises an error' do
+          expect{vsphere_cloud.calculate_vm_cloud_properties(vm_properties)}.to raise_error(
+            /Missing VM cloud properties: 'ephemeral_disk_size'/)
+        end
+      end
+      context 'when two of the three keys is missing' do
+        let(:vm_properties) { {
+          'cpu' => 2,
+        } }
+        it 'raises an error' do
+          expect{vsphere_cloud.calculate_vm_cloud_properties(vm_properties)}.to raise_error(
+            /Missing VM cloud properties: 'ram', 'ephemeral_disk_size'/)
+        end
+      end
+    end
+
     describe '#attach_disk' do
       let(:agent_env_hash) { { 'disks' => { 'persistent' => { 'disk-cid' => 'fake-device-number' } } } }
       let(:vm_location) { double(:vm_location) }
