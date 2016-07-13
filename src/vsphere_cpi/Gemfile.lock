@@ -1,11 +1,11 @@
 GEM
   remote: https://rubygems.org/
   specs:
-    bosh_common (1.3215.0)
+    bosh_common (1.3262.1)
       logging (~> 1.8.2)
-      semi_semantic (~> 1.1.0)
-    bosh_cpi (1.3215.0)
-      bosh_common (~> 1.3215.0)
+      semi_semantic (~> 1.2.0)
+    bosh_cpi (1.3262.1)
+      bosh_common (~> 1.3262.1)
       logging (~> 1.8.2)
       membrane (~> 1.1.0)
     builder (3.1.4)
@@ -23,7 +23,7 @@ GEM
     method_source (0.8.2)
     mini_portile2 (2.0.0)
     mono_logger (1.1.0)
-    multi_json (1.11.2)
+    multi_json (1.12.1)
     nokogiri (1.6.7.2)
       mini_portile2 (~> 2.0.0.rc2)
     pry (0.10.1)
@@ -50,7 +50,7 @@ GEM
       diff-lcs (>= 1.2.0, < 2.0)
       rspec-support (~> 3.3.0)
     rspec-support (3.3.0)
-    semi_semantic (1.1.0)
+    semi_semantic (1.2.0)
     simplecov (0.11.2)
       docile (~> 1.1.0)
       json (~> 1.8)
