@@ -1,6 +1,6 @@
 ---
 groups:
-  - name: bosh-vsphere-cpi-release
+  - name: bosh-vsphere-cpi
     jobs:
       - cache-stemcells
       - build-candidate
@@ -8,19 +8,6 @@ groups:
       - lifecycle-6.0
       - lifecycle-6.0-vsan
       - bats
-      - promote-candidate
-
-  - name: vsphere-5.1
-    jobs:
-      - build-candidate
-      - lifecycle-5.1
-      - promote-candidate
-
-  - name: vsphere-6.0
-    jobs:
-      - build-candidate
-      - lifecycle-6.0
-      - lifecycle-6.0-vsan
       - promote-candidate
 
 jobs:
