@@ -1,0 +1,201 @@
+require 'integration/spec_helper'
+
+
+context 'when vm was migrated to another datastore within first cluster' do
+
+  let(:network_spec) do
+    {
+      'static' => {
+        'ip' => "169.254.#{rand(1..254)}.#{rand(4..254)}",
+        'netmask' => '255.255.254.0',
+        'cloud_properties' => {'name' => @vlan},
+        'default' => ['dns', 'gateway'],
+        'dns' => ['169.254.1.2'],
+        'gateway' => '169.254.1.3'
+      }
+    }
+  end
+  let(:resource_pool) do
+    {
+      'ram' => 1024,
+      'disk' => 2048,
+      'cpu' => 1,
+    }
+  end
+
+  let(:one_cluster_cpi) do
+    options = cpi_options(
+      clusters: [{@cluster => {'resource_pool' => @resource_pool_name}}]
+    )
+    VSphereCloud::Cloud.new(options)
+  end
+
+  it 'should exercise the vm lifecycle' do
+    vm_lifecycle(one_cluster_cpi, [], resource_pool, network_spec, @stemcell_id) do |vm_id|
+      vm = one_cluster_cpi.vm_provider.find(vm_id)
+
+      datastore = one_cluster_cpi.client.cloud_searcher.get_managed_object(VimSdk::Vim::Datastore, name: @second_datastore_within_cluster)
+      relocate_spec = VimSdk::Vim::Vm::RelocateSpec.new(datastore: datastore)
+
+      task = vm.mob.relocate(relocate_spec, 'defaultPriority')
+      one_cluster_cpi.client.wait_for_task(task)
+    end
+  end
+
+  context 'given a resource pool that is configured with a drs rule' do
+    let(:one_cluster_cpi) do
+      options = cpi_options(
+        clusters: [{@cluster => {'resource_pool' => @resource_pool_name}}]
+      )
+      VSphereCloud::Cloud.new(options)
+    end
+
+    let(:resource_pool) do
+      {
+        'ram' => 1024,
+        'disk' => 2048,
+        'cpu' => 1,
+        'datacenters' => [{
+          'name' => @datacenter_name,
+          'clusters' => [{
+            @cluster => {
+              'drs_rules' => [{
+                'name' => 'separate-nodes-rule',
+                'type' => 'separate_vms'
+              }]
+            }
+          }]
+        }]
+      }
+    end
+
+    it 'should correctly apply VM Anti-Affinity rules to created VMs' do
+      begin
+        first_vm_id = one_cluster_cpi.create_vm(
+          'agent-007',
+          @stemcell_id,
+          resource_pool,
+          network_spec,
+          [],
+          {'key' => 'value'}
+        )
+        second_vm_id = one_cluster_cpi.create_vm(
+          'agent-006',
+          @stemcell_id,
+          resource_pool,
+          network_spec,
+          [],
+          {'key' => 'value'}
+        )
+        first_vm_mob = one_cluster_cpi.vm_provider.find(first_vm_id).mob
+        cluster = first_vm_mob.resource_pool.parent
+
+        drs_rules = cluster.configuration_ex.rule
+        expect(drs_rules).not_to be_empty
+        drs_rule = drs_rules.find { |rule| rule.name == "separate-nodes-rule" }
+        expect(drs_rule).to_not be_nil
+        expect(drs_rule.vm.length).to eq(2)
+        drs_vm_names = drs_rule.vm.map { |vm_mob| vm_mob.name }
+        expect(drs_vm_names).to include(first_vm_id, second_vm_id)
+
+      ensure
+        delete_vm(one_cluster_cpi, first_vm_id)
+        delete_vm(one_cluster_cpi, second_vm_id)
+      end
+    end
+  end
+  context 'when migration happened after attaching a persistent disk' do
+    let(:datastore_name) {
+      datastore_name = one_cluster_cpi.datacenter.accessible_datastores.select do |datastore|
+        datastore.match(@datastore_pattern)
+      end
+      datastore_name.first[0]
+    }
+
+    it 'can still find persistent disks after and deleting vm' do
+      begin
+        disk_attached = false
+        vm_id = one_cluster_cpi.create_vm(
+          'agent-007',
+          @stemcell_id,
+          resource_pool,
+          network_spec,
+          [],
+          {'key' => 'value'}
+        )
+
+        expect(vm_id).to_not be_nil
+        expect(one_cluster_cpi.has_vm?(vm_id)).to be(true)
+
+        disk_id = one_cluster_cpi.create_disk(2048, {}, vm_id)
+        expect(disk_id).to_not be_nil
+
+        one_cluster_cpi.attach_disk(vm_id, disk_id)
+        expect(one_cluster_cpi.has_disk?(disk_id)).to be(true)
+        disk_attached = true
+
+        vm = one_cluster_cpi.vm_provider.find(vm_id)
+
+        datastore = one_cluster_cpi.client.cloud_searcher.get_managed_object(VimSdk::Vim::Datastore, name: datastore_name)
+        relocate_spec = VimSdk::Vim::Vm::RelocateSpec.new(datastore: datastore)
+
+        task = vm.mob.relocate(relocate_spec, 'defaultPriority')
+        one_cluster_cpi.client.wait_for_task(task)
+
+        expect(one_cluster_cpi.has_disk?(disk_id)).to be(true)
+
+        one_cluster_cpi.delete_vm(vm_id)
+        vm_id = nil
+        disk_attached = false
+
+        expect(one_cluster_cpi.has_disk?(disk_id)).to be(true)
+      ensure
+        detach_disk(one_cluster_cpi, vm_id, disk_id)
+        delete_vm(one_cluster_cpi, vm_id)
+        delete_disk(one_cluster_cpi, disk_id)
+      end
+    end
+
+    it 'can still find persistent disk after vMotion and after detaching disk from vm' do
+      begin
+        disk_attached = false
+        vm_id = one_cluster_cpi.create_vm(
+          'agent-007',
+          @stemcell_id,
+          resource_pool,
+          network_spec,
+          [],
+          {'key' => 'value'}
+        )
+
+        expect(vm_id).to_not be_nil
+        expect(one_cluster_cpi.has_vm?(vm_id)).to be(true)
+
+        disk_id = one_cluster_cpi.create_disk(2048, {}, vm_id)
+        expect(disk_id).to_not be_nil
+
+        one_cluster_cpi.attach_disk(vm_id, disk_id)
+        disk_attached = true
+        expect(one_cluster_cpi.has_disk?(disk_id)).to be(true)
+
+        vm = one_cluster_cpi.vm_provider.find(vm_id)
+
+        datastore = one_cluster_cpi.client.cloud_searcher.get_managed_object(VimSdk::Vim::Datastore, name: datastore_name)
+        relocate_spec = VimSdk::Vim::Vm::RelocateSpec.new(datastore: datastore)
+
+        task = vm.mob.relocate(relocate_spec, 'defaultPriority')
+        one_cluster_cpi.client.wait_for_task(task)
+
+        expect(one_cluster_cpi.has_disk?(disk_id)).to be(true)
+
+        one_cluster_cpi.detach_disk(vm_id, disk_id)
+        disk_attached = false
+        expect(one_cluster_cpi.has_disk?(disk_id)).to be(true)
+      ensure
+        detach_disk(one_cluster_cpi, vm_id, disk_id)
+        delete_vm(one_cluster_cpi, vm_id)
+        delete_disk(one_cluster_cpi, disk_id)
+      end
+    end
+  end
+end

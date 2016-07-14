@@ -17,7 +17,7 @@ module VSphereCloud
     end
 
     attr_accessor :client
-    attr_reader :config, :datacenter
+    attr_reader :config, :logger, :datacenter
 
     def initialize(options)
       @config = Config.build(options)

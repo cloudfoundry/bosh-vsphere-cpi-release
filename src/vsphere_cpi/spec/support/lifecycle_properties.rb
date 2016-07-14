@@ -1,36 +1,36 @@
 module LifecycleProperties
-  def fetch_properties(helper)
-    @host = helper.fetch_property('BOSH_VSPHERE_CPI_HOST')
-    @user = helper.fetch_property('BOSH_VSPHERE_CPI_USER')
-    @password = helper.fetch_property('BOSH_VSPHERE_CPI_PASSWORD')
-    @vlan = helper.fetch_property('BOSH_VSPHERE_VLAN')
-    @stemcell_path = helper.fetch_property('BOSH_VSPHERE_STEMCELL')
+  def fetch_properties
+    @host = fetch_property('BOSH_VSPHERE_CPI_HOST')
+    @user = fetch_property('BOSH_VSPHERE_CPI_USER')
+    @password = fetch_property('BOSH_VSPHERE_CPI_PASSWORD')
+    @vlan = fetch_property('BOSH_VSPHERE_VLAN')
+    @stemcell_path = fetch_property('BOSH_VSPHERE_STEMCELL')
 
-    @second_datastore_within_cluster = helper.fetch_property('BOSH_VSPHERE_CPI_SECOND_DATASTORE')
-    @second_resource_pool_within_cluster = helper.fetch_property('BOSH_VSPHERE_CPI_SECOND_RESOURCE_POOL')
+    @second_datastore_within_cluster = fetch_property('BOSH_VSPHERE_CPI_SECOND_DATASTORE')
+    @second_resource_pool_within_cluster = fetch_property('BOSH_VSPHERE_CPI_SECOND_RESOURCE_POOL')
 
-    @datacenter_name = helper.fetch_property('BOSH_VSPHERE_CPI_DATACENTER')
-    @vm_folder = helper.fetch_optional_property('BOSH_VSPHERE_CPI_VM_FOLDER', '')
-    @template_folder = helper.fetch_optional_property('BOSH_VSPHERE_CPI_TEMPLATE_FOLDER', '')
-    @disk_path = helper.fetch_property('BOSH_VSPHERE_CPI_DISK_PATH')
+    @datacenter_name = fetch_property('BOSH_VSPHERE_CPI_DATACENTER')
+    @vm_folder = fetch_optional_property('BOSH_VSPHERE_CPI_VM_FOLDER', '')
+    @template_folder = fetch_optional_property('BOSH_VSPHERE_CPI_TEMPLATE_FOLDER', '')
+    @disk_path = fetch_property('BOSH_VSPHERE_CPI_DISK_PATH')
 
-    @datastore_pattern = helper.fetch_property('BOSH_VSPHERE_CPI_DATASTORE_PATTERN')
-    @persistent_datastore_pattern = helper.fetch_property('BOSH_VSPHERE_CPI_PERSISTENT_DATASTORE_PATTERN')
-    @inactive_datastore_pattern = helper.fetch_property('BOSH_VSPHERE_CPI_INACTIVE_DATASTORE_PATTERN')
-    @cluster = helper.fetch_property('BOSH_VSPHERE_CPI_CLUSTER')
-    @resource_pool_name = helper.fetch_property('BOSH_VSPHERE_CPI_RESOURCE_POOL')
+    @datastore_pattern = fetch_property('BOSH_VSPHERE_CPI_DATASTORE_PATTERN')
+    @persistent_datastore_pattern = fetch_property('BOSH_VSPHERE_CPI_PERSISTENT_DATASTORE_PATTERN')
+    @inactive_datastore_pattern = fetch_property('BOSH_VSPHERE_CPI_INACTIVE_DATASTORE_PATTERN')
+    @cluster = fetch_property('BOSH_VSPHERE_CPI_CLUSTER')
+    @resource_pool_name = fetch_property('BOSH_VSPHERE_CPI_RESOURCE_POOL')
 
-    @second_cluster = helper.fetch_property('BOSH_VSPHERE_CPI_SECOND_CLUSTER')
-    @second_cluster_resource_pool_name = helper.fetch_property('BOSH_VSPHERE_CPI_SECOND_CLUSTER_RESOURCE_POOL')
-    @second_cluster_datastore = helper.fetch_property('BOSH_VSPHERE_CPI_SECOND_CLUSTER_DATASTORE')
+    @second_cluster = fetch_property('BOSH_VSPHERE_CPI_SECOND_CLUSTER')
+    @second_cluster_resource_pool_name = fetch_property('BOSH_VSPHERE_CPI_SECOND_CLUSTER_RESOURCE_POOL')
+    @second_cluster_datastore = fetch_property('BOSH_VSPHERE_CPI_SECOND_CLUSTER_DATASTORE')
 
-    nested_datacenter_name = helper.fetch_property('BOSH_VSPHERE_CPI_NESTED_DATACENTER')
-    nested_datacenter_datastore_pattern = helper.fetch_property('BOSH_VSPHERE_CPI_NESTED_DATACENTER_DATASTORE_PATTERN')
-    nested_datacenter_cluster_name = helper.fetch_property('BOSH_VSPHERE_CPI_NESTED_DATACENTER_CLUSTER')
-    nested_datacenter_resource_pool_name = helper.fetch_property('BOSH_VSPHERE_CPI_NESTED_DATACENTER_RESOURCE_POOL')
-    @nested_datacenter_vlan = helper.fetch_property('BOSH_VSPHERE_CPI_NESTED_DATACENTER_VLAN')
+    nested_datacenter_name = fetch_property('BOSH_VSPHERE_CPI_NESTED_DATACENTER')
+    nested_datacenter_datastore_pattern = fetch_property('BOSH_VSPHERE_CPI_NESTED_DATACENTER_DATASTORE_PATTERN')
+    nested_datacenter_cluster_name = fetch_property('BOSH_VSPHERE_CPI_NESTED_DATACENTER_CLUSTER')
+    nested_datacenter_resource_pool_name = fetch_property('BOSH_VSPHERE_CPI_NESTED_DATACENTER_RESOURCE_POOL')
+    @nested_datacenter_vlan = fetch_property('BOSH_VSPHERE_CPI_NESTED_DATACENTER_VLAN')
 
-    @vsphere_version = helper.fetch_optional_property('BOSH_VSPHERE_VERSION')
+    @vsphere_version = fetch_optional_property('BOSH_VSPHERE_VERSION')
 
     @nested_datacenter_cpi_options = cpi_options(
       datacenter_name: nested_datacenter_name,
@@ -44,63 +44,63 @@ module LifecycleProperties
     )
   end
 
-  def verify_properties(helper)
-    helper.verify_vsphere_version(cpi_options, @vsphere_version)
-    helper.verify_datacenter_exists(cpi_options, 'BOSH_VSPHERE_CPI_DATACENTER')
-    helper.verify_vlan(cpi_options, @vlan, 'BOSH_VSPHERE_VLAN')
-    helper.verify_user_has_limited_permissions(cpi_options)
+  def verify_properties
+    verify_vsphere_version(cpi_options, @vsphere_version)
+    verify_datacenter_exists(cpi_options, 'BOSH_VSPHERE_CPI_DATACENTER')
+    verify_vlan(cpi_options, @vlan, 'BOSH_VSPHERE_VLAN')
+    verify_user_has_limited_permissions(cpi_options)
 
-    datacenter = described_class.new(cpi_options).datacenter
-    helper.verify_cluster(datacenter, @cluster, 'BOSH_VSPHERE_CPI_CLUSTER')
-    helper.verify_resource_pool(datacenter.find_cluster(@cluster), @resource_pool_name, 'BOSH_VSPHERE_CPI_RESOURCE_POOL')
-    helper.verify_cluster(datacenter, @second_cluster, 'BOSH_VSPHERE_CPI_SECOND_CLUSTER')
-    helper.verify_resource_pool(datacenter.find_cluster(@second_cluster), @second_cluster_resource_pool_name, 'BOSH_VSPHERE_CPI_SECOND_CLUSTER_RESOURCE_POOL')
+    datacenter = VSphereCloud::Cloud.new(cpi_options).datacenter
+    verify_cluster(datacenter, @cluster, 'BOSH_VSPHERE_CPI_CLUSTER')
+    verify_resource_pool(datacenter.find_cluster(@cluster), @resource_pool_name, 'BOSH_VSPHERE_CPI_RESOURCE_POOL')
+    verify_cluster(datacenter, @second_cluster, 'BOSH_VSPHERE_CPI_SECOND_CLUSTER')
+    verify_resource_pool(datacenter.find_cluster(@second_cluster), @second_cluster_resource_pool_name, 'BOSH_VSPHERE_CPI_SECOND_CLUSTER_RESOURCE_POOL')
 
-    second_resource_pool_datacenter = described_class.new(@second_resource_pool_cpi_options).datacenter
-    helper.verify_resource_pool(second_resource_pool_datacenter.find_cluster(@cluster), @second_resource_pool_within_cluster, 'BOSH_VSPHERE_CPI_SECOND_RESOURCE_POOL')
+    second_resource_pool_datacenter = VSphereCloud::Cloud.new(@second_resource_pool_cpi_options).datacenter
+    verify_resource_pool(second_resource_pool_datacenter.find_cluster(@cluster), @second_resource_pool_within_cluster, 'BOSH_VSPHERE_CPI_SECOND_RESOURCE_POOL')
 
-    nested_datacenter_name = helper.fetch_property('BOSH_VSPHERE_CPI_NESTED_DATACENTER')
-    nested_datacenter_datastore_pattern = helper.fetch_property('BOSH_VSPHERE_CPI_NESTED_DATACENTER_DATASTORE_PATTERN')
-    nested_datacenter_cluster_name = helper.fetch_property('BOSH_VSPHERE_CPI_NESTED_DATACENTER_CLUSTER')
-    nested_datacenter_resource_pool_name = helper.fetch_property('BOSH_VSPHERE_CPI_NESTED_DATACENTER_RESOURCE_POOL')
+    nested_datacenter_name = fetch_property('BOSH_VSPHERE_CPI_NESTED_DATACENTER')
+    nested_datacenter_datastore_pattern = fetch_property('BOSH_VSPHERE_CPI_NESTED_DATACENTER_DATASTORE_PATTERN')
+    nested_datacenter_cluster_name = fetch_property('BOSH_VSPHERE_CPI_NESTED_DATACENTER_CLUSTER')
+    nested_datacenter_resource_pool_name = fetch_property('BOSH_VSPHERE_CPI_NESTED_DATACENTER_RESOURCE_POOL')
 
-    helper.verify_datacenter_exists(@nested_datacenter_cpi_options, 'BOSH_VSPHERE_CPI_NESTED_DATACENTER')
-    helper.verify_datacenter_is_nested(@nested_datacenter_cpi_options, nested_datacenter_name, 'BOSH_VSPHERE_CPI_NESTED_DATACENTER')
-    nested_datacenter = described_class.new(@nested_datacenter_cpi_options).datacenter
-    helper.verify_cluster(nested_datacenter, nested_datacenter_cluster_name, 'BOSH_VSPHERE_CPI_NESTED_DATACENTER_CLUSTER')
-    helper.verify_datastore_within_cluster(
+    verify_datacenter_exists(@nested_datacenter_cpi_options, 'BOSH_VSPHERE_CPI_NESTED_DATACENTER')
+    verify_datacenter_is_nested(@nested_datacenter_cpi_options, nested_datacenter_name, 'BOSH_VSPHERE_CPI_NESTED_DATACENTER')
+    nested_datacenter = VSphereCloud::Cloud.new(@nested_datacenter_cpi_options).datacenter
+    verify_cluster(nested_datacenter, nested_datacenter_cluster_name, 'BOSH_VSPHERE_CPI_NESTED_DATACENTER_CLUSTER')
+    verify_datastore_within_cluster(
       nested_datacenter,
       'BOSH_VSPHERE_CPI_NESTED_DATACENTER_DATASTORE_PATTERN',
       nested_datacenter_datastore_pattern,
       nested_datacenter_cluster_name
     )
 
-    helper.verify_resource_pool(nested_datacenter.find_cluster(nested_datacenter_cluster_name), nested_datacenter_resource_pool_name, 'BOSH_VSPHERE_CPI_NESTED_DATACENTER_DATASTORE_PATTERN')
-    helper.verify_vlan(@nested_datacenter_cpi_options, @nested_datacenter_vlan, 'BOSH_VSPHERE_CPI_NESTED_DATACENTER_VLAN')
+    verify_resource_pool(nested_datacenter.find_cluster(nested_datacenter_cluster_name), nested_datacenter_resource_pool_name, 'BOSH_VSPHERE_CPI_NESTED_DATACENTER_DATASTORE_PATTERN')
+    verify_vlan(@nested_datacenter_cpi_options, @nested_datacenter_vlan, 'BOSH_VSPHERE_CPI_NESTED_DATACENTER_VLAN')
 
-    helper.verify_datastore_within_cluster(
+    verify_datastore_within_cluster(
       datacenter,
       'BOSH_VSPHERE_CPI_DATASTORE_PATTERN',
       @datastore_pattern,
       @cluster
     )
 
-    helper.verify_datastore_within_cluster(
+    verify_datastore_within_cluster(
       datacenter,
       'BOSH_VSPHERE_CPI_PERSISTENT_DATASTORE_PATTERN',
       @persistent_datastore_pattern,
       @cluster
     )
 
-    helper.verify_datastore_within_cluster(
+    verify_datastore_within_cluster(
       second_datastore_cpi.datacenter,
       'BOSH_VSPHERE_CPI_SECOND_DATASTORE',
       @second_datastore_within_cluster,
       @cluster
     )
 
-    cpi_instance = described_class.new(cpi_options)
-    helper.verify_non_overlapping_datastores(
+    cpi_instance = VSphereCloud::Cloud.new(cpi_options)
+    verify_non_overlapping_datastores(
       cpi_instance,
       @datastore_pattern,
       'BOSH_VSPHERE_CPI_DATASTORE_PATTERN',
@@ -109,8 +109,8 @@ module LifecycleProperties
       'BOSH_VSPHERE_CPI_PERSISTENT_DATASTORE_PATTERN'
     )
 
-    helper.verify_non_overlapping_datastores(
-      described_class.new(cpi_options),
+    verify_non_overlapping_datastores(
+      VSphereCloud::Cloud.new(cpi_options),
       @datastore_pattern,
       'BOSH_VSPHERE_CPI_DATASTORE_PATTERN',
       second_datastore_cpi,
@@ -118,14 +118,14 @@ module LifecycleProperties
       'BOSH_VSPHERE_CPI_SECOND_DATASTORE'
     )
 
-    helper.verify_datastore_within_cluster(
+    verify_datastore_within_cluster(
       datacenter,
       'BOSH_VSPHERE_CPI_SECOND_CLUSTER_DATASTORE',
       @second_cluster_datastore,
       @second_cluster
     )
 
-    helper.verify_datastore_pattern_available_to_all_hosts(
+    verify_datastore_pattern_available_to_all_hosts(
       cpi_options,
       'BOSH_VSPHERE_CPI_PERSISTENT_DATASTORE_PATTERN',
       @persistent_datastore_pattern,
@@ -169,6 +169,6 @@ module LifecycleProperties
       datastore_pattern: @second_datastore_within_cluster,
       persistent_datastore_pattern: @second_datastore_within_cluster
     )
-    described_class.new(options)
+    VSphereCloud::Cloud.new(options)
   end
 end
