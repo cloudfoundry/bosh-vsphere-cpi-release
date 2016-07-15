@@ -80,5 +80,5 @@ export BOSH_VSPHERE_VCENTER_PASSWORD=${BOSH_VSPHERE_CPI_PASSWORD}
 
 pushd "${release_dir}/src/vsphere_cpi"
   bundle install
-  bundle exec rspec spec/integration ${RSPEC_FLAGS}
+  bundle exec parallel_rspec -n 32 spec/integration ${RSPEC_FLAGS}
 popd
