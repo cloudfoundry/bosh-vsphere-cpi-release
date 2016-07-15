@@ -1,33 +1,6 @@
-require 'spec_helper'
-require 'tempfile'
-require 'yaml'
+require 'integration/spec_helper'
 
-describe VSphereCloud::Cloud, external_cpi: false do
-  include LifecycleProperties
-
-  before(:all) do
-    config = VSphereSpecConfig.new
-    config.logger = Logger.new(STDOUT)
-    config.logger.level = Logger::DEBUG
-    config.uuid = '123'
-    Bosh::Clouds::Config.configure(config)
-
-    @logger = config.logger
-
-    fetch_properties(LifecycleHelpers)
-    verify_properties(LifecycleHelpers)
-
-    @cpi = described_class.new(cpi_options)
-
-    Dir.mktmpdir do |temp_dir|
-      stemcell_image = LifecycleHelpers.stemcell_image(@stemcell_path, temp_dir)
-      @stemcell_id = @cpi.create_stemcell(stemcell_image, nil)
-    end
-  end
-
-  after(:all) do
-    delete_stemcell(@cpi, @stemcell_id)
-  end
+context 'exercising core CPI functionality' do
 
   let(:network_spec) do
     {
@@ -66,7 +39,7 @@ describe VSphereCloud::Cloud, external_cpi: false do
 
   context 'without existing disks' do
     it 'should exercise the vm lifecycle' do
-      vm_lifecycle(@cpi, [], resource_pool, network_spec)
+      vm_lifecycle(@cpi, [], resource_pool, network_spec, @stemcell_id)
     end
 
     context 'when resource_pool is set to the first cluster' do
@@ -114,9 +87,9 @@ describe VSphereCloud::Cloud, external_cpi: false do
           datastore_pattern: @second_cluster_datastore,
           persistent_datastore_pattern: @second_cluster_datastore
         )
-        second_cluster_cpi = described_class.new(options)
+        second_cluster_cpi = VSphereCloud::Cloud.new(options)
         resource_pool['datacenters'] = [{'name' => @datacenter_name, 'clusters' => [{@second_cluster => {}}]}]
-        vm_lifecycle(second_cluster_cpi, [], resource_pool, network_spec) do |vm_id|
+        vm_lifecycle(second_cluster_cpi, [], resource_pool, network_spec, @stemcell_id) do |vm_id|
           vm = second_cluster_cpi.vm_provider.find(vm_id)
           expect(vm.cluster).to eq(@second_cluster)
         end
@@ -129,7 +102,7 @@ describe VSphereCloud::Cloud, external_cpi: false do
     after { delete_disk(@cpi, @existing_volume_id) }
 
     it 'should exercise the vm lifecycle' do
-      vm_lifecycle(@cpi, [@existing_volume_id], resource_pool, network_spec)
+      vm_lifecycle(@cpi, [@existing_volume_id], resource_pool, network_spec, @stemcell_id)
     end
   end
 end

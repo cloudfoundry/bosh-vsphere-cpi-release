@@ -1,4 +1,4 @@
-require 'spec_helper'
+require 'integration/spec_helper'
 require 'open3'
 require 'tempfile'
 require 'yaml'
@@ -117,7 +117,7 @@ describe VSphereCloud::Cloud, external_cpi: true do
 
   describe 'logging' do
     let(:temp_dir) { Dir.mktmpdir('vsphere_cpi_test') }
-    let(:stemcell_image) { LifecycleHelpers.stemcell_image(ENV.fetch('BOSH_VSPHERE_STEMCELL'), temp_dir) }
+    let(:stemcell_img) { stemcell_image(ENV.fetch('BOSH_VSPHERE_STEMCELL'), temp_dir) }
 
     after do
       _ = external_cpi_response('delete_stemcell', @stemcell_id) if @stemcell_id
@@ -125,7 +125,7 @@ describe VSphereCloud::Cloud, external_cpi: true do
     end
 
     it 'logs http requests and responses' do
-      resp = external_cpi_response('create_stemcell', stemcell_image, nil)
+      resp = external_cpi_response('create_stemcell', stemcell_img, nil)
       expect(resp['error']).to be_nil
       expect(resp['result']).to_not be_nil
       @stemcell_id = resp['result']
