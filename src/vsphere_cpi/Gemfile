@@ -9,13 +9,14 @@ gem 'httpclient',  '=2.7.1'
 gem 'mono_logger', '~>1.1.0'
 
 group :development, :test do
-  gem 'simplecov', :require => false
-  gem 'timecop', '~>0.7.1'
+  gem 'fakefs'
+  gem 'parallel_tests'
+  gem 'pry'
+  gem 'rack', '~> 1.6.4'
   gem 'rake', '~>10.0'
   gem 'rspec', '~> 3.0'
-  gem 'rspec-its'
   gem 'rspec-instafail'
-  gem 'fakefs'
-  gem "rack", "~> 1.6.4"
-  gem "pry"
+  gem 'rspec-its'
+  gem 'simplecov', :require => false
+  gem 'timecop', '~>0.7.1'
 end
