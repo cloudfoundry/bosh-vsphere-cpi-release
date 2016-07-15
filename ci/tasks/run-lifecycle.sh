@@ -41,7 +41,7 @@ fi
 : ${BOSH_VSPHERE_CPI_SINGLE_LOCAL_DATASTORE_PATTERN:=""}
 : ${BOSH_VSPHERE_CPI_MULTI_LOCAL_DATASTORE_PATTERN:=""}
 : ${BOSH_VSPHERE_CPI_SECOND_CLUSTER_LOCAL_DATASTORE:=""}
-: ${RSPEC_FLAGS:=""}
+: ${PARALLEL_RSPEC_FLAGS:=""}
 
 install_mkisofs() {
   pushd "${release_dir}"
@@ -80,5 +80,5 @@ export BOSH_VSPHERE_VCENTER_PASSWORD=${BOSH_VSPHERE_CPI_PASSWORD}
 
 pushd "${release_dir}/src/vsphere_cpi"
   bundle install
-  bundle exec parallel_rspec -n 32 spec/integration ${RSPEC_FLAGS}
+  bundle exec parallel_rspec ${PARALLEL_RSPEC_FLAGS} spec/integration
 popd
