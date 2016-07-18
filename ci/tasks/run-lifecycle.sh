@@ -40,7 +40,7 @@ fi
 : ${BOSH_VSPHERE_CPI_SINGLE_LOCAL_DATASTORE_PATTERN:=""}
 : ${BOSH_VSPHERE_CPI_MULTI_LOCAL_DATASTORE_PATTERN:=""}
 : ${BOSH_VSPHERE_CPI_SECOND_CLUSTER_LOCAL_DATASTORE:=""}
-: ${PARALLEL_RSPEC_FLAGS:=""}
+: ${RSPEC_FLAGS:=""}
 : ${BOSH_VSPHERE_STEMCELL:=""}
 
 if [ -z "${BOSH_VSPHERE_STEMCELL}" ]; then
@@ -85,5 +85,5 @@ export BOSH_VSPHERE_VCENTER_PASSWORD=${BOSH_VSPHERE_CPI_PASSWORD}
 
 pushd "${release_dir}/src/vsphere_cpi"
   bundle install
-  bundle exec parallel_rspec ${PARALLEL_RSPEC_FLAGS} spec/integration
+  bundle exec parallel_rspec --serialize-stdout -- ${RSPEC_FLAGS} -- spec/integration
 popd
