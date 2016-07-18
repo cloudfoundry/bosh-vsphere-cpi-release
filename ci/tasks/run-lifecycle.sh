@@ -4,7 +4,6 @@ set -e
 
 release_dir="$( cd $(dirname $0) && cd ../.. && pwd )"
 workspace_dir="$( cd ${release_dir} && cd .. && pwd )"
-stemcell_dir="$( cd ${workspace_dir}/stemcell && pwd )"
 
 if [ -f /etc/profile.d/chruby.sh ]; then
   source /etc/profile.d/chruby.sh
@@ -42,6 +41,12 @@ fi
 : ${BOSH_VSPHERE_CPI_MULTI_LOCAL_DATASTORE_PATTERN:=""}
 : ${BOSH_VSPHERE_CPI_SECOND_CLUSTER_LOCAL_DATASTORE:=""}
 : ${PARALLEL_RSPEC_FLAGS:=""}
+: ${BOSH_VSPHERE_STEMCELL:=""}
+
+if [ -z "${BOSH_VSPHERE_STEMCELL}" ]; then
+  stemcell_dir="$( cd ${workspace_dir}/stemcell && pwd )"
+  BOSH_VSPHERE_STEMCELL=${stemcell_dir}/stemcell.tgz
+fi
 
 install_mkisofs() {
   pushd "${release_dir}"
@@ -73,7 +78,7 @@ if [ ${util_exists} != 0 ]; then
   install_mkisofs
 fi
 
-export BOSH_VSPHERE_STEMCELL=${stemcell_dir}/stemcell.tgz
+export BOSH_VSPHERE_STEMCELL
 export BOSH_VSPHERE_VCENTER=${BOSH_VSPHERE_CPI_HOST}
 export BOSH_VSPHERE_VCENTER_USER=${BOSH_VSPHERE_CPI_USER}
 export BOSH_VSPHERE_VCENTER_PASSWORD=${BOSH_VSPHERE_CPI_PASSWORD}

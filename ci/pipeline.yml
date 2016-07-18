@@ -61,7 +61,7 @@ jobs:
         tags: ["vsphere-v5.1"]
         file: bosh-cpi-src/ci/tasks/run-lifecycle.yml
         params:
-          PARALLEL_RSPEC_FLAGS:                                 "--serialize-stdout -n 4 -- --tag ~host_local --"
+          PARALLEL_RSPEC_FLAGS:                                 "--serialize-stdout -- --tag ~host_local --"
           BOSH_VSPHERE_VERSION:                                 {{lifecycle_vsphere_5_1_version}}
           BOSH_VSPHERE_CPI_HOST:                                {{lifecycle_vsphere_5_1_host}}
           BOSH_VSPHERE_CPI_USER:                                {{lifecycle_vsphere_5_1_user}}
@@ -98,7 +98,7 @@ jobs:
         tags: ["vsphere-v5.1"]
         file: bosh-cpi-src/ci/tasks/run-lifecycle.yml
         params: &lifecycle-6-params
-          PARALLEL_RSPEC_FLAGS:                                 "--serialize-stdout -n 4"
+          PARALLEL_RSPEC_FLAGS:                                 "--serialize-stdout"
           BOSH_VSPHERE_VERSION:                                 {{lifecycle_vsphere_6_0_version}}
           BOSH_VSPHERE_CPI_HOST:                                {{lifecycle_vsphere_6_0_host}}
           BOSH_VSPHERE_CPI_USER:                                {{lifecycle_vsphere_6_0_user}}
