@@ -130,6 +130,14 @@ module LifecycleHelpers
     'InventoryService.Tagging.EditTag',
   ]
 
+  def setup_config
+    vsphere_config = VSphereSpecConfig.new
+    vsphere_config.logger = Logger.new(STDOUT)
+    vsphere_config.logger.level = Logger::DEBUG
+    vsphere_config.uuid = '123'
+    Bosh::Clouds::Config.configure(vsphere_config)
+  end
+
   def fetch_property(key)
     fail "Missing Environment variable #{key}: #{MISSING_KEY_MESSAGES[key]}" unless(ENV.has_key?(key))
     value = ENV[key]

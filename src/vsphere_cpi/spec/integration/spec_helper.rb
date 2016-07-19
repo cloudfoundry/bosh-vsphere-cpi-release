@@ -1,30 +1,37 @@
 require 'spec_helper'
 
-RSpec.configure do |config|
+RSpec.configure do |rspec_config|
   include LifecycleProperties
-  config.include LifecycleHelpers
+  include LifecycleHelpers
 
-  config.before(:all) do
-    config = VSphereSpecConfig.new
-    config.logger = Logger.new(STDOUT)
-    config.logger.level = Logger::DEBUG
-    config.uuid = '123'
-    Bosh::Clouds::Config.configure(config)
+  # before(:suite) and before(:all) seem to run in different contexts
+  # so we can't assign directly to @stemcell; using a closure instead
+  stemcell_id = nil
 
-    @logger = config.logger
+  rspec_config.before(:suite) do
+    setup_config
+    fetch_properties
+    verify_properties
 
+    @suite_cpi = VSphereCloud::Cloud.new(cpi_options)
+
+    Dir.mktmpdir do |temp_dir|
+      stemcell_image = stemcell_image(@stemcell_path, temp_dir)
+      # stemcell uploads are slow on local vSphere, only upload once
+      stemcell_id = @suite_cpi.create_stemcell(stemcell_image, nil)
+    end
+  end
+
+  rspec_config.before(:all) do
+    setup_config
     fetch_properties
     verify_properties
 
     @cpi = VSphereCloud::Cloud.new(cpi_options)
-
-    Dir.mktmpdir do |temp_dir|
-      stemcell_image = stemcell_image(@stemcell_path, temp_dir)
-      @stemcell_id = @cpi.create_stemcell(stemcell_image, nil)
-    end
+    @stemcell_id = stemcell_id
   end
 
-  config.after(:all) do
-    delete_stemcell(@cpi, @stemcell_id)
+  rspec_config.after(:suite) do
+    delete_stemcell(@suite_cpi, stemcell_id)
   end
 end
