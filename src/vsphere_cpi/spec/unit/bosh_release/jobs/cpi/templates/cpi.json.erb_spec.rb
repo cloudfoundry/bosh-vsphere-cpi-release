@@ -206,6 +206,41 @@ describe 'cpi.json.erb' do
       end
     end
   end
+
+  context 'when using a local blobstore' do
+    let(:rendered_blobstore) { subject['cloud']['properties']['agent']['blobstore'] }
+
+    context 'when provided a minimal configuration' do
+      before do
+        manifest['properties']['blobstore'].merge!({
+          'provider' => 'local',
+          'path' => '/fake/path',
+        })
+      end
+
+      it 'renders the local provider section with the correct defaults' do
+        expect(rendered_blobstore).to eq(
+          {
+            'provider' => 'local',
+            'options' => {
+              'blobstore_path' => '/fake/path',
+            }
+          }
+        )
+      end
+    end
+    context 'when provided an incomplete configuration' do
+      before do
+        manifest['properties']['blobstore'].merge!({
+          'provider' => 'local',
+        })
+      end
+
+      it 'raises an error' do
+        expect { rendered_blobstore }.to raise_error(/Can't find property 'blobstore.path'/)
+      end
+    end
+  end
 end
 
 class TemplateEvaluationContext
