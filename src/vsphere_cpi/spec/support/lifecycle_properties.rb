@@ -93,27 +93,24 @@ module LifecycleProperties
     )
 
     verify_datastore_within_cluster(
-      second_datastore_cpi.datacenter,
+      datacenter,
       'BOSH_VSPHERE_CPI_SECOND_DATASTORE',
       @second_datastore_within_cluster,
       @cluster
     )
 
-    cpi_instance = VSphereCloud::Cloud.new(cpi_options)
     verify_non_overlapping_datastores(
-      cpi_instance,
+      datacenter,
       @datastore_pattern,
       'BOSH_VSPHERE_CPI_DATASTORE_PATTERN',
-      cpi_instance,
       @persistent_datastore_pattern,
       'BOSH_VSPHERE_CPI_PERSISTENT_DATASTORE_PATTERN'
     )
 
     verify_non_overlapping_datastores(
-      VSphereCloud::Cloud.new(cpi_options),
+      datacenter,
       @datastore_pattern,
       'BOSH_VSPHERE_CPI_DATASTORE_PATTERN',
-      second_datastore_cpi,
       @second_datastore_within_cluster,
       'BOSH_VSPHERE_CPI_SECOND_DATASTORE'
     )
@@ -162,13 +159,5 @@ module LifecycleProperties
         }]
       }]
     }
-  end
-
-  def second_datastore_cpi
-    options = cpi_options(
-      datastore_pattern: @second_datastore_within_cluster,
-      persistent_datastore_pattern: @second_datastore_within_cluster
-    )
-    VSphereCloud::Cloud.new(options)
   end
 end

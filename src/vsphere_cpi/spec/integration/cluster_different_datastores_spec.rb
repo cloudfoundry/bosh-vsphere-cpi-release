@@ -24,7 +24,18 @@ context 'given cpis that are configured to use same cluster but different datast
   end
 
   let(:first_datastore_cpi) do
-    options = cpi_options(persistent_datastore_pattern: @datastore_pattern)
+    options = cpi_options(
+      datastore_pattern: @datastore_pattern,
+      persistent_datastore_pattern: @datastore_pattern,
+    )
+    VSphereCloud::Cloud.new(options)
+  end
+
+  let(:second_datastore_cpi) do
+    options = cpi_options(
+      datastore_pattern: @second_datastore_within_cluster,
+      persistent_datastore_pattern: @second_datastore_within_cluster,
+    )
     VSphereCloud::Cloud.new(options)
   end
 
@@ -48,30 +59,24 @@ context 'given cpis that are configured to use same cluster but different datast
     expect(disk.datastore.name).to match(@datastore_pattern)
   end
 
-  after {
+  after do
     delete_vm(first_datastore_cpi, @vm_id)
     delete_disk(first_datastore_cpi, @disk_id)
-  }
+  end
 
-  it 'can exercise lifecycle with the cpi configured with a new datastore pattern' do
-    # second cpi can see disk in datastore outside of its datastore pattern
-    expect(second_datastore_cpi.has_disk?(@disk_id)).to be(true)
+  it 'can exercise lifecycle with the cpi configured with a non-overlapping datastore pattern' do
+    begin
+      expect(second_datastore_cpi.has_disk?(@disk_id)).to be(true)
 
-    first_datastore_cpi.attach_disk(@vm_id, @disk_id)
+      first_datastore_cpi.attach_disk(@vm_id, @disk_id)
 
-    second_datastore_cpi.detach_disk(@vm_id, @disk_id)
+      second_datastore_cpi.detach_disk(@vm_id, @disk_id)
 
-    second_datastore_cpi.delete_vm(@vm_id)
-    expect {
-      first_datastore_cpi.vm_provider.find(@vm_id)
-    }.to raise_error(Bosh::Clouds::VMNotFound)
-    @vm_id = nil
-
-    second_datastore_cpi.delete_disk(@disk_id)
-    expect {
-      first_datastore_cpi.datacenter.find_disk(@disk_id)
-    }.to raise_error(Bosh::Clouds::DiskNotFound)
-    @disk_id = nil
+      expect(second_datastore_cpi.has_disk?(@disk_id)).to be(true)
+    ensure
+      second_datastore_cpi.delete_vm(@vm_id)
+      second_datastore_cpi.delete_disk(@disk_id)
+    end
   end
 
   it '#attach_disk can move the disk to the new datastore pattern' do

@@ -243,9 +243,9 @@ module LifecycleHelpers
     fail "Invalid Environment variable '#{env_var_name}': #{e.message}"
   end
 
-  def verify_non_overlapping_datastores(cpi_1, pattern_1, env_var_name_1, cpi_2, pattern_2, env_var_name_2)
-    datastore_ids_1 = matching_datastores(cpi_1.datacenter, pattern_1).map { |k, v| [k, v.mob.to_s] }
-    datastore_ids_2 = matching_datastores(cpi_2.datacenter, pattern_2).map { |k, v| [k, v.mob.to_s] }
+  def verify_non_overlapping_datastores(datacenter, pattern_1, env_var_name_1, pattern_2, env_var_name_2)
+    datastore_ids_1 = matching_datastores(datacenter, pattern_1).map { |k, v| [k, v.mob.to_s] }
+    datastore_ids_2 = matching_datastores(datacenter, pattern_2).map { |k, v| [k, v.mob.to_s] }
     overlapping_datastore_ids = datastore_ids_1 & datastore_ids_2
     if (!overlapping_datastore_ids.empty?)
       fail("There were overlapping datastores (#{overlapping_datastore_ids.map(&:first).inspect}) found matching /#{pattern_1}/ and /#{pattern_2}/ which came from Environment variables '#{env_var_name_1}' and '#{env_var_name_2}' respectively.")
