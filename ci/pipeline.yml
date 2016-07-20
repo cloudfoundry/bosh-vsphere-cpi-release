@@ -6,7 +6,6 @@ groups:
       - build-candidate
       - lifecycle-5.1
       - lifecycle-6.0
-      - lifecycle-6.0-vsan
       - bats
       - promote-candidate
 
@@ -61,7 +60,7 @@ jobs:
         tags: ["vsphere-v5.1"]
         file: bosh-cpi-src/ci/tasks/run-lifecycle.yml
         params:
-          RSPEC_FLAGS:                                          "--tag ~host_local" # fiveone env doesn't have host-local disks
+          RSPEC_FLAGS:                                          "--tag ~host_local --tag ~vsan_datastore" # fiveone env doesn't have local or vsan datastore hardware
           BOSH_VSPHERE_VERSION:                                 {{lifecycle_vsphere_5_1_version}}
           BOSH_VSPHERE_CPI_HOST:                                {{lifecycle_vsphere_5_1_host}}
           BOSH_VSPHERE_CPI_USER:                                {{lifecycle_vsphere_5_1_user}}
@@ -125,21 +124,7 @@ jobs:
           BOSH_VSPHERE_CPI_NESTED_DATACENTER_CLUSTER:           {{lifecycle_vsphere_6_0_nested_datacenter_cluster}}
           BOSH_VSPHERE_CPI_NESTED_DATACENTER_RESOURCE_POOL:     {{lifecycle_vsphere_6_0_nested_datacenter_resource_pool}}
           BOSH_VSPHERE_CPI_NESTED_DATACENTER_VLAN:              {{lifecycle_vsphere_6_0_nested_datacenter_vlan}}
-
-  - name: lifecycle-6.0-vsan
-    plan:
-      - aggregate:
-        - {trigger: true,  passed: [build-candidate], get: bosh-cpi-artifacts, tags: ["vsphere-v5.1"]} # used for job chaining only not for tasks
-        - {trigger: false, passed: [build-candidate], get: bosh-cpi-src, tags: ["vsphere-v5.1"]}
-        - {trigger: false,                            get: stemcell, resource: vsphere-ubuntu-stemcell, tags: ["vsphere-v5.1"]}
-
-      - task: test
-        tags: ["vsphere-v5.1"]
-        file: bosh-cpi-src/ci/tasks/run-lifecycle.yml
-        params:
-          <<: *lifecycle-6-params
-          BOSH_VSPHERE_CPI_DATASTORE_PATTERN:                   {{lifecycle_vsphere_6_0_vsan_datastore_pattern_available_to_all_hosts_in_first_cluster}}
-          BOSH_VSPHERE_CPI_SECOND_CLUSTER_DATASTORE:            {{lifecycle_vsphere_6_0_vsan_datastore_pattern_available_to_all_hosts_in_second_cluster}}
+          BOSH_VSPHERE_CPI_VSAN_DATASTORE_PATTERN:              {{lifecycle_vsphere_6_0_vsan_datastore_pattern_available_to_all_hosts_in_first_cluster}}
 
   - name: bats
     serial: true
@@ -206,8 +191,8 @@ jobs:
     plan:
     - aggregate:
       # temporarily remove VSAN passed constraint as environment is having issues
-      - {trigger: false, passed: [lifecycle-5.1, lifecycle-6.0, lifecycle-6.0-vsan, bats], get: bosh-cpi-artifacts, tags: ["vsphere-v5.1"]}
-      - {trigger: false, passed: [lifecycle-5.1, lifecycle-6.0, lifecycle-6.0-vsan, bats], get: bosh-cpi-src, tags: ["vsphere-v5.1"]}
+      - {trigger: false, passed: [lifecycle-5.1, lifecycle-6.0, bats], get: bosh-cpi-artifacts, tags: ["vsphere-v5.1"]}
+      - {trigger: false, passed: [lifecycle-5.1, lifecycle-6.0, bats], get: bosh-cpi-src, tags: ["vsphere-v5.1"]}
       - {trigger: false, get: release-version-semver, params: {bump: major}, tags: ["vsphere-v5.1"]}
 
     - task: promote

@@ -263,9 +263,11 @@ module LifecycleHelpers
     end
   end
 
-  def any_vsan?(cpi, pattern)
-    datastores = matching_datastores(cpi.datacenter, pattern)
-    datastores.any? { |datastore_name, _| is_vsan?(cpi, datastore_name)}
+  def verify_vsan_datastore(cpi_options, datastore_name, env_var_name)
+    cpi = VSphereCloud::Cloud.new(cpi_options)
+    unless is_vsan?(cpi, datastore_name)
+      fail("datastore: '#{datastore_name}' is not of type 'vsan'. The datasore pattern came from the environment varible:'#{env_var_name}'.")
+    end
   end
 
   def is_vsan?(cpi, datastore_name)
@@ -387,6 +389,15 @@ module LifecycleHelpers
     rescue Bosh::Clouds::DiskNotFound => e
       cpi.logger.info("Failure: 'delete_disk' for Disk ID: #{disk_id.inspect}. Error: #{e.inspect}")
     end
+  end
+
+  def upload_stemcell(cpi)
+    stemcell_id = nil
+    Dir.mktmpdir do |temp_dir|
+      stemcell_image = stemcell_image(@stemcell_path, temp_dir)
+      stemcell_id = cpi.create_stemcell("#{temp_dir}/image", nil)
+    end
+    stemcell_id
   end
 
   def delete_stemcell(cpi, stemcell_id)

@@ -33,7 +33,6 @@ context 'when disk is in non-accessible datastore' do
   it 'creates disk in accessible datastore' do
     begin
       accessible_datastores = datastores_accessible_from_cluster(@cpi, @cluster)
-      expect(accessible_datastores).to_not include(@second_cluster_datastore)
 
       vm_id = create_vm_with_cpi(cpi_for_vm, @stemcell_id)
       expect(vm_id).to_not be_nil
