@@ -41,7 +41,14 @@ fi
 : ${BOSH_VSPHERE_CPI_MULTI_LOCAL_DATASTORE_PATTERN:=""}
 : ${BOSH_VSPHERE_CPI_SECOND_CLUSTER_LOCAL_DATASTORE:=""}
 : ${RSPEC_FLAGS:=""}
+: ${RSPEC_ARGS:="spec/integration"}
 : ${BOSH_VSPHERE_STEMCELL:=""}
+
+# allow user to pass paths to spec files relative to src/vsphere_cpi
+# e.g. ./run-lifecycle.sh spec/integration/core_spec.rb
+if [ "$#" -ne 0 ]; then
+  RSPEC_ARGS="$@"
+fi
 
 if [ -z "${BOSH_VSPHERE_STEMCELL}" ]; then
   stemcell_dir="$( cd ${workspace_dir}/stemcell && pwd )"
@@ -85,5 +92,5 @@ export BOSH_VSPHERE_VCENTER_PASSWORD=${BOSH_VSPHERE_CPI_PASSWORD}
 
 pushd "${release_dir}/src/vsphere_cpi"
   bundle install
-  bundle exec parallel_rspec --serialize-stdout -- ${RSPEC_FLAGS} -- spec/integration/
+  bundle exec parallel_rspec --serialize-stdout -- ${RSPEC_FLAGS} -- ${RSPEC_ARGS}
 popd
