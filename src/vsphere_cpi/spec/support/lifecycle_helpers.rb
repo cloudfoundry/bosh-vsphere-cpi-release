@@ -139,9 +139,9 @@ module LifecycleHelpers
   end
 
   def fetch_property(key)
-    fail "Missing Environment variable #{key}: #{MISSING_KEY_MESSAGES[key]}" unless(ENV.has_key?(key))
+    fail "Missing Environment variable #{key}: #{MISSING_KEY_MESSAGES[key]}" unless (ENV.has_key?(key))
     value = ENV[key]
-    fail "Environment variable #{key} must not be blank: #{MISSING_KEY_MESSAGES[key]}" if(value =~ /^\s*$/)
+    fail "Environment variable #{key} must not be blank: #{MISSING_KEY_MESSAGES[key]}" if (value =~ /^\s*$/)
     value
   end
 
@@ -156,14 +156,16 @@ module LifecycleHelpers
     fail("vSphere version #{expected_version} required. Found #{actual_version}.") if expected_version != actual_version
   end
 
-  def verify_datastore_within_cluster(datacenter, env_var_name, datastore_pattern, cluster_name)
-    cluster = datacenter.find_cluster(cluster_name)
+  def verify_datastore_within_cluster(cpi_options, env_var_name, datastore_pattern, cluster_name)
+    cpi = VSphereCloud::Cloud.new(cpi_options)
+    cluster = cpi.datacenter.find_cluster(cluster_name)
     datastores = matching_datastores_in_cluster(cluster, datastore_pattern)
     fail("Invalid Environment variable '#{env_var_name}': No datastores found matching /#{datastore_pattern}/. #{MISSING_KEY_MESSAGES[env_var_name]}") if (datastores.empty?)
   end
 
-  def verify_cluster(datacenter, cluster_name, env_var_name)
-    datacenter.find_cluster(cluster_name)
+  def verify_cluster(cpi_options, cluster_name, env_var_name)
+    cpi = VSphereCloud::Cloud.new(cpi_options)
+    cpi.datacenter.find_cluster(cluster_name)
   rescue RuntimeError => e
     fail("#{e.message}\n#{env_var_name}: #{MISSING_KEY_MESSAGES[env_var_name]}")
   end
@@ -173,7 +175,7 @@ module LifecycleHelpers
     nonlocal_disk_datastores = all_matching_datastores.select { |_, datastore| datastore.mob.summary.multiple_host_access }
     unless (nonlocal_disk_datastores.empty?)
       fail(
-      <<-EOF
+        <<-EOF
       Some datastores found maching `#{env_var_name}`(/#{local_datastore_pattern}/)
       are configured to allow multiple hosts to access them:
       #{nonlocal_disk_datastores}.
@@ -216,10 +218,13 @@ module LifecycleHelpers
     fail "Invalid Environment variable '#{env_var_name}': Datacenter '#{datacenter_name}'  is not in subfolder" if root_folder.to_str == datacenter_parent.to_str
   end
 
-  def verify_resource_pool(cluster, resource_pool_name, env_var_name)
-    cluster.resource_pool.mob
-  rescue
-    fail "Invalid Environment variable '#{env_var_name}': No resource pool named '#{resource_pool_name}' found in cluster named '#{cluster.name}'"
+  def verify_resource_pool(cpi_options, cluster_name, resource_pool_name, env_var_name)
+    cpi = VSphereCloud::Cloud.new(cpi_options)
+    cluster = cpi.datacenter.find_cluster(cluster_name)
+
+    unless cluster.resource_pool.name == resource_pool_name
+      fail "Invalid Environment variable '#{env_var_name}': Expected resource pool on cluster '#{cluster_name}' to be '#{resource_pool_name}', but was '#{cluster.resource_pool.name}'"
+    end
   end
 
   def stemcell_image(stemcell_path, destination_dir)
@@ -254,11 +259,11 @@ module LifecycleHelpers
 
   def verify_datastore_pattern_available_to_all_hosts(cpi_options, env_var_name, datastore_pattern)
     cpi = VSphereCloud::Cloud.new(cpi_options)
-    datastore_pattern_regex =  Regexp.new(datastore_pattern)
+    datastore_pattern_regex = Regexp.new(datastore_pattern)
     cpi.datacenter.clusters.values.each do |cluster|
       cluster.mob.host.each do |host_mob|
         datastore_names = host_mob.datastore.map(&:name)
-        fail("host: '#{host_mob.name}' does not have any datastores matching pattern /#{datastore_pattern}/. Found datastores are #{datastore_names.inspect}. The datasore pattern came from the environment varible:'#{env_var_name}'. #{MISSING_KEY_MESSAGES[env_var_name]}") unless datastore_names.any?{ |name| name =~ datastore_pattern_regex }
+        fail("host: '#{host_mob.name}' does not have any datastores matching pattern /#{datastore_pattern}/. Found datastores are #{datastore_names.inspect}. The datasore pattern came from the environment varible:'#{env_var_name}'. #{MISSING_KEY_MESSAGES[env_var_name]}") unless datastore_names.any? { |name| name =~ datastore_pattern_regex }
       end
     end
   end
@@ -287,7 +292,8 @@ module LifecycleHelpers
     cluster.accessible_datastores.select { |ds_name| ds_name =~ /#{pattern}/ }
   end
 
-  class VMWareToolsNotFound < StandardError; end
+  class VMWareToolsNotFound < StandardError;
+  end
 
   def block_on_vmware_tools(cpi, vm_name)
     # wait for vsphere tools to be detected by vCenter :(
@@ -314,12 +320,12 @@ module LifecycleHelpers
   def vm_lifecycle(cpi, disk_locality, resource_pool, network_spec, stemcell_id)
     disk_attached = false
     vm_id = cpi.create_vm(
-    'agent-007',
-    stemcell_id,
-    resource_pool,
-    network_spec,
-    disk_locality,
-    {'key' => 'value'}
+      'agent-007',
+      stemcell_id,
+      resource_pool,
+      network_spec,
+      disk_locality,
+      {'key' => 'value'}
     )
 
     expect(vm_id).to_not be_nil
@@ -358,12 +364,12 @@ module LifecycleHelpers
 
   def create_vm_with_cpi(cpi, stemcell_id)
     cpi.create_vm(
-    'agent-007',
-    stemcell_id,
-    resource_pool,
-    network_spec,
-    [],
-    {}
+      'agent-007',
+      stemcell_id,
+      resource_pool,
+      network_spec,
+      [],
+      {}
     )
   end
 
@@ -438,7 +444,7 @@ module LifecycleHelpers
     all_privileges = cpi.client.service_content.authorization_manager.privilege_list.map(&:priv_id)
     current_session_id = cpi.client.service_content.session_manager.current_session.key
     privileges_response =
-    cpi.client.service_content.authorization_manager.has_privilege_on_entity(entity, current_session_id, all_privileges)
+      cpi.client.service_content.authorization_manager.has_privilege_on_entity(entity, current_session_id, all_privileges)
     Hash[all_privileges.zip(privileges_response)].select { |_, privelege| privelege }.keys
   end
 end

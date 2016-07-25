@@ -51,21 +51,21 @@ describe 'host-local storage patterns', :host_local => true do
     )
 
     verify_datastore_within_cluster(
-      datacenter,
+      cpi_options,
       'BOSH_VSPHERE_CPI_SINGLE_LOCAL_DATASTORE_PATTERN',
       @single_local_ds_pattern,
       @cluster
     )
 
     verify_datastore_within_cluster(
-      datacenter,
+      cpi_options,
       'BOSH_VSPHERE_CPI_MULTI_LOCAL_DATASTORE_PATTERN',
       @multi_local_ds_pattern,
       @cluster
     )
 
     verify_datastore_within_cluster(
-      datacenter,
+      cpi_options,
       'BOSH_VSPHERE_CPI_SECOND_CLUSTER_LOCAL_DATASTORE',
       @second_cluster_local_datastore,
       @second_cluster

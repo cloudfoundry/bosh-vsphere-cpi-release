@@ -15,6 +15,10 @@ module VSphereCloud
         @client = client
       end
 
+      def name
+        mob.name
+      end
+
       def mob
         return @mob if @mob
 
