@@ -6,7 +6,6 @@ module LifecycleProperties
     @vlan = fetch_property('BOSH_VSPHERE_VLAN')
     @stemcell_path = fetch_property('BOSH_VSPHERE_STEMCELL')
 
-    @second_datastore_within_cluster = fetch_property('BOSH_VSPHERE_CPI_SECOND_DATASTORE')
     @second_resource_pool_within_cluster = fetch_property('BOSH_VSPHERE_CPI_SECOND_RESOURCE_POOL')
 
     @datacenter_name = fetch_property('BOSH_VSPHERE_CPI_DATACENTER')
@@ -15,7 +14,6 @@ module LifecycleProperties
     @disk_path = fetch_property('BOSH_VSPHERE_CPI_DISK_PATH')
 
     @datastore_pattern = fetch_property('BOSH_VSPHERE_CPI_DATASTORE_PATTERN')
-    @persistent_datastore_pattern = fetch_property('BOSH_VSPHERE_CPI_PERSISTENT_DATASTORE_PATTERN')
     @inactive_datastore_pattern = fetch_property('BOSH_VSPHERE_CPI_INACTIVE_DATASTORE_PATTERN')
     @cluster = fetch_property('BOSH_VSPHERE_CPI_CLUSTER')
     @resource_pool_name = fetch_property('BOSH_VSPHERE_CPI_RESOURCE_POOL')
@@ -37,7 +35,6 @@ module LifecycleProperties
     verify_vlan(cpi_options, @vlan, 'BOSH_VSPHERE_VLAN')
     verify_user_has_limited_permissions(cpi_options)
 
-    datacenter = VSphereCloud::Cloud.new(cpi_options).datacenter
     verify_cluster(cpi_options, @cluster, 'BOSH_VSPHERE_CPI_CLUSTER')
     verify_resource_pool(cpi_options, @cluster, @resource_pool_name, 'BOSH_VSPHERE_CPI_RESOURCE_POOL')
     verify_cluster(cpi_options, @second_cluster, 'BOSH_VSPHERE_CPI_SECOND_CLUSTER')
@@ -54,51 +51,21 @@ module LifecycleProperties
 
     verify_datastore_within_cluster(
       cpi_options,
-      'BOSH_VSPHERE_CPI_PERSISTENT_DATASTORE_PATTERN',
-      @persistent_datastore_pattern,
-      @cluster
-    )
-
-    verify_datastore_within_cluster(
-      cpi_options,
-      'BOSH_VSPHERE_CPI_SECOND_DATASTORE',
-      @second_datastore_within_cluster,
-      @cluster
-    )
-
-    verify_non_overlapping_datastores(
-      datacenter,
-      @datastore_pattern,
-      'BOSH_VSPHERE_CPI_DATASTORE_PATTERN',
-      @persistent_datastore_pattern,
-      'BOSH_VSPHERE_CPI_PERSISTENT_DATASTORE_PATTERN'
-    )
-
-    verify_non_overlapping_datastores(
-      datacenter,
-      @datastore_pattern,
-      'BOSH_VSPHERE_CPI_DATASTORE_PATTERN',
-      @second_datastore_within_cluster,
-      'BOSH_VSPHERE_CPI_SECOND_DATASTORE'
-    )
-
-    verify_datastore_within_cluster(
-      cpi_options,
       'BOSH_VSPHERE_CPI_SECOND_CLUSTER_DATASTORE',
       @second_cluster_datastore,
       @second_cluster
-    )
-
-    verify_datastore_pattern_available_to_all_hosts(
-      cpi_options,
-      'BOSH_VSPHERE_CPI_PERSISTENT_DATASTORE_PATTERN',
-      @persistent_datastore_pattern,
     )
   end
 
   def fetch_and_verify_datastore(env_var, cluster_name)
     datastore = fetch_property(env_var)
     verify_datastore_within_cluster(
+      cpi_options,
+      env_var,
+      datastore,
+      cluster_name
+    )
+    verify_datastore_pattern_available_to_all_hosts(
       cpi_options,
       env_var,
       datastore,
@@ -127,7 +94,7 @@ module LifecycleProperties
 
   def cpi_options(options = {})
     datastore_pattern = options.fetch(:datastore_pattern, @datastore_pattern)
-    persistent_datastore_pattern = options.fetch(:persistent_datastore_pattern, @persistent_datastore_pattern)
+    persistent_datastore_pattern = options.fetch(:persistent_datastore_pattern, @datastore_pattern)
     default_clusters = [
       { @cluster => {'resource_pool' => @resource_pool_name} },
       { @second_cluster => {'resource_pool' => @second_cluster_resource_pool_name } },

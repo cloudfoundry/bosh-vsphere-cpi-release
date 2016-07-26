@@ -260,14 +260,13 @@ module LifecycleHelpers
     end
   end
 
-  def verify_datastore_pattern_available_to_all_hosts(cpi_options, env_var_name, datastore_pattern)
+  def verify_datastore_pattern_available_to_all_hosts(cpi_options, env_var_name, datastore_pattern, cluster_name)
     cpi = VSphereCloud::Cloud.new(cpi_options)
     datastore_pattern_regex = Regexp.new(datastore_pattern)
-    cpi.datacenter.clusters.values.each do |cluster|
-      cluster.mob.host.each do |host_mob|
-        datastore_names = host_mob.datastore.map(&:name)
-        fail("host: '#{host_mob.name}' does not have any datastores matching pattern /#{datastore_pattern}/. Found datastores are #{datastore_names.inspect}. The datasore pattern came from the environment varible:'#{env_var_name}'. #{MISSING_KEY_MESSAGES[env_var_name]}") unless datastore_names.any? { |name| name =~ datastore_pattern_regex }
-      end
+    cluster = cpi.datacenter.clusters[cluster_name]
+    cluster.mob.host.each do |host_mob|
+      datastore_names = host_mob.datastore.map(&:name)
+      fail("host: '#{host_mob.name}' does not have any datastores matching pattern /#{datastore_pattern}/. Found datastores are #{datastore_names.inspect}. The datasore pattern came from the environment varible:'#{env_var_name}'. #{MISSING_KEY_MESSAGES[env_var_name]}") unless datastore_names.any? { |name| name =~ datastore_pattern_regex }
     end
   end
 
