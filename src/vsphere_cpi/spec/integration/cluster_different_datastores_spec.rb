@@ -1,6 +1,18 @@
 require 'integration/spec_helper'
 
 context 'given cpis that are configured to use same cluster but different datastores' do
+  before (:all) do
+    @cluster_name = fetch_and_verify_cluster('BOSH_VSPHERE_CPI_CLUSTER')
+    @datastore_pattern = fetch_and_verify_datastore('BOSH_VSPHERE_CPI_SECOND_DATASTORE', @cluster_name)
+    @second_datastore = fetch_and_verify_datastore('BOSH_VSPHERE_CPI_SECOND_DATASTORE', @cluster_name)
+    verify_non_overlapping_datastores(
+      cpi_options,
+      @datastore_pattern,
+      'BOSH_VSPHERE_CPI_DATASTORE_PATTERN',
+      @second_datastore,
+      'BOSH_VSPHERE_CPI_SECOND_DATASTORE'
+    )
+  end
 
   let(:network_spec) do
     {
@@ -33,8 +45,8 @@ context 'given cpis that are configured to use same cluster but different datast
 
   let(:second_datastore_cpi) do
     options = cpi_options(
-      datastore_pattern: @second_datastore_within_cluster,
-      persistent_datastore_pattern: @second_datastore_within_cluster,
+      datastore_pattern: @second_datastore,
+      persistent_datastore_pattern: @second_datastore,
     )
     VSphereCloud::Cloud.new(options)
   end
@@ -84,7 +96,7 @@ context 'given cpis that are configured to use same cluster but different datast
 
     disk = second_datastore_cpi.datacenter.find_disk(@disk_id)
     expect(disk.cid).to eq(@disk_id)
-    expect(disk.datastore.name).to match(@second_datastore_within_cluster)
+    expect(disk.datastore.name).to match(@second_datastore)
 
     second_datastore_cpi.detach_disk(@vm_id, @disk_id)
   end
