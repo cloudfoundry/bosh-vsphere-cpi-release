@@ -412,22 +412,12 @@ module LifecycleHelpers
     cpi.delete_stemcell(stemcell_id) if stemcell_id
   end
 
-  def verify_disk_is_in_datastores(disk_id, accessible_datastores)
-    disk_is_in_accessible_datastore = false
-    accessible_datastores.each do |datastore_name|
-      disk = find_disk_in_datastore(disk_id, datastore_name)
-      unless disk.nil?
-        disk_is_in_accessible_datastore = true
-        break
-      end
-    end
-    expect(disk_is_in_accessible_datastore).to eq(true)
+  def verify_disk_is_in_datastores(disk_id, datastores)
+    expect(is_disk_in_datastores(disk_id, datastores)).to eq(true), "Expected disk '#{disk_id}' to be in datastores '#{datastores.join(', ')}' but was not"
   end
 
-  def find_disk_in_datastore(disk_id, datastore_name)
-    datastore_mob = @cpi.client.cloud_searcher.get_managed_object(VimSdk::Vim::Datastore, name: datastore_name)
-    datastore = VSphereCloud::Resources::Datastore.new(datastore_name, datastore_mob, true, 0, 0)
-    @cpi.client.find_disk(disk_id, datastore, @disk_path)
+  def verify_disk_is_not_in_datastores(disk_id, datastores)
+    expect(is_disk_in_datastores(disk_id, datastores)).to eq(false), "Expected disk '#{disk_id}' to not be in datastores '#{datastores.join(', ')}' but it was"
   end
 
   def datastores_accessible_from_cluster(cpi, cluster_name)
@@ -441,6 +431,11 @@ module LifecycleHelpers
   end
 
   private
+
+  def is_disk_in_datastores(disk_id, accessible_datastores)
+    disk = @cpi.datacenter.find_disk(disk_id)
+    accessible_datastores.include?(disk.datastore.name)
+  end
 
   def build_actual_privileges_list(cpi, entity)
     all_privileges = cpi.client.service_content.authorization_manager.privilege_list.map(&:priv_id)
