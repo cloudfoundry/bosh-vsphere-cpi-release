@@ -1,6 +1,12 @@
 require 'integration/spec_helper'
 
 context 'when datastores are configured in resource_pools' do
+  before (:all) do
+    @cluster_name = fetch_and_verify_cluster('BOSH_VSPHERE_CPI_CLUSTER')
+    @second_cluster_name = fetch_and_verify_cluster('BOSH_VSPHERE_CPI_SECOND_CLUSTER')
+    @second_cluster_datastore = fetch_and_verify_datastore('BOSH_VSPHERE_CPI_SECOND_CLUSTER_DATASTORE', @second_cluster_name)
+  end
+
   let(:resource_pool) do
     {
       'ram' => 1024,
@@ -58,7 +64,7 @@ context 'when datastores are configured in resource_pools' do
         'datacenters' => [{
           'name' => @datacenter_name,
           'clusters' => [{
-            @second_cluster => {}
+            @second_cluster_name => {}
           }]
         }]
       })
@@ -95,7 +101,7 @@ context 'when datastores are configured in resource_pools' do
         'datacenters' => [{
           'name' => @datacenter_name,
           'clusters' => [{
-            @cluster => {}
+            @cluster_name => {}
           }]
         }]
       })
