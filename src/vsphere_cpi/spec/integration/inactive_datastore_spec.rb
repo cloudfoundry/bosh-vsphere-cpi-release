@@ -1,8 +1,14 @@
 require 'integration/spec_helper'
 
 describe 'inactive datastore handling' do
+  before (:all) do
+    @cluster_name = fetch_and_verify_cluster('BOSH_VSPHERE_CPI_CLUSTER')
+    @inactive_datastore_pattern = fetch_property('BOSH_VSPHERE_CPI_INACTIVE_DATASTORE_PATTERN')
+    @datastore_pattern = fetch_and_verify_datastore('BOSH_VSPHERE_CPI_DATASTORE_PATTERN', @cluster_name)
+  end
+
   let(:inactive_cpi) { VSphereCloud::Cloud.new(cpi_options) }
-  let(:inactive_datastores) { datastore_names_matching_pattern(inactive_cpi, @cluster, @inactive_datastore_pattern) }
+  let(:inactive_datastores) { datastore_names_matching_pattern(inactive_cpi, @cluster_name, @inactive_datastore_pattern) }
   let(:network_spec) do
     {
       'static' => {
@@ -38,7 +44,6 @@ describe 'inactive datastore handling' do
     end
 
     it 'returns an error creating a disk' do
-      puts disk_pool.inspect
       expect {
         inactive_cpi.create_disk(128, disk_pool)
       }.to raise_error(/No valid placement found/)
@@ -46,7 +51,7 @@ describe 'inactive datastore handling' do
   end
 
   context 'when the user specifies a mix of active and inactive datastores' do
-    let(:active_datastores) { datastore_names_matching_pattern(inactive_cpi, @cluster, @datastore_pattern) }
+    let(:active_datastores) { datastore_names_matching_pattern(inactive_cpi, @cluster_name, @datastore_pattern) }
     let(:resource_pool) do
       {
         'ram' => 1024,
