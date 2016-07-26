@@ -2,6 +2,7 @@ require 'integration/spec_helper'
 
 describe 'host-local storage patterns', :host_local => true do
   include LifecycleProperties
+
   let(:local_disk_cpi) { VSphereCloud::Cloud.new(local_disk_options) }
 
   let(:resource_pool) do
@@ -26,26 +27,36 @@ describe 'host-local storage patterns', :host_local => true do
   end
 
   before(:all) do
+    @cluster_name = fetch_and_verify_cluster('BOSH_VSPHERE_CPI_CLUSTER')
+    @second_cluster_name = fetch_and_verify_cluster('BOSH_VSPHERE_CPI_SECOND_CLUSTER')
+    @datastore_pattern = fetch_and_verify_datastore('BOSH_VSPHERE_CPI_DATASTORE_PATTERN', @cluster_name)
+    @second_datastore = fetch_and_verify_datastore('BOSH_VSPHERE_CPI_SECOND_DATASTORE', @cluster_name)
+    verify_non_overlapping_datastores(
+      cpi_options,
+      @datastore_pattern,
+      'BOSH_VSPHERE_CPI_DATASTORE_PATTERN',
+      @second_datastore,
+      'BOSH_VSPHERE_CPI_SECOND_DATASTORE'
+    )
 
     @single_local_ds_pattern = fetch_property('BOSH_VSPHERE_CPI_SINGLE_LOCAL_DATASTORE_PATTERN')
     @multi_local_ds_pattern = fetch_property('BOSH_VSPHERE_CPI_MULTI_LOCAL_DATASTORE_PATTERN')
     @second_cluster_local_datastore = fetch_property('BOSH_VSPHERE_CPI_SECOND_CLUSTER_LOCAL_DATASTORE')
 
-    datacenter = VSphereCloud::Cloud.new(cpi_options).datacenter
     verify_local_disk_infrastructure(
-      datacenter,
+      cpi_options,
       'BOSH_VSPHERE_CPI_SINGLE_LOCAL_DATASTORE_PATTERN',
       @single_local_ds_pattern,
     )
 
     verify_local_disk_infrastructure(
-      datacenter,
+      cpi_options,
       'BOSH_VSPHERE_CPI_MULTI_LOCAL_DATASTORE_PATTERN',
       @multi_local_ds_pattern,
     )
 
     verify_local_disk_infrastructure(
-      datacenter,
+      cpi_options,
       'BOSH_VSPHERE_CPI_SECOND_CLUSTER_LOCAL_DATASTORE',
       @second_cluster_local_datastore,
     )
@@ -54,21 +65,21 @@ describe 'host-local storage patterns', :host_local => true do
       cpi_options,
       'BOSH_VSPHERE_CPI_SINGLE_LOCAL_DATASTORE_PATTERN',
       @single_local_ds_pattern,
-      @cluster
+      @cluster_name
     )
 
     verify_datastore_within_cluster(
       cpi_options,
       'BOSH_VSPHERE_CPI_MULTI_LOCAL_DATASTORE_PATTERN',
       @multi_local_ds_pattern,
-      @cluster
+      @cluster_name
     )
 
     verify_datastore_within_cluster(
       cpi_options,
       'BOSH_VSPHERE_CPI_SECOND_CLUSTER_LOCAL_DATASTORE',
       @second_cluster_local_datastore,
-      @second_cluster
+      @second_cluster_name
     )
   end
 
@@ -77,13 +88,12 @@ describe 'host-local storage patterns', :host_local => true do
       cpi_options({
         datastore_pattern: @single_local_ds_pattern,
         persistent_datastore_pattern: @single_local_ds_pattern,
-        clusters: [{@cluster => {'resource_pool' => @resource_pool_name}}]
+        clusters: [@cluster_name]
       })
     end
 
     it 'places both ephemeral and persistent disks on local DS' do
       begin
-        disk_attached = false
         vm_id = local_disk_cpi.create_vm('agent-007', @stemcell_id, resource_pool, network_spec)
         vm = local_disk_cpi.vm_provider.find(vm_id)
         ephemeral_disk = vm.ephemeral_disk
@@ -98,7 +108,6 @@ describe 'host-local storage patterns', :host_local => true do
         expect(disk.datastore.name).to eq(ephemeral_ds)
 
         local_disk_cpi.attach_disk(vm_id, disk_id)
-        disk_attached = true
         expect(local_disk_cpi.has_disk?(disk_id)).to be(true)
       ensure
         detach_disk(local_disk_cpi, vm_id, disk_id)
@@ -113,14 +122,13 @@ describe 'host-local storage patterns', :host_local => true do
       cpi_options({
         datastore_pattern: @multi_local_ds_pattern,
         persistent_datastore_pattern: @multi_local_ds_pattern,
-        clusters: [{@cluster => {'resource_pool' => @resource_pool_name}}]
+        clusters: [@cluster_name]
       })
     end
 
     context 'when a VM hint is provided' do
       it 'places both ephemeral and persistent disks on local DS' do
         begin
-          disk_attached = false
           vm_id = local_disk_cpi.create_vm('agent-007', @stemcell_id, resource_pool, network_spec)
           vm = local_disk_cpi.vm_provider.find(vm_id)
           ephemeral_disk = vm.ephemeral_disk
@@ -135,7 +143,6 @@ describe 'host-local storage patterns', :host_local => true do
           expect(disk.datastore.name).to eq(ephemeral_ds)
 
           local_disk_cpi.attach_disk(vm_id, disk_id)
-          disk_attached = true
           expect(local_disk_cpi.has_disk?(disk_id)).to be(true)
         ensure
           detach_disk(local_disk_cpi, vm_id, disk_id)
@@ -148,7 +155,6 @@ describe 'host-local storage patterns', :host_local => true do
     context 'when a VM hint is not provided and the disk is placed elsewhere' do
       it 'moves the persistent disk onto the same datastore as the VM' do
         begin
-          disk_attached = false
           vm_id = local_disk_cpi.create_vm('agent-007', @stemcell_id, resource_pool, network_spec)
           vm = local_disk_cpi.vm_provider.find(vm_id)
           ephemeral_disk = vm.ephemeral_disk
@@ -167,7 +173,6 @@ describe 'host-local storage patterns', :host_local => true do
           expect(disk.datastore.name).to_not eq(ephemeral_ds)
 
           local_disk_cpi.attach_disk(vm_id, disk_id)
-          disk_attached = true
           expect(local_disk_cpi.has_disk?(disk_id)).to be(true)
           disk = local_disk_cpi.datacenter.find_disk(disk_id)
           expect(disk.datastore.name).to eq(ephemeral_ds)
@@ -184,8 +189,8 @@ describe 'host-local storage patterns', :host_local => true do
             datastore_pattern: @multi_local_ds_pattern,
             persistent_datastore_pattern: @multi_local_ds_pattern,
             clusters: [
-               {@cluster => {'resource_pool' => @resource_pool_name}},
-               {@second_cluster => {'resource_pool' => @second_cluster_resource_pool_name}},
+               @cluster_name,
+               @second_cluster_name,
             ],
           })
         end
@@ -193,7 +198,7 @@ describe 'host-local storage patterns', :host_local => true do
           VSphereCloud::Cloud.new(cpi_options({
             datastore_pattern: @second_cluster_local_datastore,
             persistent_datastore_pattern: @second_cluster_local_datastore,
-            clusters: [{@second_cluster => {'resource_pool' => @second_cluster_resource_pool_name}}],
+            clusters: [@second_cluster_name],
           }))
         end
 
@@ -234,12 +239,12 @@ describe 'host-local storage patterns', :host_local => true do
       cpi_options({
         # expect global patterns to be overridden
         datastore_pattern: @datastore_pattern,
-        persistent_datastore_pattern: @persistent_datastore_pattern,
-        clusters: [{@cluster => {}}],
+        persistent_datastore_pattern: @datastore_pattern,
+        clusters: [@cluster_name],
       })
     end
-    let(:ephemeral_datastores) { datastore_names_matching_pattern(@cpi, @cluster, @single_local_ds_pattern) }
-    let(:persistent_datastores) { datastore_names_matching_pattern(@cpi, @cluster, @multi_local_ds_pattern) }
+    let(:ephemeral_datastores) { datastore_names_matching_pattern(@cpi, @cluster_name, @single_local_ds_pattern) }
+    let(:persistent_datastores) { datastore_names_matching_pattern(@cpi, @cluster_name, @multi_local_ds_pattern) }
     let(:resource_pool) do
       {
         'ram' => 1024,

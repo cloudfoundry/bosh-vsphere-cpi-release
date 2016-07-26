@@ -96,6 +96,35 @@ module LifecycleProperties
     )
   end
 
+  def fetch_and_verify_datastore(env_var, cluster_name)
+    datastore = fetch_property(env_var)
+    verify_datastore_within_cluster(
+      cpi_options,
+      env_var,
+      datastore,
+      cluster_name
+    )
+    datastore
+  end
+
+  def fetch_and_verify_cluster(env_var)
+    cluster = fetch_property(env_var)
+    verify_cluster(cpi_options, cluster, env_var)
+    cluster
+  end
+
+  def fetch_and_verify_resource_pool(env_var, cluster_name)
+    resource_pool_name = fetch_property(env_var)
+    verify_resource_pool(cpi_options, cluster_name, resource_pool_name, env_var)
+    resource_pool_name
+  end
+
+  def fetch_and_verify_datacenter(env_var)
+    datacenter_name = fetch_property(env_var)
+    verify_datacenter_exists(cpi_options, datacenter_name)
+    datacenter_name
+  end
+
   def cpi_options(options = {})
     datastore_pattern = options.fetch(:datastore_pattern, @datastore_pattern)
     persistent_datastore_pattern = options.fetch(:persistent_datastore_pattern, @persistent_datastore_pattern)
