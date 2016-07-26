@@ -1,15 +1,27 @@
 require 'integration/spec_helper'
 
 context 'Replicating stemcells across datastores', external_cpi: false do
+  before (:all) do
+    @cluster_name = fetch_and_verify_cluster('BOSH_VSPHERE_CPI_CLUSTER')
+    @datastore_pattern = fetch_and_verify_datastore('BOSH_VSPHERE_CPI_DATASTORE_PATTERN', @cluster_name)
+    @second_datastore = fetch_and_verify_datastore('BOSH_VSPHERE_CPI_SECOND_DATASTORE', @cluster_name)
+    verify_non_overlapping_datastores(
+      cpi_options,
+      @datastore_pattern,
+      'BOSH_VSPHERE_CPI_DATASTORE_PATTERN',
+      @second_datastore,
+      'BOSH_VSPHERE_CPI_SECOND_DATASTORE'
+    )
+  end
 
   let(:second_cpi) do
     options = cpi_options(
-    clusters: [@cluster]
+    clusters: [@cluster_name]
     )
     VSphereCloud::Cloud.new(options)
   end
 
-  let(:destination_cluster) { @cpi.datacenter.clusters[@cluster] }
+  let(:destination_cluster) { @cpi.datacenter.clusters[@cluster_name] }
 
   it 'raises an error when no stemcell exists for the given stemcell id' do
     expect {
@@ -37,7 +49,7 @@ context 'Replicating stemcells across datastores', external_cpi: false do
       # and all of the contexts we are testing can be run on same setup state
 
       original_datastore = @cpi.datacenter.accessible_datastores[@cpi.vm_datastore_name(@original_stemcell_vm)]
-      other_datastore = @cpi.datacenter.accessible_datastores[@second_datastore_within_cluster]
+      other_datastore = @cpi.datacenter.accessible_datastores[@second_datastore]
 
       #Test:        replicate into original datastore
       #Expectation: returns original stemcell vm and does not create a replica
@@ -111,7 +123,7 @@ context 'Replicating stemcells across datastores', external_cpi: false do
 
     context 'when another thread is in the process of creating the replicated stemcell' do
       it 'waits for other thread to finish creating stemcell vm and returns it new' do
-        destination_datastore = @cpi.datacenter.accessible_datastores[@second_datastore_within_cluster]
+        destination_datastore = @cpi.datacenter.accessible_datastores[@second_datastore]
 
         t1_replicated_stemcell_vm = nil
         t1 = Thread.new {
