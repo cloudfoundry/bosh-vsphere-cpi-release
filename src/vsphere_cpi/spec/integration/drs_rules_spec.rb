@@ -2,6 +2,19 @@ require 'integration/spec_helper'
 
 
 context 'when vm was migrated to another datastore within first cluster' do
+  before (:all) do
+    @datacenter_name = fetch_and_verify_datacenter('BOSH_VSPHERE_CPI_DATACENTER')
+    @cluster_name = fetch_and_verify_cluster('BOSH_VSPHERE_CPI_CLUSTER')
+    @datastore_pattern = fetch_and_verify_datastore('BOSH_VSPHERE_CPI_DATASTORE_PATTERN', @cluster_name)
+    @second_datastore = fetch_and_verify_datastore('BOSH_VSPHERE_CPI_SECOND_DATASTORE', @cluster_name)
+    verify_non_overlapping_datastores(
+      cpi_options,
+      @datastore_pattern,
+      'BOSH_VSPHERE_CPI_DATASTORE_PATTERN',
+      @second_datastore,
+      'BOSH_VSPHERE_CPI_SECOND_DATASTORE'
+    )
+  end
 
   let(:network_spec) do
     {
@@ -25,7 +38,7 @@ context 'when vm was migrated to another datastore within first cluster' do
 
   let(:one_cluster_cpi) do
     options = cpi_options(
-      clusters: [{@cluster => {'resource_pool' => @resource_pool_name}}]
+      clusters: [@cluster_name]
     )
     VSphereCloud::Cloud.new(options)
   end
@@ -34,7 +47,7 @@ context 'when vm was migrated to another datastore within first cluster' do
     vm_lifecycle(one_cluster_cpi, [], resource_pool, network_spec, @stemcell_id) do |vm_id|
       vm = one_cluster_cpi.vm_provider.find(vm_id)
 
-      datastore = one_cluster_cpi.client.cloud_searcher.get_managed_object(VimSdk::Vim::Datastore, name: @second_datastore_within_cluster)
+      datastore = one_cluster_cpi.client.cloud_searcher.get_managed_object(VimSdk::Vim::Datastore, name: @second_datastore)
       relocate_spec = VimSdk::Vim::Vm::RelocateSpec.new(datastore: datastore)
 
       task = vm.mob.relocate(relocate_spec, 'defaultPriority')
@@ -45,7 +58,7 @@ context 'when vm was migrated to another datastore within first cluster' do
   context 'given a resource pool that is configured with a drs rule' do
     let(:one_cluster_cpi) do
       options = cpi_options(
-        clusters: [{@cluster => {'resource_pool' => @resource_pool_name}}]
+        clusters: [@cluster_name]
       )
       VSphereCloud::Cloud.new(options)
     end
@@ -58,7 +71,7 @@ context 'when vm was migrated to another datastore within first cluster' do
         'datacenters' => [{
           'name' => @datacenter_name,
           'clusters' => [{
-            @cluster => {
+            @cluster_name => {
               'drs_rules' => [{
                 'name' => 'separate-nodes-rule',
                 'type' => 'separate_vms'
@@ -104,6 +117,7 @@ context 'when vm was migrated to another datastore within first cluster' do
       end
     end
   end
+
   context 'when migration happened after attaching a persistent disk' do
     let(:datastore_name) {
       datastore_name = one_cluster_cpi.datacenter.accessible_datastores.select do |datastore|
@@ -114,7 +128,6 @@ context 'when vm was migrated to another datastore within first cluster' do
 
     it 'can still find persistent disks after and deleting vm' do
       begin
-        disk_attached = false
         vm_id = one_cluster_cpi.create_vm(
           'agent-007',
           @stemcell_id,
@@ -132,7 +145,6 @@ context 'when vm was migrated to another datastore within first cluster' do
 
         one_cluster_cpi.attach_disk(vm_id, disk_id)
         expect(one_cluster_cpi.has_disk?(disk_id)).to be(true)
-        disk_attached = true
 
         vm = one_cluster_cpi.vm_provider.find(vm_id)
 
@@ -146,7 +158,6 @@ context 'when vm was migrated to another datastore within first cluster' do
 
         one_cluster_cpi.delete_vm(vm_id)
         vm_id = nil
-        disk_attached = false
 
         expect(one_cluster_cpi.has_disk?(disk_id)).to be(true)
       ensure
@@ -158,7 +169,6 @@ context 'when vm was migrated to another datastore within first cluster' do
 
     it 'can still find persistent disk after vMotion and after detaching disk from vm' do
       begin
-        disk_attached = false
         vm_id = one_cluster_cpi.create_vm(
           'agent-007',
           @stemcell_id,
@@ -175,7 +185,6 @@ context 'when vm was migrated to another datastore within first cluster' do
         expect(disk_id).to_not be_nil
 
         one_cluster_cpi.attach_disk(vm_id, disk_id)
-        disk_attached = true
         expect(one_cluster_cpi.has_disk?(disk_id)).to be(true)
 
         vm = one_cluster_cpi.vm_provider.find(vm_id)
@@ -189,7 +198,6 @@ context 'when vm was migrated to another datastore within first cluster' do
         expect(one_cluster_cpi.has_disk?(disk_id)).to be(true)
 
         one_cluster_cpi.detach_disk(vm_id, disk_id)
-        disk_attached = false
         expect(one_cluster_cpi.has_disk?(disk_id)).to be(true)
       ensure
         detach_disk(one_cluster_cpi, vm_id, disk_id)
