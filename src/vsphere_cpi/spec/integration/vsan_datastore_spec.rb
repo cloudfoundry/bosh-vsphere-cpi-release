@@ -3,6 +3,7 @@ require 'integration/spec_helper'
 context 'given cpis that are configured to use VSAN datastores', vsan_datastore: true do
 
   before(:all) do
+    @datastore_pattern = fetch_property('BOSH_VSPHERE_CPI_DATASTORE_PATTERN')
     @vsan_datastore_pattern = fetch_property('BOSH_VSPHERE_CPI_VSAN_DATASTORE_PATTERN')
 
     verify_vsan_datastore(

@@ -9,9 +9,8 @@ RSpec.configure do |rspec_config|
   stemcell_id = nil
 
   rspec_config.before(:suite) do
-    setup_config
-    fetch_properties
-    verify_properties
+    setup_global_config
+    fetch_global_properties
 
     @suite_cpi = VSphereCloud::Cloud.new(cpi_options)
 
@@ -23,9 +22,8 @@ RSpec.configure do |rspec_config|
   end
 
   rspec_config.before(:all) do
-    setup_config
-    fetch_properties
-    verify_properties
+    setup_global_config
+    fetch_global_properties
 
     @cpi = VSphereCloud::Cloud.new(cpi_options)
     @stemcell_id = stemcell_id

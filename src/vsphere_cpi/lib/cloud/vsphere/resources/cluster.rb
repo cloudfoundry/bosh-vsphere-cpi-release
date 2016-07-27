@@ -35,7 +35,7 @@ module VSphereCloud
 
         @config = cluster_config
         @mob = properties[:obj]
-        @resource_pool = ResourcePool.new(@client, @logger, cluster_config, properties["resourcePool"])
+        @resource_pool = ResourcePool.new(@client, @logger, cluster_config, properties['resourcePool'])
       end
 
       # @return [Integer] amount of free memory in the cluster

@@ -48,7 +48,7 @@ context 'when disk_pools.cloud_properties.datastores is specified' do
     begin
       director_disk_id = cpi.create_disk(128, cloud_properties)
       disk_id, _ = VSphereCloud::DiskMetadata.decode(director_disk_id)
-      verify_disk_is_in_datastores(disk_id, persistent_datastores)
+      verify_disk_is_in_datastores(options, disk_id, persistent_datastores)
       expect(cpi.has_disk?(director_disk_id)).to be(true)
 
       vm_id = cpi.create_vm(
@@ -62,7 +62,7 @@ context 'when disk_pools.cloud_properties.datastores is specified' do
       expect(vm_id).to_not be_nil
 
       cpi.attach_disk(vm_id, director_disk_id)
-      verify_disk_is_in_datastores(disk_id, persistent_datastores)
+      verify_disk_is_in_datastores(options, disk_id, persistent_datastores)
       expect(cpi.has_disk?(director_disk_id)).to be(true)
     ensure
       detach_disk(cpi, vm_id, director_disk_id)

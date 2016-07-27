@@ -1,6 +1,16 @@
 require 'integration/spec_helper'
 
 context 'given a CPI configured with vSphere resource pools' do
+  before (:all) do
+    @cluster_name = fetch_and_verify_cluster('BOSH_VSPHERE_CPI_CLUSTER')
+    @datastore_pattern = fetch_and_verify_datastore('BOSH_VSPHERE_CPI_DATASTORE_PATTERN', @cluster_name)
+    @resource_pool_name = fetch_and_verify_resource_pool('BOSH_VSPHERE_CPI_RESOURCE_POOL', @cluster_name)
+    @second_resource_pool_name = fetch_and_verify_resource_pool('BOSH_VSPHERE_CPI_SECOND_RESOURCE_POOL', @cluster_name)
+
+    @second_cluster_name = fetch_and_verify_cluster('BOSH_VSPHERE_CPI_SECOND_CLUSTER')
+    @second_cluster_datastore_pattern = fetch_and_verify_datastore('BOSH_VSPHERE_CPI_SECOND_CLUSTER_DATASTORE', @second_cluster_name)
+  end
+
   let(:network_spec) do
     {
       'static' => {
@@ -24,13 +34,16 @@ context 'given a CPI configured with vSphere resource pools' do
 
   let(:resource_pool_cpi) do
     options = cpi_options(
-      clusters: [{ @cluster => {'resource_pool' => @resource_pool_name} }],
+      clusters: [{ @cluster_name => {'resource_pool' => @resource_pool_name} }],
     )
     VSphereCloud::Cloud.new(options)
   end
 
   it 'should exercise the vm lifecycle' do
-    vm_lifecycle(resource_pool_cpi, [], resource_pool, network_spec, @stemcell_id)
+    vm_lifecycle(resource_pool_cpi, [], resource_pool, network_spec, @stemcell_id) do |vm_id|
+      vm = resource_pool_cpi.vm_provider.find(vm_id)
+      expect(vm.resource_pool).to eq(@resource_pool_name)
+    end
   end
 
   context 'when a VM already exists in a vSphere resource pool' do
@@ -55,7 +68,7 @@ context 'given a CPI configured with vSphere resource pools' do
     context 'and a second CPI is not configured with the resource pool' do
       let(:second_cpi) do
         options = cpi_options(
-          clusters: [@cluster]
+          clusters: [@cluster_name]
         )
         VSphereCloud::Cloud.new(options)
       end
@@ -73,27 +86,28 @@ context 'given a CPI configured with vSphere resource pools' do
   context 'when vm_type.resource_pool is set to a cluster' do
     let(:second_cluster_cpi) do
       options = cpi_options(
-        datastore_pattern: @second_cluster_datastore,
-        persistent_datastore_pattern: @second_cluster_datastore
+        datastore_pattern: @second_cluster_datastore_pattern,
+        persistent_datastore_pattern: @second_cluster_datastore_pattern,
+        clusters: [@second_cluster_name]
       )
       VSphereCloud::Cloud.new(options)
     end
 
     before do
-      resource_pool['datacenters'] = [{'name' => @datacenter_name, 'clusters' => [{@second_cluster => {}}]}]
+      resource_pool['datacenters'] = [{'name' => @datacenter_name, 'clusters' => [{@second_cluster_name => {}}]}]
     end
 
     it 'places vm in provided cluster' do
       vm_lifecycle(second_cluster_cpi, [], resource_pool, network_spec, @stemcell_id) do |vm_id|
         vm = second_cluster_cpi.vm_provider.find(vm_id)
-        expect(vm.cluster).to eq(@second_cluster)
+        expect(vm.cluster).to eq(@second_cluster_name)
       end
     end
   end
 
   context 'when vm_type.resource_pool is set to a resource pool within the cluster' do
     before do
-      resource_pool['datacenters'] = [{'name' => @datacenter_name, 'clusters' => [{@cluster => {'resource_pool' => @second_resource_pool_within_cluster}}]}]
+      resource_pool['datacenters'] = [{'name' => @datacenter_name, 'clusters' => [{@cluster_name => {'resource_pool' => @second_resource_pool_name}}]}]
     end
 
     it 'places vm in the specified resource pool, overriding the globally configured resource pool' do
@@ -106,8 +120,8 @@ context 'given a CPI configured with vSphere resource pools' do
         )
 
         vm = resource_pool_cpi.vm_provider.find(vm_id)
-        expect(vm.cluster).to eq(@cluster)
-        expect(vm.resource_pool).to eq(@second_resource_pool_within_cluster)
+        expect(vm.cluster).to eq(@cluster_name)
+        expect(vm.resource_pool).to eq(@second_resource_pool_name)
       ensure
         delete_vm(resource_pool_cpi, vm_id)
       end

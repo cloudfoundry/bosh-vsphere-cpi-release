@@ -130,7 +130,7 @@ module LifecycleHelpers
     'InventoryService.Tagging.EditTag',
   ]
 
-  def setup_config
+  def setup_global_config
     vsphere_config = VSphereSpecConfig.new
     vsphere_config.logger = Logger.new(STDOUT)
     vsphere_config.logger.level = Logger::DEBUG
@@ -190,9 +190,9 @@ module LifecycleHelpers
     cpi = VSphereCloud::Cloud.new(cpi_options)
     root_folder_privileges = build_actual_privileges_list(cpi, cpi.client.service_content.root_folder)
 
-    if root_folder_privileges.sort != ALLOWED_PRIVILEGES_ON_ROOT.sort
-      disallowed_privileges = root_folder_privileges - ALLOWED_PRIVILEGES_ON_ROOT
-      fail "User must have limited permissions on root folder. Disallowed permissions include: #{disallowed_privileges.inspect}"
+    disallowed_root_privileges = root_folder_privileges - ALLOWED_PRIVILEGES_ON_ROOT
+    unless disallowed_root_privileges.empty?
+      fail "User must have limited permissions on root folder. Disallowed permissions include: #{disallowed_root_privileges.inspect}"
     end
 
     cluster_mob = cpi.datacenter.clusters.first.last.mob
@@ -221,10 +221,14 @@ module LifecycleHelpers
 
   def verify_resource_pool(cpi_options, cluster_name, resource_pool_name, env_var_name)
     cpi = VSphereCloud::Cloud.new(cpi_options)
-    cluster = cpi.datacenter.find_cluster(cluster_name)
+    cluster_mob = cpi.datacenter.find_cluster(cluster_name).mob
+    resource_pool_mob = cpi.client.cloud_searcher.get_managed_objects(
+      VimSdk::Vim::ResourcePool,
+      :root => cluster_mob,
+      :name => resource_pool_name).first
 
-    unless cluster.resource_pool.name == resource_pool_name
-      fail "Invalid Environment variable '#{env_var_name}': Expected resource pool on cluster '#{cluster_name}' to be '#{resource_pool_name}', but was '#{cluster.resource_pool.name}'"
+    if resource_pool_mob.nil?
+      fail "Invalid Environment variable '#{env_var_name}': Expected to find resource pool '#{resource_pool_name}' in cluster '#{cluster_name}'"
     end
   end
 
@@ -263,7 +267,11 @@ module LifecycleHelpers
   def verify_datastore_pattern_available_to_all_hosts(cpi_options, env_var_name, datastore_pattern, cluster_name)
     cpi = VSphereCloud::Cloud.new(cpi_options)
     datastore_pattern_regex = Regexp.new(datastore_pattern)
-    cluster = cpi.datacenter.clusters[cluster_name]
+    cluster = cpi.datacenter.find_cluster(cluster_name)
+    if cluster.nil?
+      fail "Failed to find cluster '#{cluster_name}' in known clusters: #{cpi.datacenter.clusters.keys.join(', ')}"
+    end
+
     cluster.mob.host.each do |host_mob|
       datastore_names = host_mob.datastore.map(&:name)
       fail("host: '#{host_mob.name}' does not have any datastores matching pattern /#{datastore_pattern}/. Found datastores are #{datastore_names.inspect}. The datasore pattern came from the environment varible:'#{env_var_name}'. #{MISSING_KEY_MESSAGES[env_var_name]}") unless datastore_names.any? { |name| name =~ datastore_pattern_regex }
@@ -275,6 +283,14 @@ module LifecycleHelpers
     unless is_vsan?(cpi, datastore_name)
       fail("datastore: '#{datastore_name}' is not of type 'vsan'. The datasore pattern came from the environment varible:'#{env_var_name}'.")
     end
+  end
+
+  def verify_disk_is_in_datastores(cpi_options, disk_id, datastores)
+    expect(is_disk_in_datastores(cpi_options, disk_id, datastores)).to eq(true), "Expected disk '#{disk_id}' to be in datastores '#{datastores.join(', ')}' but was not"
+  end
+
+  def verify_disk_is_not_in_datastores(cpi_options, disk_id, datastores)
+    expect(is_disk_in_datastores(cpi_options, disk_id, datastores)).to eq(false), "Expected disk '#{disk_id}' to not be in datastores '#{datastores.join(', ')}' but it was"
   end
 
   def is_vsan?(cpi, datastore_name)
@@ -320,7 +336,6 @@ module LifecycleHelpers
   end
 
   def vm_lifecycle(cpi, disk_locality, resource_pool, network_spec, stemcell_id)
-    disk_attached = false
     vm_id = cpi.create_vm(
       'agent-007',
       stemcell_id,
@@ -342,7 +357,6 @@ module LifecycleHelpers
     expect(disk_id).to_not be_nil
 
     cpi.attach_disk(vm_id, disk_id)
-    disk_attached = true
     expect(cpi.has_disk?(disk_id)).to be(true)
 
     metadata[:bosh_data] = 'bosh data'
@@ -403,21 +417,13 @@ module LifecycleHelpers
     stemcell_id = nil
     Dir.mktmpdir do |temp_dir|
       stemcell_image = stemcell_image(@stemcell_path, temp_dir)
-      stemcell_id = cpi.create_stemcell("#{temp_dir}/image", nil)
+      stemcell_id = cpi.create_stemcell(stemcell_image, nil)
     end
     stemcell_id
   end
 
   def delete_stemcell(cpi, stemcell_id)
     cpi.delete_stemcell(stemcell_id) if stemcell_id
-  end
-
-  def verify_disk_is_in_datastores(disk_id, datastores)
-    expect(is_disk_in_datastores(disk_id, datastores)).to eq(true), "Expected disk '#{disk_id}' to be in datastores '#{datastores.join(', ')}' but was not"
-  end
-
-  def verify_disk_is_not_in_datastores(disk_id, datastores)
-    expect(is_disk_in_datastores(disk_id, datastores)).to eq(false), "Expected disk '#{disk_id}' to not be in datastores '#{datastores.join(', ')}' but it was"
   end
 
   def datastores_accessible_from_cluster(cpi, cluster_name)
@@ -432,8 +438,9 @@ module LifecycleHelpers
 
   private
 
-  def is_disk_in_datastores(disk_id, accessible_datastores)
-    disk = @cpi.datacenter.find_disk(disk_id)
+  def is_disk_in_datastores(cpi_options, disk_id, accessible_datastores)
+    cpi = VSphereCloud::Cloud.new(cpi_options)
+    disk = cpi.datacenter.find_disk(disk_id)
     accessible_datastores.include?(disk.datastore.name)
   end
 

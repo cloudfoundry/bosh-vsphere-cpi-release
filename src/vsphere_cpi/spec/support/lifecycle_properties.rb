@@ -1,59 +1,28 @@
 module LifecycleProperties
-  def fetch_properties
-    @host = fetch_property('BOSH_VSPHERE_CPI_HOST')
-    @user = fetch_property('BOSH_VSPHERE_CPI_USER')
-    @password = fetch_property('BOSH_VSPHERE_CPI_PASSWORD')
+  def fetch_global_properties
     @vlan = fetch_property('BOSH_VSPHERE_VLAN')
+
     @stemcell_path = fetch_property('BOSH_VSPHERE_STEMCELL')
-
-    @second_resource_pool_within_cluster = fetch_property('BOSH_VSPHERE_CPI_SECOND_RESOURCE_POOL')
-
-    @datacenter_name = fetch_property('BOSH_VSPHERE_CPI_DATACENTER')
-    @vm_folder = fetch_optional_property('BOSH_VSPHERE_CPI_VM_FOLDER', '')
-    @template_folder = fetch_optional_property('BOSH_VSPHERE_CPI_TEMPLATE_FOLDER', '')
-    @disk_path = fetch_property('BOSH_VSPHERE_CPI_DISK_PATH')
-
-    @datastore_pattern = fetch_property('BOSH_VSPHERE_CPI_DATASTORE_PATTERN')
-    @inactive_datastore_pattern = fetch_property('BOSH_VSPHERE_CPI_INACTIVE_DATASTORE_PATTERN')
-    @cluster = fetch_property('BOSH_VSPHERE_CPI_CLUSTER')
-    @resource_pool_name = fetch_property('BOSH_VSPHERE_CPI_RESOURCE_POOL')
-
-    @second_cluster = fetch_property('BOSH_VSPHERE_CPI_SECOND_CLUSTER')
-    @second_cluster_resource_pool_name = fetch_property('BOSH_VSPHERE_CPI_SECOND_CLUSTER_RESOURCE_POOL')
-    @second_cluster_datastore = fetch_property('BOSH_VSPHERE_CPI_SECOND_CLUSTER_DATASTORE')
 
     @vsphere_version = fetch_optional_property('BOSH_VSPHERE_VERSION')
 
-    @second_resource_pool_cpi_options = cpi_options(
-      clusters: [{@cluster => {'resource_pool' => @second_resource_pool_within_cluster}}]
-    )
-  end
+    @datacenter_name = fetch_property('BOSH_VSPHERE_CPI_DATACENTER')
 
-  def verify_properties
+    @default_datastore_pattern = fetch_property('BOSH_VSPHERE_CPI_DATASTORE_PATTERN')
+    @default_cluster = fetch_property('BOSH_VSPHERE_CPI_CLUSTER')
+
     verify_vsphere_version(cpi_options, @vsphere_version)
     verify_datacenter_exists(cpi_options, 'BOSH_VSPHERE_CPI_DATACENTER')
     verify_vlan(cpi_options, @vlan, 'BOSH_VSPHERE_VLAN')
     verify_user_has_limited_permissions(cpi_options)
 
-    verify_cluster(cpi_options, @cluster, 'BOSH_VSPHERE_CPI_CLUSTER')
-    verify_resource_pool(cpi_options, @cluster, @resource_pool_name, 'BOSH_VSPHERE_CPI_RESOURCE_POOL')
-    verify_cluster(cpi_options, @second_cluster, 'BOSH_VSPHERE_CPI_SECOND_CLUSTER')
-    verify_resource_pool(cpi_options, @second_cluster, @second_cluster_resource_pool_name, 'BOSH_VSPHERE_CPI_SECOND_CLUSTER_RESOURCE_POOL')
-
-    verify_resource_pool(@second_resource_pool_cpi_options, @cluster, @second_resource_pool_within_cluster, 'BOSH_VSPHERE_CPI_SECOND_RESOURCE_POOL')
+    verify_cluster(cpi_options, @default_cluster, 'BOSH_VSPHERE_CPI_CLUSTER')
 
     verify_datastore_within_cluster(
       cpi_options,
       'BOSH_VSPHERE_CPI_DATASTORE_PATTERN',
-      @datastore_pattern,
-      @cluster
-    )
-
-    verify_datastore_within_cluster(
-      cpi_options,
-      'BOSH_VSPHERE_CPI_SECOND_CLUSTER_DATASTORE',
-      @second_cluster_datastore,
-      @second_cluster
+      @default_datastore_pattern,
+      @default_cluster
     )
   end
 
@@ -93,13 +62,9 @@ module LifecycleProperties
   end
 
   def cpi_options(options = {})
-    datastore_pattern = options.fetch(:datastore_pattern, @datastore_pattern)
-    persistent_datastore_pattern = options.fetch(:persistent_datastore_pattern, @datastore_pattern)
-    default_clusters = [
-      { @cluster => {'resource_pool' => @resource_pool_name} },
-      { @second_cluster => {'resource_pool' => @second_cluster_resource_pool_name } },
-    ]
-    clusters = options.fetch(:clusters, default_clusters)
+    datastore_pattern = options.fetch(:datastore_pattern, @default_datastore_pattern)
+    persistent_datastore_pattern = options.fetch(:persistent_datastore_pattern, @default_datastore_pattern)
+    clusters = options.fetch(:clusters, [@default_cluster])
     datacenter_name = options.fetch(:datacenter_name, @datacenter_name)
 
     {
@@ -107,14 +72,14 @@ module LifecycleProperties
         'ntp' => ['10.80.0.44'],
       },
       'vcenters' => [{
-        'host' => @host,
-        'user' => @user,
-        'password' => @password,
+        'host' => fetch_property('BOSH_VSPHERE_CPI_HOST'),
+        'user' => fetch_property('BOSH_VSPHERE_CPI_USER'),
+        'password' => fetch_property('BOSH_VSPHERE_CPI_PASSWORD'),
         'datacenters' => [{
           'name' => datacenter_name,
-          'vm_folder' => @vm_folder,
-          'template_folder' => @template_folder,
-          'disk_path' => @disk_path,
+          'vm_folder' => fetch_property('BOSH_VSPHERE_CPI_VM_FOLDER'),
+          'template_folder' => fetch_property('BOSH_VSPHERE_CPI_TEMPLATE_FOLDER'),
+          'disk_path' => fetch_property('BOSH_VSPHERE_CPI_DISK_PATH'),
           'datastore_pattern' => datastore_pattern,
           'persistent_datastore_pattern' => persistent_datastore_pattern,
           'allow_mixed_datastores' => true,
