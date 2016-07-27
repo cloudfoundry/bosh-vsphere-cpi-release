@@ -97,6 +97,7 @@ jobs:
         tags: ["vsphere-v5.1"]
         file: bosh-cpi-src/ci/tasks/run-lifecycle.yml
         params: &lifecycle-6-params
+          RSPEC_FLAGS:                                          "--tag ~vsan_datastore" # temporarily skip vsan tests due to environment flakiness
           BOSH_VSPHERE_VERSION:                                 {{lifecycle_vsphere_6_0_version}}
           BOSH_VSPHERE_CPI_HOST:                                {{lifecycle_vsphere_6_0_host}}
           BOSH_VSPHERE_CPI_USER:                                {{lifecycle_vsphere_6_0_user}}
