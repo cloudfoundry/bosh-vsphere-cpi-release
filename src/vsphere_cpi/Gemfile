@@ -10,6 +10,7 @@ gem 'mono_logger', '~>1.1.0'
 
 group :development, :test do
   gem 'fakefs'
+  gem 'oga'
   gem 'parallel_tests'
   gem 'pry'
   gem 'rack', '~> 1.6.4'

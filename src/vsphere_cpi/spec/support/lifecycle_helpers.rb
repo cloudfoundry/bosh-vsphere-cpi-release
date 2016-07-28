@@ -1,4 +1,8 @@
+require 'oga'
+
 module LifecycleHelpers
+  PRIVILEGES_INPUT_FILE = 'docs/required_vcenter_privileges.md'
+
   MISSING_KEY_MESSAGES = {
     'BOSH_VSPHERE_CPI_SINGLE_LOCAL_DATASTORE_PATTERN' => 'Please ensure you provide a pattern that match datastores that are only accessible by a single host.',
     'BOSH_VSPHERE_CPI_MULTI_LOCAL_DATASTORE_PATTERN' => 'Please ensure you provide a pattern that match datastores that are accessible by multiple hosts.',
@@ -27,100 +31,6 @@ module LifecycleHelpers
     'BOSH_VSPHERE_CPI_VM_FOLDER' => 'Please ensure you provide a VM folder.',
     'BOSH_VSPHERE_CPI_DATACENTER' => 'Please ensure you provide a datacenter name.',
   }
-
-  ALLOWED_PRIVILEGES_ON_ROOT = [
-    'System.Anonymous',
-    'System.Read',
-    'System.View',
-    'Global.ManageCustomFields'
-  ]
-
-  ALLOWED_PRIVILEGES_ON_DATACENTER = [
-    'System.Anonymous',
-    'System.Read',
-    'System.View',
-
-    'Global.SetCustomField',
-
-    'Folder.Create',
-    'Folder.Delete',
-    'Folder.Rename',
-    'Folder.Move',
-
-    'Datastore.AllocateSpace',
-    'Datastore.Browse',
-    'Datastore.DeleteFile',
-    'Datastore.UpdateVirtualMachineFiles',
-    'Datastore.FileManagement',
-
-    'Host.Inventory.EditCluster',
-
-    'Network.Assign',
-
-    'VirtualMachine.Inventory.Create',
-    'VirtualMachine.Inventory.CreateFromExisting',
-    'VirtualMachine.Inventory.Delete',
-    'VirtualMachine.Inventory.Move',
-    'VirtualMachine.Interact.PowerOn',
-    'VirtualMachine.Interact.PowerOff',
-    'VirtualMachine.Interact.Suspend',
-    'VirtualMachine.Interact.Reset',
-    'VirtualMachine.Interact.AnswerQuestion',
-    'VirtualMachine.Interact.DeviceConnection',
-    'VirtualMachine.Interact.SetCDMedia',
-    'VirtualMachine.Interact.ToolsInstall',
-    'VirtualMachine.Config.Rename',
-    'VirtualMachine.Config.Annotation',
-    'VirtualMachine.Config.AddExistingDisk',
-    'VirtualMachine.Config.AddNewDisk',
-    'VirtualMachine.Config.RemoveDisk',
-    'VirtualMachine.Config.RawDevice',
-    'VirtualMachine.Config.CPUCount',
-    'VirtualMachine.Config.Memory',
-    'VirtualMachine.Config.AddRemoveDevice',
-    'VirtualMachine.Config.EditDevice',
-    'VirtualMachine.Config.Settings',
-    'VirtualMachine.Config.Resource',
-    'VirtualMachine.Config.ResetGuestInfo',
-    'VirtualMachine.Config.AdvancedConfig',
-    'VirtualMachine.Config.DiskLease',
-    'VirtualMachine.Config.SwapPlacement',
-    'VirtualMachine.Config.DiskExtend',
-    'VirtualMachine.Config.ChangeTracking',
-    'VirtualMachine.Config.Unlock',
-    'VirtualMachine.Config.ReloadFromPath',
-    'VirtualMachine.Config.MksControl',
-    'VirtualMachine.Config.ManagedBy',
-    'VirtualMachine.State.CreateSnapshot',
-    'VirtualMachine.State.RevertToSnapshot',
-    'VirtualMachine.State.RemoveSnapshot',
-    'VirtualMachine.State.RenameSnapshot',
-    'VirtualMachine.Provisioning.Customize',
-    'VirtualMachine.Provisioning.Clone',
-    'VirtualMachine.Provisioning.PromoteDisks',
-    'VirtualMachine.Provisioning.DeployTemplate',
-    'VirtualMachine.Provisioning.CloneTemplate',
-    'VirtualMachine.Provisioning.MarkAsTemplate',
-    'VirtualMachine.Provisioning.MarkAsVM',
-    'VirtualMachine.Provisioning.ReadCustSpecs',
-    'VirtualMachine.Provisioning.ModifyCustSpecs',
-    'VirtualMachine.Provisioning.DiskRandomAccess',
-    'VirtualMachine.Provisioning.DiskRandomRead',
-    'VirtualMachine.Provisioning.GetVmFiles',
-    'VirtualMachine.Provisioning.PutVmFiles',
-
-    'Resource.AssignVMToPool',
-    'Resource.ColdMigrate',
-    'Resource.HotMigrate',
-
-    'VApp.Import',
-    'VApp.InstanceConfig',
-    'VApp.ApplicationConfig',
-
-    'InventoryService.Tagging.CreateTag',
-    'InventoryService.Tagging.DeleteTag',
-    'InventoryService.Tagging.EditTag',
-  ]
 
   def setup_global_config
     vsphere_config = VSphereSpecConfig.new
@@ -182,7 +92,9 @@ module LifecycleHelpers
     cpi = VSphereCloud::Cloud.new(cpi_options)
     root_folder_privileges = build_actual_privileges_list(cpi, cpi.client.service_content.root_folder)
 
-    disallowed_root_privileges = root_folder_privileges - ALLOWED_PRIVILEGES_ON_ROOT
+    expected_privileges = build_expected_privileges_list
+
+    disallowed_root_privileges = root_folder_privileges - expected_privileges[:root]
     unless disallowed_root_privileges.empty?
       fail "User must have limited permissions on root folder. Disallowed permissions include: #{disallowed_root_privileges.inspect}"
     end
@@ -190,10 +102,10 @@ module LifecycleHelpers
     cluster_mob = cpi.datacenter.clusters.first.last.mob
     datacenter_privileges = build_actual_privileges_list(cpi, cluster_mob)
 
-    if datacenter_privileges.sort != ALLOWED_PRIVILEGES_ON_DATACENTER.sort
-      disallowed_privileges = datacenter_privileges - ALLOWED_PRIVILEGES_ON_DATACENTER
+    if datacenter_privileges.sort != expected_privileges[:datacenter].sort
+      disallowed_privileges = datacenter_privileges - expected_privileges[:datacenter]
       if disallowed_privileges.empty?
-        missing_permissions = ALLOWED_PRIVILEGES_ON_DATACENTER - datacenter_privileges
+        missing_permissions = expected_privileges[:datacenter] - datacenter_privileges
         fail "User is missing permissions on datacenter `#{cpi.datacenter.name}`. Missing permssions: #{missing_permissions}"
       else
         fail "User must have limited permissions on datacenter `#{cpi.datacenter.name}`. Disallowed permissions include: #{disallowed_privileges.inspect}"
@@ -436,11 +348,34 @@ module LifecycleHelpers
     accessible_datastores.include?(disk.datastore.name)
   end
 
+  def build_expected_privileges_list
+    handle = File.open(File.join(project_root, PRIVILEGES_INPUT_FILE))
+    document = Oga.parse_html(handle)
+
+    expected_permissions = {
+      root: [],
+      datacenter: [],
+    }
+
+    document.css('table#vcenter-root-privileges td:nth-child(2)').each do |td|
+      expected_permissions[:root] << td.text
+    end
+    document.css('table#vcenter-datacenter-privileges td:nth-child(2)').each do |td|
+      expected_permissions[:datacenter] << td.text
+    end
+
+    expected_permissions
+  end
+
   def build_actual_privileges_list(cpi, entity)
     all_privileges = cpi.client.service_content.authorization_manager.privilege_list.map(&:priv_id)
     current_session_id = cpi.client.service_content.session_manager.current_session.key
     privileges_response =
       cpi.client.service_content.authorization_manager.has_privilege_on_entity(entity, current_session_id, all_privileges)
     Hash[all_privileges.zip(privileges_response)].select { |_, privelege| privelege }.keys
+  end
+
+  def project_root
+    File.join(File.dirname(__FILE__), '../../../..')
   end
 end

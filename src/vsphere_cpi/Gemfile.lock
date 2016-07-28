@@ -1,6 +1,8 @@
 GEM
   remote: https://rubygems.org/
   specs:
+    ansi (1.5.0)
+    ast (2.1.0)
     bosh_common (1.3262.1)
       logging (~> 1.8.2)
       semi_semantic (~> 1.2.0)
@@ -26,6 +28,9 @@ GEM
     multi_json (1.12.1)
     nokogiri (1.6.7.2)
       mini_portile2 (~> 2.0.0.rc2)
+    oga (2.3)
+      ast
+      ruby-ll (~> 2.1)
     parallel (1.9.0)
     parallel_tests (2.7.0)
       parallel
@@ -53,6 +58,9 @@ GEM
       diff-lcs (>= 1.2.0, < 2.0)
       rspec-support (~> 3.3.0)
     rspec-support (3.3.0)
+    ruby-ll (2.1.2)
+      ansi
+      ast
     semi_semantic (1.2.0)
     simplecov (0.11.2)
       docile (~> 1.1.0)
@@ -74,6 +82,7 @@ DEPENDENCIES
   membrane (~> 1.1.0)
   mono_logger (~> 1.1.0)
   nokogiri (~> 1.6.6)
+  oga
   parallel_tests
   pry
   rack (~> 1.6.4)
