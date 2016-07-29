@@ -6,6 +6,7 @@ groups:
       - build-candidate
       - lifecycle-5.1
       - lifecycle-6.0
+      - lifecycle-6.0-vsan
       - bats
       - promote-candidate
 
@@ -69,7 +70,6 @@ jobs:
           BOSH_VSPHERE_CPI_DATACENTER:                          {{lifecycle_vsphere_5_1_datacenter}}
           BOSH_VSPHERE_CPI_CLUSTER:                             {{lifecycle_vsphere_5_1_first_cluster}}
           BOSH_VSPHERE_CPI_DATASTORE_PATTERN:                   {{lifecycle_vsphere_5_1_datastore_pattern_available_to_all_hosts_in_first_cluster}}
-          BOSH_VSPHERE_CPI_PERSISTENT_DATASTORE_PATTERN:        {{lifecycle_vsphere_5_1_persistent_datastore_pattern_available_to_all_clusters}}
           BOSH_VSPHERE_CPI_INACTIVE_DATASTORE_PATTERN:          {{lifecycle_vsphere_5_1_inactive_datastore_pattern}}
           BOSH_VSPHERE_CPI_SECOND_DATASTORE:                    {{lifecycle_vsphere_5_1_second_datastore_available_to_all_hosts_in_first_cluster}}
           BOSH_VSPHERE_CPI_RESOURCE_POOL:                       {{lifecycle_vsphere_5_1_first_cluster_first_resource_pool}}
@@ -97,7 +97,7 @@ jobs:
         tags: ["vsphere-v5.1"]
         file: bosh-cpi-src/ci/tasks/run-lifecycle.yml
         params: &lifecycle-6-params
-          RSPEC_FLAGS:                                          "--tag ~vsan_datastore" # temporarily skip vsan tests due to environment flakiness
+          RSPEC_FLAGS:                                          "--tag ~vsan_datastore"
           BOSH_VSPHERE_VERSION:                                 {{lifecycle_vsphere_6_0_version}}
           BOSH_VSPHERE_CPI_HOST:                                {{lifecycle_vsphere_6_0_host}}
           BOSH_VSPHERE_CPI_USER:                                {{lifecycle_vsphere_6_0_user}}
@@ -124,7 +124,31 @@ jobs:
           BOSH_VSPHERE_CPI_NESTED_DATACENTER_CLUSTER:           {{lifecycle_vsphere_6_0_nested_datacenter_cluster}}
           BOSH_VSPHERE_CPI_NESTED_DATACENTER_RESOURCE_POOL:     {{lifecycle_vsphere_6_0_nested_datacenter_resource_pool}}
           BOSH_VSPHERE_CPI_NESTED_DATACENTER_VLAN:              {{lifecycle_vsphere_6_0_nested_datacenter_vlan}}
+
+  - name: lifecycle-6.0-vsan
+    plan:
+      - aggregate:
+        - {trigger: true,  passed: [build-candidate], get: bosh-cpi-artifacts, tags: ["vsphere-v5.1"]} # used for job chaining only not for tasks
+        - {trigger: false, passed: [build-candidate], get: bosh-cpi-src, tags: ["vsphere-v5.1"]}
+        - {trigger: false,                            get: stemcell, resource: vsphere-ubuntu-stemcell, tags: ["vsphere-v5.1"]}
+
+      - task: test
+        tags: ["vsphere-v5.1"]
+        file: bosh-cpi-src/ci/tasks/run-lifecycle.yml
+        params:
+          RSPEC_FLAGS:                                          "--tag vsan_datastore"
+          BOSH_VSPHERE_VERSION:                                 {{lifecycle_vsphere_6_0_vsan_version}}
+          BOSH_VSPHERE_CPI_HOST:                                {{lifecycle_vsphere_6_0_vsan_host}}
+          BOSH_VSPHERE_CPI_USER:                                {{lifecycle_vsphere_6_0_vsan_user}}
+          BOSH_VSPHERE_CPI_PASSWORD:                            {{lifecycle_vsphere_6_0_vsan_password}}
+          BOSH_VSPHERE_VLAN:                                    {{lifecycle_vsphere_6_0_vsan_vlan}}
+          BOSH_VSPHERE_CPI_DATACENTER:                          {{lifecycle_vsphere_6_0_vsan_datacenter}}
+          BOSH_VSPHERE_CPI_CLUSTER:                             {{lifecycle_vsphere_6_0_vsan_first_cluster}}
+          BOSH_VSPHERE_CPI_VM_FOLDER:                           {{lifecycle_vsphere_6_0_vsan_vm_folder}}
+          BOSH_VSPHERE_CPI_TEMPLATE_FOLDER:                     {{lifecycle_vsphere_6_0_vsan_template_folder}}
+          BOSH_VSPHERE_CPI_DISK_PATH:                           {{lifecycle_vsphere_6_0_vsan_disk_path}}
           BOSH_VSPHERE_CPI_VSAN_DATASTORE_PATTERN:              {{lifecycle_vsphere_6_0_vsan_datastore_pattern_available_to_all_hosts_in_first_cluster}}
+          BOSH_VSPHERE_CPI_DATASTORE_PATTERN:                   {{lifecycle_vsphere_6_0_vsan_non_vsan_datastore_pattern_available_to_all_hosts_in_first_cluster}}
 
   - name: bats
     serial: true
@@ -191,8 +215,8 @@ jobs:
     plan:
     - aggregate:
       # temporarily remove VSAN passed constraint as environment is having issues
-      - {trigger: false, passed: [lifecycle-5.1, lifecycle-6.0, bats], get: bosh-cpi-artifacts, tags: ["vsphere-v5.1"]}
-      - {trigger: false, passed: [lifecycle-5.1, lifecycle-6.0, bats], get: bosh-cpi-src, tags: ["vsphere-v5.1"]}
+      - {trigger: false, passed: [lifecycle-5.1, lifecycle-6.0, lifecycle-6.0-vsan, bats], get: bosh-cpi-artifacts, tags: ["vsphere-v5.1"]}
+      - {trigger: false, passed: [lifecycle-5.1, lifecycle-6.0, lifecycle-6.0-vsan, bats], get: bosh-cpi-src, tags: ["vsphere-v5.1"]}
       - {trigger: false, get: release-version-semver, params: {bump: major}, tags: ["vsphere-v5.1"]}
 
     - task: promote
