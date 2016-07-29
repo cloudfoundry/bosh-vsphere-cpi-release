@@ -1,4 +1,4 @@
-## vCenter Privileges
+### Required vSphere Privileges
 
 <!--- NOTE: the tables in this file are parsed by the integration tests to verify required permissions -->
 
