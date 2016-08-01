@@ -25,7 +25,6 @@ module LifecycleHelpers
     'BOSH_VSPHERE_CPI_SECOND_CLUSTER_RESOURCE_POOL' => 'Please ensure you provide a name of a resource pool within the second cluster.',
     'BOSH_VSPHERE_CPI_SECOND_CLUSTER_DATASTORE' => 'Please ensure you provide a pattern of a second datastore attached to the second cluster.',
     'BOSH_VSPHERE_CPI_SECOND_CLUSTER_LOCAL_DATASTORE' => 'Please ensure you provide a pattern of a local datastore attached to the second cluster.',
-    'BOSH_VSPHERE_CPI_PERSISTENT_DATASTORE_PATTERN' => 'Please ensure you provide a pattern of a persistent datastore attached to all hosts in all provided clusters.',
     'BOSH_VSPHERE_CPI_DISK_PATH' => 'Please ensure you provide a disk path.',
     'BOSH_VSPHERE_CPI_TEMPLATE_FOLDER' => 'Please ensure you provide a template folder.',
     'BOSH_VSPHERE_CPI_VM_FOLDER' => 'Please ensure you provide a VM folder.',

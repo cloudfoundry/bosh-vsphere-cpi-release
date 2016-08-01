@@ -17,15 +17,18 @@ describe VSphereCloud::Cloud, external_cpi: true do
 
   def config
     return @config if @config
-    datacenter_name          = ENV.fetch('BOSH_VSPHERE_CPI_DATACENTER', 'BOSH_DC')
-    cluster                  = ENV.fetch('BOSH_VSPHERE_CPI_CLUSTER', 'BOSH_CL')
-    second_cluster           = ENV.fetch('BOSH_VSPHERE_CPI_SECOND_CLUSTER', 'BOSH_CL2')
+    datacenter_name          = ENV.fetch('BOSH_VSPHERE_CPI_DATACENTER')
+    cluster                  = ENV.fetch('BOSH_VSPHERE_CPI_CLUSTER')
+    second_cluster           = ENV.fetch('BOSH_VSPHERE_CPI_SECOND_CLUSTER')
 
     host                      = ENV.fetch('BOSH_VSPHERE_CPI_HOST')
     user                      = ENV.fetch('BOSH_VSPHERE_CPI_USER')
-    password                  = ENV.fetch('BOSH_VSPHERE_CPI_PASSWORD', '')
-    resource_pool_name        = ENV.fetch('BOSH_VSPHERE_CPI_RESOURCE_POOL', 'ACCEPTANCE_RP')
-    second_resource_pool_name = ENV.fetch('BOSH_VSPHERE_CPI_SECOND_CLUSTER_RESOURCE_POOL', 'ACCEPTANCE_RP')
+    password                  = ENV.fetch('BOSH_VSPHERE_CPI_PASSWORD')
+    resource_pool_name        = ENV.fetch('BOSH_VSPHERE_CPI_RESOURCE_POOL')
+    second_resource_pool_name = ENV.fetch('BOSH_VSPHERE_CPI_SECOND_CLUSTER_RESOURCE_POOL')
+
+    ephemeral_datastore_pattern = ENV.fetch('BOSH_VSPHERE_CPI_DATASTORE_PATTERN')
+    persistent_datastore_pattern = ENV.fetch('BOSH_VSPHERE_CPI_SECOND_DATASTORE')
 
     logger = Logger.new(StringIO.new(""))
     client = VSphereCloud::VCenterClient.new(
@@ -35,9 +38,9 @@ describe VSphereCloud::Cloud, external_cpi: true do
     )
     client.login(user, password, 'en')
 
-    vm_folder_name = ENV.fetch('BOSH_VSPHERE_CPI_VM_FOLDER', 'ACCEPTANCE_BOSH_VMs')
-    template_folder_name = ENV.fetch('BOSH_VSPHERE_CPI_TEMPLATE_FOLDER', 'ACCEPTANCE_BOSH_Templates')
-    disk_folder_name = ENV.fetch('BOSH_VSPHERE_CPI_DISK_PATH', 'ACCEPTANCE_BOSH_Disks')
+    vm_folder_name = ENV.fetch('BOSH_VSPHERE_CPI_VM_FOLDER')
+    template_folder_name = ENV.fetch('BOSH_VSPHERE_CPI_TEMPLATE_FOLDER')
+    disk_folder_name = ENV.fetch('BOSH_VSPHERE_CPI_DISK_PATH')
 
     prepare_tests_folder(client, datacenter_name, vm_folder_name)
     prepare_tests_folder(client, datacenter_name, template_folder_name)
@@ -58,8 +61,8 @@ describe VSphereCloud::Cloud, external_cpi: true do
               'vm_folder' => "#{vm_folder_name}/lifecycle_tests",
               'template_folder' => "#{template_folder_name}/lifecycle_tests",
               'disk_path' => "#{disk_folder_name}/lifecycle_tests",
-              'datastore_pattern' => ENV.fetch('BOSH_VSPHERE_CPI_DATASTORE_PATTERN', 'jalapeno'),
-              'persistent_datastore_pattern' => ENV.fetch('BOSH_VSPHERE_CPI_PERSISTENT_DATASTORE_PATTERN', 'jalapeno'),
+              'datastore_pattern' => ephemeral_datastore_pattern,
+              'persistent_datastore_pattern' => persistent_datastore_pattern,
               'allow_mixed_datastores' => true,
               'clusters' => [
                 {
