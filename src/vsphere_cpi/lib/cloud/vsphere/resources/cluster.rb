@@ -8,7 +8,7 @@ module VSphereCloud
       stringify_with :name
 
       PROPERTIES = %w(name datastore resourcePool host)
-      HOST_PROPERTIES = %w(hardware.memorySize runtime.inMaintenanceMode)
+      HOST_PROPERTIES = %w(hardware.memorySize runtime.connectionState runtime.inMaintenanceMode runtime.powerState)
       HOST_COUNTERS = %w(mem.usage.average)
 
       MEMORY_HEADROOM = 128
@@ -117,7 +117,11 @@ module VSphereCloud
       # @return [Array<Vim::HostSystem>] list of hosts that are active
       def select_active_host_mobs(host_properties)
         host_properties.values.
-          select { |p| p['runtime.inMaintenanceMode'] != 'true' }.
+          select { |p|
+            p['runtime.inMaintenanceMode'] != 'true' &&
+              p['runtime.connectionState'] == 'connected' &&
+              p['runtime.powerState'] == 'poweredOn'
+          }.
           collect { |p| p[:obj] }
       end
 

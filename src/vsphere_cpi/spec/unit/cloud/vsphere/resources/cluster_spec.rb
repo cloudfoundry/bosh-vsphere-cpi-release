@@ -128,79 +128,109 @@ module VSphereCloud::Resources
       end
 
       context 'when we are using clusters directly' do
-        def generate_host_property(mob, maintenance_mode, memory_size)
+        def generate_host_property(mob:, connection_state:, maintenance_mode:, memory_size:, power_state:)
           {
             mob => {
-              'runtime.inMaintenanceMode' => maintenance_mode ? 'true' : 'false',
-              :obj => mob,
               'hardware.memorySize' => memory_size,
+              'runtime.connectionState' => connection_state,
+              'runtime.inMaintenanceMode' => maintenance_mode ? 'true' : 'false',
+              'runtime.powerState' => power_state,
+              :obj => mob,
             }
           }
-        end
-
-        let(:inactive_host_properties) do
-          {}.merge(
-            generate_host_property(instance_double('VimSdk::Vim::ClusterComputeResource'), true, nil)
-          ).merge(
-            generate_host_property(instance_double('VimSdk::Vim::ClusterComputeResource'), true, nil)
-          )
         end
 
         before do
           allow(cluster_config).to receive(:resource_pool).and_return(nil)
         end
 
-        context 'when there are active host mobs' do
-          let(:active_host_1_mob) { instance_double('VimSdk::Vim::ClusterComputeResource') }
-          let(:active_host_2_mob) { instance_double('VimSdk::Vim::ClusterComputeResource') }
-          let(:active_host_mobs) { [active_host_1_mob, active_host_2_mob] }
+        let(:active_host_1_mob) { instance_double('VimSdk::Vim::ClusterComputeResource') }
+        let(:active_host_2_mob) { instance_double('VimSdk::Vim::ClusterComputeResource') }
+        let(:active_host_mobs) { [active_host_1_mob, active_host_2_mob] }
 
-          before do
-            hosts_properties = inactive_host_properties.merge(
-              generate_host_property(active_host_1_mob, false, 100 * 1024 * 1024)
+        let(:active_hosts_properties) do
+          {}.merge(
+            generate_host_property(mob: active_host_1_mob, maintenance_mode: false, memory_size: 100 * 1024 * 1024, power_state: 'poweredOn', connection_state: 'connected')
+          ).merge(
+            generate_host_property(mob: active_host_2_mob, maintenance_mode: false, memory_size: 40 * 1024 * 1024, power_state: 'poweredOn', connection_state: 'connected')
+          )
+        end
+        let(:hosts_properties) { active_hosts_properties }
+
+        before do
+          allow(cloud_searcher).to receive(:get_properties)
+                                     .with(cluster_hosts,
+                                       VimSdk::Vim::HostSystem,
+                                       described_class::HOST_PROPERTIES,
+                                       ensure_all: true)
+                                     .and_return(hosts_properties)
+
+          performance_counters = {
+            active_host_1_mob => {
+              'mem.usage.average' => '2500,2500',
+            },
+            active_host_2_mob => {
+              'mem.usage.average' => '7500,7500',
+            },
+          }
+          allow(client).to receive(:get_perf_counters)
+                             .with(active_host_mobs,
+                               described_class::HOST_COUNTERS,
+                               max_sample: 5)
+                             .and_return(performance_counters)
+        end
+
+        it 'sets resources to values based on the active hosts in the cluster' do
+          expect(cluster.free_memory).to eq(85)
+        end
+
+        context 'when an ESXi host is not powered on' do
+          let(:hosts_properties) do
+            {}.merge(
+              generate_host_property(mob: instance_double('VimSdk::Vim::ClusterComputeResource'), maintenance_mode: false, memory_size: 5 * 1024 * 1024, power_state: 'poweredOff', connection_state: 'connected')
             ).merge(
-              generate_host_property(active_host_2_mob, false, 40 * 1024 * 1024)
+               active_hosts_properties
             )
-
-            allow(cloud_searcher).to receive(:get_properties)
-                                       .with(cluster_hosts,
-                                         VimSdk::Vim::HostSystem,
-                                         described_class::HOST_PROPERTIES,
-                                         ensure_all: true)
-                                       .and_return(hosts_properties)
           end
 
-          before do
-            performance_counters = {
-              active_host_1_mob => {
-                'mem.usage.average' => '2500,2500',
-              },
-              active_host_2_mob => {
-                'mem.usage.average' => '7500,7500',
-              },
-            }
+          it 'includes the free memory of only powered on hosts' do
+            expect(cluster.free_memory).to eq(85)
+          end
+        end
 
-            allow(client).to receive(:get_perf_counters)
-                               .with(active_host_mobs,
-                                 described_class::HOST_COUNTERS,
-                                 max_sample: 5)
-                               .and_return(performance_counters)
-
+        context 'when an ESXi host is disconnected' do
+          let(:hosts_properties) do
+            {}.merge(
+              generate_host_property(mob: instance_double('VimSdk::Vim::ClusterComputeResource'), maintenance_mode: false, memory_size: 5 * 1024 * 1024, power_state: 'poweredOn', connection_state: 'disconnected')
+            ).merge(
+              active_hosts_properties
+            )
           end
 
-          it 'sets resources to values based on the active hosts in the cluster' do
+          it 'includes the free memory of only connected hosts' do
+            expect(cluster.free_memory).to eq(85)
+          end
+        end
+
+        context 'when an ESXi host is in maintenance mode' do
+          let(:hosts_properties) do
+            {}.merge(
+              generate_host_property(mob: instance_double('VimSdk::Vim::ClusterComputeResource'), maintenance_mode: true, memory_size: 5 * 1024 * 1024, power_state: 'poweredOn', connection_state: 'connected')
+            ).merge(
+               active_hosts_properties
+            )
+          end
+
+          it 'includes the free memory of only hosts not in maintenance mode' do
             expect(cluster.free_memory).to eq(85)
           end
         end
 
         context 'when there are no active cluster hosts' do
-          before do
-            allow(cloud_searcher).to receive(:get_properties)
-                                       .with(cluster_hosts,
-                                         VimSdk::Vim::HostSystem,
-                                         described_class::HOST_PROPERTIES,
-                                         ensure_all: true)
-                                       .and_return(inactive_host_properties)
+          let(:hosts_properties) do
+            {}.merge(
+              generate_host_property(mob: instance_double('VimSdk::Vim::ClusterComputeResource'), maintenance_mode: false, memory_size: 5 * 1024 * 1024, power_state: 'poweredOff', connection_state: 'disconnected')
+            )
           end
 
           it 'defaults free memory to zero' do
