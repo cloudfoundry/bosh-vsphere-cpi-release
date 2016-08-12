@@ -8,7 +8,7 @@ module VSphereCloud
       stringify_with :name
 
       PROPERTIES = %w(name datastore resourcePool host)
-      HOST_PROPERTIES = %w(hardware.memorySize runtime.connectionState runtime.inMaintenanceMode runtime.powerState)
+      HOST_PROPERTIES = %w(name hardware.memorySize runtime.connectionState runtime.inMaintenanceMode runtime.powerState)
       HOST_COUNTERS = %w(mem.usage.average)
 
       MEMORY_HEADROOM = 128
@@ -100,9 +100,14 @@ module VSphereCloud
         counters = @client.get_perf_counters(active_host_mobs, HOST_COUNTERS, max_sample: 5)
         counters.each do |host_mob, counter|
           host_properties = hosts_properties[host_mob]
-          total_memory = host_properties["hardware.memorySize"].to_i
-          percent_used = Util.average_csv(counter["mem.usage.average"]) / 10000
-          free_memory = ((1.0 - percent_used) * total_memory).to_i
+          total_memory = host_properties['hardware.memorySize'].to_i
+          free_memory = 0
+          if !counter['mem.usage.average'].nil?
+            percent_used = Util.average_csv(counter['mem.usage.average']) / 10000
+            free_memory = ((1.0 - percent_used) * total_memory).to_i
+          else
+            logger.warn("host '#{host_properties['name']}' is missing 'mem.usage.average' (possibly recently booted), ignoring")
+          end
 
           cluster_free_memory += free_memory
         end

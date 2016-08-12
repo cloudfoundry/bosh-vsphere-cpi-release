@@ -128,9 +128,10 @@ module VSphereCloud::Resources
       end
 
       context 'when we are using clusters directly' do
-        def generate_host_property(mob:, connection_state:, maintenance_mode:, memory_size:, power_state:)
+        def generate_host_property(mob:, name:, connection_state:, maintenance_mode:, memory_size:, power_state:)
           {
             mob => {
+              'name' => name,
               'hardware.memorySize' => memory_size,
               'runtime.connectionState' => connection_state,
               'runtime.inMaintenanceMode' => maintenance_mode ? 'true' : 'false',
@@ -150,9 +151,9 @@ module VSphereCloud::Resources
 
         let(:active_hosts_properties) do
           {}.merge(
-            generate_host_property(mob: active_host_1_mob, maintenance_mode: false, memory_size: 100 * 1024 * 1024, power_state: 'poweredOn', connection_state: 'connected')
+            generate_host_property(mob: active_host_1_mob, name: 'mob-1', maintenance_mode: false, memory_size: 100 * 1024 * 1024, power_state: 'poweredOn', connection_state: 'connected')
           ).merge(
-            generate_host_property(mob: active_host_2_mob, maintenance_mode: false, memory_size: 40 * 1024 * 1024, power_state: 'poweredOn', connection_state: 'connected')
+            generate_host_property(mob: active_host_2_mob, name: 'mob-2', maintenance_mode: false, memory_size: 40 * 1024 * 1024, power_state: 'poweredOn', connection_state: 'connected')
           )
         end
         let(:hosts_properties) { active_hosts_properties }
@@ -187,7 +188,7 @@ module VSphereCloud::Resources
         context 'when an ESXi host is not powered on' do
           let(:hosts_properties) do
             {}.merge(
-              generate_host_property(mob: instance_double('VimSdk::Vim::ClusterComputeResource'), maintenance_mode: false, memory_size: 5 * 1024 * 1024, power_state: 'poweredOff', connection_state: 'connected')
+              generate_host_property(mob: instance_double('VimSdk::Vim::ClusterComputeResource'), name: 'fake-powered-off', maintenance_mode: false, memory_size: 5 * 1024 * 1024, power_state: 'poweredOff', connection_state: 'connected')
             ).merge(
                active_hosts_properties
             )
@@ -201,7 +202,7 @@ module VSphereCloud::Resources
         context 'when an ESXi host is disconnected' do
           let(:hosts_properties) do
             {}.merge(
-              generate_host_property(mob: instance_double('VimSdk::Vim::ClusterComputeResource'), maintenance_mode: false, memory_size: 5 * 1024 * 1024, power_state: 'poweredOn', connection_state: 'disconnected')
+              generate_host_property(mob: instance_double('VimSdk::Vim::ClusterComputeResource'), name: 'fake-host-disc', maintenance_mode: false, memory_size: 5 * 1024 * 1024, power_state: 'poweredOn', connection_state: 'disconnected')
             ).merge(
               active_hosts_properties
             )
@@ -215,7 +216,7 @@ module VSphereCloud::Resources
         context 'when an ESXi host is in maintenance mode' do
           let(:hosts_properties) do
             {}.merge(
-              generate_host_property(mob: instance_double('VimSdk::Vim::ClusterComputeResource'), maintenance_mode: true, memory_size: 5 * 1024 * 1024, power_state: 'poweredOn', connection_state: 'connected')
+              generate_host_property(mob: instance_double('VimSdk::Vim::ClusterComputeResource'), name: 'fake-host-maint', maintenance_mode: true, memory_size: 5 * 1024 * 1024, power_state: 'poweredOn', connection_state: 'connected')
             ).merge(
                active_hosts_properties
             )
@@ -229,12 +230,31 @@ module VSphereCloud::Resources
         context 'when there are no active cluster hosts' do
           let(:hosts_properties) do
             {}.merge(
-              generate_host_property(mob: instance_double('VimSdk::Vim::ClusterComputeResource'), maintenance_mode: false, memory_size: 5 * 1024 * 1024, power_state: 'poweredOff', connection_state: 'disconnected')
+              generate_host_property(mob: instance_double('VimSdk::Vim::ClusterComputeResource'), name: 'fake-host-inactive', maintenance_mode: false, memory_size: 5 * 1024 * 1024, power_state: 'poweredOff', connection_state: 'disconnected')
             )
           end
 
           it 'defaults free memory to zero' do
             expect(cluster.free_memory).to eq(0)
+          end
+        end
+
+        context 'when the performance counters for a host are not available' do
+          before do
+            incomplete_perf_counters = {
+              active_host_1_mob => {
+                'mem.usage.average' => '2500,2500',
+              },
+              active_host_2_mob => {},
+            }
+            allow(client).to receive(:get_perf_counters)
+                               .with(active_host_mobs, %w(mem.usage.average), max_sample: 5)
+                               .and_return(incomplete_perf_counters)
+          end
+
+          it 'logs a warning and does not include the missing host in the utilization' do
+            expect(logger).to receive(:warn).with(/mob-2.*mem\.usage\.average/)
+            expect(cluster.free_memory).to eq(75)
           end
         end
       end
