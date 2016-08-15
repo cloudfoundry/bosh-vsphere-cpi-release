@@ -56,7 +56,7 @@ module VSphereCloud
       let(:cdrom_datastore) { instance_double('VimSdk::Vim::Datastore', name: 'fake-datastore-name 1') }
 
       it 'gets current agent environment from fetched file' do
-        expect(file_provider).to receive(:fetch_file).with(
+        expect(file_provider).to receive(:fetch_file_from_datastore).with(
           'fake-datacenter-name 1',
           'fake-datastore-name 1',
           'fake-vm-name/env.json',
@@ -66,7 +66,7 @@ module VSphereCloud
       end
 
       it 'raises if env.json is empty' do
-        allow(file_provider).to receive(:fetch_file).with(
+        allow(file_provider).to receive(:fetch_file_from_datastore).with(
           'fake-datacenter-name 1',
           'fake-datastore-name 1',
           'fake-vm-name/env.json',
@@ -179,7 +179,7 @@ module VSphereCloud
       end
 
       def it_uploads_environment_json(code = 204)
-        expect(file_provider).to receive(:upload_file).with(
+        expect(file_provider).to receive(:upload_file_to_datastore).with(
           'fake-datacenter-name 1',
           'fake-datastore-name 1',
           'fake-vm-name/env.json',
@@ -204,7 +204,7 @@ module VSphereCloud
       end
 
       def it_uploads_environment_iso
-        expect(file_provider).to receive(:upload_file).with(
+        expect(file_provider).to receive(:upload_file_to_datastore).with(
           'fake-datacenter-name 1',
           'fake-datastore-name 1',
           'fake-vm-name/env.iso',
@@ -289,7 +289,7 @@ module VSphereCloud
 
       context 'when uploading environment file fails' do
         before {
-          expect(file_provider).to receive(:upload_file).with(
+          expect(file_provider).to receive(:upload_file_to_datastore).with(
               'fake-datacenter-name 1',
               'fake-datastore-name 1',
               'fake-vm-name/env.json',

@@ -22,7 +22,7 @@ module VSphereCloud
       raise Bosh::Clouds::CloudError.new("Could not find matching datastore name '#{datastore_name}'") unless result
       env_path = result[1]
 
-      contents = @file_provider.fetch_file(datacenter_name, datastore_name, "#{env_path}/env.json")
+      contents = @file_provider.fetch_file_from_datastore(datacenter_name, datastore_name, "#{env_path}/env.json")
       raise Bosh::Clouds::CloudError.new("Unable to load env.json from '#{env_path}/env.json'") unless contents
 
       JSON.load(contents)
@@ -34,8 +34,8 @@ module VSphereCloud
 
       disconnect_cdrom(vm)
       clean_env(vm)
-      @file_provider.upload_file(location[:datacenter], location[:datastore], "#{location[:vm]}/env.json", env_json)
-      @file_provider.upload_file(location[:datacenter], location[:datastore], "#{location[:vm]}/env.iso", generate_env_iso(env_json))
+      @file_provider.upload_file_to_datastore(location[:datacenter], location[:datastore], "#{location[:vm]}/env.json", env_json)
+      @file_provider.upload_file_to_datastore(location[:datacenter], location[:datastore], "#{location[:vm]}/env.iso", generate_env_iso(env_json))
 
       datastore = @cloud_searcher.get_managed_object(Vim::Datastore, name: location[:datastore])
       file_name = "[#{location[:datastore]}] #{location[:vm]}/env.iso"

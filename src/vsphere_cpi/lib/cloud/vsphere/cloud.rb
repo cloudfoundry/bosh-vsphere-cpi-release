@@ -24,7 +24,8 @@ module VSphereCloud
 
       @logger = config.logger
 
-      @http_client = VSphereCloud::CpiHttpClient.new(@config.soap_log)
+      base_http_client = VSphereCloud::CpiHttpClient.new(@config.soap_log)
+      @http_client = VSphereCloud::RetryHttpClient.new(base_http_client, @logger)
 
       @client = VCenterClient.new(
         vcenter_api_uri: @config.vcenter_api_uri,
@@ -660,9 +661,9 @@ module VSphereCloud
 
             @logger.info("Uploading disk to: #{device_url.url}")
 
-            @http_client.post(device_url.url,
+            @file_provider.upload_file_to_url(device_url.url,
                              disk_file,
-                             { 'Content-Type' => 'application/x-vnd.vmware-streamVmdk', 'Content-Length' => disk_file_size })
+                             { 'Content-Type' => 'application/x-vnd.vmware-streamVmdk' })
 
             progress_thread.kill
             disk_file.close

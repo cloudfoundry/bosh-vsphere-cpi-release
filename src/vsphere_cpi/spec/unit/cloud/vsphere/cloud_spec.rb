@@ -18,7 +18,8 @@ module VSphereCloud
     end
     let(:logger) { instance_double('Logger', info: nil, debug: nil) }
     let(:vcenter_client) { instance_double('VSphereCloud::VCenterClient', login: nil, service_content: service_content) }
-    let(:http_client) { instance_double('VSphereCloud::CpiHttpClient') }
+    let(:base_http_client) { instance_double('VSphereCloud::CpiHttpClient') }
+    let(:http_client) { instance_double('VSphereCloud::RetryHttpClient') }
     let(:service_content) do
       instance_double('VimSdk::Vim::ServiceInstanceContent',
         virtual_disk_manager: virtual_disk_manager,
@@ -37,6 +38,9 @@ module VSphereCloud
       allow(Config).to receive(:build).with(config).and_return(cloud_config)
       allow(CpiHttpClient).to receive(:new)
         .with('fake-log-file')
+        .and_return(base_http_client)
+      allow(RetryHttpClient).to receive(:new)
+        .with(base_http_client, logger)
         .and_return(http_client)
       allow(VCenterClient).to receive(:new)
         .with({
