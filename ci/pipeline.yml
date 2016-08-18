@@ -154,11 +154,11 @@ jobs:
     serial: true
     plan:
       - aggregate:
-        - {get: cpi-release,  tags: [vsphere-v5.1], trigger: true, resource: bosh-cpi-artifacts, passed: [build-candidate]}
+        - {get: cpi-release,  tags: [vsphere-v5.1], trigger: true,  resource: bosh-cpi-artifacts, passed: [build-candidate]}
         - {get: bosh-release, tags: [vsphere-v5.1], trigger: false, resource: old-bosh-release}
         - {get: stemcell,     tags: [vsphere-v5.1], trigger: false, resource: old-stemcell}
         - {get: pipelines,    tags: [vsphere-v5.1], trigger: false, resource: certification}
-        - {get: bosh-init,    tags: [vsphere-v5.1], trigger: false}
+        - {get: bosh-cli,     tags: [vsphere-v5.1], trigger: false}
         - {get: bats,         tags: [vsphere-v5.1], trigger: false}
         # Passthrough
         - {get: bosh-cpi-src, tags: [vsphere-v5.1], trigger: false, passed: [build-candidate]}
@@ -281,11 +281,11 @@ resources:
     source:
       name: bosh-vsphere-esxi-centos-7-go_agent
 
-  - name: bosh-init
+  - name: bosh-cli
     type: s3
     source:
-      regexp: bosh-init-([0-9.]+)-linux-amd64
-      bucket: bosh-init-artifacts
+      regexp: bosh-cli-([0-9.]+)-linux-amd64
+      bucket: bosh-cli-artifacts
       region_name: us-east-1
 
   - name: certification
