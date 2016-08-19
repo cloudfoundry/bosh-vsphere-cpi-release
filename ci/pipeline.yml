@@ -182,6 +182,7 @@ jobs:
           BOSH_VSPHERE_VCENTER_VM_FOLDER:         {{VCENTER_VM_FOLDER}}
           BOSH_VSPHERE_VCENTER_TEMPLATE_FOLDER:   {{VCENTER_TEMPLATE_FOLDER}}
           BOSH_VSPHERE_VCENTER_DISK_PATH:         {{VCENTER_DISK_PATH}}
+          SSLIP_IO_KEY:                           {{sslip_io_key}}
           USE_REDIS:                              true
 
       - do:
