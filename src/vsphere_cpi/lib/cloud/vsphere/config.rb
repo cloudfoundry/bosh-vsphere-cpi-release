@@ -59,6 +59,10 @@ module VSphereCloud
       vcenter['password']
     end
 
+    def vcenter_default_disk_type
+      vcenter['default_disk_type']
+    end
+
     def datacenter_name
       vcenter_datacenter['name']
     end

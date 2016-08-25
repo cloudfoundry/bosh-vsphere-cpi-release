@@ -393,7 +393,7 @@ module VSphereCloud
         datastore = @datacenter.find_datastore(datastore_name)
         @logger.info("Using datastore #{datastore.name} to store persistent disk")
 
-        disk_type = cloud_properties.fetch('type', Resources::PersistentDisk::DEFAULT_DISK_TYPE)
+        disk_type = cloud_properties['type'] || @config.vcenter_default_disk_type || Resources::PersistentDisk::DEFAULT_DISK_TYPE
         disk = @datacenter.create_disk(datastore, size_in_mb, disk_type)
         @logger.info("Created disk: #{disk.inspect}")
 

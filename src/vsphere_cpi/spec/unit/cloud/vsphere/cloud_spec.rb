@@ -13,9 +13,11 @@ module VSphereCloud
         vcenter_api_uri: vcenter_api_uri,
         vcenter_user: 'fake-user',
         vcenter_password: 'fake-password',
+        vcenter_default_disk_type: default_disk_type,
         soap_log: 'fake-log-file',
       ).as_null_object
     end
+    let(:default_disk_type) { nil }
     let(:logger) { instance_double('Logger', info: nil, debug: nil) }
     let(:vcenter_client) { instance_double('VSphereCloud::VCenterClient', login: nil, service_content: service_content) }
     let(:base_http_client) { instance_double('VSphereCloud::CpiHttpClient') }
@@ -971,16 +973,52 @@ module VSphereCloud
           .and_return('small-ds')
         allow(datacenter).to receive(:accessible_datastores_hash)
           .and_return(accessible_datastores_hash)
+        allow(datacenter).to receive(:find_datastore)
+          .with('small-ds')
+          .and_return(datastore)
       end
 
       it 'creates disk via datacenter' do
-        expect(datacenter).to receive(:find_datastore)
-          .with('small-ds')
-          .and_return(datastore)
-        expect(datacenter).to receive(:create_disk).with(datastore, 1024, 'foo-type').and_return(disk)
+        expect(datacenter).to receive(:create_disk)
+          .with(datastore, 1024, Resources::PersistentDisk::DEFAULT_DISK_TYPE)
+          .and_return(disk)
 
-        disk_cid = vsphere_cloud.create_disk(1024, {'type' => 'foo-type'})
+        disk_cid = vsphere_cloud.create_disk(1024, {})
         expect(disk_cid).to eq('fake-disk-cid')
+      end
+
+      context 'when global default_disk_type is set and no disk_pool type is set' do
+        let(:default_disk_type) { 'fake-global-type' }
+        it 'creates disk with the specified default type' do
+          expect(datacenter).to receive(:create_disk)
+                                  .with(datastore, 1024, 'fake-global-type')
+                                  .and_return(disk)
+
+          disk_cid = vsphere_cloud.create_disk(1024, {})
+          expect(disk_cid).to eq('fake-disk-cid')
+        end
+      end
+
+      context 'when both global default_disk_type is set and disk_pool type is set' do
+        let(:default_disk_type) { 'fake-global-type' }
+        it 'create disk with the specified disk_pool type' do
+          expect(datacenter).to receive(:create_disk)
+                                  .with(datastore, 1024, 'fake-disk-pool-type')
+                                  .and_return(disk)
+          disk_cid = vsphere_cloud.create_disk(1024, {'type' => 'fake-disk-pool-type'})
+          expect(disk_cid).to eq('fake-disk-cid')
+        end
+      end
+
+      context 'when no global default_disk_type is set and disk_pool type is set' do
+        it 'creates disk with the specified disk_pool type' do
+          expect(datacenter).to receive(:create_disk)
+            .with(datastore, 1024, 'fake-disk-pool-type')
+            .and_return(disk)
+
+          disk_cid = vsphere_cloud.create_disk(1024, {'type' => 'fake-disk-pool-type'})
+          expect(disk_cid).to eq('fake-disk-cid')
+        end
       end
 
       context 'when vm_cid is provided' do
@@ -993,9 +1031,6 @@ module VSphereCloud
         end
 
         it 'creates disk in vm cluster' do
-          expect(datacenter).to receive(:find_datastore)
-            .with('small-ds')
-            .and_return(datastore)
           expect(datacenter).to receive(:create_disk)
             .with(datastore, 1024, Resources::PersistentDisk::DEFAULT_DISK_TYPE)
             .and_return(disk)
