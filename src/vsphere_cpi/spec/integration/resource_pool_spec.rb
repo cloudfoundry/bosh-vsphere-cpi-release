@@ -34,7 +34,9 @@ context 'given a CPI configured with vSphere resource pools' do
 
   let(:resource_pool_cpi) do
     options = cpi_options(
-      clusters: [{ @cluster_name => {'resource_pool' => @resource_pool_name} }],
+      datacenters: [{
+        clusters: [{ @cluster_name => {'resource_pool' => @resource_pool_name} }],
+      }]
     )
     VSphereCloud::Cloud.new(options)
   end
@@ -68,7 +70,9 @@ context 'given a CPI configured with vSphere resource pools' do
     context 'and a second CPI is not configured with the resource pool' do
       let(:second_cpi) do
         options = cpi_options(
-          clusters: [@cluster_name]
+          datacenters: [{
+            clusters: [@cluster_name]
+          }],
         )
         VSphereCloud::Cloud.new(options)
       end
@@ -86,9 +90,11 @@ context 'given a CPI configured with vSphere resource pools' do
   context 'when vm_type.resource_pool is set to a cluster' do
     let(:second_cluster_cpi) do
       options = cpi_options(
-        datastore_pattern: @second_cluster_datastore_pattern,
-        persistent_datastore_pattern: @second_cluster_datastore_pattern,
-        clusters: [@second_cluster_name]
+        datacenters: [{
+          datastore_pattern: @second_cluster_datastore_pattern,
+          persistent_datastore_pattern: @second_cluster_datastore_pattern,
+          clusters: [@second_cluster_name]
+        }]
       )
       VSphereCloud::Cloud.new(options)
     end

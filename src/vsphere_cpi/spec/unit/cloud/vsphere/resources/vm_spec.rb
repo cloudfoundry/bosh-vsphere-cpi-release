@@ -311,7 +311,7 @@ describe VSphereCloud::Resources::VM do
   end
 
   describe '#attach_disk' do
-    let(:disk) { VSphereCloud::Resources::PersistentDisk.new('fake-disk-cid', 1024, datastore, 'fake-folder') }
+    let(:disk) { VSphereCloud::Resources::PersistentDisk.new(cid: 'fake-disk-cid', size_in_mb: 1024, datastore: datastore, folder: 'fake-folder') }
     let(:datastore) { instance_double('VSphereCloud::Resources::Datastore', name: 'fake-datastore')}
     let(:devices) { [disk] }
 

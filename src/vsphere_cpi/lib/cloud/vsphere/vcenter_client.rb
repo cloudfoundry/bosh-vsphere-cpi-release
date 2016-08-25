@@ -264,7 +264,7 @@ module VSphereCloud
 
     def find_disk(disk_cid, datastore, disk_folder)
       disk_size_in_mb = find_disk_size_using_browser(datastore, disk_cid, disk_folder)
-      disk_size_in_mb.nil? ? nil : Resources::PersistentDisk.new(disk_cid, disk_size_in_mb, datastore, disk_folder)
+      disk_size_in_mb.nil? ? nil : Resources::PersistentDisk.new(cid: disk_cid, size_in_mb: disk_size_in_mb, datastore: datastore, folder: disk_folder)
     end
 
     def create_disk(datacenter_mob, datastore, disk_cid, disk_folder, disk_size_in_mb, disk_type)
@@ -288,7 +288,7 @@ module VSphereCloud
       )
       wait_for_task(task)
 
-      Resources::PersistentDisk.new(disk_cid, disk_size_in_mb, datastore, disk_folder)
+      Resources::PersistentDisk.new(cid: disk_cid, size_in_mb: disk_size_in_mb, datastore: datastore, folder: disk_folder)
     end
 
     def find_disk_size_using_browser(datastore, disk_cid, disk_folder)

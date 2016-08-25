@@ -16,6 +16,7 @@ module VSphereCloud
     let(:cluster_name) { 'grubby-cluster' }
     let(:cluster_name_witout_resource_pool) { 'shiny-cluster' }
     let(:resource_pool) { 'wading-pool' }
+    let(:default_disk_type) { nil }
     let(:datacenters) do
       [{
          'name' => datacenter_name,
@@ -43,6 +44,7 @@ module VSphereCloud
           'host' => host,
           'user' => user,
           'password' => password,
+          'default_disk_type' => default_disk_type,
           'datacenters' => datacenters,
         ],
         'soap_log' => 'fake-soap-log'
@@ -125,6 +127,33 @@ module VSphereCloud
           end.to raise_error(Membrane::SchemaValidationError)
         end
       end
+
+      context 'when the vcenter_default_disk_type is an invalid type' do
+        let(:default_disk_type) { 'invalid-type' }
+        it 'returns value from config' do
+          expect do
+            config.validate
+          end.to raise_error(RuntimeError, /invalid-type/)
+        end
+      end
+
+      context 'when the vcenter_default_disk_type is "thin"' do
+        let(:default_disk_type) { 'thin' }
+        it 'returns value from config' do
+          expect do
+            config.validate
+          end.to_not raise_error
+        end
+      end
+
+      context 'when the vcenter_default_disk_type is "preallocated"' do
+        let(:default_disk_type) { 'preallocated' }
+        it 'returns value from config' do
+          expect do
+            config.validate
+          end.to_not raise_error
+        end
+      end
     end
 
     describe '#logger' do
@@ -160,6 +189,21 @@ module VSphereCloud
     describe '#vcenter_password' do
       it 'returns value from config' do
         expect(config.vcenter_password).to eq(password)
+      end
+    end
+
+    describe '#vcenter_default_disk_type' do
+      context 'when the vcenter_default_disk_Type is unset' do
+        it 'returns value from config' do
+          expect(config.vcenter_default_disk_type).to eq(Config::DEFAULT_DISK_TYPE)
+        end
+      end
+
+      context 'when the vcenter_default_disk_type is "thin"' do
+        let(:default_disk_type) { 'thin' }
+        it 'returns value from config' do
+          expect(config.vcenter_default_disk_type).to eq('thin')
+        end
       end
     end
 

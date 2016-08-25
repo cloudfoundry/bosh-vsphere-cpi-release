@@ -250,6 +250,7 @@ module VSphereCloud
           cluster_provider: @cluster_provider,
           agent_env: @agent_env,
           ip_conflict_detector: IPConflictDetector.new(@logger, @client),
+          default_disk_type: @config.vcenter_default_disk_type
         )
         vm_creator.create(vm_config)
       end
@@ -393,7 +394,7 @@ module VSphereCloud
         datastore = @datacenter.find_datastore(datastore_name)
         @logger.info("Using datastore #{datastore.name} to store persistent disk")
 
-        disk_type = cloud_properties['type'] || @config.vcenter_default_disk_type || Resources::PersistentDisk::DEFAULT_DISK_TYPE
+        disk_type = cloud_properties['type'] || @config.vcenter_default_disk_type
         disk = @datacenter.create_disk(datastore, size_in_mb, disk_type)
         @logger.info("Created disk: #{disk.inspect}")
 

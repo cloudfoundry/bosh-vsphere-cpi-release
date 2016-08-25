@@ -12,23 +12,29 @@ context 'when disk is in non-accessible datastore' do
 
   let(:first_cluster_cpi_options) do
     cpi_options(
-      clusters: [@cluster_name]
+      datacenters: [{
+        clusters: [@cluster_name],
+      }],
     )
   end
   let(:first_cluster_cpi) { VSphereCloud::Cloud.new(first_cluster_cpi_options) }
   let(:second_cluster_cpi_options) do
     cpi_options(
-      datastore_pattern: @second_cluster_datastore,
-      persistent_datastore_pattern: @second_cluster_datastore,
-      clusters: [{@second_cluster_name => {'resource_pool' => @second_cluster_resource_pool_name}}],
+      datacenters: [{
+        datastore_pattern: @second_cluster_datastore,
+        persistent_datastore_pattern: @second_cluster_datastore,
+        clusters: [{@second_cluster_name => {'resource_pool' => @second_cluster_resource_pool_name}}],
+      }]
     )
   end
   let(:second_cluster_cpi) { VSphereCloud::Cloud.new(second_cluster_cpi_options) }
   let(:both_cluster_cpi_options) do
     cpi_options(
-      datastore_pattern: @datastore_pattern,
-      persistent_datastore_pattern: @datastore_pattern,
-      clusters: [@cluster_name, @second_cluster_name],
+      datacenters: [{
+        datastore_pattern: @datastore_pattern,
+        persistent_datastore_pattern: @datastore_pattern,
+        clusters: [@cluster_name, @second_cluster_name],
+      }],
     )
   end
   let(:both_cluster_cpi) { VSphereCloud::Cloud.new(both_cluster_cpi_options) }
@@ -117,9 +123,11 @@ context 'when disk is in non-accessible datastore' do
   context 'when requested placement cannot be satisfied' do
     let(:mismatch_cpi) do
       options_with_cluster_datastore_mismatch = cpi_options(
-        datastore_pattern: @second_cluster_datastore,
-        persistent_datastore_pattern: @second_cluster_datastore,
-        clusters: [@cluster_name], # cluster 1 does not have access to cluster 2's datastore
+        datacenters: [{
+          datastore_pattern: @second_cluster_datastore,
+          persistent_datastore_pattern: @second_cluster_datastore,
+          clusters: [@cluster_name], # cluster 1 does not have access to cluster 2's datastore
+        }]
       )
       VSphereCloud::Cloud.new(options_with_cluster_datastore_mismatch)
     end

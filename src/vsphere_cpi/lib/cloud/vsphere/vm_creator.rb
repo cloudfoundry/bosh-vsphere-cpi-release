@@ -1,6 +1,6 @@
 module VSphereCloud
   class VmCreator
-    def initialize(client:, cloud_searcher:, logger:, cpi:, datacenter:, cluster_provider:, agent_env:, ip_conflict_detector:)
+    def initialize(client:, cloud_searcher:, logger:, cpi:, datacenter:, cluster_provider:, agent_env:, ip_conflict_detector:, default_disk_type:)
       @client = client
       @cloud_searcher = cloud_searcher
       @logger = logger
@@ -9,6 +9,7 @@ module VSphereCloud
       @cluster_provider = cluster_provider
       @agent_env = agent_env
       @ip_conflict_detector = ip_conflict_detector
+      @default_disk_type = default_disk_type
     end
 
     def create(vm_config)
@@ -40,13 +41,15 @@ module VSphereCloud
       config_spec.device_change = []
 
       ephemeral_disk = Resources::EphemeralDisk.new(
-        Resources::EphemeralDisk::DISK_NAME,
-        vm_config.ephemeral_disk_size,
-        datastore,
-        vm_config.name
+        size_in_mb: vm_config.ephemeral_disk_size,
+        datastore: datastore,
+        folder: vm_config.name,
+        disk_type: @default_disk_type,
       )
 
-      ephemeral_disk_config = ephemeral_disk.create_disk_attachment_spec(replicated_stemcell_vm.system_disk.controller_key)
+      ephemeral_disk_config = ephemeral_disk.create_disk_attachment_spec(
+        disk_controller_id: replicated_stemcell_vm.system_disk.controller_key,
+      )
       config_spec.device_change << ephemeral_disk_config
 
       dvs_index = {}

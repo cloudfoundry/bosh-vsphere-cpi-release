@@ -124,13 +124,7 @@ module VSphereCloud
         end
       end
 
-      def create_disk(datastore, size_in_mb, type)
-        disk_type = type
-
-        if disk_type.nil?
-          disk_type = Resources::PersistentDisk::DEFAULT_DISK_TYPE
-        end
-
+      def create_disk(datastore, size_in_mb, disk_type)
         unless Resources::PersistentDisk::SUPPORTED_DISK_TYPES.include?(disk_type)
           raise "Disk type: '#{disk_type}' is not supported"
         end
@@ -175,7 +169,7 @@ module VSphereCloud
         @logger.info("Moving #{disk.path} to #{destination_path}")
         @client.move_disk(mob, disk.path, mob, destination_path)
         @logger.info('Moved disk successfully')
-        Resources::PersistentDisk.new(disk.cid, disk.size_in_mb, destination_datastore, @disk_path)
+        Resources::PersistentDisk.new(cid: disk.cid, size_in_mb: disk.size_in_mb, datastore: destination_datastore, folder: @disk_path)
       end
 
       private

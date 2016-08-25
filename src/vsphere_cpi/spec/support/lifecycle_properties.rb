@@ -61,31 +61,55 @@ module LifecycleProperties
     datacenter_name
   end
 
-  def cpi_options(options = {})
-    datastore_pattern = options.fetch(:datastore_pattern, @default_datastore_pattern)
-    persistent_datastore_pattern = options.fetch(:persistent_datastore_pattern, @default_datastore_pattern)
-    clusters = options.fetch(:clusters, [@default_cluster])
-    datacenter_name = options.fetch(:datacenter_name, @datacenter_name)
+  def cpi_options(overrides = {})
+    overrides = stringify_keys(overrides)
+
+    datacenter_overrides = overrides.delete('datacenters') || []
+    datacenter_config = deep_merge({
+      'name' => @datacenter_name,
+      'vm_folder' => fetch_property('BOSH_VSPHERE_CPI_VM_FOLDER'),
+      'template_folder' => fetch_property('BOSH_VSPHERE_CPI_TEMPLATE_FOLDER'),
+      'disk_path' => fetch_property('BOSH_VSPHERE_CPI_DISK_PATH'),
+      'datastore_pattern' => @default_datastore_pattern,
+      'persistent_datastore_pattern' => @default_datastore_pattern,
+      'allow_mixed_datastores' => true,
+      'clusters' => [@default_cluster],
+    }, datacenter_overrides.first || {})
+
+    vcenter_options = deep_merge({
+      'host' => fetch_property('BOSH_VSPHERE_CPI_HOST'),
+      'user' => fetch_property('BOSH_VSPHERE_CPI_USER'),
+      'password' => fetch_property('BOSH_VSPHERE_CPI_PASSWORD'),
+      'datacenters' => [datacenter_config]
+    }, overrides)
 
     {
       'agent' => {
         'ntp' => ['10.80.0.44'],
       },
-      'vcenters' => [{
-        'host' => fetch_property('BOSH_VSPHERE_CPI_HOST'),
-        'user' => fetch_property('BOSH_VSPHERE_CPI_USER'),
-        'password' => fetch_property('BOSH_VSPHERE_CPI_PASSWORD'),
-        'datacenters' => [{
-          'name' => datacenter_name,
-          'vm_folder' => fetch_property('BOSH_VSPHERE_CPI_VM_FOLDER'),
-          'template_folder' => fetch_property('BOSH_VSPHERE_CPI_TEMPLATE_FOLDER'),
-          'disk_path' => fetch_property('BOSH_VSPHERE_CPI_DISK_PATH'),
-          'datastore_pattern' => datastore_pattern,
-          'persistent_datastore_pattern' => persistent_datastore_pattern,
-          'allow_mixed_datastores' => true,
-          'clusters' => clusters,
-        }]
-      }]
+      'vcenters' => [vcenter_options]
     }
+  end
+
+  def deep_merge(first, second)
+    # adapted from http://stackoverflow.com/a/30225093
+    # merge nested hashes, arrays will override each other rather than merging
+    merger = proc { |key, v1, v2| Hash === v1 && Hash === v2 ? v1.merge(v2, &merger) : [:undefined, nil, :nil].include?(v2) ? v1 : v2 }
+    first.merge(second, &merger)
+  end
+
+  def stringify_keys(hash)
+    new_hash = {}
+    hash.each do |key,value|
+      new_value = if value.is_a?(Hash)
+        stringify_keys(value)
+      elsif value.is_a?(Array)
+        value.map { |v| v.is_a?(Hash) ? stringify_keys(v) : v }
+      else
+        value
+      end
+      new_hash[key.to_s] = new_value
+    end
+    new_hash
   end
 end

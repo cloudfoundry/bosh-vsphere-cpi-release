@@ -9,7 +9,7 @@ module VSphereCloud
 
         @client, @datacenter, @datastore, @disk_folder = setup
 
-        @disk = @client.create_disk(@datacenter.mob, @datastore, @disk_cid, @disk_folder, 128, Resources::PersistentDisk::DEFAULT_DISK_TYPE)
+        @disk = @client.create_disk(@datacenter.mob, @datastore, @disk_cid, @disk_folder, 128, Config::DEFAULT_DISK_TYPE)
       end
 
       after do

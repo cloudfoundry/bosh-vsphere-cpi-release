@@ -17,7 +17,7 @@ module VSphereCloud
     describe '#disk_config_from_persistent_disk' do
       let(:existing_disk_cid) { 'fake-disk-cid' }
       let(:existing_disk) do
-        instance_double(Resources::Disk,
+        instance_double(Resources::PersistentDisk,
           size_in_mb: 1024,
           cid: existing_disk_cid,
           datastore: datastore,

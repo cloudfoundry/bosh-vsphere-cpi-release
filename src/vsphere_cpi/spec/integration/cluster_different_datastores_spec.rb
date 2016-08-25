@@ -37,16 +37,20 @@ context 'given cpis that are configured to use same cluster but different datast
 
   let(:first_datastore_cpi) do
     options = cpi_options(
-      datastore_pattern: @datastore_pattern,
-      persistent_datastore_pattern: @datastore_pattern,
+      datacenters: [{
+        datastore_pattern: @datastore_pattern,
+        persistent_datastore_pattern: @datastore_pattern,
+      }],
     )
     VSphereCloud::Cloud.new(options)
   end
 
   let(:second_datastore_cpi) do
     options = cpi_options(
-      datastore_pattern: @second_datastore,
-      persistent_datastore_pattern: @second_datastore,
+      datacenters: [{
+        datastore_pattern: @second_datastore,
+        persistent_datastore_pattern: @second_datastore,
+      }],
     )
     VSphereCloud::Cloud.new(options)
   end

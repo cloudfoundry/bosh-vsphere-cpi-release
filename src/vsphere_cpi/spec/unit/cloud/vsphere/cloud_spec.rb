@@ -13,7 +13,7 @@ module VSphereCloud
         vcenter_api_uri: vcenter_api_uri,
         vcenter_user: 'fake-user',
         vcenter_password: 'fake-password',
-        vcenter_default_disk_type: default_disk_type,
+        vcenter_default_disk_type: default_disk_type || Config::DEFAULT_DISK_TYPE,
         soap_log: 'fake-log-file',
       ).as_null_object
     end
@@ -382,7 +382,7 @@ module VSphereCloud
       let(:ip_conflict_detector) { instance_double(IPConflictDetector) }
       let(:existing_disk_cids) { ['fake-disk-cid'] }
       let(:fake_disk) do
-        instance_double(Resources::Disk,
+        instance_double(Resources::PersistentDisk,
           cid: 'fake-disk-cid',
           size_in_mb: 1234,
           datastore: fake_datastore,
@@ -471,7 +471,8 @@ module VSphereCloud
             datacenter: datacenter,
             cluster_provider: cluster_provider,
             agent_env: agent_env,
-            ip_conflict_detector: ip_conflict_detector
+            ip_conflict_detector: ip_conflict_detector,
+            default_disk_type: Config::DEFAULT_DISK_TYPE,
           )
           .and_return(vm_creator)
         expect(vm_creator).to receive(:create)
@@ -523,7 +524,8 @@ module VSphereCloud
             datacenter: datacenter,
             cluster_provider: cluster_provider,
             agent_env: agent_env,
-            ip_conflict_detector: ip_conflict_detector
+            ip_conflict_detector: ip_conflict_detector,
+            default_disk_type: Config::DEFAULT_DISK_TYPE,
           )
           .and_return(vm_creator)
         expect(vm_creator).to receive(:create)
@@ -580,6 +582,70 @@ module VSphereCloud
           )
         end
       end
+
+      context 'when default_disk_type is set to "thin"' do
+        let(:default_disk_type) { 'thin' }
+
+        it 'creates a new VM with a thinly-provisioned ephemeral disk' do
+          expected_manifest_params = {
+            resource_pool: resource_pool,
+            networks_spec: "fake-networks-hash",
+            agent_id:      "fake-agent-id",
+            agent_env:     "fake-agent-env",
+            stemcell: {
+              cid: "fake-stemcell-cid",
+              size: 1024
+            },
+            global_clusters: { 'fake-cluster' => {} },
+            disk_configurations: [
+              {
+                cid: fake_disk.cid,
+                size: fake_disk.size_in_mb,
+                existing_datastore_name: fake_datastore.name,
+                target_datastore_pattern: 'fake-persistent-pattern',
+              },
+              {
+                size: 4096,
+                ephemeral: true,
+                target_datastore_pattern: 'fake-ephemeral-pattern',
+              }
+            ],
+          }
+
+          allow(VmConfig).to receive(:new)
+                               .with({
+                                 manifest_params: expected_manifest_params,
+                                 cluster_picker: cluster_picker,
+                               })
+                               .and_return(vm_config)
+          expect(vm_config).to receive(:validate)
+
+          expect(VmCreator).to receive(:new)
+                                 .with(
+                                   client: vcenter_client,
+                                   cloud_searcher: cloud_searcher,
+                                   logger: logger,
+                                   cpi: vsphere_cloud,
+                                   datacenter: datacenter,
+                                   cluster_provider: cluster_provider,
+                                   agent_env: agent_env,
+                                   ip_conflict_detector: ip_conflict_detector,
+                                   default_disk_type: 'thin'
+                                 )
+                                 .and_return(vm_creator)
+          expect(vm_creator).to receive(:create)
+                                  .with(vm_config)
+
+          vsphere_cloud.create_vm(
+            "fake-agent-id",
+            "fake-stemcell-cid",
+            resource_pool,
+            "fake-networks-hash",
+            existing_disk_cids,
+            "fake-agent-env"
+          )
+        end
+      end
     end
 
     describe '#calculate_vm_cloud_properties' do
@@ -623,7 +689,7 @@ module VSphereCloud
       let(:vm_location) { double(:vm_location) }
       let(:datastore_with_disk) { instance_double('VSphereCloud::Resources::Datastore', name: 'datastore-with-disk')}
       let(:datastore_without_disk) { instance_double('VSphereCloud::Resources::Datastore', name: 'datastore-without-disk')}
-      let(:disk) { Resources::PersistentDisk.new('disk-cid', 1024, datastore_with_disk, 'fake-folder') }
+      let(:disk) { Resources::PersistentDisk.new(cid: 'disk-cid', size_in_mb: 1024, datastore: datastore_with_disk, folder: 'fake-folder') }
 
       before do
         allow(datacenter).to receive(:persistent_pattern)
@@ -688,7 +754,7 @@ module VSphereCloud
       end
 
       context 'when disk is not in a datastore accessible to VM' do
-        let(:moved_disk) { Resources::PersistentDisk.new('disk-cid', 1024, datastore_without_disk, 'fake-folder') }
+        let(:moved_disk) { Resources::PersistentDisk.new(cid: 'disk-cid', size_in_mb: 1024, datastore: datastore_without_disk, folder: 'fake-folder') }
 
         before do
           allow(vm).to receive(:accessible_datastore_names).and_return(['datastore-without-disk'])
@@ -713,7 +779,7 @@ module VSphereCloud
       end
 
       context 'when disk is not in a persistent datastore' do
-        let(:moved_disk) { Resources::PersistentDisk.new('disk-cid', 1024, datastore_without_disk, 'fake-folder') }
+        let(:moved_disk) { Resources::PersistentDisk.new(cid: 'disk-cid', size_in_mb: 1024, datastore: datastore_without_disk, folder: 'fake-folder') }
 
         before do
           allow(datacenter).to receive(:persistent_pattern)
@@ -741,7 +807,7 @@ module VSphereCloud
 
       context 'when a persistent disk pattern is encoded into the disk cid' do
         let(:target_datastore) { instance_double('VSphereCloud::Resources::Datastore', name: 'target-datastore')}
-        let(:moved_disk) { Resources::PersistentDisk.new('disk-cid', 1024, target_datastore, 'fake-folder') }
+        let(:moved_disk) { Resources::PersistentDisk.new(cid: 'disk-cid', size_in_mb: 1024, datastore: target_datastore, folder: 'fake-folder') }
 
         before do
           allow(datacenter).to receive(:accessible_datastores_hash)
@@ -907,7 +973,7 @@ module VSphereCloud
       before { allow(datacenter).to receive(:mob).and_return('datacenter-mob') }
 
       context 'when disk is found' do
-        let(:disk) { instance_double('VSphereCloud::Resources::Disk', path: 'disk-path') }
+        let(:disk) { instance_double('VSphereCloud::Resources::PersistentDisk', path: 'disk-path') }
         before do
           allow(datacenter).to receive(:find_disk).with('fake-disk-uuid').and_return(disk)
         end
@@ -961,10 +1027,10 @@ module VSphereCloud
       let(:datastore) { double(:datastore, name: 'fake-datastore') }
       let(:disk) do
         Resources::PersistentDisk.new(
-          'fake-disk-cid',
-          1024*1024,
-          datastore,
-          'fake-folder'
+          cid: 'fake-disk-cid',
+          size_in_mb: 1024*1024,
+          datastore: datastore,
+          folder: 'fake-folder',
         )
       end
 
@@ -980,7 +1046,7 @@ module VSphereCloud
 
       it 'creates disk via datacenter' do
         expect(datacenter).to receive(:create_disk)
-          .with(datastore, 1024, Resources::PersistentDisk::DEFAULT_DISK_TYPE)
+          .with(datastore, 1024, Config::DEFAULT_DISK_TYPE)
           .and_return(disk)
 
         disk_cid = vsphere_cloud.create_disk(1024, {})
@@ -1032,7 +1098,7 @@ module VSphereCloud
 
         it 'creates disk in vm cluster' do
           expect(datacenter).to receive(:create_disk)
-            .with(datastore, 1024, Resources::PersistentDisk::DEFAULT_DISK_TYPE)
+            .with(datastore, 1024, Config::DEFAULT_DISK_TYPE)
             .and_return(disk)
 
           disk_cid = vsphere_cloud.create_disk(1024, {}, 'fake-vm-cid')
@@ -1053,10 +1119,10 @@ module VSphereCloud
             .with('large-ds')
             .and_return(large_datastore)
           allow(datacenter).to receive(:create_disk)
-            .with(small_datastore, 1024, Resources::PersistentDisk::DEFAULT_DISK_TYPE)
+            .with(small_datastore, 1024, Config::DEFAULT_DISK_TYPE)
             .and_return(disk)
           allow(datacenter).to receive(:create_disk)
-            .with(large_datastore, 1024, Resources::PersistentDisk::DEFAULT_DISK_TYPE)
+            .with(large_datastore, 1024, Config::DEFAULT_DISK_TYPE)
             .and_return(disk)
         end
 

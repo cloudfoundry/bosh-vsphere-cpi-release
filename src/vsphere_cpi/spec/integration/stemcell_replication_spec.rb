@@ -16,7 +16,9 @@ context 'Replicating stemcells across datastores', external_cpi: false do
 
   let(:second_cpi) do
     options = cpi_options(
-    clusters: [@cluster_name]
+      datacenters: [{
+        clusters: [@cluster_name]
+      }],
     )
     VSphereCloud::Cloud.new(options)
   end

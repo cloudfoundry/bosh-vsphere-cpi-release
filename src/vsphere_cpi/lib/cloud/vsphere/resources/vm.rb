@@ -232,7 +232,7 @@ module VSphereCloud
 
       def attach_disk(disk_resource_object)
         disk = disk_resource_object
-        disk_config_spec = disk.create_disk_attachment_spec(system_disk.controller_key)
+        disk_config_spec = disk.create_disk_attachment_spec(disk_controller_id: system_disk.controller_key)
 
         vm_config = Vim::Vm::ConfigSpec.new
         vm_config.device_change = []

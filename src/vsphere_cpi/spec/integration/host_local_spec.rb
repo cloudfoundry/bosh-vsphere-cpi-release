@@ -86,9 +86,11 @@ describe 'host-local storage patterns', :host_local => true do
   context 'when both ephemeral and persistent storage patterns reference a single host-local datastore' do
     let(:local_disk_options) do
       cpi_options({
-        datastore_pattern: @single_local_ds_pattern,
-        persistent_datastore_pattern: @single_local_ds_pattern,
-        clusters: [@cluster_name]
+        datacenters: [{
+          datastore_pattern: @single_local_ds_pattern,
+          persistent_datastore_pattern: @single_local_ds_pattern,
+          clusters: [@cluster_name]
+        }]
       })
     end
 
@@ -120,9 +122,11 @@ describe 'host-local storage patterns', :host_local => true do
   context 'when both ephemeral and persistent storage patterns reference a multiple host-local datastores' do
     let(:local_disk_options) do
       cpi_options({
-        datastore_pattern: @multi_local_ds_pattern,
-        persistent_datastore_pattern: @multi_local_ds_pattern,
-        clusters: [@cluster_name]
+        datacenters: [{
+          datastore_pattern: @multi_local_ds_pattern,
+          persistent_datastore_pattern: @multi_local_ds_pattern,
+          clusters: [@cluster_name]
+        }]
       })
     end
 
@@ -186,19 +190,23 @@ describe 'host-local storage patterns', :host_local => true do
       context 'when a persistent disk exists in a host-local datastore in a different cluster' do
         let(:local_disk_options) do
           cpi_options({
-            datastore_pattern: @multi_local_ds_pattern,
-            persistent_datastore_pattern: @multi_local_ds_pattern,
-            clusters: [
-               @cluster_name,
-               @second_cluster_name,
-            ],
+            datacenters: [{
+              datastore_pattern: @multi_local_ds_pattern,
+              persistent_datastore_pattern: @multi_local_ds_pattern,
+              clusters: [
+                 @cluster_name,
+                 @second_cluster_name,
+              ],
+            }]
           })
         end
         let(:second_cluster_cpi) do
           VSphereCloud::Cloud.new(cpi_options({
-            datastore_pattern: @second_cluster_local_datastore,
-            persistent_datastore_pattern: @second_cluster_local_datastore,
-            clusters: [@second_cluster_name],
+            datacenters: [{
+              datastore_pattern: @second_cluster_local_datastore,
+              persistent_datastore_pattern: @second_cluster_local_datastore,
+              clusters: [@second_cluster_name],
+            }]
           }))
         end
 
@@ -238,9 +246,11 @@ describe 'host-local storage patterns', :host_local => true do
     let(:local_disk_options) do
       cpi_options({
         # expect global patterns to be overridden
-        datastore_pattern: @datastore_pattern,
-        persistent_datastore_pattern: @datastore_pattern,
-        clusters: [@cluster_name],
+        datacenters: [{
+          datastore_pattern: @datastore_pattern,
+          persistent_datastore_pattern: @datastore_pattern,
+          clusters: [@cluster_name],
+        }],
       })
     end
     let(:ephemeral_datastores) { datastore_names_matching_pattern(@cpi, @cluster_name, @single_local_ds_pattern) }

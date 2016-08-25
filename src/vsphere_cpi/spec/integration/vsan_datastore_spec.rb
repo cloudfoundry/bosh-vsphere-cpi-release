@@ -36,8 +36,10 @@ context 'given cpis that are configured to use VSAN datastores', vsan_datastore:
 
   let(:vsan_cpi) do
     options = cpi_options(
-      datastore_pattern: @vsan_datastore_pattern,
-      persistent_datastore_pattern: @vsan_datastore_pattern,
+      datacenters: [{
+        datastore_pattern: @vsan_datastore_pattern,
+        persistent_datastore_pattern: @vsan_datastore_pattern,
+      }],
     )
     VSphereCloud::Cloud.new(options)
   end

@@ -425,15 +425,6 @@ describe VSphereCloud::Resources::Datacenter do
       allow(virtual_disk_manager).to receive(:create_virtual_disk)
     end
 
-    context 'when disk type is nil' do
-      it 'creates disk using VirtualDiskManager with default disk type' do
-        allow(client).to receive(:create_disk)
-                            .with(datacenter_mob, datastore, 'disk-cid', 'fake-disk-path', 24, 'preallocated')
-                            .and_return(disk)
-        expect(datacenter.create_disk(datastore, 24, nil)).to eq(disk)
-      end
-    end
-
     context 'when disk type is invalid' do
       it 'raises an error' do
         expect {
@@ -544,6 +535,12 @@ describe VSphereCloud::Resources::Datacenter do
     it 'forwards the call to the client with the correct args' do
       target_path = "[#{datastore.name}] fake-disk-path/fake-disk-cid.vmdk"
       expect(client).to receive(:move_disk).with(datacenter_mob, disk.path, datacenter_mob, target_path)
+      expect(VSphereCloud::Resources::PersistentDisk).to receive(:new).with(
+        cid: 'fake-disk-cid',
+        size_in_mb: 1024,
+        datastore: datastore,
+        folder: 'fake-disk-path'
+      ).and_call_original
       new_disk = datacenter.move_disk_to_datastore(disk, datastore)
       expect(new_disk.path).to eq(target_path)
     end

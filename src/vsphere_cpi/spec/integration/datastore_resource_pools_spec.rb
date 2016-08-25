@@ -38,9 +38,11 @@ context 'when datastores are configured in resource_pools' do
 
   let(:second_cluster_cpi) do
     options = cpi_options(
-      datastore_pattern: @second_cluster_datastore,
-      persistent_datastore_pattern: @second_cluster_datastore,
-      clusters: [@second_cluster_name]
+      datacenters: [{
+        datastore_pattern: @second_cluster_datastore,
+        persistent_datastore_pattern: @second_cluster_datastore,
+        clusters: [@second_cluster_name]
+      }]
     )
     VSphereCloud::Cloud.new(options)
   end
@@ -72,9 +74,11 @@ context 'when datastores are configured in resource_pools' do
     let(:second_cluster_cpi) do
       # expect global datastore pattern to be overridden
       options = cpi_options(
-        datastore_pattern: @datastore_pattern,
-        persistent_datastore_pattern: @second_cluster_datastore,
-        clusters: [@second_cluster_name]
+        datacenters: [{
+          datastore_pattern: @datastore_pattern,
+          persistent_datastore_pattern: @second_cluster_datastore,
+          clusters: [@second_cluster_name]
+        }],
       )
       VSphereCloud::Cloud.new(options)
     end
@@ -121,7 +125,9 @@ context 'when datastores are configured in resource_pools' do
   context 'when an invalid cluster is configured in resource_pools' do
     let(:two_cluster_cpi) do
       options = cpi_options(
-        clusters: [@cluster_name, @second_cluster_name]
+        datacenters: [{
+          clusters: [@cluster_name, @second_cluster_name]
+        }]
       )
       VSphereCloud::Cloud.new(options)
     end

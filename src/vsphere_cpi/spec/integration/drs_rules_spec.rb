@@ -38,7 +38,9 @@ context 'when vm was migrated to another datastore within first cluster' do
 
   let(:one_cluster_cpi) do
     options = cpi_options(
-      clusters: [@cluster_name]
+      datacenters: [{
+        clusters: [@cluster_name]
+      }],
     )
     VSphereCloud::Cloud.new(options)
   end
@@ -58,7 +60,9 @@ context 'when vm was migrated to another datastore within first cluster' do
   context 'given a resource pool that is configured with a drs rule' do
     let(:one_cluster_cpi) do
       options = cpi_options(
-        clusters: [@cluster_name]
+        datacenters: [{
+          clusters: [@cluster_name]
+        }],
       )
       VSphereCloud::Cloud.new(options)
     end

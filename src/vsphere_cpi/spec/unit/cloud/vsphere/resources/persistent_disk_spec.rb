@@ -1,7 +1,7 @@
 require 'spec_helper'
 
 describe VSphereCloud::Resources::PersistentDisk do
-  subject(:persistent_disk) { described_class.new(disk_cid, size, datastore, folder_name) }
+  subject(:persistent_disk) { described_class.new(cid: disk_cid, size_in_mb: size, datastore: datastore, folder: folder_name) }
 
   let(:disk_cid) { 'disk-cid' }
   let(:size) { 1234 }
@@ -9,6 +9,7 @@ describe VSphereCloud::Resources::PersistentDisk do
   let(:datastore) { instance_double('VSphereCloud::Resources::Datastore', mob: datastore_mob, name: datastore_name) }
   let(:datastore_name) { 'fake-datastore-name' }
   let(:datastore_mob) { 'fake-datastore-mob' }
+  let(:disk_type) { 'fake-disk-type' }
 
   describe 'allowed disk types' do
     it 'supports all documented disk types' do
@@ -23,7 +24,7 @@ describe VSphereCloud::Resources::PersistentDisk do
     let(:controller_key) { double(:controller_key) }
 
     it 'creates a virtual disk attachment spec' do
-      spec = persistent_disk.create_disk_attachment_spec(controller_key)
+      spec = persistent_disk.create_disk_attachment_spec(disk_controller_id: controller_key)
 
       expect(spec.operation).to eq(VimSdk::Vim::Vm::Device::VirtualDeviceSpec::Operation::ADD)
       expect(spec.device.controller_key).to eq(controller_key)

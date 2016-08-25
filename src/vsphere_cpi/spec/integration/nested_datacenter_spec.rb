@@ -11,10 +11,12 @@ describe 'nested datacenters', nested_datacenter: true  do
     @nested_datacenter_vlan = fetch_property('BOSH_VSPHERE_CPI_NESTED_DATACENTER_VLAN')
 
     @nested_datacenter_cpi_options = cpi_options(
-      datacenter_name: @nested_datacenter_name,
-      datastore_pattern: @nested_datacenter_datastore_pattern,
-      persistent_datastore_pattern: @nested_datacenter_datastore_pattern,
-      clusters: [{@nested_datacenter_cluster_name => {'resource_pool' => @nested_datacenter_resource_pool_name}}]
+      datacenters: [{
+        name: @nested_datacenter_name,
+        datastore_pattern: @nested_datacenter_datastore_pattern,
+        persistent_datastore_pattern: @nested_datacenter_datastore_pattern,
+        clusters: [{@nested_datacenter_cluster_name => {'resource_pool' => @nested_datacenter_resource_pool_name}}]
+      }]
     )
 
     verify_datacenter_exists(@nested_datacenter_cpi_options, 'BOSH_VSPHERE_CPI_NESTED_DATACENTER')

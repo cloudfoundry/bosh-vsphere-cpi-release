@@ -236,6 +236,7 @@ module VSphereCloud
       context 'when specifying a valid disk type' do
         it 'creates a disk' do
           expect(disk_spec).to receive(:disk_type=).with('eagerZeroedThick')
+          expect(Resources::PersistentDisk).to receive(:new).with(cid: 'disk_cid', size_in_mb: 10, datastore: datastore, folder: disk_folder)
           client.create_disk(datacenter, datastore, 'disk_cid', disk_folder, 10, 'eagerZeroedThick')
         end
       end
