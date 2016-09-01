@@ -9,7 +9,6 @@ describe VSphereCloud::Resources::PersistentDisk do
   let(:datastore) { instance_double('VSphereCloud::Resources::Datastore', mob: datastore_mob, name: datastore_name) }
   let(:datastore_name) { 'fake-datastore-name' }
   let(:datastore_mob) { 'fake-datastore-mob' }
-  let(:disk_type) { 'fake-disk-type' }
 
   describe 'allowed disk types' do
     it 'supports all documented disk types' do
