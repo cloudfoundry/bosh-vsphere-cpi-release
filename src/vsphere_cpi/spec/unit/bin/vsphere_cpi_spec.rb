@@ -16,6 +16,7 @@ describe "the vsphere_cpi executable" do
             'host' => '0.0.0.0:5000',
             'user' => 'user',
             'password' => 'password',
+            'default_disk_type' => 'preallocated',
             'datacenters' => [{
               'name' => 'datacenter_name',
               'vm_folder' => 'folder_name',

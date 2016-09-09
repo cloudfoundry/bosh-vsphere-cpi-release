@@ -56,6 +56,7 @@ describe VSphereCloud::Cloud, external_cpi: true do
             'host' => host,
             'user' => user,
             'password' => password,
+            'default_disk_type' => 'preallocated',
             'datacenters' => [{
               'name' => datacenter_name,
               'vm_folder' => "#{vm_folder_name}/lifecycle_tests",

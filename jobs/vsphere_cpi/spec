@@ -13,6 +13,9 @@ packages:
 properties:
   vcenter.address:
     description: Address of vCenter server used by vsphere cpi
+  vcenter.default_disk_type:
+    description: backing for ephemeral and persistent disks unless overridden by `disk_pools.cloud_properties.type`; can be `thin` or `preallocated`
+    default: preallocated
   vcenter.user:
     description: User to connect to vCenter server used by vsphere cpi
   vcenter.password:

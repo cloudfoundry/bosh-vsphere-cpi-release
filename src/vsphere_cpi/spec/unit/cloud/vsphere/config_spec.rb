@@ -16,7 +16,7 @@ module VSphereCloud
     let(:cluster_name) { 'grubby-cluster' }
     let(:cluster_name_witout_resource_pool) { 'shiny-cluster' }
     let(:resource_pool) { 'wading-pool' }
-    let(:default_disk_type) { nil }
+    let(:default_disk_type) { 'preallocated' }
     let(:datacenters) do
       [{
          'name' => datacenter_name,
@@ -128,6 +128,15 @@ module VSphereCloud
         end
       end
 
+      context 'when the vcenter_default_disk_type is missing' do
+        let(:default_disk_type) { nil }
+        it 'raises an error' do
+          expect do
+            config.validate
+          end.to raise_error(RuntimeError, /default_disk_type/)
+        end
+      end
+
       context 'when the vcenter_default_disk_type is an invalid type' do
         let(:default_disk_type) { 'invalid-type' }
         it 'returns value from config' do
@@ -193,12 +202,6 @@ module VSphereCloud
     end
 
     describe '#vcenter_default_disk_type' do
-      context 'when the vcenter_default_disk_Type is unset' do
-        it 'returns value from config' do
-          expect(config.vcenter_default_disk_type).to eq(Config::DEFAULT_DISK_TYPE)
-        end
-      end
-
       context 'when the vcenter_default_disk_type is "thin"' do
         let(:default_disk_type) { 'thin' }
         it 'returns value from config' do

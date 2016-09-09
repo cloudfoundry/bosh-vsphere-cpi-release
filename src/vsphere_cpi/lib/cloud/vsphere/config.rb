@@ -6,8 +6,7 @@ module VSphereCloud
       config
     end
 
-    DEFAULT_DISK_TYPE = 'preallocated'
-    SUPPORTED_DISK_TYPES = ['thin', 'preallocated', nil]
+    SUPPORTED_DISK_TYPES = ['thin', 'preallocated']
 
     def initialize(config_hash)
       @config = config_hash
@@ -30,6 +29,11 @@ module VSphereCloud
       end
 
       default_disk_type = config['vcenters'].first['default_disk_type']
+
+      if default_disk_type.nil?
+        raise 'Missing required property: vcenters[0].default_disk_type'
+      end
+
       unless SUPPORTED_DISK_TYPES.include?(default_disk_type)
         raise "Unsupported default_disk_type '#{default_disk_type}'. vSphere CPI only supports a default_disk_type of 'preallocated' or 'thin'"
       end
@@ -68,7 +72,7 @@ module VSphereCloud
     end
 
     def vcenter_default_disk_type
-      vcenter['default_disk_type'] || DEFAULT_DISK_TYPE
+      vcenter['default_disk_type']
     end
 
     def datacenter_name

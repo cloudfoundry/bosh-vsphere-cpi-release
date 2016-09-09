@@ -13,11 +13,11 @@ module VSphereCloud
         vcenter_api_uri: vcenter_api_uri,
         vcenter_user: 'fake-user',
         vcenter_password: 'fake-password',
-        vcenter_default_disk_type: default_disk_type || Config::DEFAULT_DISK_TYPE,
+        vcenter_default_disk_type: default_disk_type,
         soap_log: 'fake-log-file',
       ).as_null_object
     end
-    let(:default_disk_type) { nil }
+    let(:default_disk_type) { 'preallocated' }
     let(:logger) { instance_double('Logger', info: nil, debug: nil) }
     let(:vcenter_client) { instance_double('VSphereCloud::VCenterClient', login: nil, service_content: service_content) }
     let(:base_http_client) { instance_double('VSphereCloud::CpiHttpClient') }
@@ -472,7 +472,7 @@ module VSphereCloud
             cluster_provider: cluster_provider,
             agent_env: agent_env,
             ip_conflict_detector: ip_conflict_detector,
-            default_disk_type: Config::DEFAULT_DISK_TYPE,
+            default_disk_type: default_disk_type,
           )
           .and_return(vm_creator)
         expect(vm_creator).to receive(:create)
@@ -525,7 +525,7 @@ module VSphereCloud
             cluster_provider: cluster_provider,
             agent_env: agent_env,
             ip_conflict_detector: ip_conflict_detector,
-            default_disk_type: Config::DEFAULT_DISK_TYPE,
+            default_disk_type: default_disk_type,
           )
           .and_return(vm_creator)
         expect(vm_creator).to receive(:create)
@@ -1046,7 +1046,7 @@ module VSphereCloud
 
       it 'creates disk via datacenter' do
         expect(datacenter).to receive(:create_disk)
-          .with(datastore, 1024, Config::DEFAULT_DISK_TYPE)
+          .with(datastore, 1024, default_disk_type)
           .and_return(disk)
 
         disk_cid = vsphere_cloud.create_disk(1024, {})
@@ -1098,7 +1098,7 @@ module VSphereCloud
 
         it 'creates disk in vm cluster' do
           expect(datacenter).to receive(:create_disk)
-            .with(datastore, 1024, Config::DEFAULT_DISK_TYPE)
+            .with(datastore, 1024, default_disk_type)
             .and_return(disk)
 
           disk_cid = vsphere_cloud.create_disk(1024, {}, 'fake-vm-cid')
@@ -1119,10 +1119,10 @@ module VSphereCloud
             .with('large-ds')
             .and_return(large_datastore)
           allow(datacenter).to receive(:create_disk)
-            .with(small_datastore, 1024, Config::DEFAULT_DISK_TYPE)
+            .with(small_datastore, 1024, default_disk_type)
             .and_return(disk)
           allow(datacenter).to receive(:create_disk)
-            .with(large_datastore, 1024, Config::DEFAULT_DISK_TYPE)
+            .with(large_datastore, 1024, default_disk_type)
             .and_return(disk)
         end
 

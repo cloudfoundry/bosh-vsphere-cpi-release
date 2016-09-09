@@ -87,12 +87,20 @@ describe 'cpi.json.erb' do
               ],
               'host' => 'vcenter-address',
               'password' => 'vcenter-password',
-              'user' => 'vcenter-user'
+              'user' => 'vcenter-user',
+              'default_disk_type' => 'preallocated'
             }
           ],
         }
       }
     })
+  end
+
+  context 'when `default_disk_type` is `thin`' do
+    before(:each) { manifest['properties']['vcenter']['default_disk_type'] = 'thin' }
+    it 'interopolates the default_disk_type properly' do
+      expect(subject['cloud']['properties']['vcenters'].first['default_disk_type']).to eq('thin')
+    end
   end
 
   context 'when using an s3 blobstore' do
