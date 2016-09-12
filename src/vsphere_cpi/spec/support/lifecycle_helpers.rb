@@ -145,7 +145,7 @@ module LifecycleHelpers
   def verify_vlan(cpi_options, vlan, env_var_name)
     cpi = VSphereCloud::Cloud.new(cpi_options)
     datacenter_name = cpi.datacenter.name
-    network = cpi.client.find_by_inventory_path([datacenter_name, 'network', vlan])
+    network = cpi.client.find_network(cpi.datacenter.mob, vlan)
     fail "Invalid Environment variable '#{env_var_name}': No network named '#{vlan}' found in datacenter named '#{datacenter_name}'" if network.nil?
   end
 

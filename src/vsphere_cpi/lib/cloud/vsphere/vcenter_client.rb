@@ -181,6 +181,29 @@ module VSphereCloud
       matches
     end
 
+    def find_network(datacenter_mob, network_name)
+      inv = nil
+      if network_name.include?('/')
+        distributed_virtual_switch, portgroup_name = network_name.split('/', 2)
+        dvs = find_by_inventory_path([ datacenter_mob.name, 'network', distributed_virtual_switch])
+        unless dvs.nil?
+          inv = dvs.portgroup.find { |pg| portgroup_name == pg.name }
+        end
+      else
+        matching_networks = datacenter_mob.network.select { |n| n.name == network_name }
+        if matching_networks.length == 1
+          inv = matching_networks.first
+        elsif matching_networks.length > 1
+          standard_network = matching_networks.find { |n| n.instance_of?(VimSdk::Vim::Network) }
+
+          # the fallback shouldn't happen as vCenter only allows one standard portgroup and one distributed portgroup with the same name
+          inv = standard_network || matching_networks.first
+        end
+      end
+
+      inv
+    end
+
     def wait_for_task(task)
       interval = 1.0
       started = Time.now

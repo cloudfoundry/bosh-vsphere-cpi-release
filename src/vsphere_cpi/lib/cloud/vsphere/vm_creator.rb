@@ -54,8 +54,11 @@ module VSphereCloud
 
       dvs_index = {}
       vm_config.vsphere_networks.each do |network_name, ips|
+        network_mob = @client.find_network(@datacenter.mob, network_name)
+        if network_mob.nil?
+          raise "Unable to find network '#{network_name}'. Verify that the portgroup exists."
+        end
         ips.each do |_|
-          network_mob = @client.find_by_inventory_path([@datacenter.name, 'network', network_name])
           virtual_nic = Resources::Nic.create_virtual_nic(
             @cloud_searcher,
             network_name,

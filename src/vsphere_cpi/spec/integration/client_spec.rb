@@ -2,13 +2,14 @@ require 'spec_helper'
 
 module VSphereCloud
   describe VCenterClient do
+    before do
+      @client, @datacenter, @datastore, @disk_folder = setup
+    end
+
     describe "#find_disk" do
 
       before do
         @disk_cid = "disk-#{SecureRandom.uuid}"
-
-        @client, @datacenter, @datastore, @disk_folder = setup
-
         @disk = @client.create_disk(@datacenter.mob, @datastore, @disk_cid, @disk_folder, 128, 'thin')
       end
 
@@ -33,6 +34,49 @@ module VSphereCloud
         disk = @client.find_disk(@disk_cid, @datastore, "the-wrong-disk-folder")
 
         expect(disk).to be_nil
+      end
+    end
+
+    describe '#find_network' do
+      let(:standard_virtual_portgroup) { ENV.fetch('BOSH_VSPHERE_CPI_STANDARD_PORTGROUP') }
+      let(:distributed_virtual_portgroup) { ENV.fetch('BOSH_VSPHERE_CPI_DISTRIBUTED_PORTGROUP') }
+      let(:ambiguous_portgroup) { ENV.fetch('BOSH_VSPHERE_CPI_AMBIGUOUS_PORTGROUP') }
+
+      it 'returns the standard virtual switch if it exists' do
+        network = @client.find_network(@datacenter.mob, standard_virtual_portgroup)
+        expect(network.name).to eq(standard_virtual_portgroup)
+        expect(network).to be_a(VimSdk::Vim::Network)
+      end
+
+      it 'returns the distributed_virtual_portgroup if it exists' do
+        network = @client.find_network(@datacenter.mob, distributed_virtual_portgroup)
+        expect(network.name).to eq(distributed_virtual_portgroup)
+        expect(network).to be_a(VimSdk::Vim::Dvs::DistributedVirtualPortgroup)
+      end
+
+      it 'returns the standard virtual switch if a standard switch has the same name as a distributed virtual portgroup' do
+        network = @client.find_network(@datacenter.mob, ambiguous_portgroup)
+        expect(network.name).to eq(ambiguous_portgroup)
+        expect(network).to be_a(VimSdk::Vim::Network)
+      end
+
+      it 'returns the distributed virtual portgroup if it is prefixed with the distributed virtual switch\'s name' do
+        dvs_name = parent_dvs_from_portgroup(ambiguous_portgroup)
+
+        network = @client.find_network(@datacenter.mob, "#{dvs_name}/#{ambiguous_portgroup}")
+        expect(network.name).to eq(ambiguous_portgroup)
+        expect(network.config.distributed_virtual_switch.name).to eq(dvs_name)
+        expect(network).to be_a(VimSdk::Vim::Dvs::DistributedVirtualPortgroup)
+      end
+
+      it 'returns nil if the distributed virtual switch doesn\'t exist' do
+        network = @client.find_network(@datacenter.mob, "non-existent-dvs/#{ambiguous_portgroup}")
+        expect(network).to be_nil
+      end
+
+      it 'returns nil if the standard virtual portgroup doesn\'t exist' do
+        network = @client.find_network(@datacenter.mob, 'non-existent-standard-portgroup')
+        expect(network).to be_nil
       end
     end
 
@@ -80,6 +124,11 @@ module VSphereCloud
 
       persistent_datastores = datacenter.select_datastores(persistent_datastore_pattern).values
       return client, datacenter, persistent_datastores.first, disk_folder
+    end
+
+    def parent_dvs_from_portgroup(portgroup_name)
+      pg = @datacenter.mob.network.find { |n| n.name == portgroup_name && n.instance_of?(VimSdk::Vim::Dvs::DistributedVirtualPortgroup) }
+      pg.config.distributed_virtual_switch.name
     end
   end
 end
