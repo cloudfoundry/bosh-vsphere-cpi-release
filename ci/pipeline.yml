@@ -85,9 +85,12 @@ jobs:
           BOSH_VSPHERE_CPI_NESTED_DATACENTER_CLUSTER:           {{lifecycle_vsphere_5_1_nested_datacenter_cluster}}
           BOSH_VSPHERE_CPI_NESTED_DATACENTER_RESOURCE_POOL:     {{lifecycle_vsphere_5_1_nested_datacenter_resource_pool}}
           BOSH_VSPHERE_CPI_NESTED_DATACENTER_VLAN:              {{lifecycle_vsphere_5_1_nested_datacenter_vlan}}
-          BOSH_VSPHERE_CPI_STANDARD_PORTGROUP:                  {{lifecycle_vsphere_5_1_standard_portgroup}}
-          BOSH_VSPHERE_CPI_DISTRIBUTED_PORTGROUP:               {{lifecycle_vsphere_5_1_distributed_portgroup}}
-          BOSH_VSPHERE_CPI_AMBIGUOUS_PORTGROUP:                 {{lifecycle_vsphere_5_1_ambiguous_portgroup}}
+          BOSH_VSPHERE_CPI_PORTGROUP_STANDARD:                  {{lifecycle_vsphere_5_1_portgroup_standard}}
+          BOSH_VSPHERE_CPI_PORTGROUP_DISTRIBUTED:               {{lifecycle_vsphere_5_1_portgroup_distributed}}
+          BOSH_VSPHERE_CPI_PORTGROUP_AMBIGUOUS:                 {{lifecycle_vsphere_5_1_portgroup_ambiguous}}
+          BOSH_VSPHERE_CPI_PORTGROUP_FOLDER_STANDARD:           {{lifecycle_vsphere_5_1_portgroup_folder_standard}}
+          BOSH_VSPHERE_CPI_PORTGROUP_FOLDER_DISTRIBUTED:        {{lifecycle_vsphere_5_1_portgroup_folder_distributed}}
+          BOSH_VSPHERE_CPI_PORTGROUP_FOLDER_AMBIGUOUS:          {{lifecycle_vsphere_5_1_portgroup_folder_ambiguous}}
 
   - name: lifecycle-6.0
     plan:
@@ -127,10 +130,12 @@ jobs:
           BOSH_VSPHERE_CPI_NESTED_DATACENTER_CLUSTER:           {{lifecycle_vsphere_6_0_nested_datacenter_cluster}}
           BOSH_VSPHERE_CPI_NESTED_DATACENTER_RESOURCE_POOL:     {{lifecycle_vsphere_6_0_nested_datacenter_resource_pool}}
           BOSH_VSPHERE_CPI_NESTED_DATACENTER_VLAN:              {{lifecycle_vsphere_6_0_nested_datacenter_vlan}}
-          BOSH_VSPHERE_CPI_STANDARD_PORTGROUP:                  {{lifecycle_vsphere_6_0_standard_portgroup}}
-          BOSH_VSPHERE_CPI_DISTRIBUTED_PORTGROUP:               {{lifecycle_vsphere_6_0_distributed_portgroup}}
-          BOSH_VSPHERE_CPI_AMBIGUOUS_PORTGROUP:                 {{lifecycle_vsphere_6_0_ambiguous_portgroup}}
-
+          BOSH_VSPHERE_CPI_PORTGROUP_STANDARD:                  {{lifecycle_vsphere_6_0_portgroup_standard}}
+          BOSH_VSPHERE_CPI_PORTGROUP_DISTRIBUTED:               {{lifecycle_vsphere_6_0_portgroup_distributed}}
+          BOSH_VSPHERE_CPI_PORTGROUP_AMBIGUOUS:                 {{lifecycle_vsphere_6_0_portgroup_ambiguous}}
+          BOSH_VSPHERE_CPI_PORTGROUP_FOLDER_STANDARD:           {{lifecycle_vsphere_6_0_portgroup_folder_standard}}
+          BOSH_VSPHERE_CPI_PORTGROUP_FOLDER_DISTRIBUTED:        {{lifecycle_vsphere_6_0_portgroup_folder_distributed}}
+          BOSH_VSPHERE_CPI_PORTGROUP_FOLDER_AMBIGUOUS:          {{lifecycle_vsphere_6_0_portgroup_folder_ambiguous}}
 
   - name: lifecycle-6.0-vsan
     plan:

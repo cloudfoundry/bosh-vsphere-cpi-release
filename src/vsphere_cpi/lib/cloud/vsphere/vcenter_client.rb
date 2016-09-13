@@ -182,26 +182,31 @@ module VSphereCloud
     end
 
     def find_network(datacenter_mob, network_name)
-      inv = nil
+      valid_networks = []
       if network_name.include?('/')
-        distributed_virtual_switch, portgroup_name = network_name.split('/', 2)
-        dvs = find_by_inventory_path([ datacenter_mob.name, 'network', distributed_virtual_switch])
-        unless dvs.nil?
-          inv = dvs.portgroup.find { |pg| portgroup_name == pg.name }
+        container_name = File.dirname(network_name)
+        network_name = File.basename(network_name)
+        network_container = find_by_inventory_path([ datacenter_mob.name, 'network', container_name])
+        if network_container.instance_of?(VimSdk::Vim::Dvs::VmwareDistributedVirtualSwitch)
+          valid_networks = network_container.portgroup
+        elsif network_container.instance_of?(VimSdk::Vim::Folder)
+          valid_networks = network_container.child_entity
         end
       else
-        matching_networks = datacenter_mob.network.select { |n| n.name == network_name }
-        if matching_networks.length == 1
-          inv = matching_networks.first
-        elsif matching_networks.length > 1
-          standard_network = matching_networks.find { |n| n.instance_of?(VimSdk::Vim::Network) }
-
-          # the fallback shouldn't happen as vCenter only allows one standard portgroup and one distributed portgroup with the same name
-          inv = standard_network || matching_networks.first
-        end
+        valid_networks = datacenter_mob.network
       end
 
-      inv
+      target_network = nil
+      matching_networks = valid_networks.select { |n| n.name == network_name }
+      if matching_networks.length == 1
+        target_network = matching_networks.first
+      elsif matching_networks.length > 1
+        # pick the Standard Portgroup if multiple networks exist with the given name
+        standard_network = matching_networks.find { |n| n.instance_of?(VimSdk::Vim::Network) }
+        target_network = standard_network || matching_networks.first
+      end
+
+      target_network
     end
 
     def wait_for_task(task)
