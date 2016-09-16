@@ -200,12 +200,6 @@ describe VSphereCloud::Resources::VM do
     let(:vm_devices) { [] }
 
     before do
-      allow(cloud_searcher).to receive(:get_property).with(
-        vm_mob,
-        VimSdk::Vim::VirtualMachine,
-        ['runtime.powerState', 'runtime.question', 'config.hardware.device', 'name', 'runtime', 'resourcePool'],
-        ensure: ['config.hardware.device', 'runtime']
-      ).and_return({'runtime.question' => nil})
       allow(vm).to receive(:persistent_disk_device_keys_from_vapp_config).and_return([])
     end
 
@@ -234,6 +228,14 @@ describe VSphereCloud::Resources::VM do
     end
 
     context 'when current state is not powered off' do
+      before do
+        allow(cloud_searcher).to receive(:get_property).with(
+          vm_mob,
+          VimSdk::Vim::VirtualMachine,
+          'runtime.powerState',
+        ).and_return(powered_on_state)
+      end
+
       it 'sends power off' do
         expect(client).to receive(:power_off_vm).with(vm_mob)
         vm.power_off
@@ -242,12 +244,11 @@ describe VSphereCloud::Resources::VM do
 
     context 'when current state is powered off' do
       before do
-        allow(cloud_searcher).to receive(:get_properties).with(
+        allow(cloud_searcher).to receive(:get_property).with(
           vm_mob,
           VimSdk::Vim::VirtualMachine,
-          ['runtime.powerState', 'runtime.question', 'config.hardware.device', 'name', 'runtime', 'resourcePool'],
-          ensure: ['config.hardware.device', 'runtime']
-        ).and_return({'runtime.powerState' => powered_off_state, 'config.hardware.device' => vm_devices})
+          'runtime.powerState',
+        ).and_return(powered_off_state)
       end
 
       it 'does not send power off' do

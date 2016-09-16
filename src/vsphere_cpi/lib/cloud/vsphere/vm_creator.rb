@@ -81,16 +81,17 @@ module VSphereCloud
       @logger.info("Cloning vm: #{replicated_stemcell_vm} to #{vm_config.name}")
 
       # Clone VM
-      task = @cpi.clone_vm(replicated_stemcell_vm.mob,
-        vm_config.name,
-        @datacenter.vm_folder.mob,
-        cluster.resource_pool.mob,
-        datastore: datastore.mob,
-        linked: true,
-        snapshot: snapshot.current_snapshot,
-        config: config_spec
-      )
-      created_vm_mob = @client.wait_for_task(task)
+      created_vm_mob = @client.wait_for_task do
+        @cpi.clone_vm(replicated_stemcell_vm.mob,
+          vm_config.name,
+          @datacenter.vm_folder.mob,
+          cluster.resource_pool.mob,
+          datastore: datastore.mob,
+          linked: true,
+          snapshot: snapshot.current_snapshot,
+          config: config_spec
+        )
+      end
       created_vm = Resources::VM.new(vm_config.name, created_vm_mob, @client, @logger)
 
       # Set agent env settings

@@ -1,11 +1,11 @@
 module VSphereCloud
   class DrsLock
-    include RetryBlock
 
     DRS_LOCK_NAME = 'drs_lock'
     MAX_LOCK_TIMEOUT_IN_SECONDS = 30
 
     class LockError < RuntimeError; end
+    class TimeoutError < RuntimeError; end
 
     def initialize(vm_attribute_manager, logger)
       @vm_attribute_manager = vm_attribute_manager
@@ -27,16 +27,29 @@ module VSphereCloud
     private
 
     def acquire_lock
-      retry_with_timeout(MAX_LOCK_TIMEOUT_IN_SECONDS) do
+      retry_with_timeout do
         @vm_attribute_manager.create(DRS_LOCK_NAME)
       end
-    rescue VSphereCloud::RetryBlock::TimeoutError
+    rescue TimeoutError
       @logger.debug('Failed to acquire drs lock')
       raise LockError.new('Failed to acquire DRS lock')
     end
 
     def release_lock
       @vm_attribute_manager.delete(DRS_LOCK_NAME)
+    end
+
+    def retry_with_timeout
+      deadline = Time.now.to_i + MAX_LOCK_TIMEOUT_IN_SECONDS
+      begin
+        yield
+      rescue
+        if deadline - Time.now.to_i > 0
+          sleep 0.5
+          retry
+        end
+        raise TimeoutError
+      end
     end
   end
 end

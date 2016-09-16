@@ -1,14 +1,11 @@
 module VSphereCloud
   class FileProvider
-    include VSphereCloud::RetryBlock
 
-    NUM_RETRIES = 5
-    RETRY_INTERVAL = 1.0
-
-    def initialize(http_client:, vcenter_host:, logger:)
+    def initialize(http_client:, vcenter_host:, logger:, retryer: nil)
       @vcenter_host = vcenter_host
       @http_client = http_client
       @logger = logger
+      @retryer = retryer || Retryer.new
     end
 
     def fetch_file_from_datastore(datacenter_name, datastore_name, path)
@@ -71,15 +68,17 @@ module VSphereCloud
         raise "Invalid request type: #{request_type}."
       end
 
-      response = nil
-      retry_block(NUM_RETRIES) do
-        response = make_request.call
+      response = @retryer.try do
+        resp = make_request.call
 
-        if response.code == 404 && allow_not_found
-          response = nil
-        elsif response.code >= 400
-          raise "Could not transfer file '#{url}', received status code '#{response.code}'"
-          sleep(RETRY_INTERVAL)
+        if resp.code == 404 && allow_not_found
+          [nil, nil]
+        elsif resp.code >= 400
+          err = "Could not transfer file '#{url}', received status code '#{resp.code}'"
+          @logger.warn(err)
+          [nil, err]
+        else
+          [resp, nil]
         end
       end
 

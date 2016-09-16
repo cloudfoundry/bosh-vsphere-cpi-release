@@ -17,9 +17,9 @@ module VimSdk
 
       def invoke_method(managed_object, method_info, arguments, outer_stub = nil)
         outer_stub = self if outer_stub.nil?
-        headers = {"SOAPAction"      => @version_id,
-                   "Accept-Encoding" => "gzip, deflate",
-                   "Content-Type"    => "text/xml; charset=#{XML_ENCODING}"}
+        headers = {'SOAPAction' => @version_id,
+                   'Accept-Encoding' => 'gzip, deflate',
+                   'Content-Type' => "text/xml; charset=#{XML_ENCODING}"}
 
         request = serialize_request(managed_object, method_info, arguments)
         response = @http_client.post(@vcenter_api_uri, request, headers)
@@ -34,7 +34,7 @@ module VimSdk
           elsif object.kind_of?(Vmodl::MethodFault)
             raise SoapError.new(object.msg, object)
           else
-            raise SoapError.new("Unknown SOAP fault", object)
+            raise SoapError.new('Unknown SOAP fault', object)
           end
         else
           raise Net::HTTPError.new("#{status}", nil)
@@ -42,26 +42,30 @@ module VimSdk
         result
       end
 
-      def invoke_property(managed_object, property_info)
+      def invoke_property(managed_object, property_info, outer_stub = nil)
+        outer_stub = self if outer_stub.nil?
         filter_spec = PC::FilterSpec.new(
           :object_set => [PC::ObjectSpec.new(:obj => managed_object, :skip => false)],
           :prop_set => [PC::PropertySpec.new(:all => false, :type => managed_object.class,
                                              :path_set => [property_info.wsdl_name])])
 
         if @property_collector.nil?
-          service_instance    = Vim::ServiceInstance.new("ServiceInstance", self)
+          # TODO: remove this circular dependency
+          service_instance    = Vim::ServiceInstance.new('ServiceInstance', outer_stub)
           @property_collector = service_instance.retrieve_content.property_collector
         end
 
         @property_collector.retrieve_contents([filter_spec]).first.prop_set.first.val
       end
 
+      private
+
       def compute_version_id(version)
         version_ns = VmomiSupport.version_namespace(version)
-        if version_ns.index("/")
+        if version_ns.index('/')
           "\"urn:#{version_ns}\""
         else
-          ""
+          ''
         end
       end
 
@@ -80,7 +84,7 @@ module VimSdk
         result = [XML_HEADER, "\n", SOAP_ENVELOPE_START]
         result << SOAP_BODY_START
         result << "<#{info.wsdl_name} xmlns=\"#{default_namespace}\">"
-        property = Property.new("_this", "Vmodl.ManagedObject", @version)
+        property = Property.new('_this', 'Vmodl.ManagedObject', @version)
         property.type = Vmodl::ManagedObject
         result << serialize(managed_object, property, @version, namespace_map)
 
@@ -92,7 +96,7 @@ module VimSdk
         result << SOAP_BODY_END
         result << SOAP_ENVELOPE_END
 
-        result.join("")
+        result.join('')
       end
 
       def serialize(object, info, version, namespace_map)
@@ -102,7 +106,7 @@ module VimSdk
             version = item_type.version
           else
             if object.nil?
-              return ""
+              return ''
             end
             version = object.class.type_info.version
           end

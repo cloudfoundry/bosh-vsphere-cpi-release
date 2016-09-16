@@ -4,31 +4,38 @@ module VSphereCloud
   class NSX
 
     MAX_TRIES = 10
-    RETRY_INTERVAL_CAP_SEC = 32
 
     attr_reader :http_client, :nsx_url
 
-    def initialize(nsx_url, http_client, logger)
+    def initialize(nsx_url, http_client, logger, retryer = nil)
       @http_client = http_client
       @nsx_url = nsx_url
       @logger = logger
+      @retryer = retryer || Retryer.new
     end
 
     def apply_tag_to_vm(tag_name, vm_id)
-      @logger.debug("Applying tag '#{tag_name}' to VM '#{vm_id}'...")
+
       tag_id = find_or_create_tag(tag_name)
 
-      MAX_TRIES.times do |i|
-        response = @http_client.put("https://#{@nsx_url}/api/2.0/services/securitytags/tag/#{tag_id}/vm/#{vm_id}", nil)
-        if response.status.between?(200, 299)
-          break
+      @retryer.try(MAX_TRIES) do |i|
+        if i == 0
+          @logger.debug("Applying tag '#{tag_name}' to VM '#{vm_id}'...")
+        else
+          @logger.warn("Retrying apply tag '#{tag_name}' to VM '#{vm_id}', #{i} attempts so far...")
         end
 
-        if i < (MAX_TRIES - 1) && is_attach_error_retryable?(response.body)
-          @logger.debug("Retry ##{i+1}: Applying tag '#{tag_name}' to VM '#{vm_id}'...")
-          sleep([(2**i), RETRY_INTERVAL_CAP_SEC].min)
+        response = @http_client.put("https://#{@nsx_url}/api/2.0/services/securitytags/tag/#{tag_id}/vm/#{vm_id}", nil)
+        unless response.status.between?(200, 299)
+          unless is_attach_error_retryable?(response.body)
+            raise "Failed to associate VM to tag with unknown NSX error: '#{response.body}'"
+          end
+
+          err = "Failed to locate VM with VM ID '#{vm_id}' via NSX API: '#{response.body}'"
+          @logger.warn(err)
+          [nil, err]
         else
-          raise "Failed to associate VM to tag with unknown NSX error: '#{response.body}'"
+          [response, nil]
         end
       end
 
@@ -72,7 +79,7 @@ module VSphereCloud
     private
 
     def find_or_create_tag(tag_name)
-      tag =  create_new_tag(tag_name)
+      tag = create_new_tag(tag_name)
       return tag if tag != nil
 
       find_tag_id_by_tag_name(tag_name)
@@ -110,7 +117,7 @@ module VSphereCloud
         create_tag_content(tag_name),
         {'Content-Type' => 'text/xml'}
       )
-      if response.status.between?(200,299)
+      if response.status.between?(200, 299)
         return response.body
       end
 

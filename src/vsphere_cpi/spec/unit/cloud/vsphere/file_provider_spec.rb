@@ -2,18 +2,19 @@ require 'spec_helper'
 
 module VSphereCloud
   describe FileProvider do
-    subject(:file_provider) { described_class.new(http_client: http_client, vcenter_host: vcenter_host, logger: logger) }
+    subject(:file_provider) { described_class.new(http_client: http_client, vcenter_host: vcenter_host, logger: logger, retryer: retryer) }
 
     let(:http_client) { double('fake-rest-client') }
     let(:vcenter_host) { 'fake-vcenter-host' }
     let(:logger) { Logger.new(StringIO.new("")) }
+    let(:retryer) { Retryer.new }
 
     let(:datacenter_name) { 'fake-datacenter-name 1' }
     let(:datastore_name) { 'fake-datastore-name 1' }
     let(:path) { 'fake-path' }
 
     before do
-      allow(FileProvider).to receive(:sleep)
+      allow(retryer).to receive(:sleep)
     end
 
     describe '#fetch_file' do
@@ -50,7 +51,7 @@ module VSphereCloud
               'https://fake-vcenter-host/folder/fake-path?'\
               'dcPath=fake-datacenter-name%201&dsName=fake-datastore-name%201', {}
             )
-            .exactly(5).times
+            .exactly(Retryer::MAX_TRIES).times
             .and_return(double('response', code: 500))
 
           expect {
@@ -77,7 +78,7 @@ module VSphereCloud
       context 'when vSphere cannot handle the request' do
         it 'retries then raises an error' do
           expect(http_client).to receive(:put)
-            .exactly(5).times
+            .exactly(Retryer::MAX_TRIES).times
             .and_return(double('response', code: 500, body: nil))
 
           expect {
@@ -102,7 +103,7 @@ module VSphereCloud
 
       context 'when vSphere cannot handle the request' do
         it 'retries and then raises an error' do
-          expect(http_client).to receive(:post).exactly(5).times.and_return(double('response', code: 500, body: nil))
+          expect(http_client).to receive(:post).exactly(Retryer::MAX_TRIES).times.and_return(double('response', code: 500, body: nil))
 
           expect {
             file_provider.upload_file_to_url(url, body, headers)

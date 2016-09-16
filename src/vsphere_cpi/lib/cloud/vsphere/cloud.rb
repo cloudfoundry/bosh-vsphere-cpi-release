@@ -5,7 +5,6 @@ require 'cloud'
 module VSphereCloud
   class Cloud < Bosh::Cloud
     include VimSdk
-    include RetryBlock
 
     class TimeoutException < StandardError; end
     class NetworkException < StandardError
@@ -24,8 +23,7 @@ module VSphereCloud
 
       @logger = config.logger
 
-      base_http_client = VSphereCloud::CpiHttpClient.new(@config.soap_log)
-      @http_client = VSphereCloud::RetryHttpClient.new(base_http_client, @logger)
+      @http_client = VSphereCloud::CpiHttpClient.new(@config.soap_log)
 
       @client = VCenterClient.new(
         vcenter_api_uri: @config.vcenter_api_uri,
@@ -53,7 +51,6 @@ module VSphereCloud
         cluster_provider: @cluster_provider,
         logger: @logger,
       })
-
       @file_provider = FileProvider.new({
         http_client: @http_client,
         vcenter_host: @config.vcenter_host,
@@ -168,8 +165,9 @@ module VSphereCloud
 
           # Despite the naming, this has nothing to do with the Cloud notion of a disk snapshot
           # (which comes from AWS). This is a vm snapshot.
-          task = vm.create_snapshot('initial', nil, false, false)
-          client.wait_for_task(task)
+          client.wait_for_task do
+            vm.create_snapshot('initial', nil, false, false)
+          end
         end
         result
       end
@@ -296,7 +294,7 @@ module VSphereCloud
         end
 
         # Delete env.iso and VM specific files managed by the director
-        retry_block { @agent_env.clean_env(vm.mob) } if vm.cdrom
+        @agent_env.clean_env(vm.mob) if vm.cdrom
 
         vm.delete
         @logger.info("Deleted vm: #{vm_cid}")
@@ -320,9 +318,9 @@ module VSphereCloud
           @logger.info('Try hard reboot')
 
           # if we fail to perform a soft-reboot we force a hard-reboot
-          retry_block { vm.power_off } if vm.powered_on?
+          vm.power_off if vm.powered_on?
 
-          retry_block { vm.power_on }
+          vm.power_on
         end
       end
     end
@@ -459,17 +457,21 @@ module VSphereCloud
       @logger.info("Cluster doesn't have stemcell #{stemcell_id}, replicating")
       @logger.info("Replicating #{stemcell_id} (#{original_stemcell_vm}) to #{name_of_replicated_stemcell}")
       begin
-        replicated_stemcell_vm = client.wait_for_task(clone_vm(
-          original_stemcell_vm,
-          name_of_replicated_stemcell,
-          @datacenter.template_folder.mob,
-          cluster.resource_pool.mob,
-          datastore: to_datastore.mob
-        ))
+        replicated_stemcell_vm = client.wait_for_task do
+          clone_vm(
+            original_stemcell_vm,
+            name_of_replicated_stemcell,
+            @datacenter.template_folder.mob,
+            cluster.resource_pool.mob,
+            datastore: to_datastore.mob
+          )
+        end
         @logger.info("Replicated #{stemcell_id} (#{original_stemcell_vm}) to #{name_of_replicated_stemcell} (#{replicated_stemcell_vm})")
 
         @logger.info("Creating initial snapshot for linked clones on #{replicated_stemcell_vm}")
-        client.wait_for_task(replicated_stemcell_vm.create_snapshot('initial', nil, false, false))
+        client.wait_for_task do
+          replicated_stemcell_vm.create_snapshot('initial', nil, false, false)
+        end
         @logger.info("Created initial snapshot for linked clones on #{replicated_stemcell_vm}")
       rescue VSphereCloud::VCenterClient::DuplicateName
         @logger.info("Stemcell is being replicated by another thread, waiting for #{name_of_replicated_stemcell} to be ready")

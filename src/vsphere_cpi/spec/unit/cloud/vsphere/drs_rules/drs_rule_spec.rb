@@ -13,7 +13,9 @@ describe VSphereCloud::DrsRule do
   let(:client) { instance_double('VSphereCloud::VCenterClient') }
   before do
     allow(client).to receive(:service_content).and_return(service_content)
-    allow(client).to receive(:wait_for_task).with(task)
+    allow(client).to receive(:wait_for_task) do |*args, &block|
+      expect(block.call).to eq(task)
+    end
   end
 
   let(:service_content) { instance_double('VimSdk::Vim::ServiceInstanceContent') }

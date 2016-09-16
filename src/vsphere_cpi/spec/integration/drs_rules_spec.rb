@@ -52,8 +52,9 @@ context 'when vm was migrated to another datastore within first cluster' do
       datastore = one_cluster_cpi.client.cloud_searcher.get_managed_object(VimSdk::Vim::Datastore, name: @second_datastore)
       relocate_spec = VimSdk::Vim::Vm::RelocateSpec.new(datastore: datastore)
 
-      task = vm.mob.relocate(relocate_spec, 'defaultPriority')
-      one_cluster_cpi.client.wait_for_task(task)
+      one_cluster_cpi.client.wait_for_task do
+        vm.mob.relocate(relocate_spec, 'defaultPriority')
+      end
     end
   end
 
@@ -155,8 +156,9 @@ context 'when vm was migrated to another datastore within first cluster' do
         datastore = one_cluster_cpi.client.cloud_searcher.get_managed_object(VimSdk::Vim::Datastore, name: datastore_name)
         relocate_spec = VimSdk::Vim::Vm::RelocateSpec.new(datastore: datastore)
 
-        task = vm.mob.relocate(relocate_spec, 'defaultPriority')
-        one_cluster_cpi.client.wait_for_task(task)
+        one_cluster_cpi.client.wait_for_task do
+          vm.mob.relocate(relocate_spec, 'defaultPriority')
+        end
 
         expect(one_cluster_cpi.has_disk?(disk_id)).to be(true)
 
@@ -196,8 +198,9 @@ context 'when vm was migrated to another datastore within first cluster' do
         datastore = one_cluster_cpi.client.cloud_searcher.get_managed_object(VimSdk::Vim::Datastore, name: datastore_name)
         relocate_spec = VimSdk::Vim::Vm::RelocateSpec.new(datastore: datastore)
 
-        task = vm.mob.relocate(relocate_spec, 'defaultPriority')
-        one_cluster_cpi.client.wait_for_task(task)
+        one_cluster_cpi.client.wait_for_task do
+          vm.mob.relocate(relocate_spec, 'defaultPriority')
+        end
 
         expect(one_cluster_cpi.has_disk?(disk_id)).to be(true)
 

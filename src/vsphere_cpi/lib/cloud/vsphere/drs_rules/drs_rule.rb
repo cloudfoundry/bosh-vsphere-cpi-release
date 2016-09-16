@@ -64,14 +64,16 @@ module VSphereCloud
       rule_info.enabled = true
       rule_info.name = @rule_name
       rule_info.vm = tagged_vms
-      @logger.debug("Setting DRS rule: #{@rule_name}, vms: #{rule_info.vm}")
+      vm_names = rule_info.vm.map { |v| v.name }
+      @logger.debug("Setting DRS rule: #{@rule_name}, vms: #{vm_names.join(', ')}")
       rule_info.key = rule_key if rule_key
 
       rule_spec.info = rule_info
 
       config_spec.rules_spec = [rule_spec]
-      task = @datacenter_cluster.reconfigure_ex(config_spec, true)
-      @client.wait_for_task(task)
+      @client.wait_for_task do
+        @datacenter_cluster.reconfigure_ex(config_spec, true)
+      end
     end
 
     def tagged_vms

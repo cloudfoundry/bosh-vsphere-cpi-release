@@ -10,9 +10,16 @@ module VSphereCloud
     let(:tag_id) { 'fake-tag-id' }
     let(:vm) { 'my-vm' }
     let(:nsx_address) { 'my-nsx-manager' }
+    let(:retryer) { Retryer.new }
 
     subject(:nsx) do
-      described_class.new(nsx_address, http_client, logger)
+      described_class.new(nsx_address, http_client, logger, retryer)
+    end
+
+    before do
+      allow(logger).to receive(:debug)
+      allow(logger).to receive(:warn)
+      allow(retryer).to receive(:sleep)
     end
 
     describe '#apply_tag_to_vm' do
@@ -87,8 +94,6 @@ module VSphereCloud
 
       context 'when the tag association HTTP request fails' do
         it 'retries until the apply succeeds when call is retryable' do
-          expect(nsx).to receive(:sleep)
-
           create_response = double('response', status: 200, body: 'fake-tag-id')
           expect(http_client).to receive(:post).and_return(create_response)
 
@@ -103,7 +108,7 @@ module VSphereCloud
         end
 
         it "returns an error after #{VSphereCloud::NSX::MAX_TRIES} retries when call is retryable" do
-          expect(nsx).to receive(:sleep).exactly(VSphereCloud::NSX::MAX_TRIES - 1).times
+          expect(retryer).to receive(:sleep).exactly(VSphereCloud::NSX::MAX_TRIES - 1).times
 
           create_response = double('response', status: 200, body: 'fake-tag-id')
           expect(http_client).to receive(:post).and_return(create_response)

@@ -11,7 +11,7 @@ module VSphereCloud
     attr_reader :cloud_searcher, :service_content, :service_instance, :soap_stub
 
     def initialize(vcenter_api_uri:, http_client:, logger:)
-      @soap_stub = SoapStub.new(vcenter_api_uri, http_client).create
+      @soap_stub = SoapStub.new(vcenter_api_uri, http_client, logger).create
 
       @service_instance = Vim::ServiceInstance.new('ServiceInstance', @soap_stub)
 
@@ -26,6 +26,11 @@ module VSphereCloud
       @logger = logger
 
       @cloud_searcher = CloudSearcher.new(service_content, @logger)
+
+      @task_runner = TaskRunner.new({
+        cloud_searcher: @cloud_searcher,
+        logger: @logger,
+      })
     end
 
     def login(username, password, locale)
@@ -41,6 +46,12 @@ module VSphereCloud
       @logger.info "Failed to logout: #{e.message}"
     end
 
+    def wait_for_task(&task_block)
+      @task_runner.run do
+        task_block.call
+      end
+    end
+
     def find_parent(obj, parent_type)
       while obj && obj.class != parent_type
         obj = @cloud_searcher.get_property(obj, obj.class, "parent", :ensure_all => true)
@@ -49,13 +60,15 @@ module VSphereCloud
     end
 
     def reconfig_vm(vm, config)
-      task = vm.reconfigure(config)
-      wait_for_task(task)
+      wait_for_task do
+        vm.reconfigure(config)
+      end
     end
 
     def delete_vm(vm)
-      task = vm.destroy
-      wait_for_task(task)
+      wait_for_task do
+        vm.destroy
+      end
     end
 
     def answer_vm(vm, question, answer)
@@ -63,22 +76,25 @@ module VSphereCloud
     end
 
     def power_on_vm(datacenter, vm)
-      task = datacenter.power_on_vm([vm], nil)
-      result = wait_for_task(task)
+      wait_for_task do
+        result = wait_for_task do
+          datacenter.power_on_vm([vm], nil)
+        end
 
-      raise 'Recommendations were detected, you may be running in Manual DRS mode. Aborting.' if result.recommendations.any?
+        raise 'Recommendations were detected, you may be running in Manual DRS mode. Aborting.' if result.recommendations.any?
 
-      if result.attempted.empty?
-        raise "Could not power on VM '#{vm}': #{result.not_attempted.map(&:fault).map(&:msg).join(', ')}"
-      else
-        task = result.attempted.first.task
-        wait_for_task(task)
+        vms_powering_on = result.attempted
+        if vms_powering_on.empty?
+          raise "Could not power on VM '#{vm}': #{result.not_attempted.map(&:fault).map(&:msg).join(', ')}"
+        end
+        vms_powering_on.first.task
       end
     end
 
     def power_off_vm(vm_mob)
-      task = vm_mob.power_off
-      wait_for_task(task)
+      wait_for_task do
+        vm_mob.power_off
+      end
     end
 
     def get_cdrom_device(vm)
@@ -87,9 +103,10 @@ module VSphereCloud
     end
 
     def delete_path(datacenter_mob, path)
-      task = @service_content.file_manager.delete_file(path, datacenter_mob)
       begin
-        wait_for_task(task)
+        wait_for_task do
+          @service_content.file_manager.delete_file(path, datacenter_mob)
+        end
       rescue => e
         unless e.message =~ /File .* was not found/
           raise e
@@ -98,13 +115,13 @@ module VSphereCloud
     end
 
     def delete_disk(datacenter_mob, path)
-      task = service_content.virtual_disk_manager.delete_virtual_disk(
-        path,
-        datacenter_mob
-      )
-
       begin
-        wait_for_task(task)
+        wait_for_task do
+          service_content.virtual_disk_manager.delete_virtual_disk(
+            path,
+            datacenter_mob
+          )
+        end
       rescue => e
         unless e.message =~ /File .* was not found/
           raise e
@@ -115,16 +132,16 @@ module VSphereCloud
     def move_disk(source_datacenter_mob, source_path, dest_datacenter_mob, dest_path)
       create_parent_folder(dest_datacenter_mob, dest_path)
       @logger.info("Moving disk: #{source_path} to #{dest_path}")
-      task = service_content.virtual_disk_manager.move_virtual_disk(
-        source_path,
-        source_datacenter_mob,
-        dest_path,
-        dest_datacenter_mob,
-        false,
-        nil
-      )
-
-      wait_for_task(task)
+      wait_for_task do
+        service_content.virtual_disk_manager.move_virtual_disk(
+          source_path,
+          source_datacenter_mob,
+          dest_path,
+          dest_datacenter_mob,
+          false,
+          nil
+        )
+      end
       @logger.info('Moved disk')
     end
 
@@ -137,8 +154,9 @@ module VSphereCloud
     end
 
     def delete_folder(folder)
-      task = folder.destroy
-      wait_for_task(task)
+      wait_for_task do
+        folder.destroy
+      end
     end
 
     def find_by_inventory_path(path)
@@ -209,54 +227,6 @@ module VSphereCloud
       target_network
     end
 
-    def wait_for_task(task)
-      interval = 1.0
-      started = Time.now
-      name_properties = @cloud_searcher.get_properties([task], Vim::Task, ["info.name", "info.descriptionId"], ensure: [])[task]
-      task_name = name_properties['info.descriptionId'] || name_properties['info.name'] || "Unknown Task"
-      @logger.debug("Starting task '#{task_name}'...") unless task_name.nil?
-      wait_log_counter = 1
-      wait_log_interval = 1800
-      loop do
-        properties = @cloud_searcher.get_properties(
-          [task],
-          Vim::Task,
-          ["info.progress", "info.state", "info.result", "info.error"],
-          ensure: ["info.state"]
-        )[task]
-
-        duration = Time.now - started
-        if duration > wait_log_counter * wait_log_interval
-          @logger.debug("Waited on task '#{task_name}' for #{duration.to_i / 60} minutes...")
-          wait_log_counter += 1
-        end
-
-        # Update the polling interval based on task progress
-        if properties["info.progress"] && properties["info.progress"] > 0
-          interval = ((duration * 100 / properties["info.progress"]) - duration) / 5
-          if interval < 1
-            interval = 1
-          elsif interval > 10
-            interval = 10
-          elsif interval > duration
-            interval = duration
-          end
-        end
-
-        case properties["info.state"]
-          when Vim::TaskInfo::State::RUNNING
-            sleep(interval)
-          when Vim::TaskInfo::State::QUEUED
-            sleep(interval)
-          when Vim::TaskInfo::State::SUCCESS
-            @logger.debug("Finished task '#{task_name}' after #{duration} seconds")
-            return properties["info.result"]
-          when Vim::TaskInfo::State::ERROR
-            raise task_exception_for_vim_fault(properties["info.error"])
-        end
-      end
-    end
-
     def get_perf_counters(mobs, names, options = {})
       metrics = find_perf_metric_names(mobs.first, names)
       metric_ids = metrics.values
@@ -309,12 +279,13 @@ module VSphereCloud
       disk_spec.capacity_kb = disk_size_in_mb * 1024
       disk_spec.adapter_type = 'lsiLogic'
 
-      task = service_content.virtual_disk_manager.create_virtual_disk(
-        disk_path,
-        datacenter_mob,
-        disk_spec
-      )
-      wait_for_task(task)
+      wait_for_task do
+        service_content.virtual_disk_manager.create_virtual_disk(
+          disk_path,
+          datacenter_mob,
+          disk_spec
+        )
+      end
 
       Resources::PersistentDisk.new(cid: disk_cid, size_in_mb: disk_size_in_mb, datastore: datastore, folder: disk_folder)
     end
@@ -336,10 +307,13 @@ module VSphereCloud
 
       datastore_path = "[#{datastore.name}] #{disk_folder}"
       @logger.debug("Trying to find disk in : #{datastore_path}")
-      vm_disk_infos = wait_for_task(datastore.mob.browser.search(datastore_path, search_spec)).file
-      return nil if vm_disk_infos.empty?
+      result = wait_for_task do
+        datastore.mob.browser.search(datastore_path, search_spec)
+      end
+      disk_infos = result.file
+      return nil if disk_infos.empty?
 
-      vm_disk_infos.first.capacity_kb / 1024
+      disk_infos.first.capacity_kb / 1024
     rescue VimSdk::SoapError, FileNotFoundException
       nil
     end
@@ -355,7 +329,10 @@ module VSphereCloud
 
       datastore_path = "[#{match[1]}] #{match[2]}"
       @logger.debug("Trying to find disk in : #{datastore_path}")
-      vm_disk_infos = wait_for_task(vm_mob.environment_browser.datastore_browser.search(datastore_path, search_spec)).file
+      result = wait_for_task do
+        vm_mob.environment_browser.datastore_browser.search(datastore_path, search_spec)
+      end
+      vm_disk_infos = result.file
       return false if vm_disk_infos.empty?
 
       true
@@ -460,14 +437,6 @@ module VSphereCloud
     end
 
     private
-
-    def task_exception_for_vim_fault(fault)
-      exceptions_by_fault = {
-        VimSdk::Vim::Fault::FileNotFound => FileNotFoundException,
-        VimSdk::Vim::Fault::DuplicateName => DuplicateName,
-      }
-      exceptions_by_fault.fetch(fault.class, TaskException).new(fault.msg)
-    end
 
     def find_perf_metric_names(mob, names)
       @lock.synchronize do

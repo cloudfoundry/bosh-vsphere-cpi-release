@@ -1,7 +1,6 @@
 module VSphereCloud
   class AgentEnv
     include VimSdk
-    include RetryBlock
 
     def initialize(client:, file_provider:, cloud_searcher:, logger:)
       @client = client

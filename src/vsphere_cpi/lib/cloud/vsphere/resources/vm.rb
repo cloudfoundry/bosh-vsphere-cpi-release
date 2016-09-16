@@ -2,7 +2,6 @@ module VSphereCloud
   module Resources
     class VM
       include VimSdk
-      include RetryBlock
       include ObjectStringifier
       stringify_with :cid
 
@@ -137,22 +136,21 @@ module VSphereCloud
       def power_off
         check_for_nonpersistent_disk_modes
 
-        retry_block do
-          question = properties['runtime.question']
-          if question
-            choices = question.choice
-            @logger.info("VM is blocked on a question: #{question.text}, " +
-                "providing default answer: #{choices.choice_info[choices.default_index].label}")
-            @client.answer_vm(@mob, question.id, choices.choice_info[choices.default_index].key)
-            power_state = cloud_searcher.get_property(@mob, Vim::VirtualMachine, 'runtime.powerState')
-          else
-            power_state = properties['runtime.powerState']
-          end
+        question = properties['runtime.question']
+        if question
+          choices = question.choice
+          @logger.info("VM is blocked on a question: #{question.text}, " +
+              "providing default answer: #{choices.choice_info[choices.default_index].label}")
+          @client.answer_vm(@mob, question.id, choices.choice_info[choices.default_index].key)
+        end
 
-          if power_state != Vim::VirtualMachine::PowerState::POWERED_OFF
-            @logger.info("Powering off vm: #{@cid}")
-            @client.power_off_vm(@mob)
-          end
+        # get current power state from the server
+        power_state = cloud_searcher.get_property(@mob, Vim::VirtualMachine, 'runtime.powerState')
+
+        if power_state != Vim::VirtualMachine::PowerState::POWERED_OFF
+          @client.power_off_vm(@mob)
+        else
+          @logger.info("VM '#{@cid}' is already powered off, skipping power off task.")
         end
       end
 
@@ -183,7 +181,7 @@ module VSphereCloud
       end
 
       def delete
-        retry_block { @client.delete_vm(@mob) }
+        @client.delete_vm(@mob)
       end
 
       def reload
@@ -275,7 +273,8 @@ module VSphereCloud
             end
           end
         end
-        retry_block { @client.reconfig_vm(@mob, config) }
+
+        @client.reconfig_vm(@mob, config)
         @logger.info("Detached #{virtual_disks.size} persistent disk(s)")
 
         move_disks_to_old_path(disks_to_move)

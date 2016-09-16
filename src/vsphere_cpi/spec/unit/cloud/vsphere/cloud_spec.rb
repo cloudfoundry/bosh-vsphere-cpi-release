@@ -20,9 +20,8 @@ module VSphereCloud
     let(:default_disk_type) { 'preallocated' }
     let(:logger) { instance_double('Logger', info: nil, debug: nil) }
     let(:vcenter_client) { instance_double('VSphereCloud::VCenterClient', login: nil, service_content: service_content) }
-    let(:base_http_client) { instance_double('VSphereCloud::CpiHttpClient') }
-    let(:http_client) { instance_double('VSphereCloud::RetryHttpClient') }
     let(:http_basic_auth_client) { instance_double('VSphereCloud::NsxHttpClient') }
+    let(:http_client) { instance_double('VSphereCloud::CpiHttpClient') }
     let(:service_content) do
       instance_double('VimSdk::Vim::ServiceInstanceContent',
         virtual_disk_manager: virtual_disk_manager,
@@ -41,9 +40,6 @@ module VSphereCloud
       allow(Config).to receive(:build).with(config).and_return(cloud_config)
       allow(CpiHttpClient).to receive(:new)
         .with('fake-log-file')
-        .and_return(base_http_client)
-      allow(RetryHttpClient).to receive(:new)
-        .with(base_http_client, logger)
         .and_return(http_client)
       allow(VCenterClient).to receive(:new)
         .with({
@@ -204,7 +200,10 @@ module VSphereCloud
             resource_pool = double(:resource_pool, mob: 'fake_resource_pool_mob')
             allow(cluster).to receive(:resource_pool).and_return(resource_pool)
             allow(stemcell_vm).to receive(:clone).with(any_args).and_return(fake_task)
-            allow(vcenter_client).to receive(:wait_for_task).with(fake_task).and_return(replicated_stemcell)
+            allow(vcenter_client).to receive(:wait_for_task) do |*args, &block|
+              expect(block.call).to eq(fake_task)
+              replicated_stemcell
+            end
             allow(replicated_stemcell).to receive(:create_snapshot).with(any_args).and_return(fake_task)
 
             expect(vsphere_cloud.replicate_stemcell(cluster, target_datastore, stemcell_id)).to eql(replicated_stemcell)
@@ -1256,17 +1255,6 @@ module VSphereCloud
             expect(vm).to receive(:power_on).ordered
             vsphere_cloud.reboot_vm('vm-id')
           end
-
-          it 'retries the power-off twice before failing' do
-            allow(vm).to receive(:power_state)
-            first_error = StandardError.new('first error')
-            second_error = StandardError.new('second error')
-            expect(vm).to receive(:power_off).ordered.and_raise(first_error)
-            expect(vm).to receive(:power_off).ordered.and_raise(second_error)
-            expect {
-              vsphere_cloud.reboot_vm('vm-id')
-            }.to raise_error(second_error)
-          end
         end
 
         context 'when the machine was powered off' do
@@ -1279,19 +1267,6 @@ module VSphereCloud
             expect(vm).to_not receive(:power_off)
             expect(vm).to receive(:power_on).ordered
             vsphere_cloud.reboot_vm('vm-id')
-          end
-
-          it 'retries the power-on twice before failing' do
-            allow(vm).to receive(:powered_on?).and_return(false)
-            allow(vm).to receive(:power_state)
-            expect(vm).to_not receive(:power_off)
-            first_error = StandardError.new('first error')
-            second_error = StandardError.new('second error')
-            expect(vm).to receive(:power_on).ordered.and_raise(first_error)
-            expect(vm).to receive(:power_on).ordered.and_raise(second_error)
-            expect {
-              vsphere_cloud.reboot_vm('vm-id')
-            }.to raise_error(second_error)
           end
         end
       end
