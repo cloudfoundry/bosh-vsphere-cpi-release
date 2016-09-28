@@ -351,6 +351,9 @@ module VSphereCloud
         end
 
         disk_spec = vm.attach_disk(disk_to_attach)
+        # Overwrite cid with the director cid
+        # Since director sends messages with "director cid" to agent, the agent needs that ID in its env, not the clean_cid
+        disk_to_attach.cid = director_disk_cid
         add_disk_to_agent_env(vm, disk_to_attach, disk_spec.device.unit_number)
       end
     end
@@ -366,7 +369,7 @@ module VSphereCloud
         raise Bosh::Clouds::DiskNotAttached.new(true), "Disk '#{disk_cid}' is not attached to VM '#{vm_cid}'" if disk.nil?
 
         vm.detach_disks([disk])
-        delete_disk_from_agent_env(vm, disk_cid)
+        delete_disk_from_agent_env(vm, director_disk_cid)
       end
     end
 
