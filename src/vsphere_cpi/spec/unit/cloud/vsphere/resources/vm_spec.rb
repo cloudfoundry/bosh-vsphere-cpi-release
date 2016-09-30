@@ -3,7 +3,7 @@ require 'timecop'
 
 describe VSphereCloud::Resources::VM do
   subject(:vm) { described_class.new('vm-cid', vm_mob, client, logger) }
-  let(:vm_mob) { instance_double('VimSdk::Vim::VirtualMachine') }
+  let(:vm_mob) { instance_double('VimSdk::Vim::VirtualMachine', __mo_id__: 'fake-mob-id') }
   let(:datacenter) { instance_double('VimSdk::Vim::Datacenter')}
   let(:client) { instance_double('VSphereCloud::VCenterClient', cloud_searcher: cloud_searcher) }
   let(:cloud_searcher) { instance_double('VSphereCloud::CloudSearcher') }
@@ -26,6 +26,12 @@ describe VSphereCloud::Resources::VM do
   end
 
   let(:vm_properties) { {'runtime' => double(:runtime, host: 'vm-host')} }
+
+  describe '#mob_id' do
+    it 'returns the ID of the underlying mob object' do
+      expect(vm.mob_id).to eq('fake-mob-id')
+    end
+  end
 
   describe '#accessible_datastore_names' do
     it 'returns accessible datastores' do

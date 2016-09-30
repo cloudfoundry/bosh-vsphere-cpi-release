@@ -4,6 +4,7 @@ templates:
   cacert.pem.erb: config/cacert.pem
   cpi.erb: bin/cpi
   cpi.json.erb: config/cpi.json
+  nsx_cacert.pem.erb: config/nsx_cacert.pem
 
 packages:
 - vsphere_cpi_mkisofs
@@ -23,6 +24,18 @@ properties:
   vcenter.datacenters:
     description: Datacenters in vCenter to use (value is an array of Hashes representing datacenters and clusters, See director.yml.erb.erb)
   vcenter.connection_options.ca_cert:
+    description: All required custom CA certificates
+    example:
+      -----BEGIN CERTIFICATE-----
+      MII...
+      -----END CERTIFICATE-----
+  vcenter.nsx.address:
+    description: Address of the NSX manager
+  vcenter.nsx.user:
+    description: User to connect to NSX manager
+  vcenter.nsx.password:
+    description: Password to connect to NSX manager
+  vcenter.nsx.ca_cert:
     description: All required custom CA certificates
     example:
       -----BEGIN CERTIFICATE-----

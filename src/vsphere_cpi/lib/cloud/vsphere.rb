@@ -15,7 +15,9 @@ require 'cloud/vsphere/file_provider'
 require 'cloud/vsphere/lease_obtainer'
 require 'cloud/vsphere/lease_updater'
 require 'cloud/vsphere/path_finder'
+require 'cloud/vsphere/base_http_client'
 require 'cloud/vsphere/cpi_http_client'
+require 'cloud/vsphere/nsx_http_client'
 require 'cloud/vsphere/retry_http_client'
 require 'cloud/vsphere/vcenter_client'
 require 'cloud/vsphere/resources/cluster_provider'
@@ -42,6 +44,7 @@ require 'cloud/vsphere/vm_config'
 require 'cloud/vsphere/datastore_picker'
 require 'cloud/vsphere/cluster_picker'
 require 'cloud/vsphere/disk_metadata'
+require 'cloud/vsphere/nsx'
 
 module Bosh
   module Clouds

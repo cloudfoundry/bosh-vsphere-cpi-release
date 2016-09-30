@@ -22,6 +22,7 @@ module VSphereCloud
     let(:vcenter_client) { instance_double('VSphereCloud::VCenterClient', login: nil, service_content: service_content) }
     let(:base_http_client) { instance_double('VSphereCloud::CpiHttpClient') }
     let(:http_client) { instance_double('VSphereCloud::RetryHttpClient') }
+    let(:http_basic_auth_client) { instance_double('VSphereCloud::NsxHttpClient') }
     let(:service_content) do
       instance_double('VimSdk::Vim::ServiceInstanceContent',
         virtual_disk_manager: virtual_disk_manager,
@@ -389,11 +390,13 @@ module VSphereCloud
         )
       end
       let(:fake_datastore) { instance_double(Resources::Datastore, name: 'fake-datastore') }
+      let(:fake_vm) { instance_double(Resources::VM, cid: 'fake-cloud-id', mob_id: 'fake-mob-id') }
       let(:resource_pool) do
         {
           'disk' => 4096,
         }
       end
+      let(:nsx) { instance_double(NSX) }
 
       before do
         allow(vsphere_cloud).to receive(:stemcell_vm)
@@ -477,6 +480,7 @@ module VSphereCloud
           .and_return(vm_creator)
         expect(vm_creator).to receive(:create)
           .with(vm_config)
+          .and_return(fake_vm)
 
         vsphere_cloud.create_vm(
           "fake-agent-id",
@@ -530,6 +534,7 @@ module VSphereCloud
           .and_return(vm_creator)
         expect(vm_creator).to receive(:create)
           .with(vm_config)
+          .and_return(fake_vm)
 
         vsphere_cloud.create_vm(
           "fake-agent-id",
@@ -550,7 +555,7 @@ module VSphereCloud
         before do
           allow(VmCreator).to receive(:new)
             .and_return(vm_creator)
-          allow(vm_creator).to receive(:create)
+          allow(vm_creator).to receive(:create).and_return(fake_vm)
         end
 
         it 'creates the VM with disk cid parsed from the metadata-encoded director disk cid' do
@@ -635,6 +640,7 @@ module VSphereCloud
                                  .and_return(vm_creator)
           expect(vm_creator).to receive(:create)
                                   .with(vm_config)
+                                  .and_return(fake_vm)
 
           vsphere_cloud.create_vm(
             "fake-agent-id",
@@ -645,6 +651,62 @@ module VSphereCloud
             "fake-agent-env"
           )
         end
+      end
+
+      context 'when the VM should have security tags' do
+        let(:cloud_config) do
+          instance_double('VSphereCloud::Config',
+            logger: logger,
+            vcenter_host: vcenter_host,
+            vcenter_api_uri: vcenter_api_uri,
+            vcenter_user: 'fake-user',
+            vcenter_password: 'fake-password',
+            vcenter_default_disk_type: default_disk_type,
+            soap_log: 'fake-log-file',
+            nsx_user: 'fake-nsx-user',
+            nsx_password: 'fake-nsx-password',
+          ).as_null_object
+        end
+        let(:resource_pool) do
+          {
+            'nsx' => {
+              'security_tags' => [
+                'fake-security-tag',
+                'another-fake-security-tag',
+              ],
+            }
+          }
+        end
+
+        it 'should create the security tags and attach them to the VM' do
+          allow(VmConfig).to receive(:new)
+                           .and_return(vm_config)
+          allow(NsxHttpClient).to receive(:new)
+                            .with('fake-nsx-user', 'fake-nsx-password', 'fake-log-file')
+                            .and_return(http_basic_auth_client)
+          allow(NSX).to receive(:new).and_return(nsx)
+          expect(vm_config).to receive(:validate)
+
+          expect(VmCreator).to receive(:new)
+                           .and_return(vm_creator)
+          expect(vm_creator).to receive(:create)
+                           .with(vm_config)
+                           .and_return(fake_vm)
+          expect(cloud_config).to receive(:validate_nsx_options)
+          expect(nsx).to receive(:apply_tag_to_vm)
+                           .with('fake-security-tag', 'fake-mob-id')
+          expect(nsx).to receive(:apply_tag_to_vm)
+                           .with('another-fake-security-tag', 'fake-mob-id')
+          vsphere_cloud.create_vm(
+            "fake-agent-id",
+            "fake-stemcell-cid",
+            resource_pool,
+            "fake-networks-hash",
+            [],
+            "fake-agent-env"
+          )
+        end
+
       end
     end
 

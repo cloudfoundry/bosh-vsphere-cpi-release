@@ -43,6 +43,27 @@ module VSphereCloud
       @is_validated = true
     end
 
+    REQUIRED_NSX_OPTIONS = ['address', 'user', 'password']
+    NSX_MANIFEST_LOCATION = '`jobs.bosh.properties.vcenter.nsx`'
+
+    def validate_nsx_options
+      if vcenter['nsx'].nil?
+        raise "Must specify global NSX config in your director manifest under #{NSX_MANIFEST_LOCATION}"
+      end
+
+      missing_properties = []
+      REQUIRED_NSX_OPTIONS.each do | option |
+        missing_properties << option if vcenter['nsx'][option].nil?
+      end
+
+      unless missing_properties.empty?
+        missing_properties.map! { |p| "'#{p}'"}
+        raise "Must specify the NSX config options #{missing_properties.join(', ')} in your director manifest under #{NSX_MANIFEST_LOCATION}"
+      end
+
+      true
+    end
+
     def logger
       @logger ||= Bosh::Clouds::Config.logger
     end
@@ -106,6 +127,18 @@ module VSphereCloud
     def datacenter_use_sub_folder
       datacenter_clusters.any? { |_, cluster| cluster.resource_pool } ||
         !!vcenter_datacenter['use_sub_folder']
+    end
+
+    def nsx_url
+      vcenter['nsx']['address']
+    end
+
+    def nsx_user
+      vcenter['nsx']['user']
+    end
+
+    def nsx_password
+      vcenter['nsx']['password']
     end
 
     private

@@ -32,6 +32,9 @@ module VSphereCloud
        }]
     end
     let(:service_content) { double(:service_content) }
+    let(:nsx_url) { 'fake-nsx-url' }
+    let(:nsx_user) { 'fake-nsx-user' }
+    let(:nsx_password) { 'fake-nsx-password' }
     before do
       allow(VimSdk::Vim::ServiceInstance).to receive(:new).
         and_return(double(:service_instance, content: service_content))
@@ -46,6 +49,11 @@ module VSphereCloud
           'password' => password,
           'default_disk_type' => default_disk_type,
           'datacenters' => datacenters,
+          'nsx' => {
+            'address' => nsx_url,
+            'user' => nsx_user,
+            'password' => nsx_password,
+          }
         ],
         'soap_log' => 'fake-soap-log'
       }
@@ -342,6 +350,44 @@ module VSphereCloud
         it 'returns true' do
           expect(config.datacenter_use_sub_folder).to eq(true)
         end
+      end
+    end
+
+    describe '#validate_nsx_options' do
+      it 'returns true if all nsx options are present' do
+        expect(config.validate_nsx_options).to be(true)
+      end
+
+      context 'when required NSX properties are missing' do
+        before do
+          config_hash['vcenters'].first['nsx'] = {}
+        end
+
+        it 'returns an error' do
+          expect {
+            config.validate_nsx_options
+          }.to raise_error do |err|
+            expect(err.message).to include('address', 'user', 'password')
+          end
+        end
+      end
+    end
+
+    describe '#nsx_uri' do
+      it 'returns value from config' do
+        expect(config.nsx_url).to eq(nsx_url)
+      end
+    end
+
+    describe '#nsx_user' do
+      it 'returns value from config' do
+        expect(config.nsx_user).to eq(nsx_user)
+      end
+    end
+
+    describe '#nsx_password' do
+      it 'returns value from config' do
+        expect(config.nsx_password).to eq(nsx_password)
       end
     end
 

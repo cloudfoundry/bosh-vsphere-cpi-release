@@ -292,6 +292,18 @@ module LifecycleHelpers
     )
   end
 
+  def create_vm_with_resource_pool(cpi, resource_pool, stemcell_id)
+    cpi.create_vm(
+      'agent-007',
+      stemcell_id,
+      resource_pool,
+      network_spec,
+      [],
+      {'key' => 'value'}
+    )
+  end
+
+
   def delete_vm(cpi, vm_id)
     begin
       cpi.delete_vm(vm_id) if vm_id

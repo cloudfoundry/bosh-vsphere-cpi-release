@@ -21,8 +21,12 @@ export no_proxy="<%= no_proxy %>"
 <% end %>
 
 <% if_p('vcenter.connection_options.ca_cert') do %>
-export BOSH_CA_CERT_FILE=$BOSH_JOBS_DIR/vsphere_cpi/config/cacert.pem
+  export BOSH_CA_CERT_FILE=$BOSH_JOBS_DIR/vsphere_cpi/config/cacert.pem
 <% end %>
+<% if_p('vcenter.nsx.ca_cert') do %>
+  export BOSH_NSX_CA_CERT_FILE=$BOSH_JOBS_DIR/vsphere_cpi/config/nsx_cacert.pem
+<% end %>
+
 
 export PATH=$BOSH_PACKAGES_DIR/vsphere_cpi_ruby/bin:$BOSH_PACKAGES_DIR/vsphere_cpi_mkisofs/bin:$PATH
 

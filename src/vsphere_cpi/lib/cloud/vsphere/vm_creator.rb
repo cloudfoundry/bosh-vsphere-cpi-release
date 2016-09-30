@@ -127,7 +127,7 @@ module VSphereCloud
         raise e
       end
 
-      vm_config.name
+      created_vm
     end
 
     private

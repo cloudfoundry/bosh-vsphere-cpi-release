@@ -252,7 +252,27 @@ module VSphereCloud
           ip_conflict_detector: IPConflictDetector.new(@logger, @client),
           default_disk_type: @config.vcenter_default_disk_type
         )
-        vm_creator.create(vm_config)
+        created_vm = vm_creator.create(vm_config)
+
+        begin
+          if resource_pool.key?('nsx') && !resource_pool['nsx']['security_tags'].nil?
+            @config.validate_nsx_options
+            resource_pool['nsx']['security_tags'].each do |security_tag|
+              nsx.apply_tag_to_vm(security_tag, created_vm.mob_id)
+            end
+          end
+        rescue => e
+          @logger.info("Failed to apply NSX tags to VM '#{created_vm.cid}' with error: #{e}")
+          begin
+            @logger.info("Deleting VM '#{created_vm.cid}'...")
+            delete_vm(created_vm.cid)
+          rescue => ex
+            @logger.info("Failed to delete vm '#{created_vm.cid}' with message:  #{ex.inspect}")
+          end
+          raise e
+        end
+
+        created_vm.cid
       end
     end
 
@@ -629,6 +649,22 @@ module VSphereCloud
         @client,
         @logger
       )
+    end
+
+    def nsx
+      return @nsx if @nsx
+
+      # TODO: error check
+      if @config.nsx_url == ''
+        raise 'Must specify `properties.vcenter.nsx.address` in your manifest to add NSX tags!'
+      end
+
+      nsx_http_client = NsxHttpClient.new(
+        @config.nsx_user,
+        @config.nsx_password,
+        @config.soap_log,
+      )
+      @nsx = NSX.new(@config.nsx_url, nsx_http_client)
     end
 
     private

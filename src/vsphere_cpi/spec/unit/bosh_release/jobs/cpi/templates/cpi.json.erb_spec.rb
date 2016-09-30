@@ -51,8 +51,8 @@ describe 'cpi.json.erb' do
 
   it 'is able to render the erb given most basic manifest properties' do
     expect(subject).to eq({
-      'cloud'=>{
-        'plugin'=>'vsphere',
+      'cloud' => {
+        'plugin' => 'vsphere',
         'properties' => {
           'agent' => {
             'blobstore' => {
@@ -96,9 +96,24 @@ describe 'cpi.json.erb' do
     })
   end
 
+  context 'when nsx address is set' do
+    before(:each) {
+      manifest['properties']['vcenter']['nsx'] ={
+        'address' => 'my-nsx-manager',
+        'user' => 'my-nsx-user',
+        'password' => 'fake'
+      }
+    }
+    it 'renders the nsx section properly' do
+      expect(subject['cloud']['properties']['vcenters'].first['nsx']['address']).to eq('my-nsx-manager')
+      expect(subject['cloud']['properties']['vcenters'].first['nsx']['user']).to eq('my-nsx-user')
+      expect(subject['cloud']['properties']['vcenters'].first['nsx']['password']).to eq('fake')
+    end
+  end
+
   context 'when `default_disk_type` is `thin`' do
     before(:each) { manifest['properties']['vcenter']['default_disk_type'] = 'thin' }
-    it 'interopolates the default_disk_type properly' do
+    it 'renders the default_disk_type properly' do
       expect(subject['cloud']['properties']['vcenters'].first['default_disk_type']).to eq('thin')
     end
   end
@@ -255,6 +270,7 @@ class TemplateEvaluationContext
   attr_reader :name, :index
   attr_reader :properties, :raw_properties
   attr_reader :spec
+
   def initialize(spec, manifest)
     @name = spec['job']['name'] if spec['job'].is_a?(Hash)
     @index = spec['index']
@@ -323,7 +339,7 @@ class TemplateEvaluationContext
   def openstruct(object)
     case object
       when Hash
-        mapped = object.inject({}) { |h, (k,v)| h[k] = openstruct(v); h }
+        mapped = object.inject({}) { |h, (k, v)| h[k] = openstruct(v); h }
         OpenStruct.new(mapped)
       when Array
         object.map { |item| openstruct(item) }
@@ -353,16 +369,20 @@ class TemplateEvaluationContext
     def initialize(template)
       @context = template
     end
+
     def else
       yield
     end
+
     def else_if_p(*names, &block)
       @context.if_p(*names, &block)
     end
   end
 
   class InactiveElseBlock
-    def else; end
+    def else;
+    end
+
     def else_if_p(*_)
       InactiveElseBlock.new
     end
