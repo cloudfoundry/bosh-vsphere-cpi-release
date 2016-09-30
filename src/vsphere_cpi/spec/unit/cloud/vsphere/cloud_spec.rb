@@ -740,9 +740,10 @@ module VSphereCloud
         end
 
         it 'attaches the existing persistent disk' do
-          expect(vm).to receive(:attach_disk)
-            .with(disk)
-            .and_return(OpenStruct.new(device: OpenStruct.new(unit_number: 'some-unit-number')))
+          expect(vm).to receive(:attach_disk) do |disk|
+            expect(disk.cid).to eq('disk-cid')
+            OpenStruct.new(device: OpenStruct.new(unit_number: 'some-unit-number'))
+          end
           expect(agent_env).to receive(:set_env) do|env_vm, env_location, env|
             expect(env_vm).to eq(vm_mob)
             expect(env_location).to eq(vm_location)
@@ -750,6 +751,24 @@ module VSphereCloud
           end
 
           vsphere_cloud.attach_disk('fake-vm-cid', 'disk-cid')
+        end
+
+        it 'attaches the existing persistent disk with encoded metadata' do
+          metadata_hash = {target_datastore_pattern: '.*'}
+          encoded_metadata = Base64.urlsafe_encode64(metadata_hash.to_json)
+          disk_cid_with_metadata = "disk-cid.#{encoded_metadata}"
+
+          expect(vm).to receive(:attach_disk) do |disk|
+            expect(disk.cid).to eq('disk-cid')
+            OpenStruct.new(device: OpenStruct.new(unit_number: 'some-unit-number'))
+          end
+          expect(agent_env).to receive(:set_env) do|env_vm, env_location, env|
+            expect(env_vm).to eq(vm_mob)
+            expect(env_location).to eq(vm_location)
+            expect(env['disks']['persistent'][disk_cid_with_metadata]).to eq('some-unit-number')
+          end
+
+          vsphere_cloud.attach_disk('fake-vm-cid', disk_cid_with_metadata)
         end
       end
 
@@ -908,7 +927,6 @@ module VSphereCloud
           allow(vsphere_cloud).to receive(:get_vm_location).and_return(vm_location)
           allow(agent_env).to receive(:get_current_env).with(vm_mob, 'fake-datacenter-name').
               and_return(env)
-          allow(agent_env).to receive(:set_env)
           allow(vm).to receive(:disk_by_cid).with('disk-cid').and_return(attached_disk)
         end
 
@@ -935,13 +953,25 @@ module VSphereCloud
         end
 
         context 'when director disk cid contains metadata' do
+          let(:disk_cid_with_metadata) do
+            metadata_hash = {target_datastore_pattern:'^(target\\-datastore)$'}
+            encoded_data = Base64.urlsafe_encode64(metadata_hash.to_json)
+            "disk-cid.#{encoded_data}"
+          end
+          let(:env) do
+            {'disks' => {'persistent' => { disk_cid_with_metadata => 'fake-device-number' }}}
+          end
+
           it 'extracts the vSphere cid from the director disk cid and uses it' do
+            expect(agent_env).to receive(:set_env).with(
+              vm_mob,
+              vm_location,
+              {'disks' => {'persistent' => {}}}
+            )
             allow(vm).to receive(:disk_by_cid).and_return(attached_disk)
             allow(vm).to receive(:detach_disks)
-            metadata_hash = {target_datastore_pattern:'^(target\\-datastore)$'}
-            expected_pattern = Base64.urlsafe_encode64(metadata_hash.to_json)
 
-            vsphere_cloud.detach_disk('vm-id', "disk-cid.#{expected_pattern}")
+            vsphere_cloud.detach_disk('vm-id', disk_cid_with_metadata)
 
             expect(vm).to have_received(:disk_by_cid).with('disk-cid')
           end

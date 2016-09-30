@@ -353,8 +353,13 @@ module VSphereCloud
         disk_spec = vm.attach_disk(disk_to_attach)
         # Overwrite cid with the director cid
         # Since director sends messages with "director cid" to agent, the agent needs that ID in its env, not the clean_cid
-        disk_to_attach.cid = director_disk_cid
-        add_disk_to_agent_env(vm, disk_to_attach, disk_spec.device.unit_number)
+        agent_disk_info = Resources::PersistentDisk.new(
+          cid: director_disk_cid,
+          size_in_mb: disk_to_attach.size_in_mb,
+          datastore: disk_to_attach.datastore,
+          folder: disk_to_attach.folder,
+        )
+        add_disk_to_agent_env(vm, agent_disk_info, disk_spec.device.unit_number)
       end
     end
 
