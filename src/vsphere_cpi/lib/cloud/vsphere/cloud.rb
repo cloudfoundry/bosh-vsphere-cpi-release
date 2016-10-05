@@ -256,7 +256,6 @@ module VSphereCloud
 
         begin
           if resource_pool.key?('nsx') && !resource_pool['nsx']['security_tags'].nil?
-            @config.validate_nsx_options
             resource_pool['nsx']['security_tags'].each do |security_tag|
               nsx.apply_tag_to_vm(security_tag, created_vm.mob_id)
             end
@@ -654,10 +653,7 @@ module VSphereCloud
     def nsx
       return @nsx if @nsx
 
-      # TODO: error check
-      if @config.nsx_url == ''
-        raise 'Must specify `properties.vcenter.nsx.address` in your manifest to add NSX tags!'
-      end
+      @config.validate_nsx_options
 
       nsx_http_client = NsxHttpClient.new(
         @config.nsx_user,

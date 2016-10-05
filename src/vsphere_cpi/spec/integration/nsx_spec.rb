@@ -55,9 +55,9 @@ describe 'NSX integration', nsx: true do
     after do
       begin
         cpi.nsx.delete_tag(tag)
-      # rescue => e
-      #   puts e
-      #   # ignore clean-up errors
+      rescue => e
+        # ignore clean-up errors
+        puts e
       end
     end
 
