@@ -61,7 +61,7 @@ jobs:
         tags: ["vsphere-v5.1"]
         file: bosh-cpi-src/ci/tasks/run-lifecycle.yml
         params:
-          RSPEC_FLAGS:                                          "--tag ~host_local --tag ~vsan_datastore" # fiveone env doesn't have local or vsan datastore hardware
+          RSPEC_FLAGS:                                          "--tag ~host_local --tag ~vsan_datastore --tag ~nsx" # fiveone env doesn't support all features the CPI supports
           BOSH_VSPHERE_VERSION:                                 {{lifecycle_vsphere_5_1_version}}
           BOSH_VSPHERE_CPI_HOST:                                {{lifecycle_vsphere_5_1_host}}
           BOSH_VSPHERE_CPI_USER:                                {{lifecycle_vsphere_5_1_user}}
@@ -136,6 +136,9 @@ jobs:
           BOSH_VSPHERE_CPI_PORTGROUP_FOLDER_STANDARD:           {{lifecycle_vsphere_6_0_portgroup_folder_standard}}
           BOSH_VSPHERE_CPI_PORTGROUP_FOLDER_DISTRIBUTED:        {{lifecycle_vsphere_6_0_portgroup_folder_distributed}}
           BOSH_VSPHERE_CPI_PORTGROUP_FOLDER_AMBIGUOUS:          {{lifecycle_vsphere_6_0_portgroup_folder_ambiguous}}
+          BOSH_VSPHERE_CPI_NSX_ADDRESS:                         {{lifecycle_vsphere_6_0_nsx_address}}
+          BOSH_VSPHERE_CPI_NSX_USER:                            {{lifecycle_vsphere_6_0_nsx_user}}
+          BOSH_VSPHERE_CPI_NSX_PASSWORD:                        {{lifecycle_vsphere_6_0_nsx_password}}
 
   - name: lifecycle-6.0-vsan
     plan:

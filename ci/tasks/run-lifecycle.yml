@@ -45,3 +45,6 @@ params:
   BOSH_VSPHERE_CPI_PORTGROUP_FOLDER_STANDARD:           ""
   BOSH_VSPHERE_CPI_PORTGROUP_FOLDER_DISTRIBUTED:        ""
   BOSH_VSPHERE_CPI_PORTGROUP_FOLDER_AMBIGUOUS:          ""
+  BOSH_VSPHERE_CPI_NSX_ADDRESS:                         ""
+  BOSH_VSPHERE_CPI_NSX_USER:                            ""
+  BOSH_VSPHERE_CPI_NSX_PASSWORD:                        ""

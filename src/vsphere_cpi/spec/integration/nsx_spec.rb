@@ -1,6 +1,6 @@
 require 'integration/spec_helper'
 
-describe 'NSX integration' do
+describe 'NSX integration', nsx: true do
   before (:all) do
     @cluster_name = fetch_and_verify_cluster('BOSH_VSPHERE_CPI_CLUSTER')
 
