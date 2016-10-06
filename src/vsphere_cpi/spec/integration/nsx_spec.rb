@@ -2,8 +2,6 @@ require 'integration/spec_helper'
 
 describe 'NSX integration', nsx: true do
   before (:all) do
-    @cluster_name = fetch_and_verify_cluster('BOSH_VSPHERE_CPI_CLUSTER')
-
     @nsx_address = fetch_property('BOSH_VSPHERE_CPI_NSX_ADDRESS')
     @nsx_user = fetch_property('BOSH_VSPHERE_CPI_NSX_USER')
     @nsx_password = fetch_property('BOSH_VSPHERE_CPI_NSX_PASSWORD')

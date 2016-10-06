@@ -3,19 +3,36 @@ require 'oga'
 module VSphereCloud
   class NSX
 
+    MAX_TRIES = 5
+    RETRY_INTERVAL_CAP_SEC = 32
+
     attr_reader :http_client, :nsx_url
 
-    def initialize(nsx_url, http_client)
+    def initialize(nsx_url, http_client, logger)
       @http_client = http_client
       @nsx_url = nsx_url
+      @logger = logger
     end
 
     def apply_tag_to_vm(tag_name, vm_id)
+      @logger.debug("Applying tag '#{tag_name}' to VM '#{vm_id}'...")
       tag_id = find_or_create_tag(tag_name)
-      response = @http_client.put("https://#{@nsx_url}/api/2.0/services/securitytags/tag/#{tag_id}/vm/#{vm_id}", nil)
-      unless response.status.between?(200, 299)
-        raise "Failed to associate VM to tag with unknown NSX error: '#{response.body}'"
+
+      MAX_TRIES.times do |i|
+        response = @http_client.put("https://#{@nsx_url}/api/2.0/services/securitytags/tag/#{tag_id}/vm/#{vm_id}", nil)
+        if response.status.between?(200, 299)
+          break
+        end
+
+        if i < (MAX_TRIES - 1) && is_attach_error_retryable?(response.body)
+          @logger.debug("Retry ##{i+1}: Applying tag '#{tag_name}' to VM '#{vm_id}'...")
+          sleep([(2**i), RETRY_INTERVAL_CAP_SEC].min)
+        else
+          raise "Failed to associate VM to tag with unknown NSX error: '#{response.body}'"
+        end
       end
+
+      @logger.debug("Successfully applied tag '#{tag_name}' to VM '#{vm_id}'.")
 
       true
     end
@@ -23,16 +40,22 @@ module VSphereCloud
     # Note: this method should only be used for cleanup in integration tests
     # Deleting tags in production code could remove tags that were created by users outside the BOSH workflow
     def delete_tag(tag_name)
+      @logger.debug("Deleting tag '#{tag_name}'...")
+
       tag_id = find_tag_id_by_tag_name(tag_name)
       response = @http_client.delete("https://#{@nsx_url}/api/2.0/services/securitytags/tag/#{tag_id}")
       unless response.status.between?(200, 299)
         raise "Failed to delete tag '#{tag_name}' with unknown NSX error: '#{response.body}'"
       end
 
+      @logger.debug("Successfully deleted tag '#{tag_name}'.")
+
       true
     end
 
     def get_vms_for_tag(tag_name)
+      @logger.debug("Querying VMs attached to tag '#{tag_name}'...")
+
       tag_id = find_tag_id_by_tag_name(tag_name)
 
       response = @http_client.get("https://#{@nsx_url}/api/2.0/services/securitytags/tag/#{tag_id}/vm")
@@ -40,7 +63,10 @@ module VSphereCloud
         raise "Failed to query VMs for tag '#{tag_name}' with unknown NSX error: '#{response.body}'"
       end
 
-      extract_vms_with_tag(response)
+      vms = extract_vms_with_tag(response)
+      @logger.debug("Found VMs #{vms.join(', ')} attached to tag '#{tag_name}'.")
+
+      vms
     end
 
     private
@@ -111,6 +137,14 @@ module VSphereCloud
       }
 
       ruby_struct_to_xml('securityTag', tag_contents).to_xml
+    end
+
+    def is_attach_error_retryable?(xml_content)
+      error_document = Oga.parse_xml(xml_content)
+      error_code_element = error_document.xpath('error/errorCode')
+
+      vm_not_found = (!error_code_element.empty? && error_code_element.text == '202')
+      vm_not_found ? true : false
     end
 
     def ruby_struct_to_xml(name, ruby_struct)

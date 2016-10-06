@@ -660,7 +660,7 @@ module VSphereCloud
         @config.nsx_password,
         @config.soap_log,
       )
-      @nsx = NSX.new(@config.nsx_url, nsx_http_client)
+      @nsx = NSX.new(@config.nsx_url, nsx_http_client, @logger)
     end
 
     private

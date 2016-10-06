@@ -5,13 +5,14 @@ module VSphereCloud
   describe NSX do
 
     let(:http_client) { instance_double(NsxHttpClient) }
+    let(:logger) { instance_double('Logger', info: nil, debug: nil) }
     let(:tag_name) { 'fake-tag-name' }
     let(:tag_id) { 'fake-tag-id' }
     let(:vm) { 'my-vm' }
     let(:nsx_address) { 'my-nsx-manager' }
 
     subject(:nsx) do
-      described_class.new(nsx_address, http_client)
+      described_class.new(nsx_address, http_client, logger)
     end
 
     describe '#apply_tag_to_vm' do
@@ -85,7 +86,39 @@ module VSphereCloud
       end
 
       context 'when the tag association HTTP request fails' do
-        it 'returns an error' do
+        it 'retries until the apply succeeds when call is retryable' do
+          expect(nsx).to receive(:sleep)
+
+          create_response = double('response', status: 200, body: 'fake-tag-id')
+          expect(http_client).to receive(:post).and_return(create_response)
+
+          put_response = double('response', status: 500, body: "<error><details>The requested object : #{vm} could not be found. Object identifiers are case sensitive.</details><errorCode>202</errorCode><moduleName>core-services</moduleName></error>")
+          put_response_good = double('response', status: 200)
+          expect(http_client).to receive(:put).with("https://#{nsx_address}/api/2.0/services/securitytags/tag/fake-tag-id/vm/#{vm}", nil)
+                                   .and_return(put_response)
+          expect(http_client).to receive(:put).with("https://#{nsx_address}/api/2.0/services/securitytags/tag/fake-tag-id/vm/#{vm}", nil)
+                                   .and_return(put_response_good)
+
+          nsx.apply_tag_to_vm(tag_name, vm)
+        end
+
+        it "returns an error after #{VSphereCloud::NSX::MAX_TRIES} retries when call is retryable" do
+          expect(nsx).to receive(:sleep).exactly(VSphereCloud::NSX::MAX_TRIES - 1).times
+
+          create_response = double('response', status: 200, body: 'fake-tag-id')
+          expect(http_client).to receive(:post).and_return(create_response)
+
+          put_response = double('response', status: 500, body: "<error><details>The requested object : #{vm} could not be found. Object identifiers are case sensitive.</details><errorCode>202</errorCode><moduleName>core-services</moduleName></error>")
+          expect(http_client).to receive(:put).with("https://#{nsx_address}/api/2.0/services/securitytags/tag/fake-tag-id/vm/#{vm}", nil)
+            .exactly(VSphereCloud::NSX::MAX_TRIES).times
+            .and_return(put_response)
+
+          expect {
+            nsx.apply_tag_to_vm(tag_name, vm)
+          }.to raise_error(/could not be found/)
+        end
+
+        it 'returns an error when the call is not retryable' do
           create_response = double('response', status: 200, body: 'fake-tag-id')
           expect(http_client).to receive(:post).and_return(create_response)
 
