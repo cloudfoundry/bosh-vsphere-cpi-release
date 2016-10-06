@@ -3,7 +3,7 @@ require 'oga'
 module VSphereCloud
   class NSX
 
-    MAX_TRIES = 5
+    MAX_TRIES = 10
     RETRY_INTERVAL_CAP_SEC = 32
 
     attr_reader :http_client, :nsx_url
