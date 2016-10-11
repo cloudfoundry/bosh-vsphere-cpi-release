@@ -1,7 +1,8 @@
---- 
+---
 final_name: bosh-vsphere-cpi
 blobstore:
   provider: s3
   options:
+    region: us-west-1
     endpoint: https://s3-us-west-1.amazonaws.com
     bucket_name: bosh-vsphere-cpi-blobs
