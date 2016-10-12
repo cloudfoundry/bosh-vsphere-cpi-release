@@ -73,6 +73,8 @@ describe 'NSX integration', nsx: true do
           vm_ids = cpi.nsx.get_vms_for_tag(tag)
           expect(vm_ids).to contain_exactly(vm_id1)
 
+          # avoid IP collision
+          network_spec['static']['ip'] = "169.254.0.#{rand(4..254)}"
           vm_id2 = create_vm_with_resource_pool(cpi, resource_pool, @stemcell_id)
           vm_ids = cpi.nsx.get_vms_for_tag(tag)
           expect(vm_ids).to contain_exactly(vm_id1, vm_id2)
