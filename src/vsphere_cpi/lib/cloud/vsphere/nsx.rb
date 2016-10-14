@@ -3,7 +3,8 @@ require 'oga'
 module VSphereCloud
   class NSX
 
-    MAX_TRIES = 10
+    # roughly match the amount of time that CloudSearcher waits before error'ing (~5 minutes)
+    MAX_TRIES = 14
 
     attr_reader :http_client, :nsx_url
 
