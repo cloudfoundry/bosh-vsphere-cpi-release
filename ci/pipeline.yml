@@ -184,8 +184,8 @@ jobs:
         tags: [vsphere-v5.1]
         file: pipelines/vsphere/tasks/prepare-director.yml
         params:
-          BOSH_DIRECTOR_USERNAME:                 {{BOSH_DIRECTOR_USERNAME}}
-          BOSH_DIRECTOR_PASSWORD:                 {{BOSH_DIRECTOR_PASSWORD}}
+          BOSH_USER:                              {{BOSH_USER}}
+          BOSH_PASSWORD:                          {{BOSH_PASSWORD}}
           BOSH_VSPHERE_VCENTER:                   {{VCENTER_IP}}
           BOSH_VSPHERE_VCENTER_USER:              {{VCENTER_USER}}
           BOSH_VSPHERE_VCENTER_PASSWORD:          {{VCENTER_PASSWORD}}
@@ -210,8 +210,8 @@ jobs:
             file: pipelines/vsphere/tasks/prepare-bats.yml
             params:
               BAT_VCAP_PASSWORD:      {{BAT_VCAP_PASSWORD}}
-              BOSH_DIRECTOR_USERNAME: {{BOSH_DIRECTOR_USERNAME}}
-              BOSH_DIRECTOR_PASSWORD: {{BOSH_DIRECTOR_PASSWORD}}
+              BOSH_USER:              {{BOSH_USER}}
+              BOSH_PASSWORD:          {{BOSH_PASSWORD}}
               STEMCELL_NAME:          bosh-vsphere-esxi-ubuntu-trusty-go_agent
 
           - task: run-bats
