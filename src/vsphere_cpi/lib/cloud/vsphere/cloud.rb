@@ -253,13 +253,13 @@ module VSphereCloud
         created_vm = vm_creator.create(vm_config)
 
         begin
-          if resource_pool.key?('nsx') && !resource_pool['nsx']['security_tags'].nil?
-            resource_pool['nsx']['security_tags'].each do |security_tag|
-              nsx.apply_tag_to_vm(security_tag, created_vm.mob_id)
+          if resource_pool.key?('nsx') && !resource_pool['nsx']['security_groups'].nil?
+            resource_pool['nsx']['security_groups'].each do |security_group|
+              nsx.add_vm_to_security_group(security_group, created_vm.mob_id)
             end
           end
         rescue => e
-          @logger.info("Failed to apply NSX tags to VM '#{created_vm.cid}' with error: #{e}")
+          @logger.info("Failed to apply NSX Security Groups to VM '#{created_vm.cid}' with error: #{e}")
           begin
             @logger.info("Deleting VM '#{created_vm.cid}'...")
             delete_vm(created_vm.cid)

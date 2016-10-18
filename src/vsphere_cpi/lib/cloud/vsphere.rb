@@ -48,6 +48,7 @@ require 'cloud/vsphere/nsx'
 require 'cloud/vsphere/task_runner'
 require 'cloud/vsphere/sdk_helpers/retryable_stub_adapter'
 require 'cloud/vsphere/sdk_helpers/retry_judge'
+require 'cloud/vsphere/helpers/xml'
 
 module Bosh
   module Clouds

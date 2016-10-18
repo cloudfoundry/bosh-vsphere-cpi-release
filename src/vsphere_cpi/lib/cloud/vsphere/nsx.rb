@@ -3,9 +3,6 @@ require 'oga'
 module VSphereCloud
   class NSX
 
-    # roughly match the amount of time that CloudSearcher waits before error'ing (~5 minutes)
-    MAX_TRIES = 14
-
     attr_reader :http_client, :nsx_url
 
     def initialize(nsx_url, http_client, logger, retryer = nil)
@@ -15,21 +12,21 @@ module VSphereCloud
       @retryer = retryer || Retryer.new
     end
 
-    def apply_tag_to_vm(tag_name, vm_id)
+    def add_vm_to_security_group(security_group_name, vm_id)
 
-      tag_id = find_or_create_tag(tag_name)
+      sg_id = find_or_create_security_group(security_group_name)
 
-      @retryer.try(MAX_TRIES) do |i|
+      @retryer.try do |i|
         if i == 0
-          @logger.debug("Applying tag '#{tag_name}' to VM '#{vm_id}'...")
+          @logger.debug("Adding VM '#{vm_id}' to Security Group '#{security_group_name}'...")
         else
-          @logger.warn("Retrying apply tag '#{tag_name}' to VM '#{vm_id}', #{i} attempts so far...")
+          @logger.warn("Retrying adding VM '#{vm_id}' to Security Group '#{security_group_name}', #{i} attempts so far...")
         end
 
-        response = @http_client.put("https://#{@nsx_url}/api/2.0/services/securitytags/tag/#{tag_id}/vm/#{vm_id}", nil)
+        response = @http_client.put("https://#{@nsx_url}/api/2.0/services/securitygroup/#{sg_id}/members/#{vm_id}", nil)
         unless response.status.between?(200, 299)
           unless is_attach_error_retryable?(response.body)
-            raise "Failed to associate VM to tag with unknown NSX error: '#{response.body}'"
+            raise "Failed to add VM to Security Group with unknown NSX error: '#{response.body}'"
           end
 
           err = "Failed to locate VM with VM ID '#{vm_id}' via NSX API: '#{response.body}'"
@@ -40,82 +37,82 @@ module VSphereCloud
         end
       end
 
-      @logger.debug("Successfully applied tag '#{tag_name}' to VM '#{vm_id}'.")
+      @logger.debug("Successfully added VM '#{vm_id}' to Security Group '#{security_group_name}'.")
 
       true
     end
 
     # Note: this method should only be used for cleanup in integration tests
-    # Deleting tags in production code could remove tags that were created by users outside the BOSH workflow
-    def delete_tag(tag_name)
-      @logger.debug("Deleting tag '#{tag_name}'...")
+    # Deleting SGs in production code could remove SGs that were created by users outside the BOSH workflow
+    def delete_security_group(security_group_name)
+      @logger.debug("Deleting Security Group '#{security_group_name}'...")
 
-      tag_id = find_tag_id_by_tag_name(tag_name)
-      response = @http_client.delete("https://#{@nsx_url}/api/2.0/services/securitytags/tag/#{tag_id}")
+      sg_id = find_security_group_id_by_name(security_group_name)
+      response = @http_client.delete("https://#{@nsx_url}/api/2.0/services/securitygroup/#{sg_id}")
       unless response.status.between?(200, 299)
-        raise "Failed to delete tag '#{tag_name}' with unknown NSX error: '#{response.body}'"
+        raise "Failed to delete Security Group '#{security_group_name}' with unknown NSX error: '#{response.body}'"
       end
 
-      @logger.debug("Successfully deleted tag '#{tag_name}'.")
+      @logger.debug("Successfully deleted Security Group '#{security_group_name}'.")
 
       true
     end
 
-    def get_vms_for_tag(tag_name)
-      @logger.debug("Querying VMs attached to tag '#{tag_name}'...")
+    def get_vms_in_security_group(security_group_name)
+      @logger.debug("Querying VMs attached to Secuurity Group '#{security_group_name}'...")
 
-      tag_id = find_tag_id_by_tag_name(tag_name)
+      sg_id = find_security_group_id_by_name(security_group_name)
 
-      response = @http_client.get("https://#{@nsx_url}/api/2.0/services/securitytags/tag/#{tag_id}/vm")
+      response = @http_client.get("https://#{@nsx_url}/api/2.0/services/securitygroup/#{sg_id}/translation/virtualmachines")
       unless response.status.between?(200, 299)
-        raise "Failed to query VMs for tag '#{tag_name}' with unknown NSX error: '#{response.body}'"
+        raise "Failed to query VMs for Security Group '#{security_group_name}' with unknown NSX error: '#{response.body}'"
       end
 
-      vms = extract_vms_with_tag(response)
-      @logger.debug("Found VMs #{vms.join(', ')} attached to tag '#{tag_name}'.")
+      vms = extract_vms_in_security_group(response)
+      @logger.debug("Found VMs #{vms.join(', ')} belonging to Security Group '#{security_group_name}'.")
 
       vms
     end
 
     private
 
-    def find_or_create_tag(tag_name)
-      tag = create_new_tag(tag_name)
-      return tag if tag != nil
+    def find_or_create_security_group(security_group_name)
+      security_group = create_new_security_group(security_group_name)
+      return security_group if security_group != nil
 
-      find_tag_id_by_tag_name(tag_name)
+      find_security_group_id_by_name(security_group_name)
     end
 
-    def extract_vms_with_tag(response)
+    def extract_vms_in_security_group(response)
       document = Oga.parse_xml(response.body)
 
-      document.xpath('basicinfolist/basicinfo').map do |n|
-        n.xpath('name').text
+      document.xpath('vmnodes/vmnode').map do |n|
+        n.xpath('vmName').text
       end
     end
 
-    def find_tag_id_by_tag_name(tag_name)
-      response = @http_client.get("https://#{@nsx_url}/api/2.0/services/securitytags/tag")
+    def find_security_group_id_by_name(security_group_name)
+      response = @http_client.get("https://#{@nsx_url}/api/2.0/services/securitygroup/scope/globalroot-0")
       unless response.status.between?(200, 299)
-        raise "Failed to query list of tags with unknown NSX error: '#{response.body}'"
+        raise "Failed to query list of Security Groups with unknown NSX error: '#{response.body}'"
       end
 
       document = Oga.parse_xml(response.body)
 
-      tag_node = document.xpath('securityTags/securityTag').find do |n|
-        n.xpath('name').text == tag_name
+      security_group_node = document.xpath('list/securitygroup').find do |n|
+        n.xpath('name').text == security_group_name
       end
-      if tag_node.nil?
-        raise "Unable to find tag with name '#{tag_name}'"
+      if security_group_node.nil?
+        raise "Unable to find Security Group with name '#{security_group_name}'"
       end
 
-      tag_node.xpath('objectId').text
+      security_group_node.xpath('objectId').text
     end
 
-    def create_new_tag(tag_name)
+    def create_new_security_group(security_group_name)
       response = @http_client.post(
-        "https://#{@nsx_url}/api/2.0/services/securitytags/tag",
-        create_tag_content(tag_name),
+        "https://#{@nsx_url}/api/2.0/services/securitygroup/bulk/globalroot-0",
+        create_security_group_content(security_group_name),
         {'Content-Type' => 'text/xml'}
       )
       if response.status.between?(200, 299)
@@ -130,21 +127,21 @@ module VSphereCloud
         return nil
       end
 
-      raise "Failed to create tag with unknown NSX Error: '#{response.body}'"
+      raise "Failed to create Security Group with unknown NSX Error: '#{response.body}'"
     end
 
-    def create_tag_content(tag_name)
-      tag_contents = {
-        objectTypeName: 'SecurityTag',
+    def create_security_group_content(security_group_name)
+      security_group_contents = {
+        objectTypeName: 'SecurityGroup',
         type: {
-          typeName: 'SecurityTag',
+          typeName: 'SecurityGroup',
         },
-        name: tag_name,
+        name: security_group_name,
         description: "created by BOSH at #{Time.now}",
         extendedAttributes: nil,
       }
 
-      ruby_struct_to_xml('securityTag', tag_contents).to_xml
+      Helpers::XML.ruby_struct_to_xml('securitygroup', security_group_contents)
     end
 
     def is_attach_error_retryable?(xml_content)
@@ -154,21 +151,5 @@ module VSphereCloud
       vm_not_found = (!error_code_element.empty? && error_code_element.text == '202')
       vm_not_found ? true : false
     end
-
-    def ruby_struct_to_xml(name, ruby_struct)
-      # limitations:
-      #   attributes are ignored
-      #   can't do arrays
-      element = Oga::XML::Element.new(name: name)
-      if ruby_struct.is_a?(Hash)
-        ruby_struct.each do |key, value|
-          element.children << ruby_struct_to_xml(key, value)
-        end
-      elsif ruby_struct.is_a?(String)
-        element.inner_text = ruby_struct
-      end
-      element
-    end
-
   end
 end

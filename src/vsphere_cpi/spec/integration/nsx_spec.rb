@@ -7,7 +7,7 @@ describe 'NSX integration', nsx: true do
     @nsx_password = fetch_property('BOSH_VSPHERE_CPI_NSX_PASSWORD')
   end
 
-  let(:tag) { "BOSH-CPI-test-#{SecureRandom.uuid}" }
+  let(:security_group) { "BOSH-CPI-test-#{SecureRandom.uuid}" }
 
   let(:cpi) do
     VSphereCloud::Cloud.new(nsx_options)
@@ -32,8 +32,8 @@ describe 'NSX integration', nsx: true do
       'disk' => 2048,
       'cpu' => 1,
       'nsx' => {
-        'security_tags' => [
-          tag,
+        'security_groups' => [
+          security_group,
         ],
       },
     }
@@ -52,17 +52,17 @@ describe 'NSX integration', nsx: true do
 
     after do
       begin
-        cpi.nsx.delete_tag(tag)
+        cpi.nsx.delete_security_group(security_group)
       rescue => e
         # ignore clean-up errors
         puts e
       end
     end
 
-    context 'and a vm_type specifies an nsx security tag' do
-      it 'creates the tag' do
+    context 'and a vm_type specifies an nsx Security Group' do
+      it 'creates the Security Group' do
         vm_lifecycle(cpi, [], resource_pool, network_spec, @stemcell_id) do |vm_id|
-          vm_ids = cpi.nsx.get_vms_for_tag(tag)
+          vm_ids = cpi.nsx.get_vms_in_security_group(security_group)
           expect(vm_ids).to eq([vm_id])
         end
       end
@@ -70,13 +70,13 @@ describe 'NSX integration', nsx: true do
       it 'creates the second time without raising an error' do
         begin
           vm_id1 = create_vm_with_resource_pool(cpi, resource_pool, @stemcell_id)
-          vm_ids = cpi.nsx.get_vms_for_tag(tag)
+          vm_ids = cpi.nsx.get_vms_in_security_group(security_group)
           expect(vm_ids).to contain_exactly(vm_id1)
 
           # avoid IP collision
           network_spec['static']['ip'] = "169.254.0.#{rand(4..254)}"
           vm_id2 = create_vm_with_resource_pool(cpi, resource_pool, @stemcell_id)
-          vm_ids = cpi.nsx.get_vms_for_tag(tag)
+          vm_ids = cpi.nsx.get_vms_in_security_group(security_group)
           expect(vm_ids).to contain_exactly(vm_id1, vm_id2)
         ensure
           delete_vm(cpi, vm_id1)
@@ -96,14 +96,13 @@ describe 'NSX integration', nsx: true do
         )
       end
 
-      context 'and a vm_type specifies an nsx security tag' do
+      context 'and a vm_type specifies an nsx Security Group' do
         it 'raises an error' do
           expect {
             create_vm_with_resource_pool(cpi, resource_pool, @stemcell_id)
           }.to raise_error(/Bad Username or Credentials presented/)
         end
       end
-
     end
   end
 
@@ -112,7 +111,7 @@ describe 'NSX integration', nsx: true do
       cpi_options
     end
 
-    context 'and a vm_type specifies an nsx security tag' do
+    context 'and a vm_type specifies an nsx Security Group' do
       it 'raises an error' do
         expect {
           create_vm_with_resource_pool(cpi, resource_pool, @stemcell_id)

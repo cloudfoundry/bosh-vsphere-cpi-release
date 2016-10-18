@@ -669,7 +669,7 @@ module VSphereCloud
         let(:resource_pool) do
           {
             'nsx' => {
-              'security_tags' => [
+              'security_groups' => [
                 'fake-security-tag',
                 'another-fake-security-tag',
               ],
@@ -692,9 +692,9 @@ module VSphereCloud
                            .with(vm_config)
                            .and_return(fake_vm)
           expect(cloud_config).to receive(:validate_nsx_options)
-          expect(nsx).to receive(:apply_tag_to_vm)
+          expect(nsx).to receive(:add_vm_to_security_group)
                            .with('fake-security-tag', 'fake-mob-id')
-          expect(nsx).to receive(:apply_tag_to_vm)
+          expect(nsx).to receive(:add_vm_to_security_group)
                            .with('another-fake-security-tag', 'fake-mob-id')
           vsphere_cloud.create_vm(
             "fake-agent-id",
