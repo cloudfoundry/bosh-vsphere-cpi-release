@@ -48,3 +48,4 @@ params:
   BOSH_VSPHERE_CPI_NSX_ADDRESS:                         ""
   BOSH_VSPHERE_CPI_NSX_USER:                            ""
   BOSH_VSPHERE_CPI_NSX_PASSWORD:                        ""
+  BOSH_VSPHERE_CPI_NSX_CA_CERT:                         ""
