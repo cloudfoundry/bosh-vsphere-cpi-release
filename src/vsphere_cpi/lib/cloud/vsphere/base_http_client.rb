@@ -5,15 +5,16 @@ module VSphereCloud
 
     attr_reader :backing_client
 
-    def initialize(http_log = nil, trusted_ca_file = nil)
+    def initialize(http_log: nil, trusted_ca_file: nil, ca_cert_manifest_key: nil, skip_ssl_verify: false)
       @backing_client = HTTPClient.new
       @backing_client.send_timeout = 14400 # 4 hours, for stemcell uploads
       @backing_client.receive_timeout = 14400
       @backing_client.connect_timeout = 30
+      @ca_cert_manifest_key = ca_cert_manifest_key
 
       if trusted_ca_file
         @backing_client.ssl_config.add_trust_ca(trusted_ca_file)
-      else
+      elsif skip_ssl_verify
         @backing_client.ssl_config.verify_mode = OpenSSL::SSL::VERIFY_NONE
       end
 
@@ -64,17 +65,26 @@ module VSphereCloud
         end
       end
 
-      case method
-      when 'GET'
-        resp = @backing_client.get(url, additional_headers)
-      when 'PUT'
-        resp = @backing_client.put(url, content, additional_headers)
-      when 'POST'
-        resp = @backing_client.post(url, content, additional_headers)
-      when 'DELETE'
-        resp = @backing_client.delete(url, additional_headers)
-      else
-        raise "Invalid HTTP method '#{method}'"
+      begin
+        case method
+          when 'GET'
+            resp = @backing_client.get(url, additional_headers)
+          when 'PUT'
+            resp = @backing_client.put(url, content, additional_headers)
+          when 'POST'
+            resp = @backing_client.post(url, content, additional_headers)
+          when 'DELETE'
+            resp = @backing_client.delete(url, additional_headers)
+          else
+            raise "Invalid HTTP method '#{method}'"
+        end
+      rescue OpenSSL::SSL::SSLError => e
+        error_msg = "The URL #{url} does not have a valid SSL certificate."
+        if @ca_cert_manifest_key
+          error_msg += " You may use the manifest property '#{@ca_cert_manifest_key}' in the global CPI config to set a trusted CA CERTIFICATE, PEM-encoded."
+        end
+        error_msg += " Exception: #{e.message}"
+        raise error_msg
       end
 
       log_response(resp)

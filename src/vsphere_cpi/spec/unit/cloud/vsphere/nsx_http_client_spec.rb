@@ -34,13 +34,14 @@ module VSphereCloud
       it 'fails when the SSL cert returned from the server is not signed with a CA included in the provided bundle' do
         ENV["BOSH_NSX_CA_CERT_FILE"] = certificate(:failure).path
         expect {
-          response = http_client.get("https://localhost:#{@server.port}")
-        }.to raise_error(OpenSSL::SSL::SSLError)
+          http_client.get("https://localhost:#{@server.port}")
+        }.to raise_error(/vcenter.nsx.ca_cert/)
       end
 
-      it 'succeeds when a bundle is not provided' do
-        response = http_client.get("https://localhost:#{@server.port}")
-        expect(response.body).to eq('success')
+      it 'fails when a CA bundle is not provided' do
+        expect {
+          http_client.get("https://localhost:#{@server.port}")
+        }.to raise_error(/vcenter.nsx.ca_cert/)
       end
     end
   end

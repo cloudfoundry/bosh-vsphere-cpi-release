@@ -35,10 +35,10 @@ module VSphereCloud
         ENV["BOSH_CA_CERT_FILE"] = certificate(:failure).path
         expect {
           response = http_client.get("https://localhost:#{@server.port}")
-        }.to raise_error(OpenSSL::SSL::SSLError)
+        }.to raise_error(/vcenter.connection_options.ca_cert/)
       end
 
-      it 'succeds when a bundle is not provided' do
+      it 'succeeds when a bundle is not provided' do
         response = http_client.get("https://localhost:#{@server.port}")
         expect(response.body).to eq('success')
       end

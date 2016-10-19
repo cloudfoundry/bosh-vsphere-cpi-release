@@ -97,7 +97,7 @@ module VSphereCloud
           create_response = double('response', status: 200, body: sg_id)
           expect(http_client).to receive(:post).and_return(create_response)
 
-          put_response = double('response', status: 500, body: "<error><details>The requested object : #{vm_id} could not be found. Object identifiers are case sensitive.</details><errorCode>202</errorCode><moduleName>core-services</moduleName></error>")
+          put_response = double('response', status: 500, body: "<error><details>The requested object : #{vm_id} could not be found. Object identifiers are case sensitive.</details><errorCode>300</errorCode><moduleName>core-services</moduleName></error>")
           put_response_good = double('response', status: 200)
           expect(http_client).to receive(:put).with("https://#{nsx_address}/api/2.0/services/securitygroup/#{sg_id}/members/#{vm_id}", nil)
                                    .and_return(put_response)
@@ -108,14 +108,14 @@ module VSphereCloud
         end
 
         it "returns an error after #{VSphereCloud::Retryer::MAX_TRIES} retries when call is retryable" do
-          expect(retryer).to receive(:sleep).exactly(VSphereCloud::Retryer::MAX_TRIES - 1).times
+          expect(retryer).to receive(:sleep).exactly(VSphereCloud::NSX::MAX_TRIES - 1).times
 
           create_response = double('response', status: 200, body: sg_id)
           expect(http_client).to receive(:post).and_return(create_response)
 
-          put_response = double('response', status: 500, body: "<error><details>The requested object : #{vm_id} could not be found. Object identifiers are case sensitive.</details><errorCode>202</errorCode><moduleName>core-services</moduleName></error>")
+          put_response = double('response', status: 500, body: "<error><details>The requested object : #{vm_id} could not be found. Object identifiers are case sensitive.</details><errorCode>300</errorCode><moduleName>core-services</moduleName></error>")
           expect(http_client).to receive(:put).with("https://#{nsx_address}/api/2.0/services/securitygroup/#{sg_id}/members/#{vm_id}", nil)
-                                   .exactly(VSphereCloud::Retryer::MAX_TRIES).times
+                                   .exactly(VSphereCloud::NSX::MAX_TRIES).times
                                    .and_return(put_response)
 
           expect {

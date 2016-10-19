@@ -3,6 +3,14 @@ require 'oga'
 module VSphereCloud
   class NSX
 
+    # use a large number of retries as we investigate NSX error messages around finding VM ID
+    # <error>
+    #   <details>Requested member vm-84357 could not be found for addition to Security Group securitygroup-53.</details>
+    #   <errorCode>300</errorCode>
+    #   <moduleName>core-services</moduleName>
+    # </error>
+    MAX_TRIES = 20
+
     attr_reader :http_client, :nsx_url
 
     def initialize(nsx_url, http_client, logger, retryer = nil)
@@ -16,7 +24,7 @@ module VSphereCloud
 
       sg_id = find_or_create_security_group(security_group_name)
 
-      @retryer.try do |i|
+      @retryer.try(MAX_TRIES) do |i|
         if i == 0
           @logger.debug("Adding VM '#{vm_id}' to Security Group '#{security_group_name}'...")
         else
@@ -148,7 +156,7 @@ module VSphereCloud
       error_document = Oga.parse_xml(xml_content)
       error_code_element = error_document.xpath('error/errorCode')
 
-      vm_not_found = (!error_code_element.empty? && error_code_element.text == '202')
+      vm_not_found = (!error_code_element.empty? && error_code_element.text == '300')
       vm_not_found ? true : false
     end
   end

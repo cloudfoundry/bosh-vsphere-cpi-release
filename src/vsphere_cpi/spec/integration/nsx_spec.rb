@@ -5,6 +5,20 @@ describe 'NSX integration', nsx: true do
     @nsx_address = fetch_property('BOSH_VSPHERE_CPI_NSX_ADDRESS')
     @nsx_user = fetch_property('BOSH_VSPHERE_CPI_NSX_USER')
     @nsx_password = fetch_property('BOSH_VSPHERE_CPI_NSX_PASSWORD')
+    @nsx_ca_cert = ENV['BOSH_VSPHERE_CPI_NSX_CA_CERT']
+    if @nsx_ca_cert
+      @ca_cert_file = Tempfile.new('bosh-cpi-ca-cert')
+      @ca_cert_file.write(@nsx_ca_cert)
+      @ca_cert_file.close
+      ENV['BOSH_NSX_CA_CERT_FILE'] = @ca_cert_file.path
+    end
+  end
+
+  after (:all) do
+    if @nsx_ca_cert
+      ENV.delete('BOSH_NSX_CA_CERT_FILE')
+      @ca_cert_file.unlink
+    end
   end
 
   let(:security_group) { "BOSH-CPI-test-#{SecureRandom.uuid}" }
