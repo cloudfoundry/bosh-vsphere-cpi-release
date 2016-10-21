@@ -258,6 +258,11 @@ module VSphereCloud
               nsx.add_vm_to_security_group(security_group, created_vm.mob_id)
             end
           end
+          if resource_pool.key?('nsx') && !resource_pool['nsx']['lbs'].nil?
+            security_groups = resource_pool['nsx']['lbs'].map { |m| m['security_group'] }.uniq
+            security_groups.each { |sg| nsx.add_vm_to_security_group(sg, created_vm.mob_id) }
+            nsx.add_members_to_lbs(resource_pool['nsx']['lbs'])
+          end
         rescue => e
           @logger.info("Failed to apply NSX Security Groups to VM '#{created_vm.cid}' with error: #{e}")
           begin

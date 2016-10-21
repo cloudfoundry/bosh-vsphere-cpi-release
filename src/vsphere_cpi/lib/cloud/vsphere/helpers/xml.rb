@@ -13,12 +13,21 @@ module VSphereCloud
           ruby_struct.each do |key, value|
             element.children << ruby_struct_to_xml_element(key, value)
           end
-        elsif ruby_struct.is_a?(String)
-          element.inner_text = ruby_struct
+        elsif ruby_struct.is_a?(Array)
+          ruby_struct.each do |item|
+            if item.keys.length != 1
+              raise "Each XML item in an array must have a single key at the top-level, but found '#{item.keys.join(', ')}'. This key will be used as the name of the XML element."
+            end
+
+            itemName = item.keys.first
+            itemValue = item[itemName]
+            element.children << ruby_struct_to_xml_element(itemName, itemValue)
+          end
+        else
+          element.inner_text = ruby_struct.to_s
         end
         element
       end
-      private_class_method :ruby_struct_to_xml_element
     end
   end
 end
