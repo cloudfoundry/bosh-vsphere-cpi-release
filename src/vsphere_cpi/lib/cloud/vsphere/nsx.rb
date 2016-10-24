@@ -66,7 +66,7 @@ module VSphereCloud
     end
 
     def get_vms_in_security_group(security_group_name)
-      @logger.debug("Querying VMs attached to Secuurity Group '#{security_group_name}'...")
+      @logger.debug("Querying VMs attached to Security Group '#{security_group_name}'...")
 
       sg_id = find_security_group_id_by_name(security_group_name)
 
