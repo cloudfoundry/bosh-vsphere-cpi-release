@@ -238,14 +238,14 @@ module LifecycleHelpers
     true
   end
 
-  def vm_lifecycle(cpi, disk_locality, resource_pool, network_spec, stemcell_id)
+  def vm_lifecycle(cpi, disk_locality, resource_pool, network_spec, stemcell_id, env = {'key' => 'value'})
     vm_id = cpi.create_vm(
       'agent-007',
       stemcell_id,
       resource_pool,
       network_spec,
       disk_locality,
-      {'key' => 'value'}
+      env
     )
 
     expect(vm_id).to_not be_nil

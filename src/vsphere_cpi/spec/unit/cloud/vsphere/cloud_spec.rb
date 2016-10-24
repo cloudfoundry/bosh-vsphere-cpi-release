@@ -676,6 +676,15 @@ module VSphereCloud
             }
           }
         end
+        let(:environment) do
+          {
+            'bosh' => {
+              'groups' => [
+                'my-fake-environment-group',
+              ]
+            }
+          }
+        end
 
         it 'should create the security tags and attach them to the VM' do
           allow(VmConfig).to receive(:new)
@@ -696,13 +705,15 @@ module VSphereCloud
                            .with('fake-security-tag', 'fake-mob-id')
           expect(nsx).to receive(:add_vm_to_security_group)
                            .with('another-fake-security-tag', 'fake-mob-id')
+          expect(nsx).to receive(:add_vm_to_security_group)
+                           .with('my-fake-environment-group', 'fake-mob-id')
           vsphere_cloud.create_vm(
             "fake-agent-id",
             "fake-stemcell-cid",
             resource_pool,
             "fake-networks-hash",
             [],
-            "fake-agent-env"
+            environment,
           )
         end
 

@@ -258,6 +258,15 @@ module VSphereCloud
               nsx.add_vm_to_security_group(security_group, created_vm.mob_id)
             end
           end
+
+          bosh_env = (environment || {})['bosh']
+          bosh_groups = (bosh_env || {})['groups']
+          if bosh_groups
+            bosh_groups.each do |security_group|
+              nsx.add_vm_to_security_group(security_group, created_vm.mob_id)
+            end
+          end
+
           if resource_pool.key?('nsx') && !resource_pool['nsx']['lbs'].nil?
             security_groups = resource_pool['nsx']['lbs'].map { |m| m['security_group'] }.uniq
             security_groups.each { |sg| nsx.add_vm_to_security_group(sg, created_vm.mob_id) }

@@ -106,6 +106,26 @@ describe 'NSX integration', nsx: true do
       end
     end
 
+    context 'when vm_type specifies an nsx Security Group' do
+      let(:resource_pool) { base_resource_pool }
+      let(:environment) do
+        {
+          'bosh' => {
+            'groups' => [
+              security_group,
+            ]
+          }
+        }
+      end
+
+      it 'creates the Security Group' do
+        vm_lifecycle(cpi, [], resource_pool, network_spec, @stemcell_id, environment) do |vm_id|
+          vm_ids = cpi.nsx.get_vms_in_security_group(security_group)
+          expect(vm_ids).to eq([vm_id])
+        end
+      end
+    end
+
     context 'when the NSX password information is incorrect' do
       let(:nsx_options) do
         cpi_options(
