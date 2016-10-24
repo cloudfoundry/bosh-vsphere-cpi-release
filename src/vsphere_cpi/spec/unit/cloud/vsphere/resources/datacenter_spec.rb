@@ -503,6 +503,30 @@ describe VSphereCloud::Resources::Datacenter do
       end
     end
 
+    context 'when an unexpected event has destroyed the disk' do
+      before do
+        allow(client).to receive(:find_disk).and_return(nil)
+
+        vm_mob = instance_double('VimSdk::Vim::VirtualMachine', name: 'fake-vm-name')
+        allow(client).to receive(:find_vm_by_disk_cid).with(datacenter_mob, 'disk-cid').and_return(vm_mob)
+
+        vm = instance_double(
+          'VSphereCloud::Resources::VM',
+        )
+        allow(vm).to receive(:disk_path_by_cid).with('disk-cid')
+          .and_return(nil)
+        allow(VSphereCloud::Resources::VM).to receive(:new)
+          .with('fake-vm-name', vm_mob, client, logger)
+          .and_return(vm)
+      end
+
+      it 'raises DiskNotFound' do
+        expect {
+          datacenter.find_disk('disk-cid')
+        }.to raise_error(Bosh::Clouds::DiskNotFound)
+      end
+    end
+
     context 'when disk does not exist' do
       before do
         allow(client).to receive(:find_disk).with('disk-cid', datastore, 'fake-disk-path') { nil }
@@ -515,10 +539,10 @@ describe VSphereCloud::Resources::Datacenter do
         expect {
           datacenter.find_disk('disk-cid')
         }.to raise_error { |error|
-            expect(error).to be_a(Bosh::Clouds::DiskNotFound)
-            expect(error.ok_to_retry).to eq(false)
-            expect(error.message).to match(/Could not find disk with id 'disk-cid'/)
-          }
+          expect(error).to be_a(Bosh::Clouds::DiskNotFound)
+          expect(error.ok_to_retry).to eq(false)
+          expect(error.message).to match(/Could not find disk with id 'disk-cid'/)
+        }
       end
     end
   end
