@@ -49,3 +49,5 @@ params:
   BOSH_VSPHERE_CPI_NSX_USER:                            ""
   BOSH_VSPHERE_CPI_NSX_PASSWORD:                        ""
   BOSH_VSPHERE_CPI_NSX_CA_CERT:                         ""
+  BOSH_VSPHERE_CPI_NSX_LB_NAME:                         ""
+  BOSH_VSPHERE_CPI_NSX_POOL_NAME:                       ""
