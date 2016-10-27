@@ -124,6 +124,16 @@ describe 'NSX integration', nsx: true do
           expect(vm_ids).to eq([vm_id])
         end
       end
+
+      context 'and there\'s no NSX configuration in the Director\'s manifest' do
+        let(:nsx_options) do
+          cpi_options
+        end
+
+        it 'does not attempt to create security groups' do
+          vm_lifecycle(cpi, [], resource_pool, network_spec, @stemcell_id, environment)
+        end
+      end
     end
 
     context 'when the NSX password information is incorrect' do

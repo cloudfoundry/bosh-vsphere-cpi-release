@@ -46,6 +46,10 @@ module VSphereCloud
     REQUIRED_NSX_OPTIONS = ['address', 'user', 'password']
     NSX_MANIFEST_LOCATION = '`jobs.bosh.properties.vcenter.nsx`'
 
+    def nsx_enabled?
+      vcenter['nsx'].nil? == false
+    end
+
     def validate_nsx_options
       if vcenter['nsx'].nil?
         raise "Must specify global NSX config in your director manifest under #{NSX_MANIFEST_LOCATION}"

@@ -435,7 +435,7 @@ module VSphereCloud
           resource_pool: resource_pool,
           networks_spec: "fake-networks-hash",
           agent_id:      "fake-agent-id",
-          agent_env:     "fake-agent-env",
+          agent_env:     {},
           stemcell: {
             cid: "fake-stemcell-cid",
             size: 1024
@@ -487,7 +487,7 @@ module VSphereCloud
           resource_pool,
           "fake-networks-hash",
           existing_disk_cids,
-          "fake-agent-env"
+          {},
         )
       end
 
@@ -582,7 +582,7 @@ module VSphereCloud
             resource_pool,
             "fake-networks-hash",
             existing_disk_cids,
-            "fake-agent-env"
+            {},
           )
         end
       end
@@ -595,7 +595,7 @@ module VSphereCloud
             resource_pool: resource_pool,
             networks_spec: "fake-networks-hash",
             agent_id:      "fake-agent-id",
-            agent_env:     "fake-agent-env",
+            agent_env:     {},
             stemcell: {
               cid: "fake-stemcell-cid",
               size: 1024
@@ -647,7 +647,7 @@ module VSphereCloud
             resource_pool,
             "fake-networks-hash",
             existing_disk_cids,
-            "fake-agent-env"
+            {},
           )
         end
       end

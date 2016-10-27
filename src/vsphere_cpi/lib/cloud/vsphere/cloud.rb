@@ -259,9 +259,8 @@ module VSphereCloud
             end
           end
 
-          bosh_env = (environment || {})['bosh']
-          bosh_groups = (bosh_env || {})['groups']
-          if bosh_groups
+          if @config.nsx_enabled?
+            bosh_groups = (environment || {}).fetch('bosh', {}).fetch('groups', [])
             bosh_groups.each do |security_group|
               nsx.add_vm_to_security_group(security_group, created_vm.mob_id)
             end
@@ -273,7 +272,7 @@ module VSphereCloud
             nsx.add_members_to_lbs(resource_pool['nsx']['lbs'])
           end
         rescue => e
-          @logger.info("Failed to apply NSX Security Groups to VM '#{created_vm.cid}' with error: #{e}")
+          @logger.info("Failed to apply NSX properties to VM '#{created_vm.cid}' with error: #{e}")
           begin
             @logger.info("Deleting VM '#{created_vm.cid}'...")
             delete_vm(created_vm.cid)
