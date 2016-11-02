@@ -20,3 +20,24 @@ bosh create release --force
 ```
 
 The release is now ready for use. If everything works, commit the changes including the updated gems.
+
+## Running tests
+
+Install deps:
+```bash
+cd ./src/vsphere_cpi
+bundle install
+brew install cdrtools
+```
+
+Unit tests:
+```bash
+bundle
+bundle exec rspec spec/unit/
+```
+
+Integration tests:
+```bash
+bundle
+bundle exec rspec spec/integration/
+```
