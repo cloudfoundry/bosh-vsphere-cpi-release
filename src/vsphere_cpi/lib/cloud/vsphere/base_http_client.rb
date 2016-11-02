@@ -9,7 +9,7 @@ module VSphereCloud
       @backing_client = HTTPClient.new
       @backing_client.send_timeout = 14400 # 4 hours, for stemcell uploads
       @backing_client.receive_timeout = 14400
-      @backing_client.connect_timeout = 30
+      @backing_client.connect_timeout = 60
       @ca_cert_manifest_key = ca_cert_manifest_key
 
       if trusted_ca_file

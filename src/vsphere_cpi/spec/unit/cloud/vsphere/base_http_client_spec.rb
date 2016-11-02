@@ -18,7 +18,7 @@ module VSphereCloud
         expect(backing_client.ssl_config.verify_mode).to eq(OpenSSL::SSL::VERIFY_NONE)
         expect(backing_client.send_timeout).to eq(14400)
         expect(backing_client.receive_timeout).to eq(14400)
-        expect(backing_client.connect_timeout).to eq(30)
+        expect(backing_client.connect_timeout).to eq(60)
       end
 
       context 'when `skip_ssl_verify` is false' do
