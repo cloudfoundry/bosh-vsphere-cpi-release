@@ -106,7 +106,7 @@ describe 'NSX integration', nsx: true do
       end
     end
 
-    context 'when vm_type specifies an nsx Security Group' do
+    context 'when the BOSH Director specifies a set of groups' do
       let(:resource_pool) { base_resource_pool }
       let(:environment) do
         {
@@ -118,7 +118,7 @@ describe 'NSX integration', nsx: true do
         }
       end
 
-      it 'creates the Security Group' do
+      it 'creates a Security Group for each BOSH group' do
         vm_lifecycle(cpi, [], resource_pool, network_spec, @stemcell_id, environment) do |vm_id|
           vm_ids = cpi.nsx.get_vms_in_security_group(security_group)
           expect(vm_ids).to eq([vm_id])
