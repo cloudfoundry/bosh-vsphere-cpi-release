@@ -89,7 +89,7 @@ describe 'NSX integration', nsx: true do
       end
     end
 
-    it 'creates the second time without raising an error' do
+    it 'adds a second VM to the Security Group' do
       begin
         vm_id1 = create_vm_with_resource_pool(cpi, resource_pool, @stemcell_id)
         vm_ids = cpi.nsx.get_vms_in_security_group(security_group)
@@ -132,6 +132,25 @@ describe 'NSX integration', nsx: true do
 
         it 'does not attempt to create security groups' do
           vm_lifecycle(cpi, [], resource_pool, network_spec, @stemcell_id, environment)
+        end
+      end
+
+      context 'and vm_type specifies a duplicate nsx Security Group' do
+        let(:resource_pool) do
+          base_resource_pool.merge({
+            'nsx' => {
+              'security_groups' => [
+                security_group,
+              ],
+            },
+          })
+        end
+
+        it 'adds the VM to the Security Group' do
+          vm_lifecycle(cpi, [], resource_pool, network_spec, @stemcell_id, environment) do |vm_id|
+            vm_ids = cpi.nsx.get_vms_in_security_group(security_group)
+            expect(vm_ids).to eq([vm_id])
+          end
         end
       end
     end

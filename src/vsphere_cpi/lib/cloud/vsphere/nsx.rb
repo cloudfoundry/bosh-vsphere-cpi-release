@@ -31,7 +31,7 @@ module VSphereCloud
         end
 
         response = @http_client.put("https://#{@nsx_url}/api/2.0/services/securitygroup/#{sg_id}/members/#{vm_id}", nil)
-        unless response.status.between?(200, 299)
+        unless response.status.between?(200, 299) || vm_belongs_to_security_group?(response.body)
           unless is_attach_error_retryable?(response.body)
             raise "Failed to add VM to Security Group with unknown NSX error: '#{response.body}'"
           end
@@ -346,6 +346,18 @@ module VSphereCloud
 
       vm_not_found = (!error_code_element.empty? && error_code_element.text == '300')
       vm_not_found ? true : false
+    end
+
+    def vm_belongs_to_security_group?(xml_content)
+      if xml_content.nil?
+        return false
+      end
+
+      error_document = Oga.parse_xml(xml_content)
+      error_code_element = error_document.xpath('error/errorCode')
+
+      vm_in_security_group = (!error_code_element.empty? && error_code_element.text == '203')
+      vm_in_security_group ? true : false
     end
   end
 end
