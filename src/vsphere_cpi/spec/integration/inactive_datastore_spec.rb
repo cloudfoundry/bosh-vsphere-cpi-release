@@ -25,7 +25,7 @@ describe 'inactive datastore handling' do
   context 'when the user specifies an inactive datastore' do
     let(:resource_pool) do
       {
-        'ram' => 1024,
+        'ram' => 512,
         'disk' => 2048,
         'cpu' => 1,
         'datastores' => inactive_datastores,
@@ -54,7 +54,7 @@ describe 'inactive datastore handling' do
     let(:active_datastores) { datastore_names_matching_pattern(inactive_cpi, @cluster_name, @datastore_pattern) }
     let(:resource_pool) do
       {
-        'ram' => 1024,
+        'ram' => 512,
         'disk' => 2048,
         'cpu' => 1,
         'datastores' => inactive_datastores + active_datastores,

@@ -140,7 +140,7 @@ describe VSphereCloud::Cloud, external_cpi: true do
 
   describe 'calculate vm cloud properties' do
     let(:vm_cloud_properties) { {
-      'ram' => 1024,
+      'ram' => 512,
       'cpu' => 2,
       'ephemeral_disk_size' => 2048
     } }
@@ -149,7 +149,7 @@ describe VSphereCloud::Cloud, external_cpi: true do
       resp = external_cpi_response('calculate_vm_cloud_properties', vm_cloud_properties)
 
       expect(resp['result']).to eq({
-        'ram' => 1024,
+        'ram' => 512,
         'cpu' => 2,
         'disk' => 2048
       })

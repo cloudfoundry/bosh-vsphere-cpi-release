@@ -16,7 +16,7 @@ context 'when a persistent disk is attached' do
 
   let(:resource_pool) do
     {
-      'ram' => 1024,
+      'ram' => 512,
       'disk' => 2048,
       'cpu' => 1,
     }

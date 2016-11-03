@@ -723,13 +723,13 @@ module VSphereCloud
     describe '#calculate_vm_cloud_properties' do
       context 'when ram, cpu, and ephemeral_disk are specified' do
         let(:vm_properties) { {
-          'ram' => 1024,
+          'ram' => 512,
           'cpu' => 2,
           'ephemeral_disk_size' => 2048
         } }
         it 'returns a vSphere-specific set of cloud_properties' do
           expect(vsphere_cloud.calculate_vm_cloud_properties(vm_properties)).to eq({
-            'ram' => 1024,
+            'ram' => 512,
             'cpu' => 2,
             'disk' => 2048
           })
@@ -737,7 +737,7 @@ module VSphereCloud
       end
       context 'when one of the three keys is missing' do
         let(:vm_properties) { {
-          'ram' => 1024,
+          'ram' => 512,
           'cpu' => 2,
         } }
         it 'raises an error' do

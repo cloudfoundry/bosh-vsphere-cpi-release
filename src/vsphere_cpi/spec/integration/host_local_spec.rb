@@ -7,7 +7,7 @@ describe 'host-local storage patterns', :host_local => true do
 
   let(:resource_pool) do
     {
-      'ram' => 1024,
+      'ram' => 512,
       'disk' => 2048,
       'cpu' => 1,
     }
@@ -257,7 +257,7 @@ describe 'host-local storage patterns', :host_local => true do
     let(:persistent_datastores) { datastore_names_matching_pattern(@cpi, @cluster_name, @multi_local_ds_pattern) }
     let(:resource_pool) do
       {
-        'ram' => 1024,
+        'ram' => 512,
         'disk' => 2048,
         'cpu' => 1,
         'datastores' => ephemeral_datastores,

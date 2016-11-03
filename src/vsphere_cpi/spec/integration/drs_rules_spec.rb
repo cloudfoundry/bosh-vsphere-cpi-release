@@ -30,7 +30,7 @@ context 'when vm was migrated to another datastore within first cluster' do
   end
   let(:resource_pool) do
     {
-      'ram' => 1024,
+      'ram' => 512,
       'disk' => 2048,
       'cpu' => 1,
     }
@@ -70,7 +70,7 @@ context 'when vm was migrated to another datastore within first cluster' do
 
     let(:resource_pool) do
       {
-        'ram' => 1024,
+        'ram' => 512,
         'disk' => 2048,
         'cpu' => 1,
         'datacenters' => [{
