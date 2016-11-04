@@ -61,7 +61,7 @@ jobs:
         tags: ["vsphere-v5.1"]
         file: bosh-cpi-src/ci/tasks/run-lifecycle.yml
         params:
-          RSPEC_FLAGS:                                          "--tag ~host_local --tag ~vsan_datastore --tag ~nsx" # fiveone env doesn't support all features the CPI supports
+          RSPEC_FLAGS:                                          "--tag ~host_local --tag ~vsan_datastore --tag ~nsx --tag ~drs" # fiveone env doesn't support all features the CPI supports
           BOSH_VSPHERE_VERSION:                                 {{lifecycle_vsphere_5_1_version}}
           BOSH_VSPHERE_CPI_HOST:                                {{lifecycle_vsphere_5_1_host}}
           BOSH_VSPHERE_CPI_USER:                                {{lifecycle_vsphere_5_1_user}}
