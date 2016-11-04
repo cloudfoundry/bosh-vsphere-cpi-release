@@ -111,12 +111,12 @@ module VSphereCloud
 
         @agent_env.set_env(created_vm.mob, location, env)
 
+        # DRS Rules
+        create_drs_rules(vm_config, created_vm.mob, cluster)
+
         # Power on VM
         @logger.info("Powering on VM: #{created_vm}")
         created_vm.power_on
-
-        # DRS Rules
-        create_drs_rules(vm_config, created_vm.mob, cluster)
       rescue => e
         e.vm_cid = vm_config.name if e.instance_of?(Cloud::NetworkException)
         @logger.info("#{e} - #{e.backtrace.join("\n")}")
