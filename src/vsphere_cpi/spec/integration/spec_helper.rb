@@ -29,6 +29,10 @@ RSpec.configure do |rspec_config|
     @stemcell_id = stemcell_id
   end
 
+  rspec_config.after(:all) do
+    @cpi.cleanup
+  end
+
   rspec_config.after(:suite) do
     delete_stemcell(@suite_cpi, stemcell_id)
   end

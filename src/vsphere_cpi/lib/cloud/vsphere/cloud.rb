@@ -16,7 +16,7 @@ module VSphereCloud
     end
 
     attr_accessor :client
-    attr_reader :config, :logger, :datacenter
+    attr_reader :config, :logger, :datacenter, :heartbeat_thread
 
     def initialize(options)
       @config = Config.build(options)
@@ -64,7 +64,7 @@ module VSphereCloud
       })
 
       # We get disconnected if the connection is inactive for a long period.
-      Thread.new do
+      @heartbeat_thread = Thread.new do
         while true do
           sleep(60)
           @client.service_instance.current_time
@@ -76,7 +76,12 @@ module VSphereCloud
 
     def setup_at_exit
       # HACK: finalizer not getting called, so we'll rely on at_exit
-      at_exit { @client.logout }
+      at_exit do
+        begin
+          @client.logout
+        rescue VSphereCloud::VCenterClient::NotLoggedInException
+        end
+      end
     end
 
     def has_vm?(vm_cid)
@@ -676,6 +681,12 @@ module VSphereCloud
         @config.soap_log,
       )
       @nsx = NSX.new(@config.nsx_url, nsx_http_client, @logger)
+    end
+
+    def cleanup
+      @heartbeat_thread.terminate
+      @client.logout
+      rescue VSphereCloud::VCenterClient::NotLoggedInException
     end
 
     private

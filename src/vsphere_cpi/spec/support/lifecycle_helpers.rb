@@ -50,29 +50,25 @@ module LifecycleHelpers
     ENV[property] || default
   end
 
-  def verify_vsphere_version(cpi_options, expected_version)
+  def verify_vsphere_version(cpi, expected_version)
     return if expected_version.nil?
-    cpi = VSphereCloud::Cloud.new(cpi_options)
     actual_version = cpi.client.service_content.about.version
     fail("vSphere version #{expected_version} required. Found #{actual_version}.") if expected_version != actual_version
   end
 
-  def verify_datastore_within_cluster(cpi_options, env_var_name, datastore_pattern, cluster_name)
-    cpi = VSphereCloud::Cloud.new(cpi_options)
+  def verify_datastore_within_cluster(cpi, env_var_name, datastore_pattern, cluster_name)
     cluster = cpi.datacenter.find_cluster(cluster_name)
     datastores = matching_datastores_in_cluster(cluster, datastore_pattern)
     fail("Invalid Environment variable '#{env_var_name}': No datastores found matching /#{datastore_pattern}/. #{MISSING_KEY_MESSAGES[env_var_name]}") if (datastores.empty?)
   end
 
-  def verify_cluster(cpi_options, cluster_name, env_var_name)
-    cpi = VSphereCloud::Cloud.new(cpi_options)
+  def verify_cluster(cpi, cluster_name, env_var_name)
     cpi.datacenter.find_cluster(cluster_name)
   rescue RuntimeError => e
     fail("#{e.message}\n#{env_var_name}: #{MISSING_KEY_MESSAGES[env_var_name]}")
   end
 
-  def verify_local_disk_infrastructure(cpi_options, env_var_name, local_datastore_pattern)
-    cpi = VSphereCloud::Cloud.new(cpi_options)
+  def verify_local_disk_infrastructure(cpi, env_var_name, local_datastore_pattern)
     all_matching_datastores = matching_datastores(cpi.datacenter, local_datastore_pattern)
     nonlocal_disk_datastores = all_matching_datastores.select { |_, datastore| datastore.mob.summary.multiple_host_access }
     unless (nonlocal_disk_datastores.empty?)
@@ -87,8 +83,7 @@ module LifecycleHelpers
     end
   end
 
-  def verify_user_has_limited_permissions(cpi_options)
-    cpi = VSphereCloud::Cloud.new(cpi_options)
+  def verify_user_has_limited_permissions(cpi)
     root_folder_privileges = build_actual_privileges_list(cpi, cpi.client.service_content.root_folder)
 
     expected_privileges = build_expected_privileges_list
@@ -112,8 +107,7 @@ module LifecycleHelpers
     end
   end
 
-  def verify_datacenter_is_nested(cpi_options, datacenter_name, env_var_name)
-    cpi = VSphereCloud::Cloud.new(cpi_options)
+  def verify_datacenter_is_nested(cpi, datacenter_name, env_var_name)
     datacenter_mob = cpi.datacenter.mob
     client = cpi.client
     datacenter_parent = client.cloud_searcher.get_property(datacenter_mob, datacenter_mob.class, 'parent', :ensure_all => true)
@@ -122,8 +116,7 @@ module LifecycleHelpers
     fail "Invalid Environment variable '#{env_var_name}': Datacenter '#{datacenter_name}'  is not in subfolder" if root_folder.to_str == datacenter_parent.to_str
   end
 
-  def verify_resource_pool(cpi_options, cluster_name, resource_pool_name, env_var_name)
-    cpi = VSphereCloud::Cloud.new(cpi_options)
+  def verify_resource_pool(cpi, cluster_name, resource_pool_name, env_var_name)
     cluster_mob = cpi.datacenter.find_cluster(cluster_name).mob
     resource_pool_mob = cpi.client.cloud_searcher.get_managed_objects(
       VimSdk::Vim::ResourcePool,
@@ -142,15 +135,13 @@ module LifecycleHelpers
     "#{destination_dir}/image"
   end
 
-  def verify_vlan(cpi_options, vlan, env_var_name)
-    cpi = VSphereCloud::Cloud.new(cpi_options)
+  def verify_vlan(cpi, vlan, env_var_name)
     datacenter_name = cpi.datacenter.name
     network = cpi.client.find_network(cpi.datacenter.mob, vlan)
     fail "Invalid Environment variable '#{env_var_name}': No network named '#{vlan}' found in datacenter named '#{datacenter_name}'" if network.nil?
   end
 
-  def verify_datacenter_exists(cpi_options, env_var_name)
-    cpi = VSphereCloud::Cloud.new(cpi_options)
+  def verify_datacenter_exists(cpi, env_var_name)
     cpi.datacenter.mob
   rescue => e
     fail "Invalid Environment variable '#{env_var_name}': #{e.message}"
@@ -167,8 +158,7 @@ module LifecycleHelpers
     end
   end
 
-  def verify_datastore_pattern_available_to_all_hosts(cpi_options, env_var_name, datastore_pattern, cluster_name)
-    cpi = VSphereCloud::Cloud.new(cpi_options)
+  def verify_datastore_pattern_available_to_all_hosts(cpi, env_var_name, datastore_pattern, cluster_name)
     datastore_pattern_regex = Regexp.new(datastore_pattern)
     cluster = cpi.datacenter.find_cluster(cluster_name)
     if cluster.nil?
@@ -188,12 +178,8 @@ module LifecycleHelpers
     end
   end
 
-  def verify_disk_is_in_datastores(cpi_options, disk_id, datastores)
-    expect(is_disk_in_datastores(cpi_options, disk_id, datastores)).to eq(true), "Expected disk '#{disk_id}' to be in datastores '#{datastores.join(', ')}' but was not"
-  end
-
-  def verify_disk_is_not_in_datastores(cpi_options, disk_id, datastores)
-    expect(is_disk_in_datastores(cpi_options, disk_id, datastores)).to eq(false), "Expected disk '#{disk_id}' to not be in datastores '#{datastores.join(', ')}' but it was"
+  def verify_disk_is_in_datastores(cpi, disk_id, datastores)
+    expect(is_disk_in_datastores(cpi, disk_id, datastores)).to eq(true), "Expected disk '#{disk_id}' to be in datastores '#{datastores.join(', ')}' but was not"
   end
 
   def is_vsan?(cpi, datastore_name)
@@ -353,8 +339,7 @@ module LifecycleHelpers
 
   private
 
-  def is_disk_in_datastores(cpi_options, disk_id, accessible_datastores)
-    cpi = VSphereCloud::Cloud.new(cpi_options)
+  def is_disk_in_datastores(cpi, disk_id, accessible_datastores)
     disk = cpi.datacenter.find_disk(disk_id)
     accessible_datastores.include?(disk.datastore.name)
   end

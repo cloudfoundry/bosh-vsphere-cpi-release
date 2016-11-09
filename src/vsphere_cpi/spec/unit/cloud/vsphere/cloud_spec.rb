@@ -61,7 +61,7 @@ module VSphereCloud
     let(:cluster_provider) { instance_double(VSphereCloud::Resources::ClusterProvider) }
     before { allow(Resources::ClusterProvider).to receive(:new).and_return(cluster_provider) }
 
-    describe 'has_vm?' do
+    describe '#has_vm?' do
       context 'the vm is found' do
         it 'returns true' do
           expect(vsphere_cloud.has_vm?('vm-id')).to be(true)
@@ -76,7 +76,7 @@ module VSphereCloud
       end
     end
 
-    describe 'has disk?' do
+    describe '#has disk?' do
       let(:disk_cid) { 'disk-1234-5667-1242-1233' }
       let(:encoded_disk_cid) do
         metadata = {target_datastore_pattern: '^(fake\\-ds)$'}
@@ -123,7 +123,7 @@ module VSphereCloud
       end
     end
 
-    describe 'snapshot_disk' do
+    describe '#snapshot_disk' do
       it 'raises not implemented exception when called' do
         expect { vsphere_cloud.snapshot_disk('123', {}) }.to raise_error(Bosh::Clouds::NotImplemented)
       end
@@ -1290,6 +1290,23 @@ module VSphereCloud
         expect(vcenter_client).to receive(:set_custom_field).with(vm_mob, 'other-key', 'value')
         vsphere_cloud.set_vm_metadata(vm.cid, {'key' => 'value'})
         vsphere_cloud.set_vm_metadata(vm.cid, {'key' => 'other-value', 'other-key' => 'value'})
+      end
+    end
+
+    describe '#terminate_threads_and_logout' do
+      it 'terminates the thread and logs out the client' do
+        expect(vsphere_cloud.heartbeat_thread).to receive(:terminate).once.and_call_original
+        expect(vsphere_cloud.client).to receive(:logout).once
+        vsphere_cloud.cleanup
+      end
+
+      it 'does not raise an error when it\'s called twice in a row' do
+        expect(vsphere_cloud.heartbeat_thread).to receive(:terminate).once.and_call_original
+        expect(vsphere_cloud.client).to receive(:logout).once
+        vsphere_cloud.cleanup
+        expect(vsphere_cloud.heartbeat_thread).to receive(:terminate).once.and_call_original
+        expect(vsphere_cloud.client).to receive(:logout).once.and_raise(VSphereCloud::VCenterClient::NotLoggedInException)
+        vsphere_cloud.cleanup
       end
     end
   end

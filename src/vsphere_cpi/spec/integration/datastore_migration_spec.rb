@@ -76,7 +76,7 @@ context 'when disk is in non-accessible datastore' do
         datastores_accessible_to_vm = datastores_accessible_from_cluster(first_cluster_cpi, @cluster_name)
         disk_id = @cpi.create_disk(128, {}, existing_vm_id)
 
-        verify_disk_is_in_datastores(first_cluster_cpi_options, disk_id, datastores_accessible_to_vm)
+        verify_disk_is_in_datastores(first_cluster_cpi, disk_id, datastores_accessible_to_vm)
       ensure
         delete_disk(@cpi, disk_id)
       end
@@ -113,7 +113,7 @@ context 'when disk is in non-accessible datastore' do
       begin
         both_cluster_cpi.attach_disk(existing_vm_id, existing_disk_id)
 
-        verify_disk_is_in_datastores(both_cluster_cpi_options, existing_disk_id, accessible_datastores)
+        verify_disk_is_in_datastores(both_cluster_cpi, existing_disk_id, accessible_datastores)
       ensure
         detach_disk(both_cluster_cpi, existing_vm_id, existing_disk_id)
       end

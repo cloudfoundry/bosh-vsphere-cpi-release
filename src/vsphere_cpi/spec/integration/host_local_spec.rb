@@ -39,44 +39,46 @@ describe 'host-local storage patterns', :host_local => true do
       'BOSH_VSPHERE_CPI_SECOND_DATASTORE'
     )
 
+    cpi = VSphereCloud::Cloud.new(cpi_options)
+
     @single_local_ds_pattern = fetch_property('BOSH_VSPHERE_CPI_SINGLE_LOCAL_DATASTORE_PATTERN')
     @multi_local_ds_pattern = fetch_property('BOSH_VSPHERE_CPI_MULTI_LOCAL_DATASTORE_PATTERN')
     @second_cluster_local_datastore = fetch_property('BOSH_VSPHERE_CPI_SECOND_CLUSTER_LOCAL_DATASTORE')
 
     verify_local_disk_infrastructure(
-      cpi_options,
+      cpi,
       'BOSH_VSPHERE_CPI_SINGLE_LOCAL_DATASTORE_PATTERN',
       @single_local_ds_pattern,
     )
 
     verify_local_disk_infrastructure(
-      cpi_options,
+      cpi,
       'BOSH_VSPHERE_CPI_MULTI_LOCAL_DATASTORE_PATTERN',
       @multi_local_ds_pattern,
     )
 
     verify_local_disk_infrastructure(
-      cpi_options,
+      cpi,
       'BOSH_VSPHERE_CPI_SECOND_CLUSTER_LOCAL_DATASTORE',
       @second_cluster_local_datastore,
     )
 
     verify_datastore_within_cluster(
-      cpi_options,
+      cpi,
       'BOSH_VSPHERE_CPI_SINGLE_LOCAL_DATASTORE_PATTERN',
       @single_local_ds_pattern,
       @cluster_name
     )
 
     verify_datastore_within_cluster(
-      cpi_options,
+      cpi,
       'BOSH_VSPHERE_CPI_MULTI_LOCAL_DATASTORE_PATTERN',
       @multi_local_ds_pattern,
       @cluster_name
     )
 
     verify_datastore_within_cluster(
-      cpi_options,
+      cpi,
       'BOSH_VSPHERE_CPI_SECOND_CLUSTER_LOCAL_DATASTORE',
       @second_cluster_local_datastore,
       @second_cluster_name
