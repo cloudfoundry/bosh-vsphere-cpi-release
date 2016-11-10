@@ -23,6 +23,9 @@ properties:
     description: Password to connect to vCenter server used by vspher cpi
   vcenter.datacenters:
     description: Datacenters in vCenter to use (value is an array of Hashes representing datacenters and clusters, See director.yml.erb.erb)
+  vcenter.enable_auto_anti_affinity_drs_rules:
+    description: Creates DRS rule to place VMs on separate hosts.
+    default: false
   vcenter.connection_options.ca_cert:
     description: All required custom CA certificates
     example:

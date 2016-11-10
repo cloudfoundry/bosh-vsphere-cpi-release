@@ -15,6 +15,7 @@ module VSphereCloud
         vcenter_password: 'fake-password',
         vcenter_default_disk_type: default_disk_type,
         soap_log: 'fake-log-file',
+        vcenter_enable_auto_anti_affinity_drs_rules: false,
       ).as_null_object
     end
     let(:default_disk_type) { 'preallocated' }
@@ -475,6 +476,7 @@ module VSphereCloud
             agent_env: agent_env,
             ip_conflict_detector: ip_conflict_detector,
             default_disk_type: default_disk_type,
+            enable_auto_anti_affinity_drs_rules: false,
           )
           .and_return(vm_creator)
         expect(vm_creator).to receive(:create)
@@ -529,6 +531,7 @@ module VSphereCloud
             agent_env: agent_env,
             ip_conflict_detector: ip_conflict_detector,
             default_disk_type: default_disk_type,
+            enable_auto_anti_affinity_drs_rules: false,
           )
           .and_return(vm_creator)
         expect(vm_creator).to receive(:create)
@@ -634,7 +637,8 @@ module VSphereCloud
                                    cluster_provider: cluster_provider,
                                    agent_env: agent_env,
                                    ip_conflict_detector: ip_conflict_detector,
-                                   default_disk_type: 'thin'
+                                   default_disk_type: 'thin',
+                                   enable_auto_anti_affinity_drs_rules: false,
                                  )
                                  .and_return(vm_creator)
           expect(vm_creator).to receive(:create)

@@ -111,6 +111,14 @@ module VSphereCloud
       end
     end
 
+    def bosh_group
+      if !agent_env['bosh'].nil? then
+        return agent_env['bosh']['group']
+      else
+        return nil
+      end
+    end
+
     private
 
     def resource_pool

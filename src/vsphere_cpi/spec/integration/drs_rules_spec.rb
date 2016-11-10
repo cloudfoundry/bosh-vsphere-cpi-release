@@ -58,67 +58,243 @@ describe 'DRS rules', drs: true do
       end
     end
 
-    context 'given a resource pool that is configured with a drs rule' do
+    context 'given the director has "enable_auto_anti_affinity_drs_rules" set to true' do
       let(:one_cluster_cpi) do
         options = cpi_options(
           datacenters: [{
             clusters: [@cluster_name]
           }],
+          enable_auto_anti_affinity_drs_rules: true,
         )
         VSphereCloud::Cloud.new(options)
       end
 
-      let(:resource_pool) do
-        {
-          'ram' => 512,
-          'disk' => 2048,
-          'cpu' => 1,
-          'datacenters' => [{
-            'name' => @datacenter_name,
-            'clusters' => [{
-              @cluster_name => {
-                'drs_rules' => [{
-                  'name' => 'separate-nodes-rule',
-                  'type' => 'separate_vms'
-                }]
-              }
+      context 'but the resource pool does not have drs rule' do
+        let(:env) do
+          {
+            'key' => 'value',
+            'bosh' => {
+              'group' => 'some-group'
+            }
+          }
+        end
+
+        let(:resource_pool) do
+          {
+            'ram' => 512,
+            'disk' => 2048,
+            'cpu' => 1,
+            'datacenters' => [{
+              'name' => @datacenter_name,
+              'clusters' => [{
+                @cluster_name => {}
+              }]
             }]
-          }]
-        }
+          }
+        end
+
+        it 'should correctly apply VM Anti-Affinity rules to created VMs' do
+          begin
+            first_vm_id = one_cluster_cpi.create_vm(
+              'agent-007',
+              @stemcell_id,
+              resource_pool,
+              network_spec,
+              [],
+              env
+            )
+            second_vm_id = one_cluster_cpi.create_vm(
+              'agent-006',
+              @stemcell_id,
+              resource_pool,
+              network_spec,
+              [],
+              env
+            )
+            first_vm_mob = one_cluster_cpi.vm_provider.find(first_vm_id).mob
+            cluster = first_vm_mob.resource_pool.parent
+
+            drs_rules = cluster.configuration_ex.rule
+            expect(drs_rules).not_to be_empty
+            drs_rule = drs_rules.find { |rule| rule.name == "some-group" }
+            expect(drs_rule).to_not be_nil
+            expect(drs_rule.vm.length).to eq(2)
+            drs_vm_names = drs_rule.vm.map { |vm_mob| vm_mob.name }
+            expect(drs_vm_names).to include(first_vm_id, second_vm_id)
+
+          ensure
+            delete_vm(one_cluster_cpi, first_vm_id)
+            delete_vm(one_cluster_cpi, second_vm_id)
+          end
+        end
       end
 
-      it 'should correctly apply VM Anti-Affinity rules to created VMs' do
-        begin
-          first_vm_id = one_cluster_cpi.create_vm(
-            'agent-007',
-            @stemcell_id,
-            resource_pool,
-            network_spec,
-            [],
-            {'key' => 'value'}
-          )
-          second_vm_id = one_cluster_cpi.create_vm(
-            'agent-006',
-            @stemcell_id,
-            resource_pool,
-            network_spec,
-            [],
-            {'key' => 'value'}
-          )
-          first_vm_mob = one_cluster_cpi.vm_provider.find(first_vm_id).mob
-          cluster = first_vm_mob.resource_pool.parent
+      context 'given a resource pool that is configured with a drs rule' do
+        let(:resource_pool) do
+          {
+            'ram' => 512,
+            'disk' => 2048,
+            'cpu' => 1,
+            'datacenters' => [{
+              'name' => @datacenter_name,
+              'clusters' => [{
+                @cluster_name => {
+                  'drs_rules' => [{
+                    'name' => 'separate-nodes-rule',
+                    'type' => 'separate_vms'
+                  }]
+                }
+              }]
+            }]
+          }
+        end
 
-          drs_rules = cluster.configuration_ex.rule
-          expect(drs_rules).not_to be_empty
-          drs_rule = drs_rules.find { |rule| rule.name == "separate-nodes-rule" }
-          expect(drs_rule).to_not be_nil
-          expect(drs_rule.vm.length).to eq(2)
-          drs_vm_names = drs_rule.vm.map { |vm_mob| vm_mob.name }
-          expect(drs_vm_names).to include(first_vm_id, second_vm_id)
+        it 'should correctly apply VM Anti-Affinity rules to created VMs' do
+          begin
+            first_vm_id = one_cluster_cpi.create_vm(
+              'agent-007',
+              @stemcell_id,
+              resource_pool,
+              network_spec,
+              [],
+              {'key' => 'value'}
+            )
+            second_vm_id = one_cluster_cpi.create_vm(
+              'agent-006',
+              @stemcell_id,
+              resource_pool,
+              network_spec,
+              [],
+              {'key' => 'value'}
+            )
+            first_vm_mob = one_cluster_cpi.vm_provider.find(first_vm_id).mob
+            cluster = first_vm_mob.resource_pool.parent
 
-        ensure
-          delete_vm(one_cluster_cpi, first_vm_id)
-          delete_vm(one_cluster_cpi, second_vm_id)
+            drs_rules = cluster.configuration_ex.rule
+            expect(drs_rules).not_to be_empty
+            drs_rule = drs_rules.find { |rule| rule.name == "separate-nodes-rule" }
+            expect(drs_rule).to_not be_nil
+            expect(drs_rule.vm.length).to eq(2)
+            drs_vm_names = drs_rule.vm.map { |vm_mob| vm_mob.name }
+            expect(drs_vm_names).to include(first_vm_id, second_vm_id)
+
+          ensure
+            delete_vm(one_cluster_cpi, first_vm_id)
+            delete_vm(one_cluster_cpi, second_vm_id)
+          end
+        end
+      end
+    end
+
+    context 'given the director has "enable_auto_anti_affinity_drs_rules" set to false' do
+      let(:one_cluster_cpi) do
+        options = cpi_options(
+          datacenters: [{
+            clusters: [@cluster_name]
+          }],
+          enable_auto_anti_affinity_drs_rules: false,
+        )
+        VSphereCloud::Cloud.new(options)
+      end
+
+      context 'but the resource pool does not have drs rule' do
+        let(:resource_pool) do
+          {
+            'ram' => 512,
+            'disk' => 2048,
+            'cpu' => 1,
+            'datacenters' => [{
+              'name' => @datacenter_name,
+              'clusters' => [{
+                @cluster_name => {}
+              }]
+            }]
+          }
+        end
+
+        it 'should create VM without Anti-Affinity rule' do
+          begin
+            first_vm_id = one_cluster_cpi.create_vm(
+              'agent-007',
+              @stemcell_id,
+              resource_pool,
+              network_spec,
+              [],
+              {'key' => 'value'}
+            )
+            second_vm_id = one_cluster_cpi.create_vm(
+              'agent-006',
+              @stemcell_id,
+              resource_pool,
+              network_spec,
+              [],
+              {'key' => 'value'}
+            )
+            first_vm_mob = one_cluster_cpi.vm_provider.find(first_vm_id).mob
+            cluster = first_vm_mob.resource_pool.parent
+
+            drs_rules = cluster.configuration_ex.rule
+            expect(drs_rules).to be_empty
+          ensure
+            delete_vm(one_cluster_cpi, first_vm_id)
+            delete_vm(one_cluster_cpi, second_vm_id)
+          end
+        end
+      end
+
+      context 'given a resource pool that is configured with a drs rule' do
+        let(:resource_pool) do
+          {
+            'ram' => 512,
+            'disk' => 2048,
+            'cpu' => 1,
+            'datacenters' => [{
+              'name' => @datacenter_name,
+              'clusters' => [{
+                @cluster_name => {
+                  'drs_rules' => [{
+                    'name' => 'separate-nodes-rule',
+                    'type' => 'separate_vms'
+                  }]
+                }
+              }]
+            }]
+          }
+        end
+
+        it 'should correctly apply VM Anti-Affinity rules to created VMs' do
+          begin
+            first_vm_id = one_cluster_cpi.create_vm(
+              'agent-007',
+              @stemcell_id,
+              resource_pool,
+              network_spec,
+              [],
+              {'key' => 'value'}
+            )
+            second_vm_id = one_cluster_cpi.create_vm(
+              'agent-006',
+              @stemcell_id,
+              resource_pool,
+              network_spec,
+              [],
+              {'key' => 'value'}
+            )
+            first_vm_mob = one_cluster_cpi.vm_provider.find(first_vm_id).mob
+            cluster = first_vm_mob.resource_pool.parent
+
+            drs_rules = cluster.configuration_ex.rule
+            expect(drs_rules).not_to be_empty
+            drs_rule = drs_rules.find { |rule| rule.name == "separate-nodes-rule" }
+            expect(drs_rule).to_not be_nil
+            expect(drs_rule.vm.length).to eq(2)
+            drs_vm_names = drs_rule.vm.map { |vm_mob| vm_mob.name }
+            expect(drs_vm_names).to include(first_vm_id, second_vm_id)
+
+          ensure
+            delete_vm(one_cluster_cpi, first_vm_id)
+            delete_vm(one_cluster_cpi, second_vm_id)
+          end
         end
       end
     end

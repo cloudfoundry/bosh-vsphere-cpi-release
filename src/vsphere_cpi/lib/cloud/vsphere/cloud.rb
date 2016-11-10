@@ -253,7 +253,8 @@ module VSphereCloud
           cluster_provider: @cluster_provider,
           agent_env: @agent_env,
           ip_conflict_detector: IPConflictDetector.new(@logger, @client),
-          default_disk_type: @config.vcenter_default_disk_type
+          default_disk_type: @config.vcenter_default_disk_type,
+          enable_auto_anti_affinity_drs_rules: @config.vcenter_enable_auto_anti_affinity_drs_rules
         )
         created_vm = vm_creator.create(vm_config)
 

@@ -22,6 +22,7 @@ describe 'cpi.json.erb' do
           'address' => 'vcenter-address',
           'user' => 'vcenter-user',
           'password' => 'vcenter-password',
+          'enable_auto_anti_affinity_drs_rules' => true,
           'datacenters' => [
             {
               'name' => 'datacenter-1',
@@ -88,7 +89,8 @@ describe 'cpi.json.erb' do
               'host' => 'vcenter-address',
               'password' => 'vcenter-password',
               'user' => 'vcenter-user',
-              'default_disk_type' => 'preallocated'
+              'default_disk_type' => 'preallocated',
+              'enable_auto_anti_affinity_drs_rules' => true,
             }
           ],
         }

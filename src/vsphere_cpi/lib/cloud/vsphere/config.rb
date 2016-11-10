@@ -10,9 +10,6 @@ module VSphereCloud
 
     def initialize(config_hash)
       @config = config_hash
-      @vcenter_host = nil
-      @vcenter_user = nil
-      @vcenter_password = nil
 
       @is_validated = false
     end
@@ -100,6 +97,10 @@ module VSphereCloud
       vcenter['default_disk_type']
     end
 
+    def vcenter_enable_auto_anti_affinity_drs_rules
+      vcenter['enable_auto_anti_affinity_drs_rules']
+    end
+
     def datacenter_name
       vcenter_datacenter['name']
     end
@@ -172,6 +173,7 @@ module VSphereCloud
             'host' => String,
             'user' => String,
             'password' => String,
+            optional('enable_auto_anti_affinity_drs_rules') => bool,
             'datacenters' => [{
               'name' => String,
               'vm_folder' => String,

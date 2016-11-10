@@ -1,6 +1,6 @@
 module VSphereCloud
   class VmCreator
-    def initialize(client:, cloud_searcher:, logger:, cpi:, datacenter:, cluster_provider:, agent_env:, ip_conflict_detector:, default_disk_type:)
+    def initialize(client:, cloud_searcher:, logger:, cpi:, datacenter:, cluster_provider:, agent_env:, ip_conflict_detector:, default_disk_type:, enable_auto_anti_affinity_drs_rules:)
       @client = client
       @cloud_searcher = cloud_searcher
       @logger = logger
@@ -10,6 +10,7 @@ module VSphereCloud
       @agent_env = agent_env
       @ip_conflict_detector = ip_conflict_detector
       @default_disk_type = default_disk_type
+      @enable_auto_anti_affinity_drs_rules = enable_auto_anti_affinity_drs_rules
     end
 
     def create(vm_config)
@@ -133,11 +134,21 @@ module VSphereCloud
 
     private
 
+    def should_create_auto_drs_rule(vm_config)
+      return @enable_auto_anti_affinity_drs_rules && vm_config.drs_rule.nil? && !vm_config.bosh_group.nil?
+    end
+
     def create_drs_rules(vm_config, vm_mob, cluster)
-      return if vm_config.drs_rule.nil?
+      if should_create_auto_drs_rule(vm_config) then
+        drs_rule_name = vm_config.bosh_group
+      elsif !vm_config.drs_rule.nil? then
+        drs_rule_name = vm_config.drs_rule['name']
+      else
+        return
+      end
 
       drs_rule = VSphereCloud::DrsRule.new(
-        vm_config.drs_rule['name'],
+        drs_rule_name,
         @client,
         @cloud_searcher,
         cluster.mob,
