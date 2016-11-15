@@ -21,12 +21,18 @@ Bosh::Clouds::Config.configure(OpenStruct.new(
 
 soap_log = StringIO.new
 
-cpi_lambda = lambda do
+cpi_lambda = lambda do |context|
   unless cpi_config.has_key?('cloud') && cpi_config['cloud'].has_key?('properties')
     raise "Could not find cloud properties in the configuration"
   end
 
   cloud_properties = cpi_config['cloud']['properties']
+
+  if cloud_properties['vcenters'].nil? || cloud_properties['vcenters'].empty?
+    cloud_properties['vcenters'] = [{}]
+  end
+  cloud_properties['vcenters'][0].merge!(context)
+
   cloud_properties['soap_log'] = soap_log
   Bosh::Clouds::VSphere.new(cloud_properties)
 end
