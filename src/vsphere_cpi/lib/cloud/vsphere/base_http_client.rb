@@ -11,6 +11,7 @@ module VSphereCloud
       @backing_client.receive_timeout = 14400
       @backing_client.connect_timeout = 60
       @ca_cert_manifest_key = ca_cert_manifest_key
+      @log_filter = VSphereCloud::SdkHelpers::LogFilter.new
 
       if trusted_ca_file
         @backing_client.ssl_config.add_trust_ca(trusted_ca_file)
@@ -59,7 +60,7 @@ module VSphereCloud
         @log_writer << "Request Body:\n"
 
         if content.is_a?(String) && content.force_encoding('utf-8').valid_encoding?
-          @log_writer << content + "\n"
+          @log_writer << @log_filter.filter(content) + "\n"
         else
           @log_writer << "REQUEST BODY IS BINARY DATA\n"
         end

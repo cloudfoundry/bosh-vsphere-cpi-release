@@ -16,6 +16,10 @@ module VSphereCloud
       FileUtils.rm_rf(@workspace_dir)
     end
 
+    let(:password) do
+      ENV.fetch('BOSH_VSPHERE_CPI_PASSWORD')
+    end
+
     let(:cloud_properties) do
       {
           'cloud' => {
@@ -36,7 +40,6 @@ module VSphereCloud
 
       host = ENV.fetch('BOSH_VSPHERE_CPI_HOST')
       user = ENV.fetch('BOSH_VSPHERE_CPI_USER')
-      password = ENV.fetch('BOSH_VSPHERE_CPI_PASSWORD')
       resource_pool_name = ENV.fetch('BOSH_VSPHERE_CPI_RESOURCE_POOL')
       second_resource_pool_name = ENV.fetch('BOSH_VSPHERE_CPI_SECOND_CLUSTER_RESOURCE_POOL')
 
@@ -160,6 +163,16 @@ module VSphereCloud
         @stemcell_id = resp['result']
 
         expect(resp['log']).to include('200 OK', '<?xml')
+      end
+
+      it 'does NOT log password on Login requests' do
+        resp = external_cpi_response('create_stemcell', {}, stemcell_img, nil)
+        expect(resp['error']).to be_nil
+        expect(resp['result']).to_not be_nil
+        @stemcell_id = resp['result']
+
+        expect(resp['log']).to include('200 OK', '<?xml')
+        expect(resp['log']).not_to include(password)
       end
     end
 
