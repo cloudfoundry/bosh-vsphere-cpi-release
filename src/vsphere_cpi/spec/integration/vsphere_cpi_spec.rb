@@ -171,7 +171,7 @@ module VSphereCloud
         expect(resp['result']).to_not be_nil
         @stemcell_id = resp['result']
 
-        expect(resp['log']).to include('200 OK', '<?xml')
+        expect(resp['log']).to include('200 OK', '<?xml', 'redacted')
         expect(resp['log']).not_to include(password)
       end
     end

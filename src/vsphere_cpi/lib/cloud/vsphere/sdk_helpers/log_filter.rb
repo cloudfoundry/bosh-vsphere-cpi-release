@@ -10,10 +10,10 @@ module VSphereCloud
 
       def filter(content)
         document = Oga.parse_xml(content)
-        FILTERS.none? do |filter|
+        FILTERS.each do |filter|
           matching_node = document.xpath(filter)
 
-          matching_node.none? do |element|
+          matching_node.each do |element|
             text = Oga::XML::Text.new
             text.text = 'redacted'
 
