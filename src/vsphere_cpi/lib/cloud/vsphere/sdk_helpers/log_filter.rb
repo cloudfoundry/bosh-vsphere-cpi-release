@@ -9,11 +9,14 @@ module VSphereCloud
       ]
 
       def filter(content)
+        modified = false
+
         document = Oga.parse_xml(content)
         FILTERS.each do |filter|
           matching_node = document.xpath(filter)
 
           matching_node.each do |element|
+            modified = true
             text = Oga::XML::Text.new
             text.text = 'redacted'
 
@@ -21,7 +24,11 @@ module VSphereCloud
           end
         end
 
-        document.to_xml
+        if modified
+          document.to_xml
+        else
+          content
+        end
       end
 
     end
