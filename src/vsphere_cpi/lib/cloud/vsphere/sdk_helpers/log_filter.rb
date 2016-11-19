@@ -11,17 +11,21 @@ module VSphereCloud
       def filter(content)
         modified = false
 
-        document = Oga.parse_xml(content)
-        FILTERS.each do |filter|
-          matching_node = document.xpath(filter)
+        begin
+          document = Oga.parse_xml(content) 
+          FILTERS.each do |filter|
+            matching_node = document.xpath(filter)
 
-          matching_node.each do |element|
-            modified = true
-            text = Oga::XML::Text.new
-            text.text = 'redacted'
+            matching_node.each do |element|
+              modified = true
+              text = Oga::XML::Text.new
+              text.text = 'redacted'
 
-            element.children = [text]
+              element.children = [text]
+            end
           end
+        rescue
+          content
         end
 
         if modified
