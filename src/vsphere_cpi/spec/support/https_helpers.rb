@@ -142,6 +142,15 @@ module Support
               }
             end
 
+            map '/download-text' do
+              run lambda { |env|
+                response = Rack::Response.new
+                response.headers.merge!('Content-Type' => 'application/octet-stream')
+                response.write('{ "some-key": "some-value" }')
+                response.finish
+              }
+            end
+
             run lambda { |env| [200, { 'Content-Type' => 'text/plain'}, ['success']] }
           }, server_config)
         end

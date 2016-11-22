@@ -86,12 +86,17 @@ module LifecycleProperties
       'datacenters' => [datacenter_config]
     }, overrides)
 
-    {
+    opts = {
       'agent' => {
         'ntp' => ['10.80.0.44'],
       },
       'vcenters' => [vcenter_options]
     }
+    if overrides['soap_log']
+      opts['soap_log'] = overrides['soap_log']
+    end
+
+    opts
   end
 
   def deep_merge(first, second)

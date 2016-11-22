@@ -34,7 +34,8 @@ context 'debug logging' do
   end
 
   let(:cpi) do
-    cpi = VSphereCloud::Cloud.new(cpi_options)
+    opts = cpi_options({ soap_log: logger })
+    cpi = VSphereCloud::Cloud.new(opts)
     cpi.logger = Logger.new(logger)
     cpi
   end
@@ -43,7 +44,9 @@ context 'debug logging' do
     env = {'secret' => 'my-fake-secret'}
     vm_lifecycle(cpi, [], vm_type, network_spec, @stemcell_id, env)
 
-    expect(logger.string).to include("Creating vm")
+    expect(logger.string).to include("Creating vm") # ensure .debug logs are included
+    expect(logger.string).to include("POST")        # ensure HTTP logs are included
+
     if logger.string.include?(password)
       fail 'Expected CPI log to not contain the contents of $BOSH_VSPHERE_CPI_PASSWORD but it did.'
     end

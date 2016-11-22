@@ -59,7 +59,7 @@ module VSphereCloud
       if content
         @log_writer << "Request Body:\n"
 
-        if content.is_a?(String) && content.force_encoding('utf-8').valid_encoding?
+        if is_content_loggable?(content, additional_headers)
           @log_writer << @log_filter.filter(content) + "\n"
         else
           @log_writer << "REQUEST BODY IS BINARY DATA\n"
@@ -109,12 +109,16 @@ module VSphereCloud
       if resp.content
         @log_writer << "Response Body:\n"
 
-        if resp.content.is_a?(String) && resp.content.force_encoding('utf-8').valid_encoding?
+        if is_content_loggable?(resp.content, resp.headers)
           @log_writer << resp.content + "\n"
         else
           @log_writer << "RESPONSE BODY IS BINARY DATA\n"
         end
       end
+    end
+
+    def is_content_loggable?(content, headers)
+      content.is_a?(String) && headers['Content-Type'] != 'application/octet-stream' && content.force_encoding('utf-8').valid_encoding?
     end
   end
 end

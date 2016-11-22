@@ -41,6 +41,23 @@ module VSphereCloud
       end
 
       describe "#get" do
+        context 'when response body has Content-Type: application/octet-stream' do
+          it 'logs the request and response headers, but not the body' do
+            url = "https://localhost:#{@server.port}/download-text"
+            response = http_client.get(url)
+            expect(response.status).to eq(200)
+
+            expected_response_header = 'Content-Type: application/octet-stream'
+
+            log_contents = File.read(log_file.path)
+            expect(log_contents).to include(
+              url,
+              expected_response_header,
+            )
+            expect(log_contents).to_not include('some-key')
+          end
+        end
+
         context 'when response or request body includes non-utf8 data' do
           it 'logs the request and response headers, but not the body' do
             url = "https://localhost:#{@server.port}/download"
@@ -79,6 +96,23 @@ module VSphereCloud
       end
 
       describe "#put" do
+        context 'when request body has Content-Type: application/octet-stream' do
+          it 'logs the request and response headers, but not the body' do
+            url = "https://localhost:#{@server.port}"
+            response = http_client.put(url, '{ "some-key": "some-value" }', {'Content-Type' => 'application/octet-stream'})
+            expect(response.status).to eq(200)
+
+            expected_request_header = 'Content-Type: application/octet-stream'
+
+            log_contents = File.read(log_file.path)
+            expect(log_contents).to include(
+              url,
+              expected_request_header,
+            )
+            expect(log_contents).to_not include('some-key')
+          end
+        end
+
         context 'when response or request body includes non-utf8 data' do
           it 'logs the request and response headers, but not the body' do
             url = "https://localhost:#{@server.port}"
