@@ -15,8 +15,8 @@ module VSphereCloud
       end
     end
 
-    attr_accessor :client
-    attr_reader :config, :logger, :datacenter, :heartbeat_thread
+    attr_accessor :client, :logger # exposed for testing
+    attr_reader :config, :datacenter, :heartbeat_thread
 
     def initialize(options)
       @config = Config.build(options)
@@ -744,21 +744,17 @@ module VSphereCloud
 
     def add_disk_to_agent_env(vm, disk, device_unit_number)
       env = @agent_env.get_current_env(vm.mob, @datacenter.name)
-      @logger.info("Reading current agent env: #{env.pretty_inspect}")
       env['disks']['persistent'][disk.cid] = device_unit_number.to_s
       location = get_vm_location(vm.mob, datacenter: @datacenter.name)
       @agent_env.set_env(vm.mob, location, env)
-      @logger.info("Updated agent env to: #{env.pretty_inspect}")
     end
 
     def delete_disk_from_agent_env(vm, disk_cid)
       vm_mob = vm.mob
       location = get_vm_location(vm_mob)
       env = @agent_env.get_current_env(vm_mob, location[:datacenter])
-      @logger.info("Reading current agent env: #{env.pretty_inspect}")
       if env['disks']['persistent'][disk_cid]
         env['disks']['persistent'].delete(disk_cid)
-        @logger.info("Updating agent env to: #{env.pretty_inspect}")
 
         @agent_env.set_env(vm_mob, location, env)
       end

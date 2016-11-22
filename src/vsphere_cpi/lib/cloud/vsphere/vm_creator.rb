@@ -101,7 +101,6 @@ module VSphereCloud
         disk_env = @cpi.generate_disk_env(created_vm.system_disk, ephemeral_disk_config.device)
         env = @cpi.generate_agent_env(vm_config.name, created_vm.mob, vm_config.agent_id, network_env, disk_env)
         env['env'] = vm_config.agent_env
-        @logger.info("Setting VM env: #{env.pretty_inspect}")
 
         location = @cpi.get_vm_location(
           created_vm.mob,
