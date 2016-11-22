@@ -118,7 +118,7 @@ module VSphereCloud
 
           # TODO: this code re-use is messy, extract the necessary functionality out of vm_config
           manifest_params = {
-            resource_pool: {
+            vm_type: {
               'ram' => 0,
             },
             global_clusters: @datacenter.clusters_hash,
@@ -202,7 +202,7 @@ module VSphereCloud
       client.find_vm_by_name(@datacenter.mob, name)
     end
 
-    def create_vm(agent_id, stemcell_cid, resource_pool, networks_spec, existing_disk_cids = [], environment = nil)
+    def create_vm(agent_id, stemcell_cid, vm_type, networks_spec, existing_disk_cids = [], environment = nil)
       with_thread_name("create_vm(#{agent_id}, ...)") do
         stemcell_vm = stemcell_vm(stemcell_cid)
         raise "Could not find VM for stemcell '#{stemcell_cid}'" if stemcell_vm.nil?
@@ -216,7 +216,7 @@ module VSphereCloud
 
         disk_configs = DiskConfigs.new(
           datacenter: @datacenter,
-          resource_pool: resource_pool,
+          vm_type: vm_type,
         )
         disk_configurations = existing_disk_cids.map do |cid|
           disk_configs.disk_config_from_persistent_disk(cid)
@@ -225,7 +225,7 @@ module VSphereCloud
         disk_configurations.push(ephemeral_disk_config)
 
         manifest_params = {
-          resource_pool: resource_pool,
+          vm_type: vm_type,
           networks_spec: networks_spec,
           agent_id: agent_id,
           agent_env: environment,
@@ -259,8 +259,8 @@ module VSphereCloud
         created_vm = vm_creator.create(vm_config)
 
         begin
-          if resource_pool.key?('nsx') && !resource_pool['nsx']['security_groups'].nil?
-            resource_pool['nsx']['security_groups'].each do |security_group|
+          if vm_type.key?('nsx') && !vm_type['nsx']['security_groups'].nil?
+            vm_type['nsx']['security_groups'].each do |security_group|
               nsx.add_vm_to_security_group(security_group, created_vm.mob_id)
             end
           end
@@ -272,10 +272,10 @@ module VSphereCloud
             end
           end
 
-          if resource_pool.key?('nsx') && !resource_pool['nsx']['lbs'].nil?
-            security_groups = resource_pool['nsx']['lbs'].map { |m| m['security_group'] }.uniq
+          if vm_type.key?('nsx') && !vm_type['nsx']['lbs'].nil?
+            security_groups = vm_type['nsx']['lbs'].map { |m| m['security_group'] }.uniq
             security_groups.each { |sg| nsx.add_vm_to_security_group(sg, created_vm.mob_id) }
-            nsx.add_members_to_lbs(resource_pool['nsx']['lbs'])
+            nsx.add_members_to_lbs(vm_type['nsx']['lbs'])
           end
         rescue => e
           @logger.info("Failed to apply NSX properties to VM '#{created_vm.cid}' with error: #{e}")
@@ -363,7 +363,7 @@ module VSphereCloud
 
         disk_configs = DiskConfigs.new(
           datacenter: @datacenter,
-          resource_pool: nil,
+          vm_type: nil,
         )
         disk_config = disk_configs.disk_config_from_persistent_disk(director_disk_cid)
 

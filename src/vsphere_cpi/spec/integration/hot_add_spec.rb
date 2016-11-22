@@ -2,7 +2,7 @@ require 'integration/spec_helper'
 
 context 'when having cpu/mem hot add enabled' do
 
-  let(:resource_pool) do
+  let(:vm_type) do
     {
       'ram' => 512,
       'disk' => 2048,
@@ -23,8 +23,8 @@ context 'when having cpu/mem hot add enabled' do
     }
   end
 
-  let (:resource_pool_with_hot_params) do
-    resource_pool.merge({
+  let (:vm_type_with_hot_params) do
+    vm_type.merge({
       'cpu_hot_add_enabled' => true,
       'memory_hot_add_enabled' => true
     })
@@ -35,7 +35,7 @@ context 'when having cpu/mem hot add enabled' do
       vm_id = @cpi.create_vm(
         'agent-007',
         @stemcell_id,
-        resource_pool_with_hot_params,
+        vm_type_with_hot_params,
         network_spec,
         [],
         {}

@@ -391,7 +391,7 @@ module VSphereCloud
       end
       let(:fake_datastore) { instance_double(Resources::Datastore, name: 'fake-datastore') }
       let(:fake_vm) { instance_double(Resources::VM, cid: 'fake-cloud-id', mob_id: 'fake-mob-id') }
-      let(:resource_pool) do
+      let(:vm_type) do
         {
           'disk' => 4096,
         }
@@ -433,7 +433,7 @@ module VSphereCloud
 
       it 'creates a new VM with provided manifest properties' do
         expected_manifest_params = {
-          resource_pool: resource_pool,
+          vm_type: vm_type,
           networks_spec: "fake-networks-hash",
           agent_id:      "fake-agent-id",
           agent_env:     {},
@@ -486,7 +486,7 @@ module VSphereCloud
         vsphere_cloud.create_vm(
           "fake-agent-id",
           "fake-stemcell-cid",
-          resource_pool,
+          vm_type,
           "fake-networks-hash",
           existing_disk_cids,
           {},
@@ -495,7 +495,7 @@ module VSphereCloud
 
       it 'creates a new VM with no existing disks and default environment' do
         expected_manifest_params = {
-          resource_pool: resource_pool,
+          vm_type: vm_type,
           networks_spec: "fake-networks-hash",
           agent_id:      "fake-agent-id",
           agent_env:     nil,
@@ -541,7 +541,7 @@ module VSphereCloud
         vsphere_cloud.create_vm(
           "fake-agent-id",
           "fake-stemcell-cid",
-          resource_pool,
+          vm_type,
           "fake-networks-hash",
         )
       end
@@ -582,7 +582,7 @@ module VSphereCloud
           vsphere_cloud.create_vm(
             "fake-agent-id",
             "fake-stemcell-cid",
-            resource_pool,
+            vm_type,
             "fake-networks-hash",
             existing_disk_cids,
             {},
@@ -595,7 +595,7 @@ module VSphereCloud
 
         it 'creates a new VM with a thinly-provisioned ephemeral disk' do
           expected_manifest_params = {
-            resource_pool: resource_pool,
+            vm_type: vm_type,
             networks_spec: "fake-networks-hash",
             agent_id:      "fake-agent-id",
             agent_env:     {},
@@ -648,7 +648,7 @@ module VSphereCloud
           vsphere_cloud.create_vm(
             "fake-agent-id",
             "fake-stemcell-cid",
-            resource_pool,
+            vm_type,
             "fake-networks-hash",
             existing_disk_cids,
             {},
@@ -670,7 +670,7 @@ module VSphereCloud
             nsx_password: 'fake-nsx-password',
           ).as_null_object
         end
-        let(:resource_pool) do
+        let(:vm_type) do
           {
             'nsx' => {
               'security_groups' => [
@@ -714,7 +714,7 @@ module VSphereCloud
           vsphere_cloud.create_vm(
             "fake-agent-id",
             "fake-stemcell-cid",
-            resource_pool,
+            vm_type,
             "fake-networks-hash",
             [],
             environment,

@@ -46,7 +46,7 @@ describe 'nested datacenters', nested_datacenter: true  do
     }
   end
 
-  let(:resource_pool) do
+  let(:vm_type) do
     {
       'ram' => 512,
       'disk' => 2048,
@@ -64,7 +64,7 @@ describe 'nested datacenters', nested_datacenter: true  do
           nested_datacenter_stemcell_id = @nested_datacenter_cpi.create_stemcell("#{temp_dir}/image", nil)
         end
 
-        vm_lifecycle(@nested_datacenter_cpi, [], resource_pool, network_spec, nested_datacenter_stemcell_id) do |vm_id|
+        vm_lifecycle(@nested_datacenter_cpi, [], vm_type, network_spec, nested_datacenter_stemcell_id) do |vm_id|
           vm = @nested_datacenter_cpi.vm_provider.find(vm_id)
           expect(vm.cluster).to eq(@nested_datacenter_cluster_name)
           expect(vm.resource_pool).to eq(@nested_datacenter_resource_pool_name)

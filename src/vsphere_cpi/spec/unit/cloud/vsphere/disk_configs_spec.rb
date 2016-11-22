@@ -2,9 +2,9 @@ require "spec_helper"
 
 module VSphereCloud
   describe DiskConfigs do
-    let(:disk_configs) { DiskConfigs.new(datacenter: datacenter, resource_pool: resource_pool, disk_pool: disk_pool) }
+    let(:disk_configs) { DiskConfigs.new(datacenter: datacenter, vm_type: vm_type, disk_pool: disk_pool) }
     let(:datacenter) { instance_double(Resources::Datacenter) }
-    let(:resource_pool) { {} }
+    let(:vm_type) { {} }
     let(:disk_pool) { {} }
 
     before do
@@ -114,15 +114,15 @@ module VSphereCloud
     end
 
     describe '#new_ephemeral_disk_config' do
-      context 'when datastores are specified under resource_pool' do
-        let(:resource_pool) do
+      context 'when datastores are specified under vm_type' do
+        let(:vm_type) do
           {
             'disk' => 1024,
             'datastores' => ['ds-1', 'ds-2'],
           }
         end
 
-        it 'includes a pattern constructed from resource_pool' do
+        it 'includes a pattern constructed from vm_type' do
           disk_config = disk_configs.new_ephemeral_disk_config
           expect(disk_config).to include({
             size: 1024,
@@ -132,8 +132,8 @@ module VSphereCloud
         end
       end
 
-      context 'when datastores are not specified under resource_pool' do
-        let(:resource_pool) do
+      context 'when datastores are not specified under vm_type' do
+        let(:vm_type) do
           {
             'disk' => 1024,
           }

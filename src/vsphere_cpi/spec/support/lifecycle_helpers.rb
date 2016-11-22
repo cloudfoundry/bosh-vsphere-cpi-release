@@ -224,11 +224,11 @@ module LifecycleHelpers
     true
   end
 
-  def vm_lifecycle(cpi, disk_locality, resource_pool, network_spec, stemcell_id, env = {'key' => 'value'})
+  def vm_lifecycle(cpi, disk_locality, vm_type, network_spec, stemcell_id, env = {'key' => 'value'})
     vm_id = cpi.create_vm(
       'agent-007',
       stemcell_id,
-      resource_pool,
+      vm_type,
       network_spec,
       disk_locality,
       env
@@ -271,18 +271,18 @@ module LifecycleHelpers
     cpi.create_vm(
       'agent-007',
       stemcell_id,
-      resource_pool,
+      vm_type,
       network_spec,
       [],
       {}
     )
   end
 
-  def create_vm_with_resource_pool(cpi, resource_pool, stemcell_id)
+  def create_vm_with_vm_type(cpi, vm_type, stemcell_id)
     cpi.create_vm(
       'agent-007',
       stemcell_id,
-      resource_pool,
+      vm_type,
       network_spec,
       [],
       {'key' => 'value'}

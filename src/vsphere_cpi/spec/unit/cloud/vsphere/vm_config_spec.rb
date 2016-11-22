@@ -125,17 +125,17 @@ module VSphereCloud
     end
 
     describe '#ephemeral_disk_size' do
-      let(:input) { { resource_pool: { "disk" => 1234 } } }
+      let(:input) { { vm_type: { "disk" => 1234 } } }
       it 'returns the provided disk size' do
         expect(vm_config.ephemeral_disk_size).to eq(1234)
       end
     end
 
     describe '#cluster_name' do
-      context 'when a cluster is specified within resource_pool' do
+      context 'when a cluster is specified within vm_type' do
         let(:input) do
           {
-            resource_pool: {
+            vm_type: {
               "datacenters" => [
                 "clusters" => [
                   { "fake-cluster-name" => {} }
@@ -162,14 +162,14 @@ module VSphereCloud
           }
         end
 
-        it 'returns the resource_pool cluster name' do
+        it 'returns the vm_type cluster name' do
           expect(vm_config.cluster_name).to eq("fake-cluster-name")
         end
 
-        context 'when a non-existent cluster is specified in resource_pool' do
+        context 'when a non-existent cluster is specified in vm_type' do
           let(:input) do
           {
-            resource_pool: {
+            vm_type: {
               "datacenters" => [
                 "clusters" => [
                   { "fake-cluster-name" => {} }
@@ -194,10 +194,10 @@ module VSphereCloud
         end
       end
 
-      context 'when datacenters and clusters are not specified in resource_pool' do
+      context 'when datacenters and clusters are not specified in vm_type' do
         let(:input) do
           {
-            resource_pool: {
+            vm_type: {
               "ram" => 1024,
               "disk" => 4096
             },
@@ -250,7 +250,7 @@ module VSphereCloud
         context 'when a disk configuration includes target_datastore_pattern' do
           let(:input) do
             {
-              resource_pool: {
+              vm_type: {
                 "ram" => 1024,
                 "disk" => 4096
               },
@@ -277,7 +277,7 @@ module VSphereCloud
     describe '#ephemeral_datastore_name' do
       let(:input) do
         {
-          resource_pool: {
+          vm_type: {
             "ram" => 512,
           },
           disk_configurations: disk_configurations,
@@ -332,7 +332,7 @@ module VSphereCloud
       context 'when drs_rules are specified under cluster' do
         let(:input) do
           {
-            resource_pool: {
+            vm_type: {
               "datacenters" => [
                 "clusters" => [
                   {
@@ -356,7 +356,7 @@ module VSphereCloud
       context 'when resource_pool is specified under cluster' do
         let(:input) do
           {
-            resource_pool: {
+            vm_type: {
               "datacenters" => [
                 "clusters" => [
                   {
@@ -375,10 +375,10 @@ module VSphereCloud
         end
       end
 
-      context 'when no clusters are specified in resource_pool' do
+      context 'when no clusters are specified in vm_type' do
         let(:input) do
           {
-            resource_pool: {},
+            vm_type: {},
           }
         end
 
@@ -392,7 +392,7 @@ module VSphereCloud
       context 'when drs_rules are specified under cluster' do
         let(:input) do
           {
-            resource_pool: {
+            vm_type: {
               "datacenters" => [
                 "clusters" => [
                   {
@@ -420,7 +420,7 @@ module VSphereCloud
       context 'when resource_pool is specified under cluster' do
         let(:input) do
           {
-            resource_pool: {
+            vm_type: {
               "datacenters" => [
                 "clusters" => [
                   {
@@ -441,10 +441,10 @@ module VSphereCloud
         end
       end
 
-      context 'when no clusters are specified in resource_pool' do
+      context 'when no clusters are specified in vm_type' do
         let(:input) do
           {
-            resource_pool: {},
+            vm_type: {},
           }
         end
 
@@ -458,7 +458,7 @@ module VSphereCloud
       context 'when drs_rules are specified under cluster' do
         let(:input) do
           {
-            resource_pool: {
+            vm_type: {
               "datacenters" => [
                 "clusters" => [
                   {
@@ -482,7 +482,7 @@ module VSphereCloud
       context 'when drs_rules are not provided' do
         let(:input) do
           {
-            resource_pool: {
+            vm_type: {
               "datacenters" => [
                 "clusters" => [
                   {
@@ -504,7 +504,7 @@ module VSphereCloud
       context 'when drs_rules are not provided' do
         let(:input) do
           {
-            resource_pool: {
+            vm_type: {
               "datacenters" => [
                 "clusters" => [
                   {
@@ -524,7 +524,7 @@ module VSphereCloud
 
     describe '#config_spec_params' do
       context 'when number of CPUs is provided' do
-        let(:input) { { resource_pool: { "cpu" => 2 } } }
+        let(:input) { { vm_type: { "cpu" => 2 } } }
         let(:output) { { num_cpus: 2 } }
 
         it 'maps to num_cpus' do
@@ -533,7 +533,7 @@ module VSphereCloud
       end
 
       context 'when memory in MB is provided' do
-        let(:input) { { resource_pool: { "ram" => 4096 } } }
+        let(:input) { { vm_type: { "ram" => 4096 } } }
         let(:output) { { memory_mb: 4096 } }
 
         it 'maps to memory_mb' do
@@ -542,7 +542,7 @@ module VSphereCloud
       end
 
       context 'when nested_hardware_virtualization is true' do
-        let(:input) { { resource_pool: { "nested_hardware_virtualization" => true } } }
+        let(:input) { { vm_type: { "nested_hardware_virtualization" => true } } }
         let(:output) { { nested_hv_enabled: true } }
 
         it 'maps to num_cpus' do
@@ -551,7 +551,7 @@ module VSphereCloud
       end
 
       context 'when nested_hardware_virtualization is false' do
-        let(:input) { { resource_pool: { "nested_hardware_virtualization" => false } } }
+        let(:input) { { vm_type: { "nested_hardware_virtualization" => false } } }
         let(:output) { {} }
 
         it 'does not set any value in the config spec params' do
@@ -560,7 +560,7 @@ module VSphereCloud
       end
 
       context 'when cpu_hot_add_enabled is true' do
-        let(:input) { { resource_pool: { "cpu_hot_add_enabled" => true } } }
+        let(:input) { { vm_type: { "cpu_hot_add_enabled" => true } } }
         let(:output) { { cpu_hot_add_enabled: true } }
 
         it 'sets it to true' do
@@ -569,7 +569,7 @@ module VSphereCloud
       end
 
       context 'when memory_hot_add_enabled is true' do
-        let(:input) { { resource_pool: { "memory_hot_add_enabled" => true } } }
+        let(:input) { { vm_type: { "memory_hot_add_enabled" => true } } }
         let(:output) { { memory_hot_add_enabled: true }  }
 
         it 'sets it to true' do
@@ -593,7 +593,7 @@ module VSphereCloud
       context 'when a cluster is specified but no DRS rules are specified' do
         let(:input) do
           {
-            resource_pool: {
+            vm_type: {
               "datacenters" => [
                 "clusters" => [
                   {
@@ -615,7 +615,7 @@ module VSphereCloud
       context 'when several DRS rules are specified in cloud properties' do
         let(:input) do
           {
-            resource_pool: {
+            vm_type: {
               "datacenters" => [
                 "clusters" => [
                   {
@@ -643,7 +643,7 @@ module VSphereCloud
       context 'when one DRS rule is specified' do
         let(:input) do
           {
-            resource_pool: {
+            vm_type: {
               "datacenters" => [
                 "clusters" => [
                   {

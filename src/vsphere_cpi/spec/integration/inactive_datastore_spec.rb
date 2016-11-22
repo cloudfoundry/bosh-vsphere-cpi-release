@@ -23,7 +23,7 @@ describe 'inactive datastore handling' do
   end
 
   context 'when the user specifies an inactive datastore' do
-    let(:resource_pool) do
+    let(:vm_type) do
       {
         'ram' => 512,
         'disk' => 2048,
@@ -39,7 +39,7 @@ describe 'inactive datastore handling' do
 
     it 'returns an error creating a VM' do
       expect {
-        inactive_cpi.create_vm('agent-007', @stemcell_id, resource_pool, network_spec)
+        inactive_cpi.create_vm('agent-007', @stemcell_id, vm_type, network_spec)
       }.to raise_error(/No valid placement found/)
     end
 
@@ -52,7 +52,7 @@ describe 'inactive datastore handling' do
 
   context 'when the user specifies a mix of active and inactive datastores' do
     let(:active_datastores) { datastore_names_matching_pattern(inactive_cpi, @cluster_name, @datastore_pattern) }
-    let(:resource_pool) do
+    let(:vm_type) do
       {
         'ram' => 512,
         'disk' => 2048,
@@ -68,7 +68,7 @@ describe 'inactive datastore handling' do
 
     it 'places the VM in the active datastore' do
       begin
-        vm_id = inactive_cpi.create_vm('agent-007', @stemcell_id, resource_pool, network_spec)
+        vm_id = inactive_cpi.create_vm('agent-007', @stemcell_id, vm_type, network_spec)
         vm = inactive_cpi.vm_provider.find(vm_id)
         ephemeral_disk = vm.ephemeral_disk
         expect(ephemeral_disk).to_not be_nil

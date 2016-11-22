@@ -27,7 +27,7 @@ context 'given cpis that are configured to use same cluster but different datast
     }
   end
 
-  let(:resource_pool) do
+  let(:vm_type) do
     {
       'ram' => 512,
       'disk' => 2048,
@@ -59,7 +59,7 @@ context 'given cpis that are configured to use same cluster but different datast
     @vm_id = first_datastore_cpi.create_vm(
       'agent-007',
       @stemcell_id,
-      resource_pool,
+      vm_type,
       network_spec,
       [],
       {}

@@ -17,7 +17,7 @@ describe 're-attaching a persistent disk' do
 
   let(:vlan) { @vlan }
 
-  let(:resource_pool) do
+  let(:vm_type) do
     {
       'ram' => 512,
       'disk' => 2048,
@@ -30,7 +30,7 @@ describe 're-attaching a persistent disk' do
       vm_id = @cpi.create_vm(
         'agent-007',
         @stemcell_id,
-        resource_pool,
+        vm_type,
         network_spec,
         [],
         {'key' => 'value'}

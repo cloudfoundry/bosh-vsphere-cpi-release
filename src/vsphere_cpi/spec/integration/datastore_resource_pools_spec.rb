@@ -1,6 +1,6 @@
 require 'integration/spec_helper'
 
-context 'when datastores are configured in resource_pools' do
+context 'when datastores are configured in vm_types' do
   before (:all) do
     @cluster_name = fetch_and_verify_cluster('BOSH_VSPHERE_CPI_CLUSTER')
     @datastore_pattern = fetch_and_verify_datastore('BOSH_VSPHERE_CPI_DATASTORE_PATTERN', @cluster_name)
@@ -9,7 +9,7 @@ context 'when datastores are configured in resource_pools' do
     @second_cluster_datastore = fetch_and_verify_datastore('BOSH_VSPHERE_CPI_SECOND_CLUSTER_DATASTORE', @second_cluster_name)
   end
 
-  let(:resource_pool) do
+  let(:vm_type) do
     {
       'ram' => 512,
       'disk' => 2048,
@@ -30,8 +30,8 @@ context 'when datastores are configured in resource_pools' do
     }
   end
 
-  let (:resource_pool_with_datastores) do
-    resource_pool.merge({
+  let (:vm_type_with_datastores) do
+    vm_type.merge({
       'datastores' => [@second_cluster_datastore]
     })
   end
@@ -52,7 +52,7 @@ context 'when datastores are configured in resource_pools' do
       vm_id = second_cluster_cpi.create_vm(
         'agent-007',
         @stemcell_id,
-        resource_pool_with_datastores,
+        vm_type_with_datastores,
         network_spec,
         [],
         {}
@@ -70,7 +70,7 @@ context 'when datastores are configured in resource_pools' do
     end
   end
 
-  context 'when a valid cluster is configured in resource_pools' do
+  context 'when a valid cluster is configured in vm_types' do
     let(:second_cluster_cpi) do
       # expect global datastore pattern to be overridden
       options = cpi_options(
@@ -83,8 +83,8 @@ context 'when datastores are configured in resource_pools' do
       VSphereCloud::Cloud.new(options)
     end
 
-    let (:resource_pool_with_datastores) do
-      resource_pool.merge({
+    let (:vm_type_with_datastores) do
+      vm_type.merge({
         'datastores' => [@second_cluster_datastore],
         'datacenters' => [{
           'name' => @datacenter_name,
@@ -100,7 +100,7 @@ context 'when datastores are configured in resource_pools' do
         vm_id = second_cluster_cpi.create_vm(
           'agent-007',
           @stemcell_id,
-          resource_pool_with_datastores,
+          vm_type_with_datastores,
           network_spec,
           [],
           {}
@@ -122,7 +122,7 @@ context 'when datastores are configured in resource_pools' do
     end
   end
 
-  context 'when an invalid cluster is configured in resource_pools' do
+  context 'when an invalid cluster is configured in vm_types' do
     let(:two_cluster_cpi) do
       options = cpi_options(
         datacenters: [{
@@ -132,8 +132,8 @@ context 'when datastores are configured in resource_pools' do
       VSphereCloud::Cloud.new(options)
     end
 
-    let (:resource_pool_with_datastores) do
-      resource_pool.merge({
+    let (:vm_type_with_datastores) do
+      vm_type.merge({
         'datastores' => [@second_cluster_datastore],
         'datacenters' => [{
           'name' => @datacenter_name,
@@ -151,7 +151,7 @@ context 'when datastores are configured in resource_pools' do
           vm_id = two_cluster_cpi.create_vm(
             'agent-007',
             @stemcell_id,
-            resource_pool_with_datastores,
+            vm_type_with_datastores,
             network_spec,
             [],
             {}

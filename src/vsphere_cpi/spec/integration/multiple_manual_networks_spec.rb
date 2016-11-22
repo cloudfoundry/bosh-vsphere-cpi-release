@@ -25,7 +25,7 @@ describe 'multiple manual networks' do
 
   let(:vlan) { @vlan }
 
-  let(:resource_pool) do
+  let(:vm_type) do
     {
       'ram' => 512,
       'disk' => 2048,
@@ -35,7 +35,7 @@ describe 'multiple manual networks' do
 
   context 'with multiple manual networks' do
     it 'should exercise the vm lifecycle' do
-      vm_lifecycle(@cpi, [], resource_pool, network_spec, @stemcell_id)
+      vm_lifecycle(@cpi, [], vm_type, network_spec, @stemcell_id)
     end
   end
 end

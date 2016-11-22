@@ -27,7 +27,7 @@ describe 'cloud_properties related to disks' do
     }
   end
 
-  let(:resource_pool) do
+  let(:vm_type) do
     {
       'ram' => 512,
       'disk' => 2048,
@@ -47,7 +47,7 @@ describe 'cloud_properties related to disks' do
       vm_id = cpi.create_vm(
         'agent-007',
         @stemcell_id,
-        resource_pool,
+        vm_type,
         network_spec,
         [],
         {}
@@ -100,7 +100,7 @@ describe 'cloud_properties related to disks' do
         vm_id = cpi.create_vm(
           'agent-007',
           @stemcell_id,
-          resource_pool,
+          vm_type,
           network_spec,
           [],
           {}
@@ -151,7 +151,7 @@ describe 'cloud_properties related to disks' do
           cpi.create_vm(
             'agent-007',
             @stemcell_id,
-            resource_pool,
+            vm_type,
             network_spec,
             [],
             {}
@@ -197,7 +197,7 @@ describe 'cloud_properties related to disks' do
         vm_id = cpi.create_vm(
           'agent-007',
           @stemcell_id,
-          resource_pool,
+          vm_type,
           network_spec,
           [director_disk_id],
           {}
@@ -220,7 +220,7 @@ describe 'cloud_properties related to disks' do
     vm_id = cpi.create_vm(
       'agent-007',
       @stemcell_id,
-      resource_pool,
+      vm_type,
       network_spec,
       [disk_id],
       {}

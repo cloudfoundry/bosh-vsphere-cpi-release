@@ -17,7 +17,7 @@ context 'exercising core CPI functionality' do
 
   let(:vlan) { @vlan }
 
-  let(:resource_pool) do
+  let(:vm_type) do
     {
       'ram' => 512,
       'disk' => 2048,
@@ -39,7 +39,7 @@ context 'exercising core CPI functionality' do
 
   context 'without existing disks' do
     it 'should exercise the vm lifecycle' do
-      vm_lifecycle(@cpi, [], resource_pool, network_spec, @stemcell_id)
+      vm_lifecycle(@cpi, [], vm_type, network_spec, @stemcell_id)
     end
   end
 
@@ -48,7 +48,7 @@ context 'exercising core CPI functionality' do
     after { delete_disk(@cpi, @existing_volume_id) }
 
     it 'should exercise the vm lifecycle' do
-      vm_lifecycle(@cpi, [@existing_volume_id], resource_pool, network_spec, @stemcell_id)
+      vm_lifecycle(@cpi, [@existing_volume_id], vm_type, network_spec, @stemcell_id)
     end
   end
 end

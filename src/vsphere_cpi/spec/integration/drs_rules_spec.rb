@@ -28,7 +28,7 @@ describe 'DRS rules', drs: true do
         }
       }
     end
-    let(:resource_pool) do
+    let(:vm_type) do
       {
         'ram' => 512,
         'disk' => 2048,
@@ -46,7 +46,7 @@ describe 'DRS rules', drs: true do
     end
 
     it 'should exercise the vm lifecycle' do
-      vm_lifecycle(one_cluster_cpi, [], resource_pool, network_spec, @stemcell_id) do |vm_id|
+      vm_lifecycle(one_cluster_cpi, [], vm_type, network_spec, @stemcell_id) do |vm_id|
         vm = one_cluster_cpi.vm_provider.find(vm_id)
 
         datastore = one_cluster_cpi.client.cloud_searcher.get_managed_object(VimSdk::Vim::Datastore, name: @second_datastore)
@@ -79,7 +79,7 @@ describe 'DRS rules', drs: true do
           }
         end
 
-        let(:resource_pool) do
+        let(:vm_type) do
           {
             'ram' => 512,
             'disk' => 2048,
@@ -98,7 +98,7 @@ describe 'DRS rules', drs: true do
             first_vm_id = one_cluster_cpi.create_vm(
               'agent-007',
               @stemcell_id,
-              resource_pool,
+              vm_type,
               network_spec,
               [],
               env
@@ -106,7 +106,7 @@ describe 'DRS rules', drs: true do
             second_vm_id = one_cluster_cpi.create_vm(
               'agent-006',
               @stemcell_id,
-              resource_pool,
+              vm_type,
               network_spec,
               [],
               env
@@ -130,7 +130,7 @@ describe 'DRS rules', drs: true do
       end
 
       context 'given a resource pool that is configured with a drs rule' do
-        let(:resource_pool) do
+        let(:vm_type) do
           {
             'ram' => 512,
             'disk' => 2048,
@@ -154,7 +154,7 @@ describe 'DRS rules', drs: true do
             first_vm_id = one_cluster_cpi.create_vm(
               'agent-007',
               @stemcell_id,
-              resource_pool,
+              vm_type,
               network_spec,
               [],
               {'key' => 'value'}
@@ -162,7 +162,7 @@ describe 'DRS rules', drs: true do
             second_vm_id = one_cluster_cpi.create_vm(
               'agent-006',
               @stemcell_id,
-              resource_pool,
+              vm_type,
               network_spec,
               [],
               {'key' => 'value'}
@@ -198,7 +198,7 @@ describe 'DRS rules', drs: true do
       end
 
       context 'but the resource pool does not have drs rule' do
-        let(:resource_pool) do
+        let(:vm_type) do
           {
             'ram' => 512,
             'disk' => 2048,
@@ -217,7 +217,7 @@ describe 'DRS rules', drs: true do
             first_vm_id = one_cluster_cpi.create_vm(
               'agent-007',
               @stemcell_id,
-              resource_pool,
+              vm_type,
               network_spec,
               [],
               {'key' => 'value'}
@@ -225,7 +225,7 @@ describe 'DRS rules', drs: true do
             second_vm_id = one_cluster_cpi.create_vm(
               'agent-006',
               @stemcell_id,
-              resource_pool,
+              vm_type,
               network_spec,
               [],
               {'key' => 'value'}
@@ -243,7 +243,7 @@ describe 'DRS rules', drs: true do
       end
 
       context 'given a resource pool that is configured with a drs rule' do
-        let(:resource_pool) do
+        let(:vm_type) do
           {
             'ram' => 512,
             'disk' => 2048,
@@ -267,7 +267,7 @@ describe 'DRS rules', drs: true do
             first_vm_id = one_cluster_cpi.create_vm(
               'agent-007',
               @stemcell_id,
-              resource_pool,
+              vm_type,
               network_spec,
               [],
               {'key' => 'value'}
@@ -275,7 +275,7 @@ describe 'DRS rules', drs: true do
             second_vm_id = one_cluster_cpi.create_vm(
               'agent-006',
               @stemcell_id,
-              resource_pool,
+              vm_type,
               network_spec,
               [],
               {'key' => 'value'}
@@ -312,7 +312,7 @@ describe 'DRS rules', drs: true do
           vm_id = one_cluster_cpi.create_vm(
             'agent-007',
             @stemcell_id,
-            resource_pool,
+            vm_type,
             network_spec,
             [],
             {'key' => 'value'}
@@ -354,7 +354,7 @@ describe 'DRS rules', drs: true do
           vm_id = one_cluster_cpi.create_vm(
             'agent-007',
             @stemcell_id,
-            resource_pool,
+            vm_type,
             network_spec,
             [],
             {'key' => 'value'}

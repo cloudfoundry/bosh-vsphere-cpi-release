@@ -39,7 +39,7 @@ context 'when disk is in non-accessible datastore' do
   end
   let(:both_cluster_cpi) { VSphereCloud::Cloud.new(both_cluster_cpi_options) }
 
-  let(:resource_pool) do
+  let(:vm_type) do
     {
       'ram' => 512,
       'disk' => 2048,
@@ -134,7 +134,7 @@ context 'when disk is in non-accessible datastore' do
 
     it 'raises an error containing target cluster and datastore' do
       expect {
-        mismatch_cpi.create_vm('agent-007', @stemcell_id, resource_pool, network_spec)
+        mismatch_cpi.create_vm('agent-007', @stemcell_id, vm_type, network_spec)
       }.to raise_error { |error|
         expect(error).to be_a(Bosh::Clouds::CloudError)
         expect(error.message).to include(@second_cluster_datastore)

@@ -3,7 +3,7 @@ module VSphereCloud
 
     def initialize(opts)
       @datacenter = opts[:datacenter]
-      @resource_pool = opts[:resource_pool]
+      @vm_type = opts[:vm_type]
       @disk_pool = opts[:disk_pool]
     end
 
@@ -32,7 +32,7 @@ module VSphereCloud
 
     def new_ephemeral_disk_config
       return {
-        size: @resource_pool['disk'],
+        size: @vm_type['disk'],
         ephemeral: true,
         target_datastore_pattern: target_ephemeral_pattern,
       }
@@ -52,8 +52,8 @@ module VSphereCloud
     end
 
     def target_ephemeral_pattern
-      if @resource_pool['datastores'] && !@resource_pool['datastores'].empty?
-        escaped_names = @resource_pool['datastores'].map { |pattern| Regexp.escape(pattern) }
+      if @vm_type['datastores'] && !@vm_type['datastores'].empty?
+        escaped_names = @vm_type['datastores'].map { |pattern| Regexp.escape(pattern) }
         "^(#{escaped_names.join('|')})$"
       else
         @datacenter.ephemeral_pattern

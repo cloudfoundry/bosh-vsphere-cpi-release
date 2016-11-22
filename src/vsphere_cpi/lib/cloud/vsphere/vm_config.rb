@@ -43,7 +43,7 @@ module VSphereCloud
     end
 
     def ephemeral_disk_size
-      resource_pool["disk"]
+      vm_type["disk"]
     end
 
     def stemcell_cid
@@ -81,11 +81,11 @@ module VSphereCloud
 
     def config_spec_params
       params = {}
-      params[:num_cpus] = resource_pool['cpu']
-      params[:memory_mb] = resource_pool['ram']
-      params[:nested_hv_enabled] = true if resource_pool['nested_hardware_virtualization']
-      params[:cpu_hot_add_enabled] = true if resource_pool['cpu_hot_add_enabled']
-      params[:memory_hot_add_enabled] = true if resource_pool['memory_hot_add_enabled']
+      params[:num_cpus] = vm_type['cpu']
+      params[:memory_mb] = vm_type['ram']
+      params[:nested_hv_enabled] = true if vm_type['nested_hardware_virtualization']
+      params[:cpu_hot_add_enabled] = true if vm_type['cpu_hot_add_enabled']
+      params[:memory_hot_add_enabled] = true if vm_type['memory_hot_add_enabled']
       params.delete_if { |k, v| v.nil? }
     end
 
@@ -121,8 +121,8 @@ module VSphereCloud
 
     private
 
-    def resource_pool
-      @manifest_params[:resource_pool] || {}
+    def vm_type
+      @manifest_params[:vm_type] || {}
     end
 
     def available_clusters
@@ -152,7 +152,7 @@ module VSphereCloud
     end
 
     def datacenters_spec
-      resource_pool['datacenters'] || []
+      vm_type['datacenters'] || []
     end
 
     def resource_pool_clusters_spec
@@ -166,13 +166,13 @@ module VSphereCloud
       if available_clusters.empty?
         raise Bosh::Clouds::CloudError, "No valid clusters were provided"
       end
-      if resource_pool['ram'].nil?
+      if vm_type['ram'].nil?
         raise Bosh::Clouds::CloudError, "Must specify vm_types.cloud_properties.ram"
       end
 
       @cluster_picker.update(available_clusters)
       @cluster_placement = @cluster_picker.best_cluster_placement(
-        req_memory: resource_pool['ram'],
+        req_memory: vm_type['ram'],
         disk_configurations: disk_configurations,
       )
     end

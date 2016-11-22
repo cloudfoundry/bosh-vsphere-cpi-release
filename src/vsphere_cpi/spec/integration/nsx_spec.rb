@@ -44,7 +44,7 @@ describe 'NSX integration', nsx: true do
     }
   end
 
-  let(:base_resource_pool) do
+  let(:base_vm_type) do
     {
       'ram' => 512,
       'disk' => 2048,
@@ -72,8 +72,8 @@ describe 'NSX integration', nsx: true do
   end
 
   context 'when vm_type specifies an nsx Security Group' do
-    let(:resource_pool) do
-      base_resource_pool.merge({
+    let(:vm_type) do
+      base_vm_type.merge({
         'nsx' => {
           'security_groups' => [
             security_group,
@@ -83,7 +83,7 @@ describe 'NSX integration', nsx: true do
     end
 
     it 'creates the Security Group' do
-      vm_lifecycle(cpi, [], resource_pool, network_spec, @stemcell_id) do |vm_id|
+      vm_lifecycle(cpi, [], vm_type, network_spec, @stemcell_id) do |vm_id|
         vm_ids = cpi.nsx.get_vms_in_security_group(security_group)
         expect(vm_ids).to eq([vm_id])
       end
@@ -91,13 +91,13 @@ describe 'NSX integration', nsx: true do
 
     it 'adds a second VM to the Security Group' do
       begin
-        vm_id1 = create_vm_with_resource_pool(cpi, resource_pool, @stemcell_id)
+        vm_id1 = create_vm_with_vm_type(cpi, vm_type, @stemcell_id)
         vm_ids = cpi.nsx.get_vms_in_security_group(security_group)
         expect(vm_ids).to contain_exactly(vm_id1)
 
         # avoid IP collision
         network_spec['static']['ip'] = "169.254.0.#{rand(4..254)}"
-        vm_id2 = create_vm_with_resource_pool(cpi, resource_pool, @stemcell_id)
+        vm_id2 = create_vm_with_vm_type(cpi, vm_type, @stemcell_id)
         vm_ids = cpi.nsx.get_vms_in_security_group(security_group)
         expect(vm_ids).to contain_exactly(vm_id1, vm_id2)
       ensure
@@ -107,7 +107,7 @@ describe 'NSX integration', nsx: true do
     end
 
     context 'when the BOSH Director specifies a set of groups' do
-      let(:resource_pool) { base_resource_pool }
+      let(:vm_type) { base_vm_type }
       let(:environment) do
         {
           'bosh' => {
@@ -119,7 +119,7 @@ describe 'NSX integration', nsx: true do
       end
 
       it 'creates a Security Group for each BOSH group' do
-        vm_lifecycle(cpi, [], resource_pool, network_spec, @stemcell_id, environment) do |vm_id|
+        vm_lifecycle(cpi, [], vm_type, network_spec, @stemcell_id, environment) do |vm_id|
           vm_ids = cpi.nsx.get_vms_in_security_group(security_group)
           expect(vm_ids).to eq([vm_id])
         end
@@ -131,13 +131,13 @@ describe 'NSX integration', nsx: true do
         end
 
         it 'does not attempt to create security groups' do
-          vm_lifecycle(cpi, [], resource_pool, network_spec, @stemcell_id, environment)
+          vm_lifecycle(cpi, [], vm_type, network_spec, @stemcell_id, environment)
         end
       end
 
       context 'and vm_type specifies a duplicate nsx Security Group' do
-        let(:resource_pool) do
-          base_resource_pool.merge({
+        let(:vm_type) do
+          base_vm_type.merge({
             'nsx' => {
               'security_groups' => [
                 security_group,
@@ -147,7 +147,7 @@ describe 'NSX integration', nsx: true do
         end
 
         it 'adds the VM to the Security Group' do
-          vm_lifecycle(cpi, [], resource_pool, network_spec, @stemcell_id, environment) do |vm_id|
+          vm_lifecycle(cpi, [], vm_type, network_spec, @stemcell_id, environment) do |vm_id|
             vm_ids = cpi.nsx.get_vms_in_security_group(security_group)
             expect(vm_ids).to eq([vm_id])
           end
@@ -168,7 +168,7 @@ describe 'NSX integration', nsx: true do
 
       it 'raises an error' do
         expect {
-          create_vm_with_resource_pool(cpi, resource_pool, @stemcell_id)
+          create_vm_with_vm_type(cpi, vm_type, @stemcell_id)
         }.to raise_error(/Bad Username or Credentials presented/)
       end
     end
@@ -180,15 +180,15 @@ describe 'NSX integration', nsx: true do
 
       it 'raises an error' do
         expect {
-          create_vm_with_resource_pool(cpi, resource_pool, @stemcell_id)
+          create_vm_with_vm_type(cpi, vm_type, @stemcell_id)
         }.to raise_error(/NSX/)
       end
     end
   end
 
   context 'when vm_extensions has an NSX load balancer and pool' do
-    let(:resource_pool) do
-      base_resource_pool.merge({
+    let(:vm_type) do
+      base_vm_type.merge({
         'nsx' => {
           'lbs' => [
             {
@@ -218,7 +218,7 @@ describe 'NSX integration', nsx: true do
     end
 
     it 'creates a Security Group for the NSX load balancer and pool' do
-      vm_lifecycle(cpi, [], resource_pool, network_spec, @stemcell_id) do |vm_id|
+      vm_lifecycle(cpi, [], vm_type, network_spec, @stemcell_id) do |vm_id|
         vm_ids = cpi.nsx.get_vms_in_security_group(security_group)
         expect(vm_ids).to include(vm_id)
 

@@ -2,7 +2,7 @@ require 'integration/spec_helper'
 
 context 'when vApp Config is disabled' do
 
-  let(:resource_pool) do
+  let(:vm_type) do
     {
       'ram' => 512,
       'disk' => 2048,
@@ -28,7 +28,7 @@ context 'when vApp Config is disabled' do
       vm_id = @cpi.create_vm(
         'agent-007',
         @stemcell_id,
-        resource_pool,
+        vm_type,
         network_spec
       )
       vm = @cpi.vm_provider.find(vm_id)
@@ -61,7 +61,7 @@ context 'when vApp Config is disabled' do
       vm_id = @cpi.create_vm(
         'agent-007',
         @stemcell_id,
-        resource_pool,
+        vm_type,
         network_spec
       )
       vm = @cpi.vm_provider.find(vm_id)

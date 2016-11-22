@@ -19,7 +19,7 @@ describe 'set_vm_metadata' do
         }
       }
     end
-    let(:resource_pool) do
+    let(:vm_type) do
       {
         'ram' => 512,
         'disk' => 2048,
@@ -36,7 +36,7 @@ describe 'set_vm_metadata' do
       @vm_cid = cpi.create_vm(
         'agent-007',
         @stemcell_id,
-        resource_pool,
+        vm_type,
         network_spec,
         [],
         {'key' => 'value'}
