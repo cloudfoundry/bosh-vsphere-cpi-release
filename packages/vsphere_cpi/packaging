@@ -1,6 +1,6 @@
 #!/usr/bin/env sh
 
-set -e -x
+set -e
 
 BOSH_PACKAGES_DIR=${BOSH_PACKAGES_DIR:-/var/vcap/packages}
 

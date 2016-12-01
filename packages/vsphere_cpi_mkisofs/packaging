@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -e -x
+set -e
 
 echo "Installing smake"
 tar xvf vsphere_cpi_mkisofs/smake-1.2.4.tar.bz2
