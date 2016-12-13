@@ -31,9 +31,11 @@ module VSphereCloud
           method_name: 'RelocateVM_Task',
         },
         {
-          # used in set_vm_metadata, failure is only cosmetic, don't retry
+          # this class requires permission on the vCenter Root rather than a datacenter which may not be present
+          # used in set_vm_metadata where failure is only cosmetic and error is swallowed
+          # also used in drs_lock where failure will cause deploy to fail
           entity_class: VimSdk::Vim::CustomFieldsManager,
-          method_name: 'SetField',
+          fault_class: VimSdk::Vim::Fault::NoPermission,
         },
         {
           # sometimes called to confirm a disk does not exist
