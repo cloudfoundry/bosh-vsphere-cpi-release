@@ -70,7 +70,15 @@ module VSphereCloud
     end
 
     def soap_log
-      config['soap_log'] || config['cpi_log']
+      if vcenter_http_logging
+        config['soap_log'] || config['cpi_log']
+      else
+        nil
+      end
+    end
+
+    def vcenter_http_logging
+      vcenter['http_logging']
     end
 
     def agent
@@ -173,6 +181,7 @@ module VSphereCloud
             'host' => String,
             'user' => String,
             'password' => String,
+            'http_logging' => bool,
             optional('enable_auto_anti_affinity_drs_rules') => bool,
             'datacenters' => [{
               'name' => String,

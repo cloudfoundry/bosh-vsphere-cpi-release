@@ -83,7 +83,8 @@ module LifecycleProperties
       'user' => fetch_property('BOSH_VSPHERE_CPI_USER'),
       'password' => fetch_property('BOSH_VSPHERE_CPI_PASSWORD'),
       'default_disk_type' => 'preallocated',
-      'datacenters' => [datacenter_config]
+      'datacenters' => [datacenter_config],
+      'http_logging' => true
     }, overrides)
 
     opts = {

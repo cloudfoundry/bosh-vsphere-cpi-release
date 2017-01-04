@@ -33,23 +33,48 @@ context 'debug logging' do
     StringIO.new('')
   end
 
-  let(:cpi) do
-    opts = cpi_options({ soap_log: logger })
-    cpi = VSphereCloud::Cloud.new(opts)
-    cpi.logger = Logger.new(logger)
-    cpi
-  end
-
-  it 'does not log credentials' do
-    env = {'secret' => 'my-fake-secret'}
-    vm_lifecycle(cpi, [], vm_type, network_spec, @stemcell_id, env)
-
-    expect(logger.string).to include("Creating vm") # ensure .debug logs are included
-    expect(logger.string).to include("POST")        # ensure HTTP logs are included
-
-    if logger.string.include?(password)
-      fail 'Expected CPI log to not contain the contents of $BOSH_VSPHERE_CPI_PASSWORD but it did.'
+  context 'when http_logging is enabled' do
+    let(:cpi) do
+      opts = cpi_options({ soap_log: logger, http_logging: true})
+      cpi = VSphereCloud::Cloud.new(opts)
+      cpi.logger = Logger.new(logger)
+      cpi
     end
-    expect(logger.string).to_not include('my-fake-secret')
+
+    it 'does not log credentials' do
+      env = {'secret' => 'my-fake-secret'}
+      vm_lifecycle(cpi, [], vm_type, network_spec, @stemcell_id, env)
+
+      expect(logger.string).to include("Creating vm") # ensure .debug logs are included
+      expect(logger.string).to include("POST")        # ensure HTTP logs are included
+
+      if logger.string.include?(password)
+        fail 'Expected CPI log to not contain the contents of $BOSH_VSPHERE_CPI_PASSWORD but it did.'
+      end
+      expect(logger.string).to_not include('my-fake-secret')
+    end
   end
+
+  context 'when http_logging is NOT enabled' do
+    let(:cpi) do
+      opts = cpi_options({ soap_log: logger, http_logging: false})
+      cpi = VSphereCloud::Cloud.new(opts)
+      cpi.logger = Logger.new(logger)
+      cpi
+    end
+
+    it 'does not log http requests' do
+      env = {'secret' => 'my-fake-secret'}
+      vm_lifecycle(cpi, [], vm_type, network_spec, @stemcell_id, env)
+
+      expect(logger.string).to include("Creating vm") # ensure .debug logs are included
+      expect(logger.string).to_not include("POST")        # ensure HTTP logs are included
+
+      if logger.string.include?(password)
+        fail 'Expected CPI log to not contain the contents of $BOSH_VSPHERE_CPI_PASSWORD but it did.'
+      end
+      expect(logger.string).to_not include('my-fake-secret')
+    end
+  end
+
 end
