@@ -16,7 +16,7 @@ module VSphereCloud
         vcenter_default_disk_type: default_disk_type,
         soap_log: 'fake-log-file',
         vcenter_enable_auto_anti_affinity_drs_rules: false,
-        http_logging: true,
+        vcenter_http_logging: true,
       ).as_null_object
     end
     let(:default_disk_type) { 'preallocated' }

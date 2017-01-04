@@ -181,7 +181,7 @@ module VSphereCloud
             'host' => String,
             'user' => String,
             'password' => String,
-            'http_logging' => bool,
+            optional('http_logging') => bool,
             optional('enable_auto_anti_affinity_drs_rules') => bool,
             'datacenters' => [{
               'name' => String,
