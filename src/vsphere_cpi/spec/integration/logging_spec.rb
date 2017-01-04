@@ -45,8 +45,9 @@ context 'debug logging' do
       env = {'secret' => 'my-fake-secret'}
       vm_lifecycle(cpi, [], vm_type, network_spec, @stemcell_id, env)
 
-      expect(logger.string).to include("Creating vm") # ensure .debug logs are included
-      expect(logger.string).to include("POST")        # ensure HTTP logs are included
+      expect(logger.string).to include('Creating vm') # ensure .debug logs are included
+      expect(logger.string).to include('POST')        # ensure HTTP logs are included
+      expect(logger.string).to include('redacted')    # ensure password is redacted
 
       if logger.string.include?(password)
         fail 'Expected CPI log to not contain the contents of $BOSH_VSPHERE_CPI_PASSWORD but it did.'

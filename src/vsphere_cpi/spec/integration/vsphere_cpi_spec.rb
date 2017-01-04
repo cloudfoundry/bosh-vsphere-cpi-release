@@ -61,11 +61,13 @@ module VSphereCloud
       prepare_tests_folder(client, datacenter_name, vm_folder_name)
       prepare_tests_folder(client, datacenter_name, template_folder_name)
       prepare_tests_folder(client, datacenter_name, disk_folder_name)
+
       {
           'host' => host,
           'user' => user,
           'password' => password,
           'default_disk_type' => 'preallocated',
+          'http_logging' => true,
           'datacenters' => [{
                                 'name' => datacenter_name,
                                 'vm_folder' => "#{vm_folder_name}/lifecycle_tests",
@@ -156,23 +158,13 @@ module VSphereCloud
         FileUtils.rm_rf(temp_dir)
       end
 
-      it 'logs http requests and responses' do
+      it 'returns http requests and responses in the `log` field' do
         resp = external_cpi_response('create_stemcell', {}, stemcell_img, nil)
         expect(resp['error']).to be_nil
         expect(resp['result']).to_not be_nil
         @stemcell_id = resp['result']
 
         expect(resp['log']).to include('200 OK', '<?xml')
-      end
-
-      it 'does NOT log password on Login requests' do
-        resp = external_cpi_response('create_stemcell', {}, stemcell_img, nil)
-        expect(resp['error']).to be_nil
-        expect(resp['result']).to_not be_nil
-        @stemcell_id = resp['result']
-
-        expect(resp['log']).to include('200 OK', '<?xml', 'redacted')
-        expect(resp['log']).not_to include(password)
       end
     end
 
