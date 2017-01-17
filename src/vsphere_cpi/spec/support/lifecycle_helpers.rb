@@ -1,4 +1,5 @@
 require 'oga'
+require 'bosh/cpi'
 
 module LifecycleHelpers
   PRIVILEGES_INPUT_FILE = 'docs/required_vcenter_privileges.md'
@@ -33,7 +34,7 @@ module LifecycleHelpers
 
   def setup_global_config
     vsphere_config = VSphereSpecConfig.new
-    vsphere_config.logger = Logger.new(STDOUT)
+    vsphere_config.logger = Bosh::Cpi::Logger.new(STDOUT)
     vsphere_config.logger.level = Logger::DEBUG
     vsphere_config.uuid = '123'
     Bosh::Clouds::Config.configure(vsphere_config)

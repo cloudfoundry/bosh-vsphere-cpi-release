@@ -5,7 +5,7 @@ module VSphereCloud
   describe Cloud do
     subject(:vsphere_cloud) { Cloud.new(config) }
 
-    let(:config) { { fake: 'config' } }
+    let(:config) { { 'vcenters' => [fake: 'config'] } }
     let(:cloud_config) do
       instance_double('VSphereCloud::Config',
         logger: logger,
@@ -20,7 +20,7 @@ module VSphereCloud
       ).as_null_object
     end
     let(:default_disk_type) { 'preallocated' }
-    let(:logger) { instance_double('Logger', info: nil, debug: nil) }
+    let(:logger) { instance_double('Bosh::Cpi::Logger', info: nil, debug: nil) }
     let(:vcenter_client) { instance_double('VSphereCloud::VCenterClient', login: nil, service_content: service_content) }
     let(:http_basic_auth_client) { instance_double('VSphereCloud::NsxHttpClient') }
     let(:http_client) { instance_double('VSphereCloud::CpiHttpClient') }

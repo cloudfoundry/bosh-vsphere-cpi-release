@@ -1,7 +1,7 @@
 source 'https://rubygems.org'
 
 gem 'bosh_common', '1.3262.24.0'
-gem 'bosh_cpi',    '2.0.1'
+gem 'bosh_cpi',    '2.0.5'
 gem 'membrane',    '~>1.1.0'
 gem 'builder',     '~>3.1.4'
 gem 'nokogiri',    '~>1.6.6'

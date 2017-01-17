@@ -84,8 +84,11 @@ module LifecycleProperties
       'password' => fetch_property('BOSH_VSPHERE_CPI_PASSWORD'),
       'default_disk_type' => 'preallocated',
       'datacenters' => [datacenter_config],
-      'http_logging' => true
+      'http_logging' => true,
+      'request_id' => nil,
     }, overrides)
+
+    p vcenter_options
 
     opts = {
       'agent' => {

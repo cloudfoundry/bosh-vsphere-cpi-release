@@ -23,6 +23,11 @@ module VSphereCloud
 
       @logger = config.logger
 
+      request_id = options['vcenters'][0]['request_id']
+      if request_id
+        @logger.set_request_id(request_id)
+      end
+
       @http_client = VSphereCloud::CpiHttpClient.new(@config.soap_log)
 
       @client = VCenterClient.new(

@@ -15,7 +15,7 @@ require 'cloud/vsphere'
 cpi_config = YAML.load_file(ARGV.shift)
 
 Bosh::Clouds::Config.configure(OpenStruct.new(
-  logger: Logger.new(STDERR),
+  logger: Bosh::Cpi::Logger.new(STDERR),
   task_checkpoint: nil,
 ))
 
