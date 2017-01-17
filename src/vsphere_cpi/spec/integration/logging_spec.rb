@@ -44,7 +44,6 @@ context 'debug logging' do
     let(:cpi) do
       opts = cpi_options({ soap_log: log, http_logging: true})
       cpi = VSphereCloud::Cloud.new(opts)
-      cpi.logger = logger
       cpi
     end
 
@@ -67,7 +66,6 @@ context 'debug logging' do
     let(:cpi) do
       opts = cpi_options({ soap_log: log, http_logging: false})
       cpi = VSphereCloud::Cloud.new(opts)
-      cpi.logger = logger
       cpi
     end
 
