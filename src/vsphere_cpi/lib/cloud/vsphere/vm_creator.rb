@@ -55,7 +55,7 @@ module VSphereCloud
 
       dvs_index = {}
       vm_config.vsphere_networks.each do |network_name, ips|
-        network_mob = @client.find_network(@datacenter.mob, network_name)
+        network_mob = @client.find_network(@datacenter, network_name)
         if network_mob.nil?
           raise "Unable to find network '#{network_name}'. Verify that the portgroup exists."
         end

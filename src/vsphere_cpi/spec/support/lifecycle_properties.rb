@@ -88,8 +88,6 @@ module LifecycleProperties
       'request_id' => nil,
     }, overrides)
 
-    p vcenter_options
-
     opts = {
       'agent' => {
         'ntp' => ['10.80.0.44'],

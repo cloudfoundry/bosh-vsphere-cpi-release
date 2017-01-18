@@ -138,7 +138,7 @@ module LifecycleHelpers
 
   def verify_vlan(cpi, vlan, env_var_name)
     datacenter_name = cpi.datacenter.name
-    network = cpi.client.find_network(cpi.datacenter.mob, vlan)
+    network = cpi.client.find_network(cpi.datacenter, vlan)
     fail "Invalid Environment variable '#{env_var_name}': No network named '#{vlan}' found in datacenter named '#{datacenter_name}'" if network.nil?
   end
 

@@ -199,19 +199,19 @@ module VSphereCloud
       matches
     end
 
-    def find_network(datacenter_mob, network_name)
+    def find_network(datacenter, network_name)
       valid_networks = []
       if network_name.include?('/')
         container_name = File.dirname(network_name)
         network_name = File.basename(network_name)
-        network_container = find_by_inventory_path([ datacenter_mob.name, 'network', container_name])
+        network_container = find_by_inventory_path([ datacenter.name, 'network', container_name])
         if network_container.instance_of?(VimSdk::Vim::Dvs::VmwareDistributedVirtualSwitch)
           valid_networks = network_container.portgroup
         elsif network_container.instance_of?(VimSdk::Vim::Folder)
           valid_networks = network_container.child_entity
         end
       else
-        valid_networks = datacenter_mob.network
+        valid_networks = datacenter.mob.network
       end
 
       target_network = nil
