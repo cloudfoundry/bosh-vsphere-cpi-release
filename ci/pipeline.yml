@@ -85,6 +85,7 @@ jobs:
           BOSH_VSPHERE_CPI_NESTED_DATACENTER_CLUSTER:           {{lifecycle_vsphere_5_1_nested_datacenter_cluster}}
           BOSH_VSPHERE_CPI_NESTED_DATACENTER_RESOURCE_POOL:     {{lifecycle_vsphere_5_1_nested_datacenter_resource_pool}}
           BOSH_VSPHERE_CPI_NESTED_DATACENTER_VLAN:              {{lifecycle_vsphere_5_1_nested_datacenter_vlan}}
+          BOSH_VSPHERE_CPI_NESTED_DATACENTER_NESTED_VLAN:       {{lifecycle_vsphere_5_1_nested_datacenter_nested_vlan}}
           BOSH_VSPHERE_CPI_PORTGROUP_STANDARD:                  {{lifecycle_vsphere_5_1_portgroup_standard}}
           BOSH_VSPHERE_CPI_PORTGROUP_DISTRIBUTED:               {{lifecycle_vsphere_5_1_portgroup_distributed}}
           BOSH_VSPHERE_CPI_PORTGROUP_AMBIGUOUS:                 {{lifecycle_vsphere_5_1_portgroup_ambiguous}}
