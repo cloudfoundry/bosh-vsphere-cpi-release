@@ -221,6 +221,9 @@ module VSphereCloud
       elsif matching_networks.length > 1
         # pick the Standard Portgroup if multiple networks exist with the given name
         standard_network = matching_networks.find { |n| n.instance_of?(VimSdk::Vim::Network) }
+        if standard_network.nil? && matching_networks.length > 1
+          raise "Multiple networks found for #{network_name}. Please specify the full path, for example 'FOLDER_NAME/DISTRIBUTED_SWITCH_NAME/DISTRIBUTED_PORTGROUP_NAME'"
+        end
         target_network = standard_network || matching_networks.first
       end
 

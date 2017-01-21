@@ -41,6 +41,7 @@ module VSphereCloud
       let(:standard_virtual_portgroup) { ENV.fetch('BOSH_VSPHERE_CPI_PORTGROUP_STANDARD') }
       let(:distributed_virtual_portgroup) { ENV.fetch('BOSH_VSPHERE_CPI_PORTGROUP_DISTRIBUTED') }
       let(:ambiguous_portgroup) { ENV.fetch('BOSH_VSPHERE_CPI_PORTGROUP_AMBIGUOUS') }
+      let(:ambiguous_portgroup_raise_issue) { ENV.fetch('BOSH_VSPHERE_CPI_PORTGROUP_AMBIGUOUS_RAISE_ISSUE') }
 
       it 'returns the standard virtual switch if it exists' do
         network = @client.find_network(@datacenter, standard_virtual_portgroup)
@@ -77,6 +78,12 @@ module VSphereCloud
       it 'returns nil if the standard virtual portgroup doesn\'t exist' do
         network = @client.find_network(@datacenter, 'non-existent-standard-portgroup')
         expect(network).to be_nil
+      end
+
+      it 'raises ambiguous issue when provided network name matches multiple networks' do
+        expect do
+          @client.find_network(@datacenter, ambiguous_portgroup_raise_issue)
+        end.to raise_error(/#{ambiguous_portgroup_raise_issue}/)
       end
 
       context 'if the network is prefixed with folders\' names' do
