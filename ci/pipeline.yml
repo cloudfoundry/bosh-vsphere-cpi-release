@@ -89,6 +89,7 @@ jobs:
           BOSH_VSPHERE_CPI_PORTGROUP_STANDARD:                  {{lifecycle_vsphere_5_1_portgroup_standard}}
           BOSH_VSPHERE_CPI_PORTGROUP_DISTRIBUTED:               {{lifecycle_vsphere_5_1_portgroup_distributed}}
           BOSH_VSPHERE_CPI_PORTGROUP_AMBIGUOUS:                 {{lifecycle_vsphere_5_1_portgroup_ambiguous}}
+          BOSH_VSPHERE_CPI_PORTGROUP_AMBIGUOUS_RAISE_ISSUE:     {{lifecycle_vsphere_5_1_portgroup_raise_ambiguous_issue}}
           BOSH_VSPHERE_CPI_PORTGROUP_FOLDER_STANDARD:           {{lifecycle_vsphere_5_1_portgroup_folder_standard}}
           BOSH_VSPHERE_CPI_PORTGROUP_FOLDER_DISTRIBUTED:        {{lifecycle_vsphere_5_1_portgroup_folder_distributed}}
           BOSH_VSPHERE_CPI_PORTGROUP_FOLDER_AMBIGUOUS:          {{lifecycle_vsphere_5_1_portgroup_folder_ambiguous}}
@@ -135,6 +136,7 @@ jobs:
           BOSH_VSPHERE_CPI_PORTGROUP_STANDARD:                  {{lifecycle_vsphere_6_0_portgroup_standard}}
           BOSH_VSPHERE_CPI_PORTGROUP_DISTRIBUTED:               {{lifecycle_vsphere_6_0_portgroup_distributed}}
           BOSH_VSPHERE_CPI_PORTGROUP_AMBIGUOUS:                 {{lifecycle_vsphere_6_0_portgroup_ambiguous}}
+          BOSH_VSPHERE_CPI_PORTGROUP_AMBIGUOUS_RAISE_ISSUE:     {{lifecycle_vsphere_6_0_portgroup_raise_ambiguous_issue}}
           BOSH_VSPHERE_CPI_PORTGROUP_FOLDER_STANDARD:           {{lifecycle_vsphere_6_0_portgroup_folder_standard}}
           BOSH_VSPHERE_CPI_PORTGROUP_FOLDER_DISTRIBUTED:        {{lifecycle_vsphere_6_0_portgroup_folder_distributed}}
           BOSH_VSPHERE_CPI_PORTGROUP_FOLDER_AMBIGUOUS:          {{lifecycle_vsphere_6_0_portgroup_folder_ambiguous}}
