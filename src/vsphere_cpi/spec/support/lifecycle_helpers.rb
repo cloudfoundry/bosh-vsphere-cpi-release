@@ -94,7 +94,7 @@ module LifecycleHelpers
       fail "User must have limited permissions on root folder. Disallowed permissions include: #{disallowed_root_privileges.inspect}"
     end
 
-    cluster_mob = cpi.datacenter.clusters.first.last.mob
+    cluster_mob = cpi.datacenter.clusters.first.mob
     datacenter_privileges = build_actual_privileges_list(cpi, cluster_mob)
 
     if datacenter_privileges.sort != expected_privileges[:datacenter].sort
@@ -163,7 +163,8 @@ module LifecycleHelpers
     datastore_pattern_regex = Regexp.new(datastore_pattern)
     cluster = cpi.datacenter.find_cluster(cluster_name)
     if cluster.nil?
-      fail "Failed to find cluster '#{cluster_name}' in known clusters: #{cpi.datacenter.clusters.keys.join(', ')}"
+      cluster_names = cpi.datacenter.clusters.map {|cluster| cluster.name}
+      fail "Failed to find cluster '#{cluster_name}' in known clusters: #{cluster_names.join(', ')}"
     end
 
     cluster.mob.host.each do |host_mob|
@@ -190,8 +191,7 @@ module LifecycleHelpers
 
   def matching_datastores(datacenter, pattern)
     clusters = datacenter.clusters
-    clusters.inject({}) do |acc, kv|
-      cluster = kv.last
+    clusters.inject({}) do |acc, cluster|
       acc.merge!(matching_datastores_in_cluster(cluster, pattern))
     end
   end

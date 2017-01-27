@@ -4,18 +4,17 @@ module VSphereCloud
   describe ClusterPicker do
     describe '#best_cluster_placement' do
       context 'when one cluster fits' do
-        let(:available_clusters) do
-          {
-            'cluster-1' => {
-              memory: 2048,
-              datastores: {
-                'target-ds' => {
-                  free_space: 512,
-                }
-              }
+        let(:available_clusters) { [cluster_1] }
+        let(:cluster_1) do
+          instance_double(VSphereCloud::Resources::Cluster,
+            name: 'cluster-1',
+            free_memory: 2048,
+            accessible_datastores: {
+              'target-ds' => target_ds,
             }
-          }
+          )
         end
+        let(:target_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 512) }
 
         it 'returns the first placement option' do
           disks = [
@@ -44,18 +43,17 @@ module VSphereCloud
       end
 
       context 'when no cluster fits' do
-        let(:available_clusters) do
-          {
-            'cluster-1' => {
-              memory: 2048,
-              datastores: {
-                'not-matching-ds' => {
-                  free_space: 1024,
-                }
-              }
+        let(:available_clusters) { [cluster_1] }
+        let(:cluster_1) do
+          instance_double(VSphereCloud::Resources::Cluster,
+            name: 'cluster-1',
+            free_memory: 2048,
+            accessible_datastores: {
+              'not-matching-ds' => not_matching_ds,
             }
-          }
+          )
         end
+        let(:not_matching_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 1024) }
 
         context 'based upon available memory' do
           it 'raises a CloudError when mem_headroom is provided' do
@@ -136,26 +134,27 @@ module VSphereCloud
 
       context 'when multiple clusters fit' do
         context 'when disk migration burden provides a decision' do
-          let(:available_clusters) do
-            {
-              'cluster-1' => {
-                memory: 2048,
-                datastores: {
-                  'other-ds' => {
-                    free_space: 512,
-                  }
-                }
-              },
-              'cluster-2' => {
-                memory: 2048,
-                datastores: {
-                  'current-ds' => {
-                    free_space: 512,
-                  }
-                }
+          let(:available_clusters) { [cluster_1, cluster_2] }
+          let(:cluster_1) do
+            instance_double(VSphereCloud::Resources::Cluster,
+              name: 'cluster-1',
+              free_memory: 2048,
+              accessible_datastores: {
+                'other-ds' => other_ds,
               }
-            }
+            )
           end
+          let(:cluster_2) do
+            instance_double(VSphereCloud::Resources::Cluster,
+              name: 'cluster-2',
+              free_memory: 2048,
+              accessible_datastores: {
+                'current-ds' => current_ds,
+              }
+            )
+          end
+          let(:other_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 512) }
+          let(:current_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 512) }
 
           it 'returns the cluster' do
             disks = [{
@@ -177,26 +176,27 @@ module VSphereCloud
         end
 
         context 'when max free space provides a decision' do
-          let(:available_clusters) do
-            {
-              'cluster-1' => {
-                memory: 2048,
-                datastores: {
-                  'smaller-ds' => {
-                    free_space: 512,
-                  }
-                }
-              },
-              'cluster-2' => {
-                memory: 2048,
-                datastores: {
-                  'larger-ds' => {
-                    free_space: 1024,
-                  }
-                }
+          let(:available_clusters) { [cluster_1, cluster_2] }
+          let(:cluster_1) do
+            instance_double(VSphereCloud::Resources::Cluster,
+              name: 'cluster-1',
+              free_memory: 2048,
+              accessible_datastores: {
+                'smaller-ds' => smaller_ds,
               }
-            }
+            )
           end
+          let(:cluster_2) do
+            instance_double(VSphereCloud::Resources::Cluster,
+              name: 'cluster-2',
+              free_memory: 2048,
+              accessible_datastores: {
+                'larger-ds' => larger_ds,
+              }
+            )
+          end
+          let(:smaller_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 512) }
+          let(:larger_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 1024) }
 
           it 'returns the cluster' do
             disks = [{
@@ -217,26 +217,26 @@ module VSphereCloud
         end
 
         context 'when max free memory provides a decision' do
-          let(:available_clusters) do
-            {
-              'cluster-1' => {
-                memory: 4096,
-                datastores: {
-                  'same-ds' => {
-                    free_space: 1024,
-                  }
-                }
-              },
-              'cluster-2' => {
-                memory: 2048,
-                datastores: {
-                  'same-ds' => {
-                    free_space: 1024,
-                  }
-                }
+          let(:available_clusters) { [cluster_1, cluster_2] }
+          let(:cluster_1) do
+            instance_double(VSphereCloud::Resources::Cluster,
+              name: 'cluster-1',
+              free_memory: 4096,
+              accessible_datastores: {
+                'same-ds' => same_ds,
               }
-            }
+            )
           end
+          let(:cluster_2) do
+            instance_double(VSphereCloud::Resources::Cluster,
+              name: 'cluster-2',
+              free_memory: 2048,
+              accessible_datastores: {
+                'same-ds' => same_ds,
+              }
+            )
+          end
+          let(:same_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 1024) }
 
           it 'returns the cluster' do
             disks = [{

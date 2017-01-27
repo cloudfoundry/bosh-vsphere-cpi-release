@@ -23,7 +23,7 @@ context 'Replicating stemcells across datastores', external_cpi: false do
     VSphereCloud::Cloud.new(options)
   end
 
-  let(:destination_cluster) { @cpi.datacenter.clusters[@cluster_name] }
+  let(:destination_cluster) { @cpi.datacenter.clusters.find {|cluster| cluster.name == @cluster_name } }
 
   it 'raises an error when no stemcell exists for the given stemcell id' do
     expect {

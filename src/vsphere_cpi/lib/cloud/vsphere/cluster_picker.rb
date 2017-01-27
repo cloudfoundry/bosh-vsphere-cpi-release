@@ -5,10 +5,10 @@ module VSphereCloud
     def initialize(mem_headroom=DEFAULT_MEMORY_HEADROOM, disk_headroom=DatastorePicker::DEFAULT_DISK_HEADROOM)
       @mem_headroom = mem_headroom
       @disk_headroom = disk_headroom
-      @available_clusters = {}
+      @available_clusters = []
     end
 
-    def update(available_clusters={})
+    def update(available_clusters=[])
       @available_clusters = available_clusters
     end
 
@@ -19,14 +19,14 @@ module VSphereCloud
         "No valid placement found for requested memory: #{req_memory}\n\n#{pretty_print_cluster_memory}"
       end
 
-      placement_options = clusters.map do |cluster_name, cluster_props|
+      placement_options = clusters.map do |cluster|
         datastore_picker = DatastorePicker.new(@disk_headroom)
-        datastore_picker.update(cluster_props[:datastores])
+        datastore_picker.update(cluster.accessible_datastores)
 
         begin
           placement = datastore_picker.best_disk_placement(disk_configurations)
-          placement[:memory] = cluster_props[:memory]
-          [cluster_name, placement]
+          placement[:memory] = cluster.free_memory
+          [cluster.name, placement]
         rescue Bosh::Clouds::CloudError
           nil # continue if no placements exist for this cluster
         end
@@ -58,7 +58,7 @@ module VSphereCloud
     private
 
     def filter_on_memory(req_memory)
-      @available_clusters.reject { |name,props| props[:memory] < req_memory + @mem_headroom }
+      @available_clusters.reject { |cluster| cluster.free_memory < req_memory + @mem_headroom }
     end
 
     def placements_with_minimum_disk_migrations(placements)
@@ -99,17 +99,17 @@ module VSphereCloud
 
     def pretty_print_cluster_memory
       cluster_string = ""
-      @available_clusters.each do |cluster_name, cluster_props|
-        cluster_string += "- Cluster name: #{cluster_name}, memory: #{cluster_props[:memory]}\n"
+      @available_clusters.each do |cluster|
+        cluster_string += "- Cluster name: #{cluster.name}, memory: #{cluster.free_memory}\n"
       end
       "Possible placement options:\n#{cluster_string}"
     end
 
     def pretty_print_cluster_disk
       cluster_string = ""
-      @available_clusters.each do |cluster_name, cluster_info|
-        ds_string = DatastorePicker.pretty_print_datastores(cluster_info[:datastores])
-        cluster_string += "- Cluster name: #{cluster_name}\n  Datastores:\n#{ds_string}\n"
+      @available_clusters.each do |cluster|
+        ds_string = DatastorePicker.pretty_print_datastores(cluster.accessible_datastores)
+        cluster_string += "- Cluster name: #{cluster.name}\n  Datastores:\n#{ds_string}\n"
       end
       "Possible placement options:\n#{cluster_string}"
     end

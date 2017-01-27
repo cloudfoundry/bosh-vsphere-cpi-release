@@ -67,39 +67,9 @@ module VSphereCloud
 
       def clusters
         @logger.debug("All clusters provided: #{@clusters}")
-        @clusters.keys.inject({}) do |acc, cluster_name|
-          acc[cluster_name] = find_cluster(cluster_name)
-          acc
+        @clusters.keys.map do |cluster_name|
+          find_cluster(cluster_name)
         end
-      end
-
-      def clusters_hash
-        available_clusters = {}
-        clusters.each do |cluster_name, cluster|
-          cluster_datastores = {}
-          cluster.accessible_datastores.each do |datastore_name, datastore|
-            cluster_datastores[datastore_name] = {
-              free_space: datastore.free_space,
-            }
-          end
-          available_clusters[cluster_name] = {
-            memory: cluster.free_memory,
-            datastores: cluster_datastores
-          }
-        end
-        available_clusters
-      end
-
-      def accessible_datastores_hash
-        available_datastores = {}
-        clusters.each do |cluster_name, cluster|
-          cluster.accessible_datastores.each do |datastore_name, datastore|
-            available_datastores[datastore_name] = {
-              free_space: datastore.free_space,
-            }
-          end
-        end
-        available_datastores
       end
 
       def find_cluster(cluster_name)
@@ -118,7 +88,7 @@ module VSphereCloud
       end
 
       def accessible_datastores
-        clusters.values.inject({}) do |acc, cluster|
+        clusters.inject({}) do |acc, cluster|
           acc.merge!(cluster.accessible_datastores)
           acc
         end

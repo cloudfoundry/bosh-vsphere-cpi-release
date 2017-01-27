@@ -31,7 +31,7 @@ module VSphereCloud
       cluster_config = resource_pool_clusters_spec.values.first
       return nil if cluster_config.nil?
 
-      (cluster_config["drs_rules"] || []).first
+      (cluster_config['drs_rules'] || []).first
     end
 
     def ephemeral_datastore_name
@@ -43,7 +43,7 @@ module VSphereCloud
     end
 
     def ephemeral_disk_size
-      vm_type["disk"]
+      vm_type['disk']
     end
 
     def stemcell_cid
@@ -97,7 +97,7 @@ module VSphereCloud
       cluster_config = resource_pool_clusters_spec.values.first
       return if cluster_config.nil?
 
-      drs_rules = cluster_config["drs_rules"]
+      drs_rules = cluster_config['drs_rules']
       return if drs_rules.nil?
 
       if drs_rules.size > 1
@@ -127,10 +127,12 @@ module VSphereCloud
 
     def available_clusters
       if resource_pool_cluster_name
-        if global_clusters[resource_pool_cluster_name].nil?
-          raise Bosh::Clouds::CloudError, "Cluster '#{resource_pool_cluster_name}' does not match global clusters [#{global_clusters.keys.join(', ')}]"
+        found_clusters = global_clusters.select {|cluster| cluster.name == resource_pool_cluster_name}
+        if found_clusters.empty?
+          global_cluster_names = global_clusters.map {|cluster| cluster.name}
+          raise Bosh::Clouds::CloudError, "Cluster '#{resource_pool_cluster_name}' does not match global clusters [#{global_cluster_names.join(', ')}]"
         end
-        return global_clusters.select { |k,_| k == resource_pool_cluster_name }
+        return found_clusters
       end
       global_clusters
     end
@@ -140,7 +142,7 @@ module VSphereCloud
     end
 
     def global_clusters
-      @manifest_params[:global_clusters] || {}
+      @manifest_params[:global_clusters] || []
     end
 
     def stemcell
@@ -164,10 +166,10 @@ module VSphereCloud
       return @cluster_placement if @cluster_placement
 
       if available_clusters.empty?
-        raise Bosh::Clouds::CloudError, "No valid clusters were provided"
+        raise Bosh::Clouds::CloudError, 'No valid clusters were provided'
       end
       if vm_type['ram'].nil?
-        raise Bosh::Clouds::CloudError, "Must specify vm_types.cloud_properties.ram"
+        raise Bosh::Clouds::CloudError, 'Must specify vm_types.cloud_properties.ram'
       end
 
       @cluster_picker.update(available_clusters)

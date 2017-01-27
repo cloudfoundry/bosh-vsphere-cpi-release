@@ -53,7 +53,7 @@ module VSphereCloud
       allow_any_instance_of(Cloud).to receive(:at_exit)
     end
 
-    let(:datacenter) { instance_double('VSphereCloud::Resources::Datacenter', name: 'fake-datacenter', clusters: {}) }
+    let(:datacenter) { instance_double('VSphereCloud::Resources::Datacenter', name: 'fake-datacenter', clusters: []) }
     before { allow(Resources::Datacenter).to receive(:new).and_return(datacenter) }
     let(:vm_provider) { instance_double('VSphereCloud::VMProvider') }
     before { allow(VSphereCloud::VMProvider).to receive(:new).and_return(vm_provider) }
@@ -146,7 +146,7 @@ module VSphereCloud
         double('fake datacenter',
           name: 'fake_datacenter',
           template_folder: template_folder,
-          clusters: {},
+          clusters: [],
           mob: 'fake-datacenter-mob'
         )
       end
@@ -398,6 +398,7 @@ module VSphereCloud
         }
       end
       let(:nsx) { instance_double(NSX) }
+      let(:fake_cluster) { instance_double(VSphereCloud::Resources::Cluster, name: 'fake-cluster') }
 
       before do
         allow(vsphere_cloud).to receive(:stemcell_vm)
@@ -412,8 +413,8 @@ module VSphereCloud
           )
           .and_return(1024 * 1024 * 1024)
 
-        allow(datacenter).to receive(:clusters_hash)
-          .and_return({ 'fake-cluster' => {} })
+        allow(datacenter).to receive(:clusters)
+          .and_return([fake_cluster])
         allow(datacenter).to receive(:ephemeral_pattern)
           .and_return('fake-ephemeral-pattern')
         allow(datacenter).to receive(:persistent_pattern)
@@ -442,7 +443,7 @@ module VSphereCloud
             cid: "fake-stemcell-cid",
             size: 1024
           },
-          global_clusters: { 'fake-cluster' => {} },
+          global_clusters: [fake_cluster],
           disk_configurations: [
             {
               cid: fake_disk.cid,
@@ -504,7 +505,7 @@ module VSphereCloud
             cid: "fake-stemcell-cid",
             size: 1024
           },
-          global_clusters: { 'fake-cluster' => {} },
+          global_clusters: [fake_cluster],
           disk_configurations: [
             {
               size: 4096,
@@ -604,7 +605,7 @@ module VSphereCloud
               cid: "fake-stemcell-cid",
               size: 1024
             },
-            global_clusters: { 'fake-cluster' => {} },
+            global_clusters: [fake_cluster],
             disk_configurations: [
               {
                 cid: fake_disk.cid,
@@ -764,33 +765,24 @@ module VSphereCloud
     describe '#attach_disk' do
       let(:agent_env_hash) { { 'disks' => { 'persistent' => { 'disk-cid' => 'fake-device-number' } } } }
       let(:vm_location) { double(:vm_location) }
-      let(:datastore_with_disk) { instance_double('VSphereCloud::Resources::Datastore', name: 'datastore-with-disk')}
-      let(:datastore_without_disk) { instance_double('VSphereCloud::Resources::Datastore', name: 'datastore-without-disk')}
+      let(:datastore_with_disk) { instance_double('VSphereCloud::Resources::Datastore', name: 'datastore-with-disk', free_space: 2048)}
+      let(:datastore_without_disk) { instance_double('VSphereCloud::Resources::Datastore', name: 'datastore-without-disk', free_space: 4096)}
+      let(:inaccessible_datastore) { instance_double('VSphereCloud::Resources::Datastore', name: 'inaccessible-datastore', free_space: 4096)}
       let(:disk) { Resources::PersistentDisk.new(cid: 'disk-cid', size_in_mb: 1024, datastore: datastore_with_disk, folder: 'fake-folder') }
 
       before do
         allow(datacenter).to receive(:persistent_pattern)
           .and_return(/datastore\-.*/)
-        allow(datacenter).to receive(:accessible_datastores_hash)
+        allow(datacenter).to receive(:accessible_datastores)
           .and_return({
-            'datastore-with-disk' => {
-              free_space: 2048,
-            },
-            'datastore-without-disk' => {
-              free_space: 4096,
-            },
-            'inaccessible-datastore' => {
-              free_space: 4096,
-            }
+            'datastore-with-disk' => datastore_with_disk,
+            'datastore-without-disk' => datastore_without_disk,
+            'inaccessible-datastore' => inaccessible_datastore
           })
-        allow(datacenter).to receive(:accessible_datastores_hash)
+        allow(datacenter).to receive(:accessible_datastores)
           .and_return({
-            'datastore-with-disk' => {
-              free_space: 2048,
-            },
-            'datastore-without-disk' => {
-              free_space: 4096,
-            },
+            'datastore-with-disk' => datastore_with_disk,
+            'datastore-without-disk' =>  datastore_without_disk,
           })
         allow(datacenter).to receive(:find_datastore)
           .with('datastore-with-disk')
@@ -902,18 +894,15 @@ module VSphereCloud
       end
 
       context 'when a persistent disk pattern is encoded into the disk cid' do
-        let(:target_datastore) { instance_double('VSphereCloud::Resources::Datastore', name: 'target-datastore')}
+        let(:target_datastore) { instance_double('VSphereCloud::Resources::Datastore', name: 'target-datastore', free_space: 4096)}
+        let(:current_datastore) { instance_double('VSphereCloud::Resources::Datastore', name: 'current-datastore', free_space: 4096)}
         let(:moved_disk) { Resources::PersistentDisk.new(cid: 'disk-cid', size_in_mb: 1024, datastore: target_datastore, folder: 'fake-folder') }
 
         before do
-          allow(datacenter).to receive(:accessible_datastores_hash)
+          allow(datacenter).to receive(:accessible_datastores)
             .and_return({
-              'target-datastore' => {
-                free_space: 4096,
-              },
-              'current-datastore' => {
-                free_space: 4096,
-              },
+              'target-datastore' => target_datastore,
+              'current-datastore' => current_datastore,
             })
 
           allow(vm).to receive(:accessible_datastore_names).and_return(['target-datastore', 'current-datastore'])
@@ -1121,14 +1110,12 @@ module VSphereCloud
     end
 
     describe '#create_disk' do
-      let(:accessible_datastores_hash) do
+      let(:small_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 2048) }
+      let(:large_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 4096) }
+      let(:accessible_datastores) do
         {
-          'small-ds' => {
-            free_space: 2048,
-          },
-          'large-ds' => {
-            free_space: 4096,
-          },
+          'small-ds' => small_ds,
+          'large-ds' => large_ds,
         }
       end
       let(:datastore) { double(:datastore, name: 'fake-datastore') }
@@ -1144,8 +1131,8 @@ module VSphereCloud
       before do
         allow(datacenter).to receive(:persistent_pattern)
           .and_return('small-ds')
-        allow(datacenter).to receive(:accessible_datastores_hash)
-          .and_return(accessible_datastores_hash)
+        allow(datacenter).to receive(:accessible_datastores)
+          .and_return(accessible_datastores)
         allow(datacenter).to receive(:find_datastore)
           .with('small-ds')
           .and_return(datastore)

@@ -24,7 +24,7 @@ module VSphereCloud
 
       @available_datastores.each do |name, props|
         datastores[name] = {
-          free_space: props[:free_space],
+          free_space: props.free_space,
           disks: [],
         }
       end
@@ -56,7 +56,7 @@ module VSphereCloud
           break
         end
 
-        raise Bosh::Clouds::CloudError, pretty_print_placement_error(@available_datastores, [disk]) unless found_placement
+        raise Bosh::Clouds::CloudError, pretty_print_placement_error([disk]) unless found_placement
       end
 
       add_balance_score(placement)
@@ -78,14 +78,14 @@ module VSphereCloud
     end
 
     def self.pretty_print_datastores(datastores)
-      ds_string = datastores.map do |ds_name, ds_props|
-        "  - Name: #{ds_name}, free space: #{ds_props[:free_space]}"
+      datastores.map do |ds_name, ds_props|
+        "  - Name: #{ds_name}, free space: #{ds_props.free_space}"
       end.join("\n") + "\n"
     end
 
     private
 
-    def pretty_print_placement_error(datastores, disk_configs)
+    def pretty_print_placement_error(disk_configs)
       "No valid placement found for disks:\n#{DatastorePicker.pretty_print_disks(disk_configs)}\n\n" +
         "Possible placement options:\nDatastores:\n#{DatastorePicker.pretty_print_datastores(@available_datastores)}"
     end

@@ -7,13 +7,11 @@ module VSphereCloud
     end
 
     describe '#best_disk_placement' do
-
       context 'when a single DS is available' do
+        let(:ds_1) { instance_double(VSphereCloud::Resources::Datastore, free_space: 1024) }
         let(:available_datastores) do
          {
-           'ds-1' => {
-             free_space: 1024,
-           },
+           'ds-1' => ds_1,
          }
         end
         let(:already_placed_disk) do
@@ -65,15 +63,13 @@ module VSphereCloud
         end
       end
 
-      context 'when a multiple DS are available' do
+      context 'when multiple DSes are available' do
+        let(:ds_1) { instance_double(VSphereCloud::Resources::Datastore, free_space: 512) }
+        let(:ds_2) { instance_double(VSphereCloud::Resources::Datastore, free_space: 1024) }
         let(:available_datastores) do
          {
-           'ds-1' => {
-             free_space: 512,
-           },
-           'ds-2' => {
-             free_space: 1024,
-           },
+           'ds-1' => ds_1,
+           'ds-2' => ds_2,
          }
         end
         let(:disk1) do
@@ -109,16 +105,13 @@ module VSphereCloud
           })
         end
 
-
         context 'when headroom is not specified' do
+          let(:ds_1) { instance_double(VSphereCloud::Resources::Datastore, free_space: 1536) }
+          let(:ds_2) { instance_double(VSphereCloud::Resources::Datastore, free_space: 2048) }
           let(:available_datastores) do
            {
-             'ds-1' => {
-               free_space: 1536,
-             },
-             'ds-2' => {
-               free_space: 2048,
-             },
+             'ds-1' => ds_1,
+             'ds-2' => ds_2,
            }
           end
           let(:disk1) do
@@ -156,14 +149,12 @@ module VSphereCloud
 
         context 'when headroom is specified' do
           let(:headroom) { 512}
+          let(:ds_1) { instance_double(VSphereCloud::Resources::Datastore, free_space: 1536) }
+          let(:ds_2) { instance_double(VSphereCloud::Resources::Datastore, free_space: 2048) }
           let(:available_datastores) do
            {
-             'ds-1' => {
-               free_space: 1536,
-             },
-             'ds-2' => {
-               free_space: 2048,
-             },
+             'ds-1' => ds_1,
+             'ds-2' => ds_2,
            }
           end
           let(:disk1) do
@@ -280,7 +271,7 @@ module VSphereCloud
               { datastore_space: [700,  700],       balance_score: 2100 },
             ].each do |input|
               available_datastores = input[:datastore_space].each_with_index.map do |free_space, index|
-                [ "ds-#{index}", { free_space: free_space } ]
+                [ "ds-#{index}", instance_double(VSphereCloud::Resources::Datastore, free_space: free_space) ]
               end.to_h
 
               picker = DatastorePicker.new(0)
@@ -293,20 +284,16 @@ module VSphereCloud
       end
 
       context 'simulating placement distribution of several datastores' do
+        let(:datastore_1) { instance_double(VSphereCloud::Resources::Datastore, free_space: 51200) }
+        let(:datastore_2) { instance_double(VSphereCloud::Resources::Datastore, free_space: 10240) }
+        let(:datastore_3) { instance_double(VSphereCloud::Resources::Datastore, free_space: 20480) }
+        let(:datastore_4) { instance_double(VSphereCloud::Resources::Datastore, free_space: 10240) }
         let(:available_datastores) do
           {
-            "datastore-1" =>  {
-              free_space: 51200,
-            },
-            "datastore-2" => {
-              free_space: 10240,
-            },
-            "datastore-3" => {
-              free_space: 20480,
-            },
-            "datastore-4" => {
-              free_space: 10240,
-            }
+            'datastore-1' => datastore_1,
+            'datastore-2' => datastore_2,
+            'datastore-3' => datastore_3,
+            'datastore-4' => datastore_4
           }
         end
         let(:disk1) do
@@ -339,33 +326,32 @@ module VSphereCloud
           picker.update(available_datastores)
           disks = [disk1, disk2, disk3, disk4]
           allow(Random).to receive(:rand).and_call_original
-          "ds-1 => [disk1, disk2]"
+          'ds-1 => [disk1, disk2]'
+          disk_counts_hash = {}
           100.times do
             picker.best_disk_placement(disks)[:datastores].each do |ds_name, ds_props|
-              available_datastores[ds_name][:disk_counts] ||= 0
-              available_datastores[ds_name][:disk_counts] += ds_props[:disks].length
+              disk_counts_hash[ds_name] ||= 0
+              disk_counts_hash[ds_name] += ds_props[:disks].length
             end
           end
           sorted_datastores = available_datastores.sort do |x, y|
-            y[1][:free_space] <=> x[1][:free_space]
+            y[1].free_space <=> x[1].free_space
           end
-          puts "Summary of simulated placements"
+          puts 'Summary of simulated placements'
           sorted_datastores.each do |ds|
-            print "#{ds}\n"
+            print "#{ds[0]}: free_space => #{ds[1].free_space}, disk_counts => #{disk_counts_hash[ds[0]]}\n"
           end
         end
       end
     end
 
     describe '#pick_datastore_for_single_disk' do
+      let(:smaller_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 256) }
+      let(:larger_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 1024) }
       let(:available_datastores) do
        {
-         'smaller-ds' => {
-           free_space: 256,
-         },
-         'larger-ds' => {
-           free_space: 1024,
-         },
+         'smaller-ds' => smaller_ds,
+         'larger-ds' => larger_ds,
        }
       end
       let(:disk) do

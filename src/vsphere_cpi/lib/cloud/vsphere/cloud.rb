@@ -126,7 +126,7 @@ module VSphereCloud
             vm_type: {
               'ram' => 0,
             },
-            global_clusters: @datacenter.clusters_hash,
+            global_clusters: @datacenter.clusters,
             disk_configurations: [
               {
                 size: stemcell_size,
@@ -238,7 +238,7 @@ module VSphereCloud
             cid: stemcell_cid,
             size: stemcell_size
           },
-          global_clusters: @datacenter.clusters_hash,
+          global_clusters: @datacenter.clusters,
           disk_configurations: disk_configurations,
         }
 
@@ -375,7 +375,7 @@ module VSphereCloud
         disk_to_attach = @datacenter.find_disk(disk_config[:cid])
         @logger.info("Attaching disk: #{disk_config[:cid]} on vm: #{vm_cid}")
 
-        accessible_datastores = @datacenter.accessible_datastores_hash
+        accessible_datastores = @datacenter.accessible_datastores
         reachable_datastores = vm.accessible_datastore_names
         accessible_datastores.select! { |name| reachable_datastores.include?(name) }
         disk_is_accessible = accessible_datastores.include?(disk_config[:existing_datastore_name])
@@ -423,7 +423,7 @@ module VSphereCloud
       with_thread_name("create_disk(#{size_in_mb}, _)") do
         @logger.info("Creating disk with size: #{size_in_mb}")
 
-        accessible_datastores = @datacenter.accessible_datastores_hash
+        accessible_datastores = @datacenter.accessible_datastores
         if vm_cid
           vm = vm_provider.find(vm_cid)
           reachable_datastores = vm.accessible_datastore_names
