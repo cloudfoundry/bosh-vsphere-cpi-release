@@ -88,7 +88,7 @@ module VSphereCloud
 
       context 'when disk exists' do
         before do
-          allow(datacenter).to receive(:find_disk).with(disk_cid).and_return("fake disk")
+          allow(datacenter).to receive(:find_disk).with(disk_cid).and_return('fake disk')
         end
 
         context 'when disk_cid contains metadata' do
@@ -436,11 +436,11 @@ module VSphereCloud
       it 'creates a new VM with provided manifest properties' do
         expected_manifest_params = {
           vm_type: vm_type,
-          networks_spec: "fake-networks-hash",
-          agent_id:      "fake-agent-id",
+          networks_spec: 'fake-networks-hash',
+          agent_id: 'fake-agent-id',
           agent_env:     {},
           stemcell: {
-            cid: "fake-stemcell-cid",
+            cid: 'fake-stemcell-cid',
             size: 1024
           },
           global_clusters: [fake_cluster],
@@ -463,6 +463,7 @@ module VSphereCloud
           .with({
             manifest_params: expected_manifest_params,
             cluster_picker: cluster_picker,
+            cluster_provider: cluster_provider
           })
           .and_return(vm_config)
         expect(vm_config).to receive(:validate)
@@ -474,7 +475,6 @@ module VSphereCloud
             logger: logger,
             cpi: vsphere_cloud,
             datacenter: datacenter,
-            cluster_provider: cluster_provider,
             agent_env: agent_env,
             ip_conflict_detector: ip_conflict_detector,
             default_disk_type: default_disk_type,
@@ -486,10 +486,10 @@ module VSphereCloud
           .and_return(fake_vm)
 
         vsphere_cloud.create_vm(
-          "fake-agent-id",
-          "fake-stemcell-cid",
+          'fake-agent-id',
+          'fake-stemcell-cid',
           vm_type,
-          "fake-networks-hash",
+          'fake-networks-hash',
           existing_disk_cids,
           {},
         )
@@ -498,11 +498,11 @@ module VSphereCloud
       it 'creates a new VM with no existing disks and default environment' do
         expected_manifest_params = {
           vm_type: vm_type,
-          networks_spec: "fake-networks-hash",
-          agent_id:      "fake-agent-id",
+          networks_spec: 'fake-networks-hash',
+          agent_id: 'fake-agent-id',
           agent_env:     nil,
           stemcell: {
-            cid: "fake-stemcell-cid",
+            cid: 'fake-stemcell-cid',
             size: 1024
           },
           global_clusters: [fake_cluster],
@@ -517,7 +517,8 @@ module VSphereCloud
         expect(VmConfig).to receive(:new)
           .with(
             manifest_params: expected_manifest_params,
-            cluster_picker: cluster_picker
+            cluster_picker: cluster_picker,
+            cluster_provider: cluster_provider
           )
           .and_return(vm_config)
         expect(vm_config).to receive(:validate)
@@ -529,7 +530,6 @@ module VSphereCloud
             logger: logger,
             cpi: vsphere_cloud,
             datacenter: datacenter,
-            cluster_provider: cluster_provider,
             agent_env: agent_env,
             ip_conflict_detector: ip_conflict_detector,
             default_disk_type: default_disk_type,
@@ -541,10 +541,10 @@ module VSphereCloud
           .and_return(fake_vm)
 
         vsphere_cloud.create_vm(
-          "fake-agent-id",
-          "fake-stemcell-cid",
+          'fake-agent-id',
+          'fake-stemcell-cid',
           vm_type,
-          "fake-networks-hash",
+          'fake-networks-hash',
         )
       end
 
@@ -582,10 +582,10 @@ module VSphereCloud
           expect(vm_config).to receive(:validate)
 
           vsphere_cloud.create_vm(
-            "fake-agent-id",
-            "fake-stemcell-cid",
+            'fake-agent-id',
+            'fake-stemcell-cid',
             vm_type,
-            "fake-networks-hash",
+            'fake-networks-hash',
             existing_disk_cids,
             {},
           )
@@ -598,11 +598,11 @@ module VSphereCloud
         it 'creates a new VM with a thinly-provisioned ephemeral disk' do
           expected_manifest_params = {
             vm_type: vm_type,
-            networks_spec: "fake-networks-hash",
-            agent_id:      "fake-agent-id",
+            networks_spec: 'fake-networks-hash',
+            agent_id: 'fake-agent-id',
             agent_env:     {},
             stemcell: {
-              cid: "fake-stemcell-cid",
+              cid: 'fake-stemcell-cid',
               size: 1024
             },
             global_clusters: [fake_cluster],
@@ -625,6 +625,7 @@ module VSphereCloud
                                .with({
                                  manifest_params: expected_manifest_params,
                                  cluster_picker: cluster_picker,
+                                 cluster_provider: cluster_provider
                                })
                                .and_return(vm_config)
           expect(vm_config).to receive(:validate)
@@ -636,7 +637,6 @@ module VSphereCloud
                                    logger: logger,
                                    cpi: vsphere_cloud,
                                    datacenter: datacenter,
-                                   cluster_provider: cluster_provider,
                                    agent_env: agent_env,
                                    ip_conflict_detector: ip_conflict_detector,
                                    default_disk_type: 'thin',
@@ -648,10 +648,10 @@ module VSphereCloud
                                   .and_return(fake_vm)
 
           vsphere_cloud.create_vm(
-            "fake-agent-id",
-            "fake-stemcell-cid",
+            'fake-agent-id',
+            'fake-stemcell-cid',
             vm_type,
-            "fake-networks-hash",
+            'fake-networks-hash',
             existing_disk_cids,
             {},
           )
@@ -714,15 +714,14 @@ module VSphereCloud
           expect(nsx).to receive(:add_vm_to_security_group)
                            .with('my-fake-environment-group', 'fake-mob-id')
           vsphere_cloud.create_vm(
-            "fake-agent-id",
-            "fake-stemcell-cid",
+            'fake-agent-id',
+            'fake-stemcell-cid',
             vm_type,
-            "fake-networks-hash",
+            'fake-networks-hash',
             [],
             environment,
           )
         end
-
       end
     end
 
@@ -1060,7 +1059,7 @@ module VSphereCloud
     describe '#configure_networks' do
       it 'raises a NotSupported exception' do
         expect {
-          vsphere_cloud.configure_networks("i-foobar", {})
+          vsphere_cloud.configure_networks('i-foobar', {})
         }.to raise_error Bosh::Clouds::NotSupported
       end
     end

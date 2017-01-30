@@ -139,9 +139,8 @@ module VSphereCloud
             manifest_params: manifest_params,
             cluster_picker: ClusterPicker.new,
           )
-          cluster_name = vm_config.cluster_name
           datastore_name = vm_config.ephemeral_datastore_name
-          cluster = @datacenter.find_cluster(cluster_name)
+          cluster = vm_config.cluster
           datastore = @datacenter.find_datastore(datastore_name)
 
           @logger.info("Deploying to: #{cluster.mob} / #{datastore.mob}")
@@ -244,7 +243,8 @@ module VSphereCloud
 
         vm_config = VmConfig.new(
           manifest_params: manifest_params,
-          cluster_picker: ClusterPicker.new
+          cluster_picker: ClusterPicker.new,
+          cluster_provider: @cluster_provider
         )
 
         vm_config.validate
@@ -255,7 +255,6 @@ module VSphereCloud
           logger: @logger,
           cpi: self,
           datacenter: @datacenter,
-          cluster_provider: @cluster_provider,
           agent_env: @agent_env,
           ip_conflict_detector: IPConflictDetector.new(@logger, @client),
           default_disk_type: @config.vcenter_default_disk_type,

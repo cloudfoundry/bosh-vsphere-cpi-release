@@ -122,7 +122,7 @@ context 'when datastores are configured in vm_types' do
     end
   end
 
-  context 'when an invalid cluster is configured in vm_types' do
+  context 'when a cluster in vm_types does not have access to the datastore in vm_types' do
     let(:two_cluster_cpi) do
       options = cpi_options(
         datacenters: [{

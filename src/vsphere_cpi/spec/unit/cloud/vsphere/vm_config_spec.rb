@@ -6,9 +6,11 @@ module VSphereCloud
       VmConfig.new(
         manifest_params: input,
         cluster_picker: cluster_picker,
+        cluster_provider: cluster_provider
       )
     end
     let(:cluster_picker) { ClusterPicker.new(0, 0) }
+    let(:cluster_provider) { nil }
 
     describe '#name' do
       let(:input) { {} }
@@ -131,7 +133,23 @@ module VSphereCloud
       end
     end
 
-    describe '#cluster_name' do
+    describe '#cluster' do
+      let(:cluster_provider) { instance_double(VSphereCloud::Resources::ClusterProvider) }
+      let(:cluster_config) { instance_double(VSphereCloud::ClusterConfig) }
+      let(:small_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 1024) }
+      let(:large_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 2048) }
+      let(:fake_cluster) do
+        instance_double(VSphereCloud::Resources::Cluster,
+          name: 'fake-cluster-name',
+          free_memory: 2048,
+          accessible_datastores: {
+            'small-ds' => small_ds,
+            'large-ds' => large_ds
+          }
+        )
+      end
+      let(:global_clusters) { [fake_cluster] }
+
       context 'when a cluster is specified within vm_type' do
         let(:input) do
           {
@@ -141,57 +159,23 @@ module VSphereCloud
                   { 'fake-cluster-name' => {} }
                 ]
               ],
-              'ram' => 512,
+              'ram' => ram,
             },
             global_clusters: global_clusters,
           }
         end
 
-        let(:small_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 1024) }
-        let(:large_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 2048) }
+        let(:ram) { 512 }
 
-        let(:fake_cluster) do
-          instance_double(VSphereCloud::Resources::Cluster,
-            name: 'fake-cluster-name',
-            free_memory: 2048,
-            accessible_datastores: {
-              'small-ds' => small_ds,
-              'large-ds' => large_ds
-            }
+        it 'returns the vm_type cluster' do
+          expect(VSphereCloud::ClusterConfig).to receive(:new).with('fake-cluster-name', {}).and_return(cluster_config)
+          expect(cluster_provider).to receive(:find).with('fake-cluster-name', cluster_config).and_return(fake_cluster)
+          expect(cluster_picker).to receive(:update).with([fake_cluster])
+          expect(cluster_picker).to receive(:best_cluster_placement).with(
+            req_memory: ram,
+            disk_configurations: anything,
           )
-        end
-
-        let(:global_clusters) { [fake_cluster] }
-
-        it 'returns the vm_type cluster name' do
-          expect(vm_config.cluster_name).to eq('fake-cluster-name')
-        end
-
-        context 'when a non-existent cluster is specified in vm_type' do
-          let(:input) do
-          {
-            vm_type: {
-              'datacenters' => [
-                'clusters' => [
-                  { 'fake-cluster-name' => {} }
-                ]
-              ]
-            },
-            global_clusters: global_clusters
-          }
-          end
-          let(:global_clusters) do
-            [
-              instance_double(VSphereCloud::Resources::Cluster, name: 'some-cluster'),
-              instance_double(VSphereCloud::Resources::Cluster, name: 'some-other-cluster')
-            ]
-          end
-
-          it 'raises an error' do
-            expect {
-              vm_config.cluster_name
-            }.to raise_error Bosh::Clouds::CloudError, "Cluster 'fake-cluster-name' does not match global clusters [some-cluster, some-other-cluster]"
-          end
+          expect(vm_config.cluster).to eq(fake_cluster)
         end
       end
 
@@ -227,7 +211,6 @@ module VSphereCloud
             }
           )
         end
-
         let(:disk_configurations) do
           [{
             size: 512,
@@ -237,7 +220,7 @@ module VSphereCloud
         end
 
         it 'returns the picked global cluster' do
-          expect(vm_config.cluster_name).to eq('cluster-2')
+          expect(vm_config.cluster).to eq(cluster_2)
         end
 
         context 'when cluster picking information is not provided' do
@@ -245,7 +228,7 @@ module VSphereCloud
 
           it 'raises an error' do
             expect {
-              expect(vm_config.cluster_name)
+              expect(vm_config.cluster)
             }.to raise_error(Bosh::Clouds::CloudError, 'No valid clusters were provided')
           end
         end
@@ -271,7 +254,24 @@ module VSphereCloud
           end
 
           it 'uses the pattern specified' do
-            expect(vm_config.cluster_name).to eq('cluster-1')
+            expect(vm_config.cluster).to eq(cluster_1)
+          end
+        end
+
+        context 'when ram is not specified' do
+          let(:input) do
+            {
+              vm_type: {
+                # no ram because that's what we're testing
+                'disk' => 4096
+              },
+              disk_configurations: disk_configurations,
+              global_clusters: global_clusters,
+            }
+          end
+
+          it 'raises an error' do
+            expect { vm_config.cluster }.to raise_error(/Must specify vm_types.cloud_properties.ram/)
           end
         end
       end

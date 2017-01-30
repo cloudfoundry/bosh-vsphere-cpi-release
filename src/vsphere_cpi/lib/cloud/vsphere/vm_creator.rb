@@ -1,12 +1,11 @@
 module VSphereCloud
   class VmCreator
-    def initialize(client:, cloud_searcher:, logger:, cpi:, datacenter:, cluster_provider:, agent_env:, ip_conflict_detector:, default_disk_type:, enable_auto_anti_affinity_drs_rules:)
+    def initialize(client:, cloud_searcher:, logger:, cpi:, datacenter:, agent_env:, ip_conflict_detector:, default_disk_type:, enable_auto_anti_affinity_drs_rules:)
       @client = client
       @cloud_searcher = cloud_searcher
       @logger = logger
       @cpi = cpi
       @datacenter = datacenter
-      @cluster_provider = cluster_provider
       @agent_env = agent_env
       @ip_conflict_detector = ip_conflict_detector
       @default_disk_type = default_disk_type
@@ -14,13 +13,8 @@ module VSphereCloud
     end
 
     def create(vm_config)
-      if vm_config.has_custom_cluster_properties?
-        cluster_config = ClusterConfig.new(vm_config.cluster_name, vm_config.cluster_spec)
-        cluster = @cluster_provider.find(vm_config.cluster_name, cluster_config)
-      else
-        cluster = @datacenter.find_cluster(vm_config.cluster_name)
-      end
-      datastore = @datacenter.find_datastore(vm_config.ephemeral_datastore_name)
+      cluster = vm_config.cluster
+      datastore = cluster.accessible_datastores[vm_config.ephemeral_datastore_name]
 
       @ip_conflict_detector.ensure_no_conflicts(vm_config.vsphere_networks)
 

@@ -1,21 +1,30 @@
 module VSphereCloud
   class VmConfig
 
-    def initialize(manifest_params:, cluster_picker: nil)
+    def initialize(manifest_params:, cluster_picker: nil, cluster_provider: nil)
       @manifest_params = manifest_params
       @cluster_picker = cluster_picker
+      @cluster_provider = cluster_provider
     end
 
     def name
       @vm_cid ||= "vm-#{SecureRandom.uuid}"
     end
 
-    def cluster_name
-      return @cluster_name if @cluster_name
+    def cluster
+      if has_custom_cluster_properties?
+        cluster_config = ClusterConfig.new(resource_pool_cluster_name, resource_pool_clusters_spec[resource_pool_cluster_name])
+        cluster_obj = @cluster_provider.find(resource_pool_cluster_name, cluster_config)
 
-      return nil if @cluster_picker.nil?
+        cluster_placement(clusters: [cluster_obj])
 
-      @cluster_name = cluster_placement.keys.first
+        cluster_obj
+      else
+        validate_clusters
+        global_clusters.find do |cluster|
+          cluster.name == cluster_placement(clusters: global_clusters).keys.first
+        end
+      end
     end
 
     def has_custom_cluster_properties?
@@ -35,11 +44,11 @@ module VSphereCloud
     end
 
     def ephemeral_datastore_name
-      return nil if cluster_name.nil?
+      return nil if cluster.nil?
       return @datastore_name if @datastore_name
 
       ephemeral_disk = disk_configurations.find { |disk| disk[:ephemeral] }
-      cluster_placement[cluster_name][ephemeral_disk]
+      cluster_placement(clusters: [cluster])[cluster.name][ephemeral_disk]
     end
 
     def ephemeral_disk_size
@@ -125,18 +134,6 @@ module VSphereCloud
       @manifest_params[:vm_type] || {}
     end
 
-    def available_clusters
-      if resource_pool_cluster_name
-        found_clusters = global_clusters.select {|cluster| cluster.name == resource_pool_cluster_name}
-        if found_clusters.empty?
-          global_cluster_names = global_clusters.map {|cluster| cluster.name}
-          raise Bosh::Clouds::CloudError, "Cluster '#{resource_pool_cluster_name}' does not match global clusters [#{global_cluster_names.join(', ')}]"
-        end
-        return found_clusters
-      end
-      global_clusters
-    end
-
     def resource_pool_cluster_name
       resource_pool_clusters_spec.keys.first || nil
     end
@@ -162,17 +159,20 @@ module VSphereCloud
       datacenter_spec.fetch('clusters', []).first || {}
     end
 
-    def cluster_placement
-      return @cluster_placement if @cluster_placement
-
-      if available_clusters.empty?
+    def validate_clusters
+      if global_clusters.empty? && !has_custom_cluster_properties?
         raise Bosh::Clouds::CloudError, 'No valid clusters were provided'
       end
+    end
+
+    def cluster_placement(clusters:)
+      return @cluster_placement if @cluster_placement
+
       if vm_type['ram'].nil?
         raise Bosh::Clouds::CloudError, 'Must specify vm_types.cloud_properties.ram'
       end
 
-      @cluster_picker.update(available_clusters)
+      @cluster_picker.update(clusters)
       @cluster_placement = @cluster_picker.best_cluster_placement(
         req_memory: vm_type['ram'],
         disk_configurations: disk_configurations,
