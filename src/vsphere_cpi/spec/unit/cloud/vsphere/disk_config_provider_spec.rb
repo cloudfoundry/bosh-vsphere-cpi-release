@@ -1,8 +1,8 @@
 require 'spec_helper'
 
 module VSphereCloud
-  describe DiskConfigs do
-    let(:disk_configs) { DiskConfigs.new(datacenter: datacenter, vm_type: vm_type, disk_pool: disk_pool) }
+  describe DiskConfigProvider do
+    let(:disk_config_provider) { DiskConfigProvider.new(datacenter: datacenter, vm_type: vm_type, disk_pool: disk_pool) }
     let(:datacenter) { instance_double(Resources::Datacenter) }
     let(:vm_type) { {} }
     let(:disk_pool) { {} }
@@ -36,7 +36,7 @@ module VSphereCloud
       end
 
       it 'returns a hash representing the persistent disk' do
-        disk_config = disk_configs.disk_config_from_persistent_disk(existing_disk_cid)
+        disk_config = disk_config_provider.disk_config_from_persistent_disk(existing_disk_cid)
         expect(disk_config).to include({
           cid: existing_disk.cid,
           size: existing_disk.size_in_mb,
@@ -51,7 +51,7 @@ module VSphereCloud
         end
 
         it 'includes the encoded pattern' do
-          disk_config = disk_configs.disk_config_from_persistent_disk(encoded_disk_cid)
+          disk_config = disk_config_provider.disk_config_from_persistent_disk(encoded_disk_cid)
           expect(disk_config).to include({
             target_datastore_pattern: 'encoded-ds',
           })
@@ -60,7 +60,7 @@ module VSphereCloud
 
       context 'when datastore pattern is not encoded disk CID' do
         it 'includes the global pattern' do
-          disk_config = disk_configs.disk_config_from_persistent_disk(existing_disk_cid)
+          disk_config = disk_config_provider.disk_config_from_persistent_disk(existing_disk_cid)
           expect(disk_config).to include({
             target_datastore_pattern: datacenter.persistent_pattern,
           })
@@ -91,7 +91,7 @@ module VSphereCloud
           }
           expected_cid = DiskMetadata.encode(existing_disk_cid, expected_metadata)
 
-          director_cid = disk_configs.director_disk_cid(existing_disk_config)
+          director_cid = disk_config_provider.director_disk_cid(existing_disk_config)
           expect(director_cid).to eq(expected_cid)
         end
       end
@@ -107,7 +107,7 @@ module VSphereCloud
         end
 
         it 'returns the original disk cid' do
-          director_cid = disk_configs.director_disk_cid(existing_disk_config)
+          director_cid = disk_config_provider.director_disk_cid(existing_disk_config)
           expect(director_cid).to eq(existing_disk_cid)
         end
       end
@@ -123,7 +123,7 @@ module VSphereCloud
         end
 
         it 'includes a pattern constructed from vm_type' do
-          disk_config = disk_configs.new_ephemeral_disk_config
+          disk_config = disk_config_provider.new_ephemeral_disk_config
           expect(disk_config).to include({
             size: 1024,
             ephemeral: true,
@@ -140,7 +140,7 @@ module VSphereCloud
         end
 
         it 'includes the global ephemeral pattern' do
-          disk_config = disk_configs.new_ephemeral_disk_config
+          disk_config = disk_config_provider.new_ephemeral_disk_config
           expect(disk_config).to include({
             size: 1024,
             ephemeral: true,
@@ -159,7 +159,7 @@ module VSphereCloud
         end
 
         it 'includes a pattern constructed from cloud_properties' do
-          disk_config = disk_configs.new_persistent_disk_config(1024)
+          disk_config = disk_config_provider.new_persistent_disk_config(1024)
           expect(disk_config).to include({
             size: 1024,
             target_datastore_pattern: '^(ds\-1|ds\-2)$',
@@ -171,7 +171,7 @@ module VSphereCloud
         let(:disk_pool) { {} }
 
         it 'includes the global persistent pattern' do
-          disk_config = disk_configs.new_persistent_disk_config(1024)
+          disk_config = disk_config_provider.new_persistent_disk_config(1024)
           expect(disk_config).to include({
             size: 1024,
             target_datastore_pattern: datacenter.persistent_pattern,

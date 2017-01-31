@@ -218,14 +218,14 @@ module VSphereCloud
         )
         stemcell_size /= 1024 * 1024
 
-        disk_configs = DiskConfigs.new(
+        disk_config_provider = DiskConfigProvider.new(
           datacenter: @datacenter,
           vm_type: vm_type,
         )
         disk_configurations = existing_disk_cids.map do |cid|
-          disk_configs.disk_config_from_persistent_disk(cid)
+          disk_config_provider.disk_config_from_persistent_disk(cid)
         end
-        ephemeral_disk_config = disk_configs.new_ephemeral_disk_config
+        ephemeral_disk_config = disk_config_provider.new_ephemeral_disk_config
         disk_configurations.push(ephemeral_disk_config)
 
         manifest_params = {
@@ -365,11 +365,11 @@ module VSphereCloud
       with_thread_name("attach_disk(#{vm_cid}, #{director_disk_cid})") do
         vm = vm_provider.find(vm_cid)
 
-        disk_configs = DiskConfigs.new(
+        disk_config_provider = DiskConfigProvider.new(
           datacenter: @datacenter,
           vm_type: nil,
         )
-        disk_config = disk_configs.disk_config_from_persistent_disk(director_disk_cid)
+        disk_config = disk_config_provider.disk_config_from_persistent_disk(director_disk_cid)
 
         disk_to_attach = @datacenter.find_disk(disk_config[:cid])
         @logger.info("Attaching disk: #{disk_config[:cid]} on vm: #{vm_cid}")
@@ -429,11 +429,11 @@ module VSphereCloud
           accessible_datastores.select! { |name| reachable_datastores.include?(name) }
         end
 
-        disk_configs = DiskConfigs.new(
+        disk_config_provider = DiskConfigProvider.new(
           datacenter: @datacenter,
           disk_pool: cloud_properties,
         )
-        disk_config = disk_configs.new_persistent_disk_config(size_in_mb)
+        disk_config = disk_config_provider.new_persistent_disk_config(size_in_mb)
         @logger.info("Using persistent disk datastore pattern: #{disk_config[:target_datastore_pattern]}")
 
         datastore_picker = DatastorePicker.new
@@ -447,7 +447,7 @@ module VSphereCloud
         @logger.info("Created disk: #{disk.inspect}")
 
         disk_config[:cid] = disk.cid
-        disk_configs.director_disk_cid(disk_config)
+        disk_config_provider.director_disk_cid(disk_config)
       end
     end
 

@@ -1,5 +1,5 @@
 module VSphereCloud
-  class DiskConfigs
+  class DiskConfigProvider
 
     def initialize(opts)
       @datacenter = opts[:datacenter]
