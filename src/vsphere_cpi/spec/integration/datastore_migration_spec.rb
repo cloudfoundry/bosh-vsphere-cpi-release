@@ -1,6 +1,6 @@
 require 'integration/spec_helper'
 
-context 'when disk is in non-accessible datastore' do
+context 'when the datastore is chosen for disk creation' do
   before (:all) do
     @cluster_name = fetch_and_verify_cluster('BOSH_VSPHERE_CPI_CLUSTER')
     @datastore_pattern = fetch_and_verify_datastore('BOSH_VSPHERE_CPI_DATASTORE_PATTERN', @cluster_name)
@@ -74,11 +74,11 @@ context 'when disk is in non-accessible datastore' do
     it 'creates disk in an accessible datastore' do
       begin
         datastores_accessible_to_vm = datastores_accessible_from_cluster(first_cluster_cpi, @cluster_name)
-        disk_id = @cpi.create_disk(128, {}, existing_vm_id)
+        disk_id = first_cluster_cpi.create_disk(128, {}, existing_vm_id)
 
         verify_disk_is_in_datastores(first_cluster_cpi, disk_id, datastores_accessible_to_vm)
       ensure
-        delete_disk(@cpi, disk_id)
+        delete_disk(first_cluster_cpi, disk_id)
       end
     end
   end
@@ -90,11 +90,10 @@ context 'when disk is in non-accessible datastore' do
       vm_id
     end
     let(:accessible_datastores) do
-      accessible_datastores = datastores_accessible_from_cluster(@cpi, @cluster_name)
+      accessible_datastores = datastores_accessible_from_cluster(first_cluster_cpi, @cluster_name)
       expect(accessible_datastores).to_not include(@second_cluster_datastore)
       accessible_datastores
     end
-
     let(:existing_disk_id) do
       disk_id = second_cluster_cpi.create_disk(128, {}, nil)
       expect(disk_id).to_not be_nil

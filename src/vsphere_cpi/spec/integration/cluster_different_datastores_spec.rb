@@ -26,7 +26,6 @@ context 'given cpis that are configured to use same cluster but different datast
       }
     }
   end
-
   let(:vm_type) do
     {
       'ram' => 512,
@@ -34,7 +33,6 @@ context 'given cpis that are configured to use same cluster but different datast
       'cpu' => 1,
     }
   end
-
   let(:first_datastore_cpi) do
     options = cpi_options(
       datacenters: [{
@@ -44,7 +42,6 @@ context 'given cpis that are configured to use same cluster but different datast
     )
     VSphereCloud::Cloud.new(options)
   end
-
   let(:second_datastore_cpi) do
     options = cpi_options(
       datacenters: [{

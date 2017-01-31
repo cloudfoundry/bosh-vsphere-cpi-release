@@ -52,6 +52,7 @@ describe 'cloud_properties related to clusters' do
         ]
       )
     end
+
     it 'creates vm in cluster defined in `vm_type`' do
       cpi = VSphereCloud::Cloud.new(options)
       begin

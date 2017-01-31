@@ -16,7 +16,6 @@ context 'when datastores are configured in vm_types' do
       'cpu' => 1,
     }
   end
-
   let(:network_spec) do
     {
       'static' => {
@@ -29,18 +28,16 @@ context 'when datastores are configured in vm_types' do
       }
     }
   end
-
   let (:vm_type_with_datastores) do
     vm_type.merge({
       'datastores' => [@second_cluster_datastore]
     })
   end
-
   let(:second_cluster_cpi) do
     options = cpi_options(
       datacenters: [{
-        datastore_pattern: @second_cluster_datastore,
-        persistent_datastore_pattern: @second_cluster_datastore,
+        datastore_pattern: '.*',
+        persistent_datastore_pattern: '.*',
         clusters: [@second_cluster_name]
       }]
     )
@@ -82,7 +79,6 @@ context 'when datastores are configured in vm_types' do
       )
       VSphereCloud::Cloud.new(options)
     end
-
     let (:vm_type_with_datastores) do
       vm_type.merge({
         'datastores' => [@second_cluster_datastore],
@@ -131,7 +127,6 @@ context 'when datastores are configured in vm_types' do
       )
       VSphereCloud::Cloud.new(options)
     end
-
     let (:vm_type_with_datastores) do
       vm_type.merge({
         'datastores' => [@second_cluster_datastore],
@@ -159,6 +154,56 @@ context 'when datastores are configured in vm_types' do
         }.to raise_error Bosh::Clouds::CloudError, /No valid placement found for disks/
       ensure
         delete_vm(two_cluster_cpi, vm_id)
+      end
+    end
+  end
+
+  context 'when a datastore is specified in the vm_type but not in the global config' do
+    let(:cpi) do
+      # expect global datastore pattern to be overridden
+      options = cpi_options(
+        datacenters: [{
+          datastore_pattern: @datastore_pattern,
+          persistent_datastore_pattern: @datastore_pattern,
+          clusters: [@cluster_name]
+        }],
+      )
+      VSphereCloud::Cloud.new(options)
+    end
+    let(:vm_type_with_non_global_datastore) do
+      vm_type.merge({
+        'datastores' => [@second_cluster_datastore],
+        'datacenters' => [{
+          'name' => @datacenter_name,
+          'clusters' => [{
+            @second_cluster_name => {}
+          }]
+        }]
+      })
+    end
+
+    it 'places the VM on that datastore as long as its cluster can reach it' do
+      begin
+        vm_id = cpi.create_vm(
+          'agent-007',
+          @stemcell_id,
+          vm_type_with_non_global_datastore,
+          network_spec,
+          [],
+          {}
+        )
+        expect(vm_id).to_not be_nil
+
+        vm = cpi.vm_provider.find(vm_id)
+        expect(vm).to_not be_nil
+
+        ephemeral_disk = vm.ephemeral_disk
+        expect(ephemeral_disk).to_not be_nil
+
+        ephemeral_ds = ephemeral_disk.backing.datastore.name
+        expect(ephemeral_ds).to eq(@second_cluster_datastore)
+      ensure
+        delete_vm(cpi, vm_id)
       end
     end
   end
