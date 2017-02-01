@@ -128,11 +128,11 @@ module VSphereCloud
             },
             global_clusters: @datacenter.clusters,
             disk_configurations: [
-              {
+              VSphereCloud::DiskConfig.new(
                 size: stemcell_size,
                 target_datastore_pattern: @datacenter.ephemeral_pattern,
-                ephemeral: true,
-              },
+                ephemeral: true
+              )
             ],
           }
           vm_config = VmConfig.new(
@@ -218,14 +218,14 @@ module VSphereCloud
         )
         stemcell_size /= 1024 * 1024
 
-        disk_config_provider = DiskConfigProvider.new(
+        disk_config_factory = DiskConfigFactory.new(
           datacenter: @datacenter,
           vm_type: vm_type,
         )
         disk_configurations = existing_disk_cids.map do |cid|
-          disk_config_provider.disk_config_from_persistent_disk(cid)
+          disk_config_factory.disk_config_from_persistent_disk(cid)
         end
-        ephemeral_disk_config = disk_config_provider.new_ephemeral_disk_config
+        ephemeral_disk_config = disk_config_factory.new_ephemeral_disk_config
         disk_configurations.push(ephemeral_disk_config)
 
         manifest_params = {
@@ -365,21 +365,18 @@ module VSphereCloud
       with_thread_name("attach_disk(#{vm_cid}, #{director_disk_cid})") do
         vm = vm_provider.find(vm_cid)
 
-        disk_config_provider = DiskConfigProvider.new(
-          datacenter: @datacenter,
-          vm_type: nil,
-        )
-        disk_config = disk_config_provider.disk_config_from_persistent_disk(director_disk_cid)
+        disk_config_factory = DiskConfigFactory.new(datacenter: @datacenter)
+        disk_config = disk_config_factory.disk_config_from_persistent_disk(director_disk_cid)
 
-        disk_to_attach = @datacenter.find_disk(disk_config[:cid])
-        @logger.info("Attaching disk: #{disk_config[:cid]} on vm: #{vm_cid}")
+        disk_to_attach = @datacenter.find_disk(disk_config.cid)
+        @logger.info("Attaching disk: #{disk_config.cid} on vm: #{vm_cid}")
 
         accessible_datastores = @datacenter.accessible_datastores
         reachable_datastores = vm.accessible_datastore_names
         accessible_datastores.select! { |name| reachable_datastores.include?(name) }
-        disk_is_accessible = accessible_datastores.include?(disk_config[:existing_datastore_name])
+        disk_is_accessible = accessible_datastores.include?(disk_config.existing_datastore_name)
 
-        disk_is_in_target_datastore = disk_config[:existing_datastore_name] =~ Regexp.new(disk_config[:target_datastore_pattern])
+        disk_is_in_target_datastore = disk_config.existing_datastore_name =~ Regexp.new(disk_config.target_datastore_pattern)
 
         unless disk_is_accessible && disk_is_in_target_datastore
           datastore_picker = DatastorePicker.new
@@ -429,12 +426,12 @@ module VSphereCloud
           accessible_datastores.select! { |name| reachable_datastores.include?(name) }
         end
 
-        disk_config_provider = DiskConfigProvider.new(
+        disk_config_factory = DiskConfigFactory.new(
           datacenter: @datacenter,
           disk_pool: cloud_properties,
         )
-        disk_config = disk_config_provider.new_persistent_disk_config(size_in_mb)
-        @logger.info("Using persistent disk datastore pattern: #{disk_config[:target_datastore_pattern]}")
+        disk_config = disk_config_factory.new_persistent_disk_config(size_in_mb)
+        @logger.info("Using persistent disk datastore pattern: #{disk_config.target_datastore_pattern}")
 
         datastore_picker = DatastorePicker.new
         datastore_picker.update(accessible_datastores)
@@ -446,8 +443,8 @@ module VSphereCloud
         disk = @datacenter.create_disk(datastore, size_in_mb, disk_type)
         @logger.info("Created disk: #{disk.inspect}")
 
-        disk_config[:cid] = disk.cid
-        disk_config_provider.director_disk_cid(disk_config)
+        disk_config.cid = disk.cid
+        disk_config_factory.director_disk_cid(disk_config)
       end
     end
 

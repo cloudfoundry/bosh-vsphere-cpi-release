@@ -18,15 +18,17 @@ module VSphereCloud
 
         it 'returns the first placement option' do
           disks = [
-            {
+            instance_double(VSphereCloud::DiskConfig,
               size: 256,
-              target_datastore_pattern: 'target-ds'
-            },
-            {
+              target_datastore_pattern: 'target-ds',
+              existing_datastore_name: nil
+            ),
+            instance_double(VSphereCloud::DiskConfig,
               size: 256,
-              ephemeral: true,
-              target_datastore_pattern: 'target-ds'
-            },
+              ephemeral?: true,
+              target_datastore_pattern: 'target-ds',
+              existing_datastore_name: nil
+            ),
           ]
 
           picker = ClusterPicker.new(0, 0)
@@ -57,10 +59,13 @@ module VSphereCloud
 
         context 'based upon available memory' do
           it 'raises a CloudError when mem_headroom is provided' do
-            disks = [{
-              size: 0,
-              target_datastore_pattern: '.*',
-            }]
+            disks = [
+              instance_double(VSphereCloud::DiskConfig,
+                size: 0,
+                target_datastore_pattern: '.*',
+                existing_datastore_name: nil
+              )
+            ]
 
             picker = ClusterPicker.new(0, 0)
             picker.update(available_clusters)
@@ -71,10 +76,13 @@ module VSphereCloud
           end
 
           it 'raises a CloudError when mem_headroom is default' do
-            disks = [{
-              size: 0,
-              target_datastore_pattern: '.*',
-            }]
+            disks = [
+              instance_double(VSphereCloud::DiskConfig,
+                size: 0,
+                target_datastore_pattern: '.*',
+                existing_datastore_name: nil
+              )
+            ]
 
             picker = ClusterPicker.new
             picker.update(available_clusters)
@@ -87,10 +95,13 @@ module VSphereCloud
 
         context 'based upon available free space' do
           it 'raises a CloudError when disk_headroom is provided' do
-            disks = [{
-              size: 2048,
-              target_datastore_pattern: '.*',
-            }]
+            disks = [
+              instance_double(VSphereCloud::DiskConfig,
+                size: 2048,
+                target_datastore_pattern: '.*',
+                existing_datastore_name: nil
+              )
+            ]
 
             picker = ClusterPicker.new(0, 0)
             picker.update(available_clusters)
@@ -101,10 +112,13 @@ module VSphereCloud
           end
 
           it 'raises a CloudError when disk_headroom is default' do
-            disks = [{
-              size: 1024 - DatastorePicker::DEFAULT_DISK_HEADROOM + 1,
-              target_datastore_pattern: '.*',
-            }]
+            disks = [
+              instance_double(VSphereCloud::DiskConfig,
+                size: 1024 - DatastorePicker::DEFAULT_DISK_HEADROOM + 1,
+                target_datastore_pattern: '.*',
+                existing_datastore_name: nil
+              )
+            ]
 
             picker = ClusterPicker.new
             picker.update(available_clusters)
@@ -117,10 +131,13 @@ module VSphereCloud
 
         context 'based upon target datastore pattern' do
           it 'raises a CloudError' do
-            disks = [{
-              size: 0,
-              target_datastore_pattern: 'target-ds'
-            }]
+            disks = [
+              instance_double(VSphereCloud::DiskConfig,
+                size: 0,
+                target_datastore_pattern: 'target-ds',
+                existing_datastore_name: nil
+              )
+            ]
 
             picker = ClusterPicker.new(0, 0)
             picker.update(available_clusters)
@@ -157,11 +174,13 @@ module VSphereCloud
           let(:current_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 512) }
 
           it 'returns the cluster' do
-            disks = [{
-              size: 256,
-              target_datastore_pattern: '.*',
-              existing_datastore_name: 'current-ds',
-            }]
+            disks = [
+              instance_double(VSphereCloud::DiskConfig,
+                size: 256,
+                target_datastore_pattern: '.*',
+                existing_datastore_name: 'current-ds',
+              )
+            ]
 
             picker = ClusterPicker.new(0, 0)
             picker.update(available_clusters)
@@ -199,10 +218,13 @@ module VSphereCloud
           let(:larger_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 1024) }
 
           it 'returns the cluster' do
-            disks = [{
-              size: 256,
-              target_datastore_pattern: '.*',
-            }]
+            disks = [
+              instance_double(VSphereCloud::DiskConfig,
+                size: 256,
+                target_datastore_pattern: '.*',
+                existing_datastore_name: nil
+              )
+            ]
 
             picker = ClusterPicker.new(0, 0)
             picker.update(available_clusters)
@@ -239,10 +261,13 @@ module VSphereCloud
           let(:same_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 1024) }
 
           it 'returns the cluster' do
-            disks = [{
-              size: 256,
-              target_datastore_pattern: '.*',
-            }]
+            disks = [
+              instance_double(VSphereCloud::DiskConfig,
+                size: 256,
+                target_datastore_pattern: '.*',
+                existing_datastore_name: nil
+              )
+            ]
 
             picker = ClusterPicker.new(0, 0)
             picker.update(available_clusters)

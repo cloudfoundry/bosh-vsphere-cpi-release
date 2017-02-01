@@ -399,6 +399,22 @@ module VSphereCloud
       end
       let(:nsx) { instance_double(NSX) }
       let(:fake_cluster) { instance_double(VSphereCloud::Resources::Cluster, name: 'fake-cluster') }
+      let(:target_datastore_pattern) { 'fake-persistent-pattern' }
+      let(:fake_persistent_disk) do
+        instance_double(VSphereCloud::DiskConfig,
+          cid: fake_disk.cid,
+          size: fake_disk.size_in_mb,
+          existing_datastore_name: fake_datastore.name,
+          target_datastore_pattern: target_datastore_pattern,
+        )
+      end
+      let(:fake_ephemeral_disk) do
+        instance_double(VSphereCloud::DiskConfig,
+          size: 4096,
+          ephemeral?: true,
+          target_datastore_pattern: 'fake-ephemeral-pattern',
+        )
+      end
 
       before do
         allow(vsphere_cloud).to receive(:stemcell_vm)
@@ -431,6 +447,19 @@ module VSphereCloud
         allow(IPConflictDetector).to receive(:new)
           .with(logger, vcenter_client)
           .and_return(ip_conflict_detector)
+        allow(DiskConfig).to receive(:new)
+          .with(
+            cid: fake_disk.cid,
+            size: fake_disk.size_in_mb,
+            existing_datastore_name: fake_datastore.name,
+            target_datastore_pattern: target_datastore_pattern)
+          .and_return(fake_persistent_disk)
+        allow(DiskConfig).to receive(:new)
+           .with(
+             size: 4096,
+             ephemeral: true,
+             target_datastore_pattern: 'fake-ephemeral-pattern')
+           .and_return(fake_ephemeral_disk)
       end
 
       it 'creates a new VM with provided manifest properties' do
@@ -444,19 +473,7 @@ module VSphereCloud
             size: 1024
           },
           global_clusters: [fake_cluster],
-          disk_configurations: [
-            {
-              cid: fake_disk.cid,
-              size: fake_disk.size_in_mb,
-              existing_datastore_name: fake_datastore.name,
-              target_datastore_pattern: 'fake-persistent-pattern',
-            },
-            {
-              size: 4096,
-              ephemeral: true,
-              target_datastore_pattern: 'fake-ephemeral-pattern',
-            }
-          ],
+          disk_configurations: [fake_persistent_disk, fake_ephemeral_disk],
         }
 
         allow(VmConfig).to receive(:new)
@@ -506,13 +523,7 @@ module VSphereCloud
             size: 1024
           },
           global_clusters: [fake_cluster],
-          disk_configurations: [
-            {
-              size: 4096,
-              ephemeral: true,
-              target_datastore_pattern: 'fake-ephemeral-pattern',
-            }
-          ],
+          disk_configurations: [fake_ephemeral_disk],
         }
         expect(VmConfig).to receive(:new)
           .with(
@@ -549,34 +560,38 @@ module VSphereCloud
       end
 
       context 'when existing_disk_cids contains encoded metadata' do
+        let(:target_datastore_pattern) { '^(fake\-datastore)$' }
         let(:disk_metadata) do
           {
-            target_datastore_pattern: '^(fake\-datastore)$',
+            target_datastore_pattern: target_datastore_pattern,
           }
         end
         let(:existing_disk_cids) { ["fake-disk-cid.#{Base64.urlsafe_encode64(disk_metadata.to_json)}"] }
+        let(:fake_persistent_disk) do
+          instance_double(VSphereCloud::DiskConfig,
+            cid: fake_disk.cid,
+            size: fake_disk.size_in_mb,
+            existing_datastore_name: fake_datastore.name,
+            target_datastore_pattern: target_datastore_pattern,
+          )
+        end
 
         before do
           allow(VmCreator).to receive(:new)
             .and_return(vm_creator)
           allow(vm_creator).to receive(:create).and_return(fake_vm)
+          allow(DiskConfig).to receive(:new)
+           .with(
+               cid: fake_disk.cid,
+               size: fake_disk.size_in_mb,
+               existing_datastore_name: fake_datastore.name,
+               target_datastore_pattern: target_datastore_pattern)
+           .and_return(fake_persistent_disk)
         end
 
         it 'creates the VM with disk cid parsed from the metadata-encoded director disk cid' do
           expect(VmConfig).to receive(:new) do |options|
-            expect(options[:manifest_params][:disk_configurations]).to eq([
-              {
-                cid: fake_disk.cid,
-                size: fake_disk.size_in_mb,
-                existing_datastore_name: fake_datastore.name,
-                target_datastore_pattern: disk_metadata[:target_datastore_pattern],
-              },
-              {
-                size: 4096,
-                ephemeral: true,
-                target_datastore_pattern: 'fake-ephemeral-pattern',
-              }
-            ])
+            expect(options[:manifest_params][:disk_configurations]).to eq([fake_persistent_disk, fake_ephemeral_disk])
             vm_config
           end
           expect(vm_config).to receive(:validate)
@@ -606,19 +621,7 @@ module VSphereCloud
               size: 1024
             },
             global_clusters: [fake_cluster],
-            disk_configurations: [
-              {
-                cid: fake_disk.cid,
-                size: fake_disk.size_in_mb,
-                existing_datastore_name: fake_datastore.name,
-                target_datastore_pattern: 'fake-persistent-pattern',
-              },
-              {
-                size: 4096,
-                ephemeral: true,
-                target_datastore_pattern: 'fake-ephemeral-pattern',
-              }
-            ],
+            disk_configurations: [fake_persistent_disk, fake_ephemeral_disk]
           }
 
           allow(VmConfig).to receive(:new)
@@ -690,6 +693,15 @@ module VSphereCloud
               ]
             }
           }
+        end
+
+        before do
+          allow(DiskConfig).to receive(:new)
+            .with(
+              size: nil,
+              ephemeral: true,
+              target_datastore_pattern: 'fake-ephemeral-pattern')
+            .and_return(fake_ephemeral_disk)
         end
 
         it 'should create the security tags and attach them to the VM' do

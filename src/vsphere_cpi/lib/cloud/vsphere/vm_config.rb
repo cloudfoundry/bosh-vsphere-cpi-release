@@ -47,7 +47,7 @@ module VSphereCloud
       return nil if cluster.nil?
       return @datastore_name if @datastore_name
 
-      ephemeral_disk = disk_configurations.find { |disk| disk[:ephemeral] }
+      ephemeral_disk = disk_configurations.find { |disk| disk.ephemeral? }
       cluster_placement(clusters: [cluster])[cluster.name][ephemeral_disk]
     end
 

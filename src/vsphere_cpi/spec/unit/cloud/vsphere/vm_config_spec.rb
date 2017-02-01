@@ -212,11 +212,14 @@ module VSphereCloud
           )
         end
         let(:disk_configurations) do
-          [{
-            size: 512,
-            ephemeral: true,
-            target_datastore_pattern: '.*',
-          }]
+          [
+            instance_double(VSphereCloud::DiskConfig,
+              size: 512,
+              ephemeral?: true,
+              existing_datastore_name: nil,
+              target_datastore_pattern: '.*',
+            )
+          ]
         end
 
         it 'returns the picked global cluster' do
@@ -245,12 +248,15 @@ module VSphereCloud
             }
           end
           let(:disk_configurations) do
-            [{
-              cid: 'disk-cid',
-              size: 256,
-              ephemeral: true,
-              target_datastore_pattern: '^(smaller-ds)$',
-            }]
+            [
+              instance_double(VSphereCloud::DiskConfig,
+                cid: 'disk-cid',
+                size: 256,
+                ephemeral?: true,
+                existing_datastore_name: nil,
+                target_datastore_pattern: '^(smaller-ds)$',
+              )
+            ]
           end
 
           it 'uses the pattern specified' do
@@ -302,17 +308,18 @@ module VSphereCloud
       end
       let(:disk_configurations) do
         [
-          {
+          instance_double(VSphereCloud::DiskConfig,
             size: 512,
-            ephemeral: true,
+            ephemeral?: true,
+            existing_datastore_name: nil,
             target_datastore_pattern: 'target-ds',
-          },
-          {
+          ),
+          instance_double(VSphereCloud::DiskConfig,
             size: 512,
             cid: 'disk-1234',
             existing_datastore_name: 'other-ds',
             target_datastore_pattern: '.*',
-          },
+          ),
         ]
       end
 

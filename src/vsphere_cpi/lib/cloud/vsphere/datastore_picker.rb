@@ -30,9 +30,9 @@ module VSphereCloud
       end
 
       disks.each do |disk|
-        existing_ds_name = disk[:existing_datastore_name]
+        existing_ds_name = disk.existing_datastore_name
 
-        if existing_ds_name =~ Regexp.new(disk[:target_datastore_pattern]) && datastores.keys.include?(existing_ds_name)
+        if existing_ds_name =~ Regexp.new(disk.target_datastore_pattern) && datastores.keys.include?(existing_ds_name)
           datastores[existing_ds_name][:disks].push(disk)
           next
         end
@@ -41,12 +41,12 @@ module VSphereCloud
 
         weighted_datastores = weighted_random_sort(datastores)
         weighted_datastores.each do |ds|
-          additional_required_space = disk[:size] + @headroom
+          additional_required_space = disk.size + @headroom
 
           ds_name = ds[0]
           ds_props = ds[1]
           next if additional_required_space > ds_props[:free_space]
-          next unless ds_name =~ Regexp.new(disk[:target_datastore_pattern])
+          next unless ds_name =~ Regexp.new(disk.target_datastore_pattern)
 
           datastores[ds_name][:disks].push(disk)
           datastores[ds_name][:free_space] -= additional_required_space
@@ -73,7 +73,7 @@ module VSphereCloud
 
     def self.pretty_print_disks(disk_configs)
       disk_configs.map do |disk_config|
-        "- Size: #{disk_config[:size]}, Target DS Pattern: #{disk_config[:target_datastore_pattern]}, Current Location: #{disk_config[:existing_datastore_name] || 'N/A'}"
+        "- Size: #{disk_config.size}, Target DS Pattern: #{disk_config.target_datastore_pattern}, Current Location: #{disk_config.existing_datastore_name || 'N/A'}"
       end.join("\n")
     end
 

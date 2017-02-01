@@ -15,17 +15,18 @@ module VSphereCloud
          }
         end
         let(:already_placed_disk) do
-          {
+          instance_double(VSphereCloud::DiskConfig,
             size: 256,
             existing_datastore_name: 'ds-1',
             target_datastore_pattern: '.*',
-          }
+          )
         end
         let(:moved_disk) do
-          {
+          instance_double(VSphereCloud::DiskConfig,
             size: 512,
+            existing_datastore_name: nil,
             target_datastore_pattern: '.*',
-          }
+          )
         end
 
         it 'returns the only valid placement' do
@@ -45,10 +46,11 @@ module VSphereCloud
 
         context 'when no valid placement exists' do
           let(:large_disk) do
-            {
+            instance_double(VSphereCloud::DiskConfig,
               size: 999999,
+              existing_datastore_name: nil,
               target_datastore_pattern: '.*',
-            }
+            )
           end
 
           it 'raises an error' do
@@ -73,16 +75,18 @@ module VSphereCloud
          }
         end
         let(:disk1) do
-          {
+          instance_double(VSphereCloud::DiskConfig,
             size: 256,
             target_datastore_pattern: 'ds-2',
-          }
+            existing_datastore_name: nil
+          )
         end
         let(:disk2) do
-          {
+          instance_double(VSphereCloud::DiskConfig,
             size: 512,
             target_datastore_pattern: '.*',
-          }
+            existing_datastore_name: nil
+          )
         end
 
         let(:picker) { DatastorePicker.new(0) }
@@ -115,16 +119,18 @@ module VSphereCloud
            }
           end
           let(:disk1) do
-            {
+            instance_double(VSphereCloud::DiskConfig,
               size: 256,
               target_datastore_pattern: 'ds-2',
-            }
+              existing_datastore_name: nil
+            )
           end
           let(:disk2) do
-            {
+            instance_double(VSphereCloud::DiskConfig,
               size: 512,
               target_datastore_pattern: '.*',
-            }
+              existing_datastore_name: nil
+            )
           end
 
           it 'defaults headroom to 1024' do
@@ -158,16 +164,18 @@ module VSphereCloud
            }
           end
           let(:disk1) do
-            {
+            instance_double(VSphereCloud::DiskConfig,
               size: 256,
               target_datastore_pattern: 'ds-2',
-            }
+              existing_datastore_name: nil
+            )
           end
           let(:disk2) do
-            {
+            instance_double(VSphereCloud::DiskConfig,
               size: 512,
               target_datastore_pattern: '.*',
-            }
+              existing_datastore_name: nil
+            )
           end
 
           it 'accounts for additional headroom' do
@@ -192,17 +200,18 @@ module VSphereCloud
 
         context 'when given existing_datastore_name' do
           let(:disk1) do
-            {
+            instance_double(VSphereCloud::DiskConfig,
               size: 256,
               existing_datastore_name: 'ds-2',
               target_datastore_pattern: '.*',
-            }
+            )
           end
           let(:disk2) do
-            {
+            instance_double(VSphereCloud::DiskConfig,
               size: 512,
               target_datastore_pattern: '.*',
-            }
+              existing_datastore_name: nil
+            )
           end
 
           it 'keeps the disk in its existing datastore to minimize disk migrations' do
@@ -226,17 +235,18 @@ module VSphereCloud
 
         context 'when given existing_datastore_name that is not available' do
           let(:disk1) do
-            {
+            instance_double(VSphereCloud::DiskConfig,
               size: 256,
               existing_datastore_name: 'non-accessible-ds',
               target_datastore_pattern: '.*',
-            }
+            )
           end
           let(:disk2) do
-            {
+            instance_double(VSphereCloud::DiskConfig,
               size: 512,
               target_datastore_pattern: '.*',
-            }
+              existing_datastore_name: nil
+            )
           end
 
           it 'places the disk in an available datastore and includes the migration size' do
@@ -297,28 +307,32 @@ module VSphereCloud
           }
         end
         let(:disk1) do
-          {
+          instance_double(VSphereCloud::DiskConfig,
             size: 256,
             target_datastore_pattern: '.*',
-          }
+            existing_datastore_name: nil
+          )
         end
         let(:disk2) do
-          {
+          instance_double(VSphereCloud::DiskConfig,
             size: 512,
             target_datastore_pattern: '.*',
-          }
+            existing_datastore_name: nil
+          )
         end
         let(:disk3) do
-          {
+          instance_double(VSphereCloud::DiskConfig,
             size: 512,
             target_datastore_pattern: '.*',
-          }
+            existing_datastore_name: nil
+          )
         end
         let(:disk4) do
-          {
+          instance_double(VSphereCloud::DiskConfig,
             size: 1024,
             target_datastore_pattern: '.*',
-          }
+            existing_datastore_name: nil
+          )
         end
 
         it 'simulates placement' do
@@ -355,10 +369,11 @@ module VSphereCloud
        }
       end
       let(:disk) do
-        {
+        instance_double(VSphereCloud::DiskConfig,
           size: 512,
           target_datastore_pattern: '.*',
-        }
+          existing_datastore_name: nil
+        )
       end
 
       it 'returns the picked datastore name' do
