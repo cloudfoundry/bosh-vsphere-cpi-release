@@ -75,4 +75,63 @@ describe 'cloud_properties related to clusters' do
       end
     end
   end
+
+  context 'when vm_type specifies multiple clusters' do
+    let(:vm_type) do
+      {
+          'ram' => 512,
+          'disk' => 2048,
+          'cpu' => 1,
+          'datacenters' => [
+              {
+                  'name' => @datacenter_name,
+                  'clusters' => [
+                      {
+                          @cluster_name_2 => {}
+                      },
+                      {
+                          @cluster_name => {}
+                      },
+                  ]
+              }
+          ]
+      }
+    end
+    let(:options) do
+      options = cpi_options(
+          'datacenters' => [
+              {
+                  'name' => @datacenter_name,
+                  'clusters' => [
+                      {
+                          @cluster_name => {}
+                      },
+                  ]
+              }
+          ]
+      )
+    end
+  
+    it 'creates vm in the best possible cluster defined in `vm_type`' do
+      cpi = VSphereCloud::Cloud.new(options)
+      begin
+        vm_id = cpi.create_vm(
+            'agent-007',
+            @stemcell_id,
+            vm_type,
+            network_spec,
+            [],
+            {}
+        )
+        expect(vm_id).to_not be_nil
+      
+        vm = cpi.vm_provider.find(vm_id)
+        expect(vm).to_not be_nil
+      
+        expect(vm.cluster).to eq(@cluster_name)
+      ensure
+        delete_vm(cpi, vm_id)
+      end
+    end
+  end
 end

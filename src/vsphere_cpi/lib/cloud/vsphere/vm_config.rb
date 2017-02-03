@@ -13,12 +13,9 @@ module VSphereCloud
 
     def cluster
       if has_custom_cluster_properties?
-        cluster_config = ClusterConfig.new(resource_pool_cluster_name, resource_pool_clusters_spec[resource_pool_cluster_name])
-        cluster_obj = @cluster_provider.find(resource_pool_cluster_name, cluster_config)
-
-        cluster_placement(clusters: [cluster_obj])
-
-        cluster_obj
+        clusters = find_clusters(resource_pool_clusters_spec)
+        placement = cluster_placement(clusters: clusters)
+        clusters.find {|cluster| cluster.name == placement.keys.first}
       else
         validate_clusters
         global_clusters.find do |cluster|
@@ -27,20 +24,12 @@ module VSphereCloud
       end
     end
 
-    def has_custom_cluster_properties?
-      # custom properties include drs_rules and vcenter resource_pools
-      !!resource_pool_clusters_spec.keys.first
-    end
-
-    def cluster_spec
-      return resource_pool_clusters_spec.values.first
-    end
-
     def drs_rule
-      cluster_config = resource_pool_clusters_spec.values.first
-      return nil if cluster_config.nil?
-
-      (cluster_config['drs_rules'] || []).first
+      # binding.pry
+      cluster_name = cluster.name
+      cluster_spec = resource_pool_clusters_spec.find { |cluster_spec| cluster_spec.keys.first == cluster_name }
+      return nil if cluster_spec.nil? || cluster_spec[cluster_name].nil?
+      cluster_spec[cluster_name].fetch('drs_rules', []).first
     end
 
     def ephemeral_datastore_name
@@ -102,24 +91,6 @@ module VSphereCloud
       validate_drs_rules
     end
 
-    def validate_drs_rules
-      cluster_config = resource_pool_clusters_spec.values.first
-      return if cluster_config.nil?
-
-      drs_rules = cluster_config['drs_rules']
-      return if drs_rules.nil?
-
-      if drs_rules.size > 1
-        raise 'vSphere CPI supports only one DRS rule per resource pool'
-      end
-
-      rule_config = drs_rules.first
-
-      if rule_config['type'] != 'separate_vms'
-        raise "vSphere CPI only supports DRS rule of 'separate_vms' type, not '#{rule_config['type']}'"
-      end
-    end
-
     def bosh_group
       if !agent_env['bosh'].nil? then
         return agent_env['bosh']['group']
@@ -130,12 +101,41 @@ module VSphereCloud
 
     private
 
-    def vm_type
-      @manifest_params[:vm_type] || {}
+    def validate_drs_rules
+      cluster_name = cluster.name
+      cluster_config = resource_pool_clusters_spec.find {|cluster_spec| cluster_spec.keys.first == cluster_name}
+      return if cluster_config.nil?
+  
+      drs_rules = cluster_config[cluster_name]['drs_rules']
+      return if drs_rules.nil?
+  
+      if drs_rules.size > 1
+        raise 'vSphere CPI supports only one DRS rule per resource pool'
+      end
+  
+      rule_config = drs_rules.first
+  
+      if rule_config['type'] != 'separate_vms'
+        raise "vSphere CPI only supports DRS rule of 'separate_vms' type, not '#{rule_config['type']}'"
+      end
     end
 
-    def resource_pool_cluster_name
-      resource_pool_clusters_spec.keys.first || nil
+    def has_custom_cluster_properties?
+      # custom properties include drs_rules and vcenter resource_pools
+      !resource_pool_clusters_spec.empty?
+    end
+    
+    def find_clusters(clusters_spec)
+      clusters = []
+      clusters_spec.each do |cluster_spec|
+        cluster_config = ClusterConfig.new(cluster_spec.keys.first, cluster_spec.values.first)
+        clusters.push(@cluster_provider.find(cluster_spec.keys.first, cluster_config))
+      end
+      clusters
+    end
+
+    def vm_type
+      @manifest_params[:vm_type] || {}
     end
 
     def global_clusters
@@ -156,7 +156,7 @@ module VSphereCloud
 
     def resource_pool_clusters_spec
       datacenter_spec = datacenters_spec.first || {}
-      datacenter_spec.fetch('clusters', []).first || {}
+      datacenter_spec.fetch('clusters', [])
     end
 
     def validate_clusters
