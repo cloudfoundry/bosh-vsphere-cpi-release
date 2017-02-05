@@ -1312,5 +1312,11 @@ module VSphereCloud
         vsphere_cloud.cleanup
       end
     end
+
+    describe '#info' do
+      it 'returns correct info' do
+        expect(vsphere_cloud.info).to eq({'stemcell_formats' => ['vsphere-ovf']})
+      end
+    end
   end
 end

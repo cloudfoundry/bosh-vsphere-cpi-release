@@ -691,6 +691,10 @@ module VSphereCloud
       rescue VSphereCloud::VCenterClient::NotLoggedInException
     end
 
+    def info
+      {'stemcell_formats' =>  ['vsphere-ovf']}
+    end
+
     private
 
     def import_ovf(name, ovf, resource_pool, datastore)
