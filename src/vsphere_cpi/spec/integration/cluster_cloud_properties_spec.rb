@@ -5,6 +5,7 @@ describe 'cloud_properties related to clusters' do
     @datacenter_name = fetch_and_verify_datacenter('BOSH_VSPHERE_CPI_DATACENTER')
     @cluster_name = fetch_and_verify_cluster('BOSH_VSPHERE_CPI_CLUSTER')
     @cluster_name_2 = fetch_and_verify_cluster('BOSH_VSPHERE_CPI_SECOND_CLUSTER')
+    @datastore = ENV['BOSH_VSPHERE_CPI_SECOND_DATASTORE']
   end
 
   let(:network_spec) do
@@ -77,41 +78,67 @@ describe 'cloud_properties related to clusters' do
   end
 
   context 'when vm_type specifies multiple clusters' do
+    before do
+      options = cpi_options(
+        'datacenters' => [
+          {
+            'name' => @datacenter_name,
+            'clusters' => [
+              {
+                @cluster_name => {}
+              },
+              {
+                @cluster_name_2 => {}
+              }
+            ]
+          }
+        ]
+      )
+      cpi = VSphereCloud::Cloud.new(options)
+      # cluster_name_2 should have more memory than cluster_name and
+      # both clusters need to have the specified @datastore
+      verify_cluster_memory(cpi, @cluster_name_2, @cluster_name)
+    end
+    
     let(:vm_type) do
       {
-          'ram' => 512,
-          'disk' => 2048,
-          'cpu' => 1,
-          'datacenters' => [
+        'ram' => 512,
+        'disk' => 2048,
+        'cpu' => 1,
+        'datastores' => [@datastore],
+        'datacenters' => [
+          {
+            'name' => @datacenter_name,
+            'clusters' => [
               {
-                  'name' => @datacenter_name,
-                  'clusters' => [
-                      {
-                          @cluster_name_2 => {}
-                      },
-                      {
-                          @cluster_name => {}
-                      },
-                  ]
+                @cluster_name_2 => {}
+              },
+              {
+                @cluster_name => {}
               }
-          ]
+            ]
+          }
+        ]
       }
     end
     let(:options) do
       options = cpi_options(
-          'datacenters' => [
+        'datacenters' => [
+          {
+            'name' => @datacenter_name,
+            'clusters' => [
               {
-                  'name' => @datacenter_name,
-                  'clusters' => [
-                      {
-                          @cluster_name => {}
-                      },
-                  ]
+                @cluster_name => {}
+              },
+              {
+                @cluster_name_2 => {}
               }
-          ]
+            ]
+          }
+        ]
       )
     end
-  
+
     it 'creates vm in the best possible cluster defined in `vm_type`' do
       cpi = VSphereCloud::Cloud.new(options)
       begin
@@ -124,11 +151,11 @@ describe 'cloud_properties related to clusters' do
             {}
         )
         expect(vm_id).to_not be_nil
-      
+
         vm = cpi.vm_provider.find(vm_id)
         expect(vm).to_not be_nil
-      
-        expect(vm.cluster).to eq(@cluster_name)
+
+        expect(vm.cluster).to eq(@cluster_name_2)
       ensure
         delete_vm(cpi, vm_id)
       end

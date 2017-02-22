@@ -68,7 +68,14 @@ module LifecycleHelpers
   rescue RuntimeError => e
     fail("#{e.message}\n#{env_var_name}: #{MISSING_KEY_MESSAGES[env_var_name]}")
   end
-
+  
+  def verify_cluster_memory(cpi, cluster1_name, cluster2_name)
+    cluster1 = cpi.datacenter.find_cluster(cluster1_name)
+    cluster2 = cpi.datacenter.find_cluster(cluster2_name)
+    
+    fail("Primary cluster, #{cluster1_name}, must have more available memory (#{cluster1.free_memory}) than secondary cluster, #{cluster2_name} (#{cluster2.free_memory})") unless cluster1.free_memory > cluster2.free_memory
+  end
+  
   def verify_local_disk_infrastructure(cpi, env_var_name, local_datastore_pattern)
     all_matching_datastores = matching_datastores(cpi.datacenter, local_datastore_pattern)
     nonlocal_disk_datastores = all_matching_datastores.select { |_, datastore| datastore.mob.summary.multiple_host_access }

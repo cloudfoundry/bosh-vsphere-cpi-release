@@ -25,7 +25,6 @@ module VSphereCloud
     end
 
     def drs_rule
-      # binding.pry
       cluster_name = cluster.name
       cluster_spec = resource_pool_clusters_spec.find { |cluster_spec| cluster_spec.keys.first == cluster_name }
       return nil if cluster_spec.nil? || cluster_spec[cluster_name].nil?
