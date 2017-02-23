@@ -3,9 +3,9 @@ require 'integration/spec_helper'
 describe 'cloud_properties related to clusters' do
   before (:all) do
     @datacenter_name = fetch_and_verify_datacenter('BOSH_VSPHERE_CPI_DATACENTER')
-    @cluster_name = fetch_and_verify_cluster('BOSH_VSPHERE_CPI_CLUSTER')
-    @cluster_name_2 = fetch_and_verify_cluster('BOSH_VSPHERE_CPI_SECOND_CLUSTER')
-    @datastore = ENV['BOSH_VSPHERE_CPI_SECOND_DATASTORE']
+    @primary_cluster = fetch_and_verify_cluster('BOSH_VSPHERE_CPI_PRIMARY_CLUSTER')
+    @secondary_cluster = fetch_and_verify_cluster('BOSH_VSPHERE_CPI_SECONDARY_CLUSTER')
+    @datastore = fetch_property('BOSH_VSPHERE_CPI_SHARED_DATASTORE')
   end
 
   let(:network_spec) do
@@ -32,7 +32,7 @@ describe 'cloud_properties related to clusters' do
             'name' => @datacenter_name,
             'clusters' => [
               {
-                @cluster_name => {}
+                @primary_cluster => {}
               }
             ]
           }
@@ -46,7 +46,7 @@ describe 'cloud_properties related to clusters' do
             'name' => @datacenter_name,
             'clusters' => [
               {
-                @cluster_name_2 => {}
+                @secondary_cluster => {}
               },
             ]
           }
@@ -70,7 +70,7 @@ describe 'cloud_properties related to clusters' do
         vm = cpi.vm_provider.find(vm_id)
         expect(vm).to_not be_nil
 
-        expect(vm.cluster).to eq(@cluster_name)
+        expect(vm.cluster).to eq(@primary_cluster)
       ensure
         delete_vm(cpi, vm_id)
       end
@@ -85,19 +85,19 @@ describe 'cloud_properties related to clusters' do
             'name' => @datacenter_name,
             'clusters' => [
               {
-                @cluster_name => {}
+                @primary_cluster => {}
               },
               {
-                @cluster_name_2 => {}
+                @secondary_cluster => {}
               }
             ]
           }
         ]
       )
       cpi = VSphereCloud::Cloud.new(options)
-      # cluster_name_2 should have more memory than cluster_name and
+      # @primary_cluster should have more memory than @secondary_cluster and
       # both clusters need to have the specified @datastore
-      verify_cluster_memory(cpi, @cluster_name_2, @cluster_name)
+      verify_cluster_memory(cpi, @primary_cluster, @secondary_cluster)
     end
     
     let(:vm_type) do
@@ -111,10 +111,10 @@ describe 'cloud_properties related to clusters' do
             'name' => @datacenter_name,
             'clusters' => [
               {
-                @cluster_name_2 => {}
+                @secondary_cluster => {}
               },
               {
-                @cluster_name => {}
+                @primary_cluster => {}
               }
             ]
           }
@@ -128,10 +128,10 @@ describe 'cloud_properties related to clusters' do
             'name' => @datacenter_name,
             'clusters' => [
               {
-                @cluster_name => {}
+                @primary_cluster => {}
               },
               {
-                @cluster_name_2 => {}
+                @secondary_cluster => {}
               }
             ]
           }
@@ -155,7 +155,7 @@ describe 'cloud_properties related to clusters' do
         vm = cpi.vm_provider.find(vm_id)
         expect(vm).to_not be_nil
 
-        expect(vm.cluster).to eq(@cluster_name_2)
+        expect(vm.cluster).to eq(@primary_cluster)
       ensure
         delete_vm(cpi, vm_id)
       end

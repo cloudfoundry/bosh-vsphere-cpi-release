@@ -93,6 +93,9 @@ jobs:
           BOSH_VSPHERE_CPI_PORTGROUP_FOLDER_STANDARD:           {{lifecycle_vsphere_5_1_portgroup_folder_standard}}
           BOSH_VSPHERE_CPI_PORTGROUP_FOLDER_DISTRIBUTED:        {{lifecycle_vsphere_5_1_portgroup_folder_distributed}}
           BOSH_VSPHERE_CPI_PORTGROUP_FOLDER_AMBIGUOUS:          {{lifecycle_vsphere_5_1_portgroup_folder_ambiguous}}
+          BOSH_VSPHERE_CPI_PRIMARY_CLUSTER:                     {{lifecycle_vsphere_5_1_primary_cluster}}
+          BOSH_VSPHERE_CPI_SECONDARY_CLUSTER:                   {{lifecycle_vsphere_5_1_secondary_cluster}}
+          BOSH_VSPHERE_CPI_SHARED_DATASTORE:                    {{lifecycle_vsphere_5_1_shared_datastore}}
 
   - name: lifecycle-6.0
     plan:
@@ -146,6 +149,9 @@ jobs:
           BOSH_VSPHERE_CPI_NSX_CA_CERT:                         {{lifecycle_vsphere_6_0_nsx_ca_cert}}
           BOSH_VSPHERE_CPI_NSX_LB_NAME:                         {{lifecycle_vsphere_6_0_nsx_lb_name}}
           BOSH_VSPHERE_CPI_NSX_POOL_NAME:                       {{lifecycle_vsphere_6_0_nsx_pool_name}}
+          BOSH_VSPHERE_CPI_PRIMARY_CLUSTER:                     {{lifecycle_vsphere_6_0_primary_cluster}}
+          BOSH_VSPHERE_CPI_SECONDARY_CLUSTER:                   {{lifecycle_vsphere_6_0_secondary_cluster}}
+          BOSH_VSPHERE_CPI_SHARED_DATASTORE:                    {{lifecycle_vsphere_6_0_shared_datastore}}
 
   - name: lifecycle-6.0-vsan
     plan:
