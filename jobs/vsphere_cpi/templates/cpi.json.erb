@@ -35,6 +35,7 @@
         "clusters" => []
       }
 
+      raise "cluters property must be an array" unless datacenter['clusters'].kind_of?(Array)
       datacenter['clusters'].each do |cluster|
         case cluster
           when Hash
