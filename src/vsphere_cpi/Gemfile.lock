@@ -10,9 +10,9 @@ GEM
       httpclient (= 2.7.1)
       logging (~> 1.8.2)
       membrane (~> 1.1.0)
-    builder (3.1.4)
+    builder (3.2.3)
     coderay (1.1.0)
-    diff-lcs (1.2.5)
+    diff-lcs (1.3)
     docile (1.1.5)
     fakefs (0.6.7)
     httpclient (2.7.1)
@@ -23,11 +23,11 @@ GEM
       multi_json (>= 1.8.4)
     membrane (1.1.0)
     method_source (0.8.2)
-    mini_portile2 (2.0.0)
+    mini_portile2 (2.1.0)
     mono_logger (1.1.0)
     multi_json (1.12.1)
-    nokogiri (1.6.7.2)
-      mini_portile2 (~> 2.0.0.rc2)
+    nokogiri (1.7.1)
+      mini_portile2 (~> 2.1.0)
     oga (2.3)
       ast
       ruby-ll (~> 2.1)
@@ -38,26 +38,26 @@ GEM
       coderay (~> 1.1.0)
       method_source (~> 0.8.1)
       slop (~> 3.4)
-    rack (1.6.4)
-    rake (10.4.2)
-    rspec (3.3.0)
-      rspec-core (~> 3.3.0)
-      rspec-expectations (~> 3.3.0)
-      rspec-mocks (~> 3.3.0)
-    rspec-core (3.3.2)
-      rspec-support (~> 3.3.0)
-    rspec-expectations (3.3.1)
+    rack (2.0.1)
+    rake (10.5.0)
+    rspec (3.5.0)
+      rspec-core (~> 3.5.0)
+      rspec-expectations (~> 3.5.0)
+      rspec-mocks (~> 3.5.0)
+    rspec-core (3.5.4)
+      rspec-support (~> 3.5.0)
+    rspec-expectations (3.5.0)
       diff-lcs (>= 1.2.0, < 2.0)
-      rspec-support (~> 3.3.0)
+      rspec-support (~> 3.5.0)
     rspec-instafail (0.4.0)
       rspec
     rspec-its (1.2.0)
       rspec-core (>= 3.0.0)
       rspec-expectations (>= 3.0.0)
-    rspec-mocks (3.3.2)
+    rspec-mocks (3.5.0)
       diff-lcs (>= 1.2.0, < 2.0)
-      rspec-support (~> 3.3.0)
-    rspec-support (3.3.0)
+      rspec-support (~> 3.5.0)
+    rspec-support (3.5.0)
     ruby-ll (2.1.2)
       ansi
       ast
@@ -68,7 +68,7 @@ GEM
       simplecov-html (~> 0.10.0)
     simplecov-html (0.10.0)
     slop (3.5.0)
-    timecop (0.7.4)
+    timecop (0.8.1)
 
 PLATFORMS
   ruby
@@ -76,22 +76,22 @@ PLATFORMS
 DEPENDENCIES
   bosh_common (= 1.3262.24.0)
   bosh_cpi (= 2.0.5)
-  builder (~> 3.1.4)
+  builder (~> 3.2.3)
   fakefs
   httpclient (= 2.7.1)
   membrane (~> 1.1.0)
   mono_logger (~> 1.1.0)
-  nokogiri (~> 1.6.6)
+  nokogiri (~> 1.7.1)
   oga
   parallel_tests
   pry
-  rack (~> 1.6.4)
+  rack (~> 2.0.1)
   rake (~> 10.0)
-  rspec (~> 3.0)
+  rspec (~> 3.5.0)
   rspec-instafail
   rspec-its
   simplecov
-  timecop (~> 0.7.1)
+  timecop (~> 0.8.1)
 
 BUNDLED WITH
-   1.12.4
+   1.14.6
