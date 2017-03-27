@@ -36,11 +36,11 @@ RUN mkdir /tmp/ruby-install && \
     rm -rf /tmp/ruby-install
 
 # ruby
-RUN ruby-install ruby 2.1.2
+RUN ruby-install ruby 2.2.6
 
 # Install Bundler, Bosh CLI, and CPI Dependencies
 RUN /bin/bash -l -c "source /etc/profile.d/chruby.sh ;  \
-                     chruby 2.1.2 ;                     \
+                     chruby 2.2.6 ;                     \
                      gem update --system ; \
                      gem install bundler bosh_cli --no-ri --no-rdoc ; \
                      cd /tmp ; \
