@@ -6,7 +6,7 @@ release_dir="$( cd $(dirname $0) && cd ../.. && pwd )"
 workspace_dir="$( cd ${release_dir} && cd .. && pwd )"
 
 source /etc/profile.d/chruby.sh
-chruby 2.1.2
+chruby 2.2.6
 
 semver=$(cat ${workspace_dir}/version-semver/number)
 
