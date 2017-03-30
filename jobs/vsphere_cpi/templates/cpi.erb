@@ -29,6 +29,7 @@ export no_proxy="<%= no_proxy %>"
 
 
 export PATH=$BOSH_PACKAGES_DIR/vsphere_cpi_ruby/bin:$BOSH_PACKAGES_DIR/vsphere_cpi_mkisofs/bin:$PATH
+export HOME=~
 
 export BUNDLE_GEMFILE=$BOSH_PACKAGES_DIR/vsphere_cpi/Gemfile
 bundle_cmd="${BOSH_PACKAGES_DIR}/vsphere_cpi_ruby/bin/bundle"
