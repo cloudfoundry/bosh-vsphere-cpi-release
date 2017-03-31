@@ -357,6 +357,14 @@ module VSphereCloud
       end
     end
 
+    def info
+      {}
+    end
+
+    def set_disk_metadata(disk_id, metadata)
+      # not implemented
+    end
+
     def configure_networks(vm_cid, networks)
       raise Bosh::Clouds::NotSupported, "configure_networks is no longer supported"
     end

@@ -1296,6 +1296,20 @@ module VSphereCloud
       end
     end
 
+    describe '#info' do
+      it 'returns an empty hash because it has not been implemented' do
+        expect(vsphere_cloud.info).to eq({})
+      end
+    end
+
+    describe '#set_disk_metadata' do
+      let(:disk_metadata) { { 'a' => 'b' } }
+      let(:disk_id) { 'fake-disk-cid' }
+      it 'does nothing because it has not been implemented' do
+        expect(vsphere_cloud.set_disk_metadata(disk_id, disk_metadata)).to be_nil
+      end
+    end
+
     describe '#terminate_threads_and_logout' do
       it 'terminates the thread and logs out the client' do
         expect(vsphere_cloud.heartbeat_thread).to receive(:terminate).once.and_call_original

@@ -66,7 +66,8 @@ module Bosh
                      :attach_disk, :detach_disk,
                      :snapshot_disk, :delete_snapshot,
                      :current_vm_id, :get_disks, :ping,
-                     :calculate_vm_cloud_properties
+                     :calculate_vm_cloud_properties,
+                     :info, :set_disk_metadata
 
       def initialize(options)
         @delegate = VSphereCloud::Cloud.new(options)
