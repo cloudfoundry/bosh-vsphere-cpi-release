@@ -75,8 +75,13 @@ PLATFORMS
 
 DEPENDENCIES
   bosh_common (= 1.3262.24.0)
+<<<<<<< HEAD
   bosh_cpi (= 2.1.0)
   builder (~> 3.2.3)
+=======
+  bosh_cpi (= 2.0.6)
+  builder (~> 3.1.4)
+>>>>>>> 9a4eeb755b19e0e1ea79ad625a5613ccf34fa4b4
   fakefs
   membrane (~> 1.1.0)
   mono_logger (~> 1.1.0)
