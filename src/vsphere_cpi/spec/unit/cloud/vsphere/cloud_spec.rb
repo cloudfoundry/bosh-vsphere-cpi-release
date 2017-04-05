@@ -1296,12 +1296,6 @@ module VSphereCloud
       end
     end
 
-    describe '#info' do
-      it 'returns an empty hash because it has not been implemented' do
-        expect(vsphere_cloud.info).to eq({})
-      end
-    end
-
     describe '#set_disk_metadata' do
       let(:disk_metadata) { { 'a' => 'b' } }
       let(:disk_id) { 'fake-disk-cid' }
