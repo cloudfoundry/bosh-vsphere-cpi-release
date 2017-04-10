@@ -12,6 +12,7 @@ group :development, :test do
   gem 'fakefs'
   gem 'parallel_tests'
   gem 'pry'
+  gem 'pry-byebug'
   gem 'rack', '~> 2.0.1'
   gem 'rake', '~>10.0'
   gem 'rspec', '~> 3.5.0'
