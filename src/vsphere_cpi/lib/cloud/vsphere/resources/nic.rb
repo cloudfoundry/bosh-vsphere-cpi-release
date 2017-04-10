@@ -20,6 +20,12 @@ module VSphereCloud
           backing_info.port = port
 
           dvs_index[port.portgroup_key] = v_network_name
+        elsif network.class == VimSdk::Vim::OpaqueNetwork
+          backing_info = VimSdk::Vim::Vm::Device::VirtualEthernetCard::OpaqueNetworkBackingInfo.new
+          network_id = network.summary.opaque_network_id
+          backing_info.opaque_network_id = network_id
+          dvs_index[network_id] = v_network_name
+          backing_info.opaque_network_type = network.summary.opaque_network_type
         else
           backing_info = VimSdk::Vim::Vm::Device::VirtualEthernetCard::NetworkBackingInfo.new
           backing_info.device_name = network.name

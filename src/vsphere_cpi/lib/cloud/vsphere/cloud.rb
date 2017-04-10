@@ -550,6 +550,8 @@ module VSphereCloud
           backing = device.backing
           if backing.kind_of?(Vim::Vm::Device::VirtualEthernetCard::DistributedVirtualPortBackingInfo)
             v_network_name = dvs_index[backing.port.portgroup_key]
+          elsif backing.kind_of?(Vim::Vm::Device::VirtualEthernetCard::OpaqueNetworkBackingInfo)
+            v_network_name = dvs_index[backing.opaque_network_id]
           else
             v_network_name = PathFinder.new.path(backing.network)
           end

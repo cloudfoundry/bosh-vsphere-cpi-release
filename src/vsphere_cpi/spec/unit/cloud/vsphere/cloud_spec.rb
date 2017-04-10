@@ -272,11 +272,37 @@ module VSphereCloud
         end
       end
 
+      context 'using an NSX opaque network' do
+        let(:opaque_network_id) { 'some_id' }
+        let(:backing) do
+          instance_double(
+            VimSdk::Vim::Vm::Device::VirtualEthernetCard::OpaqueNetworkBackingInfo,
+            opaque_network_id: opaque_network_id,
+          )
+        end
+
+        before do
+          allow(backing).to receive(:kind_of?).
+            with(VimSdk::Vim::Vm::Device::VirtualEthernetCard::DistributedVirtualPortBackingInfo).
+            and_return(false)
+          allow(backing).to receive(:kind_of?).
+            with(VimSdk::Vim::Vm::Device::VirtualEthernetCard::OpaqueNetworkBackingInfo).
+            and_return(true)
+        end
+
+        let(:dvs_index) { { opaque_network_id => 'fake_network1' } }
+
+        it 'generates the network env' do
+          expect(vsphere_cloud.generate_network_env(devices, networks, dvs_index)).to eq(expected_output)
+        end
+      end
+
       context 'using a standard switch' do
         let(:backing) { double(network: 'fake_network1') }
 
         it 'generates the network env' do
           allow(backing).to receive(:kind_of?).with(VimSdk::Vim::Vm::Device::VirtualEthernetCard::DistributedVirtualPortBackingInfo) { false }
+          allow(backing).to receive(:kind_of?).with(VimSdk::Vim::Vm::Device::VirtualEthernetCard::OpaqueNetworkBackingInfo) { false }
 
           expect(vsphere_cloud.generate_network_env(devices, networks, dvs_index)).to eq(expected_output)
         end
@@ -288,6 +314,7 @@ module VSphereCloud
 
         it 'ignores non VirtualEthernetCard devices' do
           allow(backing).to receive(:kind_of?).with(VimSdk::Vim::Vm::Device::VirtualEthernetCard::DistributedVirtualPortBackingInfo) { false }
+          allow(backing).to receive(:kind_of?).with(VimSdk::Vim::Vm::Device::VirtualEthernetCard::OpaqueNetworkBackingInfo) { false }
 
           expect(vsphere_cloud.generate_network_env(devices, networks, dvs_index)).to eq(expected_output)
         end
@@ -332,6 +359,7 @@ module VSphereCloud
             allow(path_finder).to receive(:path).with(fake_network_object).and_return('networks/fake_network1')
 
             allow(backing).to receive(:kind_of?).with(VimSdk::Vim::Vm::Device::VirtualEthernetCard::DistributedVirtualPortBackingInfo) { false }
+            allow(backing).to receive(:kind_of?).with(VimSdk::Vim::Vm::Device::VirtualEthernetCard::OpaqueNetworkBackingInfo) { false }
 
             expect(vsphere_cloud.generate_network_env(devices, networks, dvs_index)).to eq(expected_output)
           end

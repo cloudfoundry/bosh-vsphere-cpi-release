@@ -13,7 +13,7 @@ describe VSphereCloud::SoapStub do
       expect(VimSdk::Soap::StubAdapter).to receive(:new)
         .with(
           'https://some-host/sdk/vimService',
-          'vim.version.version8',
+          'vim.version.version9',
           http_client,
         )
         .and_return(base_adapter)

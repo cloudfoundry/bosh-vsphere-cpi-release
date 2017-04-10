@@ -9,7 +9,7 @@ module VSphereCloud
     end
 
     def create
-      base_stub = VimSdk::Soap::StubAdapter.new(@vcenter_api_uri, 'vim.version.version8', @http_client)
+      base_stub = VimSdk::Soap::StubAdapter.new(@vcenter_api_uri, 'vim.version.version9', @http_client)
       VSphereCloud::SdkHelpers::RetryableStubAdapter.new(base_stub, @logger)
     end
   end
