@@ -2,10 +2,10 @@
 
 | Concourse Job | Status |
 |---|---|
-| BATS | [![bosh-cpi.ci.cf-app.com](https://bosh-cpi.ci.cf-app.com/api/v1/teams/main/pipelines/bosh-vsphere-cpi/jobs/bats/badge)](https://bosh-cpi.ci.cf-app.com/teams/main/pipelines/bosh-vsphere-cpi/jobs/bats) |
-| lifecycle-5.1 | [![bosh-cpi.ci.cf-app.com](https://bosh-cpi.ci.cf-app.com/api/v1/teams/main/pipelines/bosh-vsphere-cpi/jobs/lifecycle-5.1/badge)](https://bosh-cpi.ci.cf-app.com/teams/main/pipelines/bosh-vsphere-cpi/jobs/lifecycle-5.1) |
-| lifecycle-6.0 | [![bosh-cpi.ci.cf-app.com](https://bosh-cpi.ci.cf-app.com/api/v1/teams/main/pipelines/bosh-vsphere-cpi/jobs/lifecycle-6.0/badge)](https://bosh-cpi.ci.cf-app.com/teams/main/pipelines/bosh-vsphere-cpi/jobs/lifecycle-6.0) |
-| lifecycle-6.0-vsan | [![bosh-cpi.ci.cf-app.com](https://bosh-cpi.ci.cf-app.com/api/v1/teams/main/pipelines/bosh-vsphere-cpi/jobs/lifecycle-6.0-vsan/badge)](https://bosh-cpi.ci.cf-app.com/teams/main/pipelines/bosh-vsphere-cpi/jobs/lifecycle-6.0-vsan) |
+| BATS | [![bosh-cpi.ci.cf-app.com](https://bosh-cpi.ci.cf-app.com/api/v1/teams/pivotal/pipelines/bosh-vsphere-cpi/jobs/bats/badge)](https://bosh-cpi.ci.cf-app.com/teams/pivotal/pipelines/bosh-vsphere-cpi/jobs/bats) |
+| lifecycle-5.1 | [![bosh-cpi.ci.cf-app.com](https://bosh-cpi.ci.cf-app.com/api/v1/teams/pivotal/pipelines/bosh-vsphere-cpi/jobs/lifecycle-5.1/badge)](https://bosh-cpi.ci.cf-app.com/teams/pivotal/pipelines/bosh-vsphere-cpi/jobs/lifecycle-5.1) |
+| lifecycle-6.0 | [![bosh-cpi.ci.cf-app.com](https://bosh-cpi.ci.cf-app.com/api/v1/teams/pivotal/pipelines/bosh-vsphere-cpi/jobs/lifecycle-6.0/badge)](https://bosh-cpi.ci.cf-app.com/teams/pivotal/pipelines/bosh-vsphere-cpi/jobs/lifecycle-6.0) |
+| lifecycle-6.0-vsan | [![bosh-cpi.ci.cf-app.com](https://bosh-cpi.ci.cf-app.com/api/v1/teams/pivotal/pipelines/bosh-vsphere-cpi/jobs/lifecycle-6.0-vsan/badge)](https://bosh-cpi.ci.cf-app.com/teams/pivotal/pipelines/bosh-vsphere-cpi/jobs/lifecycle-6.0-vsan) |
 
 
 * Documentation: [bosh.io/docs](https://bosh.io/docs)
