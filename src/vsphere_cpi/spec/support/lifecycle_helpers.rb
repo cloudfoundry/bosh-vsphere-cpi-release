@@ -5,31 +5,31 @@ module LifecycleHelpers
   PRIVILEGES_INPUT_FILE = 'docs/required_vcenter_privileges.md'
 
   MISSING_KEY_MESSAGES = {
-    'BOSH_VSPHERE_CPI_SINGLE_LOCAL_DATASTORE_PATTERN' => 'Please ensure you provide a pattern that match datastores that are only accessible by a single host.',
-    'BOSH_VSPHERE_CPI_MULTI_LOCAL_DATASTORE_PATTERN' => 'Please ensure you provide a pattern that match datastores that are accessible by multiple hosts.',
-    'BOSH_VSPHERE_CPI_NESTED_DATACENTER' => 'Please ensure you provide a datacenter that is in a sub-folder of the root folder.',
-    'BOSH_VSPHERE_CPI_NESTED_DATACENTER_DATASTORE_PATTERN' => 'Please ensure you provide a datastore accessible datacenter referenced by BOSH_VSPHERE_CPI_NESTED_DATACENTER.',
-    'BOSH_VSPHERE_CPI_NESTED_DATACENTER_CLUSTER' => 'Please ensure you provide a cluster within the datacenter referenced by BOSH_VSPHERE_CPI_NESTED_DATACENTER.',
-    'BOSH_VSPHERE_CPI_NESTED_DATACENTER_RESOURCE_POOL' => 'Please ensure you provide a resource pool within the cluster referenced by BOSH_VSPHERE_CPI_NESTED_DATACENTER_CLUSTER.',
-    'BOSH_VSPHERE_CPI_NESTED_DATACENTER_VLAN' => 'Please ensure you provide the name of the distributed switch within the datacenter referenced by BOSH_VSPHERE_CPI_NESTED_DATACENTER.',
-    'BOSH_VSPHERE_CPI_HOST' => 'Please ensure you provide a vSphere hostname to connect to.',
-    'BOSH_VSPHERE_CPI_USER' => 'Please ensure you provide a vSphere username to authenticate with.',
-    'BOSH_VSPHERE_CPI_PASSWORD' => 'Please ensure you provide a vSphere password to authenticate with.',
-    'BOSH_VSPHERE_VLAN' => 'Please ensure you provide a VLAN network name.',
-    'BOSH_VSPHERE_STEMCELL' => 'Please ensure you provide a path to a stemcell file.',
-    'BOSH_VSPHERE_CPI_CLUSTER' => 'Please ensure you provide the name of the first cluster.',
-    'BOSH_VSPHERE_CPI_SECOND_CLUSTER' => 'Please ensure you provide the name of the second cluster.',
-    'BOSH_VSPHERE_CPI_DATASTORE_PATTERN' => 'Please ensure you provide a pattern of a first datastore attached to the first cluster.',
-    'BOSH_VSPHERE_CPI_SECOND_DATASTORE' => 'Please ensure you provide a pattern of a second datastore attached to the first cluster.',
-    'BOSH_VSPHERE_CPI_RESOURCE_POOL' => 'Please ensure you provide a name of a resource pool within the first cluster.',
-    'BOSH_VSPHERE_CPI_SECOND_RESOURCE_POOL' => 'Please ensure you provide a name of the second resource pool within the first cluster.',
-    'BOSH_VSPHERE_CPI_SECOND_CLUSTER_RESOURCE_POOL' => 'Please ensure you provide a name of a resource pool within the second cluster.',
-    'BOSH_VSPHERE_CPI_SECOND_CLUSTER_DATASTORE' => 'Please ensure you provide a pattern of a second datastore attached to the second cluster.',
-    'BOSH_VSPHERE_CPI_SECOND_CLUSTER_LOCAL_DATASTORE' => 'Please ensure you provide a pattern of a local datastore attached to the second cluster.',
-    'BOSH_VSPHERE_CPI_DISK_PATH' => 'Please ensure you provide a disk path.',
-    'BOSH_VSPHERE_CPI_TEMPLATE_FOLDER' => 'Please ensure you provide a template folder.',
-    'BOSH_VSPHERE_CPI_VM_FOLDER' => 'Please ensure you provide a VM folder.',
-    'BOSH_VSPHERE_CPI_DATACENTER' => 'Please ensure you provide a datacenter name.',
+    'BOSH_VSPHERE_CPI_SINGLE_LOCAL_DATASTORE_PATTERN' => 'Please provide a pattern that match datastores that are only accessible by a single host.',
+    'BOSH_VSPHERE_CPI_MULTI_LOCAL_DATASTORE_PATTERN' => 'Please provide a pattern that matches at least two datastores each of which is accessible by a single, but unique, host.',
+    'BOSH_VSPHERE_CPI_NESTED_DATACENTER' => 'Please provide a datacenter that is in a sub-folder of the root folder.',
+    'BOSH_VSPHERE_CPI_NESTED_DATACENTER_DATASTORE_PATTERN' => 'Please provide a datastore accessible datacenter referenced by BOSH_VSPHERE_CPI_NESTED_DATACENTER.',
+    'BOSH_VSPHERE_CPI_NESTED_DATACENTER_CLUSTER' => 'Please provide a cluster within the datacenter referenced by BOSH_VSPHERE_CPI_NESTED_DATACENTER.',
+    'BOSH_VSPHERE_CPI_NESTED_DATACENTER_RESOURCE_POOL' => 'Please provide a resource pool within the cluster referenced by BOSH_VSPHERE_CPI_NESTED_DATACENTER_CLUSTER.',
+    'BOSH_VSPHERE_CPI_NESTED_DATACENTER_VLAN' => 'Please provide the name of the distributed switch within the datacenter referenced by BOSH_VSPHERE_CPI_NESTED_DATACENTER.',
+    'BOSH_VSPHERE_CPI_HOST' => 'Please provide a vSphere hostname to connect to.',
+    'BOSH_VSPHERE_CPI_USER' => 'Please provide a vSphere username to authenticate with.',
+    'BOSH_VSPHERE_CPI_PASSWORD' => 'Please provide a vSphere password to authenticate with.',
+    'BOSH_VSPHERE_VLAN' => 'Please provide a VLAN network name.',
+    'BOSH_VSPHERE_STEMCELL' => 'Please provide a path to a stemcell file.',
+    'BOSH_VSPHERE_CPI_CLUSTER' => 'Please provide the name of the first cluster.',
+    'BOSH_VSPHERE_CPI_SECOND_CLUSTER' => 'Please provide the name of the second cluster.',
+    'BOSH_VSPHERE_CPI_DATASTORE_PATTERN' => 'Please provide a pattern of a first datastore attached to the first cluster.',
+    'BOSH_VSPHERE_CPI_SECOND_DATASTORE' => 'Please provide a pattern of a second datastore attached to the first cluster.',
+    'BOSH_VSPHERE_CPI_RESOURCE_POOL' => 'Please provide a name of a resource pool within the first cluster.',
+    'BOSH_VSPHERE_CPI_SECOND_RESOURCE_POOL' => 'Please provide a name of the second resource pool within the first cluster.',
+    'BOSH_VSPHERE_CPI_SECOND_CLUSTER_RESOURCE_POOL' => 'Please provide a name of a resource pool within the second cluster.',
+    'BOSH_VSPHERE_CPI_SECOND_CLUSTER_DATASTORE' => 'Please provide a pattern of a second datastore attached to the second cluster.',
+    'BOSH_VSPHERE_CPI_SECOND_CLUSTER_LOCAL_DATASTORE' => 'Please provide a pattern of a local datastore attached to the second cluster.',
+    'BOSH_VSPHERE_CPI_DISK_PATH' => 'Please provide a disk path.',
+    'BOSH_VSPHERE_CPI_TEMPLATE_FOLDER' => 'Please provide a template folder.',
+    'BOSH_VSPHERE_CPI_VM_FOLDER' => 'Please provide a VM folder.',
+    'BOSH_VSPHERE_CPI_DATACENTER' => 'Please provide a datacenter name.',
   }
 
   def setup_global_config
@@ -82,7 +82,7 @@ module LifecycleHelpers
     unless (nonlocal_disk_datastores.empty?)
       fail(
         <<-EOF
-      Some datastores found maching `#{env_var_name}`(/#{local_datastore_pattern}/)
+      Some datastores found matching `#{env_var_name}`(/#{local_datastore_pattern}/)
       are configured to allow multiple hosts to access them:
       #{nonlocal_disk_datastores}.
       #{MISSING_KEY_MESSAGES[env_var_name]}
