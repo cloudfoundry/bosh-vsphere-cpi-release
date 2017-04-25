@@ -53,6 +53,7 @@ jobs:
         params: {from: dev-artifacts/.*\.tgz}
 
   - name: lifecycle-5.1
+    serial: true
     plan:
       - aggregate:
         - {trigger: true,  passed: [build-candidate], get: bosh-cpi-artifacts, tags: ["vsphere-v5.1"]} # used for job chaining only not for tasks
@@ -100,6 +101,7 @@ jobs:
           BOSH_VSPHERE_CPI_SHARED_DATASTORE:                    {{lifecycle_vsphere_5_1_shared_datastore}}
 
   - name: lifecycle-6.0
+    serial: true
     plan:
       - aggregate:
         - {trigger: true,  passed: [build-candidate], get: bosh-cpi-artifacts, tags: ["vsphere-v5.1"]} # used for job chaining only not for tasks
@@ -156,6 +158,7 @@ jobs:
           BOSH_VSPHERE_CPI_SHARED_DATASTORE:                    {{lifecycle_vsphere_6_0_shared_datastore}}
 
   - name: lifecycle-6.5
+    serial: true
     plan:
       - aggregate:
         - {trigger: true,  passed: [build-candidate], get: bosh-cpi-artifacts, tags: ["vsphere-v5.1"]} # used for job chaining only not for tasks
@@ -212,6 +215,7 @@ jobs:
           BOSH_VSPHERE_CPI_SHARED_DATASTORE:                    {{lifecycle_vsphere_6_5_shared_datastore}}
 
   - name: lifecycle-6.0-vsan
+    serial: true
     plan:
       - aggregate:
         - {trigger: true,  passed: [build-candidate], get: bosh-cpi-artifacts, tags: ["vsphere-v5.1"]} # used for job chaining only not for tasks
