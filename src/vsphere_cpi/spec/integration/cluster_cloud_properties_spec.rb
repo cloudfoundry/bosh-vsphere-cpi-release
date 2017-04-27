@@ -7,8 +7,8 @@ describe 'cloud_properties related to clusters' do
     @cluster_name = fetch_and_verify_cluster('BOSH_VSPHERE_CPI_CLUSTER')
     @cluster_name_2 = fetch_and_verify_cluster('BOSH_VSPHERE_CPI_SECOND_CLUSTER')
 
-    @cluster_more_memory = fetch_and_verify_cluster('BOSH_VSPHERE_CPI_CLUSTER_MORE_MEMORY')
-    @cluster_less_memory = fetch_and_verify_cluster('BOSH_VSPHERE_CPI_CLUSTER_LESS_MEMORY')
+    @cluster_more_datastore_free_space = fetch_and_verify_cluster('BOSH_VSPHERE_CPI_CLUSTER_MORE_DATASTORE_FREE_SPACE')
+    @cluster_less_datastore_free_space = fetch_and_verify_cluster('BOSH_VSPHERE_CPI_CLUSTER_LESS_DATASTORE_FREE_SPACE')
     @shared_datastore = fetch_property('BOSH_VSPHERE_CPI_SHARED_DATASTORE')
   end
 
@@ -89,10 +89,10 @@ describe 'cloud_properties related to clusters' do
             'name' => @datacenter_name,
             'clusters' => [
               {
-                @cluster_more_memory => {}
+                @cluster_more_datastore_free_space => {}
               },
               {
-                @cluster_less_memory => {}
+                @cluster_less_datastore_free_space => {}
               }
             ]
           }
@@ -101,7 +101,7 @@ describe 'cloud_properties related to clusters' do
       cpi = VSphereCloud::Cloud.new(options)
       # @cluster_more_memory should have more memory than @cluster_less_memory and
       # both clusters need to have the specified @shared_datastore
-      verify_cluster_memory(cpi, @cluster_more_memory, @cluster_less_memory)
+      verify_cluster_free_space(cpi, @cluster_more_datastore_free_space, @cluster_less_datastore_free_space)
     end
     
     let(:vm_type) do
@@ -115,10 +115,10 @@ describe 'cloud_properties related to clusters' do
             'name' => @datacenter_name,
             'clusters' => [
               {
-                @cluster_less_memory => {}
+                @cluster_less_datastore_free_space => {}
               },
               {
-                @cluster_more_memory => {}
+                @cluster_more_datastore_free_space => {}
               }
             ]
           }
@@ -132,10 +132,10 @@ describe 'cloud_properties related to clusters' do
             'name' => @datacenter_name,
             'clusters' => [
               {
-                @cluster_more_memory => {}
+                @cluster_more_datastore_free_space => {}
               },
               {
-                @cluster_less_memory => {}
+                @cluster_less_datastore_free_space => {}
               }
             ]
           }
@@ -159,7 +159,7 @@ describe 'cloud_properties related to clusters' do
         vm = cpi.vm_provider.find(vm_id)
         expect(vm).to_not be_nil
 
-        expect(vm.cluster).to eq(@cluster_more_memory)
+        expect(vm.cluster).to eq(@cluster_more_datastore_free_space)
       ensure
         delete_vm(cpi, vm_id)
       end

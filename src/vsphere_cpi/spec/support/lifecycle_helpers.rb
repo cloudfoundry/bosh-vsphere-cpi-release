@@ -69,11 +69,14 @@ module LifecycleHelpers
     fail("#{e.message}\n#{env_var_name}: #{MISSING_KEY_MESSAGES[env_var_name]}")
   end
   
-  def verify_cluster_memory(cpi, cluster1_name, cluster2_name)
+  def verify_cluster_free_space(cpi, cluster1_name, cluster2_name)
     cluster1 = cpi.datacenter.find_cluster(cluster1_name)
     cluster2 = cpi.datacenter.find_cluster(cluster2_name)
-    
-    fail("Primary cluster, #{cluster1_name}, must have more available memory (#{cluster1.free_memory}) than secondary cluster, #{cluster2_name} (#{cluster2.free_memory})") unless cluster1.free_memory > cluster2.free_memory
+
+    cluster1_free_datastore_space = cluster1.accessible_datastores.map { |_, props| props.free_space }.inject(0, :+)
+    cluster2_free_datastore_space = cluster2.accessible_datastores.map { |_, props| props.free_space }.inject(0, :+)
+
+    fail("Primary cluster, #{cluster1_name}, must have more free space (#{cluster1_free_datastore_space}) than secondary cluster, #{cluster2_name} (#{cluster2_free_datastore_space})") unless cluster1_free_datastore_space > cluster2_free_datastore_space
   end
   
   def verify_local_disk_infrastructure(cpi, env_var_name, local_datastore_pattern)
@@ -183,7 +186,7 @@ module LifecycleHelpers
   def verify_vsan_datastore(cpi_options, datastore_name, env_var_name)
     cpi = VSphereCloud::Cloud.new(cpi_options)
     unless is_vsan?(cpi, datastore_name)
-      fail("datastore: '#{datastore_name}' is not of type 'vsan'. The datasore pattern came from the environment varible:'#{env_var_name}'.")
+      fail("datastore: '#{datastore_name}' is not of type 'vsan'. The datasore pattern came from the environment variable:'#{env_var_name}'.")
     end
   end
 
