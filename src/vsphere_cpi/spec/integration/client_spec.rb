@@ -6,7 +6,7 @@ module VSphereCloud
       @client, @datacenter, @datastore, @disk_folder = setup
     end
 
-    describe "#find_disk" do
+    describe '#find_disk' do
 
       before do
         @disk_cid = "disk-#{SecureRandom.uuid}"
@@ -17,21 +17,21 @@ module VSphereCloud
         @client.delete_disk(@datacenter.mob, @disk.path)
       end
 
-      it "returns the disk if it exists" do
+      it 'returns the disk if it exists' do
         disk = @client.find_disk(@disk_cid, @datastore, @disk_folder)
 
         expect(disk.cid).to eq(@disk_cid)
         expect(disk.size_in_mb).to eq(128)
       end
 
-      it "returns nil when the disk can't be found" do
+      it 'returns nil when the disk can not be found' do
         disk = @client.find_disk("not-the-#{@disk_cid}", @datastore, @disk_folder)
 
         expect(disk).to be_nil
       end
 
-      it "returns nil when the disk folder doesn't exit" do
-        disk = @client.find_disk(@disk_cid, @datastore, "the-wrong-disk-folder")
+      it 'returns nil when the disk folder does not exit' do
+        disk = @client.find_disk(@disk_cid, @datastore, 'the-wrong-disk-folder')
 
         expect(disk).to be_nil
       end
@@ -93,6 +93,7 @@ module VSphereCloud
 
         it 'returns the standard virtual switch if it exists' do
           network = @client.find_network(@datacenter, standard_virtual_portgroup)
+          expect(network).not_to be_nil
           expected_name = standard_virtual_portgroup.split('/').last
           expect(network.name).to eq(expected_name)
           expect(network).to be_a(VimSdk::Vim::Network)
@@ -100,6 +101,7 @@ module VSphereCloud
 
         it 'returns the distributed_virtual_portgroup if it exists' do
           network = @client.find_network(@datacenter, distributed_virtual_portgroup)
+          expect(network).not_to be_nil
           expected_name = distributed_virtual_portgroup.split('/').last
           expect(network.name).to eq(expected_name)
           expect(network).to be_a(VimSdk::Vim::Dvs::DistributedVirtualPortgroup)
@@ -107,6 +109,7 @@ module VSphereCloud
 
         it 'returns the standard virtual switch if a standard switch has the same name as a distributed virtual portgroup' do
           network = @client.find_network(@datacenter, ambiguous_portgroup)
+          expect(network).not_to be_nil
           expected_name = ambiguous_portgroup.split('/').last
           expect(network.name).to eq(expected_name)
           expect(network).to be_a(VimSdk::Vim::Network)
@@ -117,6 +120,7 @@ module VSphereCloud
           expected_dvs_name = distributed_virtual_portgroup.split('/')[-2]
 
           network = @client.find_network(@datacenter, distributed_virtual_portgroup)
+          expect(network).not_to be_nil
           expect(network.name).to eq(expected_network_name)
           expect(network.config.distributed_virtual_switch.name).to eq(expected_dvs_name)
           expect(network).to be_a(VimSdk::Vim::Dvs::DistributedVirtualPortgroup)
@@ -151,7 +155,7 @@ module VSphereCloud
       resource_pool_name = ENV.fetch('BOSH_VSPHERE_CPI_RESOURCE_POOL')
 
       cluster_configs = {cluster_name => ClusterConfig.new(cluster_name, {'resource_pool' => resource_pool_name})}
-      logger = Logger.new(StringIO.new(""))
+      logger = Logger.new(StringIO.new(''))
 
       client = VSphereCloud::VCenterClient.new(
         vcenter_api_uri: URI.parse("https://#{host}/sdk/vimService"),
