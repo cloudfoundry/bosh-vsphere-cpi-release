@@ -10,6 +10,7 @@ groups:
       - lifecycle-6.0-vsan
       - lifecycle-6.5
       - bats
+      - delivery
       - promote-candidate
 
 jobs:
@@ -301,6 +302,16 @@ jobs:
 
             - {put: environment, tags: [vsphere-v5.1], params: {release: environment}}
 
+  - name: delivery
+    plan:
+    - aggregate:
+      - {trigger: true, passed: [lifecycle-5.1, lifecycle-6.0, lifecycle-6.0-vsan, bats], get: bosh-cpi-artifacts, tags: ["vsphere-v5.1"]}
+      - {trigger: true, passed: [lifecycle-5.1, lifecycle-6.0, lifecycle-6.0-vsan, bats], get: bosh-cpi-src, tags: ["vsphere-v5.1"]}
+    - put: tracker-output
+      params:
+        repos:
+        - bosh-cpi-src
+
   - name: promote-candidate
     serial: true
     plan:
@@ -413,3 +424,10 @@ resources:
       uri: git@github.com:cloudfoundry/bosh-cpi-environments.git
       branch: master
       private_key: {{github_deployment_key__bosh-cpi-environments}}
+
+  - name: tracker-output
+    type: tracker
+    source:
+      token: {{tracker_api_token}}
+      project_id: {{tracker_project_id}}
+      tracker_url: https://www.pivotaltracker.com
