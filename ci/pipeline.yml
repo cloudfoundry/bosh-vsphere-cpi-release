@@ -56,6 +56,7 @@ jobs:
         - {trigger: true,  passed: [build-candidate], get: bosh-cpi-artifacts, tags: ["vsphere-v6.0"]} # used for job chaining only not for tasks
         - {trigger: false, passed: [build-candidate], get: bosh-cpi-src, tags: ["vsphere-v6.0"]}
         - {trigger: false,                            get: stemcell, resource: vsphere-ubuntu-stemcell, tags: ["vsphere-v6.0"]}
+        - {trigger: true,                             get: 2h, tags: [vsphere-v6.0]}
       - task: test
         tags: ["vsphere-v6.0"]
         file: bosh-cpi-src/ci/tasks/run-lifecycle.yml
@@ -168,6 +169,7 @@ jobs:
         - {trigger: true,  passed: [build-candidate], get: bosh-cpi-artifacts, tags: ["vsphere-v6.0"]} # used for job chaining only not for tasks
         - {trigger: false, passed: [build-candidate], get: bosh-cpi-src, tags: ["vsphere-v6.0"]}
         - {trigger: false,                            get: stemcell, resource: vsphere-ubuntu-stemcell, tags: ["vsphere-v6.0"]}
+        - {trigger: true,                             get: 2h, tags: [vsphere-v6.0]}
       - task: test
         tags: ["vsphere-v6.0"]
         file: bosh-cpi-src/ci/tasks/run-lifecycle.yml
@@ -197,6 +199,7 @@ jobs:
         - {get: bosh-deployment, tags: [vsphere-v6.0], trigger: false}
         - {get: bosh-cli,        tags: [vsphere-v6.0], trigger: false}
         - {get: bats,            tags: [vsphere-v6.0], trigger: false}
+        - {get: 2h,              tags: [vsphere-v6.0], trigger: true}
         # Passthrough
         - {get: bosh-cpi-src, tags: [vsphere-v6.0], trigger: false, passed: [build-candidate]}
       - {put: environment, tags: [vsphere-v6.0], params: {acquire: true}}
@@ -358,3 +361,7 @@ resources:
       token: {{tracker_api_token}}
       project_id: {{tracker_project_id}}
       tracker_url: https://www.pivotaltracker.com
+  - name: 2h
+    type: time
+    source:
+      interval: 2h
