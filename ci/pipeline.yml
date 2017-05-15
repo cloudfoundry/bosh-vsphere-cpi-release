@@ -5,7 +5,6 @@ groups:
     jobs:
       - cache-stemcells
       - build-candidate
-      - lifecycle-5.1
       - lifecycle-6.0
       - lifecycle-6.0-vsan
       - lifecycle-6.5
@@ -49,52 +48,6 @@ jobs:
         tags: ["vsphere-v6.0"]
         params: {from: dev-artifacts/.*\.tgz}
 
-  - name: lifecycle-5.1
-    serial: true
-    plan:
-      - aggregate:
-        - {trigger: true,  passed: [build-candidate], get: bosh-cpi-artifacts, tags: ["vsphere-v6.0"]} # used for job chaining only not for tasks
-        - {trigger: false, passed: [build-candidate], get: bosh-cpi-src, tags: ["vsphere-v6.0"]}
-        - {trigger: false,                            get: stemcell, resource: vsphere-ubuntu-stemcell, tags: ["vsphere-v6.0"]}
-      - task: test
-        tags: ["vsphere-v6.0"]
-        file: bosh-cpi-src/ci/tasks/run-lifecycle.yml
-        params:
-          RSPEC_FLAGS:                                          "--tag ~host_local --tag ~vsan_datastore --tag ~nsx_vsphere --tag ~nsx_transformers --tag ~drs" # fiveone env doesn't support all features the CPI supports
-          BOSH_VSPHERE_VERSION:                                 {{lifecycle_vsphere_5_1_version}}
-          BOSH_VSPHERE_CPI_HOST:                                {{lifecycle_vsphere_5_1_host}}
-          BOSH_VSPHERE_CPI_USER:                                {{lifecycle_vsphere_5_1_user}}
-          BOSH_VSPHERE_CPI_PASSWORD:                            {{lifecycle_vsphere_5_1_password}}
-          BOSH_VSPHERE_VLAN:                                    {{lifecycle_vsphere_5_1_vlan}}
-          BOSH_VSPHERE_CPI_DATACENTER:                          {{lifecycle_vsphere_5_1_datacenter}}
-          BOSH_VSPHERE_CPI_CLUSTER:                             {{lifecycle_vsphere_5_1_first_cluster}}
-          BOSH_VSPHERE_CPI_DATASTORE_PATTERN:                   {{lifecycle_vsphere_5_1_datastore_pattern_available_to_all_hosts_in_first_cluster}}
-          BOSH_VSPHERE_CPI_INACTIVE_DATASTORE_PATTERN:          {{lifecycle_vsphere_5_1_inactive_datastore_pattern}}
-          BOSH_VSPHERE_CPI_SECOND_DATASTORE:                    {{lifecycle_vsphere_5_1_second_datastore_available_to_all_hosts_in_first_cluster}}
-          BOSH_VSPHERE_CPI_RESOURCE_POOL:                       {{lifecycle_vsphere_5_1_first_cluster_first_resource_pool}}
-          BOSH_VSPHERE_CPI_SECOND_RESOURCE_POOL:                {{lifecycle_vsphere_5_1_first_cluster_second_resource_pool}}
-          BOSH_VSPHERE_CPI_SECOND_CLUSTER:                      {{lifecycle_vsphere_5_1_second_cluster}}
-          BOSH_VSPHERE_CPI_SECOND_CLUSTER_DATASTORE:            {{lifecycle_vsphere_5_1_datastore_pattern_available_to_all_hosts_in_second_cluster}}
-          BOSH_VSPHERE_CPI_SECOND_CLUSTER_RESOURCE_POOL:        {{lifecycle_vsphere_5_1_second_cluster_first_resource_pool}}
-          BOSH_VSPHERE_CPI_VM_FOLDER:                           {{lifecycle_vsphere_5_1_vm_folder}}
-          BOSH_VSPHERE_CPI_TEMPLATE_FOLDER:                     {{lifecycle_vsphere_5_1_template_folder}}
-          BOSH_VSPHERE_CPI_DISK_PATH:                           {{lifecycle_vsphere_5_1_disk_path}}
-          BOSH_VSPHERE_CPI_NESTED_DATACENTER:                   {{lifecycle_vsphere_5_1_nested_datacenter}}
-          BOSH_VSPHERE_CPI_NESTED_DATACENTER_DATASTORE_PATTERN: {{lifecycle_vsphere_5_1_nested_datacenter_datastore_pattern}}
-          BOSH_VSPHERE_CPI_NESTED_DATACENTER_CLUSTER:           {{lifecycle_vsphere_5_1_nested_datacenter_cluster}}
-          BOSH_VSPHERE_CPI_NESTED_DATACENTER_RESOURCE_POOL:     {{lifecycle_vsphere_5_1_nested_datacenter_resource_pool}}
-          BOSH_VSPHERE_CPI_NESTED_DATACENTER_VLAN:              {{lifecycle_vsphere_5_1_nested_datacenter_vlan}}
-          BOSH_VSPHERE_CPI_NESTED_DATACENTER_NESTED_VLAN:       {{lifecycle_vsphere_5_1_nested_datacenter_nested_vlan}}
-          BOSH_VSPHERE_CPI_PORTGROUP_STANDARD:                  {{lifecycle_vsphere_5_1_portgroup_standard}}
-          BOSH_VSPHERE_CPI_PORTGROUP_DISTRIBUTED:               {{lifecycle_vsphere_5_1_portgroup_distributed}}
-          BOSH_VSPHERE_CPI_PORTGROUP_AMBIGUOUS:                 {{lifecycle_vsphere_5_1_portgroup_ambiguous}}
-          BOSH_VSPHERE_CPI_PORTGROUP_AMBIGUOUS_RAISE_ISSUE:     {{lifecycle_vsphere_5_1_portgroup_raise_ambiguous_issue}}
-          BOSH_VSPHERE_CPI_PORTGROUP_FOLDER_STANDARD:           {{lifecycle_vsphere_5_1_portgroup_folder_standard}}
-          BOSH_VSPHERE_CPI_PORTGROUP_FOLDER_DISTRIBUTED:        {{lifecycle_vsphere_5_1_portgroup_folder_distributed}}
-          BOSH_VSPHERE_CPI_PORTGROUP_FOLDER_AMBIGUOUS:          {{lifecycle_vsphere_5_1_portgroup_folder_ambiguous}}
-          BOSH_VSPHERE_CPI_CLUSTER_MORE_DATASTORE_FREE_SPACE:   {{lifecycle_vsphere_5_1_cluster_more_datastore_free_space}}
-          BOSH_VSPHERE_CPI_CLUSTER_LESS_DATASTORE_FREE_SPACE:   {{lifecycle_vsphere_5_1_cluster_less_datastore_free_space}}
-          BOSH_VSPHERE_CPI_SHARED_DATASTORE:                    {{lifecycle_vsphere_5_1_shared_datastore}}
 
   - name: lifecycle-6.0
     serial: true
@@ -290,8 +243,8 @@ jobs:
   - name: delivery
     plan:
     - aggregate:
-      - {trigger: true, passed: [lifecycle-5.1, lifecycle-6.0, lifecycle-6.0-vsan, bats], get: bosh-cpi-artifacts, tags: ["vsphere-v6.0"]}
-      - {trigger: false, passed: [lifecycle-5.1, lifecycle-6.0, lifecycle-6.0-vsan, bats], get: bosh-cpi-src, tags: ["vsphere-v6.0"]}
+      - {trigger: true, passed: [lifecycle-6.0, lifecycle-6.0-vsan, bats], get: bosh-cpi-artifacts, tags: ["vsphere-v6.0"]}
+      - {trigger: false, passed: [lifecycle-6.0, lifecycle-6.0-vsan, bats], get: bosh-cpi-src, tags: ["vsphere-v6.0"]}
     - put: tracker-output
       params:
         repos:
@@ -302,8 +255,8 @@ jobs:
     plan:
     - aggregate:
       # temporarily remove VSAN passed constraint as environment is having issues
-      - {trigger: false, passed: [lifecycle-5.1, lifecycle-6.0, lifecycle-6.0-vsan, bats], get: bosh-cpi-artifacts, tags: ["vsphere-v6.0"]}
-      - {trigger: false, passed: [lifecycle-5.1, lifecycle-6.0, lifecycle-6.0-vsan, bats], get: bosh-cpi-src, tags: ["vsphere-v6.0"]}
+      - {trigger: false, passed: [lifecycle-6.0, lifecycle-6.0-vsan, bats], get: bosh-cpi-artifacts, tags: ["vsphere-v6.0"]}
+      - {trigger: false, passed: [lifecycle-6.0, lifecycle-6.0-vsan, bats], get: bosh-cpi-src, tags: ["vsphere-v6.0"]}
       - {trigger: false, get: release-version-semver, params: {bump: major}, tags: ["vsphere-v6.0"]}
     - task: promote
       tags: ["vsphere-v6.0"]
