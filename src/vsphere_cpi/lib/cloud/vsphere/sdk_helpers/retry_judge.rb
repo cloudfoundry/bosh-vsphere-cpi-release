@@ -22,7 +22,6 @@ module VSphereCloud
         },
         {
           # moving persistent data would be dangerous to retry
-          entity_class: VimSdk::Vim::VirtualDiskManager,
           method_name: 'MoveVirtualDisk_Task',
         },
         {

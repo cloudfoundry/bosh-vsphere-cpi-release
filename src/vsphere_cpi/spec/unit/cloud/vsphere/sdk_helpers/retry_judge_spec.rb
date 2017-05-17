@@ -9,8 +9,8 @@ describe 'RetryJudge' do
   end
 
   it 'should not let blacklisted methods be retryable' do
-    klass = VimSdk::Vim::VirtualDiskManager
-    method = 'MoveVirtualDisk_Task'
+    klass = VimSdk::Vim::VirtualMachine
+    method = 'RelocateVM_Task'
     entity = instance_double(klass, class: klass)
 
     expect(retry_judge.retryable?(entity, method, unknown_error)).to be(false), "Expected '#{klass.to_s}.#{method}' to not be retryable, but it was."
