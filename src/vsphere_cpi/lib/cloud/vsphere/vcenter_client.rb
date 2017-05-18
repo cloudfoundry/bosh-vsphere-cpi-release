@@ -205,6 +205,9 @@ module VSphereCloud
         container_name = File.dirname(network_name)
         network_name = File.basename(network_name)
         network_container = find_by_inventory_path([ datacenter.name, 'network', container_name])
+        if network_container.nil?
+          network_container = find_child_by_name(datacenter.mob.network_folder, container_name.split('/'))
+        end
         if network_container.instance_of?(VimSdk::Vim::Dvs::VmwareDistributedVirtualSwitch)
           valid_networks = network_container.portgroup
         elsif network_container.instance_of?(VimSdk::Vim::Folder)
@@ -220,11 +223,10 @@ module VSphereCloud
         target_network = matching_networks.first
       elsif matching_networks.length > 1
         # pick the Standard Portgroup if multiple networks exist with the given name
-        standard_network = matching_networks.find { |n| n.instance_of?(VimSdk::Vim::Network) }
-        if standard_network.nil? && matching_networks.length > 1
+        target_network = matching_networks.find { |n| n.instance_of?(VimSdk::Vim::Network) }
+        if target_network.nil?
           raise "Multiple networks found for #{network_name}. Please specify the full path, for example 'FOLDER_NAME/DISTRIBUTED_SWITCH_NAME/DISTRIBUTED_PORTGROUP_NAME'"
         end
-        target_network = standard_network || matching_networks.first
       end
 
       target_network
@@ -437,6 +439,12 @@ module VSphereCloud
       unless field.nil?
         @fields_manager.remove_field_definition(field.key)
       end
+    end
+
+    def find_child_by_name(mob, child_path)
+      return mob if child_path.empty?
+      child_entity_name = child_path.shift
+      find_child_by_name(mob.child_entity.find {|c| c.name == child_entity_name }, child_path)
     end
 
     private

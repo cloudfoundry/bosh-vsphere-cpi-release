@@ -667,6 +667,28 @@ module VSphereCloud
       end
     end
 
+    describe '#find_child_by_name' do
+      context 'when the child is there' do
+        let(:mob) {double('mob', child_entity: [child_entity])}
+        let(:child_entity) {double('child_entity', name: 'child')}
+        it 'finds it' do
+          expect(client.find_child_by_name(mob, ['child'])).to eq(child_entity)
+        end
+      end
+
+      context 'when the great-grandchild is there' do
+        let(:mob) {double('mob', child_entity: [other_child_entity, child_entity])}
+        let(:child_entity) {double('child_entity', name: 'child', child_entity: [grandchild_entity])}
+        let(:other_child_entity) {double('other_child_entity', name: 'other_child')}
+        let(:grandchild_entity) {double('grandchild_entity', name: 'grandchild', child_entity: [great_grandchild_entity])}
+        let(:great_grandchild_entity) {double('great-grandchild_entity', name: 'great-grandchild')}
+        it 'finds it' do
+          expect(client.find_child_by_name(mob, ['child', 'grandchild', 'great-grandchild'])).to eq(great_grandchild_entity)
+        end
+      end
+
+    end
+
     describe '#remove_custom_field_def' do
       let(:custom_fields_manager) { instance_double(VimSdk::Vim::CustomFieldsManager) }
       let(:vm_mob) { instance_double(VimSdk::Vim::VirtualMachine) }
