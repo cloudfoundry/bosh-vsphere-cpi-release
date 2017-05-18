@@ -108,7 +108,7 @@ context 'when the datastore is chosen for disk creation' do
       delete_vm(second_cluster_cpi, existing_vm_id)
     end
 
-    it 'migrates disk to a datastore accessible to the VM on attach' do
+    it 'migrates disk to a datastore accessible to the VM on attach', disk_migration: true do
       begin
         both_cluster_cpi.attach_disk(existing_vm_id, existing_disk_id)
 

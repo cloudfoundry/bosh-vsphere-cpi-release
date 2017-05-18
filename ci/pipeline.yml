@@ -117,7 +117,7 @@ jobs:
         tags: ["vsphere-v6.0"]
         file: bosh-cpi-src/ci/tasks/run-lifecycle.yml
         params:
-          RSPEC_FLAGS:                                          "--tag ~vsan_datastore --tag ~nsx_transformers"
+          RSPEC_FLAGS:                                          "--tag ~vsan_datastore --tag ~nsx_transformers --tag ~disk_migration"
           BOSH_VSPHERE_VERSION:                                 {{lifecycle_vsphere_6_5_version}}
           BOSH_VSPHERE_CPI_HOST:                                {{lifecycle_vsphere_6_5_host}}
           BOSH_VSPHERE_CPI_USER:                                {{lifecycle_vsphere_6_5_user}}
