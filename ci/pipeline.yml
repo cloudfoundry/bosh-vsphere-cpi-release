@@ -257,7 +257,6 @@ jobs:
     serial: true
     plan:
     - aggregate:
-      # temporarily remove VSAN passed constraint as environment is having issues
       - {trigger: false, passed: [lifecycle-6.0, lifecycle-6.0-vsan, bats], get: bosh-cpi-artifacts, tags: ["vsphere-v6.0"]}
       - {trigger: false, passed: [lifecycle-6.0, lifecycle-6.0-vsan, bats], get: bosh-cpi-src, tags: ["vsphere-v6.0"]}
       - {trigger: false, get: release-version-semver, params: {bump: major}, tags: ["vsphere-v6.0"]}
@@ -351,7 +350,7 @@ resources:
   - name: environment
     type: pool
     source:
-      pool: vsphere-5.1
+      pool: vsphere-6.0
       uri: git@github.com:cloudfoundry/bosh-cpi-environments.git
       branch: master
       private_key: {{github_deployment_key__bosh-cpi-environments}}
