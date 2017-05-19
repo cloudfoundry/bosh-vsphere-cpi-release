@@ -1,4 +1,4 @@
-# fly -t cpi set-pipeline -p bosh-vsphere-cpi -c ~/workspace/bosh-vsphere-cpi-release/ci/pipeline.yml --load-vars-from <( lpass show --notes "vsphere cpi concourse secrets")
+# fly -t cpi set-pipeline -p bosh-vsphere-cpi -c ~/workspace/bosh-vsphere-cpi-release/ci/pipeline.yml --l <( lpass show --notes "vsphere cpi concourse secrets") -l <(lpass show --notes "pivotal-tracker-resource-keys")
 ---
 groups:
   - name: bosh-vsphere-cpi
@@ -113,6 +113,7 @@ jobs:
         - {trigger: true,  passed: [build-candidate], get: bosh-cpi-artifacts, tags: ["vsphere-v6.0"]} # used for job chaining only not for tasks
         - {trigger: false, passed: [build-candidate], get: bosh-cpi-src, tags: ["vsphere-v6.0"]}
         - {trigger: false,                            get: stemcell, resource: vsphere-ubuntu-stemcell, tags: ["vsphere-v6.0"]}
+        - {trigger: true,                             get: 2h, tags: [vsphere-v6.0]}
       - task: test
         tags: ["vsphere-v6.0"]
         file: bosh-cpi-src/ci/tasks/run-lifecycle.yml
