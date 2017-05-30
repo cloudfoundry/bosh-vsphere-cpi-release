@@ -33,4 +33,4 @@ pushd rubygems-2.6.11 > /dev/null
   ${BOSH_INSTALL_TARGET}/bin/ruby setup.rb
 popd > /dev/null
 
-${BOSH_INSTALL_TARGET}/bin/gem install vsphere_cpi_ruby/bundler-1.14.6.gem --local --no-ri --no-rdoc
+${BOSH_INSTALL_TARGET}/bin/gem install vsphere_cpi_ruby/bundler-1.15.0.gem --local --no-ri --no-rdoc

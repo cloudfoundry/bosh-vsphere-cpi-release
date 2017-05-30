@@ -1,4 +1,4 @@
-# fly -t cpi set-pipeline -p bosh-vsphere-cpi -c ~/workspace/bosh-vsphere-cpi-release/ci/pipeline.yml --l <( lpass show --notes "vsphere cpi concourse secrets") -l <(lpass show --notes "pivotal-tracker-resource-keys")
+# fly -t cpi set-pipeline -p bosh-vsphere-cpi -c ~/workspace/bosh-vsphere-cpi-release/ci/pipeline.yml -l <( lpass show --notes "vsphere cpi concourse secrets") -l <(lpass show --notes "pivotal-tracker-resource-keys")
 ---
 groups:
   - name: bosh-vsphere-cpi
@@ -216,6 +216,7 @@ jobs:
           BOSH_VSPHERE_VERSION:                   {{VSPHERE_VERSION}}
           BOSH_VSPHERE_VCENTER_DC:                {{VCENTER_DC}}
           BOSH_VSPHERE_VCENTER_CLUSTER:           {{VCENTER_CLUSTER}}
+          BOSH_VSPHERE_VCENTER_RESOURCE_POOL:     {{VCENTER_RESOURCE_POOL}}
           BOSH_VSPHERE_VCENTER_DATASTORE:         {{VCENTER_DATASTORE}}
           BOSH_VSPHERE_VCENTER_VLAN:              {{VCENTER_VLAN}}
           BOSH_VSPHERE_VCENTER_VM_FOLDER:         {{VCENTER_VM_FOLDER}}

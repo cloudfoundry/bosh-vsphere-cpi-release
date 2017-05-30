@@ -4,4 +4,4 @@ files:
 - vsphere_cpi_ruby/yaml-0.1.7.tar.gz
 - vsphere_cpi_ruby/ruby-2.2.6.tar.gz
 - vsphere_cpi_ruby/rubygems-2.6.11.tgz
-- vsphere_cpi_ruby/bundler-1.14.6.gem
+- vsphere_cpi_ruby/bundler-1.15.0.gem

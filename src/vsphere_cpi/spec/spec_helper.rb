@@ -7,6 +7,8 @@ if ENV['COVERAGE']
   SimpleCov.start
 end
 
+PROJECT_RUBY_VERSION = ENV.fetch('PROJECT_RUBY_VERSION', '2.2.6')
+
 require 'fakefs/spec_helpers'
 
 require 'cloud'
@@ -25,5 +27,9 @@ RSpec.configure do |config|
 
   config.mock_with :rspec do |mocks|
     mocks.verify_doubled_constant_names = true
+  end
+
+  config.before do
+    expect(RUBY_VERSION).to eq(PROJECT_RUBY_VERSION)
   end
 end

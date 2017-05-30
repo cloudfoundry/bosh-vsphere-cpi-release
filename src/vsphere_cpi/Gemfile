@@ -6,7 +6,7 @@ gem 'membrane',    '~>1.1.0'
 gem 'builder',     '~>3.2.3'
 gem 'nokogiri',    '~>1.7.1'
 gem 'mono_logger', '~>1.1.0'
-gem 'oga'
+gem 'oga', '2.3'
 
 group :development, :test do
   gem 'fakefs'

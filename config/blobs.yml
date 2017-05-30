@@ -10,10 +10,10 @@ vsphere_cpi_mkisofs/smake-1.2.4.tar.bz2:
   size: 426050
   object_id: f9689428-a553-4858-be4b-42f60c033a62
   sha: 677af2a1b768d5dfd3bd71dc46f81992e798191b
-vsphere_cpi_ruby/bundler-1.14.6.gem:
-  size: 319488
-  object_id: 9de9bdca-cfa3-4421-71bf-91d083990487
-  sha: 3e84d3a4dd43bfaec988b029f45c0d7ffa205ab8
+vsphere_cpi_ruby/bundler-1.15.0.gem:
+  size: 338432
+  object_id: bc4bc9df-ef7f-49c8-5079-19a42765f503
+  sha: 10feaa6564d972673b21652fbecab24fb5bbdc95
 vsphere_cpi_ruby/ruby-2.2.6.tar.gz:
   size: 16663387
   object_id: c1eb8644-dab6-422a-73cc-d3c58dd00500

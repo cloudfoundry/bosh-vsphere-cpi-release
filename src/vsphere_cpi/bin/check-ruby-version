@@ -1,0 +1,16 @@
+#!/bin/bash
+
+source /usr/local/share/chruby/chruby.sh
+
+chruby $PROJECT_RUBY_VERSION
+if [ "$?" -eq "1" ]; then
+  echo "Ruby version $PROJECT_RUBY_VERSION not found. Installing..."
+  echo "Installing Ruby version $PROJECT_RUBY_VERSION ..."
+  ruby-install ruby $PROJECT_RUBY_VERSION
+  chruby $PROJECT_RUBY_VERSION
+fi
+
+echo "Installing bundler..."
+gem install bundler
+
+echo "Ruby version $PROJECT_RUBY_VERSION successfully installed."
