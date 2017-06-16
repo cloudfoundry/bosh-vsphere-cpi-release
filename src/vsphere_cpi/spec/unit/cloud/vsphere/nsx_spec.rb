@@ -475,8 +475,18 @@ module VSphereCloud
         it 'returns an error' do
           expect_GET_edges_happy(existing_edges)
           expect_GET_pools_happy(edge_id, pool_id, pool_name)
+          expect_GET_pools_happy(edge_id, pool_id, pool_name)
           expect_GET_security_groups_happy
-          expect_PUT_pool_sad
+          expect_PUT_pool_sad('org.hibernate.StaleObjectStateException')
+          expected_members = [
+            {
+              'security_group_name' => sg_name,
+              'security_group_id' => sg_id,
+              'port' => pool_port,
+              'monitor_port' => pool_monitor_port,
+            },
+          ]
+          expect_PUT_pool_happy(edge_id, pool_id, pool_name, expected_members)
 
           expect {
             nsx.add_members_to_lbs([
@@ -488,7 +498,7 @@ module VSphereCloud
                 'monitor_port' => pool_monitor_port,
               }
             ])
-          }.to raise_error(/fake-nsx-error/)
+          }.to_not raise_error
         end
       end
     end
@@ -677,10 +687,10 @@ module VSphereCloud
       end
     end
 
-    def expect_PUT_pool_sad
+    def expect_PUT_pool_sad(error='fake-nsx-error')
       expect(http_client).to receive(:put)
         .with("https://#{nsx_address}/api/4.0/edges/#{edge_id}/loadbalancer/config/pools/#{pool_id}", anything, anything)
-        .and_return(double('response', status: 500, body: 'fake-nsx-error'))
+        .and_return(double('response', status: 500, body: error))
     end
   end
 end

@@ -145,18 +145,21 @@ module VSphereCloud
     end
 
     def add_bundled_members_to_lbs(edge_id, pool_name, members_of_pool)
-      pool_details = get_pool_details(edge_id, pool_name)
-      pool_id = pool_details.xpath('poolId').text
+      Bosh::Retryable.new(tries: 50, sleep: ->(try_count, retry_exception) { 0.5 }, on: [Exception], matching: /org.hibernate.StaleObjectStateException/).retryer do
+        pool_details = get_pool_details(edge_id, pool_name)
+        pool_id = pool_details.xpath('poolId').text
 
-      members_to_add = select_members_to_add_to_lb(pool_details, members_of_pool)
-      if members_to_add.empty?
-        return
-      end
+        members_to_add = select_members_to_add_to_lb(pool_details, members_of_pool)
+        if members_to_add.empty?
+          return
+        end
 
-      pool_xml = create_pool_xml(pool_details, members_to_add)
-      response = @http_client.put("https://#{@nsx_url}/api/4.0/edges/#{edge_id}/loadbalancer/config/pools/#{pool_id}", pool_xml, { 'Content-Type' => 'text/xml' })
-      unless response.status.between?(200, 299)
-        raise "Failed to update LB Pool ID '#{pool_id}' under Edge ID '#{edge_id}' with unknown NSX error: '#{response.body}'"
+        pool_xml = create_pool_xml(pool_details, members_to_add)
+        response = @http_client.put("https://#{@nsx_url}/api/4.0/edges/#{edge_id}/loadbalancer/config/pools/#{pool_id}", pool_xml, { 'Content-Type' => 'text/xml' })
+        unless response.status.between?(200, 299)
+          raise "Failed to update LB Pool ID '#{pool_id}' under Edge ID '#{edge_id}' with unknown NSX error: '#{response.body}'"
+        end
+        response.status.between?(200, 299)
       end
     end
 
