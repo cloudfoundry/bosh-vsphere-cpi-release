@@ -19,3 +19,4 @@ src/vsphere_cpi/vendor/cache
 #*
 /_*
 tmp
+tags
