@@ -107,6 +107,7 @@ module VSphereCloud
 
         device_changes.each do |device_change|
           device = device_change.device
+          next if device.is_a?(Vim::Vm::Device::VirtualEthernetCard)
           if device.controller_key && device.unit_number.nil?
             available_unit_numbers = controllers_available_unit_numbers[device.controller_key]
             raise "No available unit numbers for device: #{device.inspect}" if available_unit_numbers.empty?

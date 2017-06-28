@@ -19,6 +19,70 @@ describe 'multiple manual networks' do
         'default' => ['dns', 'gateway'],
         'dns' => ['169.254.1.2'],
         'gateway' => '169.254.1.3'
+      },
+      'third' => {
+        'ip' => "169.254.#{rand(1..254)}.#{rand(4..254)}",
+        'netmask' => '255.255.254.0',
+        'cloud_properties' => {'name' => vlan},
+        'default' => ['dns', 'gateway'],
+        'dns' => ['169.254.1.2'],
+        'gateway' => '169.254.1.3'
+      },
+      'fourth' => {
+        'ip' => "169.254.#{rand(1..254)}.#{rand(4..254)}",
+        'netmask' => '255.255.254.0',
+        'cloud_properties' => {'name' => vlan},
+        'default' => ['dns', 'gateway'],
+        'dns' => ['169.254.1.2'],
+        'gateway' => '169.254.1.3'
+      },
+      'fifth' => {
+        'ip' => "169.254.#{rand(1..254)}.#{rand(4..254)}",
+        'netmask' => '255.255.254.0',
+        'cloud_properties' => {'name' => vlan},
+        'default' => ['dns', 'gateway'],
+        'dns' => ['169.254.1.2'],
+        'gateway' => '169.254.1.3'
+      },
+      'sixth' => {
+        'ip' => "169.254.#{rand(1..254)}.#{rand(4..254)}",
+        'netmask' => '255.255.254.0',
+        'cloud_properties' => {'name' => vlan},
+        'default' => ['dns', 'gateway'],
+        'dns' => ['169.254.1.2'],
+        'gateway' => '169.254.1.3'
+      },
+      'seventh' => {
+        'ip' => "169.254.#{rand(1..254)}.#{rand(4..254)}",
+        'netmask' => '255.255.254.0',
+        'cloud_properties' => {'name' => vlan},
+        'default' => ['dns', 'gateway'],
+        'dns' => ['169.254.1.2'],
+        'gateway' => '169.254.1.3'
+      },
+      'eighth' => {
+        'ip' => "169.254.#{rand(1..254)}.#{rand(4..254)}",
+        'netmask' => '255.255.254.0',
+        'cloud_properties' => {'name' => vlan},
+        'default' => ['dns', 'gateway'],
+        'dns' => ['169.254.1.2'],
+        'gateway' => '169.254.1.3'
+      },
+      'nineth' => {
+        'ip' => "169.254.#{rand(1..254)}.#{rand(4..254)}",
+        'netmask' => '255.255.254.0',
+        'cloud_properties' => {'name' => vlan},
+        'default' => ['dns', 'gateway'],
+        'dns' => ['169.254.1.2'],
+        'gateway' => '169.254.1.3'
+      },
+      'tenth' => {
+        'ip' => "169.254.#{rand(1..254)}.#{rand(4..254)}",
+        'netmask' => '255.255.254.0',
+        'cloud_properties' => {'name' => vlan},
+        'default' => ['dns', 'gateway'],
+        'dns' => ['169.254.1.2'],
+        'gateway' => '169.254.1.3'
       }
     }
   end
