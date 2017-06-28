@@ -88,6 +88,41 @@ describe 'RetryableStubAdapter' do
         expect(retryable_stub_adapter.invoke_method(managed_object, method_info, method_args)).to be(final_soap_result)
       end
     end
+
+    context 'when underlying invoke_method raises unhandled exception' do
+      let(:final_soap_status) { 200 + rand(100) }
+      let(:final_soap_result) { double('some-soap-object') }
+
+      it 'should retry on specific errors' do
+        expect(retryer).to receive(:sleep).with(1).once
+
+        call_count = 0
+        expect(stub_adapter).to receive(:invoke_method)
+          .twice
+          .with(managed_object, method_info, method_args, retryable_stub_adapter) do
+          if call_count == 0
+            call_count += 1
+            raise Errno::ECONNRESET
+          else
+            [final_soap_status, final_soap_result]
+          end
+        end
+
+        expect(retryable_stub_adapter.invoke_method(managed_object, method_info, method_args)).to be(final_soap_result)
+      end
+
+      it 'keeps retrying up to 6 times' do
+        expect(retryer).to receive(:sleep).with(any_args).exactly(5).times
+
+        expect(stub_adapter).to receive(:invoke_method).exactly(6).times
+          .with(managed_object, method_info, method_args, retryable_stub_adapter)
+          .and_raise(Errno::ECONNRESET)
+
+        expect {
+          retryable_stub_adapter.invoke_method(managed_object, method_info, method_args)
+        }.to raise_error(Errno::ECONNRESET)
+      end
+    end
   end
 
   describe '#invoke_property' do

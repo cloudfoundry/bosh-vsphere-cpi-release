@@ -22,20 +22,34 @@ module VSphereCloud
             @logger.warn("Retrying method '#{method_name}', #{i} attempts so far...")
           end
 
-          status, object = @stub_adapter.invoke_method(managed_object, method_info, arguments, self)
-
-          if status.between?(200, 299)
-            result = object
-          elsif object.kind_of?(VimSdk::Vmodl::MethodFault)
-            err = VimSdk::SoapError.new(object.msg, object)
+          begin
+            status, object = @stub_adapter.invoke_method(managed_object, method_info, arguments, self)
+          rescue URI::Error,
+            SocketError,
+            Errno::ECONNREFUSED,
+            Errno::ETIMEDOUT,
+            Errno::ECONNRESET,
+            Timeout::Error,
+            HTTPClient::TimeoutError,
+            HTTPClient::KeepAliveDisconnected,
+            OpenSSL::SSL::SSLError,
+            OpenSSL::X509::StoreError => e
+            @logger.warn("Error running method '#{method_name}'. Failed with '#{e.class}: #{e.message}'")
+            err = e
           else
-            err = VimSdk::SoapError.new('Unknown SOAP fault', object)
-          end
+            if status.between?(200, 299)
+              result = object
+            elsif object.kind_of?(VimSdk::Vmodl::MethodFault)
+              err = VimSdk::SoapError.new(object.msg, object)
+            else
+              err = VimSdk::SoapError.new('Unknown SOAP fault', object)
+            end
 
-          if err
-            @logger.warn(fault_message(method_name, err))
-            unless @retry_judge.retryable?(managed_object, method_info.wsdl_name, object)
-              raise err
+            if err
+              @logger.warn(fault_message(method_name, err))
+              unless @retry_judge.retryable?(managed_object, method_info.wsdl_name, object)
+                raise err
+              end
             end
           end
           [result, err]

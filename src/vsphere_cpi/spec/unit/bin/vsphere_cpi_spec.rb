@@ -2,7 +2,7 @@ require 'spec_helper'
 require 'yaml'
 require 'tempfile'
 
-describe "the vsphere_cpi executable" do
+describe 'the vsphere_cpi executable' do
   it 'will not evaluate anything that causes an exception and will return the proper message to stdout' do
     config_file = Tempfile.new('cloud_properties.yml')
     config_file.write(
