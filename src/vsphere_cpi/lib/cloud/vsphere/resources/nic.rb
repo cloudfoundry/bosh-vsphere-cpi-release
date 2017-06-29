@@ -36,6 +36,7 @@ module VSphereCloud
         nic.key = -1
         nic.controller_key = controller_key
         nic.backing = backing_info
+        nic.unit_number = -1
 
         nic
       end
