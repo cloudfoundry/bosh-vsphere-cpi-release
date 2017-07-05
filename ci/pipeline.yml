@@ -201,43 +201,33 @@ jobs:
         - {get: bosh-cli,        tags: [vsphere-v6.0], trigger: false}
         - {get: bats,            tags: [vsphere-v6.0], trigger: false}
         - {get: 2h,              tags: [vsphere-v6.0], trigger: true}
-        # Passthrough
-        - {get: bosh-cpi-src, tags: [vsphere-v6.0], trigger: false, passed: [build-candidate]}
+        - {get: bosh-cpi-src, tags: [vsphere-v6.0], trigger: false, passed: [build-candidate]} # Passthrough
       - {put: environment, tags: [vsphere-v6.0], params: {acquire: true}}
       - task: prepare-director
         tags: [vsphere-v6.0]
-        file: pipelines/vsphere/tasks/prepare-director.yml
+        file: pipelines/shared/tasks/prepare-director.yml
         params:
-          BOSH_CLIENT:                            {{BOSH_CLIENT}}
-          BOSH_CLIENT_SECRET:                     {{BOSH_CLIENT_SECRET}}
-          BOSH_VSPHERE_VCENTER:                   {{VCENTER_IP}}
-          BOSH_VSPHERE_VCENTER_USER:              {{VCENTER_USER}}
-          BOSH_VSPHERE_VCENTER_PASSWORD:          {{VCENTER_PASSWORD}}
-          BOSH_VSPHERE_VERSION:                   {{VSPHERE_VERSION}}
-          BOSH_VSPHERE_VCENTER_DC:                {{VCENTER_DC}}
-          BOSH_VSPHERE_VCENTER_CLUSTER:           {{VCENTER_CLUSTER}}
-          BOSH_VSPHERE_VCENTER_RESOURCE_POOL:     {{VCENTER_RESOURCE_POOL}}
-          BOSH_VSPHERE_VCENTER_DATASTORE:         {{VCENTER_DATASTORE}}
-          BOSH_VSPHERE_VCENTER_VLAN:              {{VCENTER_VLAN}}
-          BOSH_VSPHERE_VCENTER_VM_FOLDER:         {{VCENTER_VM_FOLDER}}
-          BOSH_VSPHERE_VCENTER_TEMPLATE_FOLDER:   {{VCENTER_TEMPLATE_FOLDER}}
-          BOSH_VSPHERE_VCENTER_DISK_PATH:         {{VCENTER_DISK_PATH}}
-          USE_REDIS:                              true
+          INFRASTRUCTURE:     vsphere
+          DIRECTOR_VARS_FILE: {{vsphere_director_vars_file}}
+          OPTIONAL_OPS_FILE:  |
+            -o pipelines/shared/assets/ops/redis.yml
+            -o bosh-deployment/vsphere/resource-pool.yml
+            -o pipelines/shared/assets/ops/remove-provider-cert.yml
       - do:
           - task: deploy-director
             tags: [vsphere-v6.0]
             file: pipelines/shared/tasks/deploy-director.yml
-          - task: prepare-bats
-            tags: [vsphere-v6.0]
-            file: pipelines/vsphere/tasks/prepare-bats.yml
             params:
-              BAT_VCAP_PASSWORD:      {{BAT_VCAP_PASSWORD}}
-              BOSH_CLIENT:            {{BOSH_CLIENT}}
-              BOSH_CLIENT_SECRET:     {{BOSH_CLIENT_SECRET}}
-              STEMCELL_NAME:          bosh-vsphere-esxi-ubuntu-trusty-go_agent
+              NETWORK_NAME: default
           - task: run-bats
             tags: [vsphere-v6.0]
             file: pipelines/shared/tasks/run-bats.yml
+            params:
+              INFRASTRUCTURE:     vsphere
+              BAT_INFRASTRUCTURE: vsphere
+              BAT_NETWORKING:     manual
+              BAT_RSPEC_FLAGS:    "--tag ~vip_networking --tag ~dynamic_networking --tag ~root_partition --tag ~raw_ephemeral_storage"
+              STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-trusty-go_agent
         ensure:
           do:
             - task: teardown
