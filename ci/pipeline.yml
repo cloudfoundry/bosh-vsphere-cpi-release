@@ -211,6 +211,7 @@ jobs:
           DIRECTOR_VARS_FILE: {{vsphere_director_vars_file}}
           OPTIONAL_OPS_FILE:  |
             -o pipelines/shared/assets/ops/redis.yml
+            -o pipelines/shared/assets/ops/remove-hm.yml
             -o bosh-deployment/vsphere/resource-pool.yml
             -o pipelines/shared/assets/ops/remove-provider-cert.yml
       - do:
@@ -338,7 +339,7 @@ resources:
     type: git
     source:
       uri: https://github.com/cloudfoundry/bosh-acceptance-tests.git
-      branch: master
+      branch: gocli-bats
   - name: environment
     type: pool
     source:
