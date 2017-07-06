@@ -73,9 +73,16 @@ module VSphereCloud
 
       replicated_stemcell_vm.fix_device_unit_numbers(config_spec.device_change)
 
-      @logger.info("Cloning vm: #{replicated_stemcell_vm} to #{vm_config.name}")
+      if vm_config.vmx_options.is_a?(Hash)
+        config_spec.extra_config = vm_config.vmx_options.keys.map { |key|
+          VimSdk::Vim::Option::OptionValue.new(key: key, value: vm_config.vmx_options[key])
+        }
+      else
+        raise "Unable to parse vmx options: 'vmx_options' is not a Hash"
+      end
 
       # Clone VM
+      @logger.info("Cloning vm: #{replicated_stemcell_vm} to #{vm_config.name}")
       created_vm_mob = @client.wait_for_task do
         @cpi.clone_vm(replicated_stemcell_vm.mob,
           vm_config.name,

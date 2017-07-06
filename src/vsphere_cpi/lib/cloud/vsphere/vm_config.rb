@@ -98,6 +98,10 @@ module VSphereCloud
       end
     end
 
+    def vmx_options
+      vm_type['vmx_options'] || {}
+    end
+
     private
 
     def validate_drs_rules

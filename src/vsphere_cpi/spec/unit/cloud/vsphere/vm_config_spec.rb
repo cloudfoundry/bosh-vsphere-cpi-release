@@ -686,5 +686,36 @@ module VSphereCloud
         end
       end
     end
+
+    describe '#vmx_options' do
+      context 'vmx_options are specified' do
+        let(:input) do
+          {
+            vm_type: {
+              'vmx_options' => {
+                'sched.mem.maxmemctl' => '0'
+              }
+            }
+          }
+        end
+
+        it 'should return the vmx_options' do
+          expect(vm_config.vmx_options).to eq({ 'sched.mem.maxmemctl' => '0' })
+        end
+      end
+
+      context 'vmx_options are NOT specified' do
+        let(:input) do
+          {
+            vm_type: {}
+          }
+        end
+
+        it 'should return empty hash' do
+          expect(vm_config.vmx_options).to eq({})
+        end
+      end
+
+    end
   end
 end
