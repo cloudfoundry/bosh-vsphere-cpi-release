@@ -47,6 +47,10 @@ module LifecycleHelpers
     value
   end
 
+  def fetch_integer(key)
+    fetch_property(key).to_i
+  end
+
   def fetch_optional_property(property, default = nil)
     ENV[property] || default
   end

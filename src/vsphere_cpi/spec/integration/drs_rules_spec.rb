@@ -3,6 +3,8 @@ require 'integration/spec_helper'
 describe 'DRS rules', drs: true do
   context 'when vm was migrated to another datastore within first cluster' do
     before (:all) do
+      # number of hosts in the given cluster `BOSH_VSPHERE_CPI_CLUSTER`
+      @number_of_hosts = fetch_integer('BOSH_VSPHERE_CPI_NUMBER_OF_HOSTS_IN_CLUSTER')
       @datacenter_name = fetch_and_verify_datacenter('BOSH_VSPHERE_CPI_DATACENTER')
       @cluster_name = fetch_and_verify_cluster('BOSH_VSPHERE_CPI_CLUSTER')
       @datastore_pattern = fetch_and_verify_datastore('BOSH_VSPHERE_CPI_DATASTORE_PATTERN', @cluster_name)
@@ -252,10 +254,12 @@ describe 'DRS rules', drs: true do
               'name' => @datacenter_name,
               'clusters' => [{
                 @cluster_name => {
-                  'drs_rules' => [{
-                    'name' => 'separate-nodes-rule',
-                    'type' => 'separate_vms'
-                  }]
+                  'drs_rules' => [
+                    {
+                      'name' => 'separate-nodes-rule',
+                      'type' => 'separate_vms'
+                    }
+                  ]
                 }
               }]
             }]
@@ -264,36 +268,43 @@ describe 'DRS rules', drs: true do
 
         it 'should correctly apply VM Anti-Affinity rules to created VMs' do
           begin
-            first_vm_id = one_cluster_cpi.create_vm(
-              'agent-007',
-              @stemcell_id,
-              vm_type,
-              network_spec,
-              [],
-              {'key' => 'value'}
-            )
-            second_vm_id = one_cluster_cpi.create_vm(
-              'agent-006',
-              @stemcell_id,
-              vm_type,
-              network_spec,
-              [],
-              {'key' => 'value'}
-            )
-            first_vm_mob = one_cluster_cpi.vm_provider.find(first_vm_id).mob
+            vms = []
+            for i in 1..@number_of_hosts
+              vm_id = one_cluster_cpi.create_vm(
+                'agent-007',
+                @stemcell_id,
+                vm_type,
+                network_spec,
+                [],
+                {'key' => 'value'}
+              )
+              vms.push(vm_id)
+            end
+
+            first_vm_mob = one_cluster_cpi.vm_provider.find(vms[0]).mob
             cluster = first_vm_mob.resource_pool.parent
 
             drs_rules = cluster.configuration_ex.rule
             expect(drs_rules).not_to be_empty
-            drs_rule = drs_rules.find { |rule| rule.name == "separate-nodes-rule" }
+            drs_rule = drs_rules.find { |rule| rule.name == 'separate-nodes-rule'}
             expect(drs_rule).to_not be_nil
-            expect(drs_rule.vm.length).to eq(2)
+            expect(drs_rule.vm.length).to eq(@number_of_hosts)
             drs_vm_names = drs_rule.vm.map { |vm_mob| vm_mob.name }
-            expect(drs_vm_names).to include(first_vm_id, second_vm_id)
+            expect(vms - drs_vm_names).to be_empty
 
+            expect do
+              failed_vm = one_cluster_cpi.create_vm(
+                'agent-006',
+                @stemcell_id,
+                vm_type,
+                network_spec,
+                [],
+                {'key' => 'value'}
+              )
+              vms.push(failed_vm)
+            end.to raise_error(/.*DRS cannot find a host to power on or migrate the virtual machine.*/)
           ensure
-            delete_vm(one_cluster_cpi, first_vm_id)
-            delete_vm(one_cluster_cpi, second_vm_id)
+            vms.each {|vm_id| delete_vm(one_cluster_cpi, vm_id)}
           end
         end
       end
