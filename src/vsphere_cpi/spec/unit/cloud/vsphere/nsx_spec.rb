@@ -98,15 +98,15 @@ module VSphereCloud
         it 'retries until the apply succeeds when call is retryable' do
           expect_POST_security_group_happy
           expect_PUT_security_group_vm_sad("<error><details>The requested object : #{vm_id} could not be found. Object identifiers are case sensitive.</details><errorCode>300</errorCode><moduleName>core-services</moduleName></error>")
-          expect_POST_security_group_happy
           expect_PUT_security_group_vm_happy
 
           nsx.add_vm_to_security_group(sg_name, vm_id)
         end
 
         it "returns an error after #{VSphereCloud::Retryer::MAX_TRIES} retries when call is retryable" do
+          expect_POST_security_group_happy
+
           VSphereCloud::NSX::MAX_TRIES.times do
-            expect_POST_security_group_happy
             expect_PUT_security_group_vm_sad("<error><details>nested exception is javax.persistence.OptimisticLockException</details><errorCode>258</errorCode></error>")
           end
 

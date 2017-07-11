@@ -21,12 +21,12 @@ module VSphereCloud
     end
 
     def add_vm_to_security_group(security_group_name, vm_id)
+      sg_id = find_or_create_security_group(security_group_name)
       i = 0
       Bosh::Retryable.new(tries: MAX_TRIES,
                           sleep: ->(try_count, retry_exception) { 0.5 },
                           on: [Exception],
                           matching: %r{(?:javax.persistence.OptimisticLockException|<errorCode>300<\/errorCode>)}).retryer do
-        sg_id = find_or_create_security_group(security_group_name)
         if i.zero?
           @logger.debug("Adding VM '#{vm_id}' to Security Group '#{security_group_name}'...")
         else
