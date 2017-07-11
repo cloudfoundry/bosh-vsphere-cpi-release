@@ -37,7 +37,10 @@ module VSphereCloud
 
         response = @http_client.put("https://#{@nsx_url}/api/2.0/services/securitygroup/#{sg_id}/members/#{vm_id}", nil)
 
-        return true if vm_belongs_to_security_group?(response.body)
+        if vm_belongs_to_security_group?(response.body)
+          @logger.debug("VM '#{vm_id}' already belongs to Security Group '#{security_group_name}'.")
+          return true
+        end
 
         unless response.status.between?(200, 299)
           raise "Failed to add VM to Security Group with unknown NSX error: '#{response.body}'"
