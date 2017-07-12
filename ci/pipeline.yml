@@ -69,6 +69,7 @@ jobs:
           BOSH_VSPHERE_VLAN:                                    {{lifecycle_vsphere_6_0_vlan}}
           BOSH_VSPHERE_CPI_DATACENTER:                          {{lifecycle_vsphere_6_0_datacenter}}
           BOSH_VSPHERE_CPI_CLUSTER:                             {{lifecycle_vsphere_6_0_first_cluster}}
+          BOSH_VSPHERE_CPI_DATASTORE_IN_DATASTORE_CLUSTER:      {{lifecycle_vsphere_6_0_datastore_in_datastore_cluster}}
           BOSH_VSPHERE_CPI_DATASTORE_PATTERN:                   {{lifecycle_vsphere_6_0_datastore_pattern_available_to_all_hosts_in_first_cluster}}
           BOSH_VSPHERE_CPI_INACTIVE_DATASTORE_PATTERN:          {{lifecycle_vsphere_6_0_inactive_datastore_pattern}}
           BOSH_VSPHERE_CPI_SECOND_DATASTORE:                    {{lifecycle_vsphere_6_0_second_datastore_available_to_all_hosts_in_first_cluster}}
@@ -126,6 +127,7 @@ jobs:
           BOSH_VSPHERE_VLAN:                                    {{lifecycle_vsphere_6_5_vlan}}
           BOSH_VSPHERE_CPI_DATACENTER:                          {{lifecycle_vsphere_6_5_datacenter}}
           BOSH_VSPHERE_CPI_CLUSTER:                             {{lifecycle_vsphere_6_5_first_cluster}}
+          BOSH_VSPHERE_CPI_DATASTORE_IN_DATASTORE_CLUSTER:      {{lifecycle_vsphere_6_5_datastore_in_datastore_cluster}}
           BOSH_VSPHERE_CPI_DATASTORE_PATTERN:                   {{lifecycle_vsphere_6_5_datastore_pattern_available_to_all_hosts_in_first_cluster}}
           BOSH_VSPHERE_CPI_INACTIVE_DATASTORE_PATTERN:          {{lifecycle_vsphere_6_5_inactive_datastore_pattern}}
           BOSH_VSPHERE_CPI_SECOND_DATASTORE:                    {{lifecycle_vsphere_6_5_second_datastore_available_to_all_hosts_in_first_cluster}}
