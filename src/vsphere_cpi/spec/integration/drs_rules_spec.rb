@@ -3,8 +3,6 @@ require 'integration/spec_helper'
 describe 'DRS rules', drs: true do
   context 'when vm was migrated to another datastore within first cluster' do
     before (:all) do
-      # number of hosts in the given cluster `BOSH_VSPHERE_CPI_CLUSTER`
-      @number_of_hosts = fetch_integer('BOSH_VSPHERE_CPI_NUMBER_OF_HOSTS_IN_CLUSTER')
       @datacenter_name = fetch_and_verify_datacenter('BOSH_VSPHERE_CPI_DATACENTER')
       @cluster_name = fetch_and_verify_cluster('BOSH_VSPHERE_CPI_CLUSTER')
       @datastore_pattern = fetch_and_verify_datastore('BOSH_VSPHERE_CPI_DATASTORE_PATTERN', @cluster_name)
@@ -132,6 +130,7 @@ describe 'DRS rules', drs: true do
       end
 
       context 'given a resource pool that is configured with a drs rule' do
+        let(:drs_rule_name) { random_drs_rule_name }
         let(:vm_type) do
           {
             'ram' => 512,
@@ -142,7 +141,7 @@ describe 'DRS rules', drs: true do
               'clusters' => [{
                 @cluster_name => {
                   'drs_rules' => [{
-                    'name' => 'separate-nodes-rule',
+                    'name' => drs_rule_name,
                     'type' => 'separate_vms'
                   }]
                 }
@@ -174,7 +173,7 @@ describe 'DRS rules', drs: true do
 
             drs_rules = cluster.configuration_ex.rule
             expect(drs_rules).not_to be_empty
-            drs_rule = drs_rules.find { |rule| rule.name == "separate-nodes-rule" }
+            drs_rule = drs_rules.find { |rule| rule.name == drs_rule_name }
             expect(drs_rule).to_not be_nil
             expect(drs_rule.vm.length).to eq(2)
             drs_vm_names = drs_rule.vm.map { |vm_mob| vm_mob.name }
@@ -245,6 +244,7 @@ describe 'DRS rules', drs: true do
       end
 
       context 'given a resource pool that is configured with a drs rule' do
+        let(:drs_rule_name) { random_drs_rule_name }
         let(:vm_type) do
           {
             'ram' => 512,
@@ -256,7 +256,7 @@ describe 'DRS rules', drs: true do
                 @cluster_name => {
                   'drs_rules' => [
                     {
-                      'name' => 'separate-nodes-rule',
+                      'name' => drs_rule_name,
                       'type' => 'separate_vms'
                     }
                   ]
@@ -268,8 +268,11 @@ describe 'DRS rules', drs: true do
 
         it 'should correctly apply VM Anti-Affinity rules to created VMs' do
           begin
+            cluster = one_cluster_cpi.datacenter.find_cluster(@cluster_name)
+            number_of_hosts = cluster.mob.host.length
+
             vms = []
-            for i in 1..@number_of_hosts
+            for i in 1..number_of_hosts
               vm_id = one_cluster_cpi.create_vm(
                 'agent-007',
                 @stemcell_id,
@@ -286,9 +289,9 @@ describe 'DRS rules', drs: true do
 
             drs_rules = cluster.configuration_ex.rule
             expect(drs_rules).not_to be_empty
-            drs_rule = drs_rules.find { |rule| rule.name == 'separate-nodes-rule'}
+            drs_rule = drs_rules.find { |rule| rule.name == drs_rule_name}
             expect(drs_rule).to_not be_nil
-            expect(drs_rule.vm.length).to eq(@number_of_hosts)
+            expect(drs_rule.vm.length).to eq(number_of_hosts)
             drs_vm_names = drs_rule.vm.map { |vm_mob| vm_mob.name }
             expect(vms - drs_vm_names).to be_empty
 
@@ -400,5 +403,11 @@ describe 'DRS rules', drs: true do
         end
       end
     end
+  end
+
+  private
+
+  def random_drs_rule_name
+    "drs-rule-#{(0...6).map { (97 + rand(26)).chr }.join}"
   end
 end
