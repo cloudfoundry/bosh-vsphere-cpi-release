@@ -288,23 +288,6 @@ module VSphereCloud
             expect(vm_config.cluster).to eq(cluster_1)
           end
         end
-
-        context 'when ram is not specified' do
-          let(:input) do
-            {
-              vm_type: {
-                # no ram because that's what we're testing
-                'disk' => 4096
-              },
-              disk_configurations: disk_configurations,
-              global_clusters: global_clusters,
-            }
-          end
-
-          it 'raises an error' do
-            expect { vm_config.cluster }.to raise_error(/Must specify vm_types.cloud_properties.ram/)
-          end
-        end
       end
     end
 

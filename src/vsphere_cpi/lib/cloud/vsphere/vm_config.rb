@@ -171,10 +171,6 @@ module VSphereCloud
     def cluster_placement(clusters:)
       return @cluster_placement if @cluster_placement
 
-      if vm_type['ram'].nil?
-        raise Bosh::Clouds::CloudError, 'Must specify vm_types.cloud_properties.ram'
-      end
-
       @cluster_picker.update(clusters)
       @cluster_placement = @cluster_picker.best_cluster_placement(
         req_memory: vm_type['ram'],

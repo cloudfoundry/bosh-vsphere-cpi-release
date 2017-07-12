@@ -208,6 +208,8 @@ module VSphereCloud
 
     def create_vm(agent_id, stemcell_cid, vm_type, networks_spec, existing_disk_cids = [], environment = nil)
       with_thread_name("create_vm(#{agent_id}, ...)") do
+        verify_props('vm_types', [ 'cpu', 'ram', 'disk' ], vm_type)
+
         stemcell_vm = stemcell_vm(stemcell_cid)
         raise "Could not find VM for stemcell '#{stemcell_cid}'" if stemcell_vm.nil?
         stemcell_size = @cloud_searcher.get_property(
@@ -366,7 +368,7 @@ module VSphereCloud
     end
 
     def configure_networks(vm_cid, networks)
-      raise Bosh::Clouds::NotSupported, "configure_networks is no longer supported"
+      raise Bosh::Clouds::NotSupported, 'configure_networks is no longer supported'
     end
 
     def attach_disk(vm_cid, director_disk_cid)
@@ -628,7 +630,7 @@ module VSphereCloud
       datastore = ephemeral_disks.first.backing.datastore
       disk_in_wrong_datastore = ephemeral_disks.find { |disk| !datastore.eql?(disk.backing.datastore) }
       if disk_in_wrong_datastore
-        error_msg = vm_name ? "for VM '#{vm_name}'" : ""
+        error_msg = vm_name ? "for VM '#{vm_name}'" : ''
         raise "Ephemeral disks #{error_msg} should all be on the same datastore. " +
             "Expected datastore '#{datastore}' to match datastore '#{disk_in_wrong_datastore.backing.datastore}'"
       end
@@ -658,7 +660,7 @@ module VSphereCloud
     # This method is used by micro bosh deployment cleaner
     def get_vms
       subfolders = []
-      with_thread_name("get_vms") do
+      with_thread_name('get_vms') do
         @logger.info("Looking for VMs in: #{@datacenter.name} - #{@datacenter.master_vm_folder.path}")
         subfolders += @datacenter.master_vm_folder.mob.child_entity
         @logger.info("Looking for Stemcells in: #{@datacenter.name} - #{@datacenter.master_template_folder.path}")
@@ -671,7 +673,7 @@ module VSphereCloud
     end
 
     def ping
-      "pong"
+      'pong'
     end
 
     def vm_provider
@@ -772,6 +774,14 @@ module VSphereCloud
         env['disks']['persistent'].delete(disk_cid)
 
         @agent_env.set_env(vm_mob, location, env)
+      end
+    end
+
+    def verify_props(top_level, required_properties, properties)
+      for prop in required_properties
+        if properties[prop].nil?
+          raise "Must specify #{top_level}.cloud_properties.#{prop}"
+        end
       end
     end
   end

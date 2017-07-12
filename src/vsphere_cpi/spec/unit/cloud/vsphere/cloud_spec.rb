@@ -422,6 +422,8 @@ module VSphereCloud
       let(:fake_vm) { instance_double(Resources::VM, cid: 'fake-cloud-id', mob_id: 'fake-mob-id') }
       let(:vm_type) do
         {
+          'cpu' => 1,
+          'ram' => 1024,
           'disk' => 4096,
         }
       end
@@ -587,6 +589,72 @@ module VSphereCloud
         )
       end
 
+      context 'when `cpu` is NOT set' do
+        let(:vm_type) do
+          {
+            'ram' => 2048,
+            'disk' => 4096,
+          }
+        end
+
+        it 'should raise error' do
+          expect {
+            vsphere_cloud.create_vm(
+              'fake-agent-id',
+              'fake-stemcell-cid',
+              vm_type,
+              'fake-networks-hash',
+              [],
+              {},
+            )
+          }.to raise_error(/Must specify vm_types.cloud_properties.cpu/)
+        end
+      end
+
+      context 'when `ram` is NOT set' do
+        let(:vm_type) do
+          {
+            'cpu' => 1,
+            'disk' => 4096,
+          }
+        end
+
+        it 'should raise error' do
+          expect {
+            vsphere_cloud.create_vm(
+              'fake-agent-id',
+              'fake-stemcell-cid',
+              vm_type,
+              'fake-networks-hash',
+              [],
+              {},
+            )
+          }.to raise_error(/Must specify vm_types.cloud_properties.ram/)
+        end
+      end
+
+      context 'when `disk` is NOT set' do
+        let(:vm_type) do
+          {
+            'cpu' => 1,
+            'ram' => 2048,
+          }
+        end
+
+        it 'should raise error' do
+          expect {
+            vsphere_cloud.create_vm(
+              'fake-agent-id',
+              'fake-stemcell-cid',
+              vm_type,
+              'fake-networks-hash',
+              [],
+              {},
+            )
+          }.to raise_error(/Must specify vm_types.cloud_properties.disk/)
+        end
+      end
+
       context 'when existing_disk_cids contains encoded metadata' do
         let(:target_datastore_pattern) { '^(fake\-datastore)$' }
         let(:disk_metadata) do
@@ -705,6 +773,9 @@ module VSphereCloud
         end
         let(:vm_type) do
           {
+            'cpu' => 1,
+            'ram' => 1024,
+            'disk' => 4096,
             'nsx' => {
               'security_groups' => [
                 'fake-security-tag',
