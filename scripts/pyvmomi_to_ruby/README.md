@@ -6,6 +6,10 @@ ServerObjects.py files to ruby versions usable by [ruby_vim_sdk](https://github.
 Usage:
 
 ```
-./gen_server_objects.sh
-./gen_core_types.sh
+./gen_all.sh "version_tag"
+```
+
+Version used by current BOSH vSphere CPI:
+```
+./gen_all.sh "v5.5.0.2014.1.1"
 ```
