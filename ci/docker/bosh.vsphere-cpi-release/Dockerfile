@@ -19,6 +19,13 @@ RUN apt-get install -y jq; apt-get clean
 
 RUN apt-get install -y realpath; apt-get clean
 
+RUN mkdir /tmp/python && \
+    cd /tmp && \
+    curl https://www.python.org/ftp/python/2.7.13/Python-2.7.13.tgz | tar -xz && \
+    cd /tmp/Python-2.7.13 && \
+    ./configure && \
+    make && make install
+
 # chruby
 RUN mkdir /tmp/chruby && \
     cd /tmp && \
