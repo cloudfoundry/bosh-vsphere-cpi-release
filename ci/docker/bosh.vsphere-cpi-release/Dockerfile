@@ -24,7 +24,8 @@ RUN mkdir /tmp/python && \
     curl https://www.python.org/ftp/python/2.7.13/Python-2.7.13.tgz | tar -xz && \
     cd /tmp/Python-2.7.13 && \
     ./configure && \
-    make && make install
+    make && make install && \
+    rm -rf /tmp/python
 
 # chruby
 RUN mkdir /tmp/chruby && \
