@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+pushd $SRC_DIR
+  . bin/check-ruby-version
+
+  echo "Running integration tests with Ruby version $RUBY_VERSION..."
+  bundle install
+  bundle exec rspec spec/integration/*
+popd

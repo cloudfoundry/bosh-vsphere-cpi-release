@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 pushd $SRC_DIR
   . bin/check-ruby-version

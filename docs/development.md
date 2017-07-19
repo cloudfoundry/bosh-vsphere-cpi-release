@@ -8,36 +8,37 @@ gem install bundler
 
 With bundler installed, run the vendoring script:
 
-```
-cd src/vsphere_cpi
-./vendor_gems
-```
-
-Then from the project root, create the BOSH release:
-
-```
-bosh create release --force
+```bash
+$SRC_DIR/vendor_gems
 ```
 
-The release is now ready for use. If everything works, commit the changes including the updated gems.
+To create a dev release:
+
+```bash
+pushd $RELEASE_DIR
+  bosh2 create-release --force --tarball vsphere-cpi.tgz
+popd
+```
 
 ## Running tests
 
 Install deps:
 ```bash
-cd ./src/vsphere_cpi
-bundle install
-brew install cdrtools
+pushd $SRC_DIR
+  bundle install
+  brew install cdrtools
+popd
 ```
 
 Unit tests:
 ```bash
-bundle
-bundle exec rspec spec/unit/
+$SRC_DIR/bin/test-unit
 ```
 
 Integration tests:
+Create the lifecycle.env file with the following [environment variables](https://github.com/cloudfoundry-incubator/bosh-vsphere-cpi-release/blob/bc88e607b08cf89bc359d69688567e1def093391/src/vsphere_cpi/spec/support/lifecycle_helpers.rb#L8-L32):
+
 ```bash
-bundle
-bundle exec rspec spec/integration/
+source lifecycle.env
+$SRC_DIR/bin/test-integration
 ```

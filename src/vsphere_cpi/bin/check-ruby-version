@@ -1,16 +1,22 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
+[[ ! -f /usr/local/share/chruby/chruby.sh ]] && brew install chruby
 source /usr/local/share/chruby/chruby.sh
 
 chruby $PROJECT_RUBY_VERSION
-if [ "$?" -eq "1" ]; then
+if [[ "$?" -eq "1" ]]; then
   echo "Ruby version $PROJECT_RUBY_VERSION not found. Installing..."
+
+  which ruby-install > /dev/null 2>&1
+  [[ "$?" -eq "1" ]] && brew install ruby-install
+
   echo "Installing Ruby version $PROJECT_RUBY_VERSION ..."
   ruby-install ruby $PROJECT_RUBY_VERSION
   chruby $PROJECT_RUBY_VERSION
+
+  echo "Ruby version $PROJECT_RUBY_VERSION successfully installed."
 fi
+echo "Using ruby version $PROJECT_RUBY_VERSION"
 
 echo "Installing bundler..."
 gem install bundler
-
-echo "Ruby version $PROJECT_RUBY_VERSION successfully installed."
