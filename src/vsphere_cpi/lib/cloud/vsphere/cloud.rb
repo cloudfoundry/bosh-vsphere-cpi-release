@@ -208,7 +208,7 @@ module VSphereCloud
 
     def create_vm(agent_id, stemcell_cid, vm_type, networks_spec, existing_disk_cids = [], environment = nil)
       with_thread_name("create_vm(#{agent_id}, ...)") do
-        verify_props('vm_types', [ 'cpu', 'ram', 'disk' ], vm_type)
+        verify_props('VM', [ 'cpu', 'ram', 'disk' ], vm_type)
 
         stemcell_vm = stemcell_vm(stemcell_cid)
         raise "Could not find VM for stemcell '#{stemcell_cid}'" if stemcell_vm.nil?
@@ -777,10 +777,10 @@ module VSphereCloud
       end
     end
 
-    def verify_props(top_level, required_properties, properties)
+    def verify_props(type, required_properties, properties)
       for prop in required_properties
         if properties[prop].nil?
-          raise "Must specify #{top_level}.cloud_properties.#{prop}"
+          raise "Must specify '#{prop}' in #{type} cloud properties."
         end
       end
     end

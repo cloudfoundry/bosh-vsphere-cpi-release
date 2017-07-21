@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
 
+args=$@
+[[ "$#" != "1" ]] && args=spec/integration/*
+
 pushd $SRC_DIR
   . bin/check-ruby-version
 
   echo "Running integration tests with Ruby version $RUBY_VERSION..."
   bundle install
-  bundle exec rspec spec/integration/*
+  bundle exec rspec ${args}
 popd

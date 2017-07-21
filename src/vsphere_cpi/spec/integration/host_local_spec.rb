@@ -103,20 +103,19 @@ describe 'host-local storage patterns', :host_local => true do
         ephemeral_disk = vm.ephemeral_disk
         expect(ephemeral_disk).to_not be_nil
 
-        ephemeral_ds = ephemeral_disk.backing.datastore.name
-        expect(ephemeral_ds).to match(@single_local_ds_pattern)
+        expect(ephemeral_disk.backing.datastore.name).to match(@single_local_ds_pattern)
 
-        disk_id = local_disk_cpi.create_disk(2048, {}, vm_id)
-        expect(disk_id).to_not be_nil
-        disk = local_disk_cpi.datacenter.find_disk(disk_id)
-        expect(disk.datastore.name).to eq(ephemeral_ds)
+        persistent_disk_id = local_disk_cpi.create_disk(2048, {}, vm_id)
+        expect(persistent_disk_id).to_not be_nil
+        persistent_disk = local_disk_cpi.datacenter.find_disk(persistent_disk_id)
+        expect(persistent_disk.datastore.name).to match(@single_local_ds_pattern)
 
-        local_disk_cpi.attach_disk(vm_id, disk_id)
-        expect(local_disk_cpi.has_disk?(disk_id)).to be(true)
+        local_disk_cpi.attach_disk(vm_id, persistent_disk_id)
+        expect(local_disk_cpi.has_disk?(persistent_disk_id)).to be(true)
       ensure
-        detach_disk(local_disk_cpi, vm_id, disk_id)
+        detach_disk(local_disk_cpi, vm_id, persistent_disk_id)
         delete_vm(local_disk_cpi, vm_id)
-        delete_disk(local_disk_cpi, disk_id)
+        delete_disk(local_disk_cpi, persistent_disk_id)
       end
     end
   end

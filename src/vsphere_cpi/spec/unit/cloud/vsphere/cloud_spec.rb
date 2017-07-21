@@ -607,7 +607,7 @@ module VSphereCloud
               [],
               {},
             )
-          }.to raise_error(/Must specify vm_types.cloud_properties.cpu/)
+          }.to raise_error(/Must specify 'cpu' in VM cloud properties/)
         end
       end
 
@@ -629,7 +629,7 @@ module VSphereCloud
               [],
               {},
             )
-          }.to raise_error(/Must specify vm_types.cloud_properties.ram/)
+          }.to raise_error(/Must specify 'ram' in VM cloud properties/)
         end
       end
 
@@ -651,7 +651,7 @@ module VSphereCloud
               [],
               {},
             )
-          }.to raise_error(/Must specify vm_types.cloud_properties.disk/)
+          }.to raise_error(/Must specify 'disk' in VM cloud properties/)
         end
       end
 
