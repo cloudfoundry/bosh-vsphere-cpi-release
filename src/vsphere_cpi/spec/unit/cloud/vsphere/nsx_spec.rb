@@ -96,32 +96,28 @@ module VSphereCloud
 
       context 'when the add VM to Security Group HTTP request fails' do
         it 'retries until the apply succeeds when call is retryable' do
-          expect(retryer).to receive(:sleep).once
-
           expect_POST_security_group_happy
-          expect_PUT_security_group_vm_sad_retryable
+          expect_PUT_security_group_vm_sad("<error><details>The requested object : #{vm_id} could not be found. Object identifiers are case sensitive.</details><errorCode>300</errorCode><moduleName>core-services</moduleName></error>")
           expect_PUT_security_group_vm_happy
 
           nsx.add_vm_to_security_group(sg_name, vm_id)
         end
 
         it "returns an error after #{VSphereCloud::Retryer::MAX_TRIES} retries when call is retryable" do
-          expect(retryer).to receive(:sleep).exactly(VSphereCloud::NSX::MAX_TRIES - 1).times
-
           expect_POST_security_group_happy
 
           VSphereCloud::NSX::MAX_TRIES.times do
-            expect_PUT_security_group_vm_sad_retryable
+            expect_PUT_security_group_vm_sad("<error><details>nested exception is javax.persistence.OptimisticLockException</details><errorCode>258</errorCode></error>")
           end
 
           expect {
             nsx.add_vm_to_security_group(sg_name, vm_id)
-          }.to raise_error(/could not be found/)
+          }.to raise_error(/javax.persistence.OptimisticLockException/)
         end
 
         it 'returns an error when the call is not retryable' do
           expect_POST_security_group_happy
-          expect_PUT_security_group_vm_sad_non_retryable
+          expect_PUT_security_group_vm_sad
 
           expect {
             nsx.add_vm_to_security_group(sg_name, vm_id)
@@ -533,14 +529,8 @@ module VSphereCloud
                                .and_return(put_response)
     end
 
-    def expect_PUT_security_group_vm_sad_retryable
-      put_response = double('response', status: 500, body: "<error><details>The requested object : #{vm_id} could not be found. Object identifiers are case sensitive.</details><errorCode>300</errorCode><moduleName>core-services</moduleName></error>")
-      expect(http_client).to receive(:put).with("https://#{nsx_address}/api/2.0/services/securitygroup/#{sg_id}/members/#{vm_id}", nil)
-                               .and_return(put_response)
-    end
-
-    def expect_PUT_security_group_vm_sad_non_retryable
-      put_response = double('response', status: 500, body: 'fake-nsx-error')
+    def expect_PUT_security_group_vm_sad(error = 'fake-nsx-error')
+      put_response = double('response', status: 500, body: error)
       expect(http_client).to receive(:put)
         .with("https://#{nsx_address}/api/2.0/services/securitygroup/#{sg_id}/members/#{vm_id}", nil)
         .and_return(put_response)
