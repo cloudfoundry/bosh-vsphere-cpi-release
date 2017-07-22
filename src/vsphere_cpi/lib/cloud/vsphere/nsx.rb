@@ -22,18 +22,12 @@ module VSphereCloud
 
     def add_vm_to_security_group(security_group_name, vm_id)
       sg_id = find_or_create_security_group(security_group_name)
-      i = 0
+
       Bosh::Retryable.new(tries: MAX_TRIES,
                           sleep: ->(try_count, retry_exception) { 0.5 },
                           on: [Exception],
-                          matching: %r{(?:javax.persistence.OptimisticLockException|<errorCode>300<\/errorCode>)}).retryer do
-        if i.zero?
-          @logger.debug("Adding VM '#{vm_id}' to Security Group '#{security_group_name}'...")
-        else
-          @logger.warn("Retrying adding VM '#{vm_id}' to Security Group '#{security_group_name}', #{i} attempts so far...")
-        end
-
-        i += 1
+                          matching: %r{(?:javax.persistence.OptimisticLockException|<errorCode>300<\/errorCode>)}).retryer do |i|
+        @logger.debug("Attempting to add VM '#{vm_id}' to Security Group '#{security_group_name}'...")
 
         response = @http_client.put("https://#{@nsx_url}/api/2.0/services/securitygroup/#{sg_id}/members/#{vm_id}", nil)
 
