@@ -294,45 +294,6 @@ describe VSphereCloud::Resources::Datacenter do
     end
   end
 
-  describe '#select_datastores' do
-    let(:datastoreA) { instance_double('VSphereCloud::Resources::Datastore', name: 'matching-datastore-A') }
-    let(:datastoreB) { instance_double('VSphereCloud::Resources::Datastore', name: 'matching-datastore-B') }
-    let(:datastoreC) { instance_double('VSphereCloud::Resources::Datastore', name: 'nonmatching-datastore') }
-
-    before do
-      allow(datacenter).to receive(:clusters).and_return([
-        instance_double('VSphereCloud::Resources::Cluster',
-          accessible_datastores: {
-            datastoreA.name => datastoreA,
-            datastoreC.name => datastoreC
-          },
-        ),
-        instance_double('VSphereCloud::Resources::Cluster',
-          accessible_datastores: {
-            datastoreA.name => datastoreA,
-            datastoreB.name => datastoreB
-          }
-        ),
-      ])
-    end
-
-    context 'when datastores exist that match the provided pattern' do
-      it 'returns a map of the matching datastores' do
-        datastores = datacenter.select_datastores(/^matching\-datastore.*$/)
-        expect(datastores.keys).to eq(['matching-datastore-A', 'matching-datastore-B'])
-        expect(datastores['matching-datastore-A']).to eq(datastoreA)
-        expect(datastores['matching-datastore-B']).to eq(datastoreB)
-      end
-    end
-
-    context 'when no datastores exist that match the provided pattern' do
-      it 'returns an empty map' do
-        datastores = datacenter.select_datastores(/^invalid\-pattern.*$/)
-        expect(datastores).to be_empty
-      end
-    end
-  end
-
   describe '#accessible_datastores' do
     it 'returns a unique set of persistent datastores across all clusters' do
       small_datastore = instance_double('VSphereCloud::Resources::Datastore', name: 'small-datastore')
@@ -419,7 +380,7 @@ describe VSphereCloud::Resources::Datacenter do
       end
 
       it 'returns disk' do
-        expect(datacenter.find_disk('disk-cid')).to eq(disk)
+        expect(datacenter.find_disk('disk-cid', '.*')).to eq(disk)
       end
     end
 

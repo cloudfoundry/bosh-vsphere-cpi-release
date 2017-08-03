@@ -83,10 +83,7 @@ module VSphereCloud
         datastore
       end
 
-      def select_datastores(pattern)
-        accessible_datastores.select { |name, _| name =~ pattern }
-      end
-
+      # TODO(cdutra,kaitinc): can we improve this and underlying search?
       def accessible_datastores
         clusters.inject({}) do |acc, cluster|
           acc.merge!(cluster.accessible_datastores)
@@ -109,7 +106,10 @@ module VSphereCloud
         persistent_datastores = {}
         if persistent_pattern
           @logger.debug("Looking for disk #{disk_cid} in datastores matching persistent pattern #{persistent_pattern}")
-          persistent_datastores = select_datastores(persistent_pattern)
+          regexp = Regexp.new(persistent_pattern)
+          persistent_datastores = accessible_datastores.select do |name, _|
+            name =~ regexp
+          end
           disk = find_disk_cid_in_datastores(disk_cid, persistent_datastores)
           return disk unless disk.nil?
         end
@@ -137,7 +137,7 @@ module VSphereCloud
       end
 
       def move_disk_to_datastore(disk, destination_datastore)
-        destination_path = path(destination_datastore.name, @disk_path, disk.cid)
+        destination_path = "[#{destination_datastore.name}] #{@disk_path}/#{disk.cid}.vmdk"
         @logger.info("Moving #{disk.path} to #{destination_path}")
         @client.move_disk(mob, disk.path, mob, destination_path)
         @logger.info('Moved disk successfully')
@@ -145,10 +145,6 @@ module VSphereCloud
       end
 
       private
-
-      def path(datastore_name, disk_path, disk_cid)
-        "[#{datastore_name}] #{disk_path}/#{disk_cid}.vmdk"
-      end
 
       def find_disk_cid_in_datastores(disk_cid, datastores)
         datastores.each do |_, datastore|
