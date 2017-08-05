@@ -72,7 +72,7 @@ describe VSphereCloud::Resources::Datacenter do
   let(:cluster_config2) { instance_double('VSphereCloud::ClusterConfig', resource_pool: nil, name: 'second-cluster') }
 
   let(:ephemeral_pattern) {instance_double('Regexp')}
-  let(:persistent_pattern) {instance_double('Regexp')}
+  let(:persistent_pattern) { 'persistent.*' }
   let(:cloud_searcher) { instance_double('VSphereCloud::CloudSearcher') }
   let(:datastore_properties) { {} }
   let(:datastore) { instance_double('VSphereCloud::Resources::Datastore', name: 'fake-datastore') }
@@ -195,30 +195,6 @@ describe VSphereCloud::Resources::Datacenter do
   describe '#master_template_folder' do
     it "returns a folder object using the datacenter's template folder" do
       expect(datacenter.master_template_folder).to eq(template_folder)
-    end
-  end
-
-  describe '#name' do
-    it 'returns the datacenter name' do
-      expect(datacenter.name).to eq('fake-datacenter-name')
-    end
-  end
-
-  describe '#disk_path' do
-    it ' returns the datastore disk path' do
-      expect(datacenter.disk_path).to eq('fake-disk-path')
-    end
-  end
-
-  describe '#ephemeral_pattern' do
-    it 'returns a Regexp object defined by the configuration' do
-      expect(datacenter.ephemeral_pattern).to eq(ephemeral_pattern)
-    end
-  end
-
-  describe '#persistent_pattern' do
-    it 'returns a Regexp object defined by the configuration' do
-      expect(datacenter.persistent_pattern).to eq(persistent_pattern)
     end
   end
 
@@ -364,104 +340,87 @@ describe VSphereCloud::Resources::Datacenter do
   end
 
   describe '#find_disk' do
-    let(:other_datastore) { instance_double(VSphereCloud::Resources::Datastore) }
+    let(:persistent_datastore) { instance_double(VSphereCloud::Resources::Datastore, name: 'persistent-ds') }
+    let(:ephemeral_datastore) { instance_double(VSphereCloud::Resources::Datastore, name: 'ephemeral-ds') }
+    let(:unspecified_datastore) { instance_double(VSphereCloud::Resources::Datastore, name: 'unspecified-ds') }
 
     before do
-      allow(datacenter).to receive(:accessible_datastores).and_return({
-            'datastore1' => datastore,
-            'datastore2' => other_datastore,
-          })
+      allow(datacenter).to receive(:accessible_datastores).and_return(
+        'persistent-ds' => persistent_datastore,
+        'ephemeral-ds' => ephemeral_datastore,
+        'unspecified-ds' => unspecified_datastore
+      )
     end
 
     context 'when disk exists in persistent datastore' do
-      before do
-        allow(client).to receive(:find_disk).with('disk-cid', datastore, 'fake-disk-path') { disk }
-        allow(client).to receive(:find_disk).with('disk-cid', other_datastore, 'fake-disk-path') { nil }
-      end
+      it 'returns disk without searching the ephemeral datastore or unspecified datastores' do
+        expect(client).to receive(:find_disk).with('disk-cid', persistent_datastore, 'fake-disk-path').and_return(disk)
+        expect(client).not_to receive(:find_disk).with('disk-cid', ephemeral_datastore, 'fake-disk-path')
+        expect(client).not_to receive(:find_disk).with('disk-cid', unspecified_datastore, 'fake-disk-path')
 
-      it 'returns disk' do
-        expect(datacenter.find_disk('disk-cid', '.*')).to eq(disk)
-      end
-    end
-
-    context 'when disk exists in some other datastore' do
-      before do
-        allow(client).to receive(:find_disk).with('disk-cid', datastore, 'fake-disk-path') { nil }
-        allow(client).to receive(:find_disk).with('disk-cid', other_datastore, 'fake-disk-path') { disk }
-      end
-
-      it 'returns disk' do
         expect(datacenter.find_disk('disk-cid')).to eq(disk)
       end
     end
 
-    context 'when disk exists but cannot be found in datastores' do
-      before do
-        allow(client).to receive(:find_disk).with('disk-cid', datastore, 'fake-disk-path') { nil }
-        allow(client).to receive(:find_disk).with('disk-cid', other_datastore, 'fake-disk-path') { nil }
+    context 'when disk exists in ephemeral datastore' do
+      it 'returns disk without searching unspecified datastores' do
+        expect(client).to receive(:find_disk).with('disk-cid', persistent_datastore, 'fake-disk-path').and_return(nil)
+        expect(client).to receive(:find_disk).with('disk-cid', ephemeral_datastore, 'fake-disk-path').and_return(disk)
+        expect(client).not_to receive(:find_disk).with('disk-cid', unspecified_datastore, 'fake-disk-path')
 
-        vm_mob = instance_double('VimSdk::Vim::VirtualMachine', name: 'fake-vm-name')
-        allow(client).to receive(:find_vm_by_disk_cid).with(datacenter_mob, 'disk-cid').and_return(vm_mob)
-
-        vm = instance_double(
-          'VSphereCloud::Resources::VM',
-        )
-        allow(vm).to receive(:disk_path_by_cid).with('disk-cid')
-          .and_return('[datastore1] fake-disk-path/fake-file_name.vmdk')
-        allow(VSphereCloud::Resources::VM).to receive(:new)
-          .with('fake-vm-name', vm_mob, client, logger)
-          .and_return(vm)
-
-        allow(client).to receive(:find_disk)
-          .with('fake-file_name', datastore, 'fake-disk-path')
-          .and_return(disk)
-      end
-
-      it 'returns the disk' do
         expect(datacenter.find_disk('disk-cid')).to eq(disk)
       end
     end
 
-    context 'when an unexpected event has destroyed the disk' do
+    context 'when disk exists but cannot be found in any of the datastores' do
       before do
-        allow(client).to receive(:find_disk).and_return(nil)
-
-        vm_mob = instance_double('VimSdk::Vim::VirtualMachine', name: 'fake-vm-name')
-        allow(client).to receive(:find_vm_by_disk_cid).with(datacenter_mob, 'disk-cid').and_return(vm_mob)
-
-        vm = instance_double(
-          'VSphereCloud::Resources::VM',
-        )
-        allow(vm).to receive(:disk_path_by_cid).with('disk-cid')
-          .and_return(nil)
-        allow(VSphereCloud::Resources::VM).to receive(:new)
-          .with('fake-vm-name', vm_mob, client, logger)
-          .and_return(vm)
+        expect(client).to receive(:find_disk).with('disk-cid', persistent_datastore, 'fake-disk-path').and_return(nil)
+        expect(client).to receive(:find_disk).with('disk-cid', ephemeral_datastore, 'fake-disk-path').and_return(nil)
+        expect(client).to receive(:find_disk).with('disk-cid', unspecified_datastore, 'fake-disk-path').and_return(nil)
       end
 
-      it 'raises DiskNotFound' do
-        expect {
-          datacenter.find_disk('disk-cid')
-        }.to raise_error(Bosh::Clouds::DiskNotFound)
+      context 'and VM with disk is found' do
+        let(:vm) { instance_double(VSphereCloud::Resources::VM) }
+        let(:vm_mob) { instance_double(VimSdk::Vim::VirtualMachine, name: 'fake-vm-name') }
+
+        before do
+          expect(client).to receive(:find_vm_by_disk_cid).with(datacenter_mob, 'disk-cid').and_return(vm_mob)
+          expect(VSphereCloud::Resources::VM).to receive(:new).with('fake-vm-name', vm_mob, client, logger).and_return(vm)
+        end
+
+        # unexpected event has destroyed the disk
+        context 'but disk_path does NOT exist' do
+          it 'raises DiskNotFound' do
+            expect(vm).to receive(:disk_path_by_cid).with('disk-cid').and_return(nil)
+
+            expect { datacenter.find_disk('disk-cid') }.to raise_error do |error|
+              expect(error).to be_a(Bosh::Clouds::DiskNotFound)
+              expect(error.ok_to_retry).to eq(false)
+              expect(error.message).to match(/Could not find disk with id 'disk-cid'/)
+            end
+          end
+        end
+
+        context 'and disk_path exists' do
+          it 'returns the disk searching by VM attachments' do
+            expect(vm).to receive(:disk_path_by_cid).with('disk-cid').and_return('[persistent-ds] fake-disk-path/fake-file_name.vmdk')
+            expect(client).to receive(:find_disk).with('fake-file_name', persistent_datastore, 'fake-disk-path').and_return(disk)
+
+            expect(datacenter.find_disk('disk-cid')).to eq(disk)
+          end
+        end
       end
-    end
 
-    context 'when disk does not exist' do
-      before do
-        allow(client).to receive(:find_disk).with('disk-cid', datastore, 'fake-disk-path') { nil }
-        allow(client).to receive(:find_disk).with('disk-cid', other_datastore, 'fake-disk-path') { nil }
+      context 'and VM with disk is NOT found' do
+        it 'raises DiskNotFound' do
+          expect(client).to receive(:find_vm_by_disk_cid).with(datacenter_mob, 'disk-cid').and_return(nil)
 
-        allow(client).to receive(:find_vm_by_disk_cid).with(datacenter_mob, 'disk-cid').and_return(nil)
-      end
-
-      it 'raises DiskNotFound' do
-        expect {
-          datacenter.find_disk('disk-cid')
-        }.to raise_error { |error|
-          expect(error).to be_a(Bosh::Clouds::DiskNotFound)
-          expect(error.ok_to_retry).to eq(false)
-          expect(error.message).to match(/Could not find disk with id 'disk-cid'/)
-        }
+          expect { datacenter.find_disk('disk-cid') }.to raise_error do |error|
+            expect(error).to be_a(Bosh::Clouds::DiskNotFound)
+            expect(error.ok_to_retry).to eq(false)
+            expect(error.message).to match(/Could not find disk with id 'disk-cid'/)
+          end
+        end
       end
     end
   end

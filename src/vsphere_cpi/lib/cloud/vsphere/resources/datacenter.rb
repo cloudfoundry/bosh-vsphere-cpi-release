@@ -83,7 +83,6 @@ module VSphereCloud
         datastore
       end
 
-      # TODO(cdutra,kaitinc): can we improve this and underlying search?
       def accessible_datastores
         clusters.inject({}) do |acc, cluster|
           acc.merge!(cluster.accessible_datastores)
@@ -102,24 +101,23 @@ module VSphereCloud
         @client.create_disk(mob, datastore, disk_cid, @disk_path, size_in_mb, disk_type)
       end
 
-      def find_disk(disk_cid, persistent_pattern = nil)
-        persistent_datastores = {}
-        if persistent_pattern
-          @logger.debug("Looking for disk #{disk_cid} in datastores matching persistent pattern #{persistent_pattern}")
-          regexp = Regexp.new(persistent_pattern)
-          persistent_datastores = accessible_datastores.select do |name, _|
-            name =~ regexp
-          end
-          disk = find_disk_cid_in_datastores(disk_cid, persistent_datastores)
-          return disk unless disk.nil?
+      def find_disk(disk_cid)
+        @logger.debug("Looking for disk #{disk_cid} in datastores matching persistent pattern #{persistent_pattern}")
+        regexp = Regexp.new(persistent_pattern)
+        persistent_datastores = accessible_datastores.select do |name, _|
+          name =~ regexp
         end
+        disk = find_disk_cid_in_datastores(disk_cid, persistent_datastores)
+        return disk unless disk.nil?
 
-        other_datastores = accessible_datastores.reject{ |datastore_name, _| persistent_datastores[datastore_name] }
-        @logger.debug("disk #{disk_cid} not found in filtered persistent datastores, trying other datastores: #{other_datastores}")
+        other_datastores = accessible_datastores.reject do |datastore_name, _|
+          persistent_datastores[datastore_name]
+        end
+        @logger.debug("Disk #{disk_cid} not found in filtered persistent datastores, trying other datastores: #{other_datastores}")
         disk = find_disk_cid_in_datastores(disk_cid, other_datastores)
         return disk unless disk.nil?
 
-        @logger.debug("disk #{disk_cid} not found in all datastores, searching VM attachments")
+        @logger.debug("Disk #{disk_cid} not found in all datastores, searching VM attachments")
         vm_mob = @client.find_vm_by_disk_cid(mob, disk_cid)
         unless vm_mob.nil?
           vm = Resources::VM.new(vm_mob.name, vm_mob, @client, @logger)
@@ -129,7 +127,7 @@ module VSphereCloud
             datastore = accessible_datastores[datastore_name]
             disk = @client.find_disk(disk_file, datastore, disk_folder)
 
-            @logger.debug("disk #{disk_cid} found at new location: #{disk.path}") unless disk.nil?
+            @logger.debug("Disk #{disk_cid} found at new location: #{disk.path}") unless disk.nil?
             return disk unless disk.nil?
           end
         end
