@@ -375,11 +375,15 @@ module VSphereCloud
       with_thread_name("attach_disk(#{vm_cid}, #{director_disk_cid})") do
         vm = vm_provider.find(vm_cid)
 
-        disk_config_factory = DiskConfigFactory.new(datacenter: @datacenter)
-        disk_config = disk_config_factory.disk_config_from_persistent_disk(director_disk_cid)
+        disk_cid, metadata = DiskMetadata.decode(director_disk_cid)
+        disk_to_attach = @datacenter.find_disk(disk_cid)
 
-        disk_to_attach = @datacenter.find_disk(disk_config.cid)
-        @logger.info("Attaching disk: #{disk_config.cid} on vm: #{vm_cid}")
+        disk_config = VSphereCloud::DiskConfig.new(
+          cid: disk_to_attach.cid,
+          size: disk_to_attach.size_in_mb,
+          existing_datastore_name: disk_to_attach.datastore.name,
+          target_datastore_pattern: metadata[:target_datastore_pattern] || @datacenter.persistent_pattern
+        )
 
         accessible_datastores = @datacenter.accessible_datastores
         reachable_datastores = vm.accessible_datastore_names
@@ -400,13 +404,7 @@ module VSphereCloud
         disk_spec = vm.attach_disk(disk_to_attach)
         # Overwrite cid with the director cid
         # Since director sends messages with "director cid" to agent, the agent needs that ID in its env, not the clean_cid
-        agent_disk_info = Resources::PersistentDisk.new(
-          cid: director_disk_cid,
-          size_in_mb: disk_to_attach.size_in_mb,
-          datastore: disk_to_attach.datastore,
-          folder: disk_to_attach.folder,
-        )
-        add_disk_to_agent_env(vm, agent_disk_info, disk_spec.device.unit_number)
+        add_disk_to_agent_env(vm, director_disk_cid, disk_spec.device.unit_number)
       end
     end
 
@@ -523,7 +521,6 @@ module VSphereCloud
       replicated_stemcell_vm
     end
 
-
     def vm_datastore_name(vm)
       vm_datacenters = @cloud_searcher.get_property(
         vm,
@@ -542,7 +539,6 @@ module VSphereCloud
 
       vm_datacenters.first.name
     end
-
 
     def generate_network_env(devices, networks, dvs_index)
       nics = {}
@@ -759,19 +755,19 @@ module VSphereCloud
       info.entity
     end
 
-    def add_disk_to_agent_env(vm, disk, device_unit_number)
+    def add_disk_to_agent_env(vm, director_disk_cid, device_unit_number)
       env = @agent_env.get_current_env(vm.mob, @datacenter.name)
-      env['disks']['persistent'][disk.cid] = device_unit_number.to_s
+      env['disks']['persistent'][director_disk_cid] = device_unit_number.to_s
       location = get_vm_location(vm.mob, datacenter: @datacenter.name)
       @agent_env.set_env(vm.mob, location, env)
     end
 
-    def delete_disk_from_agent_env(vm, disk_cid)
+    def delete_disk_from_agent_env(vm, director_disk_cid)
       vm_mob = vm.mob
       location = get_vm_location(vm_mob)
       env = @agent_env.get_current_env(vm_mob, location[:datacenter])
-      if env['disks']['persistent'][disk_cid]
-        env['disks']['persistent'].delete(disk_cid)
+      if env['disks']['persistent'][director_disk_cid]
+        env['disks']['persistent'].delete(director_disk_cid)
 
         @agent_env.set_env(vm_mob, location, env)
       end
