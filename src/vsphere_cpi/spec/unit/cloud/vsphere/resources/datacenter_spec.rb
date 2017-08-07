@@ -353,7 +353,7 @@ describe VSphereCloud::Resources::Datacenter do
     end
 
     context 'when disk exists in persistent datastore' do
-      it 'returns disk without searching the ephemeral datastore or unspecified datastores' do
+      it 'returns disk without searching in other datastores' do
         expect(client).to receive(:find_disk).with('disk-cid', persistent_datastore, 'fake-disk-path').and_return(disk)
         expect(client).not_to receive(:find_disk).with('disk-cid', ephemeral_datastore, 'fake-disk-path')
         expect(client).not_to receive(:find_disk).with('disk-cid', unspecified_datastore, 'fake-disk-path')
@@ -362,11 +362,11 @@ describe VSphereCloud::Resources::Datacenter do
       end
     end
 
-    context 'when disk exists in ephemeral datastore' do
-      it 'returns disk without searching unspecified datastores' do
+    context 'when disk exists in other datastores' do
+      it 'returns disk' do
         expect(client).to receive(:find_disk).with('disk-cid', persistent_datastore, 'fake-disk-path').and_return(nil)
         expect(client).to receive(:find_disk).with('disk-cid', ephemeral_datastore, 'fake-disk-path').and_return(disk)
-        expect(client).not_to receive(:find_disk).with('disk-cid', unspecified_datastore, 'fake-disk-path')
+        allow(client).to receive(:find_disk).with('disk-cid', unspecified_datastore, 'fake-disk-path').and_return(nil)
 
         expect(datacenter.find_disk('disk-cid')).to eq(disk)
       end

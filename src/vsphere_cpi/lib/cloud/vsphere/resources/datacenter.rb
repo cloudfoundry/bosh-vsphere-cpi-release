@@ -145,15 +145,53 @@ module VSphereCloud
       private
 
       def find_disk_cid_in_datastores(disk_cid, datastores)
+        mutex = Mutex.new
+        error = nil
+
+        pool = Bosh::ThreadPool.new(max_threads: 5, logger: @logger)
+        pool.pause
+
         datastores.each do |_, datastore|
-          disk = @client.find_disk(disk_cid, datastore, @disk_path)
-          unless disk.nil?
-            @logger.debug("disk #{disk_cid} found in: #{datastore}")
-            return disk
+          pool.process do
+            begin
+              disk = @client.find_disk(disk_cid, datastore, @disk_path)
+              unless disk.nil?
+                @logger.debug("disk #{disk_cid} found in: #{datastore}")
+                raise FindSuccessfulException.new(disk)
+              end
+            rescue => e
+              mutex.synchronize do
+                error = e if error.nil?
+              end
+            end
           end
         end
+
+        begin
+          pool.resume
+          pool.wait
+        rescue FindSuccessfulException => e
+          return e.result
+        ensure
+          pool.shutdown
+        end
+
+        raise error unless error.nil?
+
         nil
       end
+    end
+  end
+
+  class FindSuccessfulException < Exception
+    attr_reader :result
+
+    def initialize(result)
+      @result = result
+    end
+
+    def to_s
+      "Successfully found disk '#{result}' (this is not an error)"
     end
   end
 end
