@@ -5,8 +5,7 @@ module VSphereCloud
   describe NSX do
 
     let(:http_client)           { instance_double(NsxHttpClient) }
-    let(:logger)                { instance_double('Logger', info: nil, debug: nil) }
-    let(:retryer)               { Retryer.new }
+    let(:logger)                { Logger.new('/dev/null') }
     let(:vm_id)                 { 'my-vm-id' }
     let(:vm_name)               { 'my-vm-name' }
     let(:nsx_address)           { 'my-nsx-manager' }
@@ -36,13 +35,9 @@ module VSphereCloud
     }
 
     subject(:nsx) do
-      described_class.new(nsx_address, http_client, logger, retryer)
-    end
-
-    before do
-      allow(logger).to receive(:debug)
-      allow(logger).to receive(:warn)
-      allow(retryer).to receive(:sleep)
+      described_class.new(nsx_address, http_client, logger).tap do |nsx|
+        nsx.sleep_time = 0
+      end
     end
 
     describe '#add_vm_to_security_group' do

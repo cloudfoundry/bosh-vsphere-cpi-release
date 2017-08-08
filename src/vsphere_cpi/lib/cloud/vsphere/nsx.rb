@@ -10,21 +10,23 @@ module VSphereCloud
     #   <moduleName>core-services</moduleName>
     # </error>
     MAX_TRIES = 20
+    DEFAULT_SLEEP_TIME = 0.5
 
     attr_reader :http_client, :nsx_url
+    attr_writer :sleep_time
 
-    def initialize(nsx_url, http_client, logger, retryer = nil)
+    def initialize(nsx_url, http_client, logger)
       @http_client = http_client
       @nsx_url = nsx_url
       @logger = logger
-      @retryer = retryer || Retryer.new
+      @sleep_time = DEFAULT_SLEEP_TIME
     end
 
     def add_vm_to_security_group(security_group_name, vm_id)
       sg_id = find_or_create_security_group(security_group_name)
 
       Bosh::Retryable.new(tries: MAX_TRIES,
-                          sleep: ->(try_count, retry_exception) { 0.5 },
+                          sleep: ->(try_count, retry_exception) { @sleep_time },
                           on: [Exception],
                           matching: %r{(?:javax.persistence.OptimisticLockException|<errorCode>300<\/errorCode>)}).retryer do |i|
         @logger.debug("Attempting to add VM '#{vm_id}' to Security Group '#{security_group_name}'...")

@@ -198,6 +198,7 @@ module VSphereCloud
         expect(agent_env).to receive(:`).with("#{iso_generator} -o /some/tmp/dir/env.iso /some/tmp/dir/env 2>&1") do
           expect(File.read('/some/tmp/dir/env')).to eq('["fake-json"]')
           File.open('/some/tmp/dir/env.iso', 'w') { |f| f.write('iso contents') }
+          `:`
           allow($?).to receive(:exitstatus).and_return(exit_status)
         end
       end
