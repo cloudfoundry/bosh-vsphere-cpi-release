@@ -367,6 +367,10 @@ module VSphereCloud
       # not implemented
     end
 
+    def resize_disk(disk_id, new_size)
+      # not implemented
+    end
+
     def configure_networks(vm_cid, networks)
       raise Bosh::Clouds::NotSupported, 'configure_networks is no longer supported'
     end

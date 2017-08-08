@@ -65,7 +65,7 @@ module Bosh
                      :create_disk, :has_disk?, :delete_disk,
                      :attach_disk, :detach_disk,
                      :snapshot_disk, :delete_snapshot,
-                     :current_vm_id, :get_disks, :ping,
+                     :current_vm_id, :get_disks, :ping, :resize_disk,
                      :calculate_vm_cloud_properties,
                      :info, :set_disk_metadata
 
