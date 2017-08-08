@@ -343,8 +343,9 @@ describe VSphereCloud::Resources::Datacenter do
     let(:persistent_datastore) { instance_double(VSphereCloud::Resources::Datastore, name: 'persistent-ds') }
     let(:other_datastore_1) { instance_double(VSphereCloud::Resources::Datastore, name: 'other_datastore_1') }
     let(:other_datastore_2) { instance_double(VSphereCloud::Resources::Datastore, name: 'other_datastore_2') }
+    let(:encoded_disk_cid) { 'disk-cid' }
     let(:director_disk_cid) {
-      VSphereCloud::DirectorDiskCID.new('disk-cid')
+      VSphereCloud::DirectorDiskCID.new(encoded_disk_cid)
     }
 
     before do
@@ -356,12 +357,19 @@ describe VSphereCloud::Resources::Datacenter do
     end
 
     context 'when disk exists in specified datastores' do
+      let(:encoded_disk_cid) do
+        metadata = {
+          target_datastore_pattern: '^(other_datastore_2)$'
+        }
+        "disk-cid.#{Base64.urlsafe_encode64(metadata.to_json)}"
+      end
+
       it 'returns disk without searching in persistent datastore nor other datastores' do
         expect(client).to receive(:find_disk).with('disk-cid', other_datastore_2, 'fake-disk-path').and_return(disk)
         expect(client).not_to receive(:find_disk).with('disk-cid', persistent_datastore, 'fake-disk-path')
         expect(client).not_to receive(:find_disk).with('disk-cid', other_datastore_1, 'fake-disk-path')
 
-        expect(datacenter.find_disk(director_disk_cid, 'other_datastore_2')).to eq(disk)
+        expect(datacenter.find_disk(director_disk_cid)).to eq(disk)
       end
     end
 

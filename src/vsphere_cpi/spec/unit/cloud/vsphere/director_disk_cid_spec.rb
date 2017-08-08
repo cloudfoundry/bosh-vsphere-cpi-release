@@ -37,7 +37,9 @@ module VSphereCloud
     describe '.encode' do
       context 'when metadata is given' do
         it 'returns a director disk cid having the encoded metadata suffix' do
-          metadata = {target_datastore_pattern: '^(fake\\-cloud\\-prop\\-datastore\\-1|fake\\-cloud\\-prop\\-datastore\\-2)$'}
+          metadata = {
+            target_datastore_pattern: '^(fake\\-cloud\\-prop\\-datastore\\-1|fake\\-cloud\\-prop\\-datastore\\-2)$'
+          }
           expected_encoded_metadata = Base64.urlsafe_encode64(metadata.to_json)
           disk_cid = 'disk-cid'
 

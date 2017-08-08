@@ -101,9 +101,11 @@ module VSphereCloud
         @client.create_disk(mob, datastore, disk_cid, @disk_path, size_in_mb, disk_type)
       end
 
-      def find_disk(director_disk_cid, datastore_pattern = nil)
+      def find_disk(director_disk_cid)
         disk_cid = director_disk_cid.value
+        datastore_pattern = director_disk_cid.target_datastore_pattern
         hint_datastores = {}
+
         unless datastore_pattern.nil?
           @logger.debug("Looking for disk #{disk_cid} in datastores matching pattern #{datastore_pattern}")
 
