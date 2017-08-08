@@ -147,6 +147,11 @@ module VSphereCloud
 
           import_spec_result = import_ovf(name, ovf_file, cluster.resource_pool.mob, datastore.mob)
 
+          system_disk = import_spec_result.import_spec.config_spec.device_change.find do |change|
+            change.device.kind_of?(Vim::Vm::Device::VirtualDisk)
+          end.device
+          system_disk.backing.thin_provisioned = @config.vcenter_default_disk_type == 'thin'
+
           lease_obtainer = LeaseObtainer.new(@cloud_searcher, @logger)
           nfc_lease = lease_obtainer.obtain(
             cluster.resource_pool,
