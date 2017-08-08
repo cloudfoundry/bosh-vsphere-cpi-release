@@ -50,7 +50,7 @@ context 'when regex matching datastores in a datastore cluster (datastore-*)' do
       @disk_id = cpi.create_disk(2048, {}, nil)
       expect(@disk_id).to_not be_nil
       expect(cpi.has_disk?(@disk_id)).to be(true)
-      disk = cpi.datacenter.find_disk(@disk_id)
+      disk = cpi.datacenter.find_disk(VSphereCloud::DirectorDiskCID.new(@disk_id))
       expect(disk.datastore.name).to match(@datastore_pattern)
     ensure
       delete_vm(cpi, @vm_id)

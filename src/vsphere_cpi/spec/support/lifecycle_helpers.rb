@@ -254,7 +254,11 @@ module LifecycleHelpers
 
     yield vm_id if block_given?
 
-    metadata = {deployment: 'deployment', job: 'cpi_spec', index: '0'}
+    metadata = {
+      deployment: 'deployment',
+      job: 'cpi_spec',
+      index: '0'
+    }
     cpi.set_vm_metadata(vm_id, metadata)
 
     disk_id = cpi.create_disk(2048, {}, vm_id)

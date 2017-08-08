@@ -164,26 +164,29 @@ module VSphereCloud
       )
       client.login(user, password, 'en')
 
-      cluster_provider = Resources::ClusterProvider.new({
+      cluster_provider = Resources::ClusterProvider.new(
         datacenter_name: datacenter_name,
         client: client,
-        logger: logger,
-      })
-      datacenter = Resources::Datacenter.new({
-          client: client,
-          use_sub_folder: false,
-          vm_folder: vm_folder,
-          template_folder: template_folder,
-          name: datacenter_name,
-          disk_path: disk_folder,
-          ephemeral_pattern: ephemeral_datastore_pattern,
-          persistent_pattern: persistent_datastore_pattern,
-          clusters: cluster_configs,
-          cluster_provider: cluster_provider,
-          logger: logger,
-        })
+        logger: logger
+      )
+      datacenter = Resources::Datacenter.new(
+        client: client,
+        use_sub_folder: false,
+        vm_folder: vm_folder,
+        template_folder: template_folder,
+        name: datacenter_name,
+        disk_path: disk_folder,
+        ephemeral_pattern: ephemeral_datastore_pattern,
+        persistent_pattern: persistent_datastore_pattern,
+        clusters: cluster_configs,
+        cluster_provider: cluster_provider,
+        logger: logger
+      )
 
-      persistent_datastores = datacenter.select_datastores(persistent_datastore_pattern).values
+      regexp = Regexp.new(persistent_datastore_pattern)
+      persistent_datastores = datacenter.accessible_datastores.select do |name, _|
+        name =~ regexp
+      end.values
       return client, datacenter, persistent_datastores.first, disk_folder
     end
 
