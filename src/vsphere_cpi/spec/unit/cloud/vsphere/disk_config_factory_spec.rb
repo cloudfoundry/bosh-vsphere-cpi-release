@@ -17,11 +17,11 @@ module VSphereCloud
     end
 
     describe '#disk_config_from_persistent_disk' do
-      let(:existing_disk_cid) { 'fake-disk-cid' }
+      let(:existing_disk_cid) { VSphereCloud::DirectorDiskCID.new('fake-disk-cid') }
       let(:existing_disk) do
         instance_double(Resources::PersistentDisk,
                         size_in_mb: 1024,
-                        cid: existing_disk_cid,
+                        cid: existing_disk_cid.value,
                         datastore: datastore,
         )
       end
@@ -32,7 +32,7 @@ module VSphereCloud
       end
       let(:disk_config) do
         instance_double(VSphereCloud::DiskConfig,
-          cid: existing_disk_cid,
+          cid: existing_disk_cid.value,
           size: 1024,
           target_datastore_pattern: target_datastore_pattern,
         )
@@ -44,39 +44,37 @@ module VSphereCloud
                                  .and_return(existing_disk)
       end
 
-      it 'returns the persistent disk' do
-        expect(VSphereCloud::DiskConfig).to receive(:new).with(
-          cid: existing_disk_cid, size: 1024, existing_datastore_name: datastore.name, target_datastore_pattern: target_datastore_pattern,
-        ).and_return(disk_config)
-
-        returned_disk_config = disk_config_factory.disk_config_from_persistent_disk(existing_disk_cid)
-        expect(returned_disk_config).to eq(disk_config)
-      end
-
-      context 'when datastore pattern is encoded disk CID' do
+      context 'when datastore pattern is encoded into the disk CID' do
+        let(:existing_disk_cid) { DirectorDiskCID.new(encoded_disk_cid) }
         let(:target_datastore_pattern) { 'encoded-ds' }
         let(:encoded_disk_cid) do
           metadata = { target_datastore_pattern: target_datastore_pattern }
-          DiskMetadata.encode(existing_disk_cid, metadata)
+          DirectorDiskCID.encode('fake-disk-cid', metadata)
         end
 
         it 'includes the encoded pattern' do
           expect(VSphereCloud::DiskConfig).to receive(:new).with(
-            cid: existing_disk_cid, size: 1024, existing_datastore_name: datastore.name, target_datastore_pattern: target_datastore_pattern,
+            cid: existing_disk_cid.value,
+            size: 1024,
+            existing_datastore_name: datastore.name,
+            target_datastore_pattern: target_datastore_pattern
           ).and_return(disk_config)
 
-          returned_disk_config = disk_config_factory.disk_config_from_persistent_disk(encoded_disk_cid)
+          returned_disk_config = disk_config_factory.disk_config_from_persistent_disk(existing_disk_cid)
           expect(returned_disk_config).to eq(disk_config)
         end
       end
 
-      context 'when datastore pattern is not encoded disk CID' do
+      context 'when datastore pattern is not encoded into the disk CID' do
         it 'includes the global pattern' do
           expect(VSphereCloud::DiskConfig).to receive(:new).with(
-            cid: existing_disk_cid, size: 1024, existing_datastore_name: datastore.name, target_datastore_pattern: target_datastore_pattern,
+            cid: existing_disk_cid.value,
+            size: 1024,
+            existing_datastore_name: datastore.name,
+            target_datastore_pattern: target_datastore_pattern
           ).and_return(disk_config)
 
-          returned_disk_config= disk_config_factory.disk_config_from_persistent_disk(existing_disk_cid)
+          returned_disk_config = disk_config_factory.disk_config_from_persistent_disk(existing_disk_cid)
           expect(returned_disk_config).to eq(disk_config)
         end
       end
@@ -103,7 +101,7 @@ module VSphereCloud
           expected_metadata = {
               target_datastore_pattern: existing_disk_config.target_datastore_pattern,
           }
-          expected_cid = DiskMetadata.encode(existing_disk_cid, expected_metadata)
+          expected_cid = DirectorDiskCID.encode(existing_disk_cid, expected_metadata)
 
           director_cid = disk_config_factory.director_disk_cid(existing_disk_config)
           expect(director_cid).to eq(expected_cid)

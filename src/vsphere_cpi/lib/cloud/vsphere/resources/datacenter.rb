@@ -101,17 +101,30 @@ module VSphereCloud
         @client.create_disk(mob, datastore, disk_cid, @disk_path, size_in_mb, disk_type)
       end
 
-      def find_disk(disk_cid)
+      def find_disk(director_disk_cid, datastore_pattern = nil)
+        disk_cid = director_disk_cid.value
+        hint_datastores = {}
+        unless datastore_pattern.nil?
+          @logger.debug("Looking for disk #{disk_cid} in datastores matching pattern #{datastore_pattern}")
+
+          regexp = Regexp.new(datastore_pattern)
+          hint_datastores = accessible_datastores.select do |name, _|
+            name =~ regexp
+          end
+          disk = find_disk_cid_in_datastores(disk_cid, hint_datastores)
+          return disk unless disk.nil?
+        end
+
         @logger.debug("Looking for disk #{disk_cid} in datastores matching persistent pattern #{persistent_pattern}")
         regexp = Regexp.new(persistent_pattern)
         persistent_datastores = accessible_datastores.select do |name, _|
-          name =~ regexp
+          name =~ regexp && !hint_datastores.key?(name)
         end
         disk = find_disk_cid_in_datastores(disk_cid, persistent_datastores)
         return disk unless disk.nil?
 
         other_datastores = accessible_datastores.reject do |datastore_name, _|
-          persistent_datastores[datastore_name]
+          persistent_datastores.key?(datastore_name) || hint_datastores.key?(datastore_name)
         end
         @logger.debug("Disk #{disk_cid} not found in filtered persistent datastores, trying other datastores: #{other_datastores}")
         disk = find_disk_cid_in_datastores(disk_cid, other_datastores)

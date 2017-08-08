@@ -85,10 +85,17 @@ module VSphereCloud
         expected_pattern = Base64.urlsafe_encode64(metadata.to_json)
         "#{disk_cid}.#{expected_pattern}"
       end
+      let(:director_disk_cid) do
+        VSphereCloud::DirectorDiskCID.new(encoded_disk_cid)
+      end
+
+      before do
+        allow(VSphereCloud::DirectorDiskCID).to receive(:new).with(encoded_disk_cid).and_return(director_disk_cid)
+      end
 
       context 'when disk exists' do
         before do
-          allow(datacenter).to receive(:find_disk).with(disk_cid).and_return('fake disk')
+          allow(datacenter).to receive(:find_disk).with(director_disk_cid).and_return('fake disk')
         end
 
         context 'when disk_cid contains metadata' do
@@ -98,8 +105,9 @@ module VSphereCloud
         end
 
         context 'when disk_cid does not contain metadata' do
+          let(:encoded_disk_cid) { disk_cid }
           it 'returns true' do
-            expect(vsphere_cloud.has_disk?(disk_cid)).to be(true)
+            expect(vsphere_cloud.has_disk?(encoded_disk_cid)).to be(true)
           end
         end
       end
@@ -107,7 +115,7 @@ module VSphereCloud
       context 'when disk does not exist' do
         before do
           allow(datacenter).to receive(:find_disk)
-            .with(disk_cid)
+            .with(director_disk_cid)
             .and_raise(Bosh::Clouds::DiskNotFound.new(false), "Could not find disk with id '#{disk_cid}'")
         end
 
@@ -118,8 +126,9 @@ module VSphereCloud
         end
 
         context 'when disk_cid does not contain metadata' do
+          let(:encoded_disk_cid) { disk_cid }
           it 'returns false' do
-            expect(vsphere_cloud.has_disk?(disk_cid)).to be(false)
+            expect(vsphere_cloud.has_disk?(encoded_disk_cid)).to be(false)
           end
         end
       end
@@ -445,51 +454,41 @@ module VSphereCloud
           target_datastore_pattern: 'fake-ephemeral-pattern',
         )
       end
+      let(:encoded_disk_cid) { 'fake-disk-cid' }
+      let(:director_disk_cid) { VSphereCloud::DirectorDiskCID.new(encoded_disk_cid) }
 
       before do
-        allow(vsphere_cloud).to receive(:stemcell_vm)
-          .with('fake-stemcell-cid')
-          .and_return(stemcell_vm)
+        allow(vsphere_cloud).to receive(:stemcell_vm).with('fake-stemcell-cid').and_return(stemcell_vm)
         allow(cloud_searcher).to receive(:get_property)
           .with(
             stemcell_vm,
             VimSdk::Vim::VirtualMachine,
             'summary.storage.committed',
             ensure_all: true
-          )
-          .and_return(1024 * 1024 * 1024)
+          ).and_return(1024 * 1024 * 1024)
 
-        allow(datacenter).to receive(:clusters)
-          .and_return([fake_cluster])
-        allow(datacenter).to receive(:ephemeral_pattern)
-          .and_return('fake-ephemeral-pattern')
-        allow(datacenter).to receive(:persistent_pattern)
-          .and_return('fake-persistent-pattern')
-        allow(datacenter).to receive(:find_disk)
-          .with('fake-disk-cid')
-          .and_return(fake_disk)
+        allow(datacenter).to receive(:clusters).and_return([fake_cluster])
+        allow(datacenter).to receive(:ephemeral_pattern).and_return('fake-ephemeral-pattern')
+        allow(datacenter).to receive(:persistent_pattern).and_return('fake-persistent-pattern')
+        allow(datacenter).to receive(:find_disk).with(director_disk_cid).and_return(fake_disk)
+        allow(VSphereCloud::DirectorDiskCID).to receive(:new).with(encoded_disk_cid).and_return(director_disk_cid)
 
-        allow(IPConflictDetector).to receive(:new)
-          .with(logger, vcenter_client)
-          .and_return(ip_conflict_detector)
-        allow(ClusterPicker).to receive(:new)
-          .and_return(cluster_picker)
-        allow(IPConflictDetector).to receive(:new)
-          .with(logger, vcenter_client)
-          .and_return(ip_conflict_detector)
+        allow(IPConflictDetector).to receive(:new).with(logger, vcenter_client).and_return(ip_conflict_detector)
+        allow(ClusterPicker).to receive(:new).and_return(cluster_picker)
+        allow(IPConflictDetector).to receive(:new).with(logger, vcenter_client).and_return(ip_conflict_detector)
         allow(DiskConfig).to receive(:new)
           .with(
             cid: fake_disk.cid,
             size: fake_disk.size_in_mb,
             existing_datastore_name: fake_datastore.name,
-            target_datastore_pattern: target_datastore_pattern)
-          .and_return(fake_persistent_disk)
+            target_datastore_pattern: target_datastore_pattern
+          ).and_return(fake_persistent_disk)
         allow(DiskConfig).to receive(:new)
-           .with(
-             size: 4096,
-             ephemeral: true,
-             target_datastore_pattern: 'fake-ephemeral-pattern')
-           .and_return(fake_ephemeral_disk)
+          .with(
+            size: 4096,
+            ephemeral: true,
+            target_datastore_pattern: 'fake-ephemeral-pattern'
+          ).and_return(fake_ephemeral_disk)
       end
 
       it 'creates a new VM with provided manifest properties' do
@@ -507,12 +506,11 @@ module VSphereCloud
         }
 
         allow(VmConfig).to receive(:new)
-          .with({
+          .with(
             manifest_params: expected_manifest_params,
             cluster_picker: cluster_picker,
             cluster_provider: cluster_provider
-          })
-          .and_return(vm_config)
+          ).and_return(vm_config)
         expect(vm_config).to receive(:validate)
 
         expect(VmCreator).to receive(:new)
@@ -526,11 +524,8 @@ module VSphereCloud
             ip_conflict_detector: ip_conflict_detector,
             default_disk_type: default_disk_type,
             enable_auto_anti_affinity_drs_rules: false,
-          )
-          .and_return(vm_creator)
-        expect(vm_creator).to receive(:create)
-          .with(vm_config)
-          .and_return(fake_vm)
+          ).and_return(vm_creator)
+        expect(vm_creator).to receive(:create).with(vm_config).and_return(fake_vm)
 
         vsphere_cloud.create_vm(
           'fake-agent-id',
@@ -538,7 +533,7 @@ module VSphereCloud
           vm_type,
           'fake-networks-hash',
           existing_disk_cids,
-          {},
+          {}
         )
       end
 
@@ -662,27 +657,28 @@ module VSphereCloud
             target_datastore_pattern: target_datastore_pattern,
           }
         end
-        let(:existing_disk_cids) { ["fake-disk-cid.#{Base64.urlsafe_encode64(disk_metadata.to_json)}"] }
+        let(:existing_disk_cids) { [encoded_disk_cid] }
         let(:fake_persistent_disk) do
-          instance_double(VSphereCloud::DiskConfig,
+          instance_double(
+            VSphereCloud::DiskConfig,
             cid: fake_disk.cid,
             size: fake_disk.size_in_mb,
             existing_datastore_name: fake_datastore.name,
-            target_datastore_pattern: target_datastore_pattern,
+            target_datastore_pattern: target_datastore_pattern
           )
         end
+        let(:encoded_disk_cid) { "fake-disk-cid.#{Base64.urlsafe_encode64(disk_metadata.to_json)}" }
 
         before do
-          allow(VmCreator).to receive(:new)
-            .and_return(vm_creator)
+          allow(VmCreator).to receive(:new).and_return(vm_creator)
           allow(vm_creator).to receive(:create).and_return(fake_vm)
           allow(DiskConfig).to receive(:new)
            .with(
-               cid: fake_disk.cid,
-               size: fake_disk.size_in_mb,
-               existing_datastore_name: fake_datastore.name,
-               target_datastore_pattern: target_datastore_pattern)
-           .and_return(fake_persistent_disk)
+             cid: fake_disk.cid,
+             size: fake_disk.size_in_mb,
+             existing_datastore_name: fake_datastore.name,
+             target_datastore_pattern: target_datastore_pattern
+           ).and_return(fake_persistent_disk)
         end
 
         it 'creates the VM with disk cid parsed from the metadata-encoded director disk cid' do
@@ -698,7 +694,7 @@ module VSphereCloud
             vm_type,
             'fake-networks-hash',
             existing_disk_cids,
-            {},
+            {}
           )
         end
       end
@@ -879,37 +875,27 @@ module VSphereCloud
       let(:datastore_without_disk) { instance_double('VSphereCloud::Resources::Datastore', name: 'datastore-without-disk', free_space: 4096)}
       let(:inaccessible_datastore) { instance_double('VSphereCloud::Resources::Datastore', name: 'inaccessible-datastore', free_space: 4096)}
       let(:disk) { Resources::PersistentDisk.new(cid: 'disk-cid', size_in_mb: 1024, datastore: datastore_with_disk, folder: 'fake-folder') }
+      let(:director_disk_cid) { VSphereCloud::DirectorDiskCID.new('disk-cid') }
 
       before do
-        allow(datacenter).to receive(:persistent_pattern)
-          .and_return(/datastore\-.*/)
+        allow(datacenter).to receive(:persistent_pattern).and_return(/datastore\-.*/)
         allow(datacenter).to receive(:accessible_datastores)
-          .and_return({
+          .and_return(
             'datastore-with-disk' => datastore_with_disk,
             'datastore-without-disk' => datastore_without_disk,
             'inaccessible-datastore' => inaccessible_datastore
-          })
+          )
         allow(datacenter).to receive(:accessible_datastores)
-          .and_return({
+          .and_return(
             'datastore-with-disk' => datastore_with_disk,
-            'datastore-without-disk' =>  datastore_without_disk,
-          })
-        allow(datacenter).to receive(:find_datastore)
-          .with('datastore-with-disk')
-          .and_return(datastore_with_disk)
-        allow(datacenter).to receive(:find_datastore)
-          .with('datastore-without-disk')
-          .and_return(datastore_without_disk)
+            'datastore-without-disk'=> datastore_without_disk,
+          )
+        allow(datacenter).to receive(:find_datastore).with('datastore-with-disk').and_return(datastore_with_disk)
+        allow(datacenter).to receive(:find_datastore).with('datastore-without-disk').and_return(datastore_without_disk)
 
-        allow(vm_provider).to receive(:find)
-          .with('fake-vm-cid')
-          .and_return(vm)
-        allow(datacenter).to receive(:find_disk)
-          .with('disk-cid')
-          .and_return(disk)
+        allow(vm_provider).to receive(:find).with('fake-vm-cid').and_return(vm)
 
         allow(agent_env).to receive(:get_current_env).and_return(agent_env_hash)
-
         allow(vsphere_cloud).to receive(:get_vm_location).and_return(vm_location)
       end
 
@@ -919,6 +905,9 @@ module VSphereCloud
         end
 
         it 'attaches the existing persistent disk' do
+          expect(datacenter).to receive(:find_disk).with(director_disk_cid).and_return(disk)
+          expect(VSphereCloud::DirectorDiskCID).to receive(:new).with('disk-cid').and_return(director_disk_cid)
+
           expect(vm).to receive(:attach_disk) do |disk|
             expect(disk.cid).to eq('disk-cid')
             OpenStruct.new(device: OpenStruct.new(unit_number: 'some-unit-number'))
@@ -933,15 +922,21 @@ module VSphereCloud
         end
 
         it 'attaches the existing persistent disk with encoded metadata' do
-          metadata_hash = {target_datastore_pattern: '.*'}
+          metadata_hash = {
+            target_datastore_pattern: '.*'
+          }
           encoded_metadata = Base64.urlsafe_encode64(metadata_hash.to_json)
           disk_cid_with_metadata = "disk-cid.#{encoded_metadata}"
+
+          director_disk_cid = VSphereCloud::DirectorDiskCID.new(disk_cid_with_metadata)
+          expect(datacenter).to receive(:find_disk).with(director_disk_cid).and_return(disk)
+          expect(VSphereCloud::DirectorDiskCID).to receive(:new).with(disk_cid_with_metadata).and_return(director_disk_cid)
 
           expect(vm).to receive(:attach_disk) do |disk|
             expect(disk.cid).to eq('disk-cid')
             OpenStruct.new(device: OpenStruct.new(unit_number: 'some-unit-number'))
           end
-          expect(agent_env).to receive(:set_env) do|env_vm, env_location, env|
+          expect(agent_env).to receive(:set_env) do |env_vm, env_location, env|
             expect(env_vm).to eq(vm_mob)
             expect(env_location).to eq(vm_location)
             expect(env['disks']['persistent'][disk_cid_with_metadata]).to eq('some-unit-number')
@@ -952,19 +947,25 @@ module VSphereCloud
       end
 
       context 'when disk is not in a datastore accessible to VM' do
-        let(:moved_disk) { Resources::PersistentDisk.new(cid: 'disk-cid', size_in_mb: 1024, datastore: datastore_without_disk, folder: 'fake-folder') }
+        let(:moved_disk) do
+          Resources::PersistentDisk.new(
+            cid: 'disk-cid',
+            size_in_mb: 1024,
+            datastore: datastore_without_disk,
+            folder: 'fake-folder')
+        end
 
         before do
           allow(vm).to receive(:accessible_datastore_names).and_return(['datastore-without-disk'])
         end
 
         it 'moves the disk to an accessible datastore and attaches it' do
-          expect(datacenter).to receive(:move_disk_to_datastore)
-            .with(disk, datastore_without_disk)
+          expect(datacenter).to receive(:find_disk).with(director_disk_cid).and_return(disk)
+          expect(VSphereCloud::DirectorDiskCID).to receive(:new).with('disk-cid').and_return(director_disk_cid)
+          expect(datacenter).to receive(:move_disk_to_datastore).with(disk, datastore_without_disk)
             .and_return(moved_disk)
 
-          expect(vm).to receive(:attach_disk)
-            .with(moved_disk)
+          expect(vm).to receive(:attach_disk).with(moved_disk)
             .and_return(OpenStruct.new(device: OpenStruct.new(unit_number: 'some-unit-number')))
           expect(agent_env).to receive(:set_env) do|env_vm, env_location, env|
             expect(env_vm).to eq(vm_mob)
@@ -980,18 +981,18 @@ module VSphereCloud
         let(:moved_disk) { Resources::PersistentDisk.new(cid: 'disk-cid', size_in_mb: 1024, datastore: datastore_without_disk, folder: 'fake-folder') }
 
         before do
-          allow(datacenter).to receive(:persistent_pattern)
-            .and_return(/datastore\-without\-disk/)
+          allow(datacenter).to receive(:persistent_pattern).and_return(/datastore\-without\-disk/)
           allow(vm).to receive(:accessible_datastore_names).and_return(['datastore-with-disk', 'datastore-without-disk'])
         end
 
         it 'moves the disk to a persistent datastore and attaches it' do
-          expect(datacenter).to receive(:move_disk_to_datastore)
-            .with(disk, datastore_without_disk)
+          expect(datacenter).to receive(:find_disk).with(director_disk_cid).and_return(disk)
+          expect(VSphereCloud::DirectorDiskCID).to receive(:new).with('disk-cid').and_return(director_disk_cid)
+
+          expect(datacenter).to receive(:move_disk_to_datastore).with(disk, datastore_without_disk)
             .and_return(moved_disk)
 
-          expect(vm).to receive(:attach_disk)
-            .with(moved_disk)
+          expect(vm).to receive(:attach_disk).with(moved_disk)
             .and_return(OpenStruct.new(device: OpenStruct.new(unit_number: 'some-unit-number')))
           expect(agent_env).to receive(:set_env) do|env_vm, env_location, env|
             expect(env_vm).to eq(vm_mob)
@@ -1004,40 +1005,51 @@ module VSphereCloud
       end
 
       context 'when a persistent disk pattern is encoded into the disk cid' do
-        let(:target_datastore) { instance_double('VSphereCloud::Resources::Datastore', name: 'target-datastore', free_space: 4096)}
-        let(:current_datastore) { instance_double('VSphereCloud::Resources::Datastore', name: 'current-datastore', free_space: 4096)}
-        let(:moved_disk) { Resources::PersistentDisk.new(cid: 'disk-cid', size_in_mb: 1024, datastore: target_datastore, folder: 'fake-folder') }
+        let(:target_datastore) do
+          instance_double(VSphereCloud::Resources::Datastore, name: 'target-datastore', free_space: 4096)
+        end
+        let(:current_datastore) do
+          instance_double(VSphereCloud::Resources::Datastore, name: 'current-datastore', free_space: 4096)
+        end
+        let(:moved_disk) do
+          Resources::PersistentDisk.new(
+            cid: 'disk-cid',
+            size_in_mb: 1024,
+            datastore: target_datastore,
+            folder: 'fake-folder')
+        end
+        let(:encoded_disk_cid) do
+          metadata_hash = {
+            target_datastore_pattern: "^(target\\-datastore)$"
+          }
+          expected_pattern = Base64.urlsafe_encode64(metadata_hash.to_json)
+
+          "disk-cid.#{expected_pattern}"
+        end
+        let(:director_disk_cid) { VSphereCloud::DirectorDiskCID.new(encoded_disk_cid) }
 
         before do
           allow(datacenter).to receive(:accessible_datastores)
-            .and_return({
+            .and_return(
               'target-datastore' => target_datastore,
               'current-datastore' => current_datastore,
-            })
-
+            )
           allow(vm).to receive(:accessible_datastore_names).and_return(['target-datastore', 'current-datastore'])
+          expect(datacenter).to receive(:find_disk).with(director_disk_cid).and_return(disk)
+          expect(VSphereCloud::DirectorDiskCID).to receive(:new).with(encoded_disk_cid).and_return(director_disk_cid)
         end
 
         it 'extracts the pattern and uses it for datastore picking' do
-          expect(datacenter).to receive(:find_datastore)
-              .with('target-datastore')
-              .and_return(target_datastore)
+          expect(datacenter).to receive(:find_datastore).with('target-datastore').and_return(target_datastore)
 
-          expect(datacenter).to receive(:move_disk_to_datastore)
-            .with(disk, target_datastore)
+          expect(datacenter).to receive(:move_disk_to_datastore).with(disk, target_datastore)
             .and_return(moved_disk)
 
-          allow(vm).to receive(:attach_disk)
-            .with(moved_disk)
+          allow(vm).to receive(:attach_disk).with(moved_disk)
             .and_return(OpenStruct.new(device: OpenStruct.new(unit_number: 'some-unit-number')))
           allow(agent_env).to receive(:set_env)
 
-          metadata_hash = { target_datastore_pattern: "^(target\\-datastore)$" }
-          expected_pattern = Base64.urlsafe_encode64(metadata_hash.to_json)
-
-          director_disk_cid = "disk-cid.#{expected_pattern}"
-
-          vsphere_cloud.attach_disk('fake-vm-cid', director_disk_cid)
+          vsphere_cloud.attach_disk('fake-vm-cid', encoded_disk_cid)
         end
       end
     end
@@ -1176,44 +1188,51 @@ module VSphereCloud
     end
 
     describe '#delete_disk' do
-      before { allow(datacenter).to receive(:mob).and_return('datacenter-mob') }
+      let(:encoded_disk_cid) { 'fake-disk-uuid' }
+      let(:director_disk_cid) { VSphereCloud::DirectorDiskCID.new(encoded_disk_cid) }
+
+      before do
+        expect(VSphereCloud::DirectorDiskCID).to receive(:new).with(encoded_disk_cid).and_return(director_disk_cid)
+      end
 
       context 'when disk is found' do
         let(:disk) { instance_double('VSphereCloud::Resources::PersistentDisk', path: 'disk-path') }
+
         before do
-          allow(datacenter).to receive(:find_disk).with('fake-disk-uuid').and_return(disk)
+          expect(datacenter).to receive(:mob).and_return('datacenter-mob')
+          expect(datacenter).to receive(:find_disk).with(director_disk_cid).and_return(disk)
+          expect(vcenter_client).to receive(:delete_disk).with('datacenter-mob', 'disk-path')
         end
 
         it 'deletes disk' do
-          expect(vcenter_client).to receive(:delete_disk).with('datacenter-mob', 'disk-path')
           vsphere_cloud.delete_disk('fake-disk-uuid')
         end
 
         context 'when a persistent disk pattern is encoded into the director disk cid' do
-          it 'removes the suffix before searching the disk' do
-            allow(datacenter).to receive(:find_disk).and_return(disk)
-            allow(vcenter_client).to receive(:delete_disk)
-
-            metadata_hash = {target_datastore_pattern:'^(target\\-datastore)$'}
+          let(:encoded_disk_cid) do
+            metadata_hash = {
+              target_datastore_pattern:'^(target\\-datastore)$'
+            }
             expected_pattern = Base64.urlsafe_encode64(metadata_hash.to_json)
 
-            vsphere_cloud.delete_disk("disk-cid.#{expected_pattern}")
+            "disk-cid.#{expected_pattern}"
+          end
 
-            expect(datacenter).to have_received(:find_disk).with('disk-cid')
+          it 'removes the suffix before searching the disk' do
+            vsphere_cloud.delete_disk(encoded_disk_cid)
           end
         end
       end
 
       context 'when disk is not found' do
         before do
-          allow(datacenter).to receive(:find_disk).
-            with('fake-disk-uuid').
-            and_raise Bosh::Clouds::DiskNotFound.new(false)
+          expect(datacenter).to receive(:find_disk).with(director_disk_cid)
+            .and_raise Bosh::Clouds::DiskNotFound.new(false)
         end
 
         it 'raises an error' do
           expect {
-            vsphere_cloud.delete_disk('fake-disk-uuid')
+            vsphere_cloud.delete_disk(encoded_disk_cid)
           }.to raise_error Bosh::Clouds::DiskNotFound
         end
       end

@@ -7,15 +7,13 @@ module VSphereCloud
       @disk_pool = disk_pool
     end
 
-    def disk_config_from_persistent_disk(disk_cid)
-      clean_cid, metadata = DiskMetadata.decode(disk_cid)
-
-      disk = @datacenter.find_disk(clean_cid)
+    def disk_config_from_persistent_disk(director_disk_cid)
+      disk = @datacenter.find_disk(director_disk_cid)
       VSphereCloud::DiskConfig.new(
         cid: disk.cid,
         size: disk.size_in_mb,
         existing_datastore_name: disk.datastore.name,
-        target_datastore_pattern: target_pattern_from_metadata(metadata)
+        target_datastore_pattern: director_disk_cid.target_datastore_pattern || @datacenter.persistent_pattern
       )
     end
 
@@ -23,8 +21,10 @@ module VSphereCloud
       # Only encode if disk_pool.datastores is specified
       # This allows the Operator to change the global persistent pattern and the disk will be moved to match
       if has_persistent_datastores?
-        data_to_encode = { target_datastore_pattern: disk_config.target_datastore_pattern }
-        DiskMetadata.encode(disk_config.cid, data_to_encode)
+        data_to_encode = {
+          target_datastore_pattern: disk_config.target_datastore_pattern
+        }
+        DirectorDiskCID.encode(disk_config.cid, data_to_encode)
       else
         disk_config.cid
       end
@@ -67,10 +67,6 @@ module VSphereCloud
       else
         @datacenter.persistent_pattern
       end
-    end
-
-    def target_pattern_from_metadata(metadata)
-      metadata[:target_datastore_pattern] || @datacenter.persistent_pattern
     end
   end
 end

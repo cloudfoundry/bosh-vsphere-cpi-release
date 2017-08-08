@@ -96,9 +96,9 @@ module VSphereCloud
       false
     end
 
-    def has_disk?(disk_cid)
-      clean_cid, _ = DiskMetadata.decode(disk_cid)
-      @datacenter.find_disk(clean_cid)
+    def has_disk?(raw_director_disk_cid)
+      director_disk_cid = DirectorDiskCID.new(raw_director_disk_cid)
+      @datacenter.find_disk(director_disk_cid)
       true
     rescue Bosh::Clouds::DiskNotFound
       false
@@ -225,7 +225,7 @@ module VSphereCloud
           vm_type: vm_type,
         )
         disk_configurations = existing_disk_cids.map do |cid|
-          disk_config_factory.disk_config_from_persistent_disk(cid)
+          disk_config_factory.disk_config_from_persistent_disk(DirectorDiskCID.new(cid))
         end
         ephemeral_disk_config = disk_config_factory.new_ephemeral_disk_config
         disk_configurations.push(ephemeral_disk_config)
@@ -371,18 +371,18 @@ module VSphereCloud
       raise Bosh::Clouds::NotSupported, 'configure_networks is no longer supported'
     end
 
-    def attach_disk(vm_cid, director_disk_cid)
-      with_thread_name("attach_disk(#{vm_cid}, #{director_disk_cid})") do
+    def attach_disk(vm_cid, raw_director_disk_cid)
+      with_thread_name("attach_disk(#{vm_cid}, #{raw_director_disk_cid})") do
+        director_disk_cid = DirectorDiskCID.new(raw_director_disk_cid)
         vm = vm_provider.find(vm_cid)
 
-        disk_cid, metadata = DiskMetadata.decode(director_disk_cid)
-        disk_to_attach = @datacenter.find_disk(disk_cid)
+        disk_to_attach = @datacenter.find_disk(director_disk_cid)
 
         disk_config = VSphereCloud::DiskConfig.new(
           cid: disk_to_attach.cid,
           size: disk_to_attach.size_in_mb,
           existing_datastore_name: disk_to_attach.datastore.name,
-          target_datastore_pattern: metadata[:target_datastore_pattern] || @datacenter.persistent_pattern
+          target_datastore_pattern: director_disk_cid.target_datastore_pattern || @datacenter.persistent_pattern
         )
 
         accessible_datastores = @datacenter.accessible_datastores
@@ -408,15 +408,15 @@ module VSphereCloud
       end
     end
 
-    def detach_disk(vm_cid, director_disk_cid)
-      with_thread_name("detach_disk(#{vm_cid}, #{director_disk_cid})") do
-        disk_cid, _ = DiskMetadata.decode(director_disk_cid)
+    def detach_disk(vm_cid, raw_director_disk_cid)
+      with_thread_name("detach_disk(#{vm_cid}, #{raw_director_disk_cid})") do
+        director_disk_cid = DirectorDiskCID.new(raw_director_disk_cid)
 
-        @logger.info("Detaching disk: #{disk_cid} from vm: #{vm_cid}")
+        @logger.info("Detaching disk: #{director_disk_cid.value} from vm: #{vm_cid}")
 
         vm = vm_provider.find(vm_cid)
-        disk = vm.disk_by_cid(disk_cid)
-        raise Bosh::Clouds::DiskNotAttached.new(true), "Disk '#{disk_cid}' is not attached to VM '#{vm_cid}'" if disk.nil?
+        disk = vm.disk_by_cid(director_disk_cid.value)
+        raise Bosh::Clouds::DiskNotAttached.new(true), "Disk '#{director_disk_cid.value}' is not attached to VM '#{vm_cid}'" if disk.nil?
 
         vm.detach_disks([disk])
         delete_disk_from_agent_env(vm, director_disk_cid)
@@ -456,11 +456,11 @@ module VSphereCloud
       end
     end
 
-    def delete_disk(director_disk_cid)
-      with_thread_name("delete_disk(#{director_disk_cid})") do
-        disk_cid, _ = DiskMetadata.decode(director_disk_cid)
-        @logger.info("Deleting disk: #{disk_cid}")
-        disk = @datacenter.find_disk(disk_cid)
+    def delete_disk(raw_director_disk_cid)
+      with_thread_name("delete_disk(#{raw_director_disk_cid})") do
+        director_disk_cid = DirectorDiskCID.new(raw_director_disk_cid)
+        @logger.info("Deleting disk: #{director_disk_cid.value}")
+        disk = @datacenter.find_disk(director_disk_cid)
         client.delete_disk(@datacenter.mob, disk.path)
 
         @logger.info('Finished deleting disk')
@@ -757,7 +757,7 @@ module VSphereCloud
 
     def add_disk_to_agent_env(vm, director_disk_cid, device_unit_number)
       env = @agent_env.get_current_env(vm.mob, @datacenter.name)
-      env['disks']['persistent'][director_disk_cid] = device_unit_number.to_s
+      env['disks']['persistent'][director_disk_cid.raw] = device_unit_number.to_s
       location = get_vm_location(vm.mob, datacenter: @datacenter.name)
       @agent_env.set_env(vm.mob, location, env)
     end
@@ -766,8 +766,8 @@ module VSphereCloud
       vm_mob = vm.mob
       location = get_vm_location(vm_mob)
       env = @agent_env.get_current_env(vm_mob, location[:datacenter])
-      if env['disks']['persistent'][director_disk_cid]
-        env['disks']['persistent'].delete(director_disk_cid)
+      if env['disks']['persistent'][director_disk_cid.raw]
+        env['disks']['persistent'].delete(director_disk_cid.raw)
 
         @agent_env.set_env(vm_mob, location, env)
       end
