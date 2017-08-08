@@ -68,7 +68,7 @@ context 'given cpis that are configured to use same cluster but different datast
     @disk_id = first_datastore_cpi.create_disk(2048, {}, @vm_id)
     expect(@disk_id).to_not be_nil
     expect(first_datastore_cpi.has_disk?(@disk_id)).to be(true)
-    disk = first_datastore_cpi.datacenter.find_disk(@disk_id)
+    disk = first_datastore_cpi.datacenter.find_disk(VSphereCloud::DirectorDiskCID.new(@disk_id))
     expect(disk.datastore.name).to match(@datastore_pattern)
   end
 
@@ -95,7 +95,7 @@ context 'given cpis that are configured to use same cluster but different datast
   it '#attach_disk can move the disk to the new datastore pattern' do
     second_datastore_cpi.attach_disk(@vm_id, @disk_id)
 
-    disk = second_datastore_cpi.datacenter.find_disk(@disk_id)
+    disk = second_datastore_cpi.datacenter.find_disk(VSphereCloud::DirectorDiskCID.new(@disk_id))
     expect(disk.cid).to eq(@disk_id)
     expect(disk.datastore.name).to match(@second_datastore)
 

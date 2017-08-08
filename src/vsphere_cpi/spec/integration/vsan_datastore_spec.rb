@@ -78,7 +78,7 @@ context 'given cpis that are configured to use VSAN datastores', vsan_datastore:
       @disk_id = non_vsan_cpi.create_disk(2048, {}, @vm_id)
       expect(@disk_id).to_not be_nil
       expect(non_vsan_cpi.has_disk?(@disk_id)).to be(true)
-      disk = non_vsan_cpi.datacenter.find_disk(@disk_id)
+      disk = non_vsan_cpi.datacenter.find_disk(VSphereCloud::DirectorDiskCID.new(@disk_id))
       expect(disk.datastore.name).to match(@datastore_pattern)
     end
 
@@ -90,7 +90,7 @@ context 'given cpis that are configured to use VSAN datastores', vsan_datastore:
     it '#attach_disk can move the disk to and from the vsan datastore', focus: true do
       vsan_cpi.attach_disk(@vm_id, @disk_id)
 
-      disk = vsan_cpi.datacenter.find_disk(@disk_id)
+      disk = vsan_cpi.datacenter.find_disk(VSphereCloud::DirectorDiskCID.new(@disk_id))
       expect(disk.cid).to eq(@disk_id)
       expect(disk.datastore.name).to match(@vsan_datastore_pattern)
 
@@ -98,7 +98,7 @@ context 'given cpis that are configured to use VSAN datastores', vsan_datastore:
 
       non_vsan_cpi.attach_disk(@vm_id, @disk_id)
 
-      disk = non_vsan_cpi.datacenter.find_disk(@disk_id)
+      disk = non_vsan_cpi.datacenter.find_disk(VSphereCloud::DirectorDiskCID.new(@disk_id))
       expect(disk.cid).to eq(@disk_id)
       expect(disk.datastore.name).to match(@datastore_pattern)
 

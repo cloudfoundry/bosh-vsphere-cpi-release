@@ -107,7 +107,7 @@ describe 'host-local storage patterns', :host_local => true do
 
         persistent_disk_id = local_disk_cpi.create_disk(2048, {}, vm_id)
         expect(persistent_disk_id).to_not be_nil
-        persistent_disk = local_disk_cpi.datacenter.find_disk(persistent_disk_id)
+        persistent_disk = local_disk_cpi.datacenter.find_disk(VSphereCloud::DirectorDiskCID.new(persistent_disk_id))
         expect(persistent_disk.datastore.name).to match(@single_local_ds_pattern)
 
         local_disk_cpi.attach_disk(vm_id, persistent_disk_id)
@@ -122,13 +122,13 @@ describe 'host-local storage patterns', :host_local => true do
 
   context 'when both ephemeral and persistent storage patterns reference a multiple host-local datastores' do
     let(:local_disk_options) do
-      cpi_options({
+      cpi_options(
         datacenters: [{
           datastore_pattern: @multi_local_ds_pattern,
           persistent_datastore_pattern: @multi_local_ds_pattern,
           clusters: [@cluster_name]
         }]
-      })
+      )
     end
 
     context 'when a VM hint is provided' do
@@ -144,7 +144,7 @@ describe 'host-local storage patterns', :host_local => true do
 
           disk_id = local_disk_cpi.create_disk(2048, {}, vm_id)
           expect(disk_id).to_not be_nil
-          disk = local_disk_cpi.datacenter.find_disk(disk_id)
+          disk = local_disk_cpi.datacenter.find_disk(VSphereCloud::DirectorDiskCID.new(disk_id))
           expect(disk.datastore.name).to eq(ephemeral_ds)
 
           local_disk_cpi.attach_disk(vm_id, disk_id)
@@ -170,7 +170,7 @@ describe 'host-local storage patterns', :host_local => true do
 
           disk_id = local_disk_cpi.create_disk(2048, {})
           expect(disk_id).to_not be_nil
-          disk = local_disk_cpi.datacenter.find_disk(disk_id)
+          disk = local_disk_cpi.datacenter.find_disk(VSphereCloud::DirectorDiskCID.new(disk_id))
 
           host_local_datastores = matching_datastores(local_disk_cpi.datacenter, @multi_local_ds_pattern)
           other_datastore = host_local_datastores.values.find { |ds| ds.name != ephemeral_ds }
@@ -179,7 +179,7 @@ describe 'host-local storage patterns', :host_local => true do
 
           local_disk_cpi.attach_disk(vm_id, disk_id)
           expect(local_disk_cpi.has_disk?(disk_id)).to be(true)
-          disk = local_disk_cpi.datacenter.find_disk(disk_id)
+          disk = local_disk_cpi.datacenter.find_disk(VSphereCloud::DirectorDiskCID.new(disk_id))
           expect(disk.datastore.name).to eq(ephemeral_ds)
         ensure
           detach_disk(local_disk_cpi, vm_id, disk_id)
@@ -232,7 +232,7 @@ describe 'host-local storage patterns', :host_local => true do
 
             local_disk_cpi.attach_disk(vm_id, @disk_id)
             expect(local_disk_cpi.has_disk?(@disk_id)).to be(true)
-            disk = local_disk_cpi.datacenter.find_disk(@disk_id)
+            disk = local_disk_cpi.datacenter.find_disk(VSphereCloud::DirectorDiskCID.new(@disk_id))
             expect(disk.datastore.name).to eq(ephemeral_ds)
           ensure
             detach_disk(local_disk_cpi, vm_id, @disk_id)
@@ -278,8 +278,7 @@ describe 'host-local storage patterns', :host_local => true do
 
         disk_id = local_disk_cpi.create_disk(2048, disk_pool, vm_id)
         expect(disk_id).to_not be_nil
-        clean_disk_cid, _ = VSphereCloud::DiskMetadata.decode(disk_id)
-        disk = local_disk_cpi.datacenter.find_disk(clean_disk_cid)
+        disk = local_disk_cpi.datacenter.find_disk(VSphereCloud::DirectorDiskCID.new(disk_id))
         expect(disk.datastore.name).to match(@multi_local_ds_pattern)
 
         local_disk_cpi.attach_disk(vm_id, disk_id)

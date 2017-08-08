@@ -97,7 +97,7 @@ context 'when the datastore is chosen for disk creation' do
     let(:existing_disk_id) do
       disk_id = second_cluster_cpi.create_disk(128, {}, nil)
       expect(disk_id).to_not be_nil
-      disk = second_cluster_cpi.datacenter.find_disk(disk_id)
+      disk = second_cluster_cpi.datacenter.find_disk(VSphereCloud::DirectorDiskCID.new(disk_id))
       expect(accessible_datastores).to_not include(disk.datastore.name)
 
       disk_id

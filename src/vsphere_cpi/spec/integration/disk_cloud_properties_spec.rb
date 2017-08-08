@@ -190,7 +190,7 @@ describe 'cloud_properties related to disks' do
       cpi = VSphereCloud::Cloud.new(options)
       begin
         director_disk_id = cpi.create_disk(128, cloud_properties)
-        disk_id, _ = VSphereCloud::DiskMetadata.decode(director_disk_id)
+        disk_id, _ = VSphereCloud::DirectorDiskCID.decode(director_disk_id)
         verify_disk_is_in_datastores(cpi, disk_id, persistent_datastores)
         expect(cpi.has_disk?(director_disk_id)).to be(true)
 

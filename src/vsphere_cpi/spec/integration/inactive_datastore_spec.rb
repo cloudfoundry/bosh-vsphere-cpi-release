@@ -85,8 +85,7 @@ describe 'inactive datastore handling' do
         disk_id = inactive_cpi.create_disk(128, disk_pool)
         expect(disk_id).to_not be_nil
 
-        clean_disk_cid, _ = VSphereCloud::DiskMetadata.decode(disk_id)
-        disk = inactive_cpi.datacenter.find_disk(clean_disk_cid)
+        disk = inactive_cpi.datacenter.find_disk(VSphereCloud::DirectorDiskCID.new(disk_id))
         expect(active_datastores).to include(disk.datastore.name)
       ensure
         delete_disk(inactive_cpi, disk_id)

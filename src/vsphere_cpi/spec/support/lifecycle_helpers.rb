@@ -355,7 +355,7 @@ module LifecycleHelpers
   private
 
   def is_disk_in_datastores(cpi, disk_id, accessible_datastores)
-    disk = cpi.datacenter.find_disk(disk_id)
+    disk = cpi.datacenter.find_disk(VSphereCloud::DirectorDiskCID.new(disk_id))
     accessible_datastores.include?(disk.datastore.name)
   end
 
