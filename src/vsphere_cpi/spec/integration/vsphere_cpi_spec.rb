@@ -68,23 +68,25 @@ module VSphereCloud
           'password' => password,
           'default_disk_type' => 'preallocated',
           'http_logging' => true,
-          'datacenters' => [{
-                                'name' => datacenter_name,
-                                'vm_folder' => "#{vm_folder_name}/lifecycle_tests",
-                                'template_folder' => "#{template_folder_name}/lifecycle_tests",
-                                'disk_path' => "#{disk_folder_name}/lifecycle_tests",
-                                'datastore_pattern' => ephemeral_datastore_pattern,
-                                'persistent_datastore_pattern' => persistent_datastore_pattern,
-                                'allow_mixed_datastores' => true,
-                                'clusters' => [
-                                    {
-                                        cluster => {'resource_pool' => resource_pool_name},
-                                    },
-                                    {
-                                        second_cluster => {'resource_pool' => second_resource_pool_name}
-                                    }
-                                ],
-                            }]
+          'datacenters' => [
+            {
+              'name' => datacenter_name,
+              'vm_folder' => "#{vm_folder_name}/lifecycle_tests",
+              'template_folder' => "#{template_folder_name}/lifecycle_tests",
+              'disk_path' => "#{disk_folder_name}/lifecycle_tests",
+              'datastore_pattern' => ephemeral_datastore_pattern,
+              'persistent_datastore_pattern' => persistent_datastore_pattern,
+              'allow_mixed_datastores' => true,
+              'clusters' => [
+                {
+                  cluster => {'resource_pool' => resource_pool_name},
+                },
+                {
+                  second_cluster => {'resource_pool' => second_resource_pool_name}
+                }
+              ]
+            }
+          ]
       }
     end
 
@@ -128,14 +130,14 @@ module VSphereCloud
       context 'when given cpi config in the context argument' do
         let(:cloud_properties) do
           {
-              'cloud' => {
-                  'properties' => {
-                      'agent' => {
-                          'ntp' => ['10.80.0.44'],
-                      },
-                      'vcenters' => []
-                  }
+            'cloud' => {
+              'properties' => {
+                'agent' => {
+                  'ntp' => ['10.80.0.44']
+                },
+                'vcenters' => []
               }
+            }
           }
         end
 
@@ -169,20 +171,23 @@ module VSphereCloud
     end
 
     describe 'calculate vm cloud properties' do
-      let(:vm_cloud_properties) { {
+      let(:vm_cloud_properties) do
+        {
           'ram' => 512,
           'cpu' => 2,
           'ephemeral_disk_size' => 2048
-      } }
+        }
+      end
 
       it 'returns a vSphere-specific set of cloud_properties' do
         resp = external_cpi_response('calculate_vm_cloud_properties', {}, vm_cloud_properties)
 
-        expect(resp['result']).to eq({
-                                         'ram' => 512,
-                                         'cpu' => 2,
-                                         'disk' => 2048
-                                     })
+        result = {
+          'ram' => 512,
+          'cpu' => 2,
+          'disk' => 2048
+        }
+        expect(resp['result']).to eq(result)
       end
     end
   end
