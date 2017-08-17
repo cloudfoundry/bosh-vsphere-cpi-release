@@ -1,21 +1,24 @@
 require 'spec_helper'
 
 describe VSphereCloud::Resources::Datacenter do
-  subject(:datacenter) {
-    described_class.new({
+  subject(:datacenter) do
+    described_class.new(
       client: client,
       name: datacenter_name,
       vm_folder: 'fake-vm-folder',
       template_folder: 'fake-template-folder',
-      clusters: {'first-cluster' => cluster_config1, 'second-cluster' => cluster_config2},
+      clusters: {
+        'first-cluster' => cluster_config1,
+        'second-cluster' => cluster_config2
+      },
       cluster_provider: cluster_provider,
       disk_path: 'fake-disk-path',
       ephemeral_pattern: ephemeral_pattern,
       persistent_pattern: persistent_pattern,
       use_sub_folder: datacenter_use_sub_folder,
       logger: logger,
-    })
-  }
+    )
+  end
   let(:log_output) { StringIO.new('') }
   let(:logger) { Logger.new(log_output) }
   let(:client) { instance_double('VSphereCloud::VCenterClient') }
@@ -31,39 +34,44 @@ describe VSphereCloud::Resources::Datacenter do
   let(:cluster_provider) { instance_double('VSphereCloud::Resources::ClusterProvider') }
 
   let(:small_datastore) do
-    instance_double('VSphereCloud::Resources::Datastore',
+    instance_double(
+      'VSphereCloud::Resources::Datastore',
       name: 'small-datastore',
       free_space: 4000
     )
   end
   let(:large_datastore) do
-    instance_double('VSphereCloud::Resources::Datastore',
+    instance_double(
+      'VSphereCloud::Resources::Datastore',
       name: 'large-datastore',
       free_space: 8000
     )
   end
   let(:inaccessible_datastore) do
-    instance_double('VSphereCloud::Resources::Datastore',
+    instance_double(
+      'VSphereCloud::Resources::Datastore',
       name: 'inaccessible-datastore',
       free_space: 16000
     )
 
   end
   let(:first_cluster) do
-    instance_double('VSphereCloud::Resources::Cluster',
+    instance_double(
+      'VSphereCloud::Resources::Cluster',
       free_memory: 1024,
       accessible_datastores: {
         small_datastore.name => small_datastore,
-      },
+      }
     )
   end
   let(:second_cluster) do
-    instance_double('VSphereCloud::Resources::Cluster',
+    instance_double(
+      'VSphereCloud::Resources::Cluster',
       free_memory: 2048,
       accessible_datastores: {
         small_datastore.name => small_datastore,
         large_datastore.name => large_datastore
-      },
+      }
     )
   end
   let(:cluster_mob1) { instance_double('VimSdk::Vim::Cluster') }
@@ -105,7 +113,7 @@ describe VSphereCloud::Resources::Datacenter do
     ).and_return(
       [
         ['first-cluster', cluster_mob1],
-        ['second-cluster', cluster_mob2],
+        ['second-cluster', cluster_mob2]
       ]
     )
 
@@ -239,20 +247,24 @@ describe VSphereCloud::Resources::Datacenter do
         large_datastore = instance_double('VSphereCloud::Resources::Datastore', name: 'large-datastore')
         inaccessible_datastore = instance_double('VSphereCloud::Resources::Datastore', name: 'inaccessible-datastore')
 
-        allow(datacenter).to receive(:clusters).and_return([
-          instance_double('VSphereCloud::Resources::Cluster',
-            accessible_datastores: {
-              small_datastore.name => small_datastore,
-              inaccessible_datastore.name => inaccessible_datastore
-            },
-          ),
-          instance_double('VSphereCloud::Resources::Cluster',
-            accessible_datastores: {
-              small_datastore.name => small_datastore,
-              large_datastore.name => large_datastore
-            }
-          ),
-        ])
+        allow(datacenter).to receive(:clusters).and_return(
+          [
+            instance_double(
+              'VSphereCloud::Resources::Cluster',
+              accessible_datastores: {
+                small_datastore.name => small_datastore,
+                inaccessible_datastore.name => inaccessible_datastore
+              }
+            ),
+            instance_double(
+              'VSphereCloud::Resources::Cluster',
+              accessible_datastores: {
+                small_datastore.name => small_datastore,
+                large_datastore.name => large_datastore
+              }
+            )
+          ]
+        )
 
         datastore = datacenter.find_datastore('large-datastore')
         expect(datastore).to eq(large_datastore)
@@ -276,26 +288,30 @@ describe VSphereCloud::Resources::Datacenter do
       large_datastore = instance_double('VSphereCloud::Resources::Datastore', name: 'large-datastore')
       inaccessible_datastore = instance_double('VSphereCloud::Resources::Datastore', name: 'inaccessible-datastore')
 
-      allow(datacenter).to receive(:clusters).and_return([
-        instance_double('VSphereCloud::Resources::Cluster',
-          accessible_datastores: {
-            small_datastore.name => small_datastore,
-            inaccessible_datastore.name => inaccessible_datastore
-          },
-        ),
-        instance_double('VSphereCloud::Resources::Cluster',
-          accessible_datastores: {
-            small_datastore.name => small_datastore,
-            large_datastore.name => large_datastore
-          }
-        ),
-      ])
+      allow(datacenter).to receive(:clusters).and_return(
+        [
+          instance_double(
+            'VSphereCloud::Resources::Cluster',
+            accessible_datastores: {
+              small_datastore.name => small_datastore,
+              inaccessible_datastore.name => inaccessible_datastore
+            },
+          ),
+          instance_double(
+            'VSphereCloud::Resources::Cluster',
+            accessible_datastores: {
+              small_datastore.name => small_datastore,
+              large_datastore.name => large_datastore
+            }
+          )
+        ]
+      )
 
-      expect(datacenter.accessible_datastores).to eq({
+      expect(datacenter.accessible_datastores).to eq(
         small_datastore.name => small_datastore,
         large_datastore.name => large_datastore,
         inaccessible_datastore.name => inaccessible_datastore
-      })
+      )
     end
   end
 
@@ -428,6 +444,19 @@ describe VSphereCloud::Resources::Datacenter do
             expect(client).to receive(:find_disk).with('fake-file_name', persistent_datastore, 'fake-disk-path').and_return(disk)
 
             expect(datacenter.find_disk(director_disk_cid)).to eq(disk)
+          end
+
+          context 'but datastore is not accessible' do
+            it 'raises DatastoreNotAccessible' do
+              expect(vm).to receive(:disk_path_by_cid).with('disk-cid').and_return('[not-accessible-ds] fake-disk-path/fake-file_name.vmdk')
+              expect(client).not_to receive(:find_disk)
+
+              expect {datacenter.find_disk(director_disk_cid) }.to raise_error do |error|
+                expect(error).to be_a(Bosh::Clouds::DiskNotFound)
+                expect(error.ok_to_retry).to eq(false)
+                expect(error.message).to match(/Could not find disk with id 'disk-cid'. Datastore 'not-accessible-ds' is not accessible./)
+              end
+            end
           end
         end
       end

@@ -140,6 +140,8 @@ module VSphereCloud
           unless disk_path.nil?
             datastore_name, disk_folder, disk_file = /\[(.+)\] (.+)\/(.+)\.vmdk/.match(disk_path)[1..3]
             datastore = accessible_datastores[datastore_name]
+            raise Bosh::Clouds::DiskNotFound.new(false),
+              "Could not find disk with id '#{disk_cid}'. Datastore '#{datastore_name}' is not accessible." if datastore.nil?
             disk = @client.find_disk(disk_file, datastore, disk_folder)
 
             @logger.debug("Disk #{disk_cid} found at new location: #{disk.path}") unless disk.nil?
