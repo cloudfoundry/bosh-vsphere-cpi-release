@@ -1,14 +1,15 @@
 module VSphereCloud
   module Resources
-    module Disk
+    class Disk
 
       attr_reader :cid, :size_in_mb, :datastore, :folder
       protected :initialize
 
-      def initialize(size_in_mb, datastore, folder)
+      def initialize(size_in_mb, datastore, folder, cid)
         @size_in_mb = size_in_mb
         @datastore = datastore
         @folder = folder
+        @cid = cid
       end
 
       def path
@@ -32,15 +33,13 @@ module VSphereCloud
       end
     end
 
-    class EphemeralDisk
-      include Disk
+    class EphemeralDisk < Disk
       DISK_NAME = 'ephemeral_disk'.freeze
 
       attr_reader :disk_type
 
       def initialize(size_in_mb:, datastore:, folder:, disk_type:)
-        super(size_in_mb, datastore, folder)
-        @cid = DISK_NAME
+        super(size_in_mb, datastore, folder, DISK_NAME)
         @disk_type = disk_type
       end
 
@@ -56,8 +55,7 @@ module VSphereCloud
       end
     end
 
-    class PersistentDisk
-      include Disk
+    class PersistentDisk < Disk
 
       # https://pubs.vmware.com/vsphere-55/index.jsp?topic=%2Fcom.vmware.wssdk.apiref.doc%2Fvim.VirtualDiskManager.VirtualDiskType.html
       SUPPORTED_DISK_TYPES = %w{
@@ -68,8 +66,7 @@ module VSphereCloud
       }
 
       def initialize(cid:, size_in_mb:, datastore:, folder:)
-        super(size_in_mb, datastore, folder)
-        @cid = cid
+        super(size_in_mb, datastore, folder, cid)
       end
 
       def create_disk_attachment_spec(disk_controller_id:)
