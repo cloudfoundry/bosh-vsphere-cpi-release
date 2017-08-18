@@ -1,1 +1,3 @@
 --color
+---require ./spec/support/verbose_formatter.rb
+---format VerboseFormatter
