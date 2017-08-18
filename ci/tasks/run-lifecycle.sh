@@ -57,5 +57,5 @@ fi
 
 pushd "${release_dir}/src/vsphere_cpi"
   bundle install
-  bundle exec -- ${RSPEC_FLAGS} -- ${RSPEC_ARGS}
+  bundle exec rspec -- ${RSPEC_FLAGS} -- ${RSPEC_ARGS}
 popd
