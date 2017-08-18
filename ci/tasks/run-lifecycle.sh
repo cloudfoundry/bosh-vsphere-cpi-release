@@ -57,5 +57,5 @@ fi
 
 pushd "${release_dir}/src/vsphere_cpi"
   bundle install
-  bundle exec parallel_rspec --serialize-stdout -- ${RSPEC_FLAGS} -- ${RSPEC_ARGS}
+  bundle exec -- ${RSPEC_FLAGS} -- ${RSPEC_ARGS}
 popd
