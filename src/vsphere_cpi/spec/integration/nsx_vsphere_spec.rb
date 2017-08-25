@@ -56,8 +56,8 @@ describe 'NSX for vsphere integration', nsx_vsphere: true do
       nsx: {
         address: @nsx_address,
         user: @nsx_user,
-        password: @nsx_password,
-      },
+        password: @nsx_password
+      }
     )
   end
 
@@ -72,13 +72,13 @@ describe 'NSX for vsphere integration', nsx_vsphere: true do
 
   context 'when vm_type specifies an nsx Security Group' do
     let(:vm_type) do
-      base_vm_type.merge({
+      base_vm_type.merge(
         'nsx' => {
           'security_groups' => [
-            security_group,
-          ],
-        },
-      })
+            security_group
+          ]
+        }
+      )
     end
 
     it 'creates the Security Group' do
@@ -136,13 +136,13 @@ describe 'NSX for vsphere integration', nsx_vsphere: true do
 
       context 'and vm_type specifies a duplicate nsx Security Group' do
         let(:vm_type) do
-          base_vm_type.merge({
+          base_vm_type.merge(
             'nsx' => {
               'security_groups' => [
-                security_group,
-              ],
-            },
-          })
+                security_group
+              ]
+            }
+          )
         end
 
         it 'adds the VM to the Security Group' do
@@ -187,7 +187,7 @@ describe 'NSX for vsphere integration', nsx_vsphere: true do
 
   context 'when vm_extensions has an NSX load balancer and pool' do
     let(:vm_type) do
-      base_vm_type.merge({
+      base_vm_type.merge(
         'nsx' => {
           'lbs' => [
             {
@@ -203,9 +203,9 @@ describe 'NSX for vsphere integration', nsx_vsphere: true do
               'security_group' => security_group,
               'port' => 80,
             }
-          ],
-        },
-      })
+          ]
+        }
+      )
     end
 
     before do
@@ -226,12 +226,12 @@ describe 'NSX for vsphere integration', nsx_vsphere: true do
           {
             'group_name' => security_group,
             'port' => '443',
-            'monitor_port' => '443',
+            'monitor_port' => '443'
           },
           {
             'group_name' => security_group,
             'port' => '80',
-            'monitor_port' => '80',
+            'monitor_port' => '80'
           }
         )
       end

@@ -7,7 +7,8 @@ module VSphereCloud
 
     let(:config) { { 'vcenters' => [fake: 'config'] } }
     let(:cloud_config) do
-      instance_double('VSphereCloud::Config',
+      instance_double(
+        'VSphereCloud::Config',
         logger: logger,
         vcenter_host: vcenter_host,
         vcenter_api_uri: vcenter_api_uri,
@@ -17,6 +18,7 @@ module VSphereCloud
         soap_log: 'fake-log-file',
         vcenter_enable_auto_anti_affinity_drs_rules: false,
         vcenter_http_logging: true,
+        nsxt_enabled?: false
       ).as_null_object
     end
     let(:default_disk_type) { 'preallocated' }
@@ -33,7 +35,9 @@ module VSphereCloud
     let(:agent_env) { instance_double('VSphereCloud::AgentEnv') }
     let(:vcenter_host) { 'fake-host' }
     let(:vcenter_api_uri) { URI.parse("https://#{vcenter_host}") }
-    before { allow(VSphereCloud::AgentEnv).to receive(:new).and_return(agent_env) }
+    before do
+      allow(VSphereCloud::AgentEnv).to receive(:new).and_return(agent_env)
+    end
 
     let(:cloud_searcher) { instance_double('VSphereCloud::CloudSearcher') }
     before { allow(CloudSearcher).to receive(:new).and_return(cloud_searcher) }
@@ -44,11 +48,11 @@ module VSphereCloud
         .with('fake-log-file')
         .and_return(http_client)
       allow(VCenterClient).to receive(:new)
-        .with({
+        .with(
           vcenter_api_uri: vcenter_api_uri,
           http_client: http_client,
           logger: logger,
-        })
+        )
         .and_return(vcenter_client)
       allow_any_instance_of(Cloud).to receive(:at_exit)
     end
@@ -757,7 +761,8 @@ module VSphereCloud
 
       context 'when the VM should have security tags' do
         let(:cloud_config) do
-          instance_double('VSphereCloud::Config',
+          instance_double(
+            'VSphereCloud::Config',
             logger: logger,
             vcenter_host: vcenter_host,
             vcenter_api_uri: vcenter_api_uri,
@@ -767,6 +772,7 @@ module VSphereCloud
             soap_log: 'fake-log-file',
             nsx_user: 'fake-nsx-user',
             nsx_password: 'fake-nsx-password',
+            nsxt_enabled?: false
           ).as_null_object
         end
         let(:vm_type) do

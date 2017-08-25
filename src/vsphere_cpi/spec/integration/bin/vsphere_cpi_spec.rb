@@ -6,7 +6,6 @@ describe 'the vsphere_cpi executable' do
   it 'will not evaluate anything that causes an exception and will return the proper message to stdout' do
     config_file = Tempfile.new('cloud_properties.yml')
     config_file.write(
-    {
       'cloud' => {
         'properties' => {
           'agent' => {
@@ -36,8 +35,7 @@ describe 'the vsphere_cpi executable' do
             }]
           }]
         }
-      }
-    }.to_yaml
+      }.to_yaml
     )
     config_file.close
 
@@ -81,11 +79,11 @@ describe 'the vsphere_cpi executable' do
 
     expect(result['result']).to be_nil
 
-    expect(result['error']).to eq({
-    'type' => 'Unknown',
-    'message' => 'Could not find cloud properties in the configuration',
-    'ok_to_retry' => false
-    })
+    expect(result['error']).to eq(
+      'type' => 'Unknown',
+      'message' => 'Could not find cloud properties in the configuration',
+      'ok_to_retry' => false
+    )
 
     expect(result['log']).to include('backtrace')
   end

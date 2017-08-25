@@ -53,7 +53,7 @@ module VSphereCloud
             'address' => nsx_url,
             'user' => nsx_user,
             'password' => nsx_password,
-          }
+          },
         ],
         'soap_log' => 'fake-soap-log'
       }
@@ -169,6 +169,38 @@ module VSphereCloud
           expect do
             config.validate
           end.to_not raise_error
+        end
+      end
+
+      context 'when a valid nsxt is passed in config' do
+        before do
+          config_hash.merge! 'nsxt' => {
+            'host' => 'fake-host',
+            'username' => 'fake-username',
+            'password' => 'fake-password',
+          }
+        end
+
+        it 'returns value from config' do
+          expect do
+            config.validate
+          end.to_not raise_error
+        end
+      end
+
+      context 'when an invalid nsxt is passed in config' do
+        before do
+          config_hash.merge! 'nsxt' => {
+            'host' => 'fake-host',
+            'username' => 'fake-username',
+            'password' => nil,
+          }
+        end
+
+        it 'raises a schema validation error' do
+          expect do
+            config.validate
+          end.to raise_error(Membrane::SchemaValidationError)
         end
       end
     end

@@ -1,9 +1,21 @@
 module VSphereCloud
+  class NSXTConfig < Struct.new(:host, :username, :password)
+    def self.validate_schema(config)
+      return true if config.nil?
+
+      Membrane::SchemaParser.parse do
+        {
+          'host' => String,
+          'username' => String,
+          'password' => String,
+        }
+      end.validate(config)
+    end
+  end
+
   class Config
     def self.build(config_hash)
-      config = new(config_hash)
-      config.validate
-      config
+      new(config_hash).tap(&:validate)
     end
 
     SUPPORTED_DISK_TYPES = ['thin', 'preallocated']
@@ -36,6 +48,7 @@ module VSphereCloud
       end
 
       validate_schema
+      NSXTConfig.validate_schema(config['nsxt'])
 
       @is_validated = true
     end
@@ -154,6 +167,19 @@ module VSphereCloud
       vcenter['nsx']['password']
     end
 
+    def nsxt
+      return nil unless nsxt_enabled?
+      NSXTConfig.new(
+        vcenter['nsxt']['host'],
+        vcenter['nsxt']['username'],
+        vcenter['nsxt']['password']
+      )
+    end
+
+    def nsxt_enabled?
+      !vcenter['nsxt'].nil?
+    end
+
     private
 
     attr_reader :config
@@ -183,6 +209,7 @@ module VSphereCloud
             'password' => String,
             optional('http_logging') => bool,
             optional('enable_auto_anti_affinity_drs_rules') => bool,
+            optional('nsxt') => dict(String, String),
             'datacenters' => [{
               'name' => String,
               'vm_folder' => String,

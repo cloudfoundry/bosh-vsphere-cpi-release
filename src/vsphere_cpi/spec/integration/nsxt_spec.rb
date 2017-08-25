@@ -1,0 +1,111 @@
+require 'integration/spec_helper'
+require 'pry-byebug'
+
+describe 'NSX-T' do
+  let(:network_spec) do
+    {
+      'static' => {
+        'ip' => "169.254.#{rand(1..254)}.#{rand(4..254)}",
+        'netmask' => '255.255.254.0',
+        'cloud_properties' => { 'name' => @opaque_vlan },
+        'default' => ['dns', 'gateway'],
+        'dns' => ['169.254.1.2'],
+        'gateway' => '169.254.1.3'
+      }
+    }
+  end
+  let(:cpi) do
+    VSphereCloud::Cloud.new(cpi_options(nsxt: {
+      host: @nsxt_host,
+      username: @nsxt_username,
+      password: @nsxt_password,
+    }))
+  end
+  let(:nsxt) do
+    VSphereCloud::NSXT::Client.new(@nsxt_host,@nsxt_username, @nsxt_password)
+  end
+
+  before do
+    @nsxt_host = fetch_property('BOSH_VSPHERE_CPI_NSXT_HOST')
+    @nsxt_username = fetch_property('BOSH_VSPHERE_CPI_NSXT_USERNAME')
+    @nsxt_password = fetch_property('BOSH_VSPHERE_CPI_NSXT_PASSWORD')
+    @nsxt_ca_cert = ENV['BOSH_VSPHERE_CPI_NSXT_CA_CERT']
+
+    if @nsxt_ca_cert
+      @ca_cert_file = Tempfile.new('bosh-cpi-ca-cert')
+      @ca_cert_file.write(@nsxt_ca_cert)
+      @ca_cert_file.close
+      ENV['BOSH_NSXT_CA_CERT_FILE'] = @ca_cert_file.path
+    end
+
+    @opaque_vlan = fetch_property('BOSH_VSPHERE_OPAQUE_VLAN')
+  end
+
+  after do
+    if @nsxt_ca_cert
+      ENV.delete('BOSH_NSXT_CA_CERT_FILE')
+      @ca_cert_file.unlink
+    end
+  end
+
+  context 'when the vm_type specifies an NSGroup' do
+    let(:nsgroup_name) { "BOSH-CPI-test-#{SecureRandom.uuid}" }
+    let(:vm_type) do
+      {
+        'ram' => 512,
+        'disk' => 2048,
+        'cpu' => 1,
+        'nsxt' => { 'nsgroups' => [nsgroup_name] }
+      }
+    end
+
+    context 'but the NSGroup does NOT exist' do
+      it 'raises NSGroupsNotFound' do
+        expect do
+          vm_lifecycle(cpi, [], vm_type, network_spec, @stemcell_id)
+        end.to raise_error(VSphereCloud::NSGroupsNotFound)
+      end
+    end
+
+    context 'and the NSGroup does exist' do
+      let(:nsgroup) { create_nsgroup(nsgroup_name) }
+      before { expect(nsgroup).to_not be_nil }
+      after { delete_nsgroup(nsgroup) }
+
+      it 'adds the logical port of the VM to the NSGroup' do
+        vm_lifecycle(cpi, [], vm_type, network_spec, @stemcell_id) do |vm_id|
+          external_id = nsxt.virtual_machines(display_name: vm_id).first.external_id
+          attachment_id = nsxt.vifs(owner_vm_id: external_id).first.lport_attachment_id
+          logical_port_id = nsxt.logical_ports(attachment_id: attachment_id).first.id
+
+          nsgroups = nsxt.nsgroups.select do |nsgroup|
+            nsgroup.display_name == nsgroup_name
+          end
+          expect(nsgroups.length).to eq(1)
+
+          expect(nsgroup_effective_logical_port_member_ids(nsgroup)).to include(logical_port_id)
+        end
+      end
+    end
+  end
+
+  def nsxt_client
+    nsxt.instance_variable_get('@client')
+  end
+
+  def create_nsgroup(display_name)
+    json = nsxt_client.post('ns-groups', body: {
+      display_name: display_name
+    }).body
+    VSphereCloud::NSXT::NSGroup.new(nsxt_client, id: json['id'], display_name: json['display_name'])
+  end
+
+  def delete_nsgroup(nsgroup)
+    nsxt_client.delete(nsgroup.href)
+  end
+
+  def nsgroup_effective_logical_port_member_ids(nsgroup)
+    json = nsxt_client.get("#{nsgroup.href}/effective-logical-port-members").body
+    json['results'].map { |member| member['target_id'] }
+  end
+end

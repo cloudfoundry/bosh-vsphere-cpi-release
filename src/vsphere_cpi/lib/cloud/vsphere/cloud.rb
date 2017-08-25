@@ -38,12 +38,12 @@ module VSphereCloud
       @client.login(@config.vcenter_user, @config.vcenter_password, 'en')
 
       @cloud_searcher = CloudSearcher.new(@client.service_content, @logger)
-      @cluster_provider = Resources::ClusterProvider.new({
+      @cluster_provider = Resources::ClusterProvider.new(
         datacenter_name: @config.datacenter_name,
         client: @client,
         logger: @logger,
-      })
-      @datacenter = Resources::Datacenter.new({
+      )
+      @datacenter = Resources::Datacenter.new(
         client: @client,
         ephemeral_pattern: @config.datacenter_datastore_pattern,
         persistent_pattern: @config.datacenter_persistent_datastore_pattern,
@@ -55,18 +55,21 @@ module VSphereCloud
         clusters: @config.datacenter_clusters,
         cluster_provider: @cluster_provider,
         logger: @logger,
-      })
-      @file_provider = FileProvider.new({
+      )
+      @file_provider = FileProvider.new(
         http_client: @http_client,
         vcenter_host: @config.vcenter_host,
         logger: @logger
-      })
-      @agent_env = AgentEnv.new({
+      )
+      @agent_env = AgentEnv.new(
         client: client,
         file_provider: @file_provider,
         cloud_searcher: @cloud_searcher,
         logger: @logger,
-      })
+      )
+
+      # Setup NSX-T Provider
+      @nsxt_provider = NSXTProvider.new(@config.nsxt) if @config.nsxt_enabled?
 
       # We get disconnected if the connection is inactive for a long period.
       @heartbeat_thread = Thread.new do
@@ -268,6 +271,10 @@ module VSphereCloud
           enable_auto_anti_affinity_drs_rules: @config.vcenter_enable_auto_anti_affinity_drs_rules
         )
         created_vm = vm_creator.create(vm_config)
+
+        if @config.nsxt_enabled?
+          @nsxt_provider.on_create_vm(created_vm.cid, vm_type['nsxt'])
+        end
 
         begin
           if vm_type.key?('nsx') && !vm_type['nsx']['security_groups'].nil?
