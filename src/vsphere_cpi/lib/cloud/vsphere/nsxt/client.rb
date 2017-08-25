@@ -8,7 +8,6 @@ module VSphereCloud
         root = URI::HTTPS.build(host: host, path: '/api/v1/')
 
         @client = JSONClient.new(base_url: root)
-        binding.pry
 
         @client.set_auth(root, username, password)
         # NSXT returns 403, not 401, so we need force basic auth from the get-go
