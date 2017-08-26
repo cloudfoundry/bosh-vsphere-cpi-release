@@ -239,6 +239,39 @@ module LifecycleHelpers
     true
   end
 
+  def simple_vm_lifecycle(cpi, network_name, vm_type = {})
+    default_network_spec = {
+      'static' => {
+        'ip' => "169.254.#{rand(1..254)}.#{rand(4..254)}",
+        'netmask' => '255.255.254.0',
+        'cloud_properties' => { 'name' => network_name },
+        'default' => ['dns', 'gateway'],
+        'dns' => ['169.254.1.2'],
+        'gateway' => '169.254.1.3'
+      }
+    }
+
+    default_vm_type = {
+      'ram' => 512,
+      'disk' => 2048,
+      'cpu' => 1,
+    }
+
+    vm_id = cpi.create_vm(
+      'agent-007',
+      @stemcell_id,
+      default_vm_type.merge(vm_type),
+      default_network_spec
+    )
+
+    expect(vm_id).to_not be_nil
+    expect(cpi.has_vm?(vm_id)).to be(true)
+
+    yield vm_id if block_given?
+  ensure
+    delete_vm(cpi, vm_id)
+  end
+
   def vm_lifecycle(cpi, disk_locality, vm_type, network_spec, stemcell_id, env = {'key' => 'value'})
     vm_id = cpi.create_vm(
       'agent-007',

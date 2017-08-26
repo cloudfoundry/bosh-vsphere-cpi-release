@@ -333,6 +333,10 @@ module VSphereCloud
         # Delete env.iso and VM specific files managed by the director
         @agent_env.clean_env(vm.mob) if vm.cdrom
 
+        if @config.nsxt_enabled?
+          @nsxt_provider.on_delete_vm(vm_cid)
+        end
+
         vm.delete
         @logger.info("Deleted vm: #{vm_cid}")
       end

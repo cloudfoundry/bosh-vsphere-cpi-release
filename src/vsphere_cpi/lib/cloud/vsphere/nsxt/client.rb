@@ -1,4 +1,5 @@
 require 'jsonclient'
+require 'pry-byebug'
 
 module VSphereCloud
   module NSXT
@@ -23,7 +24,7 @@ module VSphereCloud
       def nsgroups
         json = @client.get('ns-groups').body
         json['results'].map do |result|
-          NSGroup.new(@client, id: result['id'], display_name: result['display_name'])
+          NSGroup.new(@client, id: result['id'], display_name: result['display_name'], members: result['members'])
         end
       end
 

@@ -3,6 +3,16 @@ require 'spec_helper'
 describe VSphereCloud::NSXTProvider do
   let(:client) { instance_double(VSphereCloud::NSXT::Client) }
   let(:nsxt_config) { VSphereCloud::NSXTConfig.new('fake-host', 'fake-username', 'fake-password') }
+  let(:vm_id) { 'fake-vm-id' }
+  let(:virtual_machine) do
+    VSphereCloud::NSXT::VirtualMachine.new(external_id: 'fake-external-id')
+  end
+  let(:vif) do
+    VSphereCloud::NSXT::VIF.new(lport_attachment_id: 'fake-lport-attachment-id')
+  end
+  let(:logical_port) do
+    VSphereCloud::NSXT::LogicalPort.new(id: 'fake-logical-port-id')
+  end
   subject(:nsxt_provider) do
     described_class.new(nsxt_config).tap do |provider|
       provider.instance_variable_set('@client', client)
@@ -10,21 +20,11 @@ describe VSphereCloud::NSXTProvider do
   end
 
   context '#on_create_vm' do
-    let(:vm_id) { 'fake-vm-id' }
-    let(:virtual_machine) do
-      VSphereCloud::NSXT::VirtualMachine.new(external_id: 'fake-external-id')
-    end
-    let(:vif) do
-      VSphereCloud::NSXT::VIF.new(lport_attachment_id: 'fake-lport-attachment-id')
-    end
-    let(:logical_port) do
-      VSphereCloud::NSXT::LogicalPort.new(id: 'fake-logical-port-id')
-    end
-
-    context 'when vm_type_nsxt is NOT provided' do
-      it 'no-ops' do
-        # TODO
-      end
+    it 'does nothing when vm_type_nsxt is absent or empty' do
+      # No call to client should be made
+      nsxt_provider.on_create_vm(vm_id, nil)
+      nsxt_provider.on_create_vm(vm_id, {})
+      nsxt_provider.on_create_vm(vm_id, { 'nsgroups' => [] })
     end
 
     context 'when nsgroups are specified in vm_type_nsxt' do
@@ -107,6 +107,32 @@ describe VSphereCloud::NSXTProvider do
           nsxt_provider.on_create_vm(vm_id, vm_type_nsxt)
         end
       end
+    end
+  end
+
+  context '#on_delete_vm' do
+    let(:membership) do
+      VSphereCloud::NSXT::NSGroup::SimpleExpression.new(target_type: 'LogicalPort', target_property: 'id', op: 'EQUALS', value: logical_port.id)
+    end
+    let(:nsgroup_1) do
+      VSphereCloud::NSXT::NSGroup.new(client, id: 'id-1', display_name: 'test-nsgroup-1', members: [membership])
+    end
+    let(:nsgroup_2) do
+      VSphereCloud::NSXT::NSGroup.new(client, id: 'id-2', display_name: 'test-nsgroup-2', members: [membership])
+    end
+
+    before do
+      expect(client).to receive(:virtual_machines).with(display_name: vm_id).and_return([virtual_machine])
+      expect(client).to receive(:vifs).with(owner_vm_id: virtual_machine.external_id).and_return([vif])
+      expect(client).to receive(:logical_ports).with(attachment_id: vif.lport_attachment_id).and_return([logical_port])
+      expect(client).to receive(:nsgroups).and_return([nsgroup_1, nsgroup_2])
+    end
+
+    it "removes VM's logical port from all NSGroups" do
+      expect(nsgroup_1).to receive(:remove_member).with(logical_port)
+      expect(nsgroup_2).to receive(:remove_member).with(logical_port)
+
+      nsxt_provider.on_delete_vm(vm_id)
     end
   end
 end
