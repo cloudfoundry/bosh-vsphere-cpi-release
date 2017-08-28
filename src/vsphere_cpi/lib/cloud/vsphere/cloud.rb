@@ -273,7 +273,7 @@ module VSphereCloud
         created_vm = vm_creator.create(vm_config)
 
         if @config.nsxt_enabled?
-          @nsxt_provider.on_create_vm(created_vm.cid, vm_type['nsxt'])
+          @nsxt_provider.add_vm_to_nsgroups(created_vm.cid, vm_type['nsxt'])
         end
 
         begin
@@ -334,7 +334,11 @@ module VSphereCloud
         @agent_env.clean_env(vm.mob) if vm.cdrom
 
         if @config.nsxt_enabled?
-          @nsxt_provider.on_delete_vm(vm_cid)
+          begin
+            @nsxt_provider.remove_vm_from_nsgroups(vm_cid)
+          rescue => e
+            @logger.info("Failed to remove VM from NSGroups: #{e.message}")
+          end
         end
 
         vm.delete

@@ -81,7 +81,7 @@ describe 'NSX-T' do
           delete_nsgroup(nsgroup_2)
         end
 
-        it 'adds the logical port of the VM to the NSGroup' do
+        it 'adds the logical port of the VM to all given NSGroups' do
           vm_lifecycle(cpi, [], vm_type, network_spec, @stemcell_id) do |vm_id|
             external_id = nsxt.virtual_machines(display_name: vm_id).first.external_id
             attachment_id = nsxt.vifs(owner_vm_id: external_id).first.lport_attachment_id
@@ -135,10 +135,6 @@ describe 'NSX-T' do
         end
         expect(nsgroups).to eq([])
       end
-    end
-
-    context 'when NSX-T is disabled' do
-      # TODO
     end
   end
 

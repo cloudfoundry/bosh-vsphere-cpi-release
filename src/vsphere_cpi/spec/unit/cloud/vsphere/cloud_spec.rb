@@ -462,8 +462,10 @@ module VSphereCloud
       end
       let(:encoded_disk_cid) { 'fake-disk-cid' }
       let(:director_disk_cid) { VSphereCloud::DirectorDiskCID.new(encoded_disk_cid) }
+      let(:nsxt_provider) { instance_double(VSphereCloud::NSXTProvider) }
 
       before do
+        allow(VSphereCloud::NSXTProvider).to receive(:new).with(any_args).and_return(nsxt_provider)
         allow(vsphere_cloud).to receive(:stemcell_vm).with('fake-stemcell-cid').and_return(stemcell_vm)
         allow(cloud_searcher).to receive(:get_property)
           .with(
@@ -781,10 +783,7 @@ module VSphereCloud
             'ram' => 1024,
             'disk' => 4096,
             'nsx' => {
-              'security_groups' => [
-                'fake-security-tag',
-                'another-fake-security-tag',
-              ],
+              'security_groups' => %w(fake-security-tag another-fake-security-tag)
             }
           }
         end
@@ -808,33 +807,74 @@ module VSphereCloud
         end
 
         it 'should create the security tags and attach them to the VM' do
-          allow(VmConfig).to receive(:new)
-                           .and_return(vm_config)
+          allow(VmConfig).to receive(:new).and_return(vm_config)
           allow(NsxHttpClient).to receive(:new)
                             .with('fake-nsx-user', 'fake-nsx-password', 'fake-log-file')
                             .and_return(http_basic_auth_client)
           allow(NSX).to receive(:new).and_return(nsx)
           expect(vm_config).to receive(:validate)
 
-          expect(VmCreator).to receive(:new)
-                           .and_return(vm_creator)
-          expect(vm_creator).to receive(:create)
-                           .with(vm_config)
-                           .and_return(fake_vm)
+          expect(VmCreator).to receive(:new).and_return(vm_creator)
+          expect(vm_creator).to receive(:create).with(vm_config).and_return(fake_vm)
           expect(cloud_config).to receive(:validate_nsx_options)
-          expect(nsx).to receive(:add_vm_to_security_group)
-                           .with('fake-security-tag', 'fake-mob-id')
-          expect(nsx).to receive(:add_vm_to_security_group)
-                           .with('another-fake-security-tag', 'fake-mob-id')
-          expect(nsx).to receive(:add_vm_to_security_group)
-                           .with('my-fake-environment-group', 'fake-mob-id')
+          expect(nsx).to receive(:add_vm_to_security_group).with('fake-security-tag', 'fake-mob-id')
+          expect(nsx).to receive(:add_vm_to_security_group).with('another-fake-security-tag', 'fake-mob-id')
+          expect(nsx).to receive(:add_vm_to_security_group).with('my-fake-environment-group', 'fake-mob-id')
           vsphere_cloud.create_vm(
             'fake-agent-id',
             'fake-stemcell-cid',
             vm_type,
             'fake-networks-hash',
             [],
-            environment,
+            environment
+          )
+        end
+      end
+
+      context 'when NSXT is enabled' do
+        let(:nsxt_config) { VSphereCloud::NSXTConfig.new('fake-host', 'fake-username', 'fake-password') }
+        let(:cloud_config) do
+          instance_double(
+            'VSphereCloud::Config',
+            logger: logger,
+            vcenter_host: vcenter_host,
+            vcenter_api_uri: vcenter_api_uri,
+            vcenter_user: 'fake-user',
+            vcenter_password: 'fake-password',
+            vcenter_default_disk_type: default_disk_type,
+            soap_log: 'fake-log-file',
+            nsxt_enabled?: true,
+            nsxt: nsxt_config
+          ).as_null_object
+        end
+        let(:vm_type) do
+          {
+            'cpu' => 1,
+            'ram' => 1024,
+            'disk' => 4096,
+            'nsxt' => {
+              'nsgroups' => %w(fake-nsgroup-1 fake-nsgroup-2)
+            }
+          }
+        end
+
+        before do
+          allow(VmConfig).to receive(:new).and_return(vm_config)
+          expect(vm_config).to receive(:validate)
+          expect(VmCreator).to receive(:new).and_return(vm_creator)
+          expect(vm_creator).to receive(:create).with(vm_config).and_return(fake_vm)
+        end
+
+        it "adds the VM's logical port to NSGroups" do
+          expect(nsxt_provider).to receive(:add_vm_to_nsgroups).with(fake_vm.cid, vm_type['nsxt'])
+
+          vsphere_cloud.create_vm(
+            'fake-agent-id',
+            'fake-stemcell-cid',
+            vm_type,
+            'fake-networks-hash',
+            [],
+            {}
           )
         end
       end
@@ -1108,6 +1148,37 @@ module VSphereCloud
           expect(vm).to receive(:delete)
 
           vsphere_cloud.delete_vm('vm-id')
+        end
+      end
+
+      context 'when NSXT is enabled' do
+        let(:nsxt_provider) { instance_double(VSphereCloud::NSXTProvider) }
+        let(:nsxt_config) { VSphereCloud::NSXTConfig.new('fake-host', 'fake-username', 'fake-password') }
+
+        before do
+          allow(cloud_config).to receive(:nsxt_enabled?).and_return(true)
+          allow(cloud_config).to receive(:nsxt).and_return(nsxt_config)
+          expect(VSphereCloud::NSXTProvider).to receive(:new).with(any_args).and_return(nsxt_provider)
+        end
+
+        it "removes the VM's logical port from NSGroups" do
+          expect(vm).to receive(:power_off)
+          expect(vm).to receive(:delete)
+          expect(nsxt_provider).to receive(:remove_vm_from_nsgroups).with('vm-id')
+
+          vsphere_cloud.delete_vm('vm-id')
+        end
+
+        context 'and NSXTProvider fails to remove member' do
+          it 'deletes the VM' do
+            expect(vm).to receive(:power_off)
+            expect(vm).to receive(:delete)
+            expect(nsxt_provider).to receive(:remove_vm_from_nsgroups).with('vm-id').and_raise(
+              LogicalPortNotFound.new('vm-id', 'fake-external-id', 'fake-lport-attachment-id')
+            )
+
+            vsphere_cloud.delete_vm('vm-id')
+          end
         end
       end
     end
