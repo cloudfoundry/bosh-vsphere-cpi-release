@@ -66,6 +66,15 @@
     }
   end
 
+  if_p('vcenter.nsxt.host') do
+    vcenter = params['cloud']['properties']['vcenters'].first
+    vcenter['nsxt'] = {
+      'host' => p('vcenter.nsxt.host'),
+      'username' => p('vcenter.nsxt.username'),
+      'password' => p('vcenter.nsxt.password'),
+    }
+  end
+
   if_p('blobstore') do
     if p('blobstore.provider') == "s3"
       options = {
