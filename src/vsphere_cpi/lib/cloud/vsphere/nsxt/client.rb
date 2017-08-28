@@ -11,7 +11,7 @@ module VSphereCloud
         @client = JSONClient.new(base_url: root)
 
         @client.set_auth(root, username, password)
-        # NSXT returns 403, not 401, so we need force basic auth from the get-go
+        # NSX-T returns 403, not 401, so we need force basic auth from the get-go
         @client.force_basic_auth = true
 
         if ENV['BOSH_NSXT_CA_CERT_FILE']

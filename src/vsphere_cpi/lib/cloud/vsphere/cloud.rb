@@ -272,8 +272,19 @@ module VSphereCloud
         )
         created_vm = vm_creator.create(vm_config)
 
-        if @config.nsxt_enabled?
-          @nsxt_provider.add_vm_to_nsgroups(created_vm.cid, vm_type['nsxt'])
+        begin
+          if @config.nsxt_enabled?
+            @nsxt_provider.add_vm_to_nsgroups(created_vm.cid, vm_type['nsxt'])
+          end
+        rescue => e
+          @logger.info("Failed to add VM '#{created_vm.cid}' to NSGroups with error: #{e}")
+          begin
+            @logger.info("Deleting VM '#{created_vm.cid}'...")
+            delete_vm(created_vm.cid)
+          rescue => ex
+            @logger.info("Failed to delete VM '#{created_vm.cid}' with message: #{ex.inspect}")
+          end
+          raise e
         end
 
         begin

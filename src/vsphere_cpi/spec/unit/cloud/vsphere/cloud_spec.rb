@@ -831,7 +831,7 @@ module VSphereCloud
         end
       end
 
-      context 'when NSXT is enabled' do
+      context 'when NSX-T is enabled' do
         let(:nsxt_config) { VSphereCloud::NSXTConfig.new('fake-host', 'fake-username', 'fake-password') }
         let(:cloud_config) do
           instance_double(
@@ -876,6 +876,28 @@ module VSphereCloud
             [],
             {}
           )
+        end
+
+        context 'and an error occurs when adding VM to NSGroups' do
+          let(:nsxt_error) { NSGroupsNotFound.new('fake-nsgroup-name') }
+          before do
+            expect(nsxt_provider).to receive(:add_vm_to_nsgroups).with(any_args).and_raise(nsxt_error)
+          end
+
+          it 'delete created VM and raises error' do
+            expect(vsphere_cloud).to receive(:delete_vm).with(fake_vm.cid)
+
+            expect do
+              vsphere_cloud.create_vm(
+                'fake-agent-id',
+                'fake-stemcell-cid',
+                vm_type,
+                'fake-networks-hash',
+                [],
+                {}
+              )
+            end.to raise_error(nsxt_error)
+          end
         end
       end
     end
@@ -1151,7 +1173,7 @@ module VSphereCloud
         end
       end
 
-      context 'when NSXT is enabled' do
+      context 'when NSX-T is enabled' do
         let(:nsxt_provider) { instance_double(VSphereCloud::NSXTProvider) }
         let(:nsxt_config) { VSphereCloud::NSXTConfig.new('fake-host', 'fake-username', 'fake-password') }
 

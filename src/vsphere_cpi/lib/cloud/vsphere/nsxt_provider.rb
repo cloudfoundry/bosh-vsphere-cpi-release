@@ -7,7 +7,7 @@ module VSphereCloud
     end
 
     def to_s
-      "VM #{@vm_id} was expected in NSXT but was not found"
+      "VM #{@vm_id} was expected in NSX-T but was not found"
     end
   end
 
@@ -18,7 +18,7 @@ module VSphereCloud
     end
 
     def to_s
-      "VIF for VM #{@vm_id} with 'external_id' #{@external_id} was expected in NSXT but was not found"
+      "VIF for VM #{@vm_id} with 'external_id' #{@external_id} was expected in NSX-T but was not found"
     end
   end
 
@@ -30,7 +30,7 @@ module VSphereCloud
     end
 
     def to_s
-      "Logical port with attachment_id #{@lport_attachment_id} for VIF for VM #{@vm_id} with 'external_id' #{@external_id} was expected in NSXT but was not found"
+      "Logical port with attachment_id #{@lport_attachment_id} for VIF for VM #{@vm_id} with 'external_id' #{@external_id} was expected in NSX-T but was not found"
     end
   end
 
@@ -40,7 +40,7 @@ module VSphereCloud
     end
 
     def to_s
-      "NSGroups [#{@display_names.join(', ')}] was not found in NSXT"
+      "NSGroups [#{@display_names.join(', ')}] was not found in NSX-T"
     end
   end
 
