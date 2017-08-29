@@ -49,7 +49,7 @@ module VSphereCloud
       @client = NSXT::Client.new(config.host, config.username, config.password)
     end
 
-    def add_vm_to_nsgroups(vm_id, vm_type_nsxt)
+    def add_vm_to_nsgroups(vm, vm_type_nsxt)
       return if vm_type_nsxt.nil? || vm_type_nsxt['nsgroups'].nil? || vm_type_nsxt['nsgroups'].empty?
 
       nsgroups_by_name = @client.nsgroups.each_with_object({}) do |nsgroup, hash|
@@ -63,12 +63,12 @@ module VSphereCloud
 
       nsgroups = vm_type_nsxt['nsgroups'].map(&nsgroups_by_name.method(:[]))
 
-      lport = logical_port(vm_id)
+      lport = logical_port(vm)
       nsgroups.each { |nsgroup| nsgroup.add_member(lport) }
     end
 
-    def remove_vm_from_nsgroups(vm_id)
-      lport = logical_port(vm_id)
+    def remove_vm_from_nsgroups(vm)
+      lport = logical_port(vm)
 
       nsgroups = @client.nsgroups.select do |nsgroup|
         nsgroup.members.find do |member|
@@ -81,26 +81,37 @@ module VSphereCloud
 
     private
 
-    def logical_port(vm_id)
+    def logical_port(vm)
+      return nil if nsxt_nics(vm).empty?
       # TODO(cdutra): virtual machine and vifs exist even without using NSX-T Opaque Networks (nsx.LogicalSwitch)
 
-      virtual_machines = @client.virtual_machines(display_name: vm_id)
+      # if vm.cid is nil will return all virtual_machine
+      virtual_machines = @client.virtual_machines(display_name: vm.cid)
       if virtual_machines.empty?
-        raise VirtualMachineNotFound.new(vm_id)
+        raise VirtualMachineNotFound.new(vm.cid)
       end
       external_id = virtual_machines.first.external_id
 
+      # if external_id is nil will return all vifs
       vifs = @client.vifs(owner_vm_id: external_id)
       if vifs.empty?
-        raise VIFNotFound.new(vm_id, external_id)
+        raise VIFNotFound.new(vm.cid, external_id)
       end
       lport_attachment_id = vifs.first.lport_attachment_id
 
+      # if lport_attachment_id is nil will return all logical_ports
       logical_ports = @client.logical_ports(attachment_id: lport_attachment_id)
       if logical_ports.empty?
-        raise LogicalPortNotFound.new(vm_id, external_id, lport_attachment_id)
+        raise LogicalPortNotFound.new(vm.cid, external_id, lport_attachment_id)
       end
       logical_ports.first
+    end
+
+    def nsxt_nics(vm)
+      vm.nics.select do |nic|
+        nic.backing.is_a?(VimSdk::Vim::Vm::Device::VirtualEthernetCard::OpaqueNetworkBackingInfo) &&
+          nic.backing.opaque_network_type == 'nsx.LogicalSwitch'
+      end
     end
   end
 end

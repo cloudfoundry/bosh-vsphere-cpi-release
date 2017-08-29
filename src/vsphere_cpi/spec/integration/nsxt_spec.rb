@@ -59,8 +59,8 @@ describe 'NSX-T' do
   end
 
   describe 'on create_vm' do
-    context 'when the vm_type specifies an NSGroup' do
-      context 'but the NSGroup does NOT exist' do
+    context 'when NSGroups are specified' do
+      context 'but at least of the NSGroups do NOT exist' do
         it 'raises NSGroupsNotFound' do
           expect do
             vm_lifecycle(cpi, [], vm_type, network_spec, @stemcell_id)
@@ -68,7 +68,7 @@ describe 'NSX-T' do
         end
       end
 
-      context 'and the NSGroup does exist' do
+      context 'and all the NSGroups exist' do
         let(:nsgroup_1) { create_nsgroup(nsgroup_name_1) }
         let(:nsgroup_2) { create_nsgroup(nsgroup_name_2) }
         before do
@@ -97,19 +97,15 @@ describe 'NSX-T' do
         end
 
         context "but none of VM's networks are NSX-T Opaque Network (nsx.LogicalSwitch)" do
-          it 'does NOT try to add VM to NSGroups' do
+          it 'does NOT add VM to NSGroups' do
             simple_vm_lifecycle(cpi, @vlan, vm_type) do |vm_id|
               external_id = nsxt.virtual_machines(display_name: vm_id).first.external_id
               attachment_id = nsxt.vifs(owner_vm_id: external_id).first.lport_attachment_id
               logical_port_id = nsxt.logical_ports(attachment_id: attachment_id).first.id
 
               nsgroups = nsxt.nsgroups.select do |nsgroup|
-                [nsgroup_name_1, nsgroup_name_2].include?(nsgroup.display_name)
+                expect(nsgroup_effective_logical_port_member_ids(nsgroup)).to_not include(logical_port_id)
               end
-              expect(nsgroups.length).to eq(2)
-
-              expect(nsgroup_effective_logical_port_member_ids(nsgroup_1)).to_not include(logical_port_id)
-              expect(nsgroup_effective_logical_port_member_ids(nsgroup_2)).to_not include(logical_port_id)
             end
           end
         end

@@ -866,7 +866,7 @@ module VSphereCloud
         end
 
         it "adds the VM's logical port to NSGroups" do
-          expect(nsxt_provider).to receive(:add_vm_to_nsgroups).with(fake_vm.cid, vm_type['nsxt'])
+          expect(nsxt_provider).to receive(:add_vm_to_nsgroups).with(fake_vm, vm_type['nsxt'])
 
           vsphere_cloud.create_vm(
             'fake-agent-id',
@@ -1176,6 +1176,7 @@ module VSphereCloud
       context 'when NSX-T is enabled' do
         let(:nsxt_provider) { instance_double(VSphereCloud::NSXTProvider) }
         let(:nsxt_config) { VSphereCloud::NSXTConfig.new('fake-host', 'fake-username', 'fake-password') }
+        let(:vm) { instance_double(VSphereCloud::Resources::VM, cid: ' vm-id') }
 
         before do
           allow(cloud_config).to receive(:nsxt_enabled?).and_return(true)
@@ -1186,7 +1187,7 @@ module VSphereCloud
         it "removes the VM's logical port from NSGroups" do
           expect(vm).to receive(:power_off)
           expect(vm).to receive(:delete)
-          expect(nsxt_provider).to receive(:remove_vm_from_nsgroups).with('vm-id')
+          expect(nsxt_provider).to receive(:remove_vm_from_nsgroups).with(vm)
 
           vsphere_cloud.delete_vm('vm-id')
         end
@@ -1195,7 +1196,7 @@ module VSphereCloud
           it 'deletes the VM' do
             expect(vm).to receive(:power_off)
             expect(vm).to receive(:delete)
-            expect(nsxt_provider).to receive(:remove_vm_from_nsgroups).with('vm-id').and_raise(
+            expect(nsxt_provider).to receive(:remove_vm_from_nsgroups).with(vm).and_raise(
               LogicalPortNotFound.new('vm-id', 'fake-external-id', 'fake-lport-attachment-id')
             )
 
