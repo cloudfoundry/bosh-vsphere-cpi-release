@@ -24,6 +24,16 @@ describe 'NSX-T' do
   let(:nsxt) do
     VSphereCloud::NSXT::Client.new(@nsxt_host,@nsxt_username, @nsxt_password)
   end
+  let(:nsgroup_name_1) { "BOSH-CPI-test-#{SecureRandom.uuid}" }
+  let(:nsgroup_name_2) { "BOSH-CPI-test-#{SecureRandom.uuid}" }
+  let(:vm_type) do
+    {
+      'ram' => 512,
+      'disk' => 2048,
+      'cpu' => 1,
+      'nsxt' => { 'nsgroups' => [nsgroup_name_1, nsgroup_name_2] }
+    }
+  end
 
   before do
     @nsxt_host = fetch_property('BOSH_VSPHERE_CPI_NSXT_HOST')
@@ -50,17 +60,6 @@ describe 'NSX-T' do
 
   describe 'on create_vm' do
     context 'when the vm_type specifies an NSGroup' do
-      let(:nsgroup_name_1) { "BOSH-CPI-test-#{SecureRandom.uuid}" }
-      let(:nsgroup_name_2) { "BOSH-CPI-test-#{SecureRandom.uuid}" }
-      let(:vm_type) do
-        {
-          'ram' => 512,
-          'disk' => 2048,
-          'cpu' => 1,
-          'nsxt' => { 'nsgroups' => [nsgroup_name_1, nsgroup_name_2] }
-        }
-      end
-
       context 'but the NSGroup does NOT exist' do
         it 'raises NSGroupsNotFound' do
           expect do
@@ -82,7 +81,7 @@ describe 'NSX-T' do
         end
 
         it 'adds the logical port of the VM to all given NSGroups' do
-          vm_lifecycle(cpi, [], vm_type, network_spec, @stemcell_id) do |vm_id|
+          simple_vm_lifecycle(cpi, @opaque_vlan, vm_type) do |vm_id|
             external_id = nsxt.virtual_machines(display_name: vm_id).first.external_id
             attachment_id = nsxt.vifs(owner_vm_id: external_id).first.lport_attachment_id
             logical_port_id = nsxt.logical_ports(attachment_id: attachment_id).first.id
@@ -96,17 +95,30 @@ describe 'NSX-T' do
             expect(nsgroup_effective_logical_port_member_ids(nsgroup_2)).to include(logical_port_id)
           end
         end
+
+        context "but none of VM's networks are NSX-T Opaque Network (nsx.LogicalSwitch)" do
+          it 'does NOT try to add VM to NSGroups' do
+            simple_vm_lifecycle(cpi, @vlan, vm_type) do |vm_id|
+              external_id = nsxt.virtual_machines(display_name: vm_id).first.external_id
+              attachment_id = nsxt.vifs(owner_vm_id: external_id).first.lport_attachment_id
+              logical_port_id = nsxt.logical_ports(attachment_id: attachment_id).first.id
+
+              nsgroups = nsxt.nsgroups.select do |nsgroup|
+                [nsgroup_name_1, nsgroup_name_2].include?(nsgroup.display_name)
+              end
+              expect(nsgroups.length).to eq(2)
+
+              expect(nsgroup_effective_logical_port_member_ids(nsgroup_1)).to_not include(logical_port_id)
+              expect(nsgroup_effective_logical_port_member_ids(nsgroup_2)).to_not include(logical_port_id)
+            end
+          end
+        end
       end
     end
   end
 
   describe 'on delete_vm' do
     context 'when NSX-T is enabled' do
-      let(:nsgroup_name_1) { "BOSH-CPI-test-#{SecureRandom.uuid}" }
-      let(:nsgroup_name_2) { "BOSH-CPI-test-#{SecureRandom.uuid}" }
-      let(:vm_type) do
-        { 'nsxt' => { 'nsgroups' => [nsgroup_name_1, nsgroup_name_2] } }
-      end
       let(:nsgroup_1) { create_nsgroup(nsgroup_name_1) }
       let(:nsgroup_2) { create_nsgroup(nsgroup_name_2) }
       before do

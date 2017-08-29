@@ -26,6 +26,8 @@ module VSphereCloud
         if ENV['BOSH_NSXT_CA_CERT_FILE']
           @client.ssl_config.add_trust_ca(ENV['BOSH_NSXT_CA_CERT_FILE'])
         end
+
+        @client.ssl_config.verify_mode = OpenSSL::SSL::VERIFY_NONE
       end
 
       def nsgroups

@@ -274,7 +274,16 @@ module VSphereCloud
 
         begin
           if @config.nsxt_enabled?
-            @nsxt_provider.add_vm_to_nsgroups(created_vm.cid, vm_type['nsxt'])
+            vm_uses_nsxt_network = created_vm.nics.any? do |nic|
+              nic.backing.is_a?(VimSdk::Vim::Vm::Device::VirtualEthernetCard::OpaqueNetworkBackingInfo) &&
+                nic.backing.opaque_network_type == 'nsx.LogicalSwitch'
+            end
+
+            if vm_uses_nsxt_network
+              @nsxt_provider.add_vm_to_nsgroups(created_vm.cid, vm_type['nsxt'])
+            else
+              @logger.info("VM '#{created_vm.cid}' is not configured with any NSX-T Network.")
+            end
           end
         rescue => e
           @logger.info("Failed to add VM '#{created_vm.cid}' to NSGroups with error: #{e}")

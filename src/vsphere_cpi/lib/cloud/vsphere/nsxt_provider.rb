@@ -82,6 +82,8 @@ module VSphereCloud
     private
 
     def logical_port(vm_id)
+      # TODO(cdutra): virtual machine and vifs exist even without using NSX-T Opaque Networks (nsx.LogicalSwitch)
+
       virtual_machines = @client.virtual_machines(display_name: vm_id)
       if virtual_machines.empty?
         raise VirtualMachineNotFound.new(vm_id)
