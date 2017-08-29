@@ -604,45 +604,6 @@ module VSphereCloud
       env
     end
 
-    def get_vm_location(vm, options = {})
-      datacenter_name = options[:datacenter]
-      datastore_name = options[:datastore]
-      vm_name = options[:vm]
-
-      unless datacenter_name
-        datacenter_name = config.datacenter_name
-      end
-
-      if vm_name.nil? || datastore_name.nil?
-        vm_properties =
-          @cloud_searcher.get_properties(vm, Vim::VirtualMachine, ['config.hardware.device', 'name'], ensure_all: true)
-        vm_name = vm_properties['name']
-
-        unless datastore_name
-          devices = vm_properties['config.hardware.device']
-          datastore = get_primary_datastore(devices, vm_name)
-          datastore_name = @cloud_searcher.get_property(datastore, Vim::Datastore, 'name')
-        end
-      end
-
-      { datacenter: datacenter_name, datastore: datastore_name, vm: vm_name }
-    end
-
-    def get_primary_datastore(devices, vm_name = nil)
-      ephemeral_disks = devices.select { |device| device.kind_of?(Vim::Vm::Device::VirtualDisk) &&
-        device.backing.disk_mode != Vim::Vm::Device::VirtualDiskOption::DiskMode::INDEPENDENT_PERSISTENT }
-
-      datastore = ephemeral_disks.first.backing.datastore
-      disk_in_wrong_datastore = ephemeral_disks.find { |disk| !datastore.eql?(disk.backing.datastore) }
-      if disk_in_wrong_datastore
-        error_msg = vm_name ? "for VM '#{vm_name}'" : ''
-        raise "Ephemeral disks #{error_msg} should all be on the same datastore. " +
-            "Expected datastore '#{datastore}' to match datastore '#{disk_in_wrong_datastore.backing.datastore}'"
-      end
-
-      datastore
-    end
-
     def clone_vm(vm, name, folder, resource_pool, options={})
       relocation_spec = Vim::Vm::RelocateSpec.new
       relocation_spec.datastore = options[:datastore] if options[:datastore]
@@ -764,21 +725,26 @@ module VSphereCloud
       info.entity
     end
 
+    def get_vm_env_datastore_name(vm)
+      cdrom = @client.get_cdrom_device(vm.mob)
+      cdrom.backing.datastore.name
+    end
+
     def add_disk_to_agent_env(vm, director_disk_cid, device_unit_number)
       env = @agent_env.get_current_env(vm.mob, @datacenter.name)
       env['disks']['persistent'][director_disk_cid.raw] = device_unit_number.to_s
-      location = get_vm_location(vm.mob, datacenter: @datacenter.name)
+      location = { datacenter: @datacenter.name, datastore: get_vm_env_datastore_name(vm), vm: vm.cid }
       @agent_env.set_env(vm.mob, location, env)
     end
 
     def delete_disk_from_agent_env(vm, director_disk_cid)
-      vm_mob = vm.mob
-      location = get_vm_location(vm_mob)
-      env = @agent_env.get_current_env(vm_mob, location[:datacenter])
+      env = @agent_env.get_current_env(vm.mob, @datacenter.name)
+      location = { datacenter: @datacenter.name, datastore: get_vm_env_datastore_name(vm), vm: vm.cid }
+
       if env['disks']['persistent'][director_disk_cid.raw]
         env['disks']['persistent'].delete(director_disk_cid.raw)
 
-        @agent_env.set_env(vm_mob, location, env)
+        @agent_env.set_env(vm.mob, location, env)
       end
     end
 

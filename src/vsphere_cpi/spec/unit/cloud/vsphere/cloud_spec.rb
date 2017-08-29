@@ -53,7 +53,9 @@ module VSphereCloud
       allow_any_instance_of(Cloud).to receive(:at_exit)
     end
 
-    let(:datacenter) { instance_double('VSphereCloud::Resources::Datacenter', name: 'fake-datacenter', clusters: []) }
+    let(:datacenter) do
+      instance_double('VSphereCloud::Resources::Datacenter', name: 'fake-datacenter', clusters: [])
+    end
     before { allow(Resources::Datacenter).to receive(:new).and_return(datacenter) }
     let(:vm_provider) { instance_double('VSphereCloud::VMProvider') }
     before { allow(VSphereCloud::VMProvider).to receive(:new).and_return(vm_provider) }
@@ -870,12 +872,20 @@ module VSphereCloud
 
     describe '#attach_disk' do
       let(:agent_env_hash) { { 'disks' => { 'persistent' => { 'disk-cid' => 'fake-device-number' } } } }
-      let(:vm_location) { double(:vm_location) }
       let(:datastore_with_disk) { instance_double('VSphereCloud::Resources::Datastore', name: 'datastore-with-disk', free_space: 2048)}
       let(:datastore_without_disk) { instance_double('VSphereCloud::Resources::Datastore', name: 'datastore-without-disk', free_space: 4096)}
       let(:inaccessible_datastore) { instance_double('VSphereCloud::Resources::Datastore', name: 'inaccessible-datastore', free_space: 4096)}
       let(:disk) { Resources::PersistentDisk.new(cid: 'disk-cid', size_in_mb: 1024, datastore: datastore_with_disk, folder: 'fake-folder') }
       let(:director_disk_cid) { VSphereCloud::DirectorDiskCID.new('disk-cid') }
+      let(:vm_location) do
+        {
+          datacenter: 'fake-datacenter',
+          datastore: 'fake-datastore-name',
+          vm: 'vm-id'
+        }
+      end
+      let(:cdrom) { instance_double(VimSdk::Vim::Vm::Device::VirtualCdrom) }
+
 
       before do
         allow(datacenter).to receive(:persistent_pattern).and_return(/datastore\-.*/)
@@ -896,7 +906,8 @@ module VSphereCloud
         allow(vm_provider).to receive(:find).with('fake-vm-cid').and_return(vm)
 
         allow(agent_env).to receive(:get_current_env).and_return(agent_env_hash)
-        allow(vsphere_cloud).to receive(:get_vm_location).and_return(vm_location)
+        allow(cdrom).to receive_message_chain(:backing, :datastore, :name) { 'fake-datastore-name' }
+        allow(vcenter_client).to receive(:get_cdrom_device).with(vm_mob).and_return(cdrom)
       end
 
       context 'when disk is in a datastore accessible to VM' do
@@ -1098,23 +1109,22 @@ module VSphereCloud
     describe '#detach_disk' do
       context 'disk is attached' do
         let(:attached_disk) { instance_double(VimSdk::Vim::Vm::Device::VirtualDisk, key: 'disk-key') }
-
         let(:vm_location) do
           {
-            datacenter: 'fake-datacenter-name',
+            datacenter: 'fake-datacenter',
             datastore: 'fake-datastore-name',
-            vm: 'fake-vm-name'
+            vm: 'vm-id'
           }
         end
-
+        let(:cdrom) { instance_double(VimSdk::Vim::Vm::Device::VirtualCdrom) }
         let(:env) do
           {'disks' => {'persistent' => {'disk-cid' => 'fake-data'}}}
         end
 
         before do
-          allow(vsphere_cloud).to receive(:get_vm_location).and_return(vm_location)
-          allow(agent_env).to receive(:get_current_env).with(vm_mob, 'fake-datacenter-name').
-              and_return(env)
+          allow(cdrom).to receive_message_chain(:backing, :datastore, :name) { 'fake-datastore-name' }
+          allow(vcenter_client).to receive(:get_cdrom_device).with(vm_mob).and_return(cdrom)
+          allow(agent_env).to receive(:get_current_env).with(vm_mob, 'fake-datacenter').and_return(env)
           allow(vm).to receive(:disk_by_cid).with('disk-cid').and_return(attached_disk)
         end
 
