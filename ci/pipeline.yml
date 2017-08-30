@@ -3,7 +3,6 @@
 groups:
   - name: bosh-vsphere-cpi
     jobs:
-      - cache-stemcells
       - pyvmomi_to_ruby-tests
       - build-candidate
       - lifecycle-6.0
@@ -14,25 +13,6 @@ groups:
       - promote-candidate
 
 jobs:
-  - name: cache-stemcells
-    plan:
-      - aggregate:
-        - {trigger: true, get: vsphere-centos-stemcell, tags: ["vsphere-v6.0"]}
-        - {trigger: true, get: vsphere-ubuntu-stemcell, tags: ["vsphere-v6.0"]}
-      - task: setup-container
-        tags: ["vsphere-v6.0"]
-        config:
-          platform: linux
-          image_resource:
-            type: docker-image
-            source: {repository: boshcpi/vsphere-cpi-release}
-          inputs:
-            - name: vsphere-centos-stemcell
-            - name: vsphere-ubuntu-stemcell
-          run:
-            path: echo
-            args: ["Finished setting up container."]
-
   - name: pyvmomi_to_ruby-tests
     serial: true
     plan:
@@ -313,10 +293,6 @@ resources:
     type: bosh-io-stemcell
     source:
       name: bosh-vsphere-esxi-ubuntu-trusty-go_agent
-  - name: vsphere-centos-stemcell
-    type: bosh-io-stemcell
-    source:
-      name: bosh-vsphere-esxi-centos-7-go_agent
   - name: bosh-cli
     type: s3
     source:
