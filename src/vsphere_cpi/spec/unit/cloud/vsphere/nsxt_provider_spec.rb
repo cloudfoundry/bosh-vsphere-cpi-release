@@ -6,6 +6,10 @@ describe VSphereCloud::NSXTProvider do
   let(:opaque_nsxt) do
     instance_double(
       VimSdk::Vim::Vm::Device::VirtualEthernetCard,
+      device_info: instance_double(
+        VimSdk::Vim::Description,
+        summary: 'nsx.LogicalSwitch: nsx-t-network-id'
+      ),
       backing: VimSdk::Vim::Vm::Device::VirtualEthernetCard::OpaqueNetworkBackingInfo.new.tap do |backing|
         backing.opaque_network_type = 'nsx.LogicalSwitch'
       end
@@ -14,6 +18,10 @@ describe VSphereCloud::NSXTProvider do
   let(:opaque_non_nsxt) do
     instance_double(
       VimSdk::Vim::Vm::Device::VirtualEthernetCard,
+      device_info: instance_double(
+        VimSdk::Vim::Description,
+        summary: 'non-nsx-t'
+      ),
       backing: VimSdk::Vim::Vm::Device::VirtualEthernetCard::OpaqueNetworkBackingInfo.new.tap do |backing|
         backing.opaque_network_type = 'nsx.LogicalRouter'
       end
@@ -22,6 +30,10 @@ describe VSphereCloud::NSXTProvider do
   let(:network_backing) do
     instance_double(
       VimSdk::Vim::Vm::Device::VirtualEthernetCard,
+      device_info: instance_double(
+        VimSdk::Vim::Description,
+        summary: 'network'
+      ),
       backing: VimSdk::Vim::Vm::Device::VirtualEthernetCard::NetworkBackingInfo.new.tap do |backing|
         backing.device_name = 'network-name'
       end
@@ -50,9 +62,10 @@ describe VSphereCloud::NSXTProvider do
   let(:simple_expression_2) do
     NSXT::NSGroup::SimpleExpression.from_resource(logical_port_2, 'id')
   end
+  let(:logger) { Logger.new('/dev/null') }
 
   subject(:nsxt_provider) do
-    described_class.new(nsxt_config).tap do |provider|
+    described_class.new(nsxt_config, logger).tap do |provider|
       provider.instance_variable_set('@client', client)
     end
   end

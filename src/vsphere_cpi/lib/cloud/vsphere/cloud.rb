@@ -69,7 +69,7 @@ module VSphereCloud
       )
 
       # Setup NSX-T Provider
-      @nsxt_provider = NSXTProvider.new(@config.nsxt) if @config.nsxt_enabled?
+      @nsxt_provider = NSXTProvider.new(@config.nsxt, @logger) if @config.nsxt_enabled?
 
       # We get disconnected if the connection is inactive for a long period.
       @heartbeat_thread = Thread.new do

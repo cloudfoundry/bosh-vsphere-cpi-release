@@ -36,18 +36,21 @@ module VSphereCloud
   end
 
   class NSXTProvider
-    def initialize(config)
-      @client = NSXT::Client.new(config.host, config.username, config.password)
+    def initialize(config, logger)
+      @client = NSXT::Client.new(config.host, config.username, config.password, logger)
+      @logger = logger
     end
 
     def add_vm_to_nsgroups(vm, vm_type_nsxt)
       return if vm_type_nsxt.nil? || vm_type_nsxt['nsgroups'].nil? || vm_type_nsxt['nsgroups'].empty?
       return if nsxt_nics(vm).empty?
 
+      @logger.info("Adding vm '#{vm.cid}' to NSGroups: #{vm_type_nsxt['nsgroups']}")
       nsgroups = retrieve_nsgroups(vm_type_nsxt['nsgroups'])
 
       lports = logical_ports(vm)
       nsgroups.each do |nsgroup|
+        @logger.info("Adding LogicalPorts: #{lports.map(&:id)} to NSGroup '#{nsgroup.id}'")
         nsgroup.add_members(*to_simple_expressions(lports))
       end
     end
@@ -67,6 +70,7 @@ module VSphereCloud
       end
 
       nsgroups.each do |nsgroup|
+        @logger.info("Removing LogicalPorts: #{lport_ids} to NSGroup '#{nsgroup.id}'")
         nsgroup.remove_members(*to_simple_expressions(lports))
       end
     end
@@ -76,6 +80,7 @@ module VSphereCloud
     NSXT_LOGICAL_SWITCH = 'nsx.LogicalSwitch'.freeze
 
     def retrieve_nsgroups(nsgroup_names)
+      @logger.info("Searching for groups: #{nsgroup_names}")
       nsgroups_by_name = @client.nsgroups.each_with_object({}) do |nsgroup, hash|
         hash[nsgroup.display_name] = nsgroup
       end
@@ -85,25 +90,32 @@ module VSphereCloud
       end
       raise NSGroupsNotFound.new(*missing) unless missing.empty?
 
-      nsgroup_names.map do |nsgroup_name|
+      found_nsgroups = nsgroup_names.map do |nsgroup_name|
         nsgroups_by_name[nsgroup_name]
       end
+      @logger.info("Found NSGroups with ids: #{found_nsgroups.map(&:id)}")
+
+      found_nsgroups
     end
 
     def logical_ports(vm)
+      @logger.info("Searching for LogicalPorts for vm '#{vm.cid}'")
       virtual_machines = @client.virtual_machines(display_name: vm.cid)
       raise VirtualMachineNotFound.new(vm.cid) if virtual_machines.empty?
       raise 'Multiple NSX-T virtual machines found.' if virtual_machines.length > 1
       external_id = virtual_machines.first.external_id
 
+      @logger.info("Searching VIFs with 'owner_vm_id: #{external_id}'")
       vifs = @client.vifs(owner_vm_id: external_id)
       vifs.select! { |vif| !vif.lport_attachment_id.nil? }
       raise VIFNotFound.new(vm.cid, external_id) if vifs.empty?
 
       lports = vifs.inject([]) do |lports, vif|
+        @logger.info("Searching LogicalPorts with 'attachment_id: #{vif.lport_attachment_id}'")
         lports << @client.logical_ports(attachment_id: vif.lport_attachment_id).first
       end.compact
       raise LogicalPortNotFound if lports.empty?
+      @logger.info("LogicalPorts found for vm '#{vm.cid}': #{lports.map(&:id)}'")
 
       lports
     end
@@ -115,10 +127,13 @@ module VSphereCloud
     end
 
     def nsxt_nics(vm)
-      vm.nics.select do |nic|
+      nics = vm.nics.select do |nic|
         nic.backing.is_a?(VimSdk::Vim::Vm::Device::VirtualEthernetCard::OpaqueNetworkBackingInfo) &&
           nic.backing.opaque_network_type == NSXT_LOGICAL_SWITCH
       end
+      @logger.info("NSX-T networks found for vm '#{vm.cid}': #{nics.map(&:device_info).map(&:summary)}")
+
+      nics
     end
   end
 end
