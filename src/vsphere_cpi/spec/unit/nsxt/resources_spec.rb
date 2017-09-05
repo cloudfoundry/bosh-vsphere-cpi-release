@@ -1,18 +1,16 @@
 require 'spec_helper'
 
-include VSphereCloud::NSXT
-
-describe NSGroup do
+describe NSXT::NSGroup do
   subject(:nsgroup) do
     described_class.new(client, 'fake-id', 'fake-display-name', [])
   end
   let(:client) { instance_double(JSONClient) }
   let(:path) { 'ns-groups/fake-id' }
   let(:expression_1) do
-    NSGroup::SimpleExpression.new('EQUALS', 'LogicalPort', 'id', 'fake-lport-id-1')
+    NSXT::NSGroup::SimpleExpression.new('EQUALS', 'LogicalPort', 'id', 'fake-lport-id-1')
   end
   let(:expression_2) do
-    NSGroup::SimpleExpression.new('EQUALS', 'LogicalPort', 'id', 'fake-lport-id-2')
+    NSXT::NSGroup::SimpleExpression.new('EQUALS', 'LogicalPort', 'id', 'fake-lport-id-2')
   end
   let(:body) { { members: [expression_1.to_h, expression_2.to_h] } }
   let(:response) { instance_double(HTTP::Message, body: body) }
@@ -59,9 +57,9 @@ describe NSGroup do
       expect(members).to_not be_nil
       expect(members.length).to eq(3)
 
-      expect(members[0]).to be_a(NSGroup::SimpleExpression)
-      expect(members[1]).to be_a(NSGroup::TagExpression)
-      expect(members[2]).to be_a(NSGroup::ComplexExpression)
+      expect(members[0]).to be_a(NSXT::NSGroup::SimpleExpression)
+      expect(members[1]).to be_a(NSXT::NSGroup::TagExpression)
+      expect(members[2]).to be_a(NSXT::NSGroup::ComplexExpression)
     end
   end
 
@@ -102,7 +100,7 @@ describe NSGroup do
   end
 end
 
-describe NSGroup::ComplexExpression do
+describe NSXT::NSGroup::ComplexExpression do
   let(:complex_expression) do
     {
       'resource_type' => 'NSGroupComplexExpression',
@@ -145,27 +143,27 @@ describe NSGroup::ComplexExpression do
       expect(nested_exp).to_not be_nil
       expect(nested_exp.length).to eq(3)
 
-      expect(nested_exp[0]).to be_a(NSGroup::SimpleExpression)
-      expect(nested_exp[1]).to be_a(NSGroup::TagExpression)
-      expect(nested_exp[2]).to be_a(NSGroup::ComplexExpression)
+      expect(nested_exp[0]).to be_a(NSXT::NSGroup::SimpleExpression)
+      expect(nested_exp[1]).to be_a(NSXT::NSGroup::TagExpression)
+      expect(nested_exp[2]).to be_a(NSXT::NSGroup::ComplexExpression)
 
       expect(nested_exp[2].expressions).to_not be_nil
       expect(nested_exp[2].expressions.length).to eq(1)
-      expect(nested_exp[2].expressions[0]).to be_a(NSGroup::ComplexExpression)
+      expect(nested_exp[2].expressions[0]).to be_a(NSXT::NSGroup::ComplexExpression)
       expect(nested_exp[2].expressions[0].expressions.length).to eq(0)
     end
   end
 end
 
-describe NSGroup::SimpleExpression do
+describe NSXT::NSGroup::SimpleExpression do
   context '#from_resource' do
-    let(:vif_resource) { VIF.new('fake_lport_attachment_id') }
-    let(:logical_port) { LogicalPort.new('fake_id') }
+    let(:vif_resource) { NSXT::VIF.new('fake_lport_attachment_id') }
+    let(:logical_port) { NSXT::LogicalPort.new('fake_id') }
 
     it 'raises an error if resource is not a LogicalPort' do
       expect do
         described_class.from_resource(vif_resource, 'id')
-      end.to raise_error(InvalidExpressionResource)
+      end.to raise_error(NSXT::InvalidExpressionResource)
     end
 
     it 'returns an instance of SimpleExpression for given resource' do

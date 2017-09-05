@@ -60,7 +60,7 @@ module VSphereCloud
       lport_ids = lports.map(&:id)
       nsgroups = @client.nsgroups.select do |nsgroup|
         not nsgroup.members.select do |member|
-          member.is_a?(VSphereCloud::NSXT::NSGroup::SimpleExpression) &&
+          member.is_a?(NSXT::NSGroup::SimpleExpression) &&
             member.target_property == 'id' &&
             lport_ids.include?(member.value)
         end.empty?
@@ -110,7 +110,7 @@ module VSphereCloud
 
     def to_simple_expressions(lports)
       lports.map do |lport|
-        VSphereCloud::NSXT::NSGroup::SimpleExpression.from_resource(lport, 'id')
+        NSXT::NSGroup::SimpleExpression.from_resource(lport, 'id')
       end
     end
 

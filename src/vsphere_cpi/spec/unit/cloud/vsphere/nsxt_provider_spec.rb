@@ -1,8 +1,7 @@
 require 'spec_helper'
-include VSphereCloud::NSXT
 
 describe VSphereCloud::NSXTProvider do
-  let(:client) { instance_double(Client) }
+  let(:client) { instance_double(NSXT::Client) }
   let(:nsxt_config) { VSphereCloud::NSXTConfig.new('fake-host', 'fake-username', 'fake-password') }
   let(:opaque_nsxt) do
     instance_double(
@@ -31,25 +30,25 @@ describe VSphereCloud::NSXTProvider do
   let(:nics) { [opaque_non_nsxt, network_backing, opaque_nsxt] }
   let(:vm) { instance_double(VSphereCloud::Resources::VM, cid: 'fake-vm-id', nics: nics) }
   let(:virtual_machine) do
-    VirtualMachine.new(external_id: 'fake-external-id')
+    NSXT::VirtualMachine.new(external_id: 'fake-external-id')
   end
   let(:vif) do
-    VIF.new(lport_attachment_id: 'fake-lport-attachment-id')
+    NSXT::VIF.new(lport_attachment_id: 'fake-lport-attachment-id')
   end
   let(:vif_without_lport_attachment) do
-    VIF.new
+    NSXT::VIF.new
   end
   let(:logical_port_1) do
-    LogicalPort.new('fake-logical-port-id')
+    NSXT::LogicalPort.new('fake-logical-port-id')
   end
   let(:logical_port_2) do
-    LogicalPort.new('fake-logical-port-id-2')
+    NSXT::LogicalPort.new('fake-logical-port-id-2')
   end
   let(:simple_expression_1) do
-    NSGroup::SimpleExpression.from_resource(logical_port_1, 'id')
+    NSXT::NSGroup::SimpleExpression.from_resource(logical_port_1, 'id')
   end
   let(:simple_expression_2) do
-    NSGroup::SimpleExpression.from_resource(logical_port_2, 'id')
+    NSXT::NSGroup::SimpleExpression.from_resource(logical_port_2, 'id')
   end
 
   subject(:nsxt_provider) do
@@ -71,10 +70,10 @@ describe VSphereCloud::NSXTProvider do
         { 'nsgroups' => %w(test-nsgroup-1 test-nsgroup-2) }
       end
       let(:nsgroup_1) do
-        NSGroup.new(client, 'id-1', 'test-nsgroup-1')
+        NSXT::NSGroup.new(client, 'id-1', 'test-nsgroup-1')
       end
       let(:nsgroup_2) do
-        NSGroup.new(client, 'id-2', 'test-nsgroup-2')
+        NSXT::NSGroup.new(client, 'id-2', 'test-nsgroup-2')
       end
 
       before do
@@ -120,19 +119,19 @@ describe VSphereCloud::NSXTProvider do
 
   describe '#remove_vm_from_nsgroups' do
     let(:simple_member) do
-      NSGroup::SimpleExpression.new('EQUALS', 'LogicalPort', 'id', logical_port_1.id)
+      NSXT::NSGroup::SimpleExpression.new('EQUALS', 'LogicalPort', 'id', logical_port_1.id)
       end
     let(:tag_member) do
-      NSGroup::TagExpression.new('Tenant', 'EQUALS', 'my-tag', 'EQUALS', 'LogicalPort')
+      NSXT::NSGroup::TagExpression.new('Tenant', 'EQUALS', 'my-tag', 'EQUALS', 'LogicalPort')
     end
     let(:nsgroup_1) do
-      NSGroup.new(client, 'id-1', 'test-nsgroup-1', [simple_member, tag_member])
+      NSXT::NSGroup.new(client, 'id-1', 'test-nsgroup-1', [simple_member, tag_member])
     end
     let(:nsgroup_2) do
-      NSGroup.new(client, 'id-2', 'test-nsgroup-2', [simple_member])
+      NSXT::NSGroup.new(client, 'id-2', 'test-nsgroup-2', [simple_member])
     end
     let(:nsgroup_3) do
-      NSGroup.new(client, 'id-2', 'test-nsgroup-2', [])
+      NSXT::NSGroup.new(client, 'id-2', 'test-nsgroup-2', [])
     end
 
     before do

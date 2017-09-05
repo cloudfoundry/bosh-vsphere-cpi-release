@@ -1,6 +1,6 @@
 require 'spec_helper'
 
-describe VSphereCloud::NSXT::Client do
+describe NSXT::Client do
   subject(:client) do
     described_class.new('fake-host', 'fake-username', 'fake-password')
   end
@@ -56,8 +56,8 @@ describe VSphereCloud::NSXT::Client do
     end
     let(:clazz) { TestClass }
 
-    class TestClass < VSphereCloud::NSXT::Resource.new(:id); end
-    class TestClassWithClient < VSphereCloud::NSXT::Resource.new(:client, :id); end
+    class TestClass < NSXT::Resource.new(:id); end
+    class TestClassWithClient < NSXT::Resource.new(:client, :id); end
 
     before do
       expect(json_client).to receive(:get).with(path, query: query).and_return(http_response)
@@ -85,7 +85,7 @@ describe VSphereCloud::NSXT::Client do
       end
 
       context 'and class does NOT have client' do
-        it 'maps each result to VSphereCloud::NSXT::Resource' do
+        it 'maps each result to NSXT::Resource' do
           expect(results[0].id).to eq('fake-id-1')
           expect(results[1].id).to eq('fake-id-2')
         end
@@ -99,13 +99,13 @@ describe VSphereCloud::NSXT::Client do
         end
       end
       let(:error) do
-        VSphereCloud::NSXT::Error.new(HTTP::Status::INTERNAL, nil)
+        NSXT::Error.new(HTTP::Status::INTERNAL, nil)
       end
 
       it 'raises an error' do
         expect do
           client.send(:get_results, path, clazz, query)
-        end.to raise_error(VSphereCloud::NSXT::Error)
+        end.to raise_error(NSXT::Error)
       end
     end
   end

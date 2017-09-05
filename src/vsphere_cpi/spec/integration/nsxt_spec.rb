@@ -10,7 +10,7 @@ describe 'CPI', nsx_transformers: true do
     }))
   end
   let(:nsxt) do
-    VSphereCloud::NSXT::Client.new(@nsxt_host,@nsxt_username, @nsxt_password)
+    NSXT::Client.new(@nsxt_host,@nsxt_username, @nsxt_password)
   end
   let(:nsgroup_name_1) { "BOSH-CPI-test-#{SecureRandom.uuid}" }
   let(:nsgroup_name_2) { "BOSH-CPI-test-#{SecureRandom.uuid}" }
@@ -202,7 +202,7 @@ describe 'CPI', nsx_transformers: true do
     json = nsxt_client.post('ns-groups', body: {
       display_name: display_name
     }).body
-    VSphereCloud::NSXT::NSGroup.new(nsxt_client,json['id'], json['display_name'], json['members'])
+    NSXT::NSGroup.new(nsxt_client,json['id'], json['display_name'], json['members'])
   end
 
   def delete_nsgroup(nsgroup)
