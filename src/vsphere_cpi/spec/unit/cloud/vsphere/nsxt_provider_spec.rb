@@ -1,7 +1,8 @@
 require 'spec_helper'
+include VSphereCloud::NSXT
 
 describe VSphereCloud::NSXTProvider do
-  let(:client) { instance_double(VSphereCloud::NSXT::Client) }
+  let(:client) { instance_double(Client) }
   let(:nsxt_config) { VSphereCloud::NSXTConfig.new('fake-host', 'fake-username', 'fake-password') }
   let(:opaque_nsxt) do
     instance_double(
@@ -30,14 +31,27 @@ describe VSphereCloud::NSXTProvider do
   let(:nics) { [opaque_non_nsxt, network_backing, opaque_nsxt] }
   let(:vm) { instance_double(VSphereCloud::Resources::VM, cid: 'fake-vm-id', nics: nics) }
   let(:virtual_machine) do
-    VSphereCloud::NSXT::VirtualMachine.new(external_id: 'fake-external-id')
+    VirtualMachine.new(external_id: 'fake-external-id')
   end
   let(:vif) do
-    VSphereCloud::NSXT::VIF.new(lport_attachment_id: 'fake-lport-attachment-id')
+    VIF.new(lport_attachment_id: 'fake-lport-attachment-id')
   end
-  let(:logical_port) do
-    VSphereCloud::NSXT::LogicalPort.new(id: 'fake-logical-port-id')
+  let(:vif_without_lport_attachment) do
+    VIF.new
   end
+  let(:logical_port_1) do
+    LogicalPort.new('fake-logical-port-id')
+  end
+  let(:logical_port_2) do
+    LogicalPort.new('fake-logical-port-id-2')
+  end
+  let(:simple_expression_1) do
+    NSGroup::SimpleExpression.from_resource(logical_port_1, 'id')
+  end
+  let(:simple_expression_2) do
+    NSGroup::SimpleExpression.from_resource(logical_port_2, 'id')
+  end
+
   subject(:nsxt_provider) do
     described_class.new(nsxt_config).tap do |provider|
       provider.instance_variable_set('@client', client)
@@ -57,14 +71,23 @@ describe VSphereCloud::NSXTProvider do
         { 'nsgroups' => %w(test-nsgroup-1 test-nsgroup-2) }
       end
       let(:nsgroup_1) do
-        VSphereCloud::NSXT::NSGroup.new(client, id: 'id-1', display_name: 'test-nsgroup-1')
+        NSGroup.new(client, 'id-1', 'test-nsgroup-1')
       end
       let(:nsgroup_2) do
-        VSphereCloud::NSXT::NSGroup.new(client, id: 'id-2', display_name: 'test-nsgroup-2')
+        NSGroup.new(client, 'id-2', 'test-nsgroup-2')
       end
 
       before do
-        expect(client).to receive(:nsgroups).and_return([nsgroup_1, nsgroup_2])
+        allow(client).to receive(:nsgroups).and_return([nsgroup_1, nsgroup_2])
+      end
+
+      context 'but VM does NOT have any NSX-T opaque network' do
+        let(:nics) { [opaque_non_nsxt, network_backing] }
+
+        it 'should no-op' do
+          # No call to client should be made
+          nsxt_provider.add_vm_to_nsgroups(vm, vm_type_nsxt)
+        end
       end
 
       context 'if any of the nsgroups cannot be found in NSXT' do
@@ -79,14 +102,15 @@ describe VSphereCloud::NSXTProvider do
         end
       end
 
-      context 'when logical port is found' do
+      context 'when logical ports are found' do
         before do
-          expect(nsxt_provider).to receive(:logical_port).with(vm).and_return(logical_port)
+          expect(nsxt_provider).to receive(:logical_ports).with(vm)
+            .and_return([logical_port_1, logical_port_2])
         end
 
-        it 'adds the logical port to each NSGroup' do
-          expect(nsgroup_1).to receive(:add_member).with(logical_port)
-          expect(nsgroup_2).to receive(:add_member).with(logical_port)
+        it 'adds simple expressions containing the logical ports to each NSGroup' do
+          expect(nsgroup_1).to receive(:add_members).with(simple_expression_1, simple_expression_2)
+          expect(nsgroup_2).to receive(:add_members).with(simple_expression_1, simple_expression_2)
 
           nsxt_provider.add_vm_to_nsgroups(vm, vm_type_nsxt)
         end
@@ -95,88 +119,115 @@ describe VSphereCloud::NSXTProvider do
   end
 
   describe '#remove_vm_from_nsgroups' do
-    let(:membership) do
-      VSphereCloud::NSXT::NSGroup::SimpleExpression.new(target_type: 'LogicalPort', target_property: 'id', op: 'EQUALS', value: logical_port.id)
+    let(:simple_member) do
+      NSGroup::SimpleExpression.new('EQUALS', 'LogicalPort', 'id', logical_port_1.id)
+      end
+    let(:tag_member) do
+      NSGroup::TagExpression.new('Tenant', 'EQUALS', 'my-tag', 'EQUALS', 'LogicalPort')
     end
     let(:nsgroup_1) do
-      VSphereCloud::NSXT::NSGroup.new(client, id: 'id-1', display_name: 'test-nsgroup-1', members: [membership])
+      NSGroup.new(client, 'id-1', 'test-nsgroup-1', [simple_member, tag_member])
     end
     let(:nsgroup_2) do
-      VSphereCloud::NSXT::NSGroup.new(client, id: 'id-2', display_name: 'test-nsgroup-2', members: [membership])
+      NSGroup.new(client, 'id-2', 'test-nsgroup-2', [simple_member])
+    end
+    let(:nsgroup_3) do
+      NSGroup.new(client, 'id-2', 'test-nsgroup-2', [])
     end
 
     before do
-      expect(client).to receive(:nsgroups).and_return([nsgroup_1, nsgroup_2])
-      expect(nsxt_provider).to receive(:logical_port).with(vm).and_return(logical_port)
+      allow(nsxt_provider).to receive(:logical_ports).with(vm)
+        .and_return([logical_port_1, logical_port_2])
+      allow(client).to receive(:nsgroups).and_return([nsgroup_1, nsgroup_2, nsgroup_3])
     end
 
-    it "removes VM's logical port from all NSGroups" do
-      expect(nsgroup_1).to receive(:remove_member).with(logical_port)
-      expect(nsgroup_2).to receive(:remove_member).with(logical_port)
+    it "removes VM's logical ports from all NSGroups" do
+      expect(nsgroup_1).to receive(:remove_members).with(simple_expression_1, simple_expression_2)
+      expect(nsgroup_2).to receive(:remove_members).with(simple_expression_1, simple_expression_2)
 
       nsxt_provider.remove_vm_from_nsgroups(vm)
     end
-  end
 
-  describe '#logical_port' do
-    context 'when VM does NOT have any NSX-T Opaque Network' do
+    context 'but VM does NOT have any NSX-T Opaque Network' do
       let(:nics) { [opaque_non_nsxt, network_backing] }
 
-      it 'returns nil' do
+      it 'should no-op' do
         # No call to client should be made
-        expect(nsxt_provider.send(:logical_port, vm)).to be_nil
+        nsxt_provider.remove_vm_from_nsgroups(vm)
+      end
+    end
+  end
+
+  describe '#logical_ports' do
+    context 'fails' do
+      context 'when the virtual machine cannot be found in NSX-T' do
+        before do
+          expect(client).to receive(:virtual_machines).with(display_name: vm.cid)
+            .and_return([])
+        end
+
+        it 'raises an error' do
+          expect do
+            nsxt_provider.send(:logical_ports, vm)
+          end.to raise_error(VSphereCloud::VirtualMachineNotFound)
+        end
+      end
+
+      context 'when multiple virtual machines are found with same cid' do
+        before do
+          expect(client).to receive(:virtual_machines).with(display_name: vm.cid)
+            .and_return([virtual_machine, virtual_machine])
+        end
+
+        it 'raises an error' do
+          expect do
+            nsxt_provider.send(:logical_ports, vm)
+          end.to raise_error(/Multiple NSX-T virtual machines found/)
+        end
+      end
+
+      context 'when no VIF with logical port attachment can be found' do
+        before do
+          expect(client).to receive(:virtual_machines).with(display_name: vm.cid)
+            .and_return([virtual_machine])
+          expect(client).to receive(:vifs).with(owner_vm_id: virtual_machine.external_id)
+            .and_return([vif_without_lport_attachment])
+        end
+
+        it 'raises an error' do
+          expect do
+            nsxt_provider.send(:logical_ports, vm)
+          end.to raise_error(VSphereCloud::VIFNotFound)
+        end
+      end
+
+      context 'when no logical ports can be found' do
+        before do
+          expect(client).to receive(:virtual_machines).with(display_name: vm.cid)
+            .and_return([virtual_machine])
+          expect(client).to receive(:vifs).with(owner_vm_id: virtual_machine.external_id)
+            .and_return([vif])
+          expect(client).to receive(:logical_ports).with(attachment_id: vif.lport_attachment_id)
+            .and_return([])
+        end
+
+        it 'raises an error' do
+          expect do
+            nsxt_provider.send(:logical_ports, vm)
+          end.to raise_error(VSphereCloud::LogicalPortNotFound)
+        end
       end
     end
 
-    context 'when the virtual machine cannot be found in NSXT' do
-      before do
-        expect(client).to receive(:virtual_machines).with(display_name: vm.cid).and_return([])
-      end
+    it 'returns array of logical ports' do
+      expect(client).to receive(:virtual_machines).with(display_name: vm.cid)
+        .and_return([virtual_machine])
+      expect(client).to receive(:vifs).with(owner_vm_id: virtual_machine.external_id)
+        .and_return([vif, vif_without_lport_attachment])
+      expect(client).to receive(:logical_ports).with(attachment_id: vif.lport_attachment_id)
+        .and_return([logical_port_1])
 
-      it 'should raise a VirtualMachineNotFound error' do
-        expect do
-          nsxt_provider.send(:logical_port, vm)
-        end.to raise_error(VSphereCloud::VirtualMachineNotFound)
-      end
-    end
-
-    context 'when a VIF cannot be found' do
-      before do
-        expect(client).to receive(:virtual_machines).with(display_name: vm.cid).and_return([virtual_machine])
-        expect(client).to receive(:vifs).with(owner_vm_id: virtual_machine.external_id).and_return([])
-      end
-
-      it 'should raise a VIFNotFound error' do
-        expect do
-          nsxt_provider.send(:logical_port, vm)
-        end.to raise_error(VSphereCloud::VIFNotFound)
-      end
-    end
-
-    context 'when a logical port cannot be found' do
-      before do
-        expect(client).to receive(:virtual_machines).with(display_name: vm.cid).and_return([virtual_machine])
-        expect(client).to receive(:vifs).with(owner_vm_id: virtual_machine.external_id).and_return([vif])
-        expect(client).to receive(:logical_ports).with(attachment_id: vif.lport_attachment_id).and_return([])
-      end
-
-      it 'should raise a LogicalPortNotFound error' do
-        expect do
-          nsxt_provider.send(:logical_port, vm)
-        end.to raise_error(VSphereCloud::LogicalPortNotFound)
-      end
-    end
-
-    context 'when logical port can be found' do
-      before do
-        expect(client).to receive(:virtual_machines).with(display_name: vm.cid).and_return([virtual_machine])
-        expect(client).to receive(:vifs).with(owner_vm_id: virtual_machine.external_id).and_return([vif])
-        expect(client).to receive(:logical_ports).with(attachment_id: vif.lport_attachment_id).and_return([logical_port])
-      end
-
-      it 'returns logical port' do
-        expect(nsxt_provider.send(:logical_port, vm)).to eq(logical_port)
-      end
+      expect(nsxt_provider.send(:logical_ports, vm)).to eq([logical_port_1])
     end
   end
 end

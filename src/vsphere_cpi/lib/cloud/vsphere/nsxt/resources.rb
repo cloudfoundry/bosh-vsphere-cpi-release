@@ -2,88 +2,136 @@ require 'cgi'
 
 module VSphereCloud
   module NSXT
-    class VirtualMachine < Struct.new(:external_id)
-      def initialize(**kwargs)
-        super(*members.map { |k| kwargs[k] })
+    class InvalidExpressionResource < StandardError; end
+    class InvalidType < StandardError; end
+
+    class Resource < Struct
+      def self.json_create(client, hash)
+        hash['client'] = client
+        new(*members.map { |k| hash[k.to_s] })
+      end
+
+      def client=(val)
+        # no op
+      end
+
+      def self.resource_type
+        nil
+      end
+
+      def resource_type
+        self.class.resource_type
+      end
+
+      def to_h
+        return super if resource_type.nil?
+
+        h = super
+        h[:resource_type] = resource_type
+        h
+      end
+   end
+
+    class VirtualMachine < Resource.new(:external_id)
+      def self.resource_type
+        'VirtualMachine'
       end
     end
 
-    class VIF < Struct.new(:lport_attachment_id)
-      def initialize(**kwargs)
-        super(*members.map { |k| kwargs[k] })
+    class VIF < Resource.new(:lport_attachment_id)
+      def self.resource_type
+        'VirtualNetworkInterface'
       end
     end
 
-    class LogicalPort < Struct.new(:id)
-      def initialize(**kwargs)
-        super(*members.map { |k| kwargs[k] })
+    class LogicalPort < Resource.new(:id);
+      def self.resource_type
+        'LogicalPort'
       end
     end
 
-    class NSGroup
-      class SimpleExpression < Struct.new(:target_type, :target_property, :op, :value)
-        def initialize(**kwargs)
-          super(*members.map { |k| kwargs[k] })
-        end
-      end
+    class NSGroup < Resource.new(:client, :id, :display_name, :members)
 
-      attr_reader :id, :display_name, :members
+      class ExpressionFactory
+        def self.create(members)
+          return [] if members.nil?
 
-      def initialize(client, id:, display_name:, members: nil)
-        @client = client
-        @id = id
-        @display_name = display_name
-
-        if members.nil?
-          @members = []
-        else
-          @members = members.map do |member|
-            SimpleExpression.new(
-              target_type: member['target_type'],
-              target_property: member['target_property'],
-              op: member['op'],
-              value: member['value']
-            )
+          result = []
+          members.map do |m|
+            case m['resource_type']
+            when SimpleExpression.resource_type
+              result << SimpleExpression.json_create(nil, m)
+            when TagExpression.resource_type
+              result << TagExpression.json_create(nil, m)
+            when ComplexExpression.resource_type
+              result << ComplexExpression.json_create(nil, m)
+            end
           end
+
+          result
         end
       end
 
-      def inspect
-        "#<NSGroup:#{@id.inspect} @display_name=#{@display_name.inspect}, @members=#{@members.inspect}>"
+      class SimpleExpression < Resource.new(:op, :target_type, :target_property, :value)
+        def self.from_resource(resource, target_property, op = 'EQUALS')
+          raise InvalidExpressionResource unless resource.is_a?(LogicalPort)
+
+          SimpleExpression.new(
+            op,
+            resource.class.resource_type,
+            target_property,
+            resource.send(target_property)
+          )
+        end
+
+        def self.resource_type
+          'NSGroupSimpleExpression'
+        end
       end
+      class TagExpression < Resource.new(:scope, :scope_op, :tag, :tag_op, :target_type)
+        def self.resource_type
+          'NSGroupTagExpression'
+        end
+      end
+      class ComplexExpression < Resource.new(:expressions)
+        def self.json_create(client, hash)
+          hash['expressions'] = ExpressionFactory.create(hash['expressions'])
+          new(*members.map { |k| hash[k.to_s] })
+        end
+        def self.resource_type
+          'NSGroupComplexExpression'
+        end
+      end
+
+      def self.json_create(client, hash)
+        hash['members'] = ExpressionFactory.create(hash['members'])
+        super(client, hash)
+      end
+
+      def add_members(*members)
+        client.post(href, query: {
+          action: 'ADD_MEMBERS'
+        }, body: {
+          members: members.map(&:to_h)
+        })
+      end
+
+      def remove_members(*members)
+        client.post(href, query: {
+          action: 'REMOVE_MEMBERS'
+        }, body: {
+          members: members.map(&:to_h)
+        })
+      end
+
+      private
 
       def href
         "ns-groups/#{CGI.escape(id)}"
       end
 
-      def add_member(logical_port)
-        json = @client.post(href, query: {
-          action: 'ADD_MEMBERS'
-        }, body: {
-          members: [{
-            resource_type: 'NSGroupSimpleExpression',
-            op: 'EQUALS',
-            target_type: 'LogicalPort',
-            value: logical_port.id,
-            target_property: 'id',
-          }]
-        }).body
-        NSGroup.new(@client, id: json['id'], display_name: json['display_name'], members: json['members'])
-      end
-
-      def remove_member(logical_port)
-        json = @client.post(href, query: {
-          action: 'REMOVE_MEMBERS'
-        }, body: {
-          members: [{
-            resource_type: 'NSGroupSimpleExpression',
-            op: 'EQUALS',
-            target_type: 'LogicalPort',
-            value: logical_port.id,
-            target_property: 'id',
-          }]
-        }).body
-        NSGroup.new(@client, id: json['id'], display_name: json['display_name'], members: json['members'])
+      def self.resource_type
+        'NSGroup'
       end
     end
   end

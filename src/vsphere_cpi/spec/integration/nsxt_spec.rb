@@ -1,19 +1,7 @@
 require 'integration/spec_helper'
 require 'pry-byebug'
 
-describe 'NSX-T' do
-  let(:network_spec) do
-    {
-      'static' => {
-        'ip' => "169.254.#{rand(1..254)}.#{rand(4..254)}",
-        'netmask' => '255.255.254.0',
-        'cloud_properties' => { 'name' => @opaque_vlan },
-        'default' => ['dns', 'gateway'],
-        'dns' => ['169.254.1.2'],
-        'gateway' => '169.254.1.3'
-      }
-    }
-  end
+describe 'CPI', nsx_transformers: true do
   let(:cpi) do
     VSphereCloud::Cloud.new(cpi_options(nsxt: {
       host: @nsxt_host,
@@ -48,7 +36,8 @@ describe 'NSX-T' do
       ENV['BOSH_NSXT_CA_CERT_FILE'] = @ca_cert_file.path
     end
 
-    @opaque_vlan = fetch_property('BOSH_VSPHERE_OPAQUE_VLAN')
+    @nsxt_opaque_vlan_1 = fetch_property('BOSH_VSPHERE_OPAQUE_VLAN')
+    @nsxt_opaque_vlan_2 = fetch_property('BOSH_VSPHERE_SECOND_OPAQUE_VLAN')
   end
 
   after do
@@ -60,39 +49,59 @@ describe 'NSX-T' do
 
   describe 'on create_vm' do
     context 'when NSGroups are specified' do
-      context 'but at least of the NSGroups do NOT exist' do
+      context 'but at least one of the NSGroups does NOT exist' do
         it 'raises NSGroupsNotFound' do
           expect do
-            vm_lifecycle(cpi, [], vm_type, network_spec, @stemcell_id)
+            simple_vm_lifecycle(cpi, @nsxt_opaque_vlan_1, vm_type)
           end.to raise_error(VSphereCloud::NSGroupsNotFound)
         end
       end
 
       context 'and all the NSGroups exist' do
+        let(:network_spec) do
+          {
+            'static-bridged' => {
+              'ip' => "169.254.#{rand(1..254)}.#{rand(4..254)}",
+              'netmask' => '255.255.254.0',
+              'cloud_properties' => { 'name' => @nsxt_opaque_vlan_1 },
+              'default' => ['dns', 'gateway'],
+              'dns' => ['169.254.1.2'],
+              'gateway' => '169.254.1.3'
+            },
+            'static' => {
+              'ip' => "169.254.#{rand(1..254)}.#{rand(4..254)}",
+              'netmask' => '255.255.254.0',
+              'cloud_properties' => { 'name' => @nsxt_opaque_vlan_2 },
+              'default' => ['dns', 'gateway'],
+              'dns' => ['169.254.1.2'],
+              'gateway' => '169.254.1.3'
+            }
+          }
+        end
         let(:nsgroup_1) { create_nsgroup(nsgroup_name_1) }
         let(:nsgroup_2) { create_nsgroup(nsgroup_name_2) }
         before do
           expect(nsgroup_1).to_not be_nil
           expect(nsgroup_2).to_not be_nil
+
+          nsgroups = nsxt.nsgroups.select do |nsgroup|
+            [nsgroup_name_1, nsgroup_name_2].include?(nsgroup.display_name)
+          end
+          expect(nsgroups.length).to eq(2)
         end
         after do
           delete_nsgroup(nsgroup_1)
           delete_nsgroup(nsgroup_2)
         end
 
-        it 'adds the logical port of the VM to all given NSGroups' do
-          simple_vm_lifecycle(cpi, @opaque_vlan, vm_type) do |vm_id|
-            external_id = nsxt.virtual_machines(display_name: vm_id).first.external_id
-            attachment_id = nsxt.vifs(owner_vm_id: external_id).first.lport_attachment_id
-            logical_port_id = nsxt.logical_ports(attachment_id: attachment_id).first.id
+        it 'adds all the logical ports of the VM to all given NSGroups' do
+          simple_vm_lifecycle(cpi, '', vm_type, network_spec) do |vm_id|
+            verify_ports(vm_id) do |lport|
+              expect(lport).not_to be_nil
 
-            nsgroups = nsxt.nsgroups.select do |nsgroup|
-              [nsgroup_name_1, nsgroup_name_2].include?(nsgroup.display_name)
+              expect(nsgroup_effective_logical_port_member_ids(nsgroup_1)).to include(lport.id)
+              expect(nsgroup_effective_logical_port_member_ids(nsgroup_2)).to include(lport.id)
             end
-            expect(nsgroups.length).to eq(2)
-
-            expect(nsgroup_effective_logical_port_member_ids(nsgroup_1)).to include(logical_port_id)
-            expect(nsgroup_effective_logical_port_member_ids(nsgroup_2)).to include(logical_port_id)
           end
         end
 
@@ -103,7 +112,7 @@ describe 'NSX-T' do
               attachment_id = nsxt.vifs(owner_vm_id: external_id).first.lport_attachment_id
               logical_port_id = nsxt.logical_ports(attachment_id: attachment_id).first.id
 
-              nsgroups = nsxt.nsgroups.select do |nsgroup|
+              nsxt.nsgroups.select do |nsgroup|
                 expect(nsgroup_effective_logical_port_member_ids(nsgroup)).to_not include(logical_port_id)
               end
             end
@@ -115,6 +124,26 @@ describe 'NSX-T' do
 
   describe 'on delete_vm' do
     context 'when NSX-T is enabled' do
+      let(:network_spec) do
+        {
+          'static-bridged' => {
+            'ip' => "169.254.#{rand(1..254)}.#{rand(4..254)}",
+            'netmask' => '255.255.254.0',
+            'cloud_properties' => { 'name' => @nsxt_opaque_vlan_1 },
+            'default' => ['dns', 'gateway'],
+            'dns' => ['169.254.1.2'],
+            'gateway' => '169.254.1.3'
+          },
+          'static' => {
+            'ip' => "169.254.#{rand(1..254)}.#{rand(4..254)}",
+            'netmask' => '255.255.254.0',
+            'cloud_properties' => { 'name' => @nsxt_opaque_vlan_2 },
+            'default' => ['dns', 'gateway'],
+            'dns' => ['169.254.1.2'],
+            'gateway' => '169.254.1.3'
+          }
+        }
+      end
       let(:nsgroup_1) { create_nsgroup(nsgroup_name_1) }
       let(:nsgroup_2) { create_nsgroup(nsgroup_name_2) }
       before do
@@ -126,23 +155,42 @@ describe 'NSX-T' do
         delete_nsgroup(nsgroup_2)
       end
 
-      it "removes the VM's logical port from all NSGroups" do
-        logical_port_id = nil
-        simple_vm_lifecycle(cpi, @opaque_vlan, vm_type) do |vm_id|
-          external_id = nsxt.virtual_machines(display_name: vm_id).first.external_id
-          attachment_id = nsxt.vifs(owner_vm_id: external_id).first.lport_attachment_id
-          logical_port_id = nsxt.logical_ports(attachment_id: attachment_id).first.id
-        end
+      it "removes all the VM's logical ports from all NSGroups" do
+        lport_ids = []
+        simple_vm_lifecycle(cpi, '', vm_type, network_spec) do |vm_id|
+          verify_ports(vm_id) do |lport|
+            expect(lport).not_to be_nil
 
-        expect(logical_port_id).not_to be_nil
-
-        nsgroups = nsxt.nsgroups.select do |nsgroup|
-          nsgroup.members.find do |member|
-            member.target_type == 'LogicalPort' && member.target_property == 'id' && member.value == logical_port_id
+            lport_ids << lport.id
           end
         end
-        expect(nsgroups).to eq([])
+        expect(lport_ids.length).to eq(2)
+
+        lport_ids.each do |id|
+          nsgroups = nsxt.nsgroups.select do |nsgroup|
+            nsgroup.members.find do |member|
+              member.target_type == 'LogicalPort' && member.target_property == 'id' && member.value == id
+            end
+          end
+
+          expect(nsgroups).to eq([])
+        end
       end
+    end
+  end
+
+  def verify_ports(vm_id, &block)
+    nsxt_vms = nsxt.virtual_machines(display_name: vm_id)
+    expect(nsxt_vms.length).to eq(1)
+    expect(nsxt_vms.first.external_id).not_to be_nil
+
+    vifs = nsxt.vifs(owner_vm_id: nsxt_vms.first.external_id)
+    expect(vifs.length).to eq(2)
+    expect(vifs.map(&:lport_attachment_id).compact.length).to be(2)
+
+    vifs.each do |vif|
+      lport = nsxt.logical_ports(attachment_id: vif.lport_attachment_id).first
+      yield lport unless block.nil?
     end
   end
 
@@ -154,15 +202,15 @@ describe 'NSX-T' do
     json = nsxt_client.post('ns-groups', body: {
       display_name: display_name
     }).body
-    VSphereCloud::NSXT::NSGroup.new(nsxt_client, id: json['id'], display_name: json['display_name'], members: json['members'])
+    VSphereCloud::NSXT::NSGroup.new(nsxt_client,json['id'], json['display_name'], json['members'])
   end
 
   def delete_nsgroup(nsgroup)
-    nsxt_client.delete(nsgroup.href)
+    nsxt_client.delete("ns-groups/#{nsgroup.id}")
   end
 
   def nsgroup_effective_logical_port_member_ids(nsgroup)
-    json = nsxt_client.get("#{nsgroup.href}/effective-logical-port-members").body
+    json = nsxt_client.get("ns-groups/#{nsgroup.id}/effective-logical-port-members").body
     json['results'].map { |member| member['target_id'] }
   end
 end

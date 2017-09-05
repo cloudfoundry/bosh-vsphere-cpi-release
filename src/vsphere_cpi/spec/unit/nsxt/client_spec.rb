@@ -43,42 +43,52 @@ describe VSphereCloud::NSXT::Client do
     end
   end
 
-  # TODO(cdutra, kchen): remove after refactoring
-  describe '#nsgroups' do
-    before do
-      expect(json_client).to receive(:get).with('ns-groups', query: {}).and_return(
-        HTTP::Message.new_response('results' => [
-          nsgroup_json(id: 'fake-nsgroup-id-1', display_name: 'fake-nsgroup-name-1'),
-          nsgroup_json(id: 'fake-nsgroup-id-2', display_name: 'fake-nsgroup-name-2'),
-        ])
-      )
-    end
-
-    it 'returns the list of NSGroups' do
-      nsgroups = client.nsgroups
-
-      expect(nsgroups[0].id).to eq('fake-nsgroup-id-1')
-      expect(nsgroups[0].display_name).to eq('fake-nsgroup-name-1')
-      expect(nsgroups[1].id).to eq('fake-nsgroup-id-2')
-      expect(nsgroups[1].display_name).to eq('fake-nsgroup-name-2')
-    end
-  end
-
   describe '#get_results' do
     let(:path) { 'fake-path' }
     let(:query) { { query_1: 'whatever' } }
-    let(:http_response) { HTTP::Message.new_response('results' => %w(fake-result-1 fake-result-2)) }
+    let(:http_response) do
+      HTTP::Message.new_response(
+        'results' => [
+          { 'id' => 'fake-id-1', 'another_param' => 'abc' },
+          { 'id' => 'fake-id-2' },
+        ]
+      )
+    end
+    let(:clazz) { TestClass }
+
+    class TestClass < VSphereCloud::NSXT::Resource.new(:id); end
+    class TestClassWithClient < VSphereCloud::NSXT::Resource.new(:client, :id); end
 
     before do
       expect(json_client).to receive(:get).with(path, query: query).and_return(http_response)
     end
 
     context 'when response is successful' do
-      it 'maps a block over each result' do
-        results = client.send(:get_results, path, query) do |result|
-          "got-#{result}"
+      results = []
+      before do
+        results = client.send(:get_results, path, clazz, query)
+        expect(results.length).to eq(2)
+
+        expect(results[0].class).to eq(clazz)
+        expect(results[1].class).to eq(clazz)
+      end
+
+      context 'and class has client' do
+        let(:clazz) { TestClassWithClient }
+
+        it 'injects client into Resource' do
+          expect(results[0].client).to eq(json_client)
+          expect(results[1].client).to eq(json_client)
+          expect(results[0].id).to eq('fake-id-1')
+          expect(results[1].id).to eq('fake-id-2')
         end
-        expect(results).to eq(%w(got-fake-result-1 got-fake-result-2))
+      end
+
+      context 'and class does NOT have client' do
+        it 'maps each result to VSphereCloud::NSXT::Resource' do
+          expect(results[0].id).to eq('fake-id-1')
+          expect(results[1].id).to eq('fake-id-2')
+        end
       end
     end
 
@@ -94,15 +104,9 @@ describe VSphereCloud::NSXT::Client do
 
       it 'raises an error' do
         expect do
-          client.send(:get_results, path, query) do |result|
-            "got-#{result}"
-          end
+          client.send(:get_results, path, clazz, query)
         end.to raise_error(VSphereCloud::NSXT::Error)
       end
     end
-  end
-
-  def nsgroup_json(id:, display_name:, members: [])
-    { 'id' => id, 'display_name' => display_name, 'members' => members }
   end
 end

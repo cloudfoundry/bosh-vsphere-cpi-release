@@ -1197,7 +1197,7 @@ module VSphereCloud
             expect(vm).to receive(:power_off)
             expect(vm).to receive(:delete)
             expect(nsxt_provider).to receive(:remove_vm_from_nsgroups).with(vm).and_raise(
-              LogicalPortNotFound.new('vm-id', 'fake-external-id', 'fake-lport-attachment-id')
+              VIFNotFound.new('vm-id', 'fake-external-id')
             )
 
             vsphere_cloud.delete_vm('vm-id')

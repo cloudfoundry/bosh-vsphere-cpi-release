@@ -239,7 +239,7 @@ module LifecycleHelpers
     true
   end
 
-  def simple_vm_lifecycle(cpi, network_name, vm_type = {})
+  def simple_vm_lifecycle(cpi, network_name, vm_type = {}, network_spec = {})
     default_network_spec = {
       'static' => {
         'ip' => "169.254.#{rand(1..254)}.#{rand(4..254)}",
@@ -261,7 +261,7 @@ module LifecycleHelpers
       'agent-007',
       @stemcell_id,
       default_vm_type.merge(vm_type),
-      default_network_spec
+      default_network_spec.merge(network_spec)
     )
 
     expect(vm_id).to_not be_nil

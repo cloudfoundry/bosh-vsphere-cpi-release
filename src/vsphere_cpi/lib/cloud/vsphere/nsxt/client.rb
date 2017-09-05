@@ -1,5 +1,4 @@
 require 'jsonclient'
-require 'pry-byebug'
 
 module VSphereCloud
   module NSXT
@@ -31,35 +30,27 @@ module VSphereCloud
       end
 
       def nsgroups
-        get_results('ns-groups') do |result|
-          NSGroup.new(@client, id: result['id'], display_name: result['display_name'], members: result['members'])
-        end
+        get_results('ns-groups', NSGroup)
       end
 
       def virtual_machines(display_name:)
-        get_results('fabric/virtual-machines', display_name: display_name) do |result|
-          VirtualMachine.new(external_id: result['external_id'])
-        end
+        get_results('fabric/virtual-machines', VirtualMachine, display_name: display_name)
       end
 
       def vifs(owner_vm_id:)
-        get_results('fabric/vifs', owner_vm_id: owner_vm_id) do |result|
-          VIF.new(lport_attachment_id: result['lport_attachment_id'])
-        end
+        get_results('fabric/vifs', VIF, owner_vm_id: owner_vm_id)
       end
 
       def logical_ports(attachment_id:)
-        get_results('logical-ports', attachment_id: attachment_id) do |result|
-          LogicalPort.new(id: result['id'])
-        end
+        get_results('logical-ports', LogicalPort, attachment_id: attachment_id)
       end
 
       private
 
-      def get_results(path, query = {}, &block)
+      def get_results(path, clazz, query = {})
         response = @client.get(path, query: query)
         if response.ok?
-          response.body['results'].map(&block)
+          response.body['results'].map { |result| clazz.json_create(@client, result) }
         else
           raise Error.new(response.status_code), response.body
         end
