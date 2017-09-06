@@ -6,8 +6,10 @@ module NSXT
 
   class Resource < Struct
     def self.json_create(client, hash)
-      hash['client'] = client
-      new(*members.map { |k| hash[k.to_s] })
+      resource = new(*members.map { |k| hash[k.to_s] })
+      resource.client = client if resource.respond_to?(:client)
+      resource.json_data = hash if resource.respond_to?(:json_data=)
+      resource
     end
 
     def client=(val)
@@ -27,6 +29,7 @@ module NSXT
 
       h = super
       h[:resource_type] = resource_type
+      h.delete(:client)
       h
     end
  end
@@ -43,14 +46,39 @@ module NSXT
     end
   end
 
-  class LogicalPort < Resource.new(:id);
+  class LogicalPort < Resource.new(:client, :id, :tags, :json_data)
     def self.resource_type
       'LogicalPort'
     end
+
+    def update(hash)
+      response = client.put(href, body: json_data.merge(hash))
+      if response.ok?
+        self.tags = response.content['tags']
+      end
+      response
+    end
+
+    def reload!
+      response = client.get(href)
+      if response.ok?
+        self.json_data = response.body
+        self.tags = json_data['tags']
+      else
+        raise Error.new(response.status_code), response.body
+      end
+    end
+
+    private
+
+    def href
+      "logical-ports/#{CGI.escape(id)}"
+    end
   end
 
-  class NSGroup < Resource.new(:client, :id, :display_name, :members)
+  class Tag < Resource.new(:scope, :tag); end
 
+  class NSGroup < Resource.new(:client, :id, :display_name, :members)
     class ExpressionFactory
       def self.create(members)
         return [] if members.nil?

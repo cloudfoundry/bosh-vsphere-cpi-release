@@ -20,6 +20,17 @@ module VSphereCloud
     end
   end
 
+  class LogicalPortNotFound < StandardError
+    def initialize(vm_id, external_id)
+      @vm_id = vm_id
+      @external_id = external_id
+    end
+
+    def to_s
+      "Logical port for VM #{@vm_id} with 'external_id' #{@external_id} was expected in NSX-T but was not found"
+    end
+  end
+
   class NSGroupsNotFound < StandardError
     def initialize(*display_names)
       @display_names = display_names
@@ -30,7 +41,14 @@ module VSphereCloud
     end
   end
 
-  class LogicalPortNotFound < StandardError
+  class InvalidLogicalPortError < StandardError
+    def initialize(logical_port)
+      @logical_port = logical_port
+    end
+
+    def to_s
+      "Logical port #{@logical_port.id} has multiple values for tag with scope 'bosh/vm_id'"
+    end
   end
 
   class NSXTProvider
@@ -73,6 +91,34 @@ module VSphereCloud
       end
     end
 
+    def update_vm_metadata_on_logical_ports(vm, metadata)
+      return unless metadata.has_key?('id')
+      return if nsxt_nics(vm).empty?
+
+      logical_ports(vm).each do |logical_port|
+        loop do
+          tags = logical_port.tags
+          tags_by_scope = tags.group_by { |tag| tag['scope'] }
+          bosh_vm_id_tags = tags_by_scope.fetch('bosh/vm_id', [])
+
+          raise InvalidLogicalPortError.new(logical_port) if bosh_vm_id_tags.uniq.length > 1
+
+          vm_id_tag = {'scope' => 'bosh/vm_id', 'tag' => metadata['id']}
+          tags.delete_if {|tag| tag['scope'] == 'bosh/vm_id'}
+          tags << vm_id_tag
+
+          response = logical_port.update('tags' => tags)
+          if response.ok?
+            break
+          elsif response.status == 412
+            logical_port.reload!
+          else
+            raise NSXT::Error.new(response.status_code), response.body
+          end
+        end
+      end
+    end
+
     private
 
     NSXT_LOGICAL_SWITCH = 'nsx.LogicalSwitch'.freeze
@@ -112,7 +158,7 @@ module VSphereCloud
         @logger.info("Searching LogicalPorts with 'attachment_id: #{vif.lport_attachment_id}'")
         lports << @client.logical_ports(attachment_id: vif.lport_attachment_id).first
       end.compact
-      raise LogicalPortNotFound if lports.empty?
+      raise LogicalPortNotFound.new(vm.cid, external_id) if lports.empty?
       @logger.info("LogicalPorts found for vm '#{vm.cid}': #{lports.map(&:id)}'")
 
       lports

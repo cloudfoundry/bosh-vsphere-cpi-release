@@ -51,10 +51,10 @@ describe VSphereCloud::NSXTProvider do
     NSXT::VIF.new
   end
   let(:logical_port_1) do
-    NSXT::LogicalPort.new('fake-logical-port-id')
+    NSXT::LogicalPort.new(client, 'fake-logical-port-id')
   end
   let(:logical_port_2) do
-    NSXT::LogicalPort.new('fake-logical-port-id-2')
+    NSXT::LogicalPort.new(client, 'fake-logical-port-id-2')
   end
   let(:simple_expression_1) do
     NSXT::NSGroup::SimpleExpression.from_resource(logical_port_1, 'id')
@@ -166,6 +166,114 @@ describe VSphereCloud::NSXTProvider do
       it 'should no-op' do
         # No call to client should be made
         nsxt_provider.remove_vm_from_nsgroups(vm)
+      end
+    end
+  end
+
+  describe '#update_vm_metadata_on_logical_ports' do
+    let(:metadata) { { 'id' => 'new-bosh-id' } }
+    let(:old_vm_id_tag) { { 'scope' => 'bosh/vm_id', 'tag' => 'old-bosh-id' } }
+    let(:new_vm_id_tag) { { 'scope' => 'bosh/vm_id', 'tag' => 'new-bosh-id' } }
+    let(:new_data) do
+      { 'tags' => [{ 'scope' => 'bosh/fake', 'tag' => 'fake-data' }, new_vm_id_tag] }
+    end
+    let(:existing_tags) { [] }
+    let(:success_response) { HTTP::Message.new_response('') }
+
+    context 'with bosh id' do
+      before do
+        expect(logical_port_1).to receive(:tags).and_return(existing_tags)
+        allow(logical_port_2).to receive(:tags).and_return(existing_tags)
+        expect(nsxt_provider).to receive(:logical_ports).with(vm)
+          .and_return([logical_port_1, logical_port_2])
+      end
+
+      context 'when logical ports do not have the id tag' do
+        let(:existing_tags) { [{ 'scope' => 'bosh/fake', 'tag' => 'fake-data' }] }
+
+        it 'adds the id tag' do
+          expect(logical_port_1).to receive(:update).with(new_data).and_return(success_response)
+          expect(logical_port_2).to receive(:update).with(new_data).and_return(success_response)
+          nsxt_provider.update_vm_metadata_on_logical_ports(vm, metadata)
+        end
+      end
+
+      context 'when logical ports have one id tag' do
+        let(:existing_tags) do
+          [{ 'scope' => 'bosh/fake', 'tag' => 'fake-data' }, old_vm_id_tag]
+        end
+
+        it 'sets the existing id tag' do
+          expect(logical_port_1).to receive(:update).with(new_data).and_return(success_response)
+          expect(logical_port_2).to receive(:update).with(new_data).and_return(success_response)
+          nsxt_provider.update_vm_metadata_on_logical_ports(vm, metadata)
+        end
+      end
+
+      context 'when a logical port has more than one relevant tag' do
+        context 'when the relevant tags have the same value' do
+          let(:existing_tags) do
+            [{ 'scope' => 'bosh/fake', 'tag' => 'fake-data' }, old_vm_id_tag, old_vm_id_tag]
+          end
+
+          it 'consolidates the existing id tags and sets it' do
+            expect(logical_port_1).to receive(:update).with(new_data).and_return(success_response)
+            expect(logical_port_2).to receive(:update).with(new_data).and_return(success_response)
+            nsxt_provider.update_vm_metadata_on_logical_ports(vm, metadata)
+          end
+        end
+
+        context 'when the relevant tags have different values' do
+          let(:existing_tags) do
+            [{ 'scope' => 'bosh/fake', 'tag' => 'fake-data' }, old_vm_id_tag, new_vm_id_tag]
+          end
+
+          it 'raises an error' do
+            expect do
+              nsxt_provider.update_vm_metadata_on_logical_ports(vm, metadata)
+            end.to raise_error(VSphereCloud::InvalidLogicalPortError)
+          end
+        end
+      end
+    end
+
+    context 'when an update fails due to a revision mismatch error' do
+      let(:logical_port) { logical_port_1 }
+      let(:existing_tags) { [{ 'scope' => 'bosh/fake', 'tag' => 'fake-data' }] }
+      let(:failure_response) do
+        HTTP::Message.new_response('{
+          "error_code": 206,
+          "error_message": "The object LogicalPort/...",
+          "httpStatus": "PRECONDITION_FAILED",
+          "module_name": "common-services"
+        }').tap { |r| r.status = 412 }
+      end
+
+      before do
+        expect(logical_port).to receive(:tags).at_least(:once).and_return(existing_tags)
+        expect(nsxt_provider).to receive(:logical_ports).with(vm).and_return([logical_port])
+        expect(logical_port).to receive(:reload!)
+        expect(logical_port).to receive(:update).with(new_data).and_return(failure_response, success_response)
+      end
+
+      it 'retries' do
+        nsxt_provider.update_vm_metadata_on_logical_ports(vm, metadata)
+      end
+    end
+
+    context 'without bosh id' do
+      let(:metadata) { { 'index' => 1 } }
+
+      it 'should do nothing' do
+        nsxt_provider.update_vm_metadata_on_logical_ports(vm, metadata)
+      end
+    end
+
+    context 'when there are no NSX-T nics attached to VM' do
+      let(:nics) { [opaque_non_nsxt, network_backing] }
+
+      it 'should do nothing' do
+        nsxt_provider.update_vm_metadata_on_logical_ports(vm, metadata)
       end
     end
   end

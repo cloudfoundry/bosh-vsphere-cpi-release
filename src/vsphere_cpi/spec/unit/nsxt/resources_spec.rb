@@ -69,7 +69,6 @@ describe NSXT::NSGroup do
         :id => 'fake-id',
         :display_name => 'fake-display-name',
         :members => [],
-        :client => client,
         :resource_type => 'NSGroup'
       )
     end
@@ -158,7 +157,7 @@ end
 describe NSXT::NSGroup::SimpleExpression do
   context '#from_resource' do
     let(:vif_resource) { NSXT::VIF.new('fake_lport_attachment_id') }
-    let(:logical_port) { NSXT::LogicalPort.new('fake_id') }
+    let(:logical_port) { NSXT::LogicalPort.new(nil, 'fake_id') }
 
     it 'raises an error if resource is not a LogicalPort' do
       expect do
@@ -173,6 +172,54 @@ describe NSXT::NSGroup::SimpleExpression do
       expect(simple_expression.target_type).to eq('LogicalPort')
       expect(simple_expression.target_property).to eq('id')
       expect(simple_expression.value).to eq('fake_id')
+    end
+  end
+end
+
+describe NSXT::LogicalPort do
+  let(:client) { instance_double(JSONClient) }
+  let(:logical_port) { NSXT::LogicalPort.new(client, 'fake-logical-port-id', nil, json_data) }
+  let(:json_data) do
+    { 'id' => 'fake-logical-port-id', 'display_name' => 'fake-name' }
+  end
+
+  context '#update' do
+    let(:tags) { [{'scope' => 'vm_id', 'tag' => '12345'}] }
+    let(:update_data) { { 'tags' => tags } }
+
+    before do
+      expect(client).to receive(:put).with(
+        logical_port.send(:href),
+        body: json_data.merge(update_data)
+      ).and_return(response)
+    end
+
+    context 'when successful' do
+      let(:response) { HTTP::Message.new_response(update_data) }
+
+      it 'updates logical port with the given data' do
+        expect do
+          logical_port.update(update_data)
+        end.to change { logical_port.tags }.from(nil).to(tags)
+      end
+    end
+
+    context 'when unsuccessful' do
+      let(:response) do
+        HTTP::Message.new_response('{
+          "details": "Field level validation errors: {tags has exceeded maximum size 15}",
+          "error_code": 255,
+          "error_message": "Field level validation errors: {tags has exceeded maximum size 15}",
+          "httpStatus": "BAD_REQUEST",
+          "module_name": "common-services"
+        }').tap { |r| r.status = HTTP::Status::BAD_REQUEST }
+      end
+
+      it 'returns error if there is an error updating the port' do
+        response = logical_port.update(update_data)
+        expect(response.ok?).to be_falsey
+        expect(logical_port.tags).to be_nil
+      end
     end
   end
 end
