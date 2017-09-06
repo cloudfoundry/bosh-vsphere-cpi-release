@@ -178,7 +178,52 @@ describe 'CPI', nsx_transformers: true do
     end
   end
 
-  def verify_ports(vm_id, &block)
+  describe 'on_set_vm_metadata' do
+    let(:vm_type) do
+      {
+        'ram' => 512,
+        'disk' => 2048,
+        'cpu' => 1
+      }
+    end
+    let(:network_spec) do
+      {
+        'static-bridged' => {
+          'ip' => "169.254.#{rand(1..254)}.#{rand(4..254)}",
+          'netmask' => '255.255.254.0',
+          'cloud_properties' => { 'name' => @nsxt_opaque_vlan_1 },
+          'default' => ['dns', 'gateway'],
+          'dns' => ['169.254.1.2'],
+          'gateway' => '169.254.1.3'
+        },
+        'static' => {
+          'ip' => "169.254.#{rand(1..254)}.#{rand(4..254)}",
+          'netmask' => '255.255.254.0',
+          'cloud_properties' => { 'name' => @nsxt_opaque_vlan_2 },
+          'default' => ['dns', 'gateway'],
+          'dns' => ['169.254.1.2'],
+          'gateway' => '169.254.1.3'
+        }
+      }
+    end
+
+    context 'with bosh id' do
+      let(:bosh_id) { SecureRandom.uuid }
+
+      it "tags the VM's logical ports with the bosh id" do
+        simple_vm_lifecycle(cpi, '', vm_type, network_spec) do |vm_id|
+          cpi.set_vm_metadata(vm_id, 'id' => bosh_id)
+          verify_ports(vm_id) do |logical_port|
+            expect(logical_port.tags).to include(
+              { 'scope' => 'bosh/vm_id', 'tag' => bosh_id }
+            )
+          end
+        end
+      end
+    end
+  end
+
+  def verify_ports(vm_id)
     nsxt_vms = nsxt.virtual_machines(display_name: vm_id)
     expect(nsxt_vms.length).to eq(1)
     expect(nsxt_vms.first.external_id).not_to be_nil
@@ -189,7 +234,7 @@ describe 'CPI', nsx_transformers: true do
 
     vifs.each do |vif|
       lport = nsxt.logical_ports(attachment_id: vif.lport_attachment_id).first
-      yield lport unless block.nil?
+      yield lport if block_given?
     end
   end
 

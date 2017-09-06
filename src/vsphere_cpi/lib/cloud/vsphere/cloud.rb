@@ -387,6 +387,7 @@ module VSphereCloud
         metadata.each do |name, value|
           client.set_custom_field(vm.mob, name, value)
         end
+        @nsxt_provider.update_vm_metadata_on_logical_ports(vm, metadata) if @config.nsxt_enabled?
       end
     end
 

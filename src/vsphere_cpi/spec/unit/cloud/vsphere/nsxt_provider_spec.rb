@@ -188,6 +188,16 @@ describe VSphereCloud::NSXTProvider do
           .and_return([logical_port_1, logical_port_2])
       end
 
+      context 'when logical ports do not have any tags' do
+        let(:existing_tags) { nil }
+        let(:new_data) { { 'tags' => [new_vm_id_tag] } }
+        it 'adds the id tag' do
+          expect(logical_port_1).to receive(:update).with(new_data).and_return(success_response)
+          expect(logical_port_2).to receive(:update).with(new_data).and_return(success_response)
+          nsxt_provider.update_vm_metadata_on_logical_ports(vm, metadata)
+        end
+      end
+
       context 'when logical ports do not have the id tag' do
         let(:existing_tags) { [{ 'scope' => 'bosh/fake', 'tag' => 'fake-data' }] }
 

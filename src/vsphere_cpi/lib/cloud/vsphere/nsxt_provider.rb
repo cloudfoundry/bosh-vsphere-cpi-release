@@ -97,7 +97,7 @@ module VSphereCloud
 
       logical_ports(vm).each do |logical_port|
         loop do
-          tags = logical_port.tags
+          tags = logical_port.tags || []
           tags_by_scope = tags.group_by { |tag| tag['scope'] }
           bosh_vm_id_tags = tags_by_scope.fetch('bosh/vm_id', [])
 
