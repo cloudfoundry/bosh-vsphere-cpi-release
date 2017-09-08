@@ -1,5 +1,3 @@
-require 'pry-byebug'
-
 module VSphereCloud
   class VirtualMachineNotFound < StandardError
     def initialize(vm_id)
