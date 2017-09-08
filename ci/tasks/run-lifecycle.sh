@@ -1,4 +1,4 @@
-#!/usr/bin/env bash
+#! /bin/bash
 
 set -e
 
@@ -11,7 +11,6 @@ if [ -f /etc/profile.d/chruby.sh ]; then
 fi
 
 : ${RSPEC_FLAGS:=""}
-: ${RSPEC_ARGS:="spec/integration"}
 : ${BOSH_VSPHERE_STEMCELL:=""}
 
 # allow user to pass paths to spec files relative to src/vsphere_cpi
@@ -46,16 +45,9 @@ install_mkisofs() {
   which mkisofs
 }
 
-set +e
-  which mkisofs
-  util_exists=$?
-set -e
-
-if [ ${util_exists} != 0 ]; then
-  install_mkisofs
-fi
+command -v mkisofs > /dev/null 2>&1 || install_mkisofs
 
 pushd "${release_dir}/src/vsphere_cpi"
   bundle install
-  bundle exec rspec ${RSPEC_FLAGS} ${RSPEC_ARGS}
+  bundle exec rspec ${RSPEC_FLAGS} --require ./spec/support/verbose_formatter.rb --format VerboseFormatter spec/integration
 popd
