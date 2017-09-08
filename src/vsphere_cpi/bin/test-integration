@@ -1,12 +1,9 @@
-#!/usr/bin/env bash
+#! /bin/bash
 
-args=$@
-[[ "$#" != "1" ]] && args=spec/integration/*
+cd "$(dirname "${BASH_SOURCE[0]}")"/..
 
-pushd $SRC_DIR
-  . bin/check-ruby-version
+source bin/check-ruby-version
 
-  echo "Running integration tests with Ruby version $RUBY_VERSION..."
-  bundle install --quiet
-  bundle exec rspec ${args}
-popd
+echo "Running integration tests with Ruby version $RUBY_VERSION ..." 1>&2
+bundle install --quiet
+bundle exec rspec "${@:-spec/integration/}"
