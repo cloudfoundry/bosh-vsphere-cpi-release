@@ -6,34 +6,36 @@ describe 'the vsphere_cpi executable' do
   it 'will not evaluate anything that causes an exception and will return the proper message to stdout' do
     config_file = Tempfile.new('cloud_properties.yml')
     config_file.write(
-      'cloud' => {
-        'properties' => {
-          'agent' => {
-            'ntp' => ['ntp'],
-          },
-          'vcenters' => [{
-            'host' => '0.0.0.0:5000',
-            'user' => 'user',
-            'password' => 'password',
-            'default_disk_type' => 'preallocated',
-            'datacenters' => [{
-              'name' => 'datacenter_name',
-              'vm_folder' => 'folder_name',
-              'template_folder' => 'template_folder_name',
-              'disk_path' => 'disk_path',
-              'datastore_pattern' => 'datastore_pattern',
-              'persistent_datastore_pattern' => 'persistent_datastore_pattern',
-              'allow_mixed_datastores' => true,
-              'clusters' => [
-                {
-                  'cluster' => {'resource_pool' => 'resource_pool_name'},
-                },
-                {
-                  'second_cluster' => {'resource_pool' => 'second_resource_pool_name'}
-                }
-              ],
+      {
+        'cloud' => {
+          'properties' => {
+            'agent' => {
+              'ntp' => ['ntp'],
+            },
+            'vcenters' => [{
+              'host' => '0.0.0.0:5000',
+              'user' => 'user',
+              'password' => 'password',
+              'default_disk_type' => 'preallocated',
+              'datacenters' => [{
+                'name' => 'datacenter_name',
+                'vm_folder' => 'folder_name',
+                'template_folder' => 'template_folder_name',
+                'disk_path' => 'disk_path',
+                'datastore_pattern' => 'datastore_pattern',
+                'persistent_datastore_pattern' => 'persistent_datastore_pattern',
+                'allow_mixed_datastores' => true,
+                'clusters' => [
+                  {
+                    'cluster' => {'resource_pool' => 'resource_pool_name'},
+                  },
+                  {
+                    'second_cluster' => {'resource_pool' => 'second_resource_pool_name'}
+                  }
+                ],
+              }]
             }]
-          }]
+          }
         }
       }.to_yaml
     )
