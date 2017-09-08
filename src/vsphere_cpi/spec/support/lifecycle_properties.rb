@@ -16,8 +16,7 @@ module LifecycleProperties
     verify_vsphere_version(@lifecycle_cpi, @vsphere_version)
     verify_datacenter_exists(@lifecycle_cpi, 'BOSH_VSPHERE_CPI_DATACENTER')
     verify_vlan(@lifecycle_cpi, @vlan, 'BOSH_VSPHERE_VLAN')
-    # TODO(cdutra): uncomment next line
-    # verify_user_has_limited_permissions(@lifecycle_cpi)
+    verify_user_has_limited_permissions(@lifecycle_cpi) if fetch_boolean('BOSH_VSPHERE_VERIFY_LIMITED_PERMISSIONS', true)
 
     verify_cluster(@lifecycle_cpi, @default_cluster, 'BOSH_VSPHERE_CPI_CLUSTER')
 

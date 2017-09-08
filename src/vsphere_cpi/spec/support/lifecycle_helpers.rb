@@ -40,6 +40,12 @@ module LifecycleHelpers
     Bosh::Clouds::Config.configure(vsphere_config)
   end
 
+  def fetch_boolean(key, default)
+    value = ENV.fetch(key, default)
+    value = false if value == "false"
+    value
+  end
+
   def fetch_property(key)
     fail "Missing Environment variable #{key}: #{MISSING_KEY_MESSAGES[key]}" unless (ENV.has_key?(key))
     value = ENV[key]

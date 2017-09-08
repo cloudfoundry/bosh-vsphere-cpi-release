@@ -212,6 +212,7 @@ jobs:
           BOSH_VSPHERE_CPI_NSXT_USERNAME:                {{lifecycle_vsphere_6_0_nsxt_username}}
           BOSH_VSPHERE_CPI_NSXT_PASSWORD:                {{lifecycle_vsphere_6_0_nsxt_password}}
           BOSH_VSPHERE_CPI_NSXT_CA_CERT:                 {{lifecycle_vsphere_6_0_nsxt_ca_cert}}
+          BOSH_VSPHERE_VERIFY_LIMITED_PERMISSIONS:       false
 
   - name: bats
     serial: true

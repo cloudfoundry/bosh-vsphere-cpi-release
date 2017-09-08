@@ -56,3 +56,10 @@ params:
   BOSH_VSPHERE_CPI_CLUSTER_MORE_DATASTORE_FREE_SPACE:   ""
   BOSH_VSPHERE_CPI_CLUSTER_LESS_DATASTORE_FREE_SPACE:   ""
   BOSH_VSPHERE_CPI_SHARED_DATASTORE:                    ""
+  BOSH_VSPHERE_CPI_NSXT_HOST:                           ""
+  BOSH_VSPHERE_CPI_NSXT_USERNAME:                       ""
+  BOSH_VSPHERE_CPI_NSXT_PASSWORD:                       ""
+  BOSH_VSPHERE_CPI_NSXT_CA_CERT:                        ""
+  BOSH_VSPHERE_OPAQUE_VLAN:                             ""
+  BOSH_VSPHERE_SECOND_OPAQUE_VLAN:                      ""
+  BOSH_VSPHERE_VERIFY_LIMITED_PERMISSIONS:              true
