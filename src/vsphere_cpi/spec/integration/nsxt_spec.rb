@@ -1,3 +1,5 @@
+require 'digest'
+require 'securerandom'
 require 'integration/spec_helper'
 
 describe 'CPI', nsx_transformers: true do
@@ -215,7 +217,7 @@ describe 'CPI', nsx_transformers: true do
           cpi.set_vm_metadata(vm_id, 'id' => bosh_id)
           verify_ports(vm_id) do |logical_port|
             expect(logical_port.tags).to include(
-              { 'scope' => 'bosh/vm_id', 'tag' => bosh_id }
+              { 'scope' => 'bosh/vm_id', 'tag' => Digest::SHA1.hexdigest(bosh_id) }
             )
           end
         end

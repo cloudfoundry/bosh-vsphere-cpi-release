@@ -1,3 +1,5 @@
+require 'digest'
+
 module VSphereCloud
   class VirtualMachineNotFound < StandardError
     def initialize(vm_id)
@@ -103,7 +105,7 @@ module VSphereCloud
 
           raise InvalidLogicalPortError.new(logical_port) if bosh_vm_id_tags.uniq.length > 1
 
-          vm_id_tag = {'scope' => 'bosh/vm_id', 'tag' => metadata['id']}
+          vm_id_tag = { 'scope' => 'bosh/vm_id', 'tag' => Digest::SHA1.hexdigest(metadata['id']) }
           tags.delete_if {|tag| tag['scope'] == 'bosh/vm_id'}
           tags << vm_id_tag
 
