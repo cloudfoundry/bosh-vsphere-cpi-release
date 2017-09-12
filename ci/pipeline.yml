@@ -199,7 +199,8 @@ jobs:
           BOSH_VSPHERE_CPI_USER:                         {{lifecycle_vsphere_6_0_wild_user}}
           BOSH_VSPHERE_CPI_PASSWORD:                     {{lifecycle_vsphere_6_0_wild_password}}
           BOSH_VSPHERE_CPI_DATACENTER:                   {{lifecycle_vsphere_6_0_wild_datacenter}}
-          BOSH_VSPHERE_CPI_CLUSTER:                      {{lifecycle_vsphere_6_0_wild_first_cluster}}
+          BOSH_VSPHERE_CPI_CLUSTER:                      {{lifecycle_vsphere_6_0_wild_cluster}}
+          BOSH_VSPHERE_CPI_RESOURCE_POOL:                {{lifecycle_vsphere_6_0_wild_rp}}
           BOSH_VSPHERE_CPI_DATASTORE_PATTERN:            {{lifecycle_vsphere_6_0_wild_datastore_pattern}}
           BOSH_VSPHERE_CPI_PERSISTENT_DATASTORE_PATTERN: {{lifecycle_vsphere_6_0_wild_datastore_pattern}}
           BOSH_VSPHERE_CPI_VM_FOLDER:                    {{lifecycle_vsphere_6_0_wild_vm_folder}}

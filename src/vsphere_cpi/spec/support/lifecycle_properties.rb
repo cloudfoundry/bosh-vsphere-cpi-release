@@ -10,6 +10,7 @@ module LifecycleProperties
 
     @default_datastore_pattern = fetch_property('BOSH_VSPHERE_CPI_DATASTORE_PATTERN')
     @default_cluster = fetch_property('BOSH_VSPHERE_CPI_CLUSTER')
+    @default_resource_pool = fetch_property('BOSH_VSPHERE_CPI_RESOURCE_POOL')
 
     @lifecycle_cpi = VSphereCloud::Cloud.new(cpi_options)
 
@@ -19,6 +20,7 @@ module LifecycleProperties
     verify_user_has_limited_permissions(@lifecycle_cpi) if fetch_boolean('BOSH_VSPHERE_VERIFY_LIMITED_PERMISSIONS', true)
 
     verify_cluster(@lifecycle_cpi, @default_cluster, 'BOSH_VSPHERE_CPI_CLUSTER')
+    verify_resource_pool(@lifecycle_cpi, @default_cluster, @default_resource_pool, 'BOSH_VSPHERE_CPI_RESOURCE_POOL')
 
     verify_datastore_within_cluster(
       @lifecycle_cpi,
@@ -67,16 +69,25 @@ module LifecycleProperties
     overrides = stringify_keys(overrides)
 
     datacenter_overrides = overrides.delete('datacenters') || []
-    datacenter_config = deep_merge({
-      'name' => @datacenter_name,
-      'vm_folder' => fetch_property('BOSH_VSPHERE_CPI_VM_FOLDER'),
-      'template_folder' => fetch_property('BOSH_VSPHERE_CPI_TEMPLATE_FOLDER'),
-      'disk_path' => fetch_property('BOSH_VSPHERE_CPI_DISK_PATH'),
-      'datastore_pattern' => @default_datastore_pattern,
-      'persistent_datastore_pattern' => @default_datastore_pattern,
-      'allow_mixed_datastores' => true,
-      'clusters' => [@default_cluster],
-    }, datacenter_overrides.first || {})
+    datacenter_config = deep_merge(
+      {
+        'name' => @datacenter_name,
+        'vm_folder' => fetch_property('BOSH_VSPHERE_CPI_VM_FOLDER'),
+        'template_folder' => fetch_property('BOSH_VSPHERE_CPI_TEMPLATE_FOLDER'),
+        'disk_path' => fetch_property('BOSH_VSPHERE_CPI_DISK_PATH'),
+        'datastore_pattern' => @default_datastore_pattern,
+        'persistent_datastore_pattern' => @default_datastore_pattern,
+        'allow_mixed_datastores' => true,
+        'clusters' => [
+          {
+            @default_cluster => {
+              'resource_pool' => @default_resource_pool
+            }
+          }
+        ]
+      },
+      datacenter_overrides.first || {}
+    )
 
     vcenter_options = deep_merge({
       'host' => fetch_property('BOSH_VSPHERE_CPI_HOST'),
