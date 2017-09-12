@@ -264,8 +264,8 @@ jobs:
   - name: delivery
     plan:
     - aggregate:
-      - {trigger: true, passed: [lifecycle-6.0, lifecycle-6.0-vsan, bats], get: bosh-cpi-artifacts, tags: ["vsphere-v6.0"]}
-      - {trigger: false, passed: [lifecycle-6.0, lifecycle-6.0-vsan, bats], get: bosh-cpi-src, tags: ["vsphere-v6.0"]}
+      - {trigger: true, passed: [lifecycle-6.0, lifecycle-6.5, lifecycle-6.0-nsx-t, lifecycle-6.0-vsan, bats], get: bosh-cpi-artifacts, tags: ["vsphere-v6.0"]}
+      - {trigger: false, passed: [lifecycle-6.0, lifecycle-6.5, lifecycle-6.0-nsx-t, lifecycle-6.0-vsan, bats], get: bosh-cpi-src, tags: ["vsphere-v6.0"]}
     - put: tracker-output
       params:
         repos:
@@ -275,8 +275,8 @@ jobs:
     serial: true
     plan:
     - aggregate:
-      - {trigger: false, passed: [lifecycle-6.0, lifecycle-6.0-vsan, bats], get: bosh-cpi-artifacts, tags: ["vsphere-v6.0"]}
-      - {trigger: false, passed: [lifecycle-6.0, lifecycle-6.0-vsan, bats], get: bosh-cpi-src, tags: ["vsphere-v6.0"]}
+      - {trigger: false, passed: [lifecycle-6.0, lifecycle-6.5, lifecycle-6.0-nsx-t, lifecycle-6.0-vsan, bats], get: bosh-cpi-artifacts, tags: ["vsphere-v6.0"]}
+      - {trigger: false, passed: [lifecycle-6.0, lifecycle-6.5, lifecycle-6.0-nsx-t, lifecycle-6.0-vsan, bats], get: bosh-cpi-src, tags: ["vsphere-v6.0"]}
       - {trigger: false, get: release-version-semver, params: {bump: major}, tags: ["vsphere-v6.0"]}
     - task: promote
       tags: ["vsphere-v6.0"]
