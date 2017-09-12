@@ -76,8 +76,6 @@ module NSXT
     end
   end
 
-  class Tag < Resource.new(:scope, :tag); end
-
   class NSGroup < Resource.new(:client, :id, :display_name, :members)
     class ExpressionFactory
       def self.create(members)
@@ -125,6 +123,7 @@ module NSXT
         hash['expressions'] = ExpressionFactory.create(hash['expressions'])
         new(*members.map { |k| hash[k.to_s] })
       end
+
       def self.resource_type
         'NSGroupComplexExpression'
       end

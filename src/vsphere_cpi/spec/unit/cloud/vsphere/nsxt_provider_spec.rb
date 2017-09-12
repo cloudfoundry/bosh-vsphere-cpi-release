@@ -173,8 +173,8 @@ describe VSphereCloud::NSXTProvider do
 
   describe '#update_vm_metadata_on_logical_ports' do
     let(:metadata) { { 'id' => 'new-bosh-id' } }
-    let(:old_vm_id_tag) { { 'scope' => 'bosh/vm_id', 'tag' => Digest::SHA1.hexdigest('old-bosh-id') } }
-    let(:new_vm_id_tag) { { 'scope' => 'bosh/vm_id', 'tag' => Digest::SHA1.hexdigest('new-bosh-id') } }
+    let(:old_vm_id_tag) { { 'scope' => 'bosh/id', 'tag' => Digest::SHA1.hexdigest('old-bosh-id') } }
+    let(:new_vm_id_tag) { { 'scope' => 'bosh/id', 'tag' => Digest::SHA1.hexdigest('new-bosh-id') } }
     let(:new_data) do
       { 'tags' => [{ 'scope' => 'bosh/fake', 'tag' => 'fake-data' }, new_vm_id_tag] }
     end

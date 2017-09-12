@@ -49,7 +49,7 @@ module VSphereCloud
     end
 
     def to_s
-      "Logical port #{@logical_port.id} has multiple values for tag with scope 'bosh/vm_id'"
+      "Logical port #{@logical_port.id} has multiple values for tag with scope 'bosh/id'"
     end
   end
 
@@ -101,13 +101,13 @@ module VSphereCloud
         loop do
           tags = logical_port.tags || []
           tags_by_scope = tags.group_by { |tag| tag['scope'] }
-          bosh_vm_id_tags = tags_by_scope.fetch('bosh/vm_id', [])
+          bosh_id_tags = tags_by_scope.fetch('bosh/id', [])
 
-          raise InvalidLogicalPortError.new(logical_port) if bosh_vm_id_tags.uniq.length > 1
+          raise InvalidLogicalPortError.new(logical_port) if bosh_id_tags.uniq.length > 1
 
-          vm_id_tag = { 'scope' => 'bosh/vm_id', 'tag' => Digest::SHA1.hexdigest(metadata['id']) }
-          tags.delete_if {|tag| tag['scope'] == 'bosh/vm_id'}
-          tags << vm_id_tag
+          id_tag = { 'scope' => 'bosh/id', 'tag' => Digest::SHA1.hexdigest(metadata['id']) }
+          tags.delete_if {|tag| tag['scope'] == 'bosh/id'}
+          tags << id_tag
 
           response = logical_port.update('tags' => tags)
           if response.ok?
