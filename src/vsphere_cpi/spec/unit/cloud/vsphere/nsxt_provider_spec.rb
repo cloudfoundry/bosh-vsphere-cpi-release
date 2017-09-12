@@ -76,12 +76,12 @@ describe VSphereCloud::NSXTProvider do
       # No call to client should be made
       nsxt_provider.add_vm_to_nsgroups(vm, nil)
       nsxt_provider.add_vm_to_nsgroups(vm, {})
-      nsxt_provider.add_vm_to_nsgroups(vm, { 'nsgroups' => [] })
+      nsxt_provider.add_vm_to_nsgroups(vm, { 'ns_groups' => [] })
     end
 
     context 'when nsgroups are specified in vm_type_nsxt' do
       let(:vm_type_nsxt) do
-        { 'nsgroups' => %w(test-nsgroup-1 test-nsgroup-2) }
+        { 'ns_groups' => %w(test-nsgroup-1 test-nsgroup-2) }
       end
       let(:nsgroup_1) do
         NSXT::NSGroup.new(client, 'id-1', 'test-nsgroup-1')
@@ -105,7 +105,7 @@ describe VSphereCloud::NSXTProvider do
 
       context 'if any of the nsgroups cannot be found in NSXT' do
         let(:vm_type_nsxt) do
-          { 'nsgroups' => %w(other-nsgroup-1 other-nsgroup-2) }
+          { 'ns_groups' => %w(other-nsgroup-1 other-nsgroup-2) }
         end
 
         it 'should raise a NSGroupsNotFound error' do

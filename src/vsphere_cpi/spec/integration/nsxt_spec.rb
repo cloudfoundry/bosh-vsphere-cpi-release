@@ -20,7 +20,7 @@ describe 'CPI', nsx_transformers: true do
       'ram' => 512,
       'disk' => 2048,
       'cpu' => 1,
-      'nsxt' => { 'nsgroups' => [nsgroup_name_1, nsgroup_name_2] }
+      'nsxt' => { 'ns_groups' => [nsgroup_name_1, nsgroup_name_2] }
     }
   end
 

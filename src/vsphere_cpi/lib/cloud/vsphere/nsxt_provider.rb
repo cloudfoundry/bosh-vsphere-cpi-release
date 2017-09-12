@@ -60,11 +60,11 @@ module VSphereCloud
     end
 
     def add_vm_to_nsgroups(vm, vm_type_nsxt)
-      return if vm_type_nsxt.nil? || vm_type_nsxt['nsgroups'].nil? || vm_type_nsxt['nsgroups'].empty?
+      return if vm_type_nsxt.nil? || vm_type_nsxt['ns_groups'].nil? || vm_type_nsxt['ns_groups'].empty?
       return if nsxt_nics(vm).empty?
 
-      @logger.info("Adding vm '#{vm.cid}' to NSGroups: #{vm_type_nsxt['nsgroups']}")
-      nsgroups = retrieve_nsgroups(vm_type_nsxt['nsgroups'])
+      @logger.info("Adding vm '#{vm.cid}' to NSGroups: #{vm_type_nsxt['ns_groups']}")
+      nsgroups = retrieve_nsgroups(vm_type_nsxt['ns_groups'])
 
       lports = logical_ports(vm)
       nsgroups.each do |nsgroup|
