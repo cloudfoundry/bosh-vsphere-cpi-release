@@ -109,12 +109,11 @@ describe 'CPI', nsx_transformers: true do
         context "but none of VM's networks are NSX-T Opaque Network (nsx.LogicalSwitch)" do
           it 'does NOT add VM to NSGroups' do
             simple_vm_lifecycle(cpi, @vlan, vm_type) do |vm_id|
-              external_id = nsxt.virtual_machines(display_name: vm_id).first.external_id
-              attachment_id = nsxt.vifs(owner_vm_id: external_id).first.lport_attachment_id
-              logical_port_id = nsxt.logical_ports(attachment_id: attachment_id).first.id
-
-              nsxt.nsgroups.select do |nsgroup|
-                expect(nsgroup_effective_logical_port_member_ids(nsgroup)).to_not include(logical_port_id)
+              retryer do
+                external_id = nsxt.virtual_machines(display_name: vm_id).first.external_id
+                vifs = nsxt.vifs(owner_vm_id: external_id)
+                expect(vifs.length).to eq(1)
+                expect(vifs.first.lport_attachment_id).to be_nil
               end
             end
           end
@@ -225,18 +224,20 @@ describe 'CPI', nsx_transformers: true do
     end
   end
 
-  def verify_ports(vm_id)
-    nsxt_vms = nsxt.virtual_machines(display_name: vm_id)
-    expect(nsxt_vms.length).to eq(1)
-    expect(nsxt_vms.first.external_id).not_to be_nil
+  def verify_ports(vm_id, expected_vif_number = 2)
+    retryer do
+      nsxt_vms = nsxt.virtual_machines(display_name: vm_id)
+      expect(nsxt_vms.length).to eq(1)
+      expect(nsxt_vms.first.external_id).not_to be_nil
 
-    vifs = nsxt.vifs(owner_vm_id: nsxt_vms.first.external_id)
-    expect(vifs.length).to eq(2)
-    expect(vifs.map(&:lport_attachment_id).compact.length).to be(2)
+      vifs = nsxt.vifs(owner_vm_id: nsxt_vms.first.external_id)
+      expect(vifs.length).to eq(expected_vif_number)
+      expect(vifs.map(&:lport_attachment_id).compact.length).to eq(expected_vif_number)
 
-    vifs.each do |vif|
-      lport = nsxt.logical_ports(attachment_id: vif.lport_attachment_id).first
-      yield lport if block_given?
+      vifs.each do |vif|
+        lport = nsxt.logical_ports(attachment_id: vif.lport_attachment_id).first
+        yield lport if block_given?
+      end
     end
   end
 
@@ -258,5 +259,15 @@ describe 'CPI', nsx_transformers: true do
   def nsgroup_effective_logical_port_member_ids(nsgroup)
     json = nsxt_client.get("ns-groups/#{nsgroup.id}/effective-logical-port-members").body
     json['results'].map { |member| member['target_id'] }
+  end
+
+  def retryer
+    Bosh::Retryable.new(
+      tries: 20,
+      sleep: ->(try_count, retry_exception) { 0.5 },
+      on: [VSphereCloud::VirtualMachineNotFound, VSphereCloud::VirtualMachineNotFound, VSphereCloud::VirtualMachineNotFound]
+    ).retryer do |i|
+      yield i if block_given?
+    end
   end
 end
