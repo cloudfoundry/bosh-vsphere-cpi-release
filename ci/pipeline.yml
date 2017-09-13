@@ -173,6 +173,7 @@ jobs:
           BOSH_VSPHERE_CPI_USER:                                {{lifecycle_vsphere_6_0_vsan_user}}
           BOSH_VSPHERE_CPI_PASSWORD:                            {{lifecycle_vsphere_6_0_vsan_password}}
           BOSH_VSPHERE_VLAN:                                    {{lifecycle_vsphere_6_0_vsan_vlan}}
+          BOSH_VSPHERE_CPI_RESOURCE_POOL:                       {{lifecycle_vsphere_6_0_vsan_rp}}
           BOSH_VSPHERE_CPI_DATACENTER:                          {{lifecycle_vsphere_6_0_vsan_datacenter}}
           BOSH_VSPHERE_CPI_CLUSTER:                             {{lifecycle_vsphere_6_0_vsan_first_cluster}}
           BOSH_VSPHERE_CPI_VM_FOLDER:                           {{lifecycle_vsphere_6_0_vsan_vm_folder}}
