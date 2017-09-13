@@ -57,6 +57,8 @@ module VSphereCloud
     def initialize(config, logger)
       @client = NSXT::Client.new(config.host, config.username, config.password, logger)
       @logger = logger
+      @max_tries = MAX_TRIES
+      @sleep_time = DEFAULT_SLEEP_TIME
     end
 
     def add_vm_to_nsgroups(vm, vm_type_nsxt)
@@ -123,6 +125,8 @@ module VSphereCloud
 
     private
 
+    MAX_TRIES = 20
+    DEFAULT_SLEEP_TIME = 0.5
     NSXT_LOGICAL_SWITCH = 'nsx.LogicalSwitch'.freeze
 
     def retrieve_nsgroups(nsgroup_names)
@@ -145,25 +149,31 @@ module VSphereCloud
     end
 
     def logical_ports(vm)
-      @logger.info("Searching for LogicalPorts for vm '#{vm.cid}'")
-      virtual_machines = @client.virtual_machines(display_name: vm.cid)
-      raise VirtualMachineNotFound.new(vm.cid) if virtual_machines.empty?
-      raise 'Multiple NSX-T virtual machines found.' if virtual_machines.length > 1
-      external_id = virtual_machines.first.external_id
+      Bosh::Retryable.new(
+        tries: @max_tries,
+        sleep: ->(try_count, retry_exception) { @sleep_time },
+        on: [VirtualMachineNotFound, VIFNotFound, LogicalPortNotFound]
+      ).retryer do |i|
+        @logger.info("Searching for LogicalPorts for vm '#{vm.cid}'")
+        virtual_machines = @client.virtual_machines(display_name: vm.cid)
+        raise VirtualMachineNotFound.new(vm.cid) if virtual_machines.empty?
+        raise 'Multiple NSX-T virtual machines found.' if virtual_machines.length > 1
+        external_id = virtual_machines.first.external_id
 
-      @logger.info("Searching VIFs with 'owner_vm_id: #{external_id}'")
-      vifs = @client.vifs(owner_vm_id: external_id)
-      vifs.select! { |vif| !vif.lport_attachment_id.nil? }
-      raise VIFNotFound.new(vm.cid, external_id) if vifs.empty?
+        @logger.info("Searching VIFs with 'owner_vm_id: #{external_id}'")
+        vifs = @client.vifs(owner_vm_id: external_id)
+        vifs.select! { |vif| !vif.lport_attachment_id.nil? }
+        raise VIFNotFound.new(vm.cid, external_id) if vifs.empty?
 
-      lports = vifs.inject([]) do |lports, vif|
-        @logger.info("Searching LogicalPorts with 'attachment_id: #{vif.lport_attachment_id}'")
-        lports << @client.logical_ports(attachment_id: vif.lport_attachment_id).first
-      end.compact
-      raise LogicalPortNotFound.new(vm.cid, external_id) if lports.empty?
-      @logger.info("LogicalPorts found for vm '#{vm.cid}': #{lports.map(&:id)}'")
+        lports = vifs.inject([]) do |lports, vif|
+          @logger.info("Searching LogicalPorts with 'attachment_id: #{vif.lport_attachment_id}'")
+          lports << @client.logical_ports(attachment_id: vif.lport_attachment_id).first
+        end.compact
+        raise LogicalPortNotFound.new(vm.cid, external_id) if lports.empty?
+        @logger.info("LogicalPorts found for vm '#{vm.cid}': #{lports.map(&:id)}'")
 
-      lports
+        lports
+      end
     end
 
     def to_simple_expressions(lports)

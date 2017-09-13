@@ -290,7 +290,38 @@ describe VSphereCloud::NSXTProvider do
   end
 
   describe '#logical_ports' do
+    context 'retries when' do
+      before do
+        nsxt_provider.instance_variable_set('@max_tries', 4)
+        nsxt_provider.instance_variable_set('@sleep_time', 0.0)
+
+        expect(client).to receive(:virtual_machines).with(display_name: vm.cid).once
+          .and_return([])
+        expect(client).to receive(:virtual_machines).with(display_name: vm.cid).exactly(3).times
+          .and_return([virtual_machine])
+
+        expect(client).to receive(:vifs).with(owner_vm_id: virtual_machine.external_id).once
+          .and_return([vif_without_lport_attachment])
+        expect(client).to receive(:vifs).with(owner_vm_id: virtual_machine.external_id).twice
+          .and_return([vif, vif_without_lport_attachment])
+
+        expect(client).to receive(:logical_ports).with(attachment_id: vif.lport_attachment_id).once
+          .and_return([])
+        expect(client).to receive(:logical_ports).with(attachment_id: vif.lport_attachment_id).once
+          .and_return([logical_port_1])
+      end
+
+      it 'VirtualMachineNotFound, VIFNotFound or LogicalPortNotFound exception is raised' do
+        expect(nsxt_provider.send(:logical_ports, vm)).to eq([logical_port_1])
+      end
+    end
+
     context 'fails' do
+      before do
+        nsxt_provider.instance_variable_set('@max_tries', 0)
+        nsxt_provider.instance_variable_set('@sleep_time', 0.0)
+      end
+
       context 'when the virtual machine cannot be found in NSX-T' do
         before do
           expect(client).to receive(:virtual_machines).with(display_name: vm.cid)
