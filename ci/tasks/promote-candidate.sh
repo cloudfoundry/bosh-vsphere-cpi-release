@@ -2,6 +2,7 @@
 
 set -e
 
+source /bosh-cpi-src/ci/utils.sh
 source /etc/profile.d/chruby.sh
 chruby 2.2.6
 
@@ -30,11 +31,8 @@ blobstore:
     secret_access_key: $AWS_SECRET_ACCESS_KEY
 EOF
 
-  echo "using bosh CLI version..."
-  bosh version
-
   echo "finalizing CPI release..."
-  bosh finalize release ${artifacts_dir}/*.tgz --version $integer_version
+  bosh2 finalize-release ${artifacts_dir}/*.tgz --version $integer_version
 
   rm config/private.yml
 

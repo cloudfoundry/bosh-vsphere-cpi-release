@@ -6,6 +6,7 @@ image_resource:
 inputs:
   - name: bosh-cpi-src
   - name: stemcell
+  - name: bosh-cli
 outputs:
   - name: dummy # dummy output to avoid sending the entire task over the network
 run:

@@ -29,6 +29,7 @@ jobs:
       - aggregate:
         - {trigger: true, get: bosh-cpi-src, tags: ["vsphere-v6.0"]}
         - {trigger: false, get: version-semver, params: {bump: patch}, tags: ["vsphere-v6.0"]}
+        - {trigger: false, get: bosh-cli, tags: ["vsphere-v6.0"]}
       - put: version-semver
         tags: ["vsphere-v6.0"]
         params: {file: version-semver/number}
@@ -47,6 +48,7 @@ jobs:
         - {trigger: false, passed: [build-candidate], get: bosh-cpi-src, tags: ["vsphere-v6.0"]}
         - {trigger: false,                            get: stemcell, resource: vsphere-ubuntu-stemcell, tags: ["vsphere-v6.0"]}
         - {trigger: true,                             get: 2h, tags: [vsphere-v6.0]}
+        - {trigger: false, get: bosh-cli, tags: ["vsphere-v6.0"]}
       - task: test
         tags: ["vsphere-v6.0"]
         file: bosh-cpi-src/ci/tasks/run-lifecycle.yml
@@ -105,6 +107,7 @@ jobs:
         - {trigger: false, passed: [build-candidate], get: bosh-cpi-src, tags: ["vsphere-v6.0"]}
         - {trigger: false,                            get: stemcell, resource: vsphere-ubuntu-stemcell, tags: ["vsphere-v6.0"]}
         - {trigger: true,                             get: 2h, tags: [vsphere-v6.0]}
+        - {trigger: false, get: bosh-cli, tags: ["vsphere-v6.0"]}
       - task: test
         tags: ["vsphere-v6.0"]
         file: bosh-cpi-src/ci/tasks/run-lifecycle.yml
@@ -163,6 +166,7 @@ jobs:
         - {trigger: false, passed: [build-candidate], get: bosh-cpi-src, tags: ["vsphere-v6.0"]}
         - {trigger: false,                            get: stemcell, resource: vsphere-ubuntu-stemcell, tags: ["vsphere-v6.0"]}
         - {trigger: true,                             get: 2h, tags: [vsphere-v6.0]}
+        - {trigger: false, get: bosh-cli, tags: ["vsphere-v6.0"]}
       - task: test
         tags: ["vsphere-v6.0"]
         file: bosh-cpi-src/ci/tasks/run-lifecycle.yml
@@ -190,6 +194,7 @@ jobs:
         - {trigger: false, passed: [build-candidate], get: bosh-cpi-src, tags: ["vsphere-v6.0"]}
         - {trigger: false,                            get: stemcell, resource: vsphere-ubuntu-stemcell, tags: ["vsphere-v6.0"]}
         - {trigger: true,                             get: 2h, tags: [vsphere-v6.0]}
+        - {trigger: false, get: bosh-cli, tags: ["vsphere-v6.0"]}
       - task: test
         tags: ["vsphere-v6.0"]
         file: bosh-cpi-src/ci/tasks/run-lifecycle.yml
@@ -280,6 +285,7 @@ jobs:
       - {trigger: false, passed: [lifecycle-6.0, lifecycle-6.5, lifecycle-6.0-nsx-t, lifecycle-6.0-vsan, bats], get: bosh-cpi-artifacts, tags: ["vsphere-v6.0"]}
       - {trigger: false, passed: [lifecycle-6.0, lifecycle-6.5, lifecycle-6.0-nsx-t, lifecycle-6.0-vsan, bats], get: bosh-cpi-src, tags: ["vsphere-v6.0"]}
       - {trigger: false, get: release-version-semver, params: {bump: major}, tags: ["vsphere-v6.0"]}
+      - {trigger: false, get: bosh-cli, tags: ["vsphere-v6.0"]}
     - task: promote
       tags: ["vsphere-v6.0"]
       file: bosh-cpi-src/ci/tasks/promote-candidate.yml

@@ -5,6 +5,7 @@ set -e
 release_dir="$( cd $(dirname $0) && cd ../.. && pwd )"
 workspace_dir="$( cd ${release_dir} && cd .. && pwd )"
 
+source bosh-cpi-src/ci/utils.sh
 if [ -f /etc/profile.d/chruby.sh ]; then
   source /etc/profile.d/chruby.sh
   chruby 2.2.6
@@ -26,10 +27,9 @@ fi
 
 install_mkisofs() {
   pushd "${release_dir}"
-    echo "using bosh CLI version..."
-    bosh version
     rm -rf ./dev_releases/lifecycle-test
-    bosh create release --name lifecycle-test --version 0.0.0 --with-tarball --force
+    bosh2 create-release --name lifecycle-test --version 0.0.0 \
+      --tarball "${release_dir}/dev_releases/lifecycle-test/lifecycle-test-0.0.0.tgz" --force
   popd
 
   echo "Extracting mkisofs from bosh release..."
