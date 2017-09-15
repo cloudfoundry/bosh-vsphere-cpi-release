@@ -110,7 +110,10 @@ describe 'CPI', nsx_transformers: true do
           it 'does NOT add VM to NSGroups' do
             simple_vm_lifecycle(cpi, @vlan, vm_type) do |vm_id|
               retryer do
-                external_id = nsxt.virtual_machines(display_name: vm_id).first.external_id
+                nsxt_vms = nsxt.virtual_machines(display_name: vm_id)
+                raise VSphereCloud::VirtualMachineNotFound if nsxt_vms.empty?
+
+                external_id = nsxt_vms.first.external_id
                 vifs = nsxt.vifs(owner_vm_id: external_id)
                 expect(vifs.length).to eq(1)
                 expect(vifs.first.lport_attachment_id).to be_nil
