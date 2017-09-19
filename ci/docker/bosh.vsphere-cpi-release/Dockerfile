@@ -17,7 +17,7 @@ RUN apt-get update && \
 
 RUN apt-get install -y --no-install-recommends python
 
-ENV RUBY_INSTALL_VERSION=0.6.1 CHRUBY_VERSION=0.3.9 RUBY_VERSION=2.2.6
+ENV RUBY_INSTALL_VERSION=0.6.1 CHRUBY_VERSION=0.3.9 RUBY_VERSION=2.2.6 GOLANG_VERSION=1.8.3
 
 # Import Postmodern PGP key
 RUN wget -nv https://raw.github.com/postmodern/postmodern.github.io/master/postmodern.asc && \
@@ -54,3 +54,17 @@ RUN /bin/bash -l -c "                            \
   chruby $RUBY_VERSION ;                         \
   gem install bundler --no-ri --no-rdoc          \
 "
+
+# Install Golang
+RUN cd /tmp && \
+    wget -nv https://storage.googleapis.com/golang/go$GOLANG_VERSION.linux-amd64.tar.gz && \
+    ( \
+        echo '1862f4c3d3907e59b04a757cfda0ea7aa9ef39274af99a784f5be843c80c6772 go1.8.3.linux-amd64.tar.gz' | \
+        sha256sum -c - \
+    ) && \
+    tar -C /usr/local -xzf go*.tar.gz && \
+    rm go*.tar.gz
+
+RUN mkdir -p /opt/go
+ENV GOPATH /opt/go
+ENV PATH /usr/local/go/bin:/opt/go/bin:$PATH
