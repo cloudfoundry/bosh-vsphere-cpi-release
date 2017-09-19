@@ -25,27 +25,27 @@ if [ -z "${BOSH_VSPHERE_STEMCELL}" ]; then
   export BOSH_VSPHERE_STEMCELL=${stemcell_dir}/stemcell.tgz
 fi
 
-install_mkisofs() {
+install_iso9660wrap() {
   pushd "${release_dir}"
     rm -rf ./dev_releases/lifecycle-test
     bosh2 create-release --name lifecycle-test --version 0.0.0 \
       --tarball "${release_dir}/dev_releases/lifecycle-test/lifecycle-test-0.0.0.tgz" --force
   popd
 
-  echo "Extracting mkisofs from bosh release..."
+  echo "Extracting iso9660wrap from bosh release..."
   iso_tmp_dir="$(mktemp -d /tmp/iso_image.XXXXXXXXXX)"
   pushd "${iso_tmp_dir}"
     tar -xf "${release_dir}/dev_releases/lifecycle-test/lifecycle-test-0.0.0.tgz"
-    tar -xf packages/vsphere_cpi_mkisofs.tgz
+    tar -xf packages/iso9660wrap.tgz
     chmod +x packaging
-    BOSH_INSTALL_TARGET="${iso_tmp_dir}" ./packaging &> mkisofs_compilation.log
+    BOSH_INSTALL_TARGET="${iso_tmp_dir}" ./packaging &> iso9660wrap_compilation.log
     export PATH="${iso_tmp_dir}/bin:$PATH"
   popd
-  echo "installed mkisofs at:"
-  which mkisofs
+  echo "installed iso9660wrap at:"
+  which iso9660wrap
 }
 
-command -v mkisofs > /dev/null 2>&1 || install_mkisofs
+command -v iso9660wrap > /dev/null 2>&1 || install_iso9660wrap
 
 pushd "${release_dir}/src/vsphere_cpi"
   bundle install
