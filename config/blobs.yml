@@ -1,15 +1,3 @@
-vsphere_cpi_mkisofs/cdrtools-3.00.tar.bz2:
-  size: 1978563
-  object_id: 93d9103d-44cf-47da-9343-49c1a4bea480
-  sha: 6464844d6b936d4f43ee98a04d637cd91131de4e
-vsphere_cpi_mkisofs/patch-include_schily_sha2.h:
-  size: 648
-  object_id: 58ebaf12-3799-4ac0-bbbd-205bf874868f
-  sha: 6c2c06b7546face6dd58c3fb39484b9120e3e1ca
-vsphere_cpi_mkisofs/smake-1.2.4.tar.bz2:
-  size: 426050
-  object_id: f9689428-a553-4858-be4b-42f60c033a62
-  sha: 677af2a1b768d5dfd3bd71dc46f81992e798191b
 vsphere_cpi_ruby/bundler-1.15.0.gem:
   size: 338432
   object_id: bc4bc9df-ef7f-49c8-5079-19a42765f503

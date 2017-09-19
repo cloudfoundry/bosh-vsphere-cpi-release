@@ -95,7 +95,14 @@ module VSphereCloud
         env_path = File.join(path, 'env')
         iso_path = File.join(path, 'env.iso')
         File.open(env_path, 'w') { |f| f.write(env) }
-        output = `#{genisoimage} -o #{iso_path} #{env_path} 2>&1`
+
+        mkiso = genisoimage
+        if mkiso.match('iso9660wrap$')
+          output = `#{mkiso} #{env_path} #{iso_path} 2>&1`
+        else
+          output = `#{mkiso} -o #{iso_path} #{env_path} 2>&1`
+        end
+
         raise "#{$?.exitstatus} -#{output}" if $?.exitstatus != 0
         File.open(iso_path, 'r') { |f| f.read }
       end
@@ -112,7 +119,7 @@ module VSphereCloud
     end
 
     def genisoimage
-      @genisoimage ||= which(%w{genisoimage mkisofs})
+      @genisoimage ||= which(%w{genisoimage iso9660wrap})
     end
   end
 end

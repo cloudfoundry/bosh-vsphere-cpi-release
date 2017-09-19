@@ -1,0 +1,7 @@
+---
+name: iso9660wrap
+dependencies:
+- golang-1.8-darwin
+- golang-1.8-linux
+files:
+- iso9660wrap/*.go

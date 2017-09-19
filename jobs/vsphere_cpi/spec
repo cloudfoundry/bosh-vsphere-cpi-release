@@ -8,7 +8,7 @@ templates:
   nsxt_cacert.pem.erb: config/nsxt_cacert.pem
 
 packages:
-- vsphere_cpi_mkisofs
+- iso9660wrap
 - vsphere_cpi_ruby
 - vsphere_cpi
 

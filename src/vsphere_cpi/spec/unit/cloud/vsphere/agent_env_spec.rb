@@ -195,7 +195,12 @@ module VSphereCloud
           blk.call('/some/tmp/dir')
         end
 
-        expect(agent_env).to receive(:`).with("#{iso_generator} -o /some/tmp/dir/env.iso /some/tmp/dir/env 2>&1") do
+        path = "#{iso_generator} -o /some/tmp/dir/env.iso /some/tmp/dir/env 2>&1"
+        if iso_generator.match('/bin/iso9660wrap')
+          path = "#{iso_generator} /some/tmp/dir/env /some/tmp/dir/env.iso 2>&1"
+        end
+
+        expect(agent_env).to receive(:`).with(path) do
           expect(File.read('/some/tmp/dir/env')).to eq('["fake-json"]')
           File.open('/some/tmp/dir/env.iso', 'w') { |f| f.write('iso contents') }
           `:`
@@ -270,16 +275,16 @@ module VSphereCloud
 
       context 'when genisoimage is not found' do
         before do
-          stub_const('ENV', {'PATH' => '/bin'})
+          stub_const('ENV', { 'PATH' => '/bin' })
           allow(File).to receive(:exists?).and_call_original
-          allow(File).to receive(:exists?).with('/bin/mkisofs').and_return(true)
+          allow(File).to receive(:exists?).with('/bin/iso9660wrap').and_return(true)
         end
 
-        it 'uses mkisofs' do
+        it 'uses iso9660wrap' do
           it_disconnects_cdrom.ordered
           it_cleans_up_old_env_files.ordered
           it_uploads_environment_json.ordered
-          it_generates_environment_iso(iso_generator: '/bin/mkisofs').ordered
+          it_generates_environment_iso(iso_generator: '/bin/iso9660wrap').ordered
           it_uploads_environment_iso.ordered
           it_reconfigures_cdrom.ordered
 

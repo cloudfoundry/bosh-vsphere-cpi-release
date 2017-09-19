@@ -30,7 +30,7 @@ export no_proxy="<%= no_proxy %>"
   export BOSH_NSXT_CA_CERT_FILE=$BOSH_JOBS_DIR/vsphere_cpi/config/nsxt_cacert.pem
 <% end %>
 
-export PATH=$BOSH_PACKAGES_DIR/vsphere_cpi_ruby/bin:$BOSH_PACKAGES_DIR/vsphere_cpi_mkisofs/bin:$PATH
+export PATH=$BOSH_PACKAGES_DIR/vsphere_cpi_ruby/bin:$BOSH_PACKAGES_DIR/iso9660wrap/bin:$PATH
 export HOME=~
 
 export BUNDLE_GEMFILE=$BOSH_PACKAGES_DIR/vsphere_cpi/Gemfile
