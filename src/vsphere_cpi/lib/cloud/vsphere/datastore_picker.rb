@@ -91,7 +91,10 @@ module VSphereCloud
     end
 
     def add_balance_score(placement)
-      free_spaces = placement[:datastores].map { |_, ds_data| ds_data[:free_space]}.sort
+      targeted_datastores = placement[:datastores].reject do | _, item |
+        item[:disks].empty?
+      end
+      free_spaces = targeted_datastores.map { |_, ds_data| ds_data[:free_space]}.sort
 
       min = free_spaces.first
       mean = free_spaces.inject(0, &:+) / free_spaces.length
