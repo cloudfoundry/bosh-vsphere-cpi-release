@@ -15,7 +15,7 @@ output_dir="${workspace_dir}/dev-artifacts/"
 
 pushd bosh-cpi-src
   echo "building iso9660wrap"
-  pushd iso9660wrap
+  pushd src/iso9660wrap
     for platform in linux darwin; do
       GOOS=${platform} GOARCH=amd64 CGO_ENABLED=0 go build \
         -o iso9660wrap-${platform}-amd64 ./...
