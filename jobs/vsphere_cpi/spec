@@ -9,7 +9,7 @@ templates:
 
 packages:
 - iso9660wrap
-- vsphere_cpi_ruby
+- ruby-2.4
 - vsphere_cpi
 
 properties:

@@ -17,7 +17,7 @@ RUN apt-get update && \
 
 RUN apt-get install -y --no-install-recommends python
 
-ENV RUBY_INSTALL_VERSION=0.6.1 CHRUBY_VERSION=0.3.9 RUBY_VERSION=2.2.6 GOLANG_VERSION=1.8.3
+ENV RUBY_INSTALL_VERSION=0.6.1 CHRUBY_VERSION=0.3.9 RUBY_VERSION=2.4.2 GOLANG_VERSION=1.8.3
 
 # Import Postmodern PGP key
 RUN wget -nv https://raw.github.com/postmodern/postmodern.github.io/master/postmodern.asc && \

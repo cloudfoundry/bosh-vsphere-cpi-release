@@ -1,16 +1,1 @@
-vsphere_cpi_ruby/bundler-1.15.0.gem:
-  size: 338432
-  object_id: bc4bc9df-ef7f-49c8-5079-19a42765f503
-  sha: 10feaa6564d972673b21652fbecab24fb5bbdc95
-vsphere_cpi_ruby/ruby-2.2.6.tar.gz:
-  size: 16663387
-  object_id: c1eb8644-dab6-422a-73cc-d3c58dd00500
-  sha: a5aaf19694470e543c8216e3f1189e48b6dbb0da
-vsphere_cpi_ruby/rubygems-2.6.11.tgz:
-  size: 766785
-  object_id: 8cff3923-b180-4dbe-6bb2-14cbf622142c
-  sha: 1475ff4d7ad565d521e56d4d0461931d2c00563c
-vsphere_cpi_ruby/yaml-0.1.7.tar.gz:
-  size: 527518
-  object_id: dc12f34c-d5cd-47d5-5dd6-ae629e852a3c
-  sha: 3590cbf092ef4c71bc0a9b404c00a626b1e04dee
+{}
