@@ -1,2 +1,4 @@
 /iso9660wrap
+/iso9660wrap-linux-amd64
+/iso9660wrap-darwin-amd64
 *.swp
