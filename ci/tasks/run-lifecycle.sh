@@ -2,13 +2,11 @@
 
 set -e
 
-release_dir="$( cd $(dirname $0) && cd ../.. && pwd )"
-workspace_dir="$( cd ${release_dir} && cd .. && pwd )"
-
 source bosh-cpi-src/ci/utils.sh
+source bosh-cpi-src/.envrc
 if [ -f /etc/profile.d/chruby.sh ]; then
   source /etc/profile.d/chruby.sh
-  chruby 2.2.6
+  chruby $PROJECT_RUBY_VERSION
 fi
 
 : ${RSPEC_FLAGS:=""}
@@ -21,12 +19,12 @@ if [ "$#" -ne 0 ]; then
 fi
 
 if [ -z "${BOSH_VSPHERE_STEMCELL}" ]; then
-  stemcell_dir="$( cd ${workspace_dir}/stemcell && pwd )"
+  stemcell_dir="$( cd stemcell && pwd )"
   export BOSH_VSPHERE_STEMCELL=${stemcell_dir}/stemcell.tgz
 fi
 
 install_iso9660wrap() {
-  pushd "${release_dir}"
+  pushd bosh-cpi-src
     pushd src/iso9660wrap
       go build ./...
       export PATH="$PATH:$PWD"
@@ -36,7 +34,7 @@ install_iso9660wrap() {
 
 install_iso9660wrap
 
-pushd "${release_dir}/src/vsphere_cpi"
+pushd bosh-cpi-src/src/vsphere_cpi
   bundle install
   bundle exec rspec ${RSPEC_FLAGS} --require ./spec/support/verbose_formatter.rb --format VerboseFormatter spec/integration
 popd

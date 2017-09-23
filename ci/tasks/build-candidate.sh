@@ -2,16 +2,14 @@
 
 set -e
 
-release_dir="$( cd $(dirname $0) && cd ../.. && pwd )"
-workspace_dir="$( cd ${release_dir} && cd .. && pwd )"
-
+source bosh-cpi-src/.envrc
 source bosh-cpi-src/ci/utils.sh
 source /etc/profile.d/chruby.sh
-chruby 2.2.6
+chruby $PROJECT_RUBY_VERSION
 
-semver=$(cat ${workspace_dir}/version-semver/number)
+semver=$(cat version-semver/number)
 
-output_dir="${workspace_dir}/dev-artifacts/"
+output_dir="dev-artifacts/"
 
 pushd bosh-cpi-src
   echo "building iso9660wrap"
