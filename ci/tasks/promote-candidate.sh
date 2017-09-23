@@ -11,7 +11,6 @@ chruby $PROJECT_RUBY_VERSION
 : ${AWS_SECRET_ACCESS_KEY:?}
 
 
-release_dir=$(realpath bosh-cpi-src)
 artifacts_dir=$(realpath bosh-cpi-artifacts)
 
 # Creates an integer version number from the semantic version format
