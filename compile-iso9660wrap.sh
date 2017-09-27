@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+source .envrc
 
 pushd $ISO9660WRAP_SRC_DIR
   for platform in linux darwin; do
