@@ -32,7 +32,7 @@ blobstore:
 EOF
 
   echo "finalizing CPI release..."
-  bosh2 finalize-release ${artifacts_dir}/*.tgz --version $integer_version
+  bosh finalize-release ${artifacts_dir}/*.tgz --version $integer_version
 
   rm config/private.yml
 

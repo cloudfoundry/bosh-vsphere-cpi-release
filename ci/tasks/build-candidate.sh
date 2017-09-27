@@ -22,5 +22,5 @@ pushd bosh-cpi-src
   cpi_release_name="bosh-vsphere-cpi"
 
   echo "building CPI release..."
-  bosh2 create-release --name $cpi_release_name --version $semver --tarball $output_dir/$cpi_release_name-$semver.tgz
+  bosh create-release --name $cpi_release_name --version $semver --tarball $output_dir/$cpi_release_name-$semver.tgz
 popd

@@ -17,7 +17,7 @@ To create a dev release:
 ```bash
 pushd $RELEASE_DIR
   ./compile-iso9660wrap.sh
-  bosh2 create-release --force --tarball vsphere-cpi.tgz
+  bosh create-release --force --tarball vsphere-cpi.tgz
 popd
 ```
 
