@@ -16,19 +16,12 @@ To create a dev release:
 
 ```bash
 pushd $RELEASE_DIR
+  ./compile-iso9660wrap.sh
   bosh2 create-release --force --tarball vsphere-cpi.tgz
 popd
 ```
 
 ## Running tests
-
-Install deps:
-```bash
-pushd $SRC_DIR
-  bundle install
-  brew install cdrtools
-popd
-```
 
 Unit tests:
 ```bash

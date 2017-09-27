@@ -2,6 +2,15 @@
 
 cd "$(dirname "${BASH_SOURCE[0]}")"/..
 
+which iso9660wrap
+if [[ "$?" != "0" ]]; then
+  pushd $ISO9660WRAP_SRC_DIR
+    platform=`uname | tr '[:upper:]' '[:lower:]'`
+    GOOS=${platform} GOARCH=amd64 CGO_ENABLED=0 go build \
+      -o /usr/local/bin/iso9660wrap ./...
+  popd
+fi
+
 source bin/check-ruby-version
 
 echo "Running integration tests with Ruby version $RUBY_VERSION ..." 1>&2
