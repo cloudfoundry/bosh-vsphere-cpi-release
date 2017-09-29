@@ -275,6 +275,7 @@ module VSphereCloud
         begin
           if @config.nsxt_enabled?
             @nsxt_provider.add_vm_to_nsgroups(created_vm, vm_type['nsxt'])
+            @nsxt_provider.set_vif_type(created_vm, vm_type['nsxt'])
           end
         rescue => e
           @logger.info("Failed to add VM '#{created_vm.cid}' to NSGroups with error: #{e}")

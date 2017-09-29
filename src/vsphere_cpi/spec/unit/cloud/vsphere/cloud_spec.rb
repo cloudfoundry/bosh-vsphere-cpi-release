@@ -853,7 +853,8 @@ module VSphereCloud
             'ram' => 1024,
             'disk' => 4096,
             'nsxt' => {
-              'nsgroups' => %w(fake-nsgroup-1 fake-nsgroup-2)
+              'nsgroups' => %w(fake-nsgroup-1 fake-nsgroup-2),
+              'vif_type' => 'PARENT',
             }
           }
         end
@@ -867,6 +868,21 @@ module VSphereCloud
 
         it "adds the VM's logical port to NSGroups" do
           expect(nsxt_provider).to receive(:add_vm_to_nsgroups).with(fake_vm, vm_type['nsxt'])
+          allow(nsxt_provider).to receive(:set_vif_type)
+
+          vsphere_cloud.create_vm(
+            'fake-agent-id',
+            'fake-stemcell-cid',
+            vm_type,
+            'fake-networks-hash',
+            [],
+            {}
+          )
+        end
+
+        it "sets the vif_type of the VM's VIF attachment" do
+          allow(nsxt_provider).to receive(:add_vm_to_nsgroups)
+          expect(nsxt_provider).to receive(:set_vif_type).with(fake_vm, vm_type['nsxt'])
 
           vsphere_cloud.create_vm(
             'fake-agent-id',
@@ -885,6 +901,29 @@ module VSphereCloud
           end
 
           it 'delete created VM and raises error' do
+            expect(vsphere_cloud).to receive(:delete_vm).with(fake_vm.cid)
+
+            expect do
+              vsphere_cloud.create_vm(
+                'fake-agent-id',
+                'fake-stemcell-cid',
+                vm_type,
+                'fake-networks-hash',
+                [],
+                {}
+              )
+            end.to raise_error(nsxt_error)
+          end
+        end
+
+        context 'and an error occurs when setting vif_type' do
+          let(:nsxt_error) { NSXT::Error.new(404) }
+          before do
+            allow(nsxt_provider).to receive(:add_vm_to_nsgroups)
+            expect(nsxt_provider).to receive(:set_vif_type).and_raise(nsxt_error)
+          end
+
+          it 'deletes created VM and raises error' do
             expect(vsphere_cloud).to receive(:delete_vm).with(fake_vm.cid)
 
             expect do
