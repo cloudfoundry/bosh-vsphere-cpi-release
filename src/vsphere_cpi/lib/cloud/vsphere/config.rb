@@ -1,5 +1,5 @@
 module VSphereCloud
-  class NSXTConfig < Struct.new(:host, :username, :password)
+  class NSXTConfig < Struct.new(:host, :username, :password, :default_vif_type)
     def self.validate_schema(config)
       return true if config.nil?
 
@@ -8,6 +8,7 @@ module VSphereCloud
           'host' => String,
           'username' => String,
           'password' => String,
+          optional('default_vif_type') => enum('PARENT', 'CHILD'),
         }
       end.validate(config)
     end
@@ -172,7 +173,8 @@ module VSphereCloud
       NSXTConfig.new(
         vcenter['nsxt']['host'],
         vcenter['nsxt']['username'],
-        vcenter['nsxt']['password']
+        vcenter['nsxt']['password'],
+        vcenter['nsxt']['default_vif_type'],
       )
     end
 

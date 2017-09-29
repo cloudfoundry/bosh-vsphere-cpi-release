@@ -73,6 +73,9 @@
       'username' => p('vcenter.nsxt.username'),
       'password' => p('vcenter.nsxt.password'),
     }
+    if_p('vcenter.nsxt.default_vif_type') do
+      vcenter['nsxt']['default_vif_type'] = p('vcenter.nsxt.default_vif_type')
+    end
   end
 
   if_p('blobstore') do

@@ -57,6 +57,8 @@ properties:
       -----BEGIN CERTIFICATE-----
       MII...
       -----END CERTIFICATE-----
+  vcenter.nsxt.default_vif_type:
+    description: Default vif_type for logical port attachment. Either PARENT or CHILD.
   vcenter.http_logging:
     description: Enables HTTP level logging. Each HTTP request to vcenter will be logged
     default: false
