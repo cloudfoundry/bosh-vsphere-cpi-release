@@ -70,6 +70,7 @@ module VSphereCloud
       @logger = logger
       @max_tries = MAX_TRIES
       @sleep_time = DEFAULT_SLEEP_TIME
+      @default_vif_type = config.default_vif_type
     end
 
     def add_vm_to_nsgroups(vm, vm_type_nsxt)
@@ -123,6 +124,30 @@ module VSphereCloud
           tags << id_tag
 
           response = logical_port.update('tags' => tags)
+          if response.ok?
+            break
+          elsif response.status == 412
+            logical_port.reload!
+          else
+            raise NSXT::Error.new(response.status_code), response.body
+          end
+        end
+      end
+    end
+
+    def set_vif_type(vm, vm_type_nsxt)
+      vif_type = (vm_type_nsxt || {})['vif_type'] || @default_vif_type
+      return if vif_type.nil?
+      return if nsxt_nics(vm).empty?
+
+      logical_ports(vm).each do |logical_port|
+        @logger.info("Setting VIF attachment on logical port #{logical_port.id} to have vif_type '#{vif_type}'")
+        loop do
+          attachment = logical_port.attachment.merge('context' => {
+            'resource_type': 'VifAttachmentContext', 'vif_type': vif_type
+          })
+
+          response = logical_port.update('attachment' => attachment)
           if response.ok?
             break
           elsif response.status == 412

@@ -156,7 +156,7 @@ end
 
 describe NSXT::NSGroup::SimpleExpression do
   context '#from_resource' do
-    let(:vif_resource) { NSXT::VIF.new('fake_lport_attachment_id') }
+    let(:vif_resource) { NSXT::VIF.new('fake-vif-id', 'fake_lport_attachment_id') }
     let(:logical_port) { NSXT::LogicalPort.new(nil, 'fake_id') }
 
     it 'raises an error if resource is not a LogicalPort' do
@@ -178,14 +178,23 @@ end
 
 describe NSXT::LogicalPort do
   let(:client) { instance_double(JSONClient) }
-  let(:logical_port) { NSXT::LogicalPort.new(client, 'fake-logical-port-id', nil, json_data) }
+  let(:old_attachment) do {
+    'attachment_type' => 'VIF',
+    'id' => 'fake-vif-id',
+  } end
+  let(:logical_port) { NSXT::LogicalPort.new(client, 'fake-logical-port-id', nil, old_attachment, json_data) }
   let(:json_data) do
     { 'id' => 'fake-logical-port-id', 'display_name' => 'fake-name' }
   end
 
   context '#update' do
     let(:tags) { [{'scope' => 'vm_id', 'tag' => '12345'}] }
-    let(:update_data) { { 'tags' => tags } }
+    let(:new_attachment) do
+      old_attachment.merge('context' => {
+        'resource_type': 'VifAttachmentContext', 'vif_type': 'PARENT',
+      })
+    end
+    let(:update_data) { { 'tags' => tags, 'attachment' => new_attachment } }
 
     before do
       expect(client).to receive(:put).with(
@@ -200,7 +209,8 @@ describe NSXT::LogicalPort do
       it 'updates logical port with the given data' do
         expect do
           logical_port.update(update_data)
-        end.to change { logical_port.tags }.from(nil).to(tags)
+        end.to change { logical_port.tags }.from(nil).to(tags).
+           and change { logical_port.attachment }.from(old_attachment).to(new_attachment)
       end
     end
 

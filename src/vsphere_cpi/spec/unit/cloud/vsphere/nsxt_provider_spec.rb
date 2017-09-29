@@ -46,13 +46,13 @@ describe VSphereCloud::NSXTProvider do
     NSXT::VirtualMachine.new(external_id: 'fake-external-id')
   end
   let(:vif) do
-    NSXT::VIF.new(lport_attachment_id: 'fake-lport-attachment-id')
+    NSXT::VIF.new('fake-vif-id', 'fake-lport-attachment-id')
   end
   let(:vif_without_lport_attachment) do
     NSXT::VIF.new
   end
   let(:logical_port_1) do
-    NSXT::LogicalPort.new(client, 'fake-logical-port-id')
+    NSXT::LogicalPort.new(client, 'fake-logical-port-id', nil, { 'attachment_type' => 'VIF', 'id' => vif.id })
   end
   let(:logical_port_2) do
     NSXT::LogicalPort.new(client, 'fake-logical-port-id-2')
@@ -68,6 +68,67 @@ describe VSphereCloud::NSXTProvider do
   subject(:nsxt_provider) do
     described_class.new(nsxt_config, logger).tap do |provider|
       provider.instance_variable_set('@client', client)
+    end
+  end
+
+  describe '#set_vif_type' do
+    let(:success_response) { HTTP::Message.new_response('') }
+
+    before do
+      allow(nsxt_provider).to receive(:logical_ports).with(vm).and_return([logical_port_1])
+    end
+
+    it 'does nothing when both default_vif_type and vif_type are nil' do
+      # No call to client should be made
+      nsxt_provider.set_vif_type(vm, nil)
+    end
+
+    it "sets all of the VM's VIF attachments to the vif_type in vm_type" do
+      expect(logical_port_1).to receive(:update).with(
+        'attachment' => logical_port_1.attachment.merge({ 'context' => {
+          'resource_type': 'VifAttachmentContext', 'vif_type': 'PARENT',
+        }})
+      ).and_return(success_response)
+      nsxt_provider.set_vif_type(vm, 'vif_type' => 'PARENT')
+    end
+
+    context 'when default_vif_type is set and vif_type is nil' do
+      before do
+        nsxt_provider.instance_variable_set('@default_vif_type', 'CHILD')
+      end
+
+      it 'sets all VIF attachments on the VM to the default_vif_type' do
+        expect(logical_port_1).to receive(:update).with(
+          'attachment' => logical_port_1.attachment.merge({ 'context' => {
+            'resource_type': 'VifAttachmentContext', 'vif_type': 'CHILD',
+          }})
+        ).and_return(success_response)
+        nsxt_provider.set_vif_type(vm, nil)
+      end
+    end
+
+    context 'when an update fails due to a revision mismatch error' do
+      let(:failure_response) do
+        HTTP::Message.new_response('{
+          "error_code": 206,
+          "error_message": "The object LogicalPort/...",
+          "httpStatus": "PRECONDITION_FAILED",
+          "module_name": "common-services"
+        }').tap { |r| r.status = 412 }
+      end
+
+      before do
+        expect(logical_port_1).to receive(:update).with(
+          'attachment' => logical_port_1.attachment.merge({ 'context' => {
+            'resource_type': 'VifAttachmentContext', 'vif_type': 'PARENT',
+          }})
+        ).and_return(failure_response, success_response)
+        expect(logical_port_1).to receive(:reload!)
+      end
+
+      it 'retries' do
+        nsxt_provider.set_vif_type(vm, 'vif_type' => 'PARENT')
+      end
     end
   end
 

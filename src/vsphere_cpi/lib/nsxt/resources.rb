@@ -40,13 +40,13 @@ module NSXT
     end
   end
 
-  class VIF < Resource.new(:lport_attachment_id)
+  class VIF < Resource.new(:id, :lport_attachment_id)
     def self.resource_type
       'VirtualNetworkInterface'
     end
   end
 
-  class LogicalPort < Resource.new(:client, :id, :tags, :json_data)
+  class LogicalPort < Resource.new(:client, :id, :tags, :attachment, :json_data)
     def self.resource_type
       'LogicalPort'
     end
@@ -55,6 +55,7 @@ module NSXT
       response = client.put(href, body: json_data.merge(hash))
       if response.ok?
         self.tags = response.content['tags']
+        self.attachment = response.content['attachment']
       end
       response
     end
