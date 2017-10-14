@@ -291,15 +291,13 @@ module VSphereCloud
 
       def move_disks_to_old_path(disks_to_move)
         @logger.info("Renaming #{disks_to_move.size} persistent disk(s)")
-        disks_to_move.each do |virtual_disk|
-          current_path = virtual_disk.backing.file_name
+        disks_to_move.each do |disk|
+          current_datastore = disk.backing.file_name.match(/^\[([^\]]+)\]/)[1]
+          original_disk_path = get_old_disk_filepath(disk.key)
+          dest_filename = original_disk_path.match(/^\[[^\]]+\] (.*)/)[1]
+          dest_path = "[#{current_datastore}] #{dest_filename}"
 
-          current_datastore = current_path.split(" ").first
-          original_disk_path = get_old_disk_filepath(virtual_disk.key)
-          dest_filename = original_disk_path.split(" ").last
-          dest_path = "#{current_datastore} #{dest_filename}"
-
-          @client.move_disk(datacenter_mob, current_path, datacenter_mob, dest_path)
+          @client.move_disk(datacenter_mob, disk.backing.file_name, datacenter_mob, dest_path)
         end
       end
 

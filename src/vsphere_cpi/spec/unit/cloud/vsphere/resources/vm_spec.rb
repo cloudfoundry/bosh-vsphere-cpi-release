@@ -346,7 +346,7 @@ describe VSphereCloud::Resources::VM do
     let(:disk0) do
       disk = VimSdk::Vim::Vm::Device::VirtualDisk.new
       disk.backing = VimSdk::Vim::Vm::Device::VirtualDisk::FlatVer2BackingInfo.new
-      disk.backing.file_name = '[datastore] fake-disk-path/fake-file_name.vmdk'
+      disk.backing.file_name = '[datastore x] fake-disk-path/fake-file_name.vmdk'
       disk.backing.disk_mode = VimSdk::Vim::Vm::Device::VirtualDiskOption::DiskMode::INDEPENDENT_PERSISTENT
       disk.key = 'first-disk-key'
       disk
@@ -354,7 +354,7 @@ describe VSphereCloud::Resources::VM do
     let(:disk1) do
       disk = VimSdk::Vim::Vm::Device::VirtualDisk.new
       disk.backing = VimSdk::Vim::Vm::Device::VirtualDisk::FlatVer2BackingInfo.new
-      disk.backing.file_name = '[datastore] fake-disk-path/fake-file_name2.vmdk'
+      disk.backing.file_name = '[datastore x] fake-disk-path/fake-file_name2.vmdk'
       disk.backing.disk_mode = VimSdk::Vim::Vm::Device::VirtualDiskOption::DiskMode::INDEPENDENT_PERSISTENT
       disk.key = 'second-disk-key'
       disk
@@ -366,14 +366,14 @@ describe VSphereCloud::Resources::VM do
         'VimSdk::Vim::VApp::PropertyInfo',
         key: 'first-disk-key',
         category: 'BOSH Persistent Disks',
-        value: '[datastore] fake-disk-path/fake-file_name.vmdk'
+        value: '[datastore x] fake-disk-path/fake-file_name.vmdk'
       )
     end
     let(:disk1_property) do
       instance_double('VimSdk::Vim::VApp::PropertyInfo',
         key: 'first-disk-key',
         category: 'BOSH Persistent Disks',
-        value: '[datastore] fake-disk-path/fake-file_name2.vmdk'
+        value: '[datastore x] fake-disk-path/fake-file_name2.vmdk'
       )
     end
 
@@ -421,9 +421,9 @@ describe VSphereCloud::Resources::VM do
         end
         expect(client).to receive(:move_disk).with(
           datacenter,
-          '[datastore] fake-disk-path/fake-file_name.vmdk',
+          '[datastore x] fake-disk-path/fake-file_name.vmdk',
           datacenter,
-          '[datastore] old-disk-path/old-file-name.vmdk'
+          '[datastore x] old-disk-path/old-file-name.vmdk'
         )
         expect(client).to receive(:delete_persistent_disk_property_from_vm).with(vm, 'first-disk-key')
         vm.detach_disks([disk0])
