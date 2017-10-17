@@ -344,7 +344,7 @@ describe VSphereCloud::NSXTProvider do
         it 'raises an error' do
           expect do
             nsxt_provider.send(:logical_ports, vm)
-          end.to raise_error(/Multiple NSX-T virtual machines found/)
+          end.to raise_error(VSphereCloud::MultipleVirtualMachinesFound)
         end
       end
 

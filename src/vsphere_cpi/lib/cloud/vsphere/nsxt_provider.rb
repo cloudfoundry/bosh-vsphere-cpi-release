@@ -18,7 +18,7 @@ module VSphereCloud
     end
 
     def to_s
-      "Multiple NSX-T virtual machines (#{@vm_id}) found. (#{count})"
+      "Multiple NSX-T virtual machines (#{@vm_id}) found. (#{@count})"
     end
   end
 
