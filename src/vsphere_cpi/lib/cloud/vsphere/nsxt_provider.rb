@@ -11,6 +11,17 @@ module VSphereCloud
     end
   end
 
+  class MultipleVirtualMachinesFound < StandardError
+    def initialize(vm_id, count)
+      @vm_id = vm_id
+      @count = count
+    end
+
+    def to_s
+      "Multiple NSX-T virtual machines (#{@vm_id}) found. (#{count})"
+    end
+  end
+
   class VIFNotFound < StandardError
     def initialize(vm_id, external_id)
       @vm_id = vm_id
@@ -126,7 +137,7 @@ module VSphereCloud
     private
 
     MAX_TRIES = 20
-    DEFAULT_SLEEP_TIME = 0.5
+    DEFAULT_SLEEP_TIME = 1
     NSXT_LOGICAL_SWITCH = 'nsx.LogicalSwitch'.freeze
 
     def retrieve_nsgroups(nsgroup_names)
@@ -152,12 +163,12 @@ module VSphereCloud
       Bosh::Retryable.new(
         tries: @max_tries,
         sleep: ->(try_count, retry_exception) { @sleep_time },
-        on: [VirtualMachineNotFound, VIFNotFound, LogicalPortNotFound]
+        on: [VirtualMachineNotFound, MultipleVirtualMachinesFound, VIFNotFound, LogicalPortNotFound]
       ).retryer do |i|
         @logger.info("Searching for LogicalPorts for vm '#{vm.cid}'")
         virtual_machines = @client.virtual_machines(display_name: vm.cid)
         raise VirtualMachineNotFound.new(vm.cid) if virtual_machines.empty?
-        raise 'Multiple NSX-T virtual machines found.' if virtual_machines.length > 1
+        raise MultipleVirtualMachinesFound.new(vm.cid, virtual_machines.length) if virtual_machines.length > 1
         external_id = virtual_machines.first.external_id
 
         @logger.info("Searching VIFs with 'owner_vm_id: #{external_id}'")

@@ -111,7 +111,8 @@ describe 'CPI', nsx_transformers: true do
             simple_vm_lifecycle(cpi, @vlan, vm_type) do |vm_id|
               retryer do
                 nsxt_vms = nsxt.virtual_machines(display_name: vm_id)
-                raise VSphereCloud::VirtualMachineNotFound if nsxt_vms.empty?
+                raise VSphereCloud::VirtualMachineNotFound.new(vm_id) if nsxt_vms.empty?
+                raise "Multiple NSX-T virtual machines found. (#{nsxt_vms.length})" if nsxt_vms.length > 1
 
                 external_id = nsxt_vms.first.external_id
                 vifs = nsxt.vifs(owner_vm_id: external_id)
@@ -267,7 +268,7 @@ describe 'CPI', nsx_transformers: true do
   def retryer
     Bosh::Retryable.new(
       tries: 20,
-      sleep: ->(try_count, retry_exception) { 0.5 },
+      sleep: ->(try_count, retry_exception) { 1 },
       on: [VSphereCloud::VirtualMachineNotFound, VSphereCloud::VirtualMachineNotFound, VSphereCloud::VirtualMachineNotFound]
     ).retryer do |i|
       yield i if block_given?
