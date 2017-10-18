@@ -231,8 +231,8 @@ describe 'CPI', nsx_transformers: true do
   def verify_ports(vm_id, expected_vif_number = 2)
     retryer do
       nsxt_vms = nsxt.virtual_machines(display_name: vm_id)
-      raise VirtualMachineNotFound.new(vm_id) if nsxt_vms.empty?
-      raise MultipleVirtualMachinesFound.new(vm_id, nsxt_vms.length) if nsxt_vms.length > 1
+      raise VSphereCloud::VirtualMachineNotFound.new(vm_id) if nsxt_vms.empty?
+      raise VSphereCloud::MultipleVirtualMachinesFound.new(vm_id, nsxt_vms.length) if nsxt_vms.length > 1
 
       expect(nsxt_vms.length).to eq(1)
       expect(nsxt_vms.first.external_id).not_to be_nil
