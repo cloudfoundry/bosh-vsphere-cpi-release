@@ -86,7 +86,7 @@ describe VSphereCloud::NSXTProvider do
     it "sets all of the VM's VIF attachments to the vif_type in vm_type" do
       expect(logical_port_1).to receive(:update).with(
         'attachment' => logical_port_1.attachment.merge({ 'context' => {
-          'resource_type': 'VifAttachmentContext', 'vif_type': 'PARENT',
+          'resource_type' => 'VifAttachmentContext', 'vif_type' => 'PARENT',
         }})
       ).and_return(success_response)
       nsxt_provider.set_vif_type(vm, 'vif_type' => 'PARENT')
@@ -100,7 +100,7 @@ describe VSphereCloud::NSXTProvider do
       it 'sets all VIF attachments on the VM to the default_vif_type' do
         expect(logical_port_1).to receive(:update).with(
           'attachment' => logical_port_1.attachment.merge({ 'context' => {
-            'resource_type': 'VifAttachmentContext', 'vif_type': 'CHILD',
+            'resource_type' => 'VifAttachmentContext', 'vif_type' => 'CHILD',
           }})
         ).and_return(success_response)
         nsxt_provider.set_vif_type(vm, nil)
@@ -120,7 +120,7 @@ describe VSphereCloud::NSXTProvider do
       before do
         expect(logical_port_1).to receive(:update).with(
           'attachment' => logical_port_1.attachment.merge({ 'context' => {
-            'resource_type': 'VifAttachmentContext', 'vif_type': 'PARENT',
+            'resource_type' => 'VifAttachmentContext', 'vif_type' => 'PARENT',
           }})
         ).and_return(failure_response, success_response)
         expect(logical_port_1).to receive(:reload!)
