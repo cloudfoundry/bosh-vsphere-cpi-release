@@ -112,7 +112,7 @@ describe 'CPI', nsx_transformers: true do
               retryer do
                 nsxt_vms = nsxt.virtual_machines(display_name: vm_id)
                 raise VSphereCloud::VirtualMachineNotFound.new(vm_id) if nsxt_vms.empty?
-                raise "Multiple NSX-T virtual machines found. (#{nsxt_vms.length})" if nsxt_vms.length > 1
+                raise VSphereCloud::MultipleVirtualMachinesFound.new(vm_id, nsxt_vms.length) if nsxt_vms.length > 1
 
                 external_id = nsxt_vms.first.external_id
                 vifs = nsxt.vifs(owner_vm_id: external_id)
@@ -231,6 +231,9 @@ describe 'CPI', nsx_transformers: true do
   def verify_ports(vm_id, expected_vif_number = 2)
     retryer do
       nsxt_vms = nsxt.virtual_machines(display_name: vm_id)
+      raise VirtualMachineNotFound.new(vm_id) if nsxt_vms.empty?
+      raise MultipleVirtualMachinesFound.new(vm_id, nsxt_vms.length) if nsxt_vms.length > 1
+
       expect(nsxt_vms.length).to eq(1)
       expect(nsxt_vms.first.external_id).not_to be_nil
 
@@ -269,7 +272,12 @@ describe 'CPI', nsx_transformers: true do
     Bosh::Retryable.new(
       tries: 20,
       sleep: ->(try_count, retry_exception) { 1 },
-      on: [VSphereCloud::VirtualMachineNotFound, VSphereCloud::VirtualMachineNotFound, VSphereCloud::VirtualMachineNotFound]
+      on: [
+        VSphereCloud::VirtualMachineNotFound,
+        VSphereCloud::MultipleVirtualMachinesFound,
+        VSphereCloud::VIFNotFound,
+        VSphereCloud::LogicalPortNotFound
+      ]
     ).retryer do |i|
       yield i if block_given?
     end
