@@ -174,7 +174,7 @@ module VSphereCloud
         vcenter['nsxt']['host'],
         vcenter['nsxt']['username'],
         vcenter['nsxt']['password'],
-        vcenter['nsxt']['default_vif_type'],
+        vcenter['nsxt']['default_vif_type']
       )
     end
 

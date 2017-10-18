@@ -78,6 +78,7 @@ module NSXT
   end
 
   class NSGroup < Resource.new(:client, :id, :display_name, :members)
+
     class ExpressionFactory
       def self.create(members)
         return [] if members.nil?
@@ -114,11 +115,13 @@ module NSXT
         'NSGroupSimpleExpression'
       end
     end
+
     class TagExpression < Resource.new(:scope, :scope_op, :tag, :tag_op, :target_type)
       def self.resource_type
         'NSGroupTagExpression'
       end
     end
+
     class ComplexExpression < Resource.new(:expressions)
       def self.json_create(client, hash)
         hash['expressions'] = ExpressionFactory.create(hash['expressions'])

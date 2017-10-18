@@ -1,13 +1,14 @@
 require 'digest'
 require 'securerandom'
 require 'integration/spec_helper'
+require 'pry-byebug'
 
 describe 'CPI', nsx_transformers: true do
   let(:cpi) do
     VSphereCloud::Cloud.new(cpi_options(nsxt: {
       host: @nsxt_host,
       username: @nsxt_username,
-      password: @nsxt_password,
+      password: @nsxt_password
     }))
   end
   let(:nsxt) do
@@ -19,8 +20,27 @@ describe 'CPI', nsx_transformers: true do
     {
       'ram' => 512,
       'disk' => 2048,
-      'cpu' => 1,
-      'nsxt' => { 'ns_groups' => [nsgroup_name_1, nsgroup_name_2] }
+      'cpu' => 1
+    }
+  end
+  let(:network_spec) do
+    {
+      'static-bridged' => {
+        'ip' => "169.254.#{rand(1..254)}.#{rand(4..254)}",
+        'netmask' => '255.255.254.0',
+        'cloud_properties' => { 'name' => @nsxt_opaque_vlan_1 },
+        'default' => ['dns', 'gateway'],
+        'dns' => ['169.254.1.2'],
+        'gateway' => '169.254.1.3'
+      },
+      'static' => {
+        'ip' => "169.254.#{rand(1..254)}.#{rand(4..254)}",
+        'netmask' => '255.255.254.0',
+        'cloud_properties' => { 'name' => @nsxt_opaque_vlan_2 },
+        'default' => ['dns', 'gateway'],
+        'dns' => ['169.254.1.2'],
+        'gateway' => '169.254.1.3'
+      }
     }
   end
 
@@ -49,7 +69,70 @@ describe 'CPI', nsx_transformers: true do
   end
 
   describe 'on create_vm' do
+    context 'when global default_vif_type is set' do
+      let(:cpi) do
+        VSphereCloud::Cloud.new(cpi_options(nsxt: {
+          host: @nsxt_host,
+          username: @nsxt_username,
+          password: @nsxt_password,
+          default_vif_type: 'PARENT'
+        }))
+      end
+
+      it 'sets vif_type for logical ports' do
+        simple_vm_lifecycle(cpi, '', vm_type, network_spec) do |vm_id|
+          verify_ports(vm_id) do |lport|
+            expect(lport).not_to be_nil
+
+            expected_context = { 'resource_type' => 'VifAttachmentContext', 'vif_type' => 'PARENT' }
+            expect(lport.attachment['context']).to eq(expected_context)
+          end
+        end
+      end
+
+      context 'and cloud property nsxt.vif_type is set' do
+        let(:vm_type) do
+          {
+            'ram' => 512,
+            'disk' => 2048,
+            'cpu' => 1,
+            'nsxt' => { 'vif_type' => nil }
+          }
+        end
+
+        it 'overrides vif_type with cloud property' do
+          simple_vm_lifecycle(cpi, '', vm_type, network_spec) do |vm_id|
+            verify_ports(vm_id) do |lport|
+              expect(lport).not_to be_nil
+
+              expect(lport.attachment['context']).to be_nil
+            end
+          end
+        end
+      end
+    end
+
+    context 'when global default_vif_type is not set' do
+      it 'should not set vif_type for logical ports' do
+        simple_vm_lifecycle(cpi, '', vm_type, network_spec) do |vm_id|
+          verify_ports(vm_id) do |lport|
+            expect(lport).not_to be_nil
+            expect(lport.attachment['context']).to be_nil
+          end
+        end
+      end
+    end
+
     context 'when NSGroups are specified' do
+      let(:vm_type) do
+        {
+          'ram' => 512,
+          'disk' => 2048,
+          'cpu' => 1,
+          'nsxt' => { 'ns_groups' => [nsgroup_name_1, nsgroup_name_2] }
+        }
+      end
+
       context 'but at least one of the NSGroups does NOT exist' do
         it 'raises NSGroupsNotFound' do
           expect do
@@ -59,26 +142,6 @@ describe 'CPI', nsx_transformers: true do
       end
 
       context 'and all the NSGroups exist' do
-        let(:network_spec) do
-          {
-            'static-bridged' => {
-              'ip' => "169.254.#{rand(1..254)}.#{rand(4..254)}",
-              'netmask' => '255.255.254.0',
-              'cloud_properties' => { 'name' => @nsxt_opaque_vlan_1 },
-              'default' => ['dns', 'gateway'],
-              'dns' => ['169.254.1.2'],
-              'gateway' => '169.254.1.3'
-            },
-            'static' => {
-              'ip' => "169.254.#{rand(1..254)}.#{rand(4..254)}",
-              'netmask' => '255.255.254.0',
-              'cloud_properties' => { 'name' => @nsxt_opaque_vlan_2 },
-              'default' => ['dns', 'gateway'],
-              'dns' => ['169.254.1.2'],
-              'gateway' => '169.254.1.3'
-            }
-          }
-        end
         let(:nsgroup_1) { create_nsgroup(nsgroup_name_1) }
         let(:nsgroup_2) { create_nsgroup(nsgroup_name_2) }
         before do
@@ -127,27 +190,16 @@ describe 'CPI', nsx_transformers: true do
   end
 
   describe 'on delete_vm' do
+    let(:vm_type) do
+      {
+        'ram' => 512,
+        'disk' => 2048,
+        'cpu' => 1,
+        'nsxt' => { 'ns_groups' => [nsgroup_name_1, nsgroup_name_2] }
+      }
+    end
+
     context 'when NSX-T is enabled' do
-      let(:network_spec) do
-        {
-          'static-bridged' => {
-            'ip' => "169.254.#{rand(1..254)}.#{rand(4..254)}",
-            'netmask' => '255.255.254.0',
-            'cloud_properties' => { 'name' => @nsxt_opaque_vlan_1 },
-            'default' => ['dns', 'gateway'],
-            'dns' => ['169.254.1.2'],
-            'gateway' => '169.254.1.3'
-          },
-          'static' => {
-            'ip' => "169.254.#{rand(1..254)}.#{rand(4..254)}",
-            'netmask' => '255.255.254.0',
-            'cloud_properties' => { 'name' => @nsxt_opaque_vlan_2 },
-            'default' => ['dns', 'gateway'],
-            'dns' => ['169.254.1.2'],
-            'gateway' => '169.254.1.3'
-          }
-        }
-      end
       let(:nsgroup_1) { create_nsgroup(nsgroup_name_1) }
       let(:nsgroup_2) { create_nsgroup(nsgroup_name_2) }
       before do
@@ -184,34 +236,6 @@ describe 'CPI', nsx_transformers: true do
   end
 
   describe 'on_set_vm_metadata' do
-    let(:vm_type) do
-      {
-        'ram' => 512,
-        'disk' => 2048,
-        'cpu' => 1
-      }
-    end
-    let(:network_spec) do
-      {
-        'static-bridged' => {
-          'ip' => "169.254.#{rand(1..254)}.#{rand(4..254)}",
-          'netmask' => '255.255.254.0',
-          'cloud_properties' => { 'name' => @nsxt_opaque_vlan_1 },
-          'default' => ['dns', 'gateway'],
-          'dns' => ['169.254.1.2'],
-          'gateway' => '169.254.1.3'
-        },
-        'static' => {
-          'ip' => "169.254.#{rand(1..254)}.#{rand(4..254)}",
-          'netmask' => '255.255.254.0',
-          'cloud_properties' => { 'name' => @nsxt_opaque_vlan_2 },
-          'default' => ['dns', 'gateway'],
-          'dns' => ['169.254.1.2'],
-          'gateway' => '169.254.1.3'
-        }
-      }
-    end
-
     context 'with bosh id' do
       let(:bosh_id) { SecureRandom.uuid }
 

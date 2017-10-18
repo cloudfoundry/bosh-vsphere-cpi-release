@@ -136,7 +136,7 @@ module VSphereCloud
     end
 
     def set_vif_type(vm, vm_type_nsxt)
-      vif_type = (vm_type_nsxt || {})['vif_type'] || @default_vif_type
+      vif_type = (vm_type_nsxt || {}).has_key?('vif_type') ? vm_type_nsxt['vif_type'] : @default_vif_type
       return if vif_type.nil?
       return if nsxt_nics(vm).empty?
 
@@ -144,7 +144,7 @@ module VSphereCloud
         @logger.info("Setting VIF attachment on logical port #{logical_port.id} to have vif_type '#{vif_type}'")
         loop do
           attachment = logical_port.attachment.merge('context' => {
-            'resource_type': 'VifAttachmentContext', 'vif_type': vif_type
+            'resource_type' => 'VifAttachmentContext', 'vif_type' => vif_type
           })
 
           response = logical_port.update('attachment' => attachment)
