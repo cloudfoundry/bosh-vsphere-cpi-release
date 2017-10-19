@@ -17,39 +17,39 @@ jobs:
     serial: true
     plan:
       - aggregate:
-        - {trigger: true, get: bosh-cpi-src, tags: ["vsphere-v6.0"]}
+        - {trigger: true, get: bosh-cpi-src, tags: ["vsphere-v6.5"]}
       - task: test
-        tags: ["vsphere-v6.0"]
+        tags: ["vsphere-v6.5"]
         file: bosh-cpi-src/ci/tasks/test-pyvmomi_to_ruby.yml
 
   - name: build-candidate
     serial: true
     plan:
       - aggregate:
-        - {trigger: true, get: bosh-cpi-src, tags: ["vsphere-v6.0"]}
-        - {trigger: false, get: version-semver, params: {bump: patch}, tags: ["vsphere-v6.0"]}
-        - {trigger: false, get: bosh-cli, tags: ["vsphere-v6.0"]}
+        - {trigger: true, get: bosh-cpi-src, tags: ["vsphere-v6.5"]}
+        - {trigger: false, get: version-semver, params: {bump: patch}, tags: ["vsphere-v6.5"]}
+        - {trigger: false, get: bosh-cli, tags: ["vsphere-v6.5"]}
       - put: version-semver
-        tags: ["vsphere-v6.0"]
+        tags: ["vsphere-v6.5"]
         params: {file: version-semver/number}
       - task: build
-        tags: ["vsphere-v6.0"]
+        tags: ["vsphere-v6.5"]
         file: bosh-cpi-src/ci/tasks/build-candidate.yml
       - put: bosh-cpi-artifacts
-        tags: ["vsphere-v6.0"]
+        tags: ["vsphere-v6.5"]
         params: {from: dev-artifacts/.*\.tgz}
 
   - name: lifecycle-6.0
     serial: true
     plan:
       - aggregate:
-        - {trigger: true,  passed: [build-candidate], get: bosh-cpi-artifacts, tags: ["vsphere-v6.0"]} # used for job chaining only not for tasks
-        - {trigger: false, passed: [build-candidate], get: bosh-cpi-src, tags: ["vsphere-v6.0"]}
-        - {trigger: false,                            get: stemcell, resource: vsphere-ubuntu-stemcell, tags: ["vsphere-v6.0"]}
+        - {trigger: true,  passed: [build-candidate], get: bosh-cpi-artifacts, tags: ["vsphere-v6.5"]} # used for job chaining only not for tasks
+        - {trigger: false, passed: [build-candidate], get: bosh-cpi-src, tags: ["vsphere-v6.5"]}
+        - {trigger: false,                            get: stemcell, resource: vsphere-ubuntu-stemcell, tags: ["vsphere-v6.5"]}
         - {trigger: true,                             get: 2h, tags: [vsphere-v6.5]}
-        - {trigger: false, get: bosh-cli, tags: ["vsphere-v6.0"]}
+        - {trigger: false, get: bosh-cli, tags: ["vsphere-v6.5"]}
       - task: test
-        tags: ["vsphere-v6.0"]
+        tags: ["vsphere-v6.5"]
         file: bosh-cpi-src/ci/tasks/run-lifecycle.yml
         params:
           RSPEC_FLAGS:                                          "--tag ~vsan_datastore --tag ~nsx_transformers"
@@ -102,13 +102,13 @@ jobs:
     serial: true
     plan:
       - aggregate:
-        - {trigger: true,  passed: [build-candidate], get: bosh-cpi-artifacts, tags: ["vsphere-v6.0"]} # used for job chaining only not for tasks
-        - {trigger: false, passed: [build-candidate], get: bosh-cpi-src, tags: ["vsphere-v6.0"]}
-        - {trigger: false,                            get: stemcell, resource: vsphere-ubuntu-stemcell, tags: ["vsphere-v6.0"]}
+        - {trigger: true,  passed: [build-candidate], get: bosh-cpi-artifacts, tags: ["vsphere-v6.5"]} # used for job chaining only not for tasks
+        - {trigger: false, passed: [build-candidate], get: bosh-cpi-src, tags: ["vsphere-v6.5"]}
+        - {trigger: false,                            get: stemcell, resource: vsphere-ubuntu-stemcell, tags: ["vsphere-v6.5"]}
         - {trigger: true,                             get: 2h, tags: [vsphere-v6.5]}
-        - {trigger: false, get: bosh-cli, tags: ["vsphere-v6.0"]}
+        - {trigger: false, get: bosh-cli, tags: ["vsphere-v6.5"]}
       - task: test
-        tags: ["vsphere-v6.0"]
+        tags: ["vsphere-v6.5"]
         file: bosh-cpi-src/ci/tasks/run-lifecycle.yml
         params:
           RSPEC_FLAGS:                                          "--tag ~vsan_datastore --tag ~nsx_transformers --tag ~disk_migration"
@@ -161,13 +161,13 @@ jobs:
     serial: true
     plan:
       - aggregate:
-        - {trigger: true,  passed: [build-candidate], get: bosh-cpi-artifacts, tags: ["vsphere-v6.0"]} # used for job chaining only not for tasks
-        - {trigger: false, passed: [build-candidate], get: bosh-cpi-src, tags: ["vsphere-v6.0"]}
-        - {trigger: false,                            get: stemcell, resource: vsphere-ubuntu-stemcell, tags: ["vsphere-v6.0"]}
+        - {trigger: true,  passed: [build-candidate], get: bosh-cpi-artifacts, tags: ["vsphere-v6.5"]} # used for job chaining only not for tasks
+        - {trigger: false, passed: [build-candidate], get: bosh-cpi-src, tags: ["vsphere-v6.5"]}
+        - {trigger: false,                            get: stemcell, resource: vsphere-ubuntu-stemcell, tags: ["vsphere-v6.5"]}
         - {trigger: true,                             get: 2h, tags: [vsphere-v6.5]}
-        - {trigger: false, get: bosh-cli, tags: ["vsphere-v6.0"]}
+        - {trigger: false, get: bosh-cli, tags: ["vsphere-v6.5"]}
       - task: test
-        tags: ["vsphere-v6.0"]
+        tags: ["vsphere-v6.5"]
         file: bosh-cpi-src/ci/tasks/run-lifecycle.yml
         params:
           RSPEC_FLAGS:                                          "--tag vsan_datastore"
@@ -189,13 +189,13 @@ jobs:
     serial: true
     plan:
       - aggregate:
-        - {trigger: true,  passed: [build-candidate], get: bosh-cpi-artifacts, tags: ["vsphere-v6.0"]} # used for job chaining only not for tasks
-        - {trigger: false, passed: [build-candidate], get: bosh-cpi-src, tags: ["vsphere-v6.0"]}
-        - {trigger: false,                            get: stemcell, resource: vsphere-ubuntu-stemcell, tags: ["vsphere-v6.0"]}
+        - {trigger: true,  passed: [build-candidate], get: bosh-cpi-artifacts, tags: ["vsphere-v6.5"]} # used for job chaining only not for tasks
+        - {trigger: false, passed: [build-candidate], get: bosh-cpi-src, tags: ["vsphere-v6.5"]}
+        - {trigger: false,                            get: stemcell, resource: vsphere-ubuntu-stemcell, tags: ["vsphere-v6.5"]}
         - {trigger: true,                             get: 2h, tags: [vsphere-v6.5]}
-        - {trigger: false, get: bosh-cli, tags: ["vsphere-v6.0"]}
+        - {trigger: false, get: bosh-cli, tags: ["vsphere-v6.5"]}
       - task: test
-        tags: ["vsphere-v6.0"]
+        tags: ["vsphere-v6.5"]
         file: bosh-cpi-src/ci/tasks/run-lifecycle.yml
         params:
           RSPEC_FLAGS:                                   "--tag nsx_transformers"
@@ -270,8 +270,8 @@ jobs:
   - name: delivery
     plan:
     - aggregate:
-      - {trigger: true, passed: [lifecycle-6.0, lifecycle-6.5, lifecycle-6.5-nsx-t, lifecycle-6.0-vsan, bats], get: bosh-cpi-artifacts, tags: ["vsphere-v6.0"]}
-      - {trigger: false, passed: [lifecycle-6.0, lifecycle-6.5, lifecycle-6.5-nsx-t, lifecycle-6.0-vsan, bats], get: bosh-cpi-src, tags: ["vsphere-v6.0"]}
+      - {trigger: true, passed: [lifecycle-6.0, lifecycle-6.5, lifecycle-6.5-nsx-t, lifecycle-6.0-vsan, bats], get: bosh-cpi-artifacts, tags: ["vsphere-v6.5"]}
+      - {trigger: false, passed: [lifecycle-6.0, lifecycle-6.5, lifecycle-6.5-nsx-t, lifecycle-6.0-vsan, bats], get: bosh-cpi-src, tags: ["vsphere-v6.5"]}
     - put: tracker-output
       params:
         repos:
@@ -281,21 +281,21 @@ jobs:
     serial: true
     plan:
     - aggregate:
-      - {trigger: false, passed: [lifecycle-6.0, lifecycle-6.5, lifecycle-6.5-nsx-t, lifecycle-6.0-vsan, bats], get: bosh-cpi-artifacts, tags: ["vsphere-v6.0"]}
-      - {trigger: false, passed: [lifecycle-6.0, lifecycle-6.5, lifecycle-6.5-nsx-t, lifecycle-6.0-vsan, bats], get: bosh-cpi-src, tags: ["vsphere-v6.0"]}
-      - {trigger: false, get: release-version-semver, params: {bump: major}, tags: ["vsphere-v6.0"]}
-      - {trigger: false, get: bosh-cli, tags: ["vsphere-v6.0"]}
+      - {trigger: false, passed: [lifecycle-6.0, lifecycle-6.5, lifecycle-6.5-nsx-t, lifecycle-6.0-vsan, bats], get: bosh-cpi-artifacts, tags: ["vsphere-v6.5"]}
+      - {trigger: false, passed: [lifecycle-6.0, lifecycle-6.5, lifecycle-6.5-nsx-t, lifecycle-6.0-vsan, bats], get: bosh-cpi-src, tags: ["vsphere-v6.5"]}
+      - {trigger: false, get: release-version-semver, params: {bump: major}, tags: ["vsphere-v6.5"]}
+      - {trigger: false, get: bosh-cli, tags: ["vsphere-v6.5"]}
     - task: promote
-      tags: ["vsphere-v6.0"]
+      tags: ["vsphere-v6.5"]
       file: bosh-cpi-src/ci/tasks/promote-candidate.yml
       params:
         AWS_ACCESS_KEY_ID:     {{s3_vsphere_cpi_blobwriter_access_key}}
         AWS_SECRET_ACCESS_KEY: {{s3_vsphere_cpi_blobwriter_secret_key}}
     - put: bosh-cpi-src-out
-      tags: ["vsphere-v6.0"]
+      tags: ["vsphere-v6.5"]
       params: {repository: updated-repo/, rebase: true, tag_prefix: "v", tag: integer-version/tag-file}
     - put: release-version-semver
-      tags: ["vsphere-v6.0"]
+      tags: ["vsphere-v6.5"]
       params: {file: release-version-semver/number}
 
 resources:
