@@ -1,7 +1,6 @@
 require 'digest'
 require 'securerandom'
 require 'integration/spec_helper'
-require 'pry-byebug'
 
 describe 'CPI', nsx_transformers: true do
   let(:cpi) do
