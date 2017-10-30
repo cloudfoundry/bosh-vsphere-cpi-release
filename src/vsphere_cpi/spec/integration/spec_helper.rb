@@ -15,10 +15,17 @@ RSpec.configure do |rspec_config|
 
     suite_cpi = VSphereCloud::Cloud.new(cpi_options)
 
-    Dir.mktmpdir do |temp_dir|
-      stemcell_image = stemcell_image(@stemcell_path, temp_dir)
-      # stemcell uploads are slow on local vSphere, only upload once
-      stemcell_id = suite_cpi.create_stemcell(stemcell_image, nil)
+    stemcell_id = ENV.fetch('BOSH_VSPHERE_STEMCELL_ID', '')
+
+    unless stemcell_id.empty?
+      stemcell_vm = suite_cpi.stemcell_vm(stemcell_id)
+      fail "Could not find VM for stemcell '#{stemcell_id}'" if stemcell_vm.nil?
+    else
+      Dir.mktmpdir do |temp_dir|
+        stemcell_image = stemcell_image(@stemcell_path, temp_dir)
+        # stemcell uploads are slow on local vSphere, only upload once
+        stemcell_id = suite_cpi.create_stemcell(stemcell_image, nil)
+      end
     end
   end
 
@@ -35,6 +42,8 @@ RSpec.configure do |rspec_config|
   end
 
   rspec_config.after(:suite) do
-    delete_stemcell(suite_cpi, stemcell_id)
+    if ENV.fetch('BOSH_VSPHERE_STEMCELL_ID', '').empty?
+      delete_stemcell(suite_cpi, stemcell_id)
+    end
   end
 end
