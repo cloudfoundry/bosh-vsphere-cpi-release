@@ -13,7 +13,7 @@ RSpec.configure do |rspec_config|
     setup_global_config
     fetch_global_properties
 
-    suite_cpi = VSphereCloud::Cloud.new(cpi_options)
+    suite_cpi = @lifecycle_cpi
 
     stemcell_id = ENV.fetch('BOSH_VSPHERE_STEMCELL_ID', '')
 
@@ -33,7 +33,7 @@ RSpec.configure do |rspec_config|
     setup_global_config
     fetch_global_properties
 
-    @cpi = VSphereCloud::Cloud.new(cpi_options)
+    @cpi = @lifecycle_cpi
     @stemcell_id = stemcell_id
   end
 
