@@ -392,10 +392,6 @@ module VSphereCloud
       end
     end
 
-    def info
-      {}
-    end
-
     def set_disk_metadata(disk_id, metadata)
       # not implemented
     end
@@ -698,7 +694,7 @@ module VSphereCloud
     end
 
     def info
-      {'stemcell_formats' =>  ['vsphere-ovf']}
+      {'stemcell_formats' =>  ['vsphere-ovf', 'vsphere-ova']}
     end
 
     private
