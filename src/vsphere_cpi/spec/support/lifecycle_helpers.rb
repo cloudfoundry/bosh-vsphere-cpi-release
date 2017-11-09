@@ -88,6 +88,24 @@ module LifecycleHelpers
 
     fail("Primary cluster, #{cluster1_name}, must have more free space (#{cluster1_free_datastore_space}) than secondary cluster, #{cluster2_name} (#{cluster2_free_datastore_space})") unless cluster1_free_datastore_space > cluster2_free_datastore_space
   end
+
+  def calculate_balance_score(cluster)
+    free_spaces = cluster.accessible_datastores.map { |_, props| props.free_space }.sort
+    min = free_spaces.first
+    mean = free_spaces.inject(0, &:+) / free_spaces.length
+    median = free_spaces[free_spaces.length / 2]
+    balance_score = min + median + mean
+    balance_score
+  end
+
+  def verify_cluster_free_space_balanced_score(cpi, cluster1_name, cluster2_name)
+    cluster1 = cpi.datacenter.find_cluster(cluster1_name)
+    cluster2 = cpi.datacenter.find_cluster(cluster2_name)
+    cluster1_balance_score = calculate_balance_score(cluster1)
+    cluster2_balance_score = calculate_balance_score(cluster2)
+
+    fail("Primary cluster, #{cluster1_name}, must have greater balnce score (#{cluster1_balance_score}) than secondary cluster, #{cluster2_name} (#{cluster2_balance_score})") unless cluster1_balance_score > cluster2_balance_score
+  end
   
   def verify_local_disk_infrastructure(cpi, env_var_name, local_datastore_pattern)
     all_matching_datastores = matching_datastores(cpi.datacenter, local_datastore_pattern)
