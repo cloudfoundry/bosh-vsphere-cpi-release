@@ -30,7 +30,7 @@ These privileges must be granted on the root vCenter Server entity.
 
 #### vCenter Datacenter Privileges
 
-These privileges must be granted on any Datacenter entities the CPI will interact with.
+These privileges must be granted on any entities in a Datacenter the CPI will interact with.
 
 <table id="vcenter-datacenter-privileges">
   <thead>
