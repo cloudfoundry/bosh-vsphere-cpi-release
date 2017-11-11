@@ -143,6 +143,5 @@ These privileges must be granted on any Datacenter entities the CPI will interac
     </tr>
     <tr><td>Import</td><td>VApp.Import</td></tr>
     <tr><td>vApp application configuration</td><td>VApp.ApplicationConfig</td></tr>
-    <tr><td>vApp instance configuration</td><td>VApp.InstanceConfig</td></tr>
   </tbody>
 </table>
