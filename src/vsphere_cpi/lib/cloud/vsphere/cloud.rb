@@ -459,12 +459,11 @@ module VSphereCloud
     def create_disk(size_in_mb, cloud_properties, vm_cid = nil)
       with_thread_name("create_disk(#{size_in_mb}, _)") do
         @logger.info("Creating disk with size: #{size_in_mb}")
-
-        accessible_datastores = @datacenter.accessible_datastores
         if vm_cid
           vm = vm_provider.find(vm_cid)
-          reachable_datastores = vm.accessible_datastore_names
-          accessible_datastores.select! { |name| reachable_datastores.include?(name) }
+          accessible_datastores = vm.accessible_datastores
+        else
+          accessible_datastores = @datacenter.accessible_datastores
         end
 
         disk_config_factory = DiskConfigFactory.new(
@@ -477,7 +476,12 @@ module VSphereCloud
         datastore_picker = DatastorePicker.new
         datastore_picker.update(accessible_datastores)
         datastore_name = datastore_picker.pick_datastore_for_single_disk(disk_config)
-        datastore = @datacenter.find_datastore(datastore_name)
+        if vm_cid
+          datastore = accessible_datastores[datastore_name]
+          raise "Can't find datastore '#{datastore_name}'" if datastore.nil?
+        else
+          datastore = @datacenter.find_datastore(datastore_name)
+        end
         @logger.info("Using datastore #{datastore.name} to store persistent disk")
 
         disk_type = cloud_properties['type'] || @config.vcenter_default_disk_type

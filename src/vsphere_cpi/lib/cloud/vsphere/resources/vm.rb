@@ -27,20 +27,20 @@ module VSphereCloud
         properties['resourcePool'].name
       end
 
-      def accessible_datastore_names
-        host_properties['datastore'].map do |store|
-          ds = cloud_searcher.get_properties(
-            store,
-            Vim::Datastore,
-            ['name', 'summary.accessible'],
+      def accessible_datastores
+        Datastore.build_from_client(
+            @client,
+            host_properties['datastore'],
             ensure_all: true
-          )
-          if ds['summary.accessible']
-            ds['name']
-          else
-            nil
-          end
-        end.compact
+        ).select { |datastore| datastore.accessible }
+            .inject({}) do |acc, datastore|
+          acc[datastore.name] = datastore
+          acc
+        end
+      end
+
+      def accessible_datastore_names
+        accessible_datastores.keys
       end
 
       def mob_id
