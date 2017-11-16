@@ -16,18 +16,6 @@ describe 'DRS rules', drs: true do
       )
     end
 
-    let(:network_spec) do
-      {
-        'static' => {
-          'ip' => "169.254.#{rand(1..254)}.#{rand(4..254)}",
-          'netmask' => '255.255.254.0',
-          'cloud_properties' => {'name' => @vlan},
-          'default' => ['dns', 'gateway'],
-          'dns' => ['169.254.1.2'],
-          'gateway' => '169.254.1.3'
-        }
-      }
-    end
     let(:vm_type) do
       {
         'ram' => 512,
@@ -46,7 +34,7 @@ describe 'DRS rules', drs: true do
     end
 
     it 'should exercise the vm lifecycle' do
-      vm_lifecycle(one_cluster_cpi, [], vm_type, network_spec, @stemcell_id) do |vm_id|
+      vm_lifecycle(one_cluster_cpi, [], vm_type, get_network_spec, @stemcell_id) do |vm_id|
         vm = one_cluster_cpi.vm_provider.find(vm_id)
 
         datastore = one_cluster_cpi.client.cloud_searcher.get_managed_object(VimSdk::Vim::Datastore, name: @second_datastore)
@@ -99,7 +87,7 @@ describe 'DRS rules', drs: true do
               'agent-007',
               @stemcell_id,
               vm_type,
-              network_spec,
+              get_network_spec,
               [],
               env
             )
@@ -107,7 +95,7 @@ describe 'DRS rules', drs: true do
               'agent-006',
               @stemcell_id,
               vm_type,
-              network_spec,
+              get_network_spec,
               [],
               env
             )
@@ -156,7 +144,7 @@ describe 'DRS rules', drs: true do
               'agent-007',
               @stemcell_id,
               vm_type,
-              network_spec,
+              get_network_spec,
               [],
               {'key' => 'value'}
             )
@@ -164,7 +152,7 @@ describe 'DRS rules', drs: true do
               'agent-006',
               @stemcell_id,
               vm_type,
-              network_spec,
+              get_network_spec,
               [],
               {'key' => 'value'}
             )
@@ -219,7 +207,7 @@ describe 'DRS rules', drs: true do
               'agent-007',
               @stemcell_id,
               vm_type,
-              network_spec,
+              get_network_spec,
               [],
               {'key' => 'value'}
             )
@@ -227,7 +215,7 @@ describe 'DRS rules', drs: true do
               'agent-006',
               @stemcell_id,
               vm_type,
-              network_spec,
+              get_network_spec,
               [],
               {'key' => 'value'}
             )
@@ -277,7 +265,7 @@ describe 'DRS rules', drs: true do
                 'agent-007',
                 @stemcell_id,
                 vm_type,
-                network_spec,
+                get_network_spec,
                 [],
                 {'key' => 'value'}
               )
@@ -300,7 +288,7 @@ describe 'DRS rules', drs: true do
                 'agent-006',
                 @stemcell_id,
                 vm_type,
-                network_spec,
+                get_network_spec,
                 [],
                 {'key' => 'value'}
               )
@@ -327,7 +315,7 @@ describe 'DRS rules', drs: true do
             'agent-007',
             @stemcell_id,
             vm_type,
-            network_spec,
+            get_network_spec,
             [],
             {'key' => 'value'}
           )
@@ -369,7 +357,7 @@ describe 'DRS rules', drs: true do
             'agent-007',
             @stemcell_id,
             vm_type,
-            network_spec,
+            get_network_spec,
             [],
             {'key' => 'value'}
           )

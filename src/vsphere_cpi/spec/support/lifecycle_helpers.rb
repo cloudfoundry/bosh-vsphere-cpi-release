@@ -162,6 +162,19 @@ module LifecycleHelpers
     fail "Invalid Environment variable '#{env_var_name}': No network named '#{vlan}' found in datacenter named '#{datacenter_name}'" if network.nil?
   end
 
+  def get_network_spec
+  network_spec = {
+    'static' => {
+      'ip' => "169.254.#{rand(1..254)}.#{rand(4..254)}",
+      'netmask' => '255.255.254.0',
+      'cloud_properties' => {'name' => @vlan},
+      'default' => ['dns', 'gateway'],
+      'dns' => ['169.254.1.2'],
+      'gateway' => '169.254.1.3'
+      }
+    }
+  end
+
   def verify_datacenter_exists(cpi, env_var_name)
     cpi.datacenter.mob
   rescue => e
