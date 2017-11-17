@@ -1460,12 +1460,14 @@ module VSphereCloud
       end
 
       context 'when vm_cid is provided' do
+        let(:datastore) { double(:datastore, free_space: 2048, name: 'small-ds') }
+        let(:accessible_datastores) { {  'small-ds' => datastore} }
         before do
           allow(vm_provider).to receive(:find)
             .with('fake-vm-cid')
             .and_return(vm)
-          allow(vm).to receive(:accessible_datastore_names)
-            .and_return(['small-ds'])
+          allow(vm).to receive(:accessible_datastores)
+            .and_return(accessible_datastores)
         end
 
         it 'creates disk in vm cluster' do

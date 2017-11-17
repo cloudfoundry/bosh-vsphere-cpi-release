@@ -32,7 +32,7 @@ module VSphereCloud
             @client,
             host_properties['datastore'],
             ensure_all: true
-        ).select { |datastore| datastore.accessible }
+        ).select(&:accessible)
             .inject({}) do |acc, datastore|
           acc[datastore.name] = datastore
           acc

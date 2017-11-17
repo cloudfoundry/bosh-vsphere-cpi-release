@@ -77,7 +77,7 @@ module VSphereCloud::Resources
       ).and_return(fake_resource_pool)
 
       allow(cloud_searcher).to receive(:get_properties).with(
-        'fake-datastore-name', VimSdk::Vim::Datastore, Datastore::PROPERTIES
+        'fake-datastore-name', VimSdk::Vim::Datastore, Datastore::PROPERTIES, {}
       ).and_return(fake_datastore_properties)
 
       allow(cloud_searcher).to receive(:get_properties).with(
