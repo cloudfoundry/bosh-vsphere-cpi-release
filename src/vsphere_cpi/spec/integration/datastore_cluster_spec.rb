@@ -50,9 +50,9 @@ end
 context 'when cluster is not defined in global config' do
   before (:all) do
     @cluster_name = fetch_and_verify_cluster('BOSH_VSPHERE_CPI_CLUSTER')
-    @datastore_pattern = fetch_and_verify_datastore('BOSH_VSPHERE_CPI_DATASTORE_IN_DATASTORE_CLUSTER', @cluster_name) #local-ds*
-    @cluster_name_3 = fetch_and_verify_cluster('BOSH_VSPHERE_CPI_THIRD_CLUSTER')
-    @datastore_cluster_3 = fetch_and_verify_datastore('BOSH_VSPHERE_CPI_DATASTORE_IN_CLUSTER_3', @cluster_name_3) #isc-cl3-ds0
+    @datastore_pattern = fetch_and_verify_datastore('BOSH_VSPHERE_CPI_DATASTORE_IN_DATASTORE_CLUSTER', @cluster_name)
+    @disjoint_cluster = fetch_and_verify_cluster('BOSH_VSPHERE_CPI_SECOND_CLUSTER') #cluster which has a disjoint datastore (not shared with any other cluster)
+    @disjoint_datastore = fetch_and_verify_datastore('BOSH_VSPHERE_CPI_SECOND_CLUSTER_DATASTORE', @disjoint_cluster)
     @datacenter_name = fetch_and_verify_datacenter('BOSH_VSPHERE_CPI_DATACENTER')
   end
   let(:vm_type) do
@@ -63,10 +63,10 @@ context 'when cluster is not defined in global config' do
         'datacenters' => [
             {
                 'name' => @datacenter_name,
-                'datastores' =>  [@datastore_cluster_3],
+                'datastores' =>  [@disjoint_datastore],
                 'clusters' => [
                     {
-                        @cluster_name_3 => {}
+                      @disjoint_cluster => {}
                     }
                 ]
             }
@@ -91,7 +91,7 @@ context 'when cluster is not defined in global config' do
     VSphereCloud::Cloud.new(options)
   end
 
-  let(:cpi2) do
+  let(:disjoint_cluster_cpi) do
     options = cpi_options(
         'datacenters' => [
             {
@@ -100,7 +100,7 @@ context 'when cluster is not defined in global config' do
                 'persistent_datastore_pattern' => @datastore_pattern,
                 'clusters' => [
                     {
-                        @cluster_name_3 => {}
+                      @disjoint_cluster => {}
                     },
                 ]
             }
@@ -109,7 +109,7 @@ context 'when cluster is not defined in global config' do
     VSphereCloud::Cloud.new(options)
   end
 
-  let(:disk_pool) { { 'datastores' => [@datastore_cluster_3] } }
+  let(:disk_pool) { { 'datastores' => [@disjoint_datastore] } }
 
   it 'should place disk into datastore that belongs to the cluster defined in cloud config' do
     begin
@@ -123,16 +123,17 @@ context 'when cluster is not defined in global config' do
       )
       expect(vm_id).to_not be_nil
       vm = cpi.vm_provider.find(vm_id)
-      expect(vm.cluster).to eq(@cluster_name_3)
+      expect(vm.cluster).to eq(@disjoint_cluster)
       expect(cpi.has_vm?(vm_id)).to be(true)
+
       disk_id = cpi.create_disk(2048, disk_pool, vm_id)
       expect(disk_id).to_not be_nil
-      expect(cpi2.has_disk?(disk_id)).to be(true)
-      disk = cpi2.datacenter.find_disk(VSphereCloud::DirectorDiskCID.new(disk_id))
-      expect(disk.datastore.name).to eq(@datastore_cluster_3)
+      expect(disjoint_cluster_cpi.has_disk?(disk_id)).to be(true)
+      disk = disjoint_cluster_cpi.datacenter.find_disk(VSphereCloud::DirectorDiskCID.new(disk_id))
+      expect(disk.datastore.name).to eq(@disjoint_datastore)
     ensure
       delete_vm(cpi, vm_id)
-      delete_disk(cpi2, disk_id)
+      delete_disk(disjoint_cluster_cpi, disk_id)
     end
   end
 
