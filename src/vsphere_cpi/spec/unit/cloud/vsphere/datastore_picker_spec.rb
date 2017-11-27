@@ -44,7 +44,7 @@ module VSphereCloud
           })
         end
 
-        context 'when no valid placement exists' do
+        context 'when no datastore can contain the disk' do
           let(:large_disk) do
             instance_double(VSphereCloud::DiskConfig,
               size: 999999,
@@ -63,6 +63,25 @@ module VSphereCloud
             }.to raise_error Bosh::Clouds::CloudError, /No valid placement/
           end
         end
+      context 'when no target datastore pattern matches an available datastore' do
+        let(:regular_disk) do
+          instance_double(VSphereCloud::DiskConfig,
+            size: 256,
+            existing_datastore_name: nil,
+            target_datastore_pattern: 'bad-pattern',
+          )
+        end
+
+        it 'raises an error' do
+          picker = DatastorePicker.new(0)
+          picker.update(available_datastores)
+          disks = [regular_disk]
+
+          expect{
+            picker.best_disk_placement(disks)
+          }.to raise_error Bosh::Clouds::CloudError, /No valid placement/
+        end
+       end
       end
 
       context 'when multiple DSes are available' do
@@ -284,10 +303,14 @@ module VSphereCloud
                 [ "ds-#{index}", instance_double(VSphereCloud::Resources::Datastore, free_space: free_space) ]
               end.to_h
 
+              disks = input[:datastore_space].each_with_index.map do |free_space, index|
+                instance_double(VSphereCloud::DiskConfig, size: 0, target_datastore_pattern: "ds-#{index}", existing_datastore_name: nil)
+              end
+
               picker = DatastorePicker.new(0)
               picker.update(available_datastores)
 
-              expect(picker.best_disk_placement([])[:balance_score]).to eq(input[:balance_score])
+              expect(picker.best_disk_placement(disks)[:balance_score]).to eq(input[:balance_score])
             end
           end
         end
@@ -381,6 +404,44 @@ module VSphereCloud
         picker.update(available_datastores)
 
         expect(picker.pick_datastore_for_single_disk(disk)).to eq('larger-ds')
+      end
+    end
+
+    describe 'Multiple clusters single datastore' do
+      let(:cluster1_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 256) }
+      let(:cluster2_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 1024) }
+      let(:shared_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 1024) }
+      let(:available_datastores_cluster1) do
+       {
+         'cluster1-ds' => cluster1_ds,
+         'shared-ds' => shared_ds,
+       }
+      end
+      let(:available_datastores_cluster2) do
+       {
+         'cluster2-ds' => cluster2_ds,
+         'shared-ds' => shared_ds,
+       }
+      end
+
+      let(:disk) do
+        instance_double(VSphereCloud::DiskConfig,
+          size: 128,
+          target_datastore_pattern: 'shared-ds',
+          existing_datastore_name: nil
+        )
+      end
+    
+      it 'calculates the same balance score for both clusters' do
+        picker = DatastorePicker.new(0)
+        picker.update(available_datastores_cluster1)
+        placeholders_cluster1 = picker.best_disk_placement([disk])
+
+        picker2 = DatastorePicker.new(0)
+        picker2.update(available_datastores_cluster2)
+        placeholders_cluster2 = picker2.best_disk_placement([disk])
+
+        expect(placeholders_cluster1[:balance_score]).to eq(placeholders_cluster2[:balance_score])
       end
     end
   end
