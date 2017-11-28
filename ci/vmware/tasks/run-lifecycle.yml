@@ -1,0 +1,66 @@
+---
+platform: linux
+image_resource:
+  type: docker-image
+  source: {repository: boshcpi/vsphere-cpi-release}
+inputs:
+  - name: bosh-cpi-src
+  - name: stemcell
+  - name: bosh-cli
+outputs:
+  - name: dummy # dummy output to avoid sending the entire task over the network
+run:
+  path: bosh-cpi-src/ci/tasks/run-lifecycle.sh
+params:
+  RSPEC_FLAGS:                                          ""
+  BOSH_VSPHERE_VERSION:                                 ""
+  BOSH_VSPHERE_CPI_HOST:                                ""
+  BOSH_VSPHERE_CPI_USER:                                ""
+  BOSH_VSPHERE_CPI_PASSWORD:                            ""
+  BOSH_VSPHERE_VLAN:                                    ""
+  BOSH_VSPHERE_CPI_DATACENTER:                          ""
+  BOSH_VSPHERE_CPI_CLUSTER:                             ""
+  BOSH_VSPHERE_CPI_DATASTORE_PATTERN:                   ""
+  BOSH_VSPHERE_CPI_INACTIVE_DATASTORE_PATTERN:          ""
+  BOSH_VSPHERE_CPI_SECOND_DATASTORE:                    ""
+  BOSH_VSPHERE_CPI_RESOURCE_POOL:                       ""
+  BOSH_VSPHERE_CPI_SECOND_RESOURCE_POOL:                ""
+  BOSH_VSPHERE_CPI_SECOND_CLUSTER:                      ""
+  BOSH_VSPHERE_CPI_SECOND_CLUSTER_DATASTORE:            ""
+  BOSH_VSPHERE_CPI_SECOND_CLUSTER_RESOURCE_POOL:        ""
+  BOSH_VSPHERE_CPI_VM_FOLDER:                           ""
+  BOSH_VSPHERE_CPI_TEMPLATE_FOLDER:                     ""
+  BOSH_VSPHERE_CPI_DISK_PATH:                           ""
+  BOSH_VSPHERE_CPI_NESTED_DATACENTER:                   ""
+  BOSH_VSPHERE_CPI_NESTED_DATACENTER_DATASTORE_PATTERN: ""
+  BOSH_VSPHERE_CPI_NESTED_DATACENTER_CLUSTER:           ""
+  BOSH_VSPHERE_CPI_NESTED_DATACENTER_RESOURCE_POOL:     ""
+  BOSH_VSPHERE_CPI_NESTED_DATACENTER_VLAN:              ""
+  BOSH_VSPHERE_CPI_NESTED_DATACENTER_NESTED_VLAN:       ""
+  BOSH_VSPHERE_CPI_SINGLE_LOCAL_DATASTORE_PATTERN:      ""
+  BOSH_VSPHERE_CPI_MULTI_LOCAL_DATASTORE_PATTERN:       ""
+  BOSH_VSPHERE_CPI_SECOND_CLUSTER_LOCAL_DATASTORE:      ""
+  BOSH_VSPHERE_CPI_VSAN_DATASTORE_PATTERN:              ""
+  BOSH_VSPHERE_CPI_PORTGROUP_STANDARD:                  ""
+  BOSH_VSPHERE_CPI_PORTGROUP_DISTRIBUTED:               ""
+  BOSH_VSPHERE_CPI_PORTGROUP_AMBIGUOUS:                 ""
+  BOSH_VSPHERE_CPI_PORTGROUP_AMBIGUOUS_RAISE_ISSUE:     ""
+  BOSH_VSPHERE_CPI_PORTGROUP_FOLDER_STANDARD:           ""
+  BOSH_VSPHERE_CPI_PORTGROUP_FOLDER_DISTRIBUTED:        ""
+  BOSH_VSPHERE_CPI_PORTGROUP_FOLDER_AMBIGUOUS:          ""
+  BOSH_VSPHERE_CPI_NSX_ADDRESS:                         ""
+  BOSH_VSPHERE_CPI_NSX_USER:                            ""
+  BOSH_VSPHERE_CPI_NSX_PASSWORD:                        ""
+  BOSH_VSPHERE_CPI_NSX_CA_CERT:                         ""
+  BOSH_VSPHERE_CPI_NSX_LB_NAME:                         ""
+  BOSH_VSPHERE_CPI_NSX_POOL_NAME:                       ""
+  BOSH_VSPHERE_CPI_CLUSTER_MORE_DATASTORE_FREE_SPACE:   ""
+  BOSH_VSPHERE_CPI_CLUSTER_LESS_DATASTORE_FREE_SPACE:   ""
+  BOSH_VSPHERE_CPI_SHARED_DATASTORE:                    ""
+  BOSH_VSPHERE_CPI_NSXT_HOST:                           ""
+  BOSH_VSPHERE_CPI_NSXT_USERNAME:                       ""
+  BOSH_VSPHERE_CPI_NSXT_PASSWORD:                       ""
+  BOSH_VSPHERE_CPI_NSXT_CA_CERT:                        ""
+  BOSH_VSPHERE_OPAQUE_VLAN:                             ""
+  BOSH_VSPHERE_SECOND_OPAQUE_VLAN:                      ""
+  BOSH_VSPHERE_VERIFY_LIMITED_PERMISSIONS:              true
