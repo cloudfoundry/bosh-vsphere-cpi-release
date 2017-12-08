@@ -17,6 +17,8 @@ pushd vcpi-nimbus
   source environment.sh
 popd
 
+stemcell_dir="$( cd stemcell && pwd )"
+export BOSH_VSPHERE_STEMCELL=${stemcell_dir}/stemcell.tgz
 export HTTP_PROXY="http://$BOSH_VSPHERE_JUMPER_HOST:3128"
 
 if [ -f /etc/profile.d/chruby.sh ]; then
@@ -31,11 +33,6 @@ fi
 # e.g. ./run-lifecycle.sh spec/integration/core_spec.rb
 if [ "$#" -ne 0 ]; then
   RSPEC_ARGS="$@"
-fi
-
-if [ -z "${BOSH_VSPHERE_STEMCELL}" ]; then
-  stemcell_dir="$( cd stemcell && pwd )"
-  export BOSH_VSPHERE_STEMCELL=${stemcell_dir}/stemcell.tgz
 fi
 
 install_iso9660wrap() {
