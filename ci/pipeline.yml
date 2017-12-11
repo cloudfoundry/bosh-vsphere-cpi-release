@@ -40,7 +40,7 @@ jobs:
       - task: test
         file: bosh-cpi-src/ci/tasks/run-lifecycle.yml
         params:
-          RSPEC_FLAGS: "--tag ~nsx_vsphere --tag ~nsx_transformers"
+          RSPEC_FLAGS: "--tag ~nsx_vsphere --tag ~nsx_transformers --tag ~disk_migration --tag ~vsan_datastore"
           DBCUSER: {{dbc_user}}
           DBCHOST: {{dbc_host}}
           DBC_SSH_KEY: {{dbc_key}}
