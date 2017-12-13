@@ -4,6 +4,21 @@ set -e
 
 source bosh-cpi-src/ci/utils.sh
 source bosh-cpi-src/.envrc
+
+# Required to run and spawn nimbus testbed
+sudo apt-get -y update
+sudo apt-get -y install jq rsync ssh
+
+# Spawn the test environment on nimbus
+pushd vcpi-nimbus
+  echo "$DBC_SSH_KEY" > ./dbc_ssh_key
+  chmod 400 dbc_ssh_key
+  ./launch -s 'ssh -i dbc_ssh_key -o StrictHostKeyChecking=no'
+  source environment.sh
+popd
+
+export HTTP_PROXY="http://$BOSH_VSPHERE_JUMPER_HOST:3128"
+
 if [ -f /etc/profile.d/chruby.sh ]; then
   source /etc/profile.d/chruby.sh
   chruby $PROJECT_RUBY_VERSION
