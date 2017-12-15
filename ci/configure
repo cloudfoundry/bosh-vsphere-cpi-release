@@ -1,4 +1,0 @@
-fly -t cpi sp -p bosh-vsphere-cpi \
-  -c "${RELEASE_DIR}/ci/pipeline.yml" \
-  -l <( lpass show --notes "vsphere cpi concourse secrets") \
-  -l <(lpass show --notes "pivotal-tracker-resource-keys")
