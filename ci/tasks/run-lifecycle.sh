@@ -17,6 +17,13 @@ pushd vcpi-nimbus
   source environment.sh
 popd
 
+# Sleep for 10 minutes to allow system to start collecting stats
+# Perf Manager provides wrong stats if this is not there and most test will fail.
+# DO NOT REMOVE OR CHANGE WITHOUT THOROUGH INVESTIGATION.
+# From vsphere documentation : VirtualCenter Server 2.5 (and subsequent vCenter Server) systems initially collect statistics data 10 minutes after system startup, and then hourly thereafter.
+# Sleeping for 600 seconds.
+sleep 600
+
 stemcell_dir="$( cd stemcell && pwd )"
 export BOSH_VSPHERE_STEMCELL=${stemcell_dir}/stemcell.tgz
 export HTTP_PROXY="http://$BOSH_VSPHERE_JUMPER_HOST:3128"

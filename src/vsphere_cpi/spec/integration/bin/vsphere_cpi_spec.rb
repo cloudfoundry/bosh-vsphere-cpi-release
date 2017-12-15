@@ -56,7 +56,11 @@ describe 'the vsphere_cpi executable' do
     expect(result['result']).to be_nil
 
     expect(result['error']['type']).to eq('Unknown')
-    expect(result['error']['message']).to include('Connection refused - connect(2)')
+    # This error depends on the way vsphere is connected to the machine running
+    # integration tests.  If it is the http proxy, the error should be connect
+    # to ssl proxy failed, else if it is through vpn or on same network error
+    # should be Connection refused.
+    expect(result['error']['message']).to include('connect to ssl proxy failed').or include('Connection refused - connect(2)')
     expect(result['error']['ok_to_retry']).to eq(false)
 
     expect(result['log']).to include('backtrace')
