@@ -1,9 +1,8 @@
 jobs:
   - name: pyvmomi_to_ruby-tests
-    serial: true
     plan:
-      - aggregate:
-        - {trigger: true, get: bosh-cpi-src}
+      - get: bosh-cpi-src
+        trigger: true
       - task: test
         file: bosh-cpi-src/ci/tasks/test-pyvmomi_to_ruby.yml
 
