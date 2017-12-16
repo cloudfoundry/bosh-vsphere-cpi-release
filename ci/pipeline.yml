@@ -35,7 +35,6 @@ jobs:
         - {trigger: true,  passed: [build-candidate], get: bosh-cpi-artifacts}
         - {trigger: false, passed: [build-candidate], get: bosh-cpi-src}
         - {trigger: false,                            get: stemcell, resource: vsphere-ubuntu-stemcell}
-        - {trigger: false,                            get: bosh-cli}
         - {trigger: true,                             get: vcpi-nimbus}
       - task: test
         file: bosh-cpi-src/ci/tasks/run-lifecycle.yml
