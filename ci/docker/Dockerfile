@@ -13,10 +13,9 @@ ENV RUBY_VERSION=2.4.2 GOLANG_VERSION=1.8.3
 
 COPY ruby-install /work/ruby-install/
 
-RUN /work/ruby-install/bin/ruby-install --system ruby $RUBY_VERSION -- --disable-install-rdoc
-
-# Install Bundler
-RUN gem install bundler --no-ri --no-rdoc
+RUN /work/ruby-install/bin/ruby-install \
+      -c --system ruby $RUBY_VERSION -- --disable-install-doc && \
+    gem install bundler --no-document
 
 # Install Golang
 RUN cd /tmp && \
