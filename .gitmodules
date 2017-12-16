@@ -1,0 +1,3 @@
+[submodule "ci/docker/ruby-install"]
+	path = ci/docker/ruby-install
+	url = git@github.com:postmodern/ruby-install.git
