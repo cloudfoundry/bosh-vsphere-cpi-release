@@ -6,9 +6,6 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     ca-certificates \
     git curl wget tar make \
-    sqlite3 libsqlite3-dev \
-    mysql-client libmysqlclient-dev \
-    postgresql-9.3 postgresql-client-9.3 libpq-dev \
     jq realpath && \
     apt-get clean
 
