@@ -36,11 +36,6 @@ export BOSH_VSPHERE_STEMCELL=${stemcell_dir}/stemcell.tgz
 export HTTP_PROXY="http://$BOSH_VSPHERE_JUMPER_HOST:3128"
 export HTTPS_PROXY="http://$BOSH_VSPHERE_JUMPER_HOST:3128"
 
-if [ -f /etc/profile.d/chruby.sh ]; then
-  source /etc/profile.d/chruby.sh
-  chruby $PROJECT_RUBY_VERSION
-fi
-
 : ${RSPEC_FLAGS:=""}
 : ${BOSH_VSPHERE_STEMCELL:=""}
 

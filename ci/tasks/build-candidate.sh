@@ -4,8 +4,6 @@ set -e
 
 source bosh-cpi-src/.envrc
 source bosh-cpi-src/ci/utils.sh
-source /etc/profile.d/chruby.sh
-chruby $PROJECT_RUBY_VERSION
 
 semver=$(cat version-semver/number)
 

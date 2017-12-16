@@ -4,8 +4,6 @@ set -e
 
 source bosh-cpi-src/.envrc
 source bosh-cpi-src/ci/utils.sh
-source /etc/profile.d/chruby.sh
-chruby $PROJECT_RUBY_VERSION
 
 : ${AWS_ACCESS_KEY_ID:?}
 : ${AWS_SECRET_ACCESS_KEY:?}
