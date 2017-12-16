@@ -9,26 +9,11 @@ RUN apt-get update && \
     jq realpath && \
     apt-get clean
 
-ENV RUBY_INSTALL_VERSION=0.6.1 RUBY_VERSION=2.4.2 GOLANG_VERSION=1.8.3
+ENV RUBY_VERSION=2.4.2 GOLANG_VERSION=1.8.3
 
-# Import Postmodern PGP key
-RUN wget -nv https://raw.github.com/postmodern/postmodern.github.io/master/postmodern.asc && \
-   gpg --import postmodern.asc && \
-   gpg --fingerprint 0xB9515E77 | grep 'Key fingerprint = 04B2 F3EA 6541 40BC C7DA  1B57 54C3 D9E9 B951 5E77' && \
-   if [ "$?" != "0" ]; then echo "Invalid PGP key!"; exit 1; fi
+COPY ruby-install /work/ruby-install/
 
-# Install ruby-install
-RUN cd /tmp && \
-   wget -nv -O ruby-install-$RUBY_INSTALL_VERSION.tar.gz https://github.com/postmodern/ruby-install/archive/v$RUBY_INSTALL_VERSION.tar.gz && \
-   wget -nv https://raw.github.com/postmodern/ruby-install/master/pkg/ruby-install-$RUBY_INSTALL_VERSION.tar.gz.asc && \
-   gpg --verify ruby-install-$RUBY_INSTALL_VERSION.tar.gz.asc ruby-install-$RUBY_INSTALL_VERSION.tar.gz && \
-   tar -xzvf ruby-install-$RUBY_INSTALL_VERSION.tar.gz && \
-   cd ruby-install-$RUBY_INSTALL_VERSION/ && \
-   sudo make install && \
-   rm -rf /tmp/ruby-install-$RUBY_INSTALL_VERSION && rm /tmp/*
-
-# Install Ruby
-RUN ruby-install --system ruby $RUBY_VERSION -- --disable-install-rdoc
+RUN /work/ruby-install/bin/ruby-install --system ruby $RUBY_VERSION -- --disable-install-rdoc
 
 # Install Bundler
 RUN gem install bundler --no-ri --no-rdoc
