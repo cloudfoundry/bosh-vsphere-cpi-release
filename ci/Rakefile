@@ -1,0 +1,23 @@
+require 'shellwords'
+
+DOCKER_NAME = 'vcpici/vcpi-main'
+
+namespace :docker do
+  desc 'Push the docker image'
+  task :push do |t|
+    name = ENV.fetch('DOCKER_NAME', DOCKER_NAME)
+    sh "docker push #{name.shellescape}"
+  end
+
+  desc 'Pull the docker image'
+  task :pull do |t|
+    name = ENV.fetch('DOCKER_NAME', DOCKER_NAME)
+    sh "docker pull #{name.shellescape}"
+  end
+end
+
+desc 'Build a docker image from the Dockerfile'
+task :docker do |t|
+  name = ENV.fetch('DOCKER_NAME', DOCKER_NAME)
+  sh "docker build -t #{name.shellescape} docker"
+end
