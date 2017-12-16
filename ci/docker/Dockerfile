@@ -9,8 +9,6 @@ RUN apt-get update && \
     jq realpath && \
     apt-get clean
 
-RUN apt-get install -y --no-install-recommends python
-
 ENV RUBY_INSTALL_VERSION=0.6.1 CHRUBY_VERSION=0.3.9 RUBY_VERSION=2.4.2 GOLANG_VERSION=1.8.3
 
 # Import Postmodern PGP key
