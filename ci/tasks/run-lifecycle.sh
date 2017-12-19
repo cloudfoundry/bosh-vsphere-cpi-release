@@ -7,7 +7,7 @@ source bosh-cpi-src/.envrc
 
 # Required to run and spawn nimbus testbed
 sudo apt-get -y update
-sudo apt-get -y install jq rsync ssh
+sudo apt-get -y install jq rsync ssh sshpass
 
 # Spawn the test environment on nimbus
 pushd vcpi-nimbus
