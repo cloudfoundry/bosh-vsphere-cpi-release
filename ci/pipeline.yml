@@ -40,10 +40,29 @@ jobs:
       - task: test
         file: bosh-cpi-src/ci/tasks/run-lifecycle.yml
         params:
-          RSPEC_FLAGS: "--tag ~nsx_vsphere --tag ~nsx_transformers --tag ~disk_migration --tag ~vsan_datastore"
+          RSPEC_FLAGS: "--tag ~nsx_vsphere --tag ~nsx_transformers --tag ~disk_migration"
           DBCUSER: {{dbc_user}}
           DBCHOST: {{dbc_host}}
           DBC_SSH_KEY: {{dbc_key}}
+
+  - name: lifecycle-6.5-nsx-t
+    serial: true
+    plan:
+      - aggregate:
+        - {trigger: true,  passed: [build-candidate], get: bosh-cpi-artifacts} # used for job chaining only not for tasks
+        - {trigger: false, passed: [build-candidate], get: bosh-cpi-src}
+        - {trigger: false,                            get: stemcell, resource: vsphere-ubuntu-stemcell}
+        - {trigger: false,                            get: bosh-cli}
+        - {trigger: true,                             get: vcpi-nimbus}
+      - task: test
+        file: bosh-cpi-src/ci/tasks/run-lifecycle.yml
+        params:
+          RSPEC_FLAGS: "--tag nsx_transformers"
+          DBCUSER: {{dbc_user}}
+          DBCHOST: {{dbc_host}}
+          DBC_SSH_KEY: {{dbc_key}}
+          TEST_NSX: "true"
+
 
 resources:
   - name: bosh-cpi-artifacts
