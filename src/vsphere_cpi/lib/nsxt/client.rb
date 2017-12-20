@@ -24,6 +24,9 @@ module NSXT
       if ENV['BOSH_NSXT_CA_CERT_FILE']
         @client.ssl_config.add_trust_ca(ENV['BOSH_NSXT_CA_CERT_FILE'])
       end
+      if ENV['NSXT_SKIP_SSL_VERIFY']
+        @client.ssl_config.verify_mode = OpenSSL::SSL::VERIFY_NONE
+      end
     end
 
     def nsgroups
