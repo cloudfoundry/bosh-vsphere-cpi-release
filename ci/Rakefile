@@ -1,5 +1,19 @@
 require 'shellwords'
 
+DidYouMean::Correctable.send(:remove_method, :to_s) if defined? DidYouMean
+
+module ColorizeExceptionMessageDetails
+  def display_exception_message_details(ex)
+    return super unless (options.trace_output || $stderr)&.isatty
+    if ex.instance_of?(RuntimeError)
+      trace "\e[31;01m#{ex.message}\e[0m"
+    else
+      trace "\e[31;01m#{ex.class.name}: \e[0m#{ex.message}"
+    end
+  end
+end
+Rake::Application.send(:prepend, ColorizeExceptionMessageDetails)
+
 DOCKER_NAME = 'vcpici/vcpi-main'
 
 namespace :docker do
@@ -21,3 +35,27 @@ task :docker do |t|
   name = ENV.fetch('DOCKER_NAME', DOCKER_NAME)
   sh "docker build -t #{name.shellescape} docker"
 end
+
+desc 'Create or update the pipeline configuration'
+task :pipeline, :name do |t, args|
+  args.with_defaults(name: ENV.fetch('PIPELINE', 'vsphere-cpi'))
+
+  TARGET = ENV.fetch('CONCOURSE_TARGET', 'main')
+
+  DBCHOST = ENV.fetch('DBCHOST') do
+    fail 'DBCHOST must be set to the unqualified hostname of your DBC host'
+  end
+  DBCUSER = ENV.fetch('DBCUSER') { require 'etc'; Etc.getpwuid.name }
+
+  sh '/bin/bash', '-c', [
+    "fly -t #{TARGET.shellescape}",
+    "set-pipeline -p #{args.name.shellescape} -c pipeline.yml",
+    "-v dbc_host=#{DBCHOST.shellescape}",
+    "-v dbc_user=#{DBCUSER.shellescape}",
+    '-v dbc_key="$(cat ~/.ssh/id_rsa)"',
+    '-v s3_vsphere_cpi_bucket=vcpi-ci-test',
+    '-l <(secret show ~/.dot/vcpi-ci.gpg)'
+  ].join(' ')
+end
+
+task default: :pipeline
