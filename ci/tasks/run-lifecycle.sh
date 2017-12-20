@@ -31,8 +31,10 @@ popd
 sleep 900
 
 stemcell_dir="$( cd stemcell && pwd )"
+
 export BOSH_VSPHERE_STEMCELL=${stemcell_dir}/stemcell.tgz
 export HTTP_PROXY="http://$BOSH_VSPHERE_JUMPER_HOST:3128"
+export HTTPS_PROXY="http://$BOSH_VSPHERE_JUMPER_HOST:3128"
 
 if [ -f /etc/profile.d/chruby.sh ]; then
   source /etc/profile.d/chruby.sh

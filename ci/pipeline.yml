@@ -64,7 +64,9 @@ jobs:
           VCBUILD: {{vc60_build}}
           NSXTBUILD: {{nsxt_build}}
           ESXBUILD: {{esx60_build}}
-
+          DBCUSER: {{dbc_user}}
+          DBCHOST: {{dbc_host}}
+          DBC_SSH_KEY: {{dbc_key}}
 
   - name: lifecycle-6.5-nsx-t
     serial: true
@@ -86,6 +88,7 @@ jobs:
           VCBUILD: {{vc_build}}
           NSXTBUILD: {{nsxt_build}}
           ESXBUILD: {{esx_build}}
+          NSXT_SKIP_SSL_VERIFY: {{nsxt_skip_ssl_verify}}
 
 
 resources:
