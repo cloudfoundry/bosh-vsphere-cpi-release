@@ -10,7 +10,6 @@ describe 'cloud_properties related to clusters' do
     @cluster_more_datastore_free_space = fetch_and_verify_cluster('BOSH_VSPHERE_CPI_CLUSTER_MORE_DATASTORE_FREE_SPACE')
     @cluster_less_datastore_free_space = fetch_and_verify_cluster('BOSH_VSPHERE_CPI_CLUSTER_LESS_DATASTORE_FREE_SPACE')
     @shared_datastore = fetch_property('BOSH_VSPHERE_CPI_SHARED_DATASTORE')
-    @second_cluster_datastore = fetch_and_verify_datastore('BOSH_VSPHERE_CPI_SECOND_CLUSTER_DATASTORE', @second_cluster_name)
   end
 
   let(:network_spec) do
@@ -110,7 +109,7 @@ describe 'cloud_properties related to clusters' do
         'ram' => 512,
         'disk' => 2048,
         'cpu' => 1,
-        'datastores' => [@shared_datastore, @second_cluster_datastore],
+        'datastores' => [@shared_datastore],
         'datacenters' => [
           {
             'name' => @datacenter_name,
