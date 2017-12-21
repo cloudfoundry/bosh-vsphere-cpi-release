@@ -42,9 +42,6 @@ jobs:
           DBCUSER: {{dbc_user}}
           DBCHOST: {{dbc_host}}
           DBC_SSH_KEY: {{dbc_key}}
-          VCBUILD: {{vc_build}}
-          NSXTBUILD: {{nsxt_build}}
-          ESXBUILD: {{esx_build}}
 
   - name: lifecycle-6.0
     serial: true
@@ -59,12 +56,11 @@ jobs:
         file: bosh-cpi-src/ci/tasks/run-lifecycle.yml
         params:
           RSPEC_FLAGS: "--tag ~nsx_vsphere --tag ~nsx_transformers"
-          VCBUILD: {{vc60_build}}
-          NSXTBUILD: {{nsxt_build}}
-          ESXBUILD: {{esx60_build}}
           DBCUSER: {{dbc_user}}
           DBCHOST: {{dbc_host}}
           DBC_SSH_KEY: {{dbc_key}}
+          VCBUILD: ob-7037817
+          ESXBUILD: '5367062'
 
   - name: lifecycle-6.5-nsx-t
     serial: true
@@ -83,10 +79,7 @@ jobs:
           DBCHOST: {{dbc_host}}
           DBC_SSH_KEY: {{dbc_key}}
           TEST_NSX: "true"
-          VCBUILD: {{vc_build}}
-          NSXTBUILD: {{nsxt_build}}
-          ESXBUILD: {{esx_build}}
-          NSXT_SKIP_SSL_VERIFY: {{nsxt_skip_ssl_verify}}
+          NSXT_SKIP_SSL_VERIFY: "true"
 
 
 resources:
