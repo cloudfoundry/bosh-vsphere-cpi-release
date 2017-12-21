@@ -1,0 +1,3 @@
+# Lock down iso9660wrap binary as we dont want to rebuild it on the branch
+name: iso9660wrap
+fingerprint: 82cd03afdce1985db8c9d7dba5e5200bcc6b5aa8

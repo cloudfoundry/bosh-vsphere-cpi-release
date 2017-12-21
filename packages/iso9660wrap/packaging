@@ -1,7 +1,0 @@
-set -e
-
-platform=`uname | tr '[:upper:]' '[:lower:]'`
-
-mkdir -p ${BOSH_INSTALL_TARGET}/bin
-mv iso9660wrap/iso9660wrap-$platform-amd64 ${BOSH_INSTALL_TARGET}/bin/iso9660wrap
-chmod +x ${BOSH_INSTALL_TARGET}/bin/iso9660wrap
