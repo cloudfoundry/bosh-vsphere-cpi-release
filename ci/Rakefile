@@ -14,27 +14,27 @@ module ColorizeExceptionMessageDetails
 end
 Rake::Application.send(:prepend, ColorizeExceptionMessageDetails)
 
-DOCKER_NAME = 'vcpici/vcpi-main'
+DOCKER_NAME = ENV.fetch('DOCKER_NAME', 'vcpici/vcpi-main')
 
 namespace :docker do
-  desc 'Push the docker image'
+  desc 'Build a docker image from the Dockerfile'
+  task :make do |t|
+    sh 'docker', 'build', '-t', DOCKER_NAME, 'docker'
+  end
+
+  desc "Push the docker image to '#{DOCKER_NAME}'"
   task :push do |t|
-    name = ENV.fetch('DOCKER_NAME', DOCKER_NAME)
-    sh "docker push #{name.shellescape}"
+    sh 'docker', 'push', DOCKER_NAME
   end
 
-  desc 'Pull the docker image'
+  desc "Pull the docker image from '#{DOCKER_NAME}'"
   task :pull do |t|
-    name = ENV.fetch('DOCKER_NAME', DOCKER_NAME)
-    sh "docker pull #{name.shellescape}"
+    sh 'docker', 'pull', DOCKER_NAME
   end
 end
 
-desc 'Build a docker image from the Dockerfile'
-task :docker do |t|
-  name = ENV.fetch('DOCKER_NAME', DOCKER_NAME)
-  sh "docker build -t #{name.shellescape} docker"
-end
+desc "Pull, build, and push the docker image '#{DOCKER_NAME}'"
+task docker: ['docker:pull', 'docker:make', 'docker:push']
 
 desc 'Create or update the pipeline configuration'
 task :pipeline, :name do |t, args|
