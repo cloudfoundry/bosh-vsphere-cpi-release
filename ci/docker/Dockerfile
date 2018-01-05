@@ -7,14 +7,16 @@ RUN apt-get update && \
     ca-certificates \
     git curl wget tar make \
     jq realpath && \
-    apt-get clean
+    rm -rf /var/lib/apt/lists/*
 
 ENV RUBY_VERSION=2.4.2 GOLANG_VERSION=1.8.3
 
 COPY ruby-install /work/ruby-install/
 
-RUN /work/ruby-install/bin/ruby-install \
+RUN apt-get update && \
+    /work/ruby-install/bin/ruby-install \
       -c --system ruby $RUBY_VERSION -- --disable-install-doc && \
+    rm -rf /var/lib/apt/lists/* && \
     gem install bundler --no-document
 
 # Install Golang
