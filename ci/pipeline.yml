@@ -95,7 +95,7 @@ resources:
     type: git
     source:
       uri:         git@github.com:cloudfoundry-incubator/bosh-vsphere-cpi-release.git
-      branch:      vmware-ci
+      branch:      {{vcpi_branch}}
       private_key: {{github_deployment_key__bosh-vsphere-cpi-release}}
   - name: version-semver
     type: semver

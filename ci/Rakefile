@@ -38,8 +38,6 @@ task docker: ['docker:pull', 'docker:make', 'docker:push']
 
 desc 'Create or update the pipeline configuration'
 task :pipeline, :name do |t, args|
-  args.with_defaults(name: ENV.fetch('PIPELINE', 'vsphere-cpi'))
-
   TARGET = ENV.fetch('CONCOURSE_TARGET', 'main')
 
   DBCHOST = ENV.fetch('DBCHOST') do
@@ -47,9 +45,22 @@ task :pipeline, :name do |t, args|
   end
   DBCUSER = ENV.fetch('DBCUSER') { require 'etc'; Etc.getpwuid.name }
 
+  branch = ENV.fetch('BRANCH') { `git symbolic-ref -q --short HEAD` }
+  branch.strip!
+
+  args.with_defaults(name: ENV.fetch('PIPELINE') do
+    if branch.empty?
+      fail 'Pipeline name must be specified if HEAD is detached'
+    end
+    %w[master vmware-ci].include?(branch) ? 'vsphere-cpi' : "vcpi-#{branch}"
+  end)
+
+  branch = !branch.empty? ? branch : 'master'
+
   sh '/bin/bash', '-c', [
     "fly -t #{TARGET.shellescape}",
     "set-pipeline -p #{args.name.shellescape} -c pipeline.yml",
+    "-v vcpi_branch=#{branch.shellescape}",
     "-v dbc_host=#{DBCHOST.shellescape}",
     "-v dbc_user=#{DBCUSER.shellescape}",
     '-v dbc_key="$(cat ~/.ssh/id_rsa)"',
