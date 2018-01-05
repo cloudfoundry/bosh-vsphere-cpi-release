@@ -3,7 +3,6 @@
 set -e
 
 source bosh-cpi-src/.envrc
-source bosh-cpi-src/ci/utils.sh
 
 : ${AWS_ACCESS_KEY_ID:?}
 : ${AWS_SECRET_ACCESS_KEY:?}

@@ -2,7 +2,6 @@
 
 set -e
 
-source bosh-cpi-src/ci/utils.sh
 source bosh-cpi-src/.envrc
 
 # Required to run and spawn nimbus testbed

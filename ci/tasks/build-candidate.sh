@@ -3,7 +3,6 @@
 set -e
 
 source bosh-cpi-src/.envrc
-source bosh-cpi-src/ci/utils.sh
 
 semver=$(cat version-semver/number)
 
