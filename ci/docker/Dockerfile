@@ -2,11 +2,18 @@ FROM ubuntu:14.04
 
 ENV LANG C.UTF-8
 
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    ca-certificates \
-    git curl wget tar make \
-    jq realpath && \
+RUN apt-get update && apt-get install -y --no-install-recommends \
+      ca-certificates \
+      curl \
+      git \
+      jq \
+      make \
+      openssh-client \
+      realpath \
+      rsync \
+      sshpass \
+      tar \
+      wget && \
     rm -rf /var/lib/apt/lists/*
 
 ENV RUBY_VERSION=2.4.2 GOLANG_VERSION=1.8.3
