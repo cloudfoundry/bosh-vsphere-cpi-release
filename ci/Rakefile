@@ -1,7 +1,9 @@
 require 'shellwords'
 
+# Remove did_you_mean as it's very annoying in a Rakefile
 DidYouMean::Correctable.send(:remove_method, :to_s) if defined? DidYouMean
 
+# Colorize error messages when the trace output is a TTY
 module ColorizeExceptionMessageDetails
   def display_exception_message_details(ex)
     return super unless (options.trace_output || $stderr)&.isatty
@@ -18,23 +20,17 @@ DOCKER_NAME = ENV.fetch('DOCKER_NAME', 'vcpici/vcpi-main')
 
 namespace :docker do
   desc 'Build a docker image from the Dockerfile'
-  task :make do |t|
-    sh 'docker', 'build', '-t', DOCKER_NAME, 'docker'
-  end
+  task(:make) { sh 'docker', 'build', '-t', DOCKER_NAME, 'docker' }
 
   desc "Push the docker image to '#{DOCKER_NAME}'"
-  task :push do |t|
-    sh 'docker', 'push', DOCKER_NAME
-  end
+  task(:push) { sh 'docker', 'push', DOCKER_NAME }
 
   desc "Pull the docker image from '#{DOCKER_NAME}'"
-  task :pull do |t|
-    sh 'docker', 'pull', DOCKER_NAME
-  end
+  task(:pull) { sh 'docker', 'pull', DOCKER_NAME }
 end
 
 desc "Pull, build, and push the docker image '#{DOCKER_NAME}'"
-task docker: ['docker:pull', 'docker:make', 'docker:push']
+task docker: %w[docker:pull docker:make docker:push]
 
 desc 'Create or update the pipeline configuration'
 task :pipeline, :name do |t, args|
