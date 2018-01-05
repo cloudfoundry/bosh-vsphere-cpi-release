@@ -30,3 +30,12 @@ RUN cd /tmp && \
 RUN mkdir -p /opt/go
 ENV GOPATH /opt/go
 ENV PATH /usr/local/go/bin:/opt/go/bin:$PATH
+
+RUN cd /tmp && \
+    wget -nv https://s3.amazonaws.com/bosh-cli-artifacts/bosh-cli-2.0.45-linux-amd64 && \
+    ( \
+      echo bf04be72daa7da0c9bbeda16fda7fc7b2b8af51e bosh-cli-2.0.45-linux-amd64 | \
+      sha1sum -c - \
+    ) && \
+    install -Dm755 bosh-cli-2.0.45-linux-amd64 /usr/local/bin/bosh && \
+    rm -f bosh-cli-2.0.45-linux-amd64

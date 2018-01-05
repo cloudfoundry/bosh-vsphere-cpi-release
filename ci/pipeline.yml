@@ -16,8 +16,6 @@ jobs:
           trigger: false
           params:
             bump: patch
-        - get: bosh-cli
-          trigger: false
       - put: version-semver
         params:
           file: version-semver/number
@@ -50,7 +48,6 @@ jobs:
         - {trigger: true,  passed: [build-candidate], get: bosh-cpi-artifacts}
         - {trigger: false, passed: [build-candidate], get: bosh-cpi-src}
         - {trigger: false,                            get: stemcell, resource: vsphere-ubuntu-stemcell}
-        - {trigger: false,                            get: bosh-cli}
         - {trigger: true,                             get: vcpi-nimbus}
       - task: test
         file: bosh-cpi-src/ci/tasks/run-lifecycle.yml
@@ -69,7 +66,6 @@ jobs:
         - {trigger: true,  passed: [build-candidate], get: bosh-cpi-artifacts} # used for job chaining only not for tasks
         - {trigger: false, passed: [build-candidate], get: bosh-cpi-src}
         - {trigger: false,                            get: stemcell, resource: vsphere-ubuntu-stemcell}
-        - {trigger: false,                            get: bosh-cli}
         - {trigger: true,                             get: vcpi-nimbus}
       - task: test
         file: bosh-cpi-src/ci/tasks/run-lifecycle.yml
@@ -80,7 +76,6 @@ jobs:
           DBC_SSH_KEY: {{dbc_key}}
           TEST_NSX: "true"
           NSXT_SKIP_SSL_VERIFY: "true"
-
 
 resources:
   - name: bosh-cpi-artifacts
@@ -113,8 +108,3 @@ resources:
     type: bosh-io-stemcell
     source:
       name: bosh-vsphere-esxi-ubuntu-trusty-go_agent
-  - name: bosh-cli
-    type: s3
-    source:
-      regexp: bosh-cli-([0-9.]+)-linux-amd64
-      bucket: bosh-cli-artifacts
