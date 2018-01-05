@@ -21,9 +21,10 @@ popd
 # According to the vSphere documentation for PerformanceManager:
 #   VirtualCenter Server 2.5 (and subsequent vCenter Server) systems initially
 #   collect statistics data 10 minutes after system startup
-# Sleep for 15 minutes (900 seconds) to allow for statistics collection to
-# commence and for one round (5 minutes) of statistics to be collected.
-sleep 900
+# Sleep for 16 minutes (960 seconds) to allow for statistics collection to
+# commence and for one round (5 minutes) of statistics to be collected. Allow
+# one more minutes as a buffer.
+sleep 960
 
 stemcell_dir="$( cd stemcell && pwd )"
 
