@@ -31,7 +31,7 @@ jobs:
       - aggregate:
         - {trigger: true,  passed: [build-candidate], get: bosh-cpi-artifacts}
         - {trigger: false, passed: [build-candidate], get: bosh-cpi-src}
-        - {trigger: false,                            get: stemcell, resource: vsphere-ubuntu-stemcell}
+        - get: stemcell
         - {trigger: true,                             get: vcpi-nimbus}
       - task: test
         file: bosh-cpi-src/ci/tasks/run-lifecycle.yml
@@ -47,7 +47,7 @@ jobs:
       - aggregate:
         - {trigger: true,  passed: [build-candidate], get: bosh-cpi-artifacts}
         - {trigger: false, passed: [build-candidate], get: bosh-cpi-src}
-        - {trigger: false,                            get: stemcell, resource: vsphere-ubuntu-stemcell}
+        - get: stemcell
         - {trigger: true,                             get: vcpi-nimbus}
       - task: test
         file: bosh-cpi-src/ci/tasks/run-lifecycle.yml
@@ -65,7 +65,7 @@ jobs:
       - aggregate:
         - {trigger: true,  passed: [build-candidate], get: bosh-cpi-artifacts} # used for job chaining only not for tasks
         - {trigger: false, passed: [build-candidate], get: bosh-cpi-src}
-        - {trigger: false,                            get: stemcell, resource: vsphere-ubuntu-stemcell}
+        - get: stemcell
         - {trigger: true,                             get: vcpi-nimbus}
       - task: test
         file: bosh-cpi-src/ci/tasks/run-lifecycle.yml
@@ -104,7 +104,7 @@ resources:
       bucket:            {{s3_vsphere_cpi_bucket}}
       access_key_id:     {{s3_vsphere_cpi_blobwriter_access_key}}
       secret_access_key: {{s3_vsphere_cpi_blobwriter_secret_key}}
-  - name: vsphere-ubuntu-stemcell
+  - name: stemcell
     type: bosh-io-stemcell
     source:
       name: bosh-vsphere-esxi-ubuntu-trusty-go_agent
