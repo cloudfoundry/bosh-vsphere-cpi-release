@@ -37,7 +37,7 @@ module VSphereCloud
           next
         end
 
-        found_placement = false
+        migration_size_accounted_for = false
 
         weighted_datastores = weighted_random_sort(datastores)
         weighted_datastores.each do |ds|
@@ -50,25 +50,55 @@ module VSphereCloud
 
           datastores[ds_name][:disks].push(disk)
           datastores[ds_name][:free_space] -= additional_required_space
-          placement[:migration_size] += additional_required_space if existing_ds_name
-
-          found_placement = true
-          break
+          if existing_ds_name && !migration_size_accounted_for
+            placement[:migration_size] += additional_required_space
+            migration_size_accounted_for = true
+          end
         end
 
-        raise Bosh::Clouds::CloudError, pretty_print_placement_error([disk]) unless found_placement
       end
 
+      placement = filter_all_placement_without_disks(placement)
+
+      raise Bosh::Clouds::CloudError, pretty_print_placement_error(disks) if placement[:datastores].empty?
+
       add_balance_score(placement)
+
+    end
+
+    def filter_all_placement_without_disks(placement)
+      datastore_placements = placement[:datastores]
+
+      iterate_placement = datastore_placements.clone
+      iterate_placement.each do |ds_name, props|
+        disks = props[:disks]
+        datastore_placements.delete(ds_name) if disks.empty?
+      end
+      placement
+    end
+
+    def persistent_placements_with_active_hosts(placements)
+      @available_datastores.each do |dsname, ds|
+        placements[:datastores].delete(dsname) unless ds.accessible?
+      end
+      placements
     end
 
     def pick_datastore_for_single_disk(disk)
       placement = best_disk_placement([disk])
+      # Filter out placements where the datastore has no active hosts
+      # (host under maintenance) or if there are any active host,
+      # they belong to a different cluster
+      # than specified in placement_options' respective key
+      placement = persistent_placements_with_active_hosts(placement)
 
-      # we should always find a matching disk because best_disk_placement raises an error if no placement was found
-      placement[:datastores].each do |ds_name, props|
-        return ds_name if props[:disks].include?(disk)
+      if placement[:datastores].empty?
+        raise Bosh::Clouds::CloudError,
+              "No valid placement found due to no active host (non-maintenance) present for chosen datastore pattern\n\n"
       end
+
+      # we should always find a matching datastore for the disk because best_disk_placement raises an error if no placement was found
+      placement[:datastores].keys.first
     end
 
     def self.pretty_print_disks(disk_configs)

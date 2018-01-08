@@ -59,6 +59,28 @@ module VSphereCloud
         end
       end
 
+      def accessible?
+        @mob.host.any? do |host_mount|
+          !host_mount.key.runtime.in_maintenance_mode
+        end
+      end
+
+      # Returns whether there is any host which can access
+      # the datastore from the cluster passed.
+      #
+      # @param [VSphereCloud::Resource::Cluster]
+      #
+      # @return [Boolean] Whether there exists a host that is not in maintenance mode and
+      # is part of the very same cluster that datastore can access
+      #
+      def accessible_from?(cluster)
+        @mob.host.any? do |host_mount_info|
+          host_mob = host_mount_info.key
+          next if host_mob.runtime.in_maintenance_mode
+          cluster.mob.host.include?(host_mob)
+        end
+      end
+
       # @return [String] debug datastore information.
       def inspect
         "<Datastore: #@mob / #@name>"
