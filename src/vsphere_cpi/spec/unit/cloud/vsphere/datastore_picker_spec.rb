@@ -114,17 +114,11 @@ module VSphereCloud
           picker.update(available_datastores)
 
           disks = [disk1, disk2]
-          expect(picker.best_disk_placement(disks)).to include({
-            datastores: {
-              'ds-1' => {
-                free_space: 512,
-                disks: [],
-              },
-              'ds-2' => {
-                free_space: 256,
-                disks: [disk1, disk2],
-              },
-            }
+          expect(picker.best_disk_placement(disks)[:datastores]).to include({
+            'ds-2' => {
+              free_space: 256,
+              disks: [disk1, disk2],
+            },
           })
         end
 
@@ -157,17 +151,15 @@ module VSphereCloud
             picker.update(available_datastores)
 
             disks = [disk1, disk2]
-            expect(picker.best_disk_placement(disks)).to include({
-              datastores: {
-                'ds-1' => {
-                  free_space: 0,
-                  disks: [disk2],
-                },
-                'ds-2' => {
-                  free_space: 768,
-                  disks: [disk1],
-                },
-              }
+            expect(picker.best_disk_placement(disks)[:datastores]).to include({
+              'ds-1' => {
+                free_space: 0,
+                disks: [disk2],
+              },
+              'ds-2' => {
+                free_space: 768,
+                disks: [disk1],
+              },
             })
           end
         end
@@ -209,8 +201,8 @@ module VSphereCloud
                   disks: [disk2],
                 },
                 'ds-2' => {
-                  free_space: 1280,
-                  disks: [disk1],
+                  free_space: 256,
+                  disks: [disk1, disk2],
                 },
               }
             })
@@ -237,17 +229,11 @@ module VSphereCloud
             picker = DatastorePicker.new(0)
             picker.update(available_datastores)
             disks = [disk1, disk2]
-            expect(picker.best_disk_placement(disks)).to include({
-              datastores: {
-                'ds-1' => {
-                  free_space: 512,
-                  disks: [],
-                },
-                'ds-2' => {
-                  free_space: 512,
-                  disks: [disk1, disk2],
-                },
-              }
+            expect(picker.best_disk_placement(disks)[:datastores]).to include({
+              'ds-2' => {
+                free_space: 512,
+                disks: [disk1, disk2],
+              },
             })
           end
         end
@@ -278,8 +264,8 @@ module VSphereCloud
               migration_size: 256,
               datastores: {
                 'ds-1' => {
-                  disks: [],
-                  free_space: 512,
+                  disks: [disk1],
+                  free_space: 256,
                 },
                 'ds-2' => {
                   disks: [disk1, disk2],
@@ -383,8 +369,8 @@ module VSphereCloud
     end
 
     describe '#pick_datastore_for_single_disk' do
-      let(:smaller_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 256) }
-      let(:larger_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 1024) }
+      let(:smaller_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 256, mob: smaller_ds_mob, accessible?: true) }
+      let(:larger_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 1024, mob: larger_ds_mob, accessible?: true) }
       let(:available_datastores) do
        {
          'smaller-ds' => smaller_ds,
@@ -398,6 +384,11 @@ module VSphereCloud
           existing_datastore_name: nil
         )
       end
+      let(:host_runtime_info) { instance_double(VimSdk::Vim::Host::RuntimeInfo, in_maintenance_mode: false) }
+      let(:host_system) {instance_double(VimSdk::Vim::HostSystem, runtime: host_runtime_info)}
+      let(:datastore_host_mount) { [instance_double('VimSdk::Vim::Datastore::HostMount', key: host_system)]}
+      let(:larger_ds_mob) { instance_double('VimSdk::Vim::Datastore', host: datastore_host_mount) }
+      let(:smaller_ds_mob) { instance_double('VimSdk::Vim::Datastore', host: datastore_host_mount) }
 
       it 'returns the picked datastore name' do
         picker = DatastorePicker.new(0)
