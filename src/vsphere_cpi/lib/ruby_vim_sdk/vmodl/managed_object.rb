@@ -69,9 +69,11 @@ module VimSdk
         __mo_id__.hash
       end
 
-      def eql?(other)
+      def ==(other)
         @__mo_id__ == other.__mo_id__
       end
+
+      alias :eql? :==
 
     end
   end
