@@ -32,6 +32,21 @@ module VSphereCloud
         end
       end.compact.to_h
 
+      if placement_options == nil || placement_options.size == 0
+        disk_string = DatastorePicker.pretty_print_disks(disk_configurations)
+        raise Bosh::Clouds::CloudError,
+              "No valid placement found for disks:\n#{disk_string}\n\n#{pretty_print_cluster_disk}"
+      end
+
+      # Filter out placements where the
+      # datastore has no active hosts i.e. (hosts are under maintenance) or
+      # if there are any active host, they belong to a different cluster
+      placement_options = placements_with_active_hosts(placement_options, clusters)
+      if placement_options.size == 0
+        raise Bosh::Clouds::CloudError,
+              "No valid placement found due to no active host (non-maintenance) present on desired cluster"
+      end
+
       if placement_options.size == 0
         disk_string = DatastorePicker.pretty_print_disks(disk_configurations)
         raise Bosh::Clouds::CloudError,
@@ -59,6 +74,22 @@ module VSphereCloud
 
     def filter_on_memory(req_memory)
       @available_clusters.reject { |cluster| cluster.free_memory < req_memory + @mem_headroom }
+    end
+
+    def placements_with_active_hosts(placements, clusters)
+      clusters.each do |cluster|
+        cluster.accessible_datastores.each do |dsname, ds|
+          unless ds.accessible_from?(cluster)
+            datastore_placements = placements[cluster.name][:datastores]
+            datastore_placements.delete(ds.name)
+            if datastore_placements.length == 0
+              placements.delete(cluster.name)
+              break
+            end
+          end
+        end
+      end
+      placements
     end
 
     def placements_with_minimum_disk_migrations(placements)

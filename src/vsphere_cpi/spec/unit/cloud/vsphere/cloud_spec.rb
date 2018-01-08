@@ -979,9 +979,15 @@ module VSphereCloud
 
     describe '#attach_disk' do
       let(:agent_env_hash) { { 'disks' => { 'persistent' => { 'disk-cid' => 'fake-device-number' } } } }
-      let(:datastore_with_disk) { instance_double('VSphereCloud::Resources::Datastore', name: 'datastore-with-disk', free_space: 2048)}
-      let(:datastore_without_disk) { instance_double('VSphereCloud::Resources::Datastore', name: 'datastore-without-disk', free_space: 4096)}
-      let(:inaccessible_datastore) { instance_double('VSphereCloud::Resources::Datastore', name: 'inaccessible-datastore', free_space: 4096)}
+      let(:host_runtime_info) { instance_double(VimSdk::Vim::Host::RuntimeInfo, in_maintenance_mode: false) }
+      let(:host_system) {instance_double(VimSdk::Vim::HostSystem, runtime: host_runtime_info)}
+      let(:datastore_host_mount) { [instance_double('VimSdk::Vim::Datastore::HostMount', key: host_system)]}
+      let(:ds_mob) { instance_double('VimSdk::Vim::Datastore', host: datastore_host_mount) }
+      let(:datastore_with_disk) do
+        instance_double('VSphereCloud::Resources::Datastore', name: 'datastore-with-disk', free_space: 2048, mob: ds_mob, accessible?: true)
+      end
+      let(:datastore_without_disk) { instance_double('VSphereCloud::Resources::Datastore', name: 'datastore-without-disk', free_space: 4096, mob:ds_mob, accessible?: true)}
+      let(:inaccessible_datastore) { instance_double('VSphereCloud::Resources::Datastore', name: 'inaccessible-datastore', free_space: 4096, mob:ds_mob, accessible?: true)}
       let(:disk) { Resources::PersistentDisk.new(cid: 'disk-cid', size_in_mb: 1024, datastore: datastore_with_disk, folder: 'fake-folder') }
       let(:director_disk_cid) { VSphereCloud::DirectorDiskCID.new('disk-cid') }
       let(:vm_location) do
@@ -1123,11 +1129,15 @@ module VSphereCloud
       end
 
       context 'when a persistent disk pattern is encoded into the disk cid' do
+        let(:host_runtime_info) { instance_double(VimSdk::Vim::Host::RuntimeInfo, in_maintenance_mode: false) }
+        let(:host_system) {instance_double(VimSdk::Vim::HostSystem, runtime: host_runtime_info)}
+        let(:datastore_host_mount) { [instance_double('VimSdk::Vim::Datastore::HostMount', key: host_system)]}
+        let(:ds_mob) { instance_double('VimSdk::Vim::Datastore', host: datastore_host_mount) }
         let(:target_datastore) do
-          instance_double(VSphereCloud::Resources::Datastore, name: 'target-datastore', free_space: 4096)
+          instance_double(VSphereCloud::Resources::Datastore, name: 'target-datastore', free_space: 4096, mob: ds_mob, accessible?: true)
         end
         let(:current_datastore) do
-          instance_double(VSphereCloud::Resources::Datastore, name: 'current-datastore', free_space: 4096)
+          instance_double(VSphereCloud::Resources::Datastore, name: 'current-datastore', free_space: 4096, mob: ds_mob, accessible?: true)
         end
         let(:moved_disk) do
           Resources::PersistentDisk.new(
@@ -1388,15 +1398,19 @@ module VSphereCloud
     end
 
     describe '#create_disk' do
-      let(:small_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 2048) }
-      let(:large_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 4096) }
+      let(:host_runtime_info) { instance_double(VimSdk::Vim::Host::RuntimeInfo, in_maintenance_mode: false) }
+      let(:host_system) {instance_double(VimSdk::Vim::HostSystem, runtime: host_runtime_info)}
+      let(:datastore_host_mount) { [instance_double('VimSdk::Vim::Datastore::HostMount', key: host_system)]}
+      let(:ds_mob) { instance_double('VimSdk::Vim::Datastore', host: datastore_host_mount) }
+      let(:small_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 2048, mob: ds_mob, accessible?: true) }
+      let(:large_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 4096, mob: ds_mob, accessible?: true) }
       let(:accessible_datastores) do
         {
           'small-ds' => small_ds,
           'large-ds' => large_ds,
         }
       end
-      let(:datastore) { double(:datastore, name: 'fake-datastore') }
+      let(:datastore) { double(:datastore, name: 'fake-datastore', mob: ds_mob) }
       let(:disk) do
         Resources::PersistentDisk.new(
           cid: 'fake-disk-cid',
@@ -1460,7 +1474,11 @@ module VSphereCloud
       end
 
       context 'when vm_cid is provided' do
-        let(:datastore) { double(:datastore, free_space: 2048, name: 'small-ds') }
+        let(:host_runtime_info) { instance_double(VimSdk::Vim::Host::RuntimeInfo, in_maintenance_mode: false) }
+        let(:host_system) {instance_double(VimSdk::Vim::HostSystem, runtime: host_runtime_info)}
+        let(:datastore_host_mount) { [instance_double('VimSdk::Vim::Datastore::HostMount', key: host_system)]}
+        let(:ds_mob) { instance_double('VimSdk::Vim::Datastore', host: datastore_host_mount) }
+        let(:datastore) { double(:datastore, free_space: 2048, name: 'small-ds', mob: ds_mob, accessible?: true) }
         let(:accessible_datastores) { {  'small-ds' => datastore} }
         before do
           allow(vm_provider).to receive(:find)
