@@ -13,7 +13,7 @@ module VSphereCloud
         let(:available_clusters) { [cluster_1] }
         let(:target_ds) do
           fake_datastore(
-            'fake-target-ds',
+            'target-ds',
             512,
             instance_double('VimSdk::Vim::Datastore', host: datastore_host_mount),
           )
@@ -28,37 +28,98 @@ module VSphereCloud
             mob: cluster1_mob
           )
         end
-        let(:host_runtime_info) { instance_double(VimSdk::Vim::Host::RuntimeInfo, in_maintenance_mode: false) }
         let(:host_system) {instance_double(VimSdk::Vim::HostSystem, runtime: host_runtime_info)}
         let(:datastore_host_mount) { [instance_double('VimSdk::Vim::Datastore::HostMount', key: host_system)]}
         let(:cluster1_mob) { instance_double(VimSdk::Vim::ClusterComputeResource, host: [host_system]) }
 
-        it 'returns the first placement option' do
-          disks = [
-            instance_double(VSphereCloud::DiskConfig,
-              size: 256,
-              target_datastore_pattern: 'target-ds',
-              existing_datastore_name: nil
-            ),
-            instance_double(VSphereCloud::DiskConfig,
-              size: 256,
-              ephemeral?: true,
-              target_datastore_pattern: 'target-ds',
-              existing_datastore_name: nil
-            ),
-          ]
+        context 'when at least few hosts are not in maintenance mode' do
+          let(:host_runtime_info) { instance_double(VimSdk::Vim::Host::RuntimeInfo, in_maintenance_mode: false) }
+          it 'returns the first placement option' do
+            disks = [
+              instance_double(VSphereCloud::DiskConfig,
+                size: 256,
+                target_datastore_pattern: 'target-ds',
+                existing_datastore_name: nil
+              ),
+              instance_double(VSphereCloud::DiskConfig,
+                size: 256,
+                ephemeral?: true,
+                target_datastore_pattern: 'target-ds',
+                existing_datastore_name: nil
+              ),
+            ]
 
-          picker = ClusterPicker.new(0, 0)
-          picker.update(available_clusters)
+            picker = ClusterPicker.new(0, 0)
+            picker.update(available_clusters)
 
-          placement_option = picker.best_cluster_placement(req_memory: 1024, disk_configurations: disks)
-          expect(placement_option).to eq({
-            'cluster-1' => {
-              disks[0] => 'target-ds',
-              disks[1] => 'target-ds',
-            }
-          })
+            placement_option = picker.best_cluster_placement(req_memory: 1024, disk_configurations: disks)
+            expect(placement_option).to eq({
+              'cluster-1' => {
+                disks[0] => 'target-ds',
+                disks[1] => 'target-ds',
+              }
+            })
+          end
         end
+
+        context 'when all hosts are in maintenance mode' do
+          let(:host_runtime_info) { instance_double(VimSdk::Vim::Host::RuntimeInfo, in_maintenance_mode: true) }
+          it 'returns the no active host exception' do
+            disks = [
+                instance_double(VSphereCloud::DiskConfig,
+                                size: 256,
+                                target_datastore_pattern: 'target-ds',
+                                existing_datastore_name: nil
+                ),
+                instance_double(VSphereCloud::DiskConfig,
+                                size: 256,
+                                ephemeral?: true,
+                                target_datastore_pattern: 'target-ds',
+                                existing_datastore_name: nil
+                ),
+            ]
+
+            picker = ClusterPicker.new(0, 0)
+            picker.update(available_clusters)
+
+            expect do
+              picker.best_cluster_placement(req_memory: 1024, disk_configurations: disks)
+            end.to raise_error(/No valid placement found due to no active host/)
+          end
+        end
+
+        context 'when all hosts are in maintenance mode but datastore can access hosts outside cluster which are in not in maintenance mode' do
+          let(:host_runtime_info) { instance_double(VimSdk::Vim::Host::RuntimeInfo, in_maintenance_mode: true) }
+          let(:active_host_runtime_info) { instance_double(VimSdk::Vim::Host::RuntimeInfo, in_maintenance_mode: false) }
+          let(:active_host_system) {instance_double(VimSdk::Vim::HostSystem, runtime: active_host_runtime_info)}
+          let(:datastore_host_mount) { [instance_double('VimSdk::Vim::Datastore::HostMount', key: active_host_system),
+                                        instance_double('VimSdk::Vim::Datastore::HostMount', key: host_system)]}
+          it 'returns the no active host exception' do
+            disks = [
+                instance_double(VSphereCloud::DiskConfig,
+                                size: 256,
+                                target_datastore_pattern: 'target-ds',
+                                existing_datastore_name: nil
+                ),
+                instance_double(VSphereCloud::DiskConfig,
+                                size: 256,
+                                ephemeral?: true,
+                                target_datastore_pattern: 'target-ds',
+                                existing_datastore_name: nil
+                ),
+            ]
+
+            picker = ClusterPicker.new(0, 0)
+            picker.update(available_clusters)
+
+            expect do
+              picker.best_cluster_placement(req_memory: 1024, disk_configurations: disks).to
+                raise_error(/No valid placement found due to no active host /)
+            end
+
+          end
+        end
+
       end
 
       context 'when no cluster fits' do
