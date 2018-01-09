@@ -369,8 +369,8 @@ module VSphereCloud
     end
 
     describe '#pick_datastore_for_single_disk' do
-      let(:smaller_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 256, mob: smaller_ds_mob, accessible?: true) }
-      let(:larger_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 1024, mob: larger_ds_mob, accessible?: true) }
+      let(:smaller_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 256, accessible?: true) }
+      let(:larger_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 1024, accessible?: true) }
       let(:available_datastores) do
        {
          'smaller-ds' => smaller_ds,
@@ -384,17 +384,28 @@ module VSphereCloud
           existing_datastore_name: nil
         )
       end
-      let(:host_runtime_info) { instance_double(VimSdk::Vim::Host::RuntimeInfo, in_maintenance_mode: false) }
-      let(:host_system) {instance_double(VimSdk::Vim::HostSystem, runtime: host_runtime_info)}
-      let(:datastore_host_mount) { [instance_double('VimSdk::Vim::Datastore::HostMount', key: host_system)]}
-      let(:larger_ds_mob) { instance_double('VimSdk::Vim::Datastore', host: datastore_host_mount) }
-      let(:smaller_ds_mob) { instance_double('VimSdk::Vim::Datastore', host: datastore_host_mount) }
 
-      it 'returns the picked datastore name' do
-        picker = DatastorePicker.new(0)
-        picker.update(available_datastores)
+      context 'when all the hosts for all the datastores are not in maintenance mode' do
+        it 'returns the picked datastore name' do
+          picker = DatastorePicker.new(0)
+          picker.update(available_datastores)
 
-        expect(picker.pick_datastore_for_single_disk(disk)).to eq('larger-ds')
+          expect(picker.pick_datastore_for_single_disk(disk)).to eq('larger-ds')
+        end
+      end
+
+      context 'when all the hosts for larger datastore are in maintenance mode' do
+        let(:larger_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 1024, accessible?: false) }
+
+        it 'raises an error for no active hosts' do
+          picker = DatastorePicker.new(0)
+          picker.update(available_datastores)
+
+          expect do
+            picker.pick_datastore_for_single_disk(disk)
+
+          end.to raise_error(/No valid placement found due to no active host /)
+        end
       end
     end
 
