@@ -47,11 +47,6 @@ module VSphereCloud
               "No valid placement found due to no active host (non-maintenance) present on desired cluster"
       end
 
-      if placement_options.size == 0
-        disk_string = DatastorePicker.pretty_print_disks(disk_configurations)
-        raise Bosh::Clouds::CloudError,
-          "No valid placement found for disks:\n#{disk_string}\n\n#{pretty_print_cluster_disk}"
-      end
       if placement_options.size == 1
         return format_final_placement(placement_options)
       end

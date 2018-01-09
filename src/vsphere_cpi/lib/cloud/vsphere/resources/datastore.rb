@@ -74,10 +74,9 @@ module VSphereCloud
       # is part of the very same cluster that datastore can access
       #
       def accessible_from?(cluster)
-        @mob.host.any? do |host_mount_info|
-          host_mob = host_mount_info.key
-          next if host_mob.runtime.in_maintenance_mode
-          cluster.mob.host.include?(host_mob)
+        @mob.host.any? do |host_mount|
+          next if host_mount.key.runtime.in_maintenance_mode
+          cluster.mob.host.include?(host_mount.key)
         end
       end
 
