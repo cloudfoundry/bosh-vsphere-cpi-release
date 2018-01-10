@@ -8,8 +8,9 @@ source bosh-cpi-src/.envrc
 pushd vcpi-nimbus
   echo "$DBC_SSH_KEY" > ./dbc_ssh_key
   chmod 400 dbc_ssh_key
-  ./launch -s 'ssh -i dbc_ssh_key -o StrictHostKeyChecking=no'
+  ./launch -e deployment.sh -s 'ssh -i dbc_ssh_key -o StrictHostKeyChecking=no'
   source environment.sh
+  source deployment.sh
 popd
 
 # Sleep for 15 minutes to allow the system to start collecting statistics.

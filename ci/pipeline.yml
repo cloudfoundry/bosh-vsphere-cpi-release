@@ -36,10 +36,11 @@ jobs:
       - task: test
         file: bosh-cpi-src/ci/tasks/run-lifecycle.yml
         params:
-          RSPEC_FLAGS: "--tag ~nsx_vsphere --tag ~nsx_transformers --tag ~disk_migration"
+          RSPEC_FLAGS: "--tag ~nsx_vsphere --tag ~disk_migration"
           DBCUSER: {{dbc_user}}
           DBCHOST: {{dbc_host}}
           DBC_SSH_KEY: {{dbc_key}}
+          NSXT_SKIP_SSL_VERIFY: "true"
 
   - name: lifecycle-6.0
     serial: true
@@ -52,29 +53,12 @@ jobs:
       - task: test
         file: bosh-cpi-src/ci/tasks/run-lifecycle.yml
         params:
-          RSPEC_FLAGS: "--tag ~nsx_vsphere --tag ~nsx_transformers"
+          RSPEC_FLAGS: "--tag ~nsx_vsphere"
           DBCUSER: {{dbc_user}}
           DBCHOST: {{dbc_host}}
           DBC_SSH_KEY: {{dbc_key}}
-          VCBUILD: ob-7037817
-          ESXBUILD: '5367062'
-
-  - name: lifecycle-6.5-nsx-t
-    serial: true
-    plan:
-      - aggregate:
-        - {trigger: true,  passed: [build-candidate], get: bosh-cpi-artifacts} # used for job chaining only not for tasks
-        - {trigger: false, passed: [build-candidate], get: bosh-cpi-src}
-        - get: stemcell
-        - {trigger: true,                             get: vcpi-nimbus}
-      - task: test
-        file: bosh-cpi-src/ci/tasks/run-lifecycle.yml
-        params:
-          RSPEC_FLAGS: "--tag nsx_transformers"
-          DBCUSER: {{dbc_user}}
-          DBCHOST: {{dbc_host}}
-          DBC_SSH_KEY: {{dbc_key}}
-          TEST_NSX: "true"
+          VC_BUILD: ob-7037817
+          ESX_BUILD: '5367062'
           NSXT_SKIP_SSL_VERIFY: "true"
 
 resources:
