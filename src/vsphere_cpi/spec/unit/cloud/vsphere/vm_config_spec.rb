@@ -2,6 +2,12 @@ require 'spec_helper'
 
 module VSphereCloud
   describe VmConfig do
+    def fake_datastore(name, free_space, mob = nil)
+      VSphereCloud::Resources::Datastore.new(
+          name, mob, true, free_space, free_space
+      )
+    end
+
     let(:vm_config) do
       VmConfig.new(
         manifest_params: input,
@@ -216,15 +222,23 @@ module VSphereCloud
           }
         end
         let(:global_clusters) { [cluster_1, cluster_2] }
-        let(:smaller_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 512) }
-        let(:larger_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 2048) }
+        let(:host_runtime_info) { instance_double(VimSdk::Vim::Host::RuntimeInfo, in_maintenance_mode: false) }
+        let(:host_system) {instance_double(VimSdk::Vim::HostSystem, runtime: host_runtime_info)}
+        let(:datastore_host_mount) { [instance_double('VimSdk::Vim::Datastore::HostMount', key: host_system)]}
+        let(:smaller_datastore_mob) { instance_double('VimSdk::Vim::Datastore', host: datastore_host_mount) }
+        let(:larger_datastore_mob) { instance_double('VimSdk::Vim::Datastore', host: datastore_host_mount) }
+        let(:smaller_ds) { fake_datastore( 'smaller-ds', 512, smaller_datastore_mob) }
+        let(:larger_ds) { fake_datastore('larger-ds', 2048, larger_datastore_mob) }
+        let(:cluster1_mob) { instance_double(VimSdk::Vim::ClusterComputeResource, host: [host_system]) }
+        let(:cluster2_mob) { instance_double(VimSdk::Vim::ClusterComputeResource, host: [host_system]) }
         let(:cluster_1) do
           instance_double(VSphereCloud::Resources::Cluster,
             name: 'cluster-1',
             free_memory: 1024,
             accessible_datastores: {
               'smaller-ds'=> smaller_ds,
-            }
+            },
+            mob: cluster1_mob
           )
         end
         let(:cluster_2) do
@@ -233,7 +247,8 @@ module VSphereCloud
             free_memory: 1024,
             accessible_datastores: {
               'larger-ds' => larger_ds,
-            }
+            },
+            mob: cluster2_mob
           )
         end
         let(:disk_configurations) do
@@ -302,8 +317,8 @@ module VSphereCloud
         }
       end
       let(:global_clusters) { [cluster_1] }
-      let(:target_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 512) }
-      let(:other_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 512) }
+      let(:target_ds) { fake_datastore('target-ds', 512, target_ds_mob) }
+      let(:other_ds) { fake_datastore('other-ds', 512, other_ds_mob) }
       let(:cluster_1) do
         instance_double(VSphereCloud::Resources::Cluster,
           name: 'cluster-1',
@@ -311,7 +326,8 @@ module VSphereCloud
           accessible_datastores: {
             'target-ds' => target_ds,
             'other-ds'=> other_ds,
-          }
+          },
+          mob: cluster1_mob
         )
       end
       let(:disk_configurations) do
@@ -330,7 +346,12 @@ module VSphereCloud
           ),
         ]
       end
-
+      let(:host_runtime_info) { instance_double(VimSdk::Vim::Host::RuntimeInfo, in_maintenance_mode: false) }
+      let(:host_system) {instance_double(VimSdk::Vim::HostSystem, runtime: host_runtime_info)}
+      let(:datastore_host_mount) { [instance_double('VimSdk::Vim::Datastore::HostMount', key: host_system)]}
+      let(:target_ds_mob) { instance_double('VimSdk::Vim::Datastore', host: datastore_host_mount) }
+      let(:other_ds_mob) { instance_double('VimSdk::Vim::Datastore', host: datastore_host_mount) }
+      let(:cluster1_mob) { instance_double(VimSdk::Vim::ClusterComputeResource, host: [host_system]) }
       it 'returns the datastore where the ephemeral disk was placed' do
         expect(vm_config.ephemeral_datastore_name).to eq('target-ds')
       end
