@@ -73,7 +73,7 @@ resources:
     type: git
     source:
       uri:         git@gitlab.eng.vmware.com:PKS/vcpi-nimbus.git
-      branch:      ci-master
+      branch:      master
       private_key: {{vcpi-nimbus_deployment_key}}
   - name: bosh-cpi-src
     type: git
