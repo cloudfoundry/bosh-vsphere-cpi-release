@@ -73,7 +73,7 @@ module VimSdk
         @__mo_id__ == other.__mo_id__
       end
 
-      alias :eql? :==
+      alias eql? ==
 
     end
   end

@@ -120,7 +120,7 @@ describe 'Give a cluster with DRS On ' do
     it 'cpi should fail to create persistent disk on a datastore ' do
       begin
         expect do
-          disk_id = cpi.create_disk(2048, {}, nil)
+          cpi.create_disk(2048, {}, nil)
         end.to raise_error(/No valid placement found due to no active host/)
       end
     end
