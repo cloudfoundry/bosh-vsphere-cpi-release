@@ -151,16 +151,18 @@ module VSphereCloud
             picker.update(available_datastores)
 
             disks = [disk1, disk2]
-            expect(picker.best_disk_placement(disks)[:datastores]).to include({
-              'ds-1' => {
-                free_space: 0,
-                disks: [disk2],
-              },
-              'ds-2' => {
-                free_space: 768,
-                disks: [disk1],
-              },
-            })
+            expect(picker.best_disk_placement(disks)[:datastores]).to include(
+              {
+                'ds-1' => {
+                  free_space: 0,
+                  disks: [disk2]
+                },
+                'ds-2' => {
+                  free_space: 768,
+                  disks: [disk1]
+                },
+              }
+            )
           end
         end
 
