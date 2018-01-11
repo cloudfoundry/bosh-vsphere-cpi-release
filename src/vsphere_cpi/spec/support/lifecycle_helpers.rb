@@ -408,6 +408,31 @@ module LifecycleHelpers
     all_datastore_names.select { |name| name =~ Regexp.new(pattern) }
   end
 
+  def turn_maintenance_on_for_half_hosts(cpi, cluster_name)
+    cluster = cpi.client.cloud_searcher.get_managed_object(VimSdk::Vim::ClusterComputeResource, name: cluster_name)
+    half_host_mob_array = cluster.host[0, cluster.host.length/2]
+    half_host_mob_array.each { |host_mob| host_mob.enter_maintenance_mode(0, true, nil) }
+    # Sleep for 10 seconds to allow hosts to enter maintenance mode
+    sleep 10
+  end
+
+  def turn_maintenance_off_for_all_hosts(cpi, cluster_name)
+    cluster = cpi.client.cloud_searcher.get_managed_object(VimSdk::Vim::ClusterComputeResource, name: cluster_name)
+    host_mob_array = cluster.host
+    host_mob_array.each { |host_mob| host_mob.exit_maintenance_mode(0) }
+    # Sleep for 10 seconds to allow hosts to exit maintenance mode
+    sleep 10
+  end
+
+  def turn_maintenance_on_for_all_hosts(cpi, cluster_name)
+    cluster = cpi.client.cloud_searcher.get_managed_object(VimSdk::Vim::ClusterComputeResource, name: cluster_name)
+    host_mob_array = cluster.host
+    host_mob_array.each { |host_mob| host_mob.enter_maintenance_mode(0, true, nil) }
+    # Sleep for 10 seconds to allow hosts to enter maintenance mode
+    sleep 10
+  end
+
+
   private
 
   def is_disk_in_datastores(cpi, disk_id, accessible_datastores)
