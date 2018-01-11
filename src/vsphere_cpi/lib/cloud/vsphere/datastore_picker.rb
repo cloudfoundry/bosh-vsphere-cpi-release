@@ -68,9 +68,7 @@ module VSphereCloud
 
     def filter_all_placement_without_disks(placement)
       datastore_placements = placement[:datastores]
-
-      iterate_placement = datastore_placements.clone
-      iterate_placement.each do |ds_name, props|
+      datastore_placements.each do |ds_name, props|
         disks = props[:disks]
         datastore_placements.delete(ds_name) if disks.empty?
       end
