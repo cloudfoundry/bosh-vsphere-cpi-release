@@ -39,7 +39,7 @@ describe 'Give a cluster with DRS On ' do
     before do
       turn_maintenance_on_for_half_hosts(cpi, @cluster_name_maintenance)
     end
-    it 'cpi should be able to replicate stemcell (create vm and create ephemeral disk) on a datastore accessible by non-maintenance mode host and which belongs to same cluster' do
+    it 'cpi should be able to replicate stemcell (create vm and create ephemeral disk) ' do
       begin
         @vm_id = cpi.create_vm(
           'agent-007',
@@ -56,7 +56,7 @@ describe 'Give a cluster with DRS On ' do
         delete_vm(cpi, @vm_id)
       end
     end
-    it 'cpi should be able to create persistent disk on a datastore accessible by non-maintenance mode host' do
+    it 'cpi should be able to create persistent disk ' do
       begin
         @disk_id = cpi.create_disk(2048, {}, nil)
         expect(@disk_id).to_not be_nil
@@ -103,7 +103,7 @@ describe 'Give a cluster with DRS On ' do
     before do
       turn_maintenance_on_for_all_hosts(cpi, @cluster_name_maintenance)
     end
-    it 'cpi should fail to replicate stemcell (create vm and create ephemeral disk) on a datastore accessible by all maintenance mode hosts and which belongs to same cluster' do
+    it 'cpi should fail to replicate stemcell (create vm and create ephemeral disk) on a datastore ' do
       begin
         expect do
           @vm_id = cpi.create_vm(
@@ -117,7 +117,7 @@ describe 'Give a cluster with DRS On ' do
          end.to raise_error(/No valid placement found due to no active host/)
       end
     end
-    it 'cpi should fail to create persistent disk on a datastore accessible by all maintenance mode host' do
+    it 'cpi should fail to create persistent disk on a datastore ' do
       begin
         expect do
           disk_id = cpi.create_disk(2048, {}, nil)
@@ -159,7 +159,7 @@ describe 'Give a cluster with DRS On ' do
     before do
       turn_maintenance_on_for_all_hosts(cpi, @cluster_name_maintenance)
     end
-    it 'cpi should fail to replicate stemcell (create vm and create ephemeral disk) on a datastore accessible by all maintenance mode host and which belongs to other cluster' do
+    it 'cpi should fail to replicate stemcell (create vm and create ephemeral disk) on a datastore ' do
       begin
         expect do
           @vm_id = cpi.create_vm(
@@ -173,7 +173,7 @@ describe 'Give a cluster with DRS On ' do
         end.to raise_error(/No valid placement found due to no active host/)
       end
     end
-    it 'cpi should be able to create persistent disk on a datastore accessible by all maintenance mode host' do
+    it 'cpi should be able to create persistent disk on a datastore ' do
       begin
         @disk_id = cpi.create_disk(2048, {}, nil)
         expect(@disk_id).to_not be_nil
