@@ -32,7 +32,7 @@ module VSphereCloud
         end
       end.compact.to_h
 
-      if placement_options == nil || placement_options.size == 0
+      if placement_options.nil? || placement_options.size == 0
         disk_string = DatastorePicker.pretty_print_disks(disk_configurations)
         raise Bosh::Clouds::CloudError,
               "No valid placement found for disks:\n#{disk_string}\n\n#{pretty_print_cluster_disk}"
@@ -76,7 +76,7 @@ module VSphereCloud
         cluster.accessible_datastores.each do |dsname, ds|
           unless ds.accessible_from?(cluster)
             datastore_placements = placements[cluster.name][:datastores]
-            datastore_placements.delete(ds.name)
+            datastore_placements.delete(dsname)
             if datastore_placements.length == 0
               placements.delete(cluster.name)
               break
