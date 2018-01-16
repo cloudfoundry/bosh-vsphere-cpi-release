@@ -118,12 +118,6 @@ module VSphereCloud::Resources
               expect(cluster.free_memory).to eq(25)
             end
           end
-
-          context 'when the runtime status is not green (i.e. it is unreliable)' do
-            it 'defaults resources to zero so that it is ignored' do
-              expect(cluster.free_memory).to eq(0)
-            end
-          end
         end
       end
 
@@ -148,7 +142,7 @@ module VSphereCloud::Resources
         let(:active_host_1_mob) { instance_double('VimSdk::Vim::ClusterComputeResource') }
         let(:active_host_2_mob) { instance_double('VimSdk::Vim::ClusterComputeResource') }
         let(:active_host_mobs) { [active_host_1_mob, active_host_2_mob] }
-
+        let(:compute_summary) { instance_double('VimSdk::Vim::ComputeResource::Summary') }
         let(:active_hosts_properties) do
           {}.merge(
             generate_host_property(mob: active_host_1_mob, name: 'mob-1', maintenance_mode: false, memory_size: 100 * 1024 * 1024, power_state: 'poweredOn', connection_state: 'connected')
@@ -159,26 +153,8 @@ module VSphereCloud::Resources
         let(:hosts_properties) { active_hosts_properties }
 
         before do
-          allow(cloud_searcher).to receive(:get_properties)
-                                     .with(cluster_hosts,
-                                       VimSdk::Vim::HostSystem,
-                                       described_class::HOST_PROPERTIES,
-                                       ensure_all: true)
-                                     .and_return(hosts_properties)
-
-          performance_counters = {
-            active_host_1_mob => {
-              'mem.usage.average' => '2500,2500',
-            },
-            active_host_2_mob => {
-              'mem.usage.average' => '7500,7500',
-            },
-          }
-          allow(client).to receive(:get_perf_counters)
-                             .with(active_host_mobs,
-                               described_class::HOST_COUNTERS,
-                               max_sample: 5)
-                             .and_return(performance_counters)
+          allow(cloud_searcher).to receive(:get_properties).and_return({"summary" => compute_summary})
+          allow(compute_summary).to receive(:effective_memory).and_return(85)
         end
 
         it 'sets resources to values based on the active hosts in the cluster' do
@@ -233,28 +209,11 @@ module VSphereCloud::Resources
               generate_host_property(mob: instance_double('VimSdk::Vim::ClusterComputeResource'), name: 'fake-host-inactive', maintenance_mode: false, memory_size: 5 * 1024 * 1024, power_state: 'poweredOff', connection_state: 'disconnected')
             )
           end
-
+          before do
+            allow(compute_summary).to receive(:effective_memory).and_return(0)
+          end
           it 'defaults free memory to zero' do
             expect(cluster.free_memory).to eq(0)
-          end
-        end
-
-        context 'when the performance counters for a host are not available' do
-          before do
-            incomplete_perf_counters = {
-              active_host_1_mob => {
-                'mem.usage.average' => '2500,2500',
-              },
-              active_host_2_mob => {},
-            }
-            allow(client).to receive(:get_perf_counters)
-                               .with(active_host_mobs, %w(mem.usage.average), max_sample: 5)
-                               .and_return(incomplete_perf_counters)
-          end
-
-          it 'logs a warning and does not include the missing host in the utilization' do
-            expect(logger).to receive(:warn).with(/mob-2.*mem\.usage\.average/)
-            expect(cluster.free_memory).to eq(75)
           end
         end
       end

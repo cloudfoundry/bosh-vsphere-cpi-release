@@ -114,7 +114,7 @@ describe 'Give a cluster with DRS On ' do
             [],
             {}
           )
-         end.to raise_error(/No valid placement found due to no active host/)
+         end.to raise_error(/No valid placement found for requested memory/)
       end
     end
     it 'cpi should fail to create persistent disk on a datastore ' do
@@ -170,7 +170,7 @@ describe 'Give a cluster with DRS On ' do
               [],
               {}
           )
-        end.to raise_error(/No valid placement found due to no active host/)
+        end.to raise_error(/No valid placement found for requested memory/)
       end
     end
     it 'cpi should be able to create persistent disk on a datastore ' do
