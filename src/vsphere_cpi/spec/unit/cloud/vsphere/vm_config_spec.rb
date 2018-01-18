@@ -140,12 +140,16 @@ module VSphereCloud
     end
 
     describe '#cluster' do
+      before do
+        allow(datastore_mob).to receive_message_chain('summary.maintenance_mode').and_return("normal")
+      end
+      let(:datastore_mob) { instance_double('VimSdk::Vim::Datastore') }
       let(:cluster_provider) { instance_double(VSphereCloud::Resources::ClusterProvider) }
       let(:cluster_config) { instance_double(VSphereCloud::ClusterConfig) }
       let(:cluster_config_2) { instance_double(VSphereCloud::ClusterConfig) }
-      let(:small_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 1024) }
-      let(:large_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 2048) }
-      let(:huge_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 10240) }
+      let(:small_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 1024, mob: datastore_mob) }
+      let(:large_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 2048, mob: datastore_mob) }
+      let(:huge_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 10240, mob: datastore_mob) }
       let(:fake_cluster) do
         instance_double(VSphereCloud::Resources::Cluster,
           name: 'fake-cluster-name',
@@ -211,6 +215,10 @@ module VSphereCloud
       end
 
       context 'when datacenters and clusters are not specified in vm_type' do
+        before do
+          allow(larger_datastore_mob).to receive_message_chain('summary.maintenance_mode').and_return("normal")
+          allow(smaller_datastore_mob).to receive_message_chain('summary.maintenance_mode').and_return("normal")
+        end
         let(:input) do
           {
             vm_type: {
@@ -307,6 +315,10 @@ module VSphereCloud
     end
 
     describe '#ephemeral_datastore_name' do
+      before do
+        allow(target_ds_mob).to receive_message_chain('summary.maintenance_mode').and_return("normal")
+        allow(other_ds_mob).to receive_message_chain('summary.maintenance_mode').and_return("normal")
+      end
       let(:input) do
         {
           vm_type: {

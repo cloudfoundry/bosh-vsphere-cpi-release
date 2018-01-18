@@ -25,8 +25,18 @@ module VSphereCloud
       @available_datastores.each do |name, props|
         datastores[name] = {
           free_space: props.free_space,
+          mob: props.mob,
           disks: [],
         }
+      end
+
+      # Reject all the datastores that are in maintenance mode.
+      # Possible states are
+      #   enteringMaintenance	Started entering maintenance mode, but not finished. This could happen when waiting for user input or for long-running vmotions to complete.
+      #   inMaintenance	Successfully entered maintenance mode.
+      #   normal	Default state.
+      datastores.keep_if do |name, props|
+        props[:mob].summary.maintenance_mode == "normal"
       end
 
       disks.each do |disk|
@@ -60,7 +70,7 @@ module VSphereCloud
 
       placement = filter_all_placement_without_disks(placement)
 
-      raise Bosh::Clouds::CloudError, pretty_print_placement_error(disks) if placement[:datastores].empty?
+      raise Bosh::Clouds::CloudError, "Datastores matching criteria are in maintenance mode. No valid placement found" if placement[:datastores].empty?
 
       add_balance_score(placement)
 

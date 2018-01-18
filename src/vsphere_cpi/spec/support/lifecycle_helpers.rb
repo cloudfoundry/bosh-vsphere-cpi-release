@@ -398,6 +398,51 @@ module LifecycleHelpers
     cpi.delete_stemcell(stemcell_id) if stemcell_id
   end
 
+  def half_pattern_datastore_enter_maintenance_mode(cpi, cluster_name, pattern)
+    @ds_maintenance_tasks = []
+    cluster = cpi.client.cloud_searcher.get_managed_object(VimSdk::Vim::ClusterComputeResource, name: cluster_name)
+    ds_mob_array = cluster.datastore
+    ds_mob_array.keep_if do |ds|
+      ds.name =~ Regexp.new(pattern)
+    end
+    half_ds_mob_array = ds_mob_array[0, ds_mob_array.length/2]
+    half_ds_mob_array.each do |ds|
+      result = ds.enter_maintenance_mode
+      @ds_maintenance_tasks << {task: result.task, datastore: ds}
+      sleep 5
+    end
+  end
+
+  def all_pattern_datastore_enter_maintenance_mode(cpi, cluster_name, pattern)
+    @ds_maintenance_tasks = []
+    cluster = cpi.client.cloud_searcher.get_managed_object(VimSdk::Vim::ClusterComputeResource, name: cluster_name)
+    ds_mob_array = cluster.datastore
+    ds_mob_array.keep_if do |ds|
+      ds.name =~ Regexp.new(pattern)
+    end
+    ds_mob_array.each do |ds|
+      result = ds.enter_maintenance_mode
+      @ds_maintenance_tasks << {task: result.task, datastore: ds}
+      sleep 5
+    end
+  end
+
+  def all_pattern_datastore_exit_maintenance_mode()
+    @ds_maintenance_tasks.each do |task_ds_tuple|
+      ds = task_ds_tuple[:datastore]
+      task = task_ds_tuple[:task]
+      if task.info.state == "success"
+        ds.exit_maintenance_mode
+      else
+        begin
+          task.cancel
+        rescue
+          raise "Unable to cancel the task in state #{task.info.state} for the ds #{ds.name}"
+        end
+      end
+    end
+  end
+
   def datastores_accessible_from_cluster(cpi, cluster_name)
     cluster = cpi.client.cloud_searcher.get_managed_object(VimSdk::Vim::ClusterComputeResource, name: cluster_name)
     cluster.datastore.map(&:name)

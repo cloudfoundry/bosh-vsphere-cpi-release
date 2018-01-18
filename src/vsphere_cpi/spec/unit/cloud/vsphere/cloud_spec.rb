@@ -978,6 +978,9 @@ module VSphereCloud
     end
 
     describe '#attach_disk' do
+      before do
+        allow(ds_mob).to receive_message_chain('summary.maintenance_mode').and_return("normal")
+      end
       let(:agent_env_hash) { { 'disks' => { 'persistent' => { 'disk-cid' => 'fake-device-number' } } } }
       let(:host_runtime_info) { instance_double(VimSdk::Vim::Host::RuntimeInfo, in_maintenance_mode: false) }
       let(:host_system) {instance_double(VimSdk::Vim::HostSystem, runtime: host_runtime_info)}
@@ -1398,6 +1401,9 @@ module VSphereCloud
     end
 
     describe '#create_disk' do
+      before do
+        allow(ds_mob).to receive_message_chain('summary.maintenance_mode').and_return("normal")
+      end
       let(:host_runtime_info) { instance_double(VimSdk::Vim::Host::RuntimeInfo, in_maintenance_mode: false) }
       let(:host_system) {instance_double(VimSdk::Vim::HostSystem, runtime: host_runtime_info)}
       let(:datastore_host_mount) { [instance_double('VimSdk::Vim::Datastore::HostMount', key: host_system)]}
