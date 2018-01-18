@@ -8,7 +8,12 @@ module VSphereCloud
 
     describe '#best_disk_placement' do
       context 'when a single DS is available' do
-        let(:ds_1) { instance_double(VSphereCloud::Resources::Datastore, free_space: 1024) }
+        before do
+          allow(ds_1_mob).to receive_message_chain('summary.maintenance_mode').and_return(maintenance_mode)
+        end
+        let(:maintenance_mode) { "normal" }
+        let(:ds_1_mob) { instance_double(VimSdk::Vim::Datastore) }
+        let(:ds_1) { instance_double(VSphereCloud::Resources::Datastore, free_space: 1024, mob: ds_1_mob) }
         let(:available_datastores) do
          {
            'ds-1' => ds_1,
@@ -28,22 +33,36 @@ module VSphereCloud
             target_datastore_pattern: '.*',
           )
         end
+        context 'when datastore is in maintenance mode' do
+          let(:maintenance_mode) { "inMaintenance" }
+          it 'returns no valid placement' do
+            picker = DatastorePicker.new(0)
+            picker.update(available_datastores)
+            disks = [already_placed_disk, moved_disk]
 
-        it 'returns the only valid placement' do
-          picker = DatastorePicker.new(0)
-          picker.update(available_datastores)
-          disks = [already_placed_disk, moved_disk]
-
-          expect(picker.best_disk_placement(disks)).to include({
-            datastores: {
-              'ds-1' => {
-                free_space: 1024 - 512,
-                disks: disks,
-              }
-            }
-          })
+            expect {
+              picker.best_disk_placement(disks)
+            }.to raise_error(/Datastores matching criteria are in maintenance mode. No valid placement found/)
+          end
         end
+        context 'when datastore is not in maintenance mode' do
+          let(:maintenance_mode) { "normal" }
+          it 'returns the only valid placement' do
+            picker = DatastorePicker.new(0)
+            picker.update(available_datastores)
+            disks = [already_placed_disk, moved_disk]
 
+            expect(picker.best_disk_placement(disks)).to include({
+              datastores: {
+                'ds-1' => {
+                  free_space: 1024 - 512,
+                  disks: disks,
+                  mob: ds_1_mob
+                }
+              }
+            })
+          end
+        end
         context 'when no datastore can contain the disk' do
           let(:large_disk) do
             instance_double(VSphereCloud::DiskConfig,
@@ -63,30 +82,35 @@ module VSphereCloud
             }.to raise_error Bosh::Clouds::CloudError, /No valid placement/
           end
         end
-      context 'when no target datastore pattern matches an available datastore' do
-        let(:regular_disk) do
-          instance_double(VSphereCloud::DiskConfig,
-            size: 256,
-            existing_datastore_name: nil,
-            target_datastore_pattern: 'bad-pattern',
-          )
-        end
+        context 'when no target datastore pattern matches an available datastore' do
+          let(:regular_disk) do
+            instance_double(VSphereCloud::DiskConfig,
+              size: 256,
+              existing_datastore_name: nil,
+              target_datastore_pattern: 'bad-pattern',
+            )
+          end
 
-        it 'raises an error' do
-          picker = DatastorePicker.new(0)
-          picker.update(available_datastores)
-          disks = [regular_disk]
+          it 'raises an error' do
+            picker = DatastorePicker.new(0)
+            picker.update(available_datastores)
+            disks = [regular_disk]
 
-          expect{
-            picker.best_disk_placement(disks)
-          }.to raise_error Bosh::Clouds::CloudError, /No valid placement/
+            expect{
+              picker.best_disk_placement(disks)
+            }.to raise_error Bosh::Clouds::CloudError, /No valid placement/
+          end
         end
-       end
       end
 
       context 'when multiple DSes are available' do
-        let(:ds_1) { instance_double(VSphereCloud::Resources::Datastore, free_space: 512) }
-        let(:ds_2) { instance_double(VSphereCloud::Resources::Datastore, free_space: 1024) }
+        before do
+          allow(ds_1_mob).to receive_message_chain('summary.maintenance_mode').and_return(maintenance_mode)
+        end
+        let(:maintenance_mode) { "normal" }
+        let(:ds_1_mob) { instance_double(VimSdk::Vim::Datastore) }
+        let(:ds_1) { instance_double(VSphereCloud::Resources::Datastore, free_space: 512, mob: ds_1_mob) }
+        let(:ds_2) { instance_double(VSphereCloud::Resources::Datastore, free_space: 1024, mob: ds_1_mob) }
         let(:available_datastores) do
          {
            'ds-1' => ds_1,
@@ -118,13 +142,14 @@ module VSphereCloud
             'ds-2' => {
               free_space: 256,
               disks: [disk1, disk2],
+              mob: ds_1_mob
             },
           })
         end
 
         context 'when headroom is not specified' do
-          let(:ds_1) { instance_double(VSphereCloud::Resources::Datastore, free_space: 1536) }
-          let(:ds_2) { instance_double(VSphereCloud::Resources::Datastore, free_space: 2048) }
+          let(:ds_1) { instance_double(VSphereCloud::Resources::Datastore, free_space: 1536, mob: ds_1_mob) }
+          let(:ds_2) { instance_double(VSphereCloud::Resources::Datastore, free_space: 2048, mob: ds_1_mob) }
           let(:available_datastores) do
            {
              'ds-1' => ds_1,
@@ -155,11 +180,13 @@ module VSphereCloud
               {
                 'ds-1' => {
                   free_space: 0,
-                  disks: [disk2]
+                  disks: [disk2],
+                  mob: ds_1_mob
                 },
                 'ds-2' => {
                   free_space: 768,
-                  disks: [disk1]
+                  disks: [disk1],
+                  mob: ds_1_mob
                 },
               }
             )
@@ -168,8 +195,8 @@ module VSphereCloud
 
         context 'when headroom is specified' do
           let(:headroom) { 512}
-          let(:ds_1) { instance_double(VSphereCloud::Resources::Datastore, free_space: 1536) }
-          let(:ds_2) { instance_double(VSphereCloud::Resources::Datastore, free_space: 2048) }
+          let(:ds_1) { instance_double(VSphereCloud::Resources::Datastore, free_space: 1536, mob: ds_1_mob) }
+          let(:ds_2) { instance_double(VSphereCloud::Resources::Datastore, free_space: 2048, mob: ds_1_mob) }
           let(:available_datastores) do
            {
              'ds-1' => ds_1,
@@ -201,10 +228,12 @@ module VSphereCloud
                 'ds-1' => {
                   free_space: 512,
                   disks: [disk2],
+                  mob:ds_1_mob
                 },
                 'ds-2' => {
                   free_space: 256,
                   disks: [disk1, disk2],
+                  mob:ds_1_mob
                 },
               }
             })
@@ -235,6 +264,7 @@ module VSphereCloud
               'ds-2' => {
                 free_space: 512,
                 disks: [disk1, disk2],
+                mob: ds_1_mob
               },
             })
           end
@@ -268,10 +298,12 @@ module VSphereCloud
                 'ds-1' => {
                   disks: [disk1],
                   free_space: 256,
+                  mob: ds_1_mob
                 },
                 'ds-2' => {
                   disks: [disk1, disk2],
                   free_space: 256,
+                  mob: ds_1_mob
                 },
               },
             })
@@ -288,7 +320,7 @@ module VSphereCloud
               { datastore_space: [700,  700],       balance_score: 2100 },
             ].each do |input|
               available_datastores = input[:datastore_space].each_with_index.map do |free_space, index|
-                [ "ds-#{index}", instance_double(VSphereCloud::Resources::Datastore, free_space: free_space) ]
+                [ "ds-#{index}", instance_double(VSphereCloud::Resources::Datastore, free_space: free_space, mob: ds_1_mob) ]
               end.to_h
 
               disks = input[:datastore_space].each_with_index.map do |free_space, index|
@@ -305,10 +337,15 @@ module VSphereCloud
       end
 
       context 'simulating placement distribution of several datastores' do
-        let(:datastore_1) { instance_double(VSphereCloud::Resources::Datastore, free_space: 51200) }
-        let(:datastore_2) { instance_double(VSphereCloud::Resources::Datastore, free_space: 10240) }
-        let(:datastore_3) { instance_double(VSphereCloud::Resources::Datastore, free_space: 20480) }
-        let(:datastore_4) { instance_double(VSphereCloud::Resources::Datastore, free_space: 10240) }
+        before do
+          allow(ds_1_mob).to receive_message_chain('summary.maintenance_mode').and_return(maintenance_mode)
+        end
+        let(:maintenance_mode) { "normal" }
+        let(:ds_1_mob) { instance_double(VimSdk::Vim::Datastore) }
+        let(:datastore_1) { instance_double(VSphereCloud::Resources::Datastore, free_space: 51200, mob: ds_1_mob) }
+        let(:datastore_2) { instance_double(VSphereCloud::Resources::Datastore, free_space: 10240, mob: ds_1_mob) }
+        let(:datastore_3) { instance_double(VSphereCloud::Resources::Datastore, free_space: 20480, mob: ds_1_mob) }
+        let(:datastore_4) { instance_double(VSphereCloud::Resources::Datastore, free_space: 10240, mob: ds_1_mob) }
         let(:available_datastores) do
           {
             'datastore-1' => datastore_1,
@@ -371,8 +408,13 @@ module VSphereCloud
     end
 
     describe '#pick_datastore_for_single_disk' do
-      let(:smaller_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 256, accessible?: true) }
-      let(:larger_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 1024, accessible?: true) }
+      before do
+        allow(ds_mob).to receive_message_chain('summary.maintenance_mode').and_return(maintenance_mode)
+      end
+      let(:ds_mob) { instance_double(VimSdk::Vim::Datastore) }
+      let(:maintenance_mode) { "normal" }
+      let(:smaller_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 256, mob: ds_mob, accessible?: true) }
+      let(:larger_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 1024, mob: ds_mob, accessible?: true) }
       let(:available_datastores) do
        {
          'smaller-ds' => smaller_ds,
@@ -397,7 +439,7 @@ module VSphereCloud
       end
 
       context 'when all the hosts for larger datastore are in maintenance mode' do
-        let(:larger_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 1024, accessible?: false) }
+        let(:larger_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 1024, mob: ds_mob, accessible?: false) }
 
         it 'raises an error for no active hosts' do
           picker = DatastorePicker.new(0)
@@ -412,9 +454,14 @@ module VSphereCloud
     end
 
     describe 'Multiple clusters single datastore' do
-      let(:cluster1_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 256) }
-      let(:cluster2_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 1024) }
-      let(:shared_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 1024) }
+      before do
+        allow(ds_mob).to receive_message_chain('summary.maintenance_mode').and_return(maintenance_mode)
+      end
+      let(:ds_mob) { instance_double(VimSdk::Vim::Datastore) }
+      let(:maintenance_mode) { "normal" }
+      let(:cluster1_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 256, mob:ds_mob) }
+      let(:cluster2_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 1024, mob:ds_mob) }
+      let(:shared_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 1024, mob:ds_mob) }
       let(:available_datastores_cluster1) do
        {
          'cluster1-ds' => cluster1_ds,

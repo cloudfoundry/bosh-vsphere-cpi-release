@@ -10,6 +10,9 @@ module VSphereCloud
 
     describe '#best_cluster_placement' do
       context 'when one cluster fits' do
+        before do
+          allow(target_ds.mob).to receive_message_chain('summary.maintenance_mode').and_return("normal")
+        end
         let(:available_clusters) { [cluster_1] }
         let(:target_ds) do
           fake_datastore(
@@ -123,6 +126,9 @@ module VSphereCloud
       end
 
       context 'when no cluster fits' do
+        before do
+          allow(not_matching_ds.mob).to receive_message_chain('summary.maintenance_mode').and_return("normal")
+        end
         let(:available_clusters) { [cluster_1] }
         let(:cluster_1) do
           instance_double(VSphereCloud::Resources::Cluster,
@@ -134,7 +140,9 @@ module VSphereCloud
           )
         end
         let(:not_matching_ds) {
-          fake_datastore('fake-target-ds',1024)
+          fake_datastore('fake-target-ds',
+            1024,
+            instance_double('VimSdk::Vim::Datastore'))
         }
 
         context 'based upon available memory' do
@@ -231,6 +239,10 @@ module VSphereCloud
 
       context 'when multiple clusters fit' do
         context 'when disk migration burden provides a decision' do
+          before do
+            allow(current_ds_mob).to receive_message_chain('summary.maintenance_mode').and_return("normal")
+            allow(other_ds_mob).to receive_message_chain('summary.maintenance_mode').and_return("normal")
+          end
           let(:available_clusters) { [cluster_1, cluster_2] }
           let(:cluster_1) do
             instance_double(VSphereCloud::Resources::Cluster,
@@ -284,6 +296,10 @@ module VSphereCloud
         end
 
         context 'when max free space provides a decision' do
+          before do
+            allow(smaller_ds_mob).to receive_message_chain('summary.maintenance_mode').and_return("normal")
+            allow(larger_ds_mob).to receive_message_chain('summary.maintenance_mode').and_return("normal")
+          end
           let(:available_clusters) { [cluster_1, cluster_2] }
           let(:cluster_1) do
             instance_double(VSphereCloud::Resources::Cluster,
@@ -337,6 +353,9 @@ module VSphereCloud
         end
 
         context 'when max free memory provides a decision' do
+          before do
+            allow(same_ds_mob).to receive_message_chain('summary.maintenance_mode').and_return("normal")
+          end
           let(:available_clusters) { [cluster_1, cluster_2] }
           let(:cluster_1) do
             instance_double(VSphereCloud::Resources::Cluster,
