@@ -34,7 +34,7 @@ task docker: %w[docker:pull docker:make docker:push]
 
 desc 'Create or update the pipeline configuration'
 task :pipeline, :name do |t, args|
-  CONCOURSE = ENV.fetch('CONCOURSE', 'main')
+  CONCOURSE = ENV.fetch('CONCOURSE', 'pks')
 
   DBCHOST = ENV.fetch('DBCHOST') do
     fail 'DBCHOST must be set to the unqualified hostname of your DBC host'
@@ -53,7 +53,7 @@ task :pipeline, :name do |t, args|
 
   branch = !branch.empty? ? branch : 'master'
 
-  sh '/bin/bash', '-c', [
+  sh '/bin/bash', '-ec', [
     "fly -t #{CONCOURSE.shellescape}",
     "set-pipeline -p #{args.name.shellescape} -c pipeline.yml",
     "-v vcpi_branch=#{branch.shellescape}",
