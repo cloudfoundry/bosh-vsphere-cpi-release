@@ -950,6 +950,68 @@ module VSphereCloud
       end
     end
 
+    describe '#clone_vm' do
+      let(:vm_config) { double('VmConfig', name: 'vm-123456') }
+      let(:config_spec) { instance_double(VimSdk::Vim::Vm::ConfigSpec) }
+      let(:vm_folder_mob) { double('fake folder mob') }
+      let(:resource_pool) { double(:resource_pool, mob: 'fake_resource_pool_mob') }
+      let(:fake_vm) { instance_double(Resources::VM, cid: 'fake-cloud-id', mob_id: 'fake-mob-id') }
+      let(:datastore) { instance_double('VSphereCloud::Resources::Datastore')}
+      let(:relocation_spec) { VimSdk::Vim::Vm::RelocateSpec.new }
+      let(:datastore_cluster) {double('StoragePod')}
+      let(:recommendation) { double('Recommendation', key: 'first_recommendation') }
+      let(:srm) { instance_double(VimSdk::Vim::StorageResourceManager) }
+      let(:storage_placement_result) { instance_double(VimSdk::Vim::StorageDrs::StoragePlacementResult) }
+
+      before do
+        allow(VimSdk::Vim::Vm::RelocateSpec).to receive(:new).and_return(relocation_spec)
+        allow(relocation_spec).to receive(:pool=).with(resource_pool.mob).and_return(resource_pool.mob)
+        allow(relocation_spec).to receive(:disk_move_type=).with('createNewChildDiskBacking').and_return('createNewChildDiskBacking')
+      end
+
+      it 'clones vm when both datastore and StoragePod option is not supplied' do
+        expect(relocation_spec).to receive(:datastore=).never
+        expect(vm_mob).to receive(:clone).with(vm_folder_mob, vm_config.name, an_instance_of(VimSdk::Vim::Vm::CloneSpec)).and_return(fake_vm)
+        vsphere_cloud.clone_vm(
+          vm_mob,
+          vm_config.name,
+          vm_folder_mob,
+          resource_pool.mob,
+          linked: true,
+          config: config_spec
+        )
+      end
+      it 'clones vm on to supplied datastore' do
+        allow(relocation_spec).to receive(:datastore=).with(datastore).and_return(datastore)
+        expect(vm_mob).to receive(:clone).with(vm_folder_mob, vm_config.name, an_instance_of(VimSdk::Vim::Vm::CloneSpec)).and_return(fake_vm)
+        vsphere_cloud.clone_vm(
+          vm_mob,
+          vm_config.name,
+          vm_folder_mob,
+          resource_pool.mob,
+          linked: true,
+          config: config_spec,
+          datastore: datastore
+        )
+      end
+      it 'clones vm on to supplied StoragePod using SDRS recommendations' do
+        expect(vm_mob).to receive(:clone).never
+        allow(vcenter_client).to receive_message_chain(:service_instance, :content, :storage_resource_manager).and_return(srm)
+        expect(srm).to receive(:recommend_datastores).with(an_instance_of(VimSdk::Vim::StorageDrs::StoragePlacementSpec)).and_return(storage_placement_result)
+        expect(storage_placement_result).to receive(:recommendations).and_return([recommendation])
+        expect(srm).to receive(:apply_recommendation).with(recommendation.key).and_return(fake_vm)
+        vsphere_cloud.clone_vm(
+          vm_mob,
+          vm_config.name,
+          vm_folder_mob,
+          resource_pool.mob,
+          linked: true,
+          config: config_spec,
+          datastore_cluster: datastore_cluster
+        )
+      end
+    end
+
     describe '#calculate_vm_cloud_properties' do
       context 'when ram, cpu, and ephemeral_disk are specified' do
         let(:vm_properties) { {

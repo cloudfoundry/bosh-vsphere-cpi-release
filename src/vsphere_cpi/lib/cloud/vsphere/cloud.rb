@@ -661,7 +661,17 @@ module VSphereCloud
       clone_spec.snapshot = options[:snapshot] if options[:snapshot]
       clone_spec.template = false
 
-      vm.clone(folder, name, clone_spec)
+      if options[:datastore_cluster] #extract this piece out into another method
+        storage_placement_spec = Vim::StorageDrs::StoragePlacementSpec.new
+        srm = @client.service_instance.content.storage_resource_manager
+        storage_placement_result = srm.recommend_datastores(storage_placement_spec)
+        recommendation = storage_placement_result.recommendations.first
+        if recommendation
+          srm.apply_recommendation(recommendation.key)
+        end
+      else
+        vm.clone(folder, name, clone_spec)
+      end
     end
 
 
