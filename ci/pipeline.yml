@@ -25,14 +25,34 @@ jobs:
         params:
           file: 'dev-artifacts/*.tgz'
 
+  - name: lock-and-extend-6.5
+    plan:
+      - get: bosh-cpi-src
+        trigger: true
+        passed: [build-candidate]
+      - do:
+        - put: nimbus-environments-6.5
+          params: {acquire: true}
+        - task: extend-lease-6.5
+          file: bosh-cpi-src/ci/tasks/extend-lease.yml
+          params:
+            DBCUSER: {{dbc_user}}
+            DBCHOST: {{dbc_host}}
+            DBC_SSH_KEY: {{dbc_key}}
+          on_failure:
+            put: nimbus-environments-6.5
+            params : {release: nimbus-environments-6.5}
+        attempts: 4
+
+
   - name: lifecycle-6.5
     serial: true
     plan:
       - aggregate:
-        - {trigger: true,  passed: [build-candidate], get: bosh-cpi-artifacts}
+        - {trigger: false,  passed: [build-candidate], get: bosh-cpi-artifacts}
         - {trigger: false, passed: [build-candidate], get: bosh-cpi-src}
+        - {trigger: true, passed: [lock-and-extend-6.5], get: nimbus-environments-6.5}
         - get: stemcell
-        - {trigger: true,                             get: vcpi-nimbus}
       - task: test
         file: bosh-cpi-src/ci/tasks/run-lifecycle.yml
         params:
@@ -41,6 +61,15 @@ jobs:
           DBCHOST: {{dbc_host}}
           DBC_SSH_KEY: {{dbc_key}}
           NSXT_SKIP_SSL_VERIFY: "true"
+        on_failure:
+          put: nimbus-environments-6.5
+          params : {remove: nimbus-environments-6.5}
+
+  - name: unlock-6.5
+    plan:
+      - {trigger: true, passed: [lifecycle-6.5], get: nimbus-environments-6.5}
+      - put: nimbus-environments-6.5
+        params : {release: nimbus-environments-6.5}
 
   - name: lifecycle-6.0
     serial: true
@@ -62,6 +91,13 @@ jobs:
           NSXT_SKIP_SSL_VERIFY: "true"
 
 resources:
+  - name: nimbus-environments-6.5
+    type: pool
+    source:
+      uri:          git@gitlab.eng.vmware.com:PKS/vcpi-pool.git
+      branch:       master
+      pool:         v6.5
+      private_key:  {{vcpi-pool_deployment_key}}
   - name: bosh-cpi-artifacts
     type: s3
     source:
