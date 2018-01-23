@@ -53,6 +53,12 @@ module LifecycleProperties
     cluster
   end
 
+  def fetch_and_verify_datastore_cluster(env_var)
+    datastore_cluster = fetch_property(env_var)
+    verify_datastore_cluster(@lifecycle_cpi, datastore_cluster, env_var)
+    datastore_cluster
+  end
+
   def fetch_and_verify_resource_pool(env_var, cluster_name)
     resource_pool_name = fetch_property(env_var)
     verify_resource_pool(@lifecycle_cpi, cluster_name, resource_pool_name, env_var)

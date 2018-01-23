@@ -53,7 +53,7 @@ module VSphereCloud
 
     def target_ephemeral_pattern
       if @vm_type['datastores'] && !@vm_type['datastores'].empty?
-        escaped_names = @vm_type['datastores'].map { |pattern| Regexp.escape(pattern) }
+        escaped_names = @vm_type['datastores'].map { |pattern| Regexp.escape(pattern) if pattern.is_a?(String)}
         "^(#{escaped_names.join('|')})$"
       else
         @datacenter.ephemeral_pattern

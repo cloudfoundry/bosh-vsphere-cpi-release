@@ -263,6 +263,13 @@ module VSphereCloud
         :skip => false
       )
 
+      # compute_resource_datastore_cluster_traversal_spec = PC::TraversalSpec.new(
+      #   :name => "computeResourceDatastoreClusterTraversalSpec",
+      #   :type => Vim::StoragePod,
+      #   :path => "childEntity",
+      #   :skip => false
+      # )
+
       compute_resource_host_traversal_spec = PC::TraversalSpec.new(
         :name => "computeResourceHostTraversalSpec",
         :type => Vim::ComputeResource,
@@ -329,10 +336,10 @@ module VSphereCloud
           compute_resource_rp_traversal_spec,
           resource_pool_traversal_spec,
           host_vm_traversal_spec,
-          resource_pool_vm_traversal_spec
+          resource_pool_vm_traversal_spec,
+          # compute_resource_datastore_cluster_traversal_spec
         ]
       )
-
       PC::FilterSpec.new(:prop_set => property_specs, :object_set => [obj_spec])
     end
   end
