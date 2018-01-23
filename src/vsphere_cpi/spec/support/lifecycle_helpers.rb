@@ -78,7 +78,13 @@ module LifecycleHelpers
   rescue RuntimeError => e
     fail("#{e.message}\n#{env_var_name}: #{MISSING_KEY_MESSAGES[env_var_name]}")
   end
-  
+
+  def verify_datastore_cluster(cpi, datastore_cluster_name, env_var_name)
+     datastore_cluster =  cpi.client.find_by_inventory_path("/#{cpi.datacenter.name}/datastore/#{datastore_cluster_name}")
+#    datastore_clusters = cpi.client.cloud_searcher.get_managed_objects(VimSdk::Vim::StoragePod, name: datastore_cluster_name)
+    fail "Invalid Environment variable '#{env_var_name}': No Datastore Cluster found with name: '#{datastore_cluster_name}'" unless datastore_cluster.is_a?(VimSdk::Vim::StoragePod)
+  end
+
   def verify_cluster_free_space(cpi, cluster1_name, cluster2_name)
     cluster1 = cpi.datacenter.find_cluster(cluster1_name)
     cluster2 = cpi.datacenter.find_cluster(cluster2_name)
