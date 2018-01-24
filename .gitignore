@@ -11,6 +11,7 @@ blobs
 .DS_Store
 .final_builds/jobs/**/*.tgz
 .final_builds/packages/**/*.tgz
+.byebug_history
 src/vsphere_cpi/vendor/cache
 .vagrant
 *.swp

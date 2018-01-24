@@ -733,5 +733,43 @@ module VSphereCloud
       end
 
     end
+
+    describe '#datastore_clusters' do
+      context 'datastore_clusters are NOT specified' do
+        let(:input) do
+          {
+            vm_type: {
+              'datastores' => ['fake-datastore']
+            }
+          }
+        end
+        it 'should return empty array' do
+          expect(vm_config.datastore_clusters).to eq([])
+        end
+      end
+      context 'datastore_clusters are specified inside datastores' do
+        before (:all) do
+          @drs_enabled_atastore_cluster = 'fake-datastore1'
+          @drs_disabled_datastore_cluster = 'fake-datastore2'
+        end
+        let(:datastore_cluster_1) do
+          instance_double(VSphereCloud::Resources::StoragePod,
+            name: @drs_enabled_atastore_cluster,
+            free_space: 2048,
+            capacity: 4096
+          )
+        end
+        let(:input) do
+          {
+            vm_type: {
+              'datastores' => ['fake-datastore', 'cluster' => [@drs_enabled_atastore_cluster, @drs_disabled_datastore_cluster]]
+            }
+          }
+        end
+        it 'should return array of datastore clusters which have drs enabled' do #TODO should we only return drs enabled datastore_clusters resource here?
+          expect(vm_config.datastore_clusters).to eq([datastore_cluster_1])
+        end
+      end
+    end
   end
 end
