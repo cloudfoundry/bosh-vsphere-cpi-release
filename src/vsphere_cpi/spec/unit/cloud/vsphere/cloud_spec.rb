@@ -212,7 +212,6 @@ module VSphereCloud
           let(:replicated_stemcell) { double('fake_replicated_stemcell') }
           let(:fake_task) { 'fake_task' }
 
-
           it 'replicates the stemcell' do
             allow(vcenter_client).to receive(:find_vm_by_name).with(
                 'fake-datacenter-mob',
@@ -242,6 +241,33 @@ module VSphereCloud
           allow(vcenter_client).to receive(:find_all_stemcell_replicas).with(any_args).and_return([stemcell_vm])
           allow(cloud_searcher).to receive(:get_property).with(any_args).and_return([target_datastore])
           expect(vsphere_cloud.replicate_stemcell(cluster, target_datastore, stemcell_id)).to eql(stemcell_vm)
+        end
+      end
+
+      context 'when stemcell vm needs to be replicated to a datastore inside datastore_cluster' do
+        let(:replicated_stemcell) { double('fake_replicated_stemcell') }
+        let (:target_datastore_cluster) {double('fake datastore cluster')}
+        let(:fake_task) { 'fake_task' }
+        let(:resource_pool) { double(:resource_pool, mob: 'fake_resource_pool_mob') }
+
+        before do
+          allow(cluster).to receive(:resource_pool).and_return(resource_pool)
+        end
+
+        it 'replicates the stemcell' do
+          expected_options = {datastore: nil, datastore_cluster: target_datastore_cluster}
+          allow(vcenter_client).to receive(:find_vm_by_name).with(any_args).and_return(stemcell_vm)
+          allow(vsphere_cloud).to receive(:clone_vm).with(stemcell_vm, anything, anything, resource_pool.mob, expected_options).and_return(fake_task)
+          allow(vcenter_client).to receive(:wait_for_task) do |*args, &block|
+            expect(block.call).to eq(fake_task)
+            replicated_stemcell
+          end
+          allow(replicated_stemcell).to receive(:create_snapshot).with(any_args).and_return(fake_task)
+          expect(vsphere_cloud.replicate_stemcell(cluster, nil, stemcell_id, target_datastore_cluster)).to eql(replicated_stemcell)
+        end
+      end
+      context 'when stemcell vm resides on recommended datastore in datastore_cluster' do
+        xit 'returns the found replica' do
         end
       end
     end

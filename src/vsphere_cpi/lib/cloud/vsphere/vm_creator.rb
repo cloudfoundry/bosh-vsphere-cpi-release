@@ -12,16 +12,26 @@ module VSphereCloud
       @enable_auto_anti_affinity_drs_rules = enable_auto_anti_affinity_drs_rules
     end
 
+    def choose_storage(vm_config)
+      vm_config.cluster.accessible_datastores[vm_config.ephemeral_datastore_name]
+    end
+
+    #TODO: DC - ask for recommendation, then look if stemcell exists on recommended datastore and if it does return that else
+    #replicate the stemcell by applying recommendations
+
     def create(vm_config)
       cluster = vm_config.cluster
-      datastore = cluster.accessible_datastores[vm_config.ephemeral_datastore_name]
+      storage = choose_storage(vm_config)
+
+      datastore, datastore_cluster = storage.is_a?(Resources::StoragePod) ? [nil, storage] : [storage, nil]
 
       @ip_conflict_detector.ensure_no_conflicts(vm_config.vsphere_networks)
 
-      @logger.info("Creating vm: #{vm_config.name} on #{cluster.mob} stored in #{datastore.mob}")
+      @logger.info("Creating vm: #{vm_config.name} on #{cluster.mob} stored in #{datastore.mob}") if datastore
+      @logger.info("Creating vm: #{vm_config.name} on #{cluster.mob} stored in Datastore Cluster: #{datastore_cluster.name}") if datastore_cluster
 
       # Replicate stemcell stage
-      replicated_stemcell_vm_mob = @cpi.replicate_stemcell(cluster, datastore, vm_config.stemcell_cid)
+      replicated_stemcell_vm_mob = @cpi.replicate_stemcell(cluster, datastore, vm_config.stemcell_cid, datastore_cluster)
       replicated_stemcell_properties = @cloud_searcher.get_properties(
         replicated_stemcell_vm_mob,
         VimSdk::Vim::VirtualMachine,
@@ -30,6 +40,7 @@ module VSphereCloud
       )
       replicated_stemcell_vm = Resources::VM.new(vm_config.stemcell_cid, replicated_stemcell_vm_mob, @client, @logger)
       snapshot = replicated_stemcell_properties['snapshot']
+      datastore =  vm_datastore_name(replicated_stemcell_vm) if datastore_cluster #create vm/ephemeral disk on same datastore as stemcell if Datastore Cluster is being used.
 
       # Create device_change config
       config_spec = VimSdk::Vim::Vm::ConfigSpec.new(vm_config.config_spec_params)
@@ -91,7 +102,8 @@ module VSphereCloud
           datastore: datastore.mob,
           linked: true,
           snapshot: snapshot.current_snapshot,
-          config: config_spec
+          config: config_spec,
+          datastore_cluster: datastore_cluster
         )
       end
       created_vm = Resources::VM.new(vm_config.name, created_vm_mob, @client, @logger)
