@@ -102,6 +102,10 @@ module VSphereCloud
       vm_type['vmx_options'] || {}
     end
 
+    def datastore_clusters
+      []
+    end
+
     private
 
     def validate_drs_rules
