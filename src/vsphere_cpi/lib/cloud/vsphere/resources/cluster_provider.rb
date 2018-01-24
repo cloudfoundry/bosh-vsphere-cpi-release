@@ -1,6 +1,8 @@
 module VSphereCloud
   module Resources
     class ClusterProvider
+      attr_reader :client, :datacenter_name
+
       def initialize(options)
         @datacenter_name = options.fetch(:datacenter_name)
         @client = options.fetch(:client)
@@ -12,16 +14,16 @@ module VSphereCloud
         raise "Can't find cluster '#{name}'" if cluster_mob.nil?
 
         cluster_properties = @client.cloud_searcher.get_properties(
-          cluster_mob, VimSdk::Vim::ClusterComputeResource,
-          Cluster::PROPERTIES, :ensure_all => true
+        cluster_mob, VimSdk::Vim::ClusterComputeResource,
+        Cluster::PROPERTIES, :ensure_all => true
         )
         raise "Can't find properties for cluster '#{name}'" if cluster_properties.nil?
 
         Cluster.new(
-          config,
-          cluster_properties,
-          @logger,
-          @client
+        config,
+        cluster_properties,
+        @logger,
+        @client
         )
       end
 

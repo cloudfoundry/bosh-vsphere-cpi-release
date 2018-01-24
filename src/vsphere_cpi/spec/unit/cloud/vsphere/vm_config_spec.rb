@@ -1,4 +1,5 @@
 require 'spec_helper'
+require 'pry-byebug'
 
 module VSphereCloud
   describe VmConfig do
@@ -735,6 +736,38 @@ module VSphereCloud
     end
 
     describe '#datastore_clusters' do
+      before (:all) do
+        @drs_enabled_datastore_cluster = 'fake-sp1'
+        @drs_disabled_datastore_cluster = 'fake-sp2'
+      end
+
+      let(:client) do
+        client = instance_double(VSphereCloud::VCenterClient)
+        allow(client).to receive(:find_by_inventory_path).with('/fake-datacenter-name/datastore/fake-sp1').and_return(datastore_cluster_1)
+        allow(client).to receive(:find_by_inventory_path).with('/fake-datacenter-name/datastore/fake-sp2').and_return(datastore_cluster_2)
+        client
+      end
+
+      let(:cluster_provider) do
+        instance_double(VSphereCloud::Resources::ClusterProvider,
+                        client: client,
+                        datacenter_name: 'fake-datacenter-name')
+      end
+
+      let(:datastore_cluster_1) do
+        instance_double(VSphereCloud::Resources::StoragePod,
+                        name: @drs_enabled_datastore_cluster,
+                        drs_enabled?: true
+        )
+      end
+
+      let(:datastore_cluster_2) do
+        instance_double(VSphereCloud::Resources::StoragePod,
+                        name: @drs_disabled_datastore_cluster,
+                        drs_enabled?: false
+        )
+      end
+
       context 'datastore_clusters are NOT specified' do
         let(:input) do
           {
@@ -747,22 +780,12 @@ module VSphereCloud
           expect(vm_config.datastore_clusters).to eq([])
         end
       end
+
       context 'datastore_clusters are specified inside datastores' do
-        before (:all) do
-          @drs_enabled_atastore_cluster = 'fake-datastore1'
-          @drs_disabled_datastore_cluster = 'fake-datastore2'
-        end
-        let(:datastore_cluster_1) do
-          instance_double(VSphereCloud::Resources::StoragePod,
-            name: @drs_enabled_atastore_cluster,
-            free_space: 2048,
-            capacity: 4096
-          )
-        end
         let(:input) do
           {
             vm_type: {
-              'datastores' => ['fake-datastore', 'cluster' => [@drs_enabled_atastore_cluster, @drs_disabled_datastore_cluster]]
+              'datastores' => ['fake-datastore', { 'clusters' => [{@drs_enabled_datastore_cluster => {}}, {@drs_disabled_datastore_cluster => {} }] }]
             }
           }
         end
