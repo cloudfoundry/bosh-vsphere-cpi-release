@@ -13,7 +13,11 @@ chmod 400 dbc_ssh_key
 
 metadata_file=nimbus-environments-6.5/metadata
 
-source "$metadata_file"
+SENTINEL='# Metadata used by vcpi-nimbus:'
+while IFS= read -r text; do
+  eval "${text#'# '}"
+done < <(sed -e "1,/^$SENTINEL/d" $metadata_file | grep '^# VCPI_NIMBUS')
+
 
 if [ -z "$VCPI_NIMBUS_LAUNCH_NAME" ]; then
   echo Unable to read Nimbus testbed launch name from "$metadata_file" 1>&2
