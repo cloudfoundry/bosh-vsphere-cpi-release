@@ -736,15 +736,11 @@ module VSphereCloud
     end
 
     describe '#datastore_clusters' do
-      before (:all) do
-        @drs_enabled_datastore_cluster = 'fake-sp1'
-        @drs_disabled_datastore_cluster = 'fake-sp2'
-      end
 
       let(:client) do
         client = instance_double(VSphereCloud::VCenterClient)
-        allow(client).to receive(:find_by_inventory_path).with('/fake-datacenter-name/datastore/fake-sp1').and_return(datastore_cluster_1)
-        allow(client).to receive(:find_by_inventory_path).with('/fake-datacenter-name/datastore/fake-sp2').and_return(datastore_cluster_2)
+        allow(client).to receive(:find_by_inventory_path).with('/fake-datacenter-name/datastore/fake-sp1').and_return(drs_enabled_datastore_cluster)
+        allow(client).to receive(:find_by_inventory_path).with('/fake-datacenter-name/datastore/fake-sp2').and_return(drs_disabled_datastore_cluster)
         client
       end
 
@@ -753,19 +749,14 @@ module VSphereCloud
                         client: client,
                         datacenter_name: 'fake-datacenter-name')
       end
+      let(:summary) {double('storage_pod_summart', name: 'fake-sp1')}
 
-      let(:datastore_cluster_1) do
-        instance_double(VSphereCloud::Resources::StoragePod,
-                        name: @drs_enabled_datastore_cluster,
-                        drs_enabled?: true
-        )
+      let(:drs_enabled_datastore_cluster) do
+        instance_double(VimSdk::Vim::StoragePod, name: 'fake-sp1', summary: summary)
       end
 
-      let(:datastore_cluster_2) do
-        instance_double(VSphereCloud::Resources::StoragePod,
-                        name: @drs_disabled_datastore_cluster,
-                        drs_enabled?: false
-        )
+      let(:drs_disabled_datastore_cluster) do
+        instance_double(VimSdk::Vim::StoragePod, name: 'fake-sp2')
       end
 
       context 'datastore_clusters are NOT specified' do
@@ -785,12 +776,15 @@ module VSphereCloud
         let(:input) do
           {
             vm_type: {
-              'datastores' => ['fake-datastore', { 'clusters' => [{@drs_enabled_datastore_cluster => {}}, {@drs_disabled_datastore_cluster => {} }] }]
+              'datastores' => ['fake-datastore', { 'clusters' => [{drs_enabled_datastore_cluster.name => {}}, {drs_disabled_datastore_cluster.name => {} }] }]
             }
           }
         end
-        it 'should return array of datastore clusters which have drs enabled' do #TODO should we only return drs enabled datastore_clusters resource here?
-          expect(vm_config.datastore_clusters).to eq([datastore_cluster_1])
+        it 'should return array of datastore clusters which have drs enabled' do
+           allow(drs_enabled_datastore_cluster).to receive_message_chain(:pod_storage_drs_entry, :storage_drs_config, :pod_config, :enabled).and_return(true)
+           allow(drs_disabled_datastore_cluster).to receive_message_chain(:pod_storage_drs_entry, :storage_drs_config, :pod_config, :enabled).and_return(false)
+          expect(vm_config.datastore_clusters.length).to eq(1)
+          expect(vm_config.datastore_clusters.first.name).to eq('fake-sp1')
         end
       end
     end
