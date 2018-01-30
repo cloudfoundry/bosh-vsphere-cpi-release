@@ -1,0 +1,18 @@
+platform: linux
+image_resource:
+  { type: docker-image, source: { repository: vcpici/vcpi-main } }
+
+inputs:
+  - name: certification
+  - name: director-config
+  - name: bosh-release
+  - name: cpi-release
+  - name: stemcell
+  - name: bosh-cpi-src
+  - name: environment
+
+outputs:
+  - name: director-state
+
+run:
+  path: bosh-cpi-src/ci/tasks/deploy-director.sh
