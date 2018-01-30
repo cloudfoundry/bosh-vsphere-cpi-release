@@ -35,12 +35,13 @@ module VSphereCloud
       replicated_stemcell_properties = @cloud_searcher.get_properties(
         replicated_stemcell_vm_mob,
         VimSdk::Vim::VirtualMachine,
-        ['snapshot'],
+        ['snapshot', 'datastore'],
         ensure_all: true
       )
+
+      datastore = Resources::Datastore.build_from_client(@client, replicated_stemcell_properties['datastore']).first if datastore_cluster #create vm/ephemeral disk on same datastore as stemcell if Datastore Cluster is being used.
       replicated_stemcell_vm = Resources::VM.new(vm_config.stemcell_cid, replicated_stemcell_vm_mob, @client, @logger)
       snapshot = replicated_stemcell_properties['snapshot']
-      datastore =  vm_datastore_name(replicated_stemcell_vm) if datastore_cluster #create vm/ephemeral disk on same datastore as stemcell if Datastore Cluster is being used.
 
       # Create device_change config
       config_spec = VimSdk::Vim::Vm::ConfigSpec.new(vm_config.config_spec_params)
@@ -94,7 +95,7 @@ module VSphereCloud
 
       # Clone VM
       @logger.info("Cloning vm: #{replicated_stemcell_vm} to #{vm_config.name}")
-      created_vm_mob = @client.wait_for_task do
+      result = @client.wait_for_task do
         @cpi.clone_vm(replicated_stemcell_vm.mob,
           vm_config.name,
           @datacenter.vm_folder.mob,
@@ -106,6 +107,7 @@ module VSphereCloud
           datastore_cluster: datastore_cluster
         )
       end
+      created_vm_mob = datastore_cluster ? result.vm : result
       created_vm = Resources::VM.new(vm_config.name, created_vm_mob, @client, @logger)
 
       # Set agent env settings

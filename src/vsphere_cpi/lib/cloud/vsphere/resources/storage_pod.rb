@@ -24,7 +24,8 @@ module VSphereCloud
       end
 
       def self.find(name, datacenter_name, client)
-        client.find_by_inventory_path("/#{datacenter_name}/datastore/#{name}")
+        storage_pod = client.find_by_inventory_path("/#{datacenter_name}/datastore/#{name}")
+        self.new(storage_pod)
       end
     end
   end

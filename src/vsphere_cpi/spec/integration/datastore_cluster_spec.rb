@@ -49,6 +49,8 @@ end
 
 context 'when datastore cluster is also defined in vm_type' do
   before (:all) do
+    do_setup
+    @datacenter_name = fetch_and_verify_datacenter('BOSH_VSPHERE_CPI_DATACENTER')
     @datastore_cluster = fetch_and_verify_datastore_cluster('BOSH_VSPHERE_CPI_DATASTORE_CLUSTER')
     @cluster_name = fetch_and_verify_cluster('BOSH_VSPHERE_CPI_CLUSTER')
     @resource_pool_name = fetch_and_verify_resource_pool('BOSH_VSPHERE_CPI_RESOURCE_POOL', @cluster_name)
@@ -67,13 +69,7 @@ context 'when datastore cluster is also defined in vm_type' do
     }
   end
   context 'and drs is enabled' do
-    let(:datastore_cluster_1) do
-      instance_double(VSphereCloud::Resources::StoragePod,
-        name: @datastore_cluster,
-        drs_enabled?: true,
-        is_a?: true
-      )
-    end
+    let(:datastore_cluster_1) { VSphereCloud::Resources::StoragePod.find(@datastore_cluster, @datacenter_name, @client) }
     it 'should place the ephemeral disk in datastore part of datastore cluster' do
       begin
         expect_any_instance_of(VSphereCloud::VmCreator).to receive(:choose_storage).with(anything).and_return(datastore_cluster_1)
@@ -85,7 +81,6 @@ context 'when datastore cluster is also defined in vm_type' do
           [],
           {}
         )
-        expect(VSphereCloud::VmCreator.any_instance).to receive(:choose_storage).and_return(datastore_cluster_1)
         expect(vm_id).to_not be_nil
         vm = cpi.vm_provider.find(vm_id)
         ephemeral_disk = vm.ephemeral_disk
@@ -144,5 +139,19 @@ context 'when datastore cluster is also defined in vm_type' do
         delete_vm(cpi, vm_id)
       end
     end
+  end
+
+  def do_setup
+    host = ENV.fetch('BOSH_VSPHERE_CPI_HOST')
+    user = ENV.fetch('BOSH_VSPHERE_CPI_USER')
+    password = ENV.fetch('BOSH_VSPHERE_CPI_PASSWORD')
+    logger = Logger.new(StringIO.new(""))
+
+    @client = VSphereCloud::VCenterClient.new(
+      vcenter_api_uri: URI.parse("https://#{host}/sdk/vimService"),
+      http_client: VSphereCloud::CpiHttpClient.new(logger),
+      logger: logger,
+    )
+    @client.login(user, password, 'en')
   end
 end
