@@ -110,6 +110,18 @@ module VSphereCloud
           }.to raise_error(/javax.persistence.OptimisticLockException/)
         end
 
+        it 'retries when Concurrent object access error is raised' do
+          expect_POST_security_group_happy
+
+          VSphereCloud::NSX::MAX_TRIES.times do
+            expect_PUT_security_group_vm_sad("<error><details>Concurrent object access error.</details><errorCode>101</errorCode></error>")
+          end
+
+          expect {
+            nsx.add_vm_to_security_group(sg_name, vm_id)
+          }.to raise_error(/Concurrent object access error/)
+        end
+
         it 'returns an error when the call is not retryable' do
           expect_POST_security_group_happy
           expect_PUT_security_group_vm_sad

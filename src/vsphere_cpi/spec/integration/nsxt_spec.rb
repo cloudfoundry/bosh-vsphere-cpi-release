@@ -67,7 +67,7 @@ describe 'CPI', nsx_transformers: true do
     end
   end
 
-  describe 'on create_vm', nsx_two_only: true do
+  describe 'on create_vm' do
     context 'when global default_vif_type is set' do
       let(:cpi) do
         VSphereCloud::Cloud.new(cpi_options(nsxt: {

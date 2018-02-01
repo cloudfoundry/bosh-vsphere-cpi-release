@@ -25,10 +25,11 @@ module VSphereCloud
     def add_vm_to_security_group(security_group_name, vm_id)
       sg_id = find_or_create_security_group(security_group_name)
 
+      #Retry when OptimisticLockException is received or concurrent object access error is received
       Bosh::Retryable.new(tries: MAX_TRIES,
                           sleep: ->(try_count, retry_exception) { @sleep_time },
                           on: [Exception],
-                          matching: %r{(?:javax.persistence.OptimisticLockException|<errorCode>300<\/errorCode>)}).retryer do |i|
+                          matching: %r{(?:javax.persistence.OptimisticLockException|<errorCode>300<\/errorCode>|Concurrent object access error)}).retryer do |i|
         @logger.debug("Attempting to add VM '#{vm_id}' to Security Group '#{security_group_name}'...")
 
         response = @http_client.put("https://#{@nsx_url}/api/2.0/services/securitygroup/#{sg_id}/members/#{vm_id}", nil)
