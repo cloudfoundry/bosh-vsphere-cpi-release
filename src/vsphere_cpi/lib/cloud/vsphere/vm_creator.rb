@@ -12,13 +12,6 @@ module VSphereCloud
       @enable_auto_anti_affinity_drs_rules = enable_auto_anti_affinity_drs_rules
     end
 
-    def choose_storage(vm_config)
-      vm_config.cluster.accessible_datastores[vm_config.ephemeral_datastore_name]
-    end
-
-    #TODO: DC - ask for recommendation, then look if stemcell exists on recommended datastore and if it does return that else
-    #replicate the stemcell by applying recommendations
-
     def create(vm_config)
       cluster = vm_config.cluster
       storage = choose_storage(vm_config)
@@ -38,8 +31,10 @@ module VSphereCloud
         ['snapshot', 'datastore'],
         ensure_all: true
       )
-
-      datastore = Resources::Datastore.build_from_client(@client, replicated_stemcell_properties['datastore']).first if datastore_cluster #create vm/ephemeral disk on same datastore as stemcell if Datastore Cluster is being used.
+      #create vm/ephemeral disk on same datastore as stemcell if Datastore Cluster is being used.
+      if datastore_cluster
+        datastore = Resources::Datastore.build_from_client(@client, replicated_stemcell_properties['datastore']).first
+      end
       replicated_stemcell_vm = Resources::VM.new(vm_config.stemcell_cid, replicated_stemcell_vm_mob, @client, @logger)
       snapshot = replicated_stemcell_properties['snapshot']
 
@@ -168,6 +163,29 @@ module VSphereCloud
         @logger
       )
       drs_rule.add_vm(vm_mob)
+    end
+
+    # choose storage from set of datastore and sdrs enabled datastore clusters
+    # using weight based algorithm on free space to choose the storage
+    # if datastore clusters are provided and none of them have sdrs enabled log an error
+    def choose_storage(vm_config)
+      storage_options = [ vm_config.cluster.accessible_datastores[vm_config.ephemeral_datastore_name]]
+      if vm_config.datastore_clusters.any?
+        sdrs_enabled_datastore_clusters = vm_config.sdrs_enabled_datastore_clusters
+        @logger.info("None of the datastore clusters have sdrs enabled") unless sdrs_enabled_datastore_clusters.any?
+        storage_options << vm_config.sdrs_enabled_datastore_clusters
+      end
+      weighted_random_sort(storage_options.flatten).first
+    end
+
+    def weighted_random_sort(storage_options)
+      random_hash = {}
+      storage_options.each do |storage_option|
+        random_hash[storage_option.mob.__mo_id__] = Random.rand * storage_option.free_space
+      end
+      storage_options.sort do |x,y|
+        random_hash[y.mob.__mo_id__] <=> random_hash[x.mob.__mo_id__]
+      end
     end
   end
 end
