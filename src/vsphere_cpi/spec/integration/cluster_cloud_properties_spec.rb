@@ -230,12 +230,12 @@ describe 'cloud_properties related to clusters' do
     it 'should place disk into datastore that belongs to the cluster defined in cloud config' do
       begin
         vm_id = cpi.create_vm(
-          'agent-007',
-          @stemcell_id,
-          vm_type,
-          get_network_spec,
-          [],
-          {}
+            'agent-007',
+            @stemcell_id,
+            vm_type,
+            get_network_spec,
+            [],
+            {}
         )
         expect(vm_id).to_not be_nil
         vm = cpi.vm_provider.find(vm_id)
@@ -254,3 +254,4 @@ describe 'cloud_properties related to clusters' do
     end
   end
 end
+

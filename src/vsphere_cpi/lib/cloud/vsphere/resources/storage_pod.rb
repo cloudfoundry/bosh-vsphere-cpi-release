@@ -12,7 +12,7 @@ module VSphereCloud
       end
 
       def free_space
-        mob.summary.free_space
+        mob.summary.free_space.to_i / BYTES_IN_MB
       end
 
       def capacity
@@ -24,8 +24,12 @@ module VSphereCloud
       end
 
       def self.find(name, datacenter_name, client)
-        storage_pod = client.find_by_inventory_path("/#{datacenter_name}/datastore/#{name}")
-        self.new(storage_pod)
+        datacenter_mob = client.find_by_inventory_path(datacenter_name)
+        raise "Datacenter '#{datacenter_name}' not found." unless datacenter_mob
+        datastore_clusters =  datacenter_mob.datastore_folder.child_entity.select {|ce| ce.class == VimSdk::Vim::StoragePod}
+        datastore_cluster = datastore_clusters.select { |sp| sp.name == name }.first
+        raise "Storage Pod '#{name}' not found." unless datastore_cluster
+        self.new(datastore_cluster)
       end
     end
   end

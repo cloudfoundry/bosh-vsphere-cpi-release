@@ -247,7 +247,7 @@ module VSphereCloud
       context 'when stemcell vm needs to be replicated to a datastore inside datastore_cluster' do
         let(:replicated_stemcell) { double('fake_replicated_stemcell', rename: 'renamed-vm') }
         let (:target_datastore_cluster) {instance_double(Resources::StoragePod, mob: 'fake_storage_pod_mob')}
-        let(:recommended_datastore) { double('datastore', __mo_id__: 'recommended-datastore-id')}
+        let(:recommended_datastore) { double('datastore', __mo_id__: 'recommended-datastore-id', name: 'fake-ds')}
         let(:fake_task) { 'fake_task' }
         let(:resource_pool) { double(:resource_pool, mob: 'fake_resource_pool_mob') }
         let(:srm) { instance_double(VimSdk::Vim::StorageResourceManager) }
@@ -260,6 +260,7 @@ module VSphereCloud
           allow(vsphere_cloud).to receive(:get_recommendation_for_stemcell).with(stemcell_vm, anything, anything, resource_pool.mob, expected_options).and_return(recommendation)
           allow(recommendation).to receive_message_chain(:action, :first, :destination).and_return(recommended_datastore)
           allow(recommendation).to receive_message_chain(:action, :first, :destination, :class).and_return(VimSdk::Vim::Datastore)
+          allow(recommendation).to receive_message_chain(:action, :first, :destination, :name).and_return(recommended_datastore.name)
           allow(vcenter_client).to receive(:find_vm_by_name).with(datacenter.mob, stemcell_id).and_return(stemcell_vm)
           @name_of_replicated_stemcell = "#{stemcell_id} %2f #{recommended_datastore.__mo_id__}"
         end
@@ -998,7 +999,7 @@ module VSphereCloud
       let(:datastore_cluster) {instance_double(Resources::StoragePod, mob: 'fake_storage_pod_mob')}
       let(:recommendation) { double('Recommendation', key: 'first_recommendation') }
       let(:srm) { instance_double(VimSdk::Vim::StorageResourceManager) }
-      let(:storage_placement_result) { instance_double(VimSdk::Vim::StorageDrs::StoragePlacementResult) }
+      let(:storage_placement_result) { instance_double(VimSdk::Vim::StorageDrs::StoragePlacementResult, drs_fault: nil) }
       let(:apply_recommendation_result) { instance_double(VimSdk::Vim::StorageDrs::ApplyRecommendationResult) }
 
       before do
@@ -1007,38 +1008,95 @@ module VSphereCloud
         allow(relocation_spec).to receive(:disk_move_type=).with('createNewChildDiskBacking').and_return('createNewChildDiskBacking')
       end
 
-      it 'clones vm when both datastore and StoragePod option is not supplied' do
-        expect(relocation_spec).to receive(:datastore=).never
-        expect(vm_mob).to receive(:clone).with(vm_folder_mob, vm_config.name, an_instance_of(VimSdk::Vim::Vm::CloneSpec)).and_return(fake_vm)
-        vsphere_cloud.clone_vm(
-          vm_mob,
-          vm_config.name,
-          vm_folder_mob,
-          resource_pool.mob,
-          linked: true,
-          config: config_spec
-        )
+      context 'when both datastore and StoragePod option is not supplied' do
+        it 'clones the vm' do
+          expect(relocation_spec).to receive(:datastore=).never
+          expect(vm_mob).to receive(:clone).with(vm_folder_mob, vm_config.name, an_instance_of(VimSdk::Vim::Vm::CloneSpec)).and_return(fake_vm)
+          vsphere_cloud.clone_vm(
+            vm_mob,
+            vm_config.name,
+            vm_folder_mob,
+            resource_pool.mob,
+            linked: true,
+            config: config_spec
+          )
+        end
       end
-      it 'clones vm on to supplied datastore' do
-        allow(relocation_spec).to receive(:datastore=).with(datastore).and_return(datastore)
-        expect(vm_mob).to receive(:clone).with(vm_folder_mob, vm_config.name, an_instance_of(VimSdk::Vim::Vm::CloneSpec)).and_return(fake_vm)
-        vsphere_cloud.clone_vm(
-          vm_mob,
-          vm_config.name,
-          vm_folder_mob,
-          resource_pool.mob,
-          linked: true,
-          config: config_spec,
-          datastore: datastore
-        )
+      context 'with only datastore option' do
+        it 'clones vm on to supplied datastore' do
+          allow(relocation_spec).to receive(:datastore=).with(datastore).and_return(datastore)
+          expect(vm_mob).to receive(:clone).with(vm_folder_mob, vm_config.name, an_instance_of(VimSdk::Vim::Vm::CloneSpec)).and_return(fake_vm)
+          vsphere_cloud.clone_vm(
+            vm_mob,
+            vm_config.name,
+            vm_folder_mob,
+            resource_pool.mob,
+            linked: true,
+            config: config_spec,
+            datastore: datastore
+          )
+        end
       end
-      it 'clones vm on to supplied StoragePod using SDRS recommendations' do
+      context 'when datastore_cluster is also specified' do
+        it 'clones vm using SDRS recommendations' do
+          expect(vm_mob).to receive(:clone).never
+          allow(vcenter_client).to receive_message_chain(:service_instance, :content, :storage_resource_manager).and_return(srm)
+          expect(srm).to receive(:recommend_datastores).with(an_instance_of(VimSdk::Vim::StorageDrs::StoragePlacementSpec)).and_return(storage_placement_result)
+          expect(storage_placement_result).to receive(:recommendations).and_return([recommendation])
+          expect(srm).to receive(:apply_recommendation).with(recommendation.key).and_return(apply_recommendation_result)
+          vsphere_cloud.clone_vm(
+            vm_mob,
+            vm_config.name,
+            vm_folder_mob,
+            resource_pool.mob,
+            linked: true,
+            config: config_spec,
+            datastore_cluster: datastore_cluster,
+            datastore: datastore
+          )
+        end
+      end
+    end
+
+    describe '#get_recommendation_for_stemcell' do
+      let(:vm_config) { double('VmConfig', name: 'vm-123456') }
+      let(:config_spec) { instance_double(VimSdk::Vim::Vm::ConfigSpec) }
+      let(:vm_folder_mob) { double('fake folder mob') }
+      let(:resource_pool) { double(:resource_pool, mob: 'fake_resource_pool_mob') }
+      let(:relocation_spec) { VimSdk::Vim::Vm::RelocateSpec.new }
+      let(:datastore_cluster) {instance_double(Resources::StoragePod, mob: 'fake_storage_pod_mob')}
+      let(:recommendation) { double('Recommendation', key: 'first_recommendation') }
+      let(:srm) { instance_double(VimSdk::Vim::StorageResourceManager) }
+      let(:storage_placement_result) { instance_double(VimSdk::Vim::StorageDrs::StoragePlacementResult, drs_fault: nil) }
+
+      before do
+        allow(VimSdk::Vim::Vm::RelocateSpec).to receive(:new).and_return(relocation_spec)
+        allow(relocation_spec).to receive(:pool=).with(resource_pool.mob).and_return(resource_pool.mob)
+        allow(relocation_spec).to receive(:disk_move_type=).with('createNewChildDiskBacking').and_return('createNewChildDiskBacking')
+      end
+
+      it 'raises an error when spec is incorrect' do
+        error = VimSdk::SoapError.new("A specified parameter was not correct: cloneSpec", false)
+        allow(vcenter_client).to receive_message_chain(:service_instance, :content, :storage_resource_manager).and_return(srm)
+        expect(srm).to receive(:recommend_datastores).with(an_instance_of(VimSdk::Vim::StorageDrs::StoragePlacementSpec)).and_raise(error)
+        expect {
+          vsphere_cloud.get_recommendation_for_stemcell(
+            vm_mob,
+            vm_config.name,
+            vm_folder_mob,
+            resource_pool.mob,
+            linked: true,
+            config: config_spec,
+            datastore_cluster: datastore_cluster
+          )
+        }.to raise_error(/A specified parameter was not correct/)
+      end
+      it 'returns a recommendation' do
         expect(vm_mob).to receive(:clone).never
         allow(vcenter_client).to receive_message_chain(:service_instance, :content, :storage_resource_manager).and_return(srm)
         expect(srm).to receive(:recommend_datastores).with(an_instance_of(VimSdk::Vim::StorageDrs::StoragePlacementSpec)).and_return(storage_placement_result)
         expect(storage_placement_result).to receive(:recommendations).and_return([recommendation])
-        expect(srm).to receive(:apply_recommendation).with(recommendation.key).and_return(apply_recommendation_result)
-        vsphere_cloud.clone_vm(
+        received_recommendation = vsphere_cloud.get_recommendation_for_stemcell(
           vm_mob,
           vm_config.name,
           vm_folder_mob,
@@ -1047,6 +1105,42 @@ module VSphereCloud
           config: config_spec,
           datastore_cluster: datastore_cluster
         )
+        expect(received_recommendation).to eq(recommendation)
+      end
+      it 'raises an exception when there are no recommendations' do
+        expect(vm_mob).to receive(:clone).never
+        allow(vcenter_client).to receive_message_chain(:service_instance, :content, :storage_resource_manager).and_return(srm)
+        expect(srm).to receive(:recommend_datastores).with(an_instance_of(VimSdk::Vim::StorageDrs::StoragePlacementSpec)).and_return(storage_placement_result)
+        expect(storage_placement_result).to receive(:recommendations).and_return([])
+        expect {
+          vsphere_cloud.get_recommendation_for_stemcell(
+            vm_mob,
+            vm_config.name,
+            vm_folder_mob,
+            resource_pool.mob,
+            linked: true,
+            config: config_spec,
+            datastore_cluster: datastore_cluster
+          )
+        }.to raise_error(/Storage DRS failed to make a recommendation for stemcell/)
+      end
+      it 'raises an exception when there is a DrsFault error' do
+        drs_fault = VimSdk::Vim::Cluster::DrsFaults.new(reason: 'storageVmotion error')
+        expect(vm_mob).to receive(:clone).never
+        allow(vcenter_client).to receive_message_chain(:service_instance, :content, :storage_resource_manager).and_return(srm)
+        expect(srm).to receive(:recommend_datastores).with(an_instance_of(VimSdk::Vim::StorageDrs::StoragePlacementSpec)).and_return(storage_placement_result)
+        allow(storage_placement_result).to receive(:drs_fault).and_return(drs_fault)
+        expect {
+          vsphere_cloud.get_recommendation_for_stemcell(
+            vm_mob,
+            vm_config.name,
+            vm_folder_mob,
+            resource_pool.mob,
+            linked: true,
+            config: config_spec,
+            datastore_cluster: datastore_cluster
+          )
+        }.to raise_error(/Storage DRS failed to make a recommendation: storageVmotion error/)
       end
     end
 
