@@ -98,7 +98,7 @@ jobs:
       - task: test
         file: bosh-cpi-src/ci/tasks/run-lifecycle.yml
         params:
-          RSPEC_FLAGS: "--tag ~nsx_vsphere"
+          RSPEC_FLAGS: "--tag ~nsx_vsphere --tag ~nsx_two_only"
           NSXT_SKIP_SSL_VERIFY: "true"
         on_failure:
           put: nimbus-environments-6.0
