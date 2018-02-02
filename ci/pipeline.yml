@@ -162,6 +162,16 @@ jobs:
       - put: nimbus-environments-6.5
         params : {release: nimbus-environments-6.5}
 
+  - name: delivery
+    plan:
+    - aggregate:
+      - {trigger: true, passed: [lifecycle-6.0, lifecycle-6.5, bats], get: bosh-cpi-artifacts}
+      - {trigger: false, passed: [lifecycle-6.0, lifecycle-6.5, bats], get: bosh-cpi-src}
+    - put: tracker-output
+      params:
+        repos:
+        - bosh-cpi-src
+
 resources:
   - name: nimbus-environments-6.5
     type: pool
@@ -234,6 +244,12 @@ resources:
     source:
       uri: https://github.com/cloudfoundry/bosh-acceptance-tests.git
       branch: gocli-bats
+  - name: tracker-output
+    type: tracker
+    source:
+      token: {{tracker_api_token}}
+      project_id: {{tracker_project_id}}
+      tracker_url: https://www.pivotaltracker.com
 
 groups:
 
@@ -250,6 +266,13 @@ groups:
   - lifecycle-6.0
   - lock-and-extend-6.0
   - unlock-6.0
+
+- name: Delivery
+  jobs:
+  - lifecycle-6.5
+  - lifecycle-6.0
+  - bats
+  - delivery
 
 - name: Unit
   jobs:
