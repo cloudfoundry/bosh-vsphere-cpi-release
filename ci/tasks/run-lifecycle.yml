@@ -13,6 +13,3 @@ run:
 params:
   RSPEC_FLAGS:                             ""
   BOSH_VSPHERE_VERIFY_LIMITED_PERMISSIONS: true
-  DBCUSER:                                 ""
-  DBCHOST:                                 ""
-  DBC_SSH_KEY:                             ""

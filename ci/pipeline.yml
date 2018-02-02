@@ -57,9 +57,6 @@ jobs:
         file: bosh-cpi-src/ci/tasks/run-lifecycle.yml
         params:
           RSPEC_FLAGS: "--tag ~nsx_vsphere --tag ~disk_migration"
-          DBCUSER: {{dbc_user}}
-          DBCHOST: {{dbc_host}}
-          DBC_SSH_KEY: {{dbc_key}}
           NSXT_SKIP_SSL_VERIFY: "true"
         on_failure:
           put: nimbus-environments-6.5
@@ -71,27 +68,41 @@ jobs:
       - put: nimbus-environments-6.5
         params : {release: nimbus-environments-6.5}
 
+  - name: lock-and-extend-6.0
+    plan:
+      - get: bosh-cpi-src
+        trigger: true
+        passed: [build-candidate]
+      - do:
+        - put: nimbus-environments-6.0
+          params: {acquire: true}
+        - task: extend-lease-6.0
+          file: bosh-cpi-src/ci/tasks/extend-lease.yml
+          params:
+            DBCUSER: {{dbc_user}}
+            DBCHOST: {{dbc_host}}
+            DBC_SSH_KEY: {{dbc_key}}
+          on_failure:
+            put: nimbus-environments-6.0
+            params : {release: nimbus-environments-6.0}
+        attempts: 4
+
   - name: lifecycle-6.0
     serial: true
     plan:
       - aggregate:
-        - {trigger: true,  passed: [build-candidate], get: bosh-cpi-artifacts}
+        - {trigger: false,  passed: [build-candidate], get: bosh-cpi-artifacts}
         - {trigger: false, passed: [build-candidate], get: bosh-cpi-src}
+        - {trigger: true, passed: [lock-and-extend-6.0], get: nimbus-environments-6.0}
         - get: stemcell
-        - {trigger: true,                             get: vcpi-nimbus}
       - task: test
         file: bosh-cpi-src/ci/tasks/run-lifecycle.yml
         params:
           RSPEC_FLAGS: "--tag ~nsx_vsphere"
-          DBCUSER: {{dbc_user}}
-          DBCHOST: {{dbc_host}}
-          DBC_SSH_KEY: {{dbc_key}}
-          VC_BUILD: ob-7037817
-          ESX_BUILD: '5367062'
           NSXT_SKIP_SSL_VERIFY: "true"
         on_failure:
           put: nimbus-environments-6.0
-          params: {remove: nimbus-environments-6.0}
+          params: {release: nimbus-environments-6.0}
 
   - name: unlock-6.0
     plan:
@@ -157,7 +168,14 @@ resources:
     source:
       uri:          git@github.com:ktchen14/vcpi-pool.git
       branch:       master
-      pool:         v6.5
+      pool:         TA65
+      private_key:  {{vcpi-pool_deployment_key}}
+  - name: nimbus-environments-6.0
+    type: pool
+    source:
+      uri:          git@github.com:ktchen14/vcpi-pool.git
+      branch:       master
+      pool:         TA60
       private_key:  {{vcpi-pool_deployment_key}}
   - name: bosh-cpi-artifacts
     type: s3
@@ -166,12 +184,6 @@ resources:
       bucket:            {{s3_vsphere_cpi_bucket}}
       access_key_id:     {{s3_vsphere_cpi_blobwriter_access_key}}
       secret_access_key: {{s3_vsphere_cpi_blobwriter_secret_key}}
-  - name: vcpi-nimbus
-    type: git
-    source:
-      uri:         git@gitlab.eng.vmware.com:PKS/vcpi-nimbus.git
-      branch:      master
-      private_key: {{vcpi-nimbus_deployment_key}}
   - name: bosh-cpi-src
     type: git
     source:
@@ -236,6 +248,8 @@ groups:
   - lifecycle-6.5
   - unlock-6.5
   - lifecycle-6.0
+  - lock-and-extend-6.0
+  - unlock-6.0
 
 - name: Unit
   jobs:
@@ -261,3 +275,5 @@ groups:
   jobs:
   - build-candidate
   - lifecycle-6.0
+  - lock-and-extend-6.0
+  - unlock-6.0
