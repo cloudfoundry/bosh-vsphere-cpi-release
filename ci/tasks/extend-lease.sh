@@ -11,7 +11,7 @@ remote=$DBCUSER@$DBCHOST.eng.vmware.com
 echo "$DBC_SSH_KEY" > dbc_ssh_key
 chmod 400 dbc_ssh_key
 
-metadata_file=nimbus-environments-6.5/metadata
+metadata_file=environment/metadata
 
 SENTINEL='# Metadata used by vcpi-nimbus:'
 while IFS= read -r text; do

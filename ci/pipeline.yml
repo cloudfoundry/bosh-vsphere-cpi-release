@@ -31,7 +31,8 @@ jobs:
         trigger: true
         passed: [build-candidate]
       - do:
-        - put: nimbus-environments-6.5
+        - put: environment
+          resource: nimbus-environments-6.5
           params: {acquire: true}
         - task: extend-lease-6.5
           file: bosh-cpi-src/ci/tasks/extend-lease.yml
@@ -51,7 +52,7 @@ jobs:
       - aggregate:
         - {trigger: false,  passed: [build-candidate], get: bosh-cpi-artifacts}
         - {trigger: false, passed: [build-candidate], get: bosh-cpi-src}
-        - {trigger: true, passed: [lock-and-extend-6.5], get: nimbus-environments-6.5}
+        - {trigger: true, passed: [lock-and-extend-6.5], get: environment, resource: nimbus-environments-6.5}
         - get: stemcell
       - task: test
         file: bosh-cpi-src/ci/tasks/run-lifecycle.yml
@@ -74,7 +75,8 @@ jobs:
         trigger: true
         passed: [build-candidate]
       - do:
-        - put: nimbus-environments-6.0
+        - put: environment
+          resource: nimbus-environments-6.0
           params: {acquire: true}
         - task: extend-lease-6.0
           file: bosh-cpi-src/ci/tasks/extend-lease.yml
@@ -93,7 +95,7 @@ jobs:
       - aggregate:
         - {trigger: false,  passed: [build-candidate], get: bosh-cpi-artifacts}
         - {trigger: false, passed: [build-candidate], get: bosh-cpi-src}
-        - {trigger: true, passed: [lock-and-extend-6.0], get: nimbus-environments-6.0}
+        - {trigger: true, passed: [lock-and-extend-6.0], get: environment, resource: nimbus-environments-6.0}
         - get: stemcell
       - task: test
         file: bosh-cpi-src/ci/tasks/run-lifecycle.yml
@@ -116,7 +118,8 @@ jobs:
         trigger: true
         passed: [build-candidate]
       - do:
-        - put: nimbus-environments-6.5
+        - put: environment
+          resource: nimbus-environments-6.5
           params: {acquire: true}
         - task: extend-lease-6.5
           file: bosh-cpi-src/ci/tasks/extend-lease.yml

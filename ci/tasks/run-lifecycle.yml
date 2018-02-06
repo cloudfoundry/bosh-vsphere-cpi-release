@@ -4,7 +4,7 @@ image_resource:
 inputs:
   - name: bosh-cpi-src
   - name: stemcell
-  - name: nimbus-environments-6.5
+  - name: environment
 
 outputs:
   - name: dummy # dummy output to avoid sending the entire task over the network

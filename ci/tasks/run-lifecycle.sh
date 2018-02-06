@@ -4,7 +4,7 @@ set -e
 
 source bosh-cpi-src/.envrc
 
-source nimbus-environments-6.5/metadata
+source environment/metadata
 export HTTP_PROXY="http://$BOSH_VSPHERE_JUMPER_HOST:80"
 export HTTPS_PROXY="http://$BOSH_VSPHERE_JUMPER_HOST:80"
 stemcell_dir="$( cd stemcell && pwd )"
