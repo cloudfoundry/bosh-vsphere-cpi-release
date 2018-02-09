@@ -104,7 +104,7 @@ jobs:
           NSXT_SKIP_SSL_VERIFY: "true"
         on_failure:
           put: nimbus-environments-6.0
-          params: {release: nimbus-environments-6.0}
+          params: {remove: nimbus-environments-6.0}
 
   - name: unlock-6.0
     plan:
@@ -158,21 +158,23 @@ jobs:
             BAT_RSPEC_FLAGS:    "--tag ~dns --tag ~vip_networking --tag ~dynamic_networking --tag ~root_partition --tag ~raw_ephemeral_storage"
             STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-trusty-go_agent
         on_failure:
-          put: notify
-          params:
-            username: 'CPI-Doctor'
-            text: |
-              The bats test failed. Check it out at: https://pksci.vcna.io/teams/$BUILD_TEAM_NAME/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME
-        on_success:
-          put: notify
-          params:
-            username: 'CPI-Doctor'
-            text: |
-              The bats tests passed. Check it out at: https://pksci.vcna.io/teams/$BUILD_TEAM_NAME/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME
+          aggregate:
+          - put: nimbus-environments-6.5
+            params : {remove: environment}
+          - put: notify
+            params:
+              username: 'CPI-Doctor'
+              text: |
+                The bats test failed. Check it out at: https://pksci.vcna.io/teams/$BUILD_TEAM_NAME/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME
         ensure:
           do:
             - task: teardown
               file: bosh-cpi-src/ci/tasks/teardown.yml
+      - put: notify
+        params:
+          username: 'CPI-Doctor'
+          text: |
+            The bats tests passed. Check it out at: https://pksci.vcna.io/teams/$BUILD_TEAM_NAME/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME
 
   - name: unlock-bats
     plan:
