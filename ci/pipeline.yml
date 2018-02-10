@@ -51,7 +51,7 @@ jobs:
     plan:
       - aggregate:
         - {trigger: false,  passed: [build-candidate], get: bosh-cpi-artifacts}
-        - {trigger: false, passed: [build-candidate], get: bosh-cpi-src}
+        - {trigger: false, passed: [lock-and-extend-6.5], get: bosh-cpi-src}
         - {trigger: true, passed: [lock-and-extend-6.5], get: environment, resource: nimbus-environments-6.5}
         - get: stemcell
       - task: test
@@ -94,7 +94,7 @@ jobs:
     plan:
       - aggregate:
         - {trigger: false,  passed: [build-candidate], get: bosh-cpi-artifacts}
-        - {trigger: false, passed: [build-candidate], get: bosh-cpi-src}
+        - {trigger: false, passed: [lock-and-extend-6.0], get: bosh-cpi-src}
         - {trigger: true, passed: [lock-and-extend-6.0], get: environment, resource: nimbus-environments-6.0}
         - get: stemcell
       - task: test
@@ -144,7 +144,7 @@ jobs:
         - {get: bosh-deployment,          trigger: false}
         - {get: bats,                     trigger: false}
         - {get: bosh-cli,                 trigger: false}
-        - {get: bosh-cpi-src,             trigger: false, passed: [build-candidate]} # Passthrough
+        - {get: bosh-cpi-src,             trigger: false, passed: [lock-and-extend-bats]} # Passthrough
       - task: prepare-director
         file: bosh-cpi-src/ci/tasks/prepare-director.yml
       - do:
