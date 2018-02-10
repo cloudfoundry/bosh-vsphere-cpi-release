@@ -42,7 +42,7 @@ jobs:
             DBC_SSH_KEY: {{dbc_key}}
           on_failure:
             put: nimbus-environments-6.5
-            params : {release: nimbus-environments-6.5}
+            params : {release: environment}
         attempts: 4
 
 
@@ -86,7 +86,7 @@ jobs:
             DBC_SSH_KEY: {{dbc_key}}
           on_failure:
             put: nimbus-environments-6.0
-            params : {release: nimbus-environments-6.0}
+            params : {release: environment}
         attempts: 4
 
   - name: lifecycle-6.0
@@ -129,7 +129,7 @@ jobs:
             DBC_SSH_KEY: {{dbc_key}}
           on_failure:
             put: nimbus-environments-6.5
-            params : {release: nimbus-environments-6.5}
+            params : {release: environment}
         attempts: 4
 
   - name: bats
