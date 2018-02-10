@@ -1,3 +1,4 @@
+require 'time'
 require 'shellwords'
 
 # Remove did_you_mean as it's very annoying in a Rakefile
@@ -15,6 +16,22 @@ module ColorizeExceptionMessageDetails
   end
 end
 Rake::Application.send(:prepend, ColorizeExceptionMessageDetails)
+
+class Target
+  # @return [[Target]] a list of the targets currently known to `fly`
+  def self.list
+    @list ||= IO.popen(%w[fly targets]).map { |t| new(*t.split(nil, 4)) }
+  end
+
+  attr_reader :name, :url, :team
+
+  # @return [Time] the expiry time of the target's authentication token
+  attr_reader :expiry
+
+  def initialize(name, url, team, expiry)
+    @name, @url, @team, @expiry = name, url, team, Time.rfc2822(expiry)
+  end
+end
 
 DOCKER_NAME = ENV.fetch('DOCKER_NAME', 'vcpici/vcpi-main')
 
@@ -34,23 +51,50 @@ task docker: %w[docker:pull docker:make docker:push]
 
 desc 'Create or update the pipeline configuration'
 task :pipeline, :name do |t, args|
-  CONCOURSE = ENV.fetch('CONCOURSE', 'pks')
+  # Default to the unexpired target expiring furthest in the future known to
+  # `fly`
+  CONCOURSE = ENV.fetch('CONCOURSE') do
+    authorized = Target.list.select { |t| t.expiry > Time.now }
+    unless target = authorized.max_by(&:expiry)
+      fail 'No Concourse target specified and all targets are expired'
+    end
+    target.name
+  end
 
+  # Ensure that the remote host is set from DBCHOST
   DBCHOST = ENV.fetch('DBCHOST') do
     fail 'DBCHOST must be set to the unqualified hostname of your DBC host'
   end
-  DBCUSER = ENV.fetch('DBCUSER') { require 'etc'; Etc.getpwuid.name }
+  dbcfqdn = "#{DBCHOST}.eng.vmware.com"
 
+  # Get the remote user name from DBCUSER, the SSH configuration for DBCHOST, or
+  # the current user name
+  DBCUSER = ENV.fetch('DBCUSER') do
+    output, _, status = Open3.capture3('ssh', '-G', dbcfqdn)
+    break nil unless status.success?
+    record = output.each_line(chomp: true).map do |text|
+      text.split(nil, 2)
+    end.find { |option, _| option == 'user' }
+    break record[1] unless record.nil?
+  end || (require 'etc'; Etc.getpwuid.name)
+
+  # Get the git branch name
   branch = ENV.fetch('BRANCH') { `git symbolic-ref -q --short HEAD` }
   branch.strip!
 
+  # Set the pipeline name to be vSphere-CPI when on the master branch or
+  # vSphere-CPI-#{branch} when on another branch. If the branch name is
+  # indeterminate (because HEAD is detached) then the pipeline name must be
+  # provided as the name argument to this task.
   args.with_defaults(name: ENV.fetch('PIPELINE') do
     if branch.empty?
       fail 'Pipeline name must be specified if HEAD is detached'
     end
-    %w[master vmware-ci].include?(branch) ? 'vsphere-cpi' : "vcpi-#{branch}"
+    branch == 'master' ? 'vSphere-CPI' : "vcpi-#{branch}"
   end)
 
+  # Default to master if the branch name is indeterminate (because HEAD is
+  # detached).
   branch = !branch.empty? ? branch : 'master'
 
   sh '/bin/bash', '-ec', [
