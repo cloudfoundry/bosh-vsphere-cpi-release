@@ -398,6 +398,14 @@ module LifecycleHelpers
     cpi.delete_stemcell(stemcell_id) if stemcell_id
   end
 
+  def delete_only_this_stemcell(stemcell_name, cpi)
+    stemcell_vm = cpi.client.find_vm_by_name(cpi.datacenter.mob, stemcell_name)
+    cpi.logger.info("Found: #{stemcell_name}")
+    cpi.logger.info("Deleting: #{stemcell_name}")
+    cpi.client.delete_vm(stemcell_vm)
+    cpi.logger.info("Deleted: #{stemcell_name}")
+  end
+
   def half_pattern_datastore_enter_maintenance_mode(cpi, cluster_name, pattern)
     @ds_maintenance_tasks = []
     cluster = cpi.client.cloud_searcher.get_managed_object(VimSdk::Vim::ClusterComputeResource, name: cluster_name)

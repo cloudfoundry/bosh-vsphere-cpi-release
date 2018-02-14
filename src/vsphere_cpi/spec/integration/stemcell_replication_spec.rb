@@ -162,4 +162,71 @@ context 'Replicating stemcells across datastores', external_cpi: false do
       end
     end
   end
+
+  context 'when a stemcell exists for the given stemcell id' do
+    before do
+      @orig_stemcell_id = nil
+      Dir.mktmpdir do |temp_dir|
+        stemcell_image = stemcell_image(@stemcell_path, temp_dir)
+        @orig_stemcell_id = @cpi.create_stemcell(stemcell_image, nil)
+        @original_stemcell_vm = @cpi.client.find_vm_by_name(@cpi.datacenter.mob, @orig_stemcell_id)
+      end
+    end
+
+    context 'when we replicate it and delete the original' do
+
+      before do
+        # replicate into another datastore
+        # creates replica stemcell vm and returns it
+        @replicated_stemcell_vm = nil
+        other_datastore = @cpi.datacenter.accessible_datastores[@second_datastore]
+        @replicated_stemcell_vm = @cpi.replicate_stemcell(destination_cluster, other_datastore, @orig_stemcell_id)
+        # Delete just the original. We cannot use delete_stemcell call
+        # as it deletes all the replicas. We will go ahead and delete the stemcell through a different function.
+        delete_only_this_stemcell(@orig_stemcell_id, @cpi)
+      end
+
+      after do
+        @cpi.delete_stemcell(@replicated_stemcell_vm.name)
+      end
+
+      let(:vm_type) do
+        {
+          'ram' => 512,
+          'disk' => 2048,
+          'cpu' => 1,
+        }
+      end
+      let(:vm_cpi) do
+        options = cpi_options(
+          datacenters: [{
+            datastore_pattern: @second_datastore,
+            persistent_datastore_pattern: @second_datastore,
+            clusters: [
+              {
+                @cluster_name => {}
+              }]
+          }]
+        )
+        VSphereCloud::Cloud.new(options)
+      end
+
+      it 'creates a vm from the replicated copy' do
+        begin
+          @vm_id = vm_cpi.create_vm(
+            'agent-007',
+            @orig_stemcell_id,
+            vm_type,
+            get_network_spec,
+            [],
+            {}
+          )
+          expect(@vm_id).to_not be_nil
+          expect(vm_cpi.has_vm?(@vm_id)).to be(true)
+        ensure
+          delete_vm(vm_cpi, @vm_id)
+        end
+      end
+    end
+  end
 end

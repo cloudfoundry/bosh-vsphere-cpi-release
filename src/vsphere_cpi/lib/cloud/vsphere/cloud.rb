@@ -211,7 +211,12 @@ module VSphereCloud
     end
 
     def stemcell_vm(name)
-      client.find_vm_by_name(@datacenter.mob, name)
+      matches = client.find_all_stemcell_replicas(@datacenter.mob, name)
+      if matches.nil?
+        return nil
+      else
+        matches[0]
+      end
     end
 
     def create_vm(agent_id, stemcell_cid, vm_type, networks_spec, existing_disk_cids = [], environment = nil)
@@ -507,13 +512,22 @@ module VSphereCloud
     # Replicating a stemcell allows the creation of linked clones which can share files with a snapshot.
     # For details see https://www.vmware.com/support/ws5/doc/ws_clone_overview.html.
     def replicate_stemcell(cluster, to_datastore, stemcell_id)
-      original_stemcell_vm = self.client.find_vm_by_name(@datacenter.mob, stemcell_id)
-      raise "Could not find VM for stemcell '#{stemcell_id}'" if original_stemcell_vm.nil?
+      original_stemcell_vm = self.client.find_all_stemcell_replicas(@datacenter.mob, stemcell_id)
+      raise "Could not find VM for stemcell '#{stemcell_id}'" if original_stemcell_vm.empty?
 
-      return original_stemcell_vm if vm_datastore_name(original_stemcell_vm) == to_datastore.name
+      # Check if any of the matched stemcell replica lives on same ds.
+      original_stemcell_vm.each do |s_vm|
+        return s_vm if vm_datastore_name(s_vm) == to_datastore.name
+      end
 
       @logger.info("Stemcell lives on a different datastore, looking for a local copy of: #{stemcell_id}.")
 
+      # pick the first from the list.
+      original_stemcell_vm = original_stemcell_vm.first
+
+      # The original name itself may have a datastore.mob.__mo_id__ appended to it.
+      # Remove this before proceeding
+      stemcell_id = stemcell_id.split('%').first.strip
       name_of_replicated_stemcell = "#{stemcell_id} %2f #{to_datastore.mob.__mo_id__}"
 
       replicated_stemcell_vm = client.find_vm_by_name(@datacenter.mob, name_of_replicated_stemcell)
