@@ -1,10 +1,11 @@
 module VSphereCloud
   class DiskConfigFactory
 
-    def initialize(datacenter:, vm_type:{}, disk_pool:{})
+    def initialize(datacenter:, vm_type:{}, disk_pool:{}, client: nil)
       @datacenter = datacenter
       @vm_type = vm_type
       @disk_pool = disk_pool
+      @client = client
     end
 
     def disk_config_from_persistent_disk(director_disk_cid)
@@ -51,23 +52,56 @@ module VSphereCloud
       @disk_pool['datastores'] && !@disk_pool['datastores'].empty?
     end
 
+    #TODO extract all this out into a module as its common code
+    def sdrs_enabled_datastore_clusters
+      @sdrs_enabled_datastore_clusters ||= datastore_clusters.map do |datastore_cluster_spec|
+        VSphereCloud::Resources::StoragePod.find(datastore_cluster_spec.keys.first, @datacenter.name, @client)
+      end.select(&:drs_enabled?)
+    end
+
+    #TODO extract all this out into a module as its common code
+    def datastore_clusters
+      datastore_clusters_spec = []
+      return datastore_clusters_spec unless @disk_pool['datastores'] && @disk_pool['datastores'].any?
+      @disk_pool['datastores'].each do |entry|
+        hash = Hash.try_convert(entry)
+        next if hash.nil?
+        if hash.key?('clusters')
+          datastore_clusters_spec = hash['clusters']
+          break
+        end
+      end
+      datastore_clusters_spec
+    end
+
     #datastores is a list of datastores and datastore_clusters. Eg.
     #[datastore1, clusters: [{datastore_cluster1: {}, datatore_cluster2: {}}]]
+    ##skip datastore clusters
     def target_ephemeral_pattern
       escaped_names = []
       if @vm_type['datastores'] && !@vm_type['datastores'].empty?
-        escaped_names = @vm_type['datastores'].map { |pattern| Regexp.escape(pattern) if pattern.is_a?(String)} #skip datastore clusters
+        escaped_names = @vm_type['datastores'].map { |pattern| Regexp.escape(pattern) if pattern.is_a?(String)}
+        escaped_names = escaped_names.compact
       end
-      escaped_names.compact.empty? ?  @datacenter.ephemeral_pattern : "^(#{escaped_names.join('|')})$"
+      escaped_names.empty? ?  @datacenter.ephemeral_pattern : "^(#{escaped_names.join('|')})$"
     end
 
+    #datastores is a list of datastores and datastore_clusters. Eg.
+    #[datastore1, clusters: [{datastore_cluster1: {}, datatore_cluster2: {}}]]
+    #skip datastore clusters
     def target_persistent_pattern
+      escaped_names = []
       if has_persistent_datastores?
-        escaped_names = @disk_pool['datastores'].map { |pattern| Regexp.escape(pattern) }
-        "^(#{escaped_names.join('|')})$"
-      else
-        @datacenter.persistent_pattern
+        escaped_names = @disk_pool['datastores'].map { |pattern| Regexp.escape(pattern) if pattern.is_a?(String)}
+        if sdrs_enabled_datastore_clusters.any?
+          #TODO pick best datastore_cluster and then fetch all of its datastores
+          datastore_cluster = sdrs_enabled_datastore_clusters.first
+          datastores = datastore_cluster.mob.child_entity
+          escaped_names << datastores.map { |datastore| Regexp.escape(datastore.name) }
+        end
+        escaped_names = escaped_names.flatten.compact
       end
+      escaped_names.empty? ?  @datacenter.persistent_pattern : "^(#{escaped_names.join('|')})$"
     end
   end
 end
