@@ -90,7 +90,7 @@ module VSphereCloud
 
       # Clone VM
       @logger.info("Cloning vm: #{replicated_stemcell_vm} to #{vm_config.name}")
-      result = @client.wait_for_task do
+      created_vm_mob = @client.wait_for_task do
         @cpi.clone_vm(replicated_stemcell_vm.mob,
           vm_config.name,
           @datacenter.vm_folder.mob,
@@ -102,7 +102,6 @@ module VSphereCloud
           datastore_cluster: datastore_cluster
         )
       end
-      created_vm_mob = datastore_cluster ? result.vm : result
       created_vm = Resources::VM.new(vm_config.name, created_vm_mob, @client, @logger)
 
       # Set agent env settings
