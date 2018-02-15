@@ -75,9 +75,12 @@ context 'when datastore cluster is also defined in vm_type' do
       'datastores' => datastores
     }
   end
+  let(:cloud_properties) { {'datastores' => datastores} }
+
   context 'and drs is enabled' do
     let(:datastores) { ['clusters' => [@datastore_cluster => {}]] }
-    it 'should place the ephemeral disk in datastore part of datastore cluster' do
+
+    it 'should place the ephemeral disk & persistent disk in datastore belonging to datastore cluster' do
       begin
         vm_id = cpi.create_vm(
           'agent-007',
@@ -94,11 +97,16 @@ context 'when datastore cluster is also defined in vm_type' do
 
         ephemeral_datastore = ephemeral_disk.backing.datastore
         expect(ephemeral_datastore.name).to eq(@datastore_in_dc)
+
+        director_disk_id = cpi.create_disk(128, cloud_properties)
+        disk = cpi.datacenter.find_disk(VSphereCloud::DirectorDiskCID.new(director_disk_id))
+        expect(disk.datastore.name).to match(@datastore_in_dc)
       ensure
         delete_vm(cpi, vm_id)
+        delete_disk(cpi, director_disk_id)
       end
     end
-    it 'should place vm in the given resource pool and ephemeral disk in datastore part of datastore cluster' do
+    it 'should place vm in the given resource pool' do
       vm_type.merge!({
         'datacenters' => [{
           'clusters' => [{ @cluster_name => { 'resource_pool' => @resource_pool_name } }],
@@ -115,20 +123,19 @@ context 'when datastore cluster is also defined in vm_type' do
         )
         expect(vm_id).to_not be_nil
         vm = cpi.vm_provider.find(vm_id)
-        ephemeral_disk = vm.ephemeral_disk
-        expect(ephemeral_disk).to_not be_nil
-
-        ephemeral_datastore = ephemeral_disk.backing.datastore
-        expect(ephemeral_datastore.name).to eq(@datastore_in_dc)
         expect(vm.resource_pool).to eq(@resource_pool_name)
       ensure
         delete_vm(cpi, vm_id)
       end
     end
-    it 'should place vm in given datastore if that has more free space than datastore cluster' do
+    it 'should place vm, ephemeral disk & persistent disk in given datastore if that has more free space than datastore cluster' do
       vm_type.merge!({
         'datastores' => [ @datastore, ['clusters' => [@datastore_cluster => {}]] ]
       })
+      cloud_properties.merge!({
+        'datastores' => [ @datastore, ['clusters' => [@datastore_cluster => {}]] ]
+      })
+
       begin
         vm_id = cpi.create_vm(
           'agent-007',
@@ -145,6 +152,10 @@ context 'when datastore cluster is also defined in vm_type' do
 
         ephemeral_datastore = ephemeral_disk.backing.datastore
         expect(ephemeral_datastore.name).to eq(@datastore)
+
+        director_disk_id = cpi.create_disk(128, cloud_properties)
+        disk = cpi.datacenter.find_disk(VSphereCloud::DirectorDiskCID.new(director_disk_id))
+        expect(disk.datastore.name).to match(@datastore)
       ensure
         delete_vm(cpi, vm_id)
       end
@@ -152,7 +163,7 @@ context 'when datastore cluster is also defined in vm_type' do
   end
   context 'and drs is not enabled' do
     let(:datastores) { ['clusters' => [@datastore_cluster_drs_disabled => {}]] }
-    it 'should place disk in datastore defined in global config' do
+    it 'should place ephemeral disk & persistent disk in datastore defined in global config' do
       begin
         vm_id = cpi.create_vm(
           'agent-007',
@@ -169,6 +180,10 @@ context 'when datastore cluster is also defined in vm_type' do
 
         ephemeral_ds = ephemeral_disk.backing.datastore.name
         expect(ephemeral_ds).to match(@datastore_pattern)
+
+        director_disk_id = cpi.create_disk(128, cloud_properties)
+        disk = cpi.datacenter.find_disk(VSphereCloud::DirectorDiskCID.new(director_disk_id))
+        expect(disk.datastore.name).to match(@datastore_pattern)
       ensure
         delete_vm(cpi, vm_id)
       end

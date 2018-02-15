@@ -724,6 +724,7 @@ module VSphereCloud
         @logger.info("Error raised when fetching recommendation from SDRS: #{storage_placement_result.drs_fault.reason}")
         raise "Storage DRS failed to make a recommendation: #{storage_placement_result.drs_fault.reason}"
       else
+        #pick first recommendation as thats the best one
         recommendation = storage_placement_result.recommendations.first
         raise "Storage DRS failed to make a recommendation for stemcell #{name} replication" unless recommendation
         recommendation
