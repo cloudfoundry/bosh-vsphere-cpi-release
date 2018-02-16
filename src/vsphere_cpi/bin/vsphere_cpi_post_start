@@ -1,0 +1,37 @@
+#!/usr/bin/env ruby
+
+$LOAD_PATH.unshift File.expand_path('../../lib', __FILE__)
+
+unless ARGV[0]
+  puts 'Usage: pry.rb <director_config_yaml>'
+  exit 1
+end
+
+require 'yaml'
+
+require 'cloud'
+require 'cloud/vsphere'
+
+bosh_director_config = OpenStruct.new(logger: Logger.new(STDOUT), uuid: 'uuid', task_checkpoint: nil)
+
+Bosh::Clouds::Config.configure(bosh_director_config)
+
+director_config = YAML.load_file(ARGV[0])
+vsphere_properties = director_config['cloud']['properties']
+
+cpi_advanced_prop=VimSdk::Vim::Option::OptionValue.new
+cpi_advanced_prop.key='config.SDDC.cpi'
+cpi_advanced_prop.value='true'
+
+cpi=VSphereCloud::Cloud.new(vsphere_properties)
+
+begin
+  cpi.client.service_content.setting.query_view(cpi_advanced_prop.key)
+rescue StandardError => e
+  if e.fault.class == VimSdk::Vim::Fault::InvalidName
+    begin
+      cpi.client.service_content.setting.update_values([cpi_advanced_prop])
+    rescue Exception
+    end
+  end
+end
