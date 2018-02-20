@@ -28,7 +28,7 @@ module VSphereCloud
         raise "Datacenter '#{datacenter_name}' not found." unless datacenter_mob
         datastore_clusters =  datacenter_mob.datastore_folder.child_entity.select {|ce| ce.class == VimSdk::Vim::StoragePod}
         datastore_cluster = datastore_clusters.select { |sp| sp.name == name }.first
-        raise "Storage Pod '#{name}' not found." unless datastore_cluster
+        raise "Datastore Cluster with name: '#{name}' not found." unless datastore_cluster
         self.new(datastore_cluster)
       end
     end

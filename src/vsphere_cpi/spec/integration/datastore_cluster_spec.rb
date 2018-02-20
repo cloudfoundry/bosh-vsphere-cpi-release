@@ -158,6 +158,7 @@ context 'when datastore cluster is also defined in vm_type' do
         expect(disk.datastore.name).to match(@datastore)
       ensure
         delete_vm(cpi, vm_id)
+        delete_disk(cpi, director_disk_id)
       end
     end
   end
@@ -186,6 +187,7 @@ context 'when datastore cluster is also defined in vm_type' do
         expect(disk.datastore.name).to match(@datastore_pattern)
       ensure
         delete_vm(cpi, vm_id)
+        delete_disk(cpi, director_disk_id)
       end
     end
   end

@@ -261,7 +261,7 @@ module VSphereCloud
           allow(recommendation).to receive_message_chain(:action, :first, :destination).and_return(recommended_datastore)
           allow(recommendation).to receive_message_chain(:action, :first, :destination, :class).and_return(VimSdk::Vim::Datastore)
           allow(recommendation).to receive_message_chain(:action, :first, :destination, :name).and_return(recommended_datastore.name)
-          allow(vcenter_client).to receive(:find_vm_by_name).with(datacenter.mob, stemcell_id).and_return(stemcell_vm)
+          allow(vcenter_client).to receive(:find_all_stemcell_replicas).with(datacenter.mob, stemcell_id).and_return([stemcell_vm])
           allow(cloud_searcher).to receive(:get_property).with(stemcell_vm, anything, 'datastore', anything).and_return([datastore_with_stemcell])
           @name_of_replicated_stemcell = "#{stemcell_id} %2f #{recommended_datastore.__mo_id__}"
         end
