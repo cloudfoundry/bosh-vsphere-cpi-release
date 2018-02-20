@@ -208,7 +208,6 @@ jobs:
         - bats
       - get: release-version-semver
         params: { bump: major }
-      - get: bosh-cli
     - task: promote
       file: bosh-cpi-src/ci/tasks/promote-candidate.yml
       params:
