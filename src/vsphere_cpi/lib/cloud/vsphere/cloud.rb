@@ -236,6 +236,7 @@ module VSphereCloud
         disk_config_factory = DiskConfigFactory.new(
           datacenter: @datacenter,
           vm_type: vm_type,
+          client: @client
         )
         disk_configurations = existing_disk_cids.map do |cid|
           disk_config_factory.disk_config_from_persistent_disk(DirectorDiskCID.new(cid))
@@ -474,6 +475,7 @@ module VSphereCloud
         disk_config_factory = DiskConfigFactory.new(
           datacenter: @datacenter,
           disk_pool: cloud_properties,
+          client: @client
         )
         disk_config = disk_config_factory.new_persistent_disk_config(size_in_mb)
         @logger.info("Using persistent disk datastore pattern: #{disk_config.target_datastore_pattern}")
@@ -512,8 +514,14 @@ module VSphereCloud
     # Replicating a stemcell allows the creation of linked clones which can share files with a snapshot.
     # For details see https://www.vmware.com/support/ws5/doc/ws_clone_overview.html.
     def replicate_stemcell(cluster, to_datastore, stemcell_id, datastore_cluster=nil)
-      original_stemcell_vm = self.client.find_all_stemcell_replicas(@datacenter.mob, stemcell_id)
-      raise "Could not find VM for stemcell '#{stemcell_id}'" if original_stemcell_vm.nil?
+      original_stemcell_vms = self.client.find_all_stemcell_replicas(@datacenter.mob, stemcell_id)
+      raise "Could not find VM for stemcell '#{stemcell_id}'" if original_stemcell_vms.empty?
+
+      # pick the first from the list.
+      original_stemcell_vm = original_stemcell_vms.first
+      # The original name itself may have a datastore.mob.__mo_id__ appended to it.
+      # Remove this before proceeding
+      stemcell_id = stemcell_id.split('%').first.strip
 
       #if datastore cluster, then find the recommended datastore and then proceed as usual
       if datastore_cluster
@@ -539,18 +547,11 @@ module VSphereCloud
         to_datastore_mob = to_datastore.mob
       end
       # Check if any of the matched stemcell replica lives on same ds.
-      original_stemcell_vm.each do |s_vm|
+      original_stemcell_vms.each do |s_vm|
         return s_vm if vm_datastore_name(s_vm) == to_datastore.name
       end
 
       @logger.info("Stemcell lives on a different datastore, looking for a local copy of: #{stemcell_id}.")
-
-      # pick the first from the list.
-      original_stemcell_vm = original_stemcell_vm.first
-
-      # The original name itself may have a datastore.mob.__mo_id__ appended to it.
-      # Remove this before proceeding
-      stemcell_id = stemcell_id.split('%').first.strip
 
       name_of_replicated_stemcell = "#{stemcell_id} %2f #{to_datastore_mob.__mo_id__}"
 

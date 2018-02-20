@@ -64,7 +64,7 @@ describe VSphereCloud::Resources::StoragePod do
         expect(datastore_folder).to receive(:child_entity).and_return([])
         expect {
           described_class.find(storage_pod_name, 'dc1', client)
-        }.to raise_error /Storage Pod 'cpi-sp1' not found/
+        }.to raise_error /Datastore Cluster with name: 'cpi-sp1' not found/
       end
 
       it 'returns an instance of Resources::StoragePod when storage_pod if found' do

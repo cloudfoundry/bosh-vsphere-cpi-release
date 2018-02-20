@@ -52,18 +52,16 @@ module VSphereCloud
       @disk_pool['datastores'] && !@disk_pool['datastores'].empty?
     end
 
-    #TODO extract all this out into a module as its common code
-    def sdrs_enabled_datastore_clusters
-      @sdrs_enabled_datastore_clusters ||= datastore_clusters.map do |datastore_cluster_spec|
+    def sdrs_enabled_datastore_clusters(datastores_spec)
+      @sdrs_enabled_datastore_clusters ||= datastore_clusters(datastores_spec).map do |datastore_cluster_spec|
         VSphereCloud::Resources::StoragePod.find(datastore_cluster_spec.keys.first, @datacenter.name, @client)
       end.select(&:drs_enabled?)
     end
 
-    #TODO extract all this out into a module as its common code
-    def datastore_clusters
+    def datastore_clusters(datastores_spec)
       datastore_clusters_spec = []
-      return datastore_clusters_spec unless @disk_pool['datastores'] && @disk_pool['datastores'].any?
-      @disk_pool['datastores'].each do |entry|
+      return datastore_clusters_spec unless datastores_spec && datastores_spec.any?
+      datastores_spec.each do |entry|
         hash = Hash.try_convert(entry)
         next if hash.nil?
         if hash.key?('clusters')
@@ -76,11 +74,17 @@ module VSphereCloud
 
     #datastores is a list of datastores and datastore_clusters. Eg.
     #[datastore1, clusters: [{datastore_cluster1: {}, datatore_cluster2: {}}]]
-    ##skip datastore clusters
     def target_ephemeral_pattern
       escaped_names = []
       if @vm_type['datastores'] && !@vm_type['datastores'].empty?
+        #skip datastore clusters which are defined as hash
         escaped_names = @vm_type['datastores'].map { |pattern| Regexp.escape(pattern) if pattern.is_a?(String)}
+        sdrs_enabled_datastore_clusters = sdrs_enabled_datastore_clusters(@vm_type['datastores'])
+        #use all datastores which belong to sdrs enabled datastore cluster.
+        if sdrs_enabled_datastore_clusters.any?
+          datastores = sdrs_enabled_datastore_clusters.collect { |datastore_cluster| datastore_cluster.mob.child_entity }.flatten
+          escaped_names << datastores.map { |datastore| Regexp.escape(datastore.name) }
+        end
         escaped_names = escaped_names.compact
       end
       escaped_names.empty? ?  @datacenter.ephemeral_pattern : "^(#{escaped_names.join('|')})$"
@@ -88,20 +92,31 @@ module VSphereCloud
 
     #datastores is a list of datastores and datastore_clusters. Eg.
     #[datastore1, clusters: [{datastore_cluster1: {}, datatore_cluster2: {}}]]
-    #skip datastore clusters
     def target_persistent_pattern
       escaped_names = []
       if has_persistent_datastores?
+        #skip datastore clusters which are defined as hash
         escaped_names = @disk_pool['datastores'].map { |pattern| Regexp.escape(pattern) if pattern.is_a?(String)}
+        sdrs_enabled_datastore_clusters = sdrs_enabled_datastore_clusters(@disk_pool['datastores'])
+        #pick best sdrs enabled datastore cluster and include its datastores in the set to be used for persistent disk
         if sdrs_enabled_datastore_clusters.any?
-          #TODO pick best datastore_cluster and then fetch all of its datastores
-          datastore_cluster = sdrs_enabled_datastore_clusters.first
+          datastore_cluster = weighted_random_sort(sdrs_enabled_datastore_clusters).first
           datastores = datastore_cluster.mob.child_entity
           escaped_names << datastores.map { |datastore| Regexp.escape(datastore.name) }
         end
         escaped_names = escaped_names.flatten.compact
       end
       escaped_names.empty? ?  @datacenter.persistent_pattern : "^(#{escaped_names.join('|')})$"
+    end
+
+    def weighted_random_sort(storage_options)
+      random_hash = {}
+      storage_options.each do |storage_option|
+        random_hash[storage_option.mob.__mo_id__] = Random.rand * storage_option.free_space
+      end
+      storage_options.sort do |x,y|
+        random_hash[y.mob.__mo_id__] <=> random_hash[x.mob.__mo_id__]
+      end
     end
   end
 end
