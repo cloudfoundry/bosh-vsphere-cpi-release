@@ -31,6 +31,17 @@ module VSphereCloud
         raise "Datastore Cluster with name: '#{name}' not found." unless datastore_cluster
         self.new(datastore_cluster)
       end
+
+      def self.find_storage_pod(name, datacenter_mob)
+        datastore_clusters =  datacenter_mob.datastore_folder.child_entity.select {|ce| ce.class == VimSdk::Vim::StoragePod}
+        datastore_cluster = datastore_clusters.select { |sp| sp.name == name }.first
+        raise "Datastore Cluster with name: '#{name}' not found." unless datastore_cluster
+        new(datastore_cluster)
+      end
+
+      def datastores
+        mob.child_entity
+      end
     end
   end
 end

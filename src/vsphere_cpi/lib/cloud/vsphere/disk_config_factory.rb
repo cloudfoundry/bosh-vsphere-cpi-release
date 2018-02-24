@@ -18,19 +18,6 @@ module VSphereCloud
       )
     end
 
-    def director_disk_cid(disk_config)
-      # Only encode if disk_pool.datastores is specified
-      # This allows the Operator to change the global persistent pattern and the disk will be moved to match
-      if has_persistent_datastores?
-        data_to_encode = {
-          target_datastore_pattern: disk_config.target_datastore_pattern
-        }
-        DirectorDiskCID.encode(disk_config.cid, data_to_encode)
-      else
-        disk_config.cid
-      end
-    end
-
     def new_ephemeral_disk_config
       VSphereCloud::DiskConfig.new(
           size: @vm_type['disk'],
@@ -39,18 +26,7 @@ module VSphereCloud
       )
     end
 
-    def new_persistent_disk_config(size)
-      VSphereCloud::DiskConfig.new(
-          size: size,
-          target_datastore_pattern: target_persistent_pattern
-      )
-    end
-
     private
-
-    def has_persistent_datastores?
-      @disk_pool['datastores'] && !@disk_pool['datastores'].empty?
-    end
 
     def sdrs_enabled_datastore_clusters(datastores_spec)
       @sdrs_enabled_datastore_clusters ||= datastore_clusters(datastores_spec).map do |datastore_cluster_spec|
@@ -88,35 +64,6 @@ module VSphereCloud
         escaped_names = escaped_names.compact
       end
       escaped_names.empty? ?  @datacenter.ephemeral_pattern : "^(#{escaped_names.join('|')})$"
-    end
-
-    #datastores is a list of datastores and datastore_clusters. Eg.
-    #[datastore1, clusters: [{datastore_cluster1: {}, datatore_cluster2: {}}]]
-    def target_persistent_pattern
-      escaped_names = []
-      if has_persistent_datastores?
-        #skip datastore clusters which are defined as hash
-        escaped_names = @disk_pool['datastores'].map { |pattern| Regexp.escape(pattern) if pattern.is_a?(String)}
-        sdrs_enabled_datastore_clusters = sdrs_enabled_datastore_clusters(@disk_pool['datastores'])
-        #pick best sdrs enabled datastore cluster and include its datastores in the set to be used for persistent disk
-        if sdrs_enabled_datastore_clusters.any?
-          datastore_cluster = weighted_random_sort(sdrs_enabled_datastore_clusters).first
-          datastores = datastore_cluster.mob.child_entity
-          escaped_names << datastores.map { |datastore| Regexp.escape(datastore.name) }
-        end
-        escaped_names = escaped_names.flatten.compact
-      end
-      escaped_names.empty? ?  @datacenter.persistent_pattern : "^(#{escaped_names.join('|')})$"
-    end
-
-    def weighted_random_sort(storage_options)
-      random_hash = {}
-      storage_options.each do |storage_option|
-        random_hash[storage_option.mob.__mo_id__] = Random.rand * storage_option.free_space
-      end
-      storage_options.sort do |x,y|
-        random_hash[y.mob.__mo_id__] <=> random_hash[x.mob.__mo_id__]
-      end
     end
   end
 end
