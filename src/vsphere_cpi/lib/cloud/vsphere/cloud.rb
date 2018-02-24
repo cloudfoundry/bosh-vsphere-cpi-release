@@ -472,31 +472,18 @@ module VSphereCloud
           accessible_datastores = @datacenter.accessible_datastores
         end
 
-        disk_config_factory = DiskConfigFactory.new(
-          datacenter: @datacenter,
-          disk_pool: cloud_properties,
-          client: @client
-        )
-        disk_config = disk_config_factory.new_persistent_disk_config(size_in_mb)
-        @logger.info("Using persistent disk datastore pattern: #{disk_config.target_datastore_pattern}")
+        disk_pool = DiskPool.new(@datacenter, cloud_properties['type'], cloud_properties['datastores'])
+        target_datastore_pattern = StoragePicker.choose_persistent_pattern(disk_pool, @logger)
+        datastore_name = StoragePicker.choose_persistent_storage(size_in_mb, target_datastore_pattern, accessible_datastores)
+        datastore = disk_pool.datacenter.find_datastore(datastore_name)
 
-        datastore_picker = DatastorePicker.new
-        datastore_picker.update(accessible_datastores)
-        datastore_name = datastore_picker.pick_datastore_for_single_disk(disk_config)
-        if vm_cid
-          datastore = accessible_datastores[datastore_name]
-          raise "Can't find datastore '#{datastore_name}'" if datastore.nil?
-        else
-          datastore = @datacenter.find_datastore(datastore_name)
-        end
         @logger.info("Using datastore #{datastore.name} to store persistent disk")
 
-        disk_type = cloud_properties['type'] || @config.vcenter_default_disk_type
+        disk_type = cloud_properties.fetch('type', @config.vcenter_default_disk_type)
         disk = @datacenter.create_disk(datastore, size_in_mb, disk_type)
         @logger.info("Created disk: #{disk.inspect}")
 
-        disk_config.cid = disk.cid
-        disk_config_factory.director_disk_cid(disk_config)
+        disk_pool.datastores.any? ? DirectorDiskCID.encode(disk.cid, target_datastore_pattern: target_datastore_pattern) : disk.cid
       end
     end
 

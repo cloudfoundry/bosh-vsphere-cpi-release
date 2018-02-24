@@ -89,51 +89,6 @@ module VSphereCloud
       end
     end
 
-    describe '#director_disk_cid' do
-      let(:existing_disk_cid) { 'fake-disk-cid' }
-
-      context 'when disk pool specifies persistent datastores' do
-        let(:disk_pool) do
-          {
-              'datastores' => ['ds-1', 'ds-2'],
-          }
-        end
-        let(:existing_disk_config) do
-          instance_double(VSphereCloud::DiskConfig,
-            size: 1024,
-            cid: existing_disk_cid,
-            target_datastore_pattern: '^(ds\\-1|ds\\-2)$',
-          )
-        end
-
-        it 'encodes the specified datastores as a pattern in the cid' do
-          expected_metadata = {
-              target_datastore_pattern: existing_disk_config.target_datastore_pattern,
-          }
-          expected_cid = DirectorDiskCID.encode(existing_disk_cid, expected_metadata)
-
-          director_cid = disk_config_factory.director_disk_cid(existing_disk_config)
-          expect(director_cid).to eq(expected_cid)
-        end
-      end
-
-      context 'when disk pool does not specify persistent datastores' do
-        let(:disk_pool) { {} }
-        let(:existing_disk_config) do
-          instance_double(VSphereCloud::DiskConfig,
-            size: 1024,
-            cid: existing_disk_cid,
-            target_datastore_pattern: 'global-persistent-ds',
-          )
-        end
-
-        it 'returns the original disk cid' do
-          director_cid = disk_config_factory.director_disk_cid(existing_disk_config)
-          expect(director_cid).to eq(existing_disk_cid)
-        end
-      end
-    end
-
     describe '#new_ephemeral_disk_config' do
       context 'when datastore clusters are specified under vm_type' do
         before do
@@ -211,78 +166,6 @@ module VSphereCloud
           ).and_return(disk_config)
 
           returned_disk_config = disk_config_factory.new_ephemeral_disk_config
-          expect(returned_disk_config).to eq(disk_config)
-        end
-      end
-    end
-
-    describe '#new_persistent_disk_config' do
-      context 'when datastore clusters are specified under disk_pool' do
-       before do
-          expect(VSphereCloud::Resources::StoragePod).to receive(:find).with('sp-1',anything,anything).and_return(sdrs_enabled_datastore_cluster1)
-          expect(VSphereCloud::Resources::StoragePod).to receive(:find).with('sp-2',anything,anything).and_return(sdrs_enabled_datastore_cluster2)
-          expect(VSphereCloud::Resources::StoragePod).to receive(:find).with('sp-3',anything,anything).and_return(sdrs_disabled_datastore_cluster)
-        end
-        context 'along with datastores' do
-          let(:disk_pool) do
-            {
-              'datastores' => ['ds-1', 'ds-2', 'clusters' => datastore_clusters],
-            }
-          end
-          let(:disk_config) do
-            instance_double(VSphereCloud::DiskConfig,
-                            size: 1024,
-                            target_datastore_pattern: '^(ds\-1|ds\-2|sp\-2\-ds\-1)$',
-            )
-          end
-
-          it 'includes a pattern constructed from cloud_properties along with datastores from best sdrs enabled datastore cluster' do
-            expect(VSphereCloud::DiskConfig).to receive(:new).with(
-              size: 1024, target_datastore_pattern: '^(ds\-1|ds\-2|sp\-2\-ds\-1)$',
-            ).and_return(disk_config)
-
-            returned_disk_config = disk_config_factory.new_persistent_disk_config(1024)
-            expect(returned_disk_config).to eq(disk_config)
-          end
-        end
-        context 'and no datastores are specified' do
-          let(:disk_pool) do
-            {
-              'datastores' => ['clusters' => datastore_clusters],
-            }
-          end
-          let(:disk_config) do
-            instance_double(VSphereCloud::DiskConfig,
-                            size: 1024,
-                            target_datastore_pattern: '^(sp\-1\-ds\-1)$',
-            )
-          end
-
-          it 'includes the datastores from the best sdrs enabled datastore cluster' do
-            expect(VSphereCloud::DiskConfig).to receive(:new).with(
-              size: 1024, target_datastore_pattern: '^(sp\-2\-ds\-1)$',
-            ).and_return(disk_config)
-
-            returned_disk_config = disk_config_factory.new_persistent_disk_config(1024)
-            expect(returned_disk_config).to eq(disk_config)
-          end
-        end
-      end
-      context 'when datastores are not specified under disk_pool' do
-        let(:disk_pool) { {} }
-        let(:disk_config) do
-          instance_double(VSphereCloud::DiskConfig,
-            size: 1024,
-            target_datastore_pattern: datacenter.persistent_pattern,
-          )
-        end
-
-        it 'includes the global persistent pattern' do
-          expect(VSphereCloud::DiskConfig).to receive(:new).with(
-              size: 1024, target_datastore_pattern: datacenter.persistent_pattern,
-          ).and_return(disk_config)
-
-          returned_disk_config = disk_config_factory.new_persistent_disk_config(1024)
           expect(returned_disk_config).to eq(disk_config)
         end
       end
