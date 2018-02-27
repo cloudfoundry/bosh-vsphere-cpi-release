@@ -1,0 +1,15 @@
+platform: linux
+image_resource:
+  { type: docker-image, source: { repository: vcpici/vcpi-main } }
+inputs:
+  - name: bosh-cpi-src
+  - name: stemcell
+  - name: environment
+
+outputs:
+  - name: dummy # dummy output to avoid sending the entire task over the network
+run:
+  path: bosh-cpi-src/ci/tasks/run-lifecycle-55.sh
+params:
+  RSPEC_FLAGS:                             ""
+  BOSH_VSPHERE_VERIFY_LIMITED_PERMISSIONS: true

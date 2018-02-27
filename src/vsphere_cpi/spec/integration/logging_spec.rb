@@ -47,7 +47,7 @@ context 'debug logging' do
       cpi
     end
 
-    it 'does not log credentials' do
+    it 'does not log credentials' , log_creds: true do
       env = {'secret' => 'my-fake-secret'}
       vm_lifecycle(cpi, [], vm_type, network_spec, @stemcell_id, env)
 

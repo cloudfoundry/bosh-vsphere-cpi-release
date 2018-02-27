@@ -112,6 +112,50 @@ jobs:
       - put: nimbus-environments-6.5-NSXV
         params : {release: nimbus-environments-6.5-NSXV}
 
+  - name: lock-and-extend-5.5
+    plan:
+      - get: bosh-cpi-src
+        trigger: true
+        passed: [build-candidate]
+      - do:
+        - put: environment
+          resource: nimbus-environments-5.5
+          params: {acquire: true}
+        - task: extend-lease-5.5
+          file: bosh-cpi-src/ci/tasks/extend-lease.yml
+          params:
+            DBCUSER: {{dbc_user}}
+            DBCHOST: {{dbc_host}}
+            DBC_SSH_KEY: {{dbc_key}}
+          on_failure:
+            put: nimbus-environments-5.5
+            params : {release: environment}
+        attempts: 4
+
+
+  - name: lifecycle-5.5
+    serial: true
+    plan:
+      - aggregate:
+        - {trigger: false,  passed: [build-candidate], get: bosh-cpi-artifacts}
+        - {trigger: false, passed: [lock-and-extend-5.5], get: bosh-cpi-src}
+        - {trigger: true, passed: [lock-and-extend-5.5], get: environment, resource: nimbus-environments-5.5}
+        - get: stemcell
+      - task: test
+        file: bosh-cpi-src/ci/tasks/run-lifecycle-55.yml
+        params:
+          RSPEC_FLAGS: "--tag ~replicate_stemcell_two_threads --tag ~vsan_datastore --tag ~nsx_vsphere --tag ~nsx_transformers --tag ~log_creds"
+          NSXT_SKIP_SSL_VERIFY: "true"
+        on_failure:
+          put: nimbus-environments-5.5
+          params : {remove: environment}
+
+  - name: unlock-5.5
+    plan:
+      - {trigger: true, passed: [lifecycle-5.5], get: nimbus-environments-5.5}
+      - put: nimbus-environments-5.5
+        params : {release: nimbus-environments-5.5}
+
   - name: lock-and-extend-6.5
     plan:
       - get: bosh-cpi-src
@@ -272,8 +316,8 @@ jobs:
   - name: delivery
     plan:
     - aggregate:
-      - {trigger: true, passed: [lifecycle-6.0, lifecycle-6.5, bats, lifecycle-6.5-NSXV, lifecycle-6.0-NSXV], get: bosh-cpi-artifacts}
-      - {trigger: false, passed: [lifecycle-6.0, lifecycle-6.5, bats, lifecycle-6.5-NSXV, lifecycle-6.0-NSXV], get: bosh-cpi-src}
+      - {trigger: true, passed: [lifecycle-6.0, lifecycle-6.5, lifecycle-5.5, bats, lifecycle-6.5-NSXV, lifecycle-6.0-NSXV], get: bosh-cpi-artifacts}
+      - {trigger: false, passed: [lifecycle-6.0, lifecycle-6.5,lifecycle-5.5, bats, lifecycle-6.5-NSXV, lifecycle-6.0-NSXV], get: bosh-cpi-src}
     - put: tracker-output
       params:
         repos:
@@ -290,6 +334,7 @@ jobs:
         - bats
         - lifecycle-6.5-NSXV
         - lifecycle-6.0-NSXV
+        - lifecycle-5.5
       - get: bosh-cpi-src
         passed:
         - lifecycle-6.0
@@ -297,6 +342,7 @@ jobs:
         - bats
         - lifecycle-6.5-NSXV
         - lifecycle-6.0-NSXV
+        - lifecycle-5.5
       - get: release-version-semver
         params: { bump: major }
     - task: promote
@@ -344,6 +390,13 @@ resources:
       uri:          git@github.com:ktchen14/vcpi-pool.git
       branch:       master
       pool:         TA65
+      private_key:  {{vcpi-pool_deployment_key}}
+  - name: nimbus-environments-5.5
+    type: pool
+    source:
+      uri:          git@github.com:ktchen14/vcpi-pool.git
+      branch:       master
+      pool:         TA55
       private_key:  {{vcpi-pool_deployment_key}}
   - name: nimbus-environments-6.0
     type: pool
@@ -445,12 +498,16 @@ groups:
   - lifecycle-6.0-NSXV
   - lock-and-extend-6.0-NSXV
   - unlock-6.0-NSXV
+  - lifecycle-5.5
+  - lock-and-extend-5.5
+  - unlock-5.5
 
 
 - name: Delivery
   jobs:
   - lifecycle-6.5
   - lifecycle-6.0
+  - lifecycle-5.5
   - lifecycle-6.5-NSXV
   - lifecycle-6.0-NSXV
   - bats
@@ -488,3 +545,10 @@ groups:
   - lifecycle-6.0-NSXV
   - lock-and-extend-6.0-NSXV
   - unlock-6.0-NSXV
+
+- name: v5.5
+  jobs:
+  - build-candidate
+  - lifecycle-5.5
+  - lock-and-extend-5.5
+  - unlock-5.5
