@@ -225,60 +225,64 @@ module VSphereCloud
 
         stemcell_vm = stemcell_vm(stemcell_cid)
         raise "Could not find VM for stemcell '#{stemcell_cid}'" if stemcell_vm.nil?
-        stemcell_size = @cloud_searcher.get_property(
-          stemcell_vm,
-          VimSdk::Vim::VirtualMachine,
-          'summary.storage.committed',
-          ensure_all: true
-        )
-        stemcell_size /= 1024 * 1024
+        begin
+          stemcell_size = @cloud_searcher.get_property(
+            stemcell_vm,
+            VimSdk::Vim::VirtualMachine,
+            'summary.storage.committed',
+            ensure_all: true
+          )
+          stemcell_size /= 1024 * 1024
 
-        disk_config_factory = DiskConfigFactory.new(
-          datacenter: @datacenter,
-          vm_type: vm_type,
-          client: @client
-        )
-        disk_configurations = existing_disk_cids.map do |cid|
-          disk_config_factory.disk_config_from_persistent_disk(DirectorDiskCID.new(cid))
+          disk_config_factory = DiskConfigFactory.new(
+            datacenter: @datacenter,
+            vm_type: vm_type,
+            client: @client
+          )
+          disk_configurations = existing_disk_cids.map do |cid|
+            disk_config_factory.disk_config_from_persistent_disk(DirectorDiskCID.new(cid))
+          end
+          ephemeral_disk_config = disk_config_factory.new_ephemeral_disk_config
+          disk_configurations.push(ephemeral_disk_config)
+
+          manifest_params = {
+            vm_type: vm_type,
+            networks_spec: networks_spec,
+            agent_id: agent_id,
+            agent_env: environment,
+            stemcell: {
+              cid: stemcell_cid,
+              size: stemcell_size
+            },
+            global_clusters: @datacenter.clusters,
+            disk_configurations: disk_configurations,
+          }
+
+          vm_config = VmConfig.new(
+            manifest_params: manifest_params,
+            cluster_picker: ClusterPicker.new,
+            cluster_provider: @cluster_provider
+          )
+
+          vm_config.validate
+
+          vm_creator = VmCreator.new(
+            client: @client,
+            cloud_searcher: @cloud_searcher,
+            logger: @logger,
+            cpi: self,
+            datacenter: @datacenter,
+            agent_env: @agent_env,
+            ip_conflict_detector: IPConflictDetector.new(@logger, @client),
+            default_disk_type: @config.vcenter_default_disk_type,
+            enable_auto_anti_affinity_drs_rules: @config.vcenter_enable_auto_anti_affinity_drs_rules,
+            stemcell: Stemcell.new(stemcell_cid, @logger)
+          )
+          created_vm = vm_creator.create(vm_config)
+        rescue => e
+          @logger.info("Error in creating vm: #{e} - #{e.backtrace.join("\n")}")
+          raise e
         end
-        ephemeral_disk_config = disk_config_factory.new_ephemeral_disk_config
-        disk_configurations.push(ephemeral_disk_config)
-
-        manifest_params = {
-          vm_type: vm_type,
-          networks_spec: networks_spec,
-          agent_id: agent_id,
-          agent_env: environment,
-          stemcell: {
-            cid: stemcell_cid,
-            size: stemcell_size
-          },
-          global_clusters: @datacenter.clusters,
-          disk_configurations: disk_configurations,
-        }
-
-        vm_config = VmConfig.new(
-          manifest_params: manifest_params,
-          cluster_picker: ClusterPicker.new,
-          cluster_provider: @cluster_provider
-        )
-
-        vm_config.validate
-
-        vm_creator = VmCreator.new(
-          client: @client,
-          cloud_searcher: @cloud_searcher,
-          logger: @logger,
-          cpi: self,
-          datacenter: @datacenter,
-          agent_env: @agent_env,
-          ip_conflict_detector: IPConflictDetector.new(@logger, @client),
-          default_disk_type: @config.vcenter_default_disk_type,
-          enable_auto_anti_affinity_drs_rules: @config.vcenter_enable_auto_anti_affinity_drs_rules,
-          stemcell: Stemcell.new(stemcell_cid, @logger)
-        )
-        created_vm = vm_creator.create(vm_config)
-
         begin
           if @config.nsxt_enabled?
             @nsxt_provider.add_vm_to_nsgroups(created_vm, vm_type['nsxt'])
@@ -476,7 +480,16 @@ module VSphereCloud
         disk_pool = DiskPool.new(@datacenter, cloud_properties['type'], cloud_properties['datastores'])
         target_datastore_pattern = StoragePicker.choose_persistent_pattern(disk_pool, @logger)
         datastore_name = StoragePicker.choose_persistent_storage(size_in_mb, target_datastore_pattern, accessible_datastores)
-        datastore = disk_pool.datacenter.find_datastore(datastore_name)
+
+        if vm_cid
+          #This is to take into account datastore which might be accessible from cluster defined in cloud config
+          ##datacenter.accessible_datastores includes datastores based on global config, so cannot use that here
+          datastore = accessible_datastores[datastore_name]
+          raise "Can't find datastore '#{datastore_name}'" if datastore.nil?
+        else
+          datastore = @datacenter.find_datastore(datastore_name)
+        end
+
 
         @logger.info("Using datastore #{datastore.name} to store persistent disk")
 

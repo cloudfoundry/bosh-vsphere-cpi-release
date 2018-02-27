@@ -23,7 +23,7 @@ module VSphereCloud
         @logger = attrs.fetch(:logger)
       end
 
-      attr_reader :name, :disk_path, :ephemeral_pattern, :persistent_pattern
+      attr_reader :name, :disk_path, :ephemeral_pattern, :persistent_pattern, :client
 
       def mob
         mob = @client.find_by_inventory_path(name)

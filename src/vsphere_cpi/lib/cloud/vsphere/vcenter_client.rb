@@ -192,7 +192,7 @@ module VSphereCloud
       matches = []
       find_all_stemcell_replicas(datacenter_mob, stemcell_id).each do |vm_mob|
         vm_datastore = @cloud_searcher.get_property(vm_mob, Vim::VirtualMachine, 'datastore', ensure_all: true)
-        if vm_datastore.first.name == datastore_name
+        if vm_datastore.first && vm_datastore.first.name == datastore_name
           matches << vm_mob
         end
       end
