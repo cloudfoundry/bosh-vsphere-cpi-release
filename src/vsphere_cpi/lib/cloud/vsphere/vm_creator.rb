@@ -1,6 +1,6 @@
 module VSphereCloud
   class VmCreator
-    def initialize(client:, cloud_searcher:, logger:, cpi:, datacenter:, agent_env:, ip_conflict_detector:, default_disk_type:, enable_auto_anti_affinity_drs_rules:)
+    def initialize(client:, cloud_searcher:, logger:, cpi:, datacenter:, agent_env:, ip_conflict_detector:, default_disk_type:, enable_auto_anti_affinity_drs_rules:, stemcell:)
       @client = client
       @cloud_searcher = cloud_searcher
       @logger = logger
@@ -10,6 +10,7 @@ module VSphereCloud
       @ip_conflict_detector = ip_conflict_detector
       @default_disk_type = default_disk_type
       @enable_auto_anti_affinity_drs_rules = enable_auto_anti_affinity_drs_rules
+      @stemcell = stemcell
     end
 
     def create(vm_config)
@@ -24,7 +25,7 @@ module VSphereCloud
       @logger.info("Creating vm: #{vm_config.name} on #{cluster.mob} stored in Datastore Cluster: #{datastore_cluster.name}") if datastore_cluster
 
       # Replicate stemcell stage
-      replicated_stemcell_vm_mob = @cpi.replicate_stemcell(cluster, datastore, vm_config.stemcell_cid, datastore_cluster)
+      replicated_stemcell_vm_mob = @stemcell.replicate(@datacenter, cluster, datastore, datastore_cluster)
       replicated_stemcell_properties = @cloud_searcher.get_properties(
         replicated_stemcell_vm_mob,
         VimSdk::Vim::VirtualMachine,

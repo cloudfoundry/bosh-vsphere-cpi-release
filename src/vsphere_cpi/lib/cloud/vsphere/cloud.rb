@@ -274,7 +274,8 @@ module VSphereCloud
           agent_env: @agent_env,
           ip_conflict_detector: IPConflictDetector.new(@logger, @client),
           default_disk_type: @config.vcenter_default_disk_type,
-          enable_auto_anti_affinity_drs_rules: @config.vcenter_enable_auto_anti_affinity_drs_rules
+          enable_auto_anti_affinity_drs_rules: @config.vcenter_enable_auto_anti_affinity_drs_rules,
+          stemcell: Stemcell.new(stemcell_cid, @logger)
         )
         created_vm = vm_creator.create(vm_config)
 
@@ -498,111 +499,6 @@ module VSphereCloud
       end
     end
 
-    # Replicating a stemcell allows the creation of linked clones which can share files with a snapshot.
-    # For details see https://www.vmware.com/support/ws5/doc/ws_clone_overview.html.
-    def replicate_stemcell(cluster, to_datastore, stemcell_id, datastore_cluster=nil)
-      original_stemcell_vms = self.client.find_all_stemcell_replicas(@datacenter.mob, stemcell_id)
-      raise "Could not find VM for stemcell '#{stemcell_id}'" if original_stemcell_vms.empty?
-
-      # pick the first from the list.
-      original_stemcell_vm = original_stemcell_vms.first
-      # The original name itself may have a datastore.mob.__mo_id__ appended to it.
-      # Remove this before proceeding
-      stemcell_id = stemcell_id.split('%').first.strip
-
-      #if datastore cluster, then find the recommended datastore and then proceed as usual
-      if datastore_cluster
-        name_of_replicated_stemcell = "#{stemcell_id} %2f #{SecureRandom.uuid}"
-        @logger.info("Replicating #{stemcell_id} (#{original_stemcell_vm}) to #{name_of_replicated_stemcell}")
-        recommendation = get_recommendation_for_stemcell(
-          original_stemcell_vm,
-          name_of_replicated_stemcell,
-          @datacenter.template_folder.mob,
-          cluster.resource_pool.mob,
-          datastore_cluster: datastore_cluster
-        )
-        @logger.info("Recommendation from Storage DRS for: #{name_of_replicated_stemcell}, Destination: #{recommendation.action.first.destination.name}")
-        #loop over all actions to pick one with reason as storagePlacement?
-        if recommendation.reason == 'storagePlacement' && recommendation.action.first.destination.class == VimSdk::Vim::Datastore
-          to_datastore = recommendation.action.first.destination
-          to_datastore_mob = to_datastore
-        else
-          @logger.info("No recommendation from SDRS for replicating #{stemcell_id} (#{original_stemcell_vm})")
-          raise "No recommendation from SDRS for replicating #{stemcell_id} (#{original_stemcell_vm})"
-        end
-      else
-        to_datastore_mob = to_datastore.mob
-      end
-      # Check if any of the matched stemcell replica lives on same ds.
-      original_stemcell_vms.each do |s_vm|
-        return s_vm if vm_datastore_name(s_vm) == to_datastore.name
-      end
-
-      @logger.info("Stemcell lives on a different datastore, looking for a local copy of: #{stemcell_id}.")
-
-      name_of_replicated_stemcell = "#{stemcell_id} %2f #{to_datastore_mob.__mo_id__}"
-
-      replicated_stemcell_vm = client.find_vm_by_name(@datacenter.mob, name_of_replicated_stemcell)
-      return replicated_stemcell_vm if replicated_stemcell_vm
-
-      @logger.info("Cluster doesn't have stemcell #{stemcell_id}, replicating")
-      @logger.info("Replicating #{stemcell_id} (#{original_stemcell_vm}) to #{name_of_replicated_stemcell}")
-      begin
-        replicated_stemcell_vm = client.wait_for_task do
-          clone_vm(
-            original_stemcell_vm,
-            name_of_replicated_stemcell,
-            @datacenter.template_folder.mob,
-            cluster.resource_pool.mob,
-            datastore: to_datastore_mob
-          )
-        end
-      rescue VSphereCloud::VCenterClient::DuplicateName
-        @logger.info("Stemcell is being replicated by another thread, waiting for #{name_of_replicated_stemcell} to be ready")
-        path_array = [@datacenter.name, 'vm', @datacenter.template_folder.path_components, name_of_replicated_stemcell]
-        replicated_stemcell_vm = client.find_by_inventory_path(path_array.flatten)
-        # get_properties will ensure the existence of the snapshot by retrying.
-        # This forces us to wait for a valid snapshot before returning with the
-        # replicated stemcell vm, if a snapshot is not found then an exception is thrown.
-        client.cloud_searcher.get_properties(replicated_stemcell_vm, VimSdk::Vim::VirtualMachine, ['snapshot'], ensure_all: true)
-        @logger.info("Stemcell #{name_of_replicated_stemcell} has been replicated.")
-      end
-      @logger.info("Replicated #{stemcell_id} (#{original_stemcell_vm}) to #{name_of_replicated_stemcell} (#{replicated_stemcell_vm})")
-
-      if datastore_cluster
-        @logger.info("Disable SDRS on replicated stemcell #{name_of_replicated_stemcell}")
-        vm_info = VimSdk::Vim::StorageDrs::VmConfigInfo.new(vm: replicated_stemcell_vm, enabled: false)
-        vm_config_spec = VimSdk::Vim::StorageDrs::VmConfigSpec.new(info: vm_info, operation: VimSdk::Vim::Option::ArrayUpdateSpec::Operation::EDIT)
-        storage_drs_config_spec = VimSdk::Vim::StorageDrs::ConfigSpec.new(vm_config_spec: [vm_config_spec])
-        client.service_instance.content.storage_resource_manager.configure_storage_drs_for_pod(datastore_cluster.mob, storage_drs_config_spec, true)
-      end
-      @logger.info("Creating initial snapshot for linked clones on #{replicated_stemcell_vm}")
-      client.wait_for_task do
-        replicated_stemcell_vm.create_snapshot('initial', nil, false, false)
-      end
-      @logger.info("Created initial snapshot for linked clones on #{replicated_stemcell_vm}")
-      replicated_stemcell_vm
-    end
-
-    def vm_datastore_name(vm)
-      vm_datacenters = @cloud_searcher.get_property(
-        vm,
-        Vim::VirtualMachine,
-        'datastore',
-        ensure_all: true
-      )
-
-      if vm_datacenters.size > 1
-        raise "stemcell VM #{vm.inspect} found in multiple datacenters #{datacenters.inspect}"
-      end
-
-      if vm_datacenters.size == 0
-        raise "no datacenter found for stemcell VM #{vm.inspect}"
-      end
-
-      vm_datacenters.first.name
-    end
-
     def generate_network_env(devices, networks, dvs_index)
       nics = {}
 
@@ -673,50 +569,6 @@ module VSphereCloud
       clone_spec.snapshot = options[:snapshot] if options[:snapshot]
       clone_spec.template = false
       vm.clone(folder, name, clone_spec)
-    end
-
-    def get_recommendation_for_stemcell(vm, name, folder, resource_pool, options={})
-      relocation_spec = Vim::Vm::RelocateSpec.new
-      relocation_spec.datastore = options[:datastore] if options[:datastore]
-      if options[:linked]
-        relocation_spec.disk_move_type = Vim::Vm::RelocateSpec::DiskMoveOptions::CREATE_NEW_CHILD_DISK_BACKING
-      end
-      relocation_spec.pool = resource_pool
-
-      clone_spec = Vim::Vm::CloneSpec.new
-      clone_spec.config = options[:config] if options[:config]
-      clone_spec.location = relocation_spec
-      clone_spec.power_on = options[:power_on] ? true : false
-      clone_spec.snapshot = options[:snapshot] if options[:snapshot]
-      clone_spec.template = false
-
-      storage_pod = options[:datastore_cluster].mob
-
-      initial_vm_config = Vim::StorageDrs::PodSelectionSpec::VmPodConfig.new
-      initial_vm_config.storage_pod = storage_pod
-      initial_vm_config.vm_config = Vim::StorageDrs::VmConfigInfo.new(enabled: false) #disable DRS for stemcell
-
-      pod_selection_spec = Vim::StorageDrs::PodSelectionSpec.new(storage_pod: storage_pod)
-      pod_selection_spec.initial_vm_config = initial_vm_config
-
-      storage_placement_spec = Vim::StorageDrs::StoragePlacementSpec.new
-      storage_placement_spec.vm = vm
-      storage_placement_spec.clone_name = name
-      storage_placement_spec.type = Vim::StorageDrs::StoragePlacementSpec::PlacementType::CLONE
-      storage_placement_spec.folder = folder
-      storage_placement_spec.clone_spec = clone_spec
-      storage_placement_spec.pod_selection_spec = pod_selection_spec
-      srm = @client.service_instance.content.storage_resource_manager
-      storage_placement_result = srm.recommend_datastores(storage_placement_spec)
-      if storage_placement_result.drs_fault
-        @logger.info("Error raised when fetching recommendation from SDRS: #{storage_placement_result.drs_fault.reason}")
-        raise "Storage DRS failed to make a recommendation: #{storage_placement_result.drs_fault.reason}"
-      else
-        #pick first recommendation as thats the best one
-        recommendation = storage_placement_result.recommendations.first
-        raise "Storage DRS failed to make a recommendation for stemcell #{name} replication" unless recommendation
-        recommendation
-      end
     end
 
     # This method is used by micro bosh deployment cleaner

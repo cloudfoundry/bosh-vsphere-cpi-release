@@ -7,7 +7,7 @@ module VSphereCloud
 
       end
     end
-    describe '#choose_persistent_pattern' do
+    describe '.choose_persistent_pattern' do
       let(:fake_logger) { instance_double('Logger', info: nil) }
       let(:global_datastore_pattern) { 'global-persistent-ds' }
       let(:datacenter) { double('Datacenter', persistent_pattern: global_datastore_pattern)}
