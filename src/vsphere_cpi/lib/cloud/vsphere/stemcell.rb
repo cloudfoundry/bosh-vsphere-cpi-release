@@ -34,7 +34,7 @@ module VSphereCloud
       # Find a replica of this stemcell to act as the source of the replication.
       # This lets stemcell replication work even if the original VM is deleted by a user.
       vm = find_replica_in(datacenter.mob, client)
-      raise "Could not find VM for stemcell #{id}" unless vm
+      raise "Could not find VM for stemcell '#{id}'" unless vm
 
       # if datastore cluster, then find the recommended datastore and then proceed as usual
       to_datastore_mob = if datastore_cluster
@@ -48,7 +48,7 @@ module VSphereCloud
 
       # Check if original stemcell lives on same datastore.
       @logger.info("Searching for stemcell #{id} on datastore #{datastore_name}")
-      replica_vm = find_replica_in(to_datastore_mob, client)
+      replica_vm = find_replica_in(datacenter.mob,  client, datastore_name)
       return replica_vm if replica_vm
 
       replica_name = "#{id} %2f #{to_datastore_mob.__mo_id__}"
@@ -80,7 +80,7 @@ module VSphereCloud
         @logger.info("Replicated #{id} to #{replica_name}")
       end
 
-      disable_sdrs(srm, replica_vm) if datastore_cluster
+      disable_sdrs(srm, datastore_cluster.mob, replica_vm) if datastore_cluster
 
       @logger.info("Creating initial snapshot for linked clones on #{replica_vm}")
       client.wait_for_task do
@@ -90,7 +90,15 @@ module VSphereCloud
       replica_vm
     end
 
+    # Uses StorageResourceManager to get recommended datastore for replicating the stemcell
+    #
+    # @param [Vim::StorageResourceManager] srm
+    # @param [Vim::VirtualMachine] vm
+    # @param [Vim.Folder] folder
+    # @param [Vim::ResourcePool] resource_pool
+    # @param [Resources::StoragePod] datastore_cluster
     def get_recommended_datastore(srm, vm, folder, resource_pool, datastore_cluster)
+      replica_name = SecureRandom.uuid
       relocation_spec = VimSdk::Vim::Vm::RelocateSpec.new(pool: resource_pool)
       clone_spec = VimSdk::Vim::Vm::CloneSpec.new(
         location: relocation_spec,
@@ -106,7 +114,7 @@ module VSphereCloud
 
       storage_placement_spec = VimSdk::Vim::StorageDrs::StoragePlacementSpec.new
       storage_placement_spec.vm = vm
-      storage_placement_spec.clone_name = SecureRandom.uuid
+      storage_placement_spec.clone_name = replica_name
       storage_placement_spec.type = VimSdk::Vim::StorageDrs::StoragePlacementSpec::PlacementType::CLONE
       storage_placement_spec.folder = folder
       storage_placement_spec.clone_spec = clone_spec
@@ -114,38 +122,43 @@ module VSphereCloud
 
       storage_placement_result = srm.recommend_datastores(storage_placement_spec)
       if storage_placement_result.drs_fault
-        @logger.info("Error raised when fetching recommendation for replicating #{id} from SDRS: #{storage_placement_result.drs_fault.reason}")
+        @logger.info("Error raised when fetching recommendation for replicating #{id} from Storage DRS: #{storage_placement_result.drs_fault.reason}")
         raise "Storage DRS failed to make a recommendation for #{id}, Reason: #{storage_placement_result.drs_fault.reason}"
       end
 
-      # pick first recommendation as thats the best one
+      # pick first recommendation as that's the best one
       recommendation = storage_placement_result.recommendations.first
       raise "Storage DRS failed to make a recommendation for stemcell #{id} replication" unless recommendation
-
       @logger.info("Recommendation from Storage DRS for: #{replica_name}, Destination: #{recommendation.action.first.destination.name}")
-      #loop over all actions to pick one with reason as storagePlacement?
+
+      #TODO: loop over all actions to pick one with reason as storagePlacement
       if recommendation.reason == 'storagePlacement' && recommendation.action.first.destination.class == VimSdk::Vim::Datastore
         recommended_datastore = recommendation.action.first.destination
-        #cancel sdrs recommendation
+        #cancel storage drs recommendation as we are not going to apply it
+        srm.cancel_recommendation(recommendation.key)
         recommended_datastore
       else
-        @logger.info("No recommendation from SDRS for replicating #{id} (#{vm})")
-        raise "No recommendation from SDRS for replicating #{id} (#{vm})"
+        @logger.info("No recommendation from Storage DRS for replicating #{id}")
+        raise "No recommendation from Storage DRS for replicating #{id}"
       end
     end
 
     private
 
-    def find_replica_in(object, client)
-      client.find_all_stemcell_replicas(object, id).first
+    def find_replica_in(object, client, datastore_name=nil)
+      if datastore_name
+        client.find_all_stemcell_replicas_in_datastore(object, id, datastore_name).first
+      else
+        client.find_all_stemcell_replicas(object, id).first
+      end
     end
 
-    def disable_sdrs(srm, vm)
+    def disable_sdrs(srm, datastore_cluster_mob, vm)
       @logger.info("Disabling Storage DRS on replicated stemcell")
       vm_info = VimSdk::Vim::StorageDrs::VmConfigInfo.new(vm: vm, enabled: false)
       vm_config_spec = VimSdk::Vim::StorageDrs::VmConfigSpec.new(info: vm_info, operation: VimSdk::Vim::Option::ArrayUpdateSpec::Operation::EDIT)
       storage_drs_config_spec = VimSdk::Vim::StorageDrs::ConfigSpec.new(vm_config_spec: [vm_config_spec])
-      srm.configure_storage_drs_for_pod(datastore_cluster.mob, storage_drs_config_spec, true)
+      srm.configure_storage_drs_for_pod(datastore_cluster_mob, storage_drs_config_spec, true)
     end
   end
 end

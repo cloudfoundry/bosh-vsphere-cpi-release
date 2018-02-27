@@ -22,12 +22,13 @@ context 'Replicating stemcells across datastores', external_cpi: false do
     )
     VSphereCloud::Cloud.new(options)
   end
-
+  let(:logger) { double('logger', debug: nil, info: nil) }
   let(:destination_cluster) { @cpi.datacenter.clusters.find {|cluster| cluster.name == @cluster_name } }
 
   it 'raises an error when no stemcell exists for the given stemcell id' do
+    stemcell = VSphereCloud::Stemcell.new('abc123', logger)
     expect {
-      @cpi.replicate_stemcell(destination_cluster, @cpi.datacenter.accessible_datastores.values.first, 'abc123')
+      stemcell.replicate(@cpi.datacenter,destination_cluster, @cpi.datacenter.accessible_datastores.values.first)
     }.to raise_error('Could not find VM for stemcell \'abc123\'')
   end
 
@@ -38,6 +39,7 @@ context 'Replicating stemcells across datastores', external_cpi: false do
         stemcell_image = stemcell_image(@stemcell_path, temp_dir)
         @orig_stemcell_id = @cpi.create_stemcell(stemcell_image, nil)
         @original_stemcell_vm = @cpi.client.find_vm_by_name(@cpi.datacenter.mob, @orig_stemcell_id)
+        @stemcell = VSphereCloud::Stemcell.new(@orig_stemcell_id, logger)
       end
     end
 
@@ -50,13 +52,13 @@ context 'Replicating stemcells across datastores', external_cpi: false do
       # creating the original stemcell to run the test against is very expensive
       # and all of the contexts we are testing can be run on same setup state
 
-      original_datastore = @cpi.datacenter.accessible_datastores[@cpi.vm_datastore_name(@original_stemcell_vm)]
+      original_datastore = @cpi.datacenter.accessible_datastores[@original_stemcell_vm.datastore.first.name]
       other_datastore = @cpi.datacenter.accessible_datastores[@second_datastore]
 
       #Test:        replicate into original datastore
       #Expectation: returns original stemcell vm and does not create a replica
       expect {
-        same_stemcell_vm = @cpi.replicate_stemcell(destination_cluster, original_datastore, @orig_stemcell_id)
+        same_stemcell_vm = @stemcell.replicate(@cpi.datacenter,destination_cluster, original_datastore)
         expect(same_stemcell_vm.__mo_id__).to eq(@original_stemcell_vm.__mo_id__)
       }.to_not change {
         @cpi.client.find_all_stemcell_replicas_in_datastore(
@@ -70,7 +72,7 @@ context 'Replicating stemcells across datastores', external_cpi: false do
       #Expectation: creates replica stemcell vm and returns it
       replicated_stemcell_vm = nil
       expect {
-        replicated_stemcell_vm = @cpi.replicate_stemcell(destination_cluster, other_datastore, @orig_stemcell_id)
+        replicated_stemcell_vm = @stemcell.replicate(@cpi.datacenter,destination_cluster, other_datastore)
         expect(replicated_stemcell_vm.__mo_id__).to_not eq(@original_stemcell_vm.__mo_id__)
       }.to change {
         @cpi.client.find_all_stemcell_replicas_in_datastore(
@@ -83,7 +85,7 @@ context 'Replicating stemcells across datastores', external_cpi: false do
       #Test:        re-replicate into another datastore
       #Expectation: returns already created replica vm (and does not create new one)
       expect {
-        same_replicated_stemcell_vm = @cpi.replicate_stemcell(destination_cluster, other_datastore, @orig_stemcell_id)
+        same_replicated_stemcell_vm = @stemcell.replicate(@cpi.datacenter,destination_cluster, other_datastore)
         expect(same_replicated_stemcell_vm.__mo_id__).to eq(replicated_stemcell_vm.__mo_id__)
       }.to_not change {
         @cpi.client.find_all_stemcell_replicas_in_datastore(
@@ -96,7 +98,7 @@ context 'Replicating stemcells across datastores', external_cpi: false do
       #Test:        re-replicate into another datastore using second_cpi
       #Expectation: returns already created replica vm (and does not create new one)
       expect {
-        same_replicated_stemcell_vm = second_cpi.replicate_stemcell(destination_cluster, other_datastore, @orig_stemcell_id)
+        same_replicated_stemcell_vm = @stemcell.replicate(second_cpi.datacenter, destination_cluster, other_datastore)
         expect(same_replicated_stemcell_vm.__mo_id__).to eq(replicated_stemcell_vm.__mo_id__)
       }.to_not change {
         second_cpi.client.find_all_stemcell_replicas_in_datastore(
@@ -130,19 +132,19 @@ context 'Replicating stemcells across datastores', external_cpi: false do
         t1_replicated_stemcell_vm = nil
         t1 = Thread.new {
           cpi = VSphereCloud::Cloud.new(cpi_options)
-          t1_replicated_stemcell_vm = cpi.replicate_stemcell(destination_cluster, destination_datastore, @orig_stemcell_id)
+          t1_replicated_stemcell_vm = @stemcell.replicate(cpi.datacenter, destination_cluster, destination_datastore)
         }
 
         t2_replicated_stemcell_vm = nil
         t2 = Thread.new {
           cpi = VSphereCloud::Cloud.new(cpi_options)
-          t2_replicated_stemcell_vm = cpi.replicate_stemcell(destination_cluster, destination_datastore, @orig_stemcell_id)
+          t2_replicated_stemcell_vm = @stemcell.replicate(cpi.datacenter, destination_cluster, destination_datastore)
         }
 
         t3_replicated_stemcell_vm = nil
         t3 = Thread.new {
           cpi = VSphereCloud::Cloud.new(cpi_options)
-          t3_replicated_stemcell_vm = cpi.replicate_stemcell(destination_cluster, destination_datastore, @orig_stemcell_id)
+          t3_replicated_stemcell_vm = @stemcell.replicate(cpi.datacenter, destination_cluster, destination_datastore)
         }
 
         t1.join
@@ -170,6 +172,7 @@ context 'Replicating stemcells across datastores', external_cpi: false do
         stemcell_image = stemcell_image(@stemcell_path, temp_dir)
         @orig_stemcell_id = @cpi.create_stemcell(stemcell_image, nil)
         @original_stemcell_vm = @cpi.client.find_vm_by_name(@cpi.datacenter.mob, @orig_stemcell_id)
+        @stemcell = VSphereCloud::Stemcell.new(@orig_stemcell_id, logger)
       end
     end
 
@@ -180,7 +183,7 @@ context 'Replicating stemcells across datastores', external_cpi: false do
         # creates replica stemcell vm and returns it
         @replicated_stemcell_vm = nil
         other_datastore = @cpi.datacenter.accessible_datastores[@second_datastore]
-        @replicated_stemcell_vm = @cpi.replicate_stemcell(destination_cluster, other_datastore, @orig_stemcell_id)
+        @replicated_stemcell_vm = @stemcell.replicate(@cpi.datacenter,destination_cluster, other_datastore)
         # Delete just the original. We cannot use delete_stemcell call
         # as it deletes all the replicas. We will go ahead and delete the stemcell through a different function.
         delete_only_this_stemcell(@orig_stemcell_id, @cpi)

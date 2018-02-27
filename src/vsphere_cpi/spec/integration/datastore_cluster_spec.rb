@@ -9,7 +9,7 @@ context 'when regex matching datastores in a datastore cluster (datastore-*)' do
     {
       'ram' => 512,
       'disk' => 2048,
-      'cpu' => 1,
+      'cpu' => 1
     }
   end
   let(:cpi) do
@@ -23,6 +23,29 @@ context 'when regex matching datastores in a datastore cluster (datastore-*)' do
   end
 
   it 'should place disk into datastores that belong to the datastore cluster' do
+    begin
+      @vm_id = cpi.create_vm(
+        'agent-007',
+        @stemcell_id,
+        vm_type,
+        get_network_spec,
+        [],
+        {}
+      )
+      expect(@vm_id).to_not be_nil
+      expect(cpi.has_vm?(@vm_id)).to be(true)
+
+      @disk_id = cpi.create_disk(2048, {}, nil)
+      expect(@disk_id).to_not be_nil
+      expect(cpi.has_disk?(@disk_id)).to be(true)
+      disk = cpi.datacenter.find_disk(VSphereCloud::DirectorDiskCID.new(@disk_id))
+      expect(disk.datastore.name).to match(@datastore_pattern)
+    ensure
+      delete_vm(cpi, @vm_id)
+      delete_disk(cpi, @disk_id)
+    end
+  end
+  it 'should raise an error for invalid datastore name' do
     begin
       @vm_id = cpi.create_vm(
         'agent-007',

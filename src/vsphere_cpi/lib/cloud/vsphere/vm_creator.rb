@@ -22,7 +22,7 @@ module VSphereCloud
       @ip_conflict_detector.ensure_no_conflicts(vm_config.vsphere_networks)
 
       @logger.info("Creating vm: #{vm_config.name} on #{cluster.mob} stored in #{datastore.mob}") if datastore
-      @logger.info("Creating vm: #{vm_config.name} on #{cluster.mob} stored in Datastore Cluster: #{datastore_cluster.name}") if datastore_cluster
+      @logger.info("Creating vm: #{vm_config.name} on #{cluster.mob} stored in datastore cluster: #{datastore_cluster.name}") if datastore_cluster
 
       # Replicate stemcell stage
       replicated_stemcell_vm_mob = @stemcell.replicate(@datacenter, cluster, datastore, datastore_cluster)
@@ -32,7 +32,7 @@ module VSphereCloud
         ['snapshot', 'datastore'],
         ensure_all: true
       )
-      #create vm/ephemeral disk on same datastore as stemcell if Datastore Cluster is being used.
+      #create vm/ephemeral disk on same datastore as stemcell if datastore cluster is being used.
       if datastore_cluster
         datastore = Resources::Datastore.build_from_client(@client, replicated_stemcell_properties['datastore']).first
       end
@@ -172,10 +172,12 @@ module VSphereCloud
       storage_options = [vm_config.cluster.accessible_datastores[vm_config.ephemeral_datastore_name]]
       if vm_config.datastore_clusters.any?
         sdrs_enabled_datastore_clusters = vm_config.sdrs_enabled_datastore_clusters
-        @logger.info("None of the datastore clusters have sdrs enabled") unless sdrs_enabled_datastore_clusters.any?
+        @logger.info("None of the datastore clusters have Storage DRS enabled") unless sdrs_enabled_datastore_clusters.any?
         storage_options.concat(vm_config.sdrs_enabled_datastore_clusters)
       end
-      StoragePicker.choose_best_from(storage_options)
+      @logger.info("Storage Options for creating ephemeral disk are: #{storage_options.inspect}")
+
+      StoragePicker.choose_best_from(storage_options.compact)
     end
   end
 end

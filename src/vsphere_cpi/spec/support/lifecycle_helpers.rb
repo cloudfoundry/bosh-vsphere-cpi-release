@@ -82,7 +82,6 @@ module LifecycleHelpers
   def verify_datastore_cluster(cpi, datastore_cluster_name, env_var_name)
     datastore_clusters =  cpi.datacenter.mob.datastore_folder.child_entity.select {|ce| ce.class == VimSdk::Vim::StoragePod}
     datastore_cluster = datastore_clusters.select { |sp| sp.name == datastore_cluster_name }.first
-    # datastore_clusters = cpi.client.cloud_searcher.get_managed_objects(VimSdk::Vim::StoragePod, name: datastore_cluster_name)
     fail "Invalid Environment variable '#{env_var_name}': No Datastore Cluster found with name: '#{datastore_cluster_name}'" unless datastore_cluster
   end
 

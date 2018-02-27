@@ -16,7 +16,7 @@ module VSphereCloud
 
       let(:datastore1) {double('Datastore', name: 'sp-1-ds-1')}
       let(:datastore2) {double('Datastore', name: 'sp-2-ds-1')}
-      let(:sdrs_enabled_datastore_cluster1) { double('StoragePod', drs_enabled?: true, datastores: [datastore1], free_space: 2048)}
+      let(:sdrs_enabled_datastore_cluster1) { double('StoragePod', drs_enabled?: true, datastores: [datastore1], free_space: 20)}
       let(:sdrs_enabled_datastore_cluster2) { double('StoragePod', drs_enabled?: true, datastores: [datastore2], free_space: 120000)}
       let(:sdrs_disabled_datastore_cluster) { double('StoragePod', drs_enabled?: false)}
 

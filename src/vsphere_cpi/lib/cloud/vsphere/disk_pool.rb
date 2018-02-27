@@ -2,6 +2,8 @@ module VSphereCloud
   class DiskPool
     attr_reader :datacenter, :type, :datastores
 
+    # @param datastores It is a list of datastores and datastore_clusters.
+    # Eg. [datastore1, clusters: [{datastore_cluster1: {}, datatore_cluster2: {}}]]
     def initialize(datacenter, type, datastores)
       @datacenter = datacenter
       @type = type
@@ -14,6 +16,7 @@ module VSphereCloud
       end
     end
 
+    #Returns list of StoragePod objects for datastore_clusters
     def datastore_clusters
       clusters_hash = @datastores.find do |entry|
         hash = Hash.try_convert(entry)
