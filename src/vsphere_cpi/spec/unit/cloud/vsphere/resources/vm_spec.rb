@@ -1,13 +1,12 @@
 require 'spec_helper'
 require 'timecop'
 
-describe VSphereCloud::Resources::VM do
-  subject(:vm) { described_class.new('vm-cid', vm_mob, client, logger) }
+describe VSphereCloud::Resources::VM, fake_logger: true do
+  subject(:vm) { described_class.new('vm-cid', vm_mob, client) }
   let(:vm_mob) { instance_double('VimSdk::Vim::VirtualMachine', __mo_id__: 'fake-mob-id') }
   let(:datacenter) { instance_double('VimSdk::Vim::Datacenter')}
   let(:client) { instance_double('VSphereCloud::VCenterClient', cloud_searcher: cloud_searcher) }
   let(:cloud_searcher) { instance_double('VSphereCloud::CloudSearcher') }
-  let(:logger) { double(:logger, debug: nil, info: nil) }
 
   let(:powered_off_state) { VimSdk::Vim::VirtualMachine::PowerState::POWERED_OFF }
   let(:powered_on_state) { VimSdk::Vim::VirtualMachine::PowerState::POWERED_ON }

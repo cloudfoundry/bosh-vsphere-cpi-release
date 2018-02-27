@@ -1,9 +1,11 @@
+require 'cloud/vsphere/logger'
+
 module VSphereCloud
   class TaskRunner
+    extend Logger
 
-    def initialize(cloud_searcher:, logger:, retry_judge: nil, retryer: nil)
+    def initialize(cloud_searcher:, retry_judge: nil, retryer: nil)
       @cloud_searcher = cloud_searcher
-      @logger = logger
       @retry_judge = retry_judge || VSphereCloud::SdkHelpers::RetryJudge.new
       @retryer = retryer || VSphereCloud::Retryer.new
     end
@@ -11,18 +13,18 @@ module VSphereCloud
     def run(&block)
       method_result = @retryer.try do |i|
         task_mob = block.call
-        task = Resources::Task.new(@cloud_searcher, task_mob, @retry_judge, @logger)
+        task = Resources::Task.new(@cloud_searcher, task_mob, @retry_judge)
 
         if i == 0
-          @logger.debug("Starting task '#{task.name}'...")
+          logger.debug("Starting task '#{task.name}'...")
         else
-          @logger.warn("Retrying task '#{task.name}', #{i} attempts so far...")
+          logger.warn("Retrying task '#{task.name}', #{i} attempts so far...")
         end
 
         result, err = wait_for_task(task)
 
         if err
-          @logger.warn(fault_message(task, err))
+          logger.warn(fault_message(task, err))
           err = task_exception_for_vim_fault(err)
           unless task.retryable?
             raise err
@@ -47,7 +49,7 @@ module VSphereCloud
 
         duration = Time.now - started
         if duration > wait_log_counter * wait_log_interval
-          @logger.debug("Waited on task '#{task.name}' for #{duration.to_i / 60} minutes...")
+          logger.debug("Waited on task '#{task.name}' for #{duration.to_i / 60} minutes...")
           wait_log_counter += 1
         end
 
@@ -69,7 +71,7 @@ module VSphereCloud
           when VimSdk::Vim::TaskInfo::State::QUEUED
             sleep(interval)
           when VimSdk::Vim::TaskInfo::State::SUCCESS
-            @logger.debug("Finished task '#{task.name}' after #{duration} seconds")
+            logger.debug("Finished task '#{task.name}' after #{duration} seconds")
             return task.result, nil
           when VimSdk::Vim::TaskInfo::State::ERROR
             return nil, task.error

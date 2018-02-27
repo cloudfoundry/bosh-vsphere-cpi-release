@@ -1,5 +1,9 @@
+require 'cloud/vsphere/logger'
+
 module VSphereCloud
   module StoragePicker
+    extend Logger
+
     module_function
 
     def choose_best_from(storage_objects)
@@ -7,7 +11,7 @@ module VSphereCloud
     end
 
     # @param [DiskPool] disk_pool
-    def choose_persistent_pattern(disk_pool, logger)
+    def choose_persistent_pattern(disk_pool)
       datastore_names = disk_pool.datastore_names
       unless disk_pool.datastore_clusters.empty?
         sdrs_enabled_datastore_clusters = disk_pool.datastore_clusters.select(&:drs_enabled?)
@@ -44,7 +48,7 @@ module VSphereCloud
     # @param [String] target_datastore_name
     # @param [Hash] accessible_datastores
     # @param [VmType] vm_type
-    def choose_ephemeral_storage(target_datastore_name, accessible_datastores, vm_type, logger)
+    def choose_ephemeral_storage(target_datastore_name, accessible_datastores, vm_type)
       #pick datastore set by cluster_picker based on ephemeral_pattern
       storage_options = [accessible_datastores[target_datastore_name]].compact
       logger.debug("Initial Storage Options for creating ephemeral disk from pattern: #{storage_options.map(&:name)}")
@@ -62,7 +66,7 @@ module VSphereCloud
     # if no datastores/datastore_clusters are specified, use global ephemeral pattern
 
     # @param [VmType] vm_type
-    def choose_ephemeral_pattern(vm_type, logger)
+    def choose_ephemeral_pattern(vm_type)
       datastore_names = vm_type.datastore_names
       unless vm_type.datastore_clusters.empty?
         sdrs_enabled_datastore_clusters = vm_type.datastore_clusters.select(&:drs_enabled?)

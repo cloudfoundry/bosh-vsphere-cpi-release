@@ -1,11 +1,10 @@
 require 'spec_helper'
 
-describe VSphereCloud::Resources::Folder do
-  subject(:folder) { VSphereCloud::Resources::Folder.new(folder_path, logger, client, datacenter_name) }
+describe VSphereCloud::Resources::Folder, fake_logger: true do
+  subject(:folder) { VSphereCloud::Resources::Folder.new(folder_path, client, datacenter_name) }
   let(:folder_path) { 'fake-parent-folder-name/fake-sub-folder-name' }
 
   let(:client) { instance_double('VSphereCloud::VCenterClient') }
-  let(:logger) { instance_double('Logger', debug: nil) }
   let(:datacenter_name) { 'fake-datacenter-name' }
   let(:parent_folder_mob) { double(:fake_parent_folder_mob) }
   let(:sub_folder_mob) { double(:fake_sub_folder_mob) }

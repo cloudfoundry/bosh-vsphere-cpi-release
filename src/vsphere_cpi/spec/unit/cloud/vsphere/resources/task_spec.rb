@@ -1,17 +1,15 @@
 require 'spec_helper'
 
-describe VSphereCloud::Resources::Task do
+describe VSphereCloud::Resources::Task, fake_logger: true do
   subject(:task) do
     VSphereCloud::Resources::Task.new(
       cloud_searcher,
       task_mob,
-      retry_judge,
-      logger,
+      retry_judge
     )
   end
   let(:cloud_searcher) { double(VSphereCloud::CloudSearcher) }
   let(:task_mob) { instance_double(VimSdk::Vim::Task) }
-  let(:logger) { instance_double('Logger', debug: nil) }
   let(:retry_judge) { VSphereCloud::SdkHelpers::RetryJudge.new }
 
   let(:task_info) do

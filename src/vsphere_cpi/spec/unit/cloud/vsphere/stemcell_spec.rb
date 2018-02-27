@@ -1,11 +1,10 @@
 require 'spec_helper'
 require 'cloud/vsphere/stemcell'
 
-describe VSphereCloud::Stemcell do
-  subject { described_class.new(stemcell_id, logger) }
+describe VSphereCloud::Stemcell, fake_logger: true do
+  subject { described_class.new(stemcell_id) }
   let(:stemcell_id) { 'fake_stemcell_id' }
 
-  let(:logger) { instance_double('Bosh::Cpi::Logger', info: nil, debug: nil) }
   let(:cloud_searcher) { instance_double('VSphereCloud::CloudSearcher') }
   let(:client) { instance_double('VSphereCloud::VCenterClient', cloud_searcher: cloud_searcher) }
 

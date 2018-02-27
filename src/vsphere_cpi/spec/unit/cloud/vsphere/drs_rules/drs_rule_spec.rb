@@ -1,13 +1,12 @@
 require 'spec_helper'
 
-describe VSphereCloud::DrsRule do
+describe VSphereCloud::DrsRule, fake_logger: true do
   subject(:drs_rule) do
     described_class.new(
       'fake-rule-name',
       client,
       cloud_searcher,
       datacenter_cluster,
-      logger
     )
   end
   let(:client) { instance_double('VSphereCloud::VCenterClient') }
@@ -52,8 +51,6 @@ describe VSphereCloud::DrsRule do
 
   let(:drs_lock) { instance_double('VSphereCloud::DrsLock') }
   before { allow(VSphereCloud::DrsLock).to receive(:new).and_return(drs_lock) }
-
-  let(:logger) { instance_double('Logger', debug: nil) }
 
   def with_lock
     expect(drs_lock).to receive(:with_drs_lock).and_yield.ordered

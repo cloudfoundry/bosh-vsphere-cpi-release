@@ -1,11 +1,14 @@
+require 'cloud/vsphere/logger'
+
 module VSphereCloud
   module SdkHelpers
     class RetryableStubAdapter
+      extend Logger
+
       PC = VimSdk::Vmodl::Query::PropertyCollector
 
-      def initialize(stub_adapter, logger, retry_judge=nil, retryer=nil)
+      def initialize(stub_adapter, retry_judge=nil, retryer=nil)
         @stub_adapter = stub_adapter
-        @logger = logger
         @retry_judge = retry_judge || RetryJudge.new
         @retryer = retryer || Retryer.new
       end
@@ -33,9 +36,9 @@ module VSphereCloud
 
           unless SILENT_RUN_METHOD.include?(method_name)
             if i == 0
-              @logger.debug("Running method '#{method_name}'...")
+              logger.debug("Running method '#{method_name}'...")
             else
-              @logger.warn("Retrying method '#{method_name}', #{i} attempts so far...")
+              logger.warn("Retrying method '#{method_name}', #{i} attempts so far...")
             end
           end
 
@@ -52,7 +55,7 @@ module VSphereCloud
             OpenSSL::SSL::SSLError,
             OpenSSL::X509::StoreError => e
             unless SILENT_ERROR_METHOD.include?(method_name)
-              @logger.warn("Error running method '#{method_name}'. Failed with '#{e.class}: #{e.message}'")
+              logger.warn("Error running method '#{method_name}'. Failed with '#{e.class}: #{e.message}'")
             end
             err = e
           else
@@ -66,7 +69,7 @@ module VSphereCloud
 
             if err
               unless SILENT_ERROR_METHOD.include?(method_name)
-                @logger.warn(fault_message(method_name, err))
+                logger.warn(fault_message(method_name, err))
               end
               unless @retry_judge.retryable?(managed_object, method_info.wsdl_name, object)
                 raise err

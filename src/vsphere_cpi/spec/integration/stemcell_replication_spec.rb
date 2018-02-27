@@ -1,6 +1,6 @@
 require 'integration/spec_helper'
 
-context 'Replicating stemcells across datastores', external_cpi: false do
+context 'Replicating stemcells across datastores', external_cpi: false, fake_logger: true do
   before (:all) do
     @cluster_name = fetch_and_verify_cluster('BOSH_VSPHERE_CPI_CLUSTER')
     @datastore_pattern = fetch_and_verify_datastore('BOSH_VSPHERE_CPI_DATASTORE_PATTERN', @cluster_name)
@@ -22,11 +22,10 @@ context 'Replicating stemcells across datastores', external_cpi: false do
     )
     VSphereCloud::Cloud.new(options)
   end
-  let(:logger) { double('logger', debug: nil, info: nil) }
   let(:destination_cluster) { @cpi.datacenter.clusters.find {|cluster| cluster.name == @cluster_name } }
 
   it 'raises an error when no stemcell exists for the given stemcell id' do
-    stemcell = VSphereCloud::Stemcell.new('abc123', logger)
+    stemcell = VSphereCloud::Stemcell.new('abc123')
     expect {
       stemcell.replicate(@cpi.datacenter,destination_cluster, @cpi.datacenter.accessible_datastores.values.first)
     }.to raise_error('Could not find VM for stemcell \'abc123\'')
@@ -39,7 +38,7 @@ context 'Replicating stemcells across datastores', external_cpi: false do
         stemcell_image = stemcell_image(@stemcell_path, temp_dir)
         @orig_stemcell_id = @cpi.create_stemcell(stemcell_image, nil)
         @original_stemcell_vm = @cpi.client.find_vm_by_name(@cpi.datacenter.mob, @orig_stemcell_id)
-        @stemcell = VSphereCloud::Stemcell.new(@orig_stemcell_id, logger)
+        @stemcell = VSphereCloud::Stemcell.new(@orig_stemcell_id)
       end
     end
 
@@ -172,7 +171,7 @@ context 'Replicating stemcells across datastores', external_cpi: false do
         stemcell_image = stemcell_image(@stemcell_path, temp_dir)
         @orig_stemcell_id = @cpi.create_stemcell(stemcell_image, nil)
         @original_stemcell_vm = @cpi.client.find_vm_by_name(@cpi.datacenter.mob, @orig_stemcell_id)
-        @stemcell = VSphereCloud::Stemcell.new(@orig_stemcell_id, logger)
+        @stemcell = VSphereCloud::Stemcell.new(@orig_stemcell_id)
       end
     end
 

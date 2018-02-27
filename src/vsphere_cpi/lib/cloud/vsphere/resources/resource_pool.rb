@@ -1,17 +1,19 @@
+require 'cloud/vsphere/logger'
+
 module VSphereCloud
   module Resources
     class ResourcePool
       include VimSdk
+      extend Logger
 
       # Creates a new ResourcePool resource.
       #
       # @param [Cluster] cluster parent cluster.
       # @param [Vim::ResourcePool] root_resource_pool cluster's root resource
       #   pool.
-      def initialize(client, logger, cluster_config, root_resource_pool)
+      def initialize(client, cluster_config, root_resource_pool)
         @cluster_config = cluster_config
         @root_resource_pool = root_resource_pool
-        @logger = logger
         @client = client
       end
 
@@ -26,7 +28,6 @@ module VSphereCloud
           @mob = @root_resource_pool
         else
           client = @client
-          logger = @logger
           @mob = client.cloud_searcher.get_managed_object(
             Vim::ResourcePool,
             :root => @root_resource_pool,

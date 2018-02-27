@@ -1,7 +1,9 @@
 require 'oga'
+require 'cloud/vsphere/logger'
 
 module VSphereCloud
   class NSX
+    extend Logger
 
     # use a large number of retries as we investigate NSX error messages around finding VM ID
     # <error>
@@ -15,10 +17,9 @@ module VSphereCloud
     attr_reader :http_client, :nsx_url
     attr_writer :sleep_time
 
-    def initialize(nsx_url, http_client, logger)
+    def initialize(nsx_url, http_client)
       @http_client = http_client
       @nsx_url = nsx_url
-      @logger = logger
       @sleep_time = DEFAULT_SLEEP_TIME
     end
 
@@ -30,12 +31,12 @@ module VSphereCloud
                           sleep: ->(try_count, retry_exception) { @sleep_time },
                           on: [Exception],
                           matching: %r{(?:javax.persistence.OptimisticLockException|<errorCode>300<\/errorCode>|Concurrent object access error)}).retryer do |i|
-        @logger.debug("Attempting to add VM '#{vm_id}' to Security Group '#{security_group_name}'...")
+        logger.debug("Attempting to add VM '#{vm_id}' to Security Group '#{security_group_name}'...")
 
         response = @http_client.put("https://#{@nsx_url}/api/2.0/services/securitygroup/#{sg_id}/members/#{vm_id}", nil)
 
         if vm_belongs_to_security_group?(response.body)
-          @logger.debug("VM '#{vm_id}' already belongs to Security Group '#{security_group_name}'.")
+          logger.debug("VM '#{vm_id}' already belongs to Security Group '#{security_group_name}'.")
           return true
         end
 
@@ -43,7 +44,7 @@ module VSphereCloud
           raise "Failed to add VM to Security Group with unknown NSX error: '#{response.body}'"
         end
 
-        @logger.debug("Successfully added VM '#{vm_id}' to Security Group '#{security_group_name}'.")
+        logger.debug("Successfully added VM '#{vm_id}' to Security Group '#{security_group_name}'.")
         response.status.between?(200, 299)
       end
     end
@@ -51,7 +52,7 @@ module VSphereCloud
     # Note: this method should only be used for cleanup in integration tests
     # Deleting SGs in production code could remove SGs that were created by users outside the BOSH workflow
     def delete_security_group(security_group_name)
-      @logger.debug("Deleting Security Group '#{security_group_name}'...")
+      logger.debug("Deleting Security Group '#{security_group_name}'...")
 
       sg_id = find_security_group_id_by_name(security_group_name)
       response = @http_client.delete("https://#{@nsx_url}/api/2.0/services/securitygroup/#{sg_id}")
@@ -59,13 +60,13 @@ module VSphereCloud
         raise "Failed to delete Security Group '#{security_group_name}' with unknown NSX error: '#{response.body}'"
       end
 
-      @logger.debug("Successfully deleted Security Group '#{security_group_name}'.")
+      logger.debug("Successfully deleted Security Group '#{security_group_name}'.")
 
       true
     end
 
     def get_vms_in_security_group(security_group_name)
-      @logger.debug("Querying VMs attached to Security Group '#{security_group_name}'...")
+      logger.debug("Querying VMs attached to Security Group '#{security_group_name}'...")
 
       sg_id = find_security_group_id_by_name(security_group_name)
 
@@ -75,7 +76,7 @@ module VSphereCloud
       end
 
       vms = extract_vms_in_security_group(response)
-      @logger.debug("Found VMs #{vms.join(', ')} belonging to Security Group '#{security_group_name}'.")
+      logger.debug("Found VMs #{vms.join(', ')} belonging to Security Group '#{security_group_name}'.")
 
       vms
     end
@@ -170,7 +171,7 @@ module VSphereCloud
         port = member['port']
         monitor_port = member['monitor_port'] || member['port']
         if already_member?(pool_details, security_group_id, port, monitor_port)
-          @logger.debug("LB Pool '#{pool_name}' already has a Security Group with Id '#{security_group_id}' port '#{port}' monitor_port #{monitor_port}, not adding.")
+          logger.debug("LB Pool '#{pool_name}' already has a Security Group with Id '#{security_group_id}' port '#{port}' monitor_port #{monitor_port}, not adding.")
         else
           members_to_add << member
         end

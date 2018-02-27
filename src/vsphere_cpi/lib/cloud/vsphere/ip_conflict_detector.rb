@@ -1,8 +1,10 @@
+require 'cloud/vsphere/logger'
+
 module VSphereCloud
   class IPConflictDetector
+    extend Logger
 
-    def initialize(logger, client)
-      @logger = logger
+    def initialize(client)
       @client = client
     end
 
@@ -14,7 +16,7 @@ module VSphereCloud
       end
 
       if ip_conflicts.empty?
-        @logger.info("No IP conflicts detected")
+        logger.info("No IP conflicts detected")
       else
         raise "Detected IP conflicts with other VMs on the same networks: #{conflict_messages.join(", ")}"
       end
@@ -26,16 +28,16 @@ module VSphereCloud
       conflicts = []
       networks.each do |name, ips|
         ips.each do |ip|
-          @logger.info("Checking if ip '#{ip}' is in use")
+          logger.info("Checking if ip '#{ip}' is in use")
           vm = @client.find_vm_by_ip(ip)
           if vm.nil?
             next
           end
-          @logger.info("Found VM '#{vm.name}' with IP '#{ip}'. Checking if VM belongs to network '#{name}'...")
+          logger.info("Found VM '#{vm.name}' with IP '#{ip}'. Checking if VM belongs to network '#{name}'...")
 
           vm.guest.net.each do |nic|
             if nic.ip_address.include?(ip) && nic.network == name
-              @logger.info("found conflicting vm: #{vm.name}, on network: #{name} with ip: #{ip}")
+              logger.info("found conflicting vm: #{vm.name}, on network: #{name} with ip: #{ip}")
               conflicts << {vm_name: vm.name, network_name: name, ip: ip}
             end
           end
