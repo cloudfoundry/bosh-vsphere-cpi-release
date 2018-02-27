@@ -1,7 +1,7 @@
 require 'rspec'
 require 'integration/spec_helper'
 
-describe '#create_stemcell' do
+describe '#create_stemcell', fake_logger: true do
   subject(:cpi) do
     VSphereCloud::Cloud.new(cpi_options('default_disk_type' => 'thin'))
   end
@@ -10,8 +10,7 @@ describe '#create_stemcell' do
     stemcell = VSphereCloud::Resources::VM.new(
       @stemcell_id,
       @cpi.client.find_vm_by_name(@cpi.datacenter.mob, @stemcell_id),
-      @cpi.client,
-      Logger.new('/dev/null')
+      @cpi.client
     )
     expect(stemcell.system_disk.backing.thin_provisioned).to be(false)
   end
@@ -23,8 +22,7 @@ describe '#create_stemcell' do
         stemcell = VSphereCloud::Resources::VM.new(
           stemcell_id,
           cpi.client.find_vm_by_name(cpi.datacenter.mob, stemcell_id),
-          cpi.client,
-          Logger.new('/dev/null')
+          cpi.client
         )
         expect(stemcell.system_disk.backing.thin_provisioned).to be(true)
       ensure

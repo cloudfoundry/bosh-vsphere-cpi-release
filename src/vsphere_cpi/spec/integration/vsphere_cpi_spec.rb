@@ -5,7 +5,7 @@ require 'yaml'
 require 'fileutils'
 
 module VSphereCloud
-  describe Cloud, external_cpi: true do
+  describe Cloud, external_cpi: true, fake_logger: true do
     before(:each) do
       @workspace_dir = Dir.mktmpdir('vsphere-cloud-spec')
       @config_path = File.join(@workspace_dir, 'vsphere_cpi_config')
@@ -46,11 +46,9 @@ module VSphereCloud
       ephemeral_datastore_pattern = ENV.fetch('BOSH_VSPHERE_CPI_DATASTORE_PATTERN')
       persistent_datastore_pattern = ENV.fetch('BOSH_VSPHERE_CPI_SECOND_DATASTORE')
 
-      logger = Logger.new(StringIO.new(""))
       client = VSphereCloud::VCenterClient.new(
           vcenter_api_uri: URI.parse("https://#{host}/sdk/vimService"),
-          http_client: VSphereCloud::CpiHttpClient.new(logger),
-          logger: logger,
+          http_client: VSphereCloud::CpiHttpClient.new(logger)
       )
       client.login(user, password, 'en')
 

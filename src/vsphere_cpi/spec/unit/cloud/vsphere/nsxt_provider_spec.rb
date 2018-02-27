@@ -1,7 +1,7 @@
 require 'digest'
 require 'spec_helper'
 
-describe VSphereCloud::NSXTProvider do
+describe VSphereCloud::NSXTProvider, fake_logger: true do
   let(:client) { instance_double(NSXT::ApiClient) }
   let(:nsxt_config) { VSphereCloud::NSXTConfig.new('fake-host', 'fake-username', 'fake-password') }
   let(:opaque_nsxt) do
@@ -66,7 +66,6 @@ describe VSphereCloud::NSXTProvider do
     NSXT::NSGroupSimpleExpression.new(:op => 'EQUALS', :resource_type => 'NSXT::LogicalPort',
                                       :target_property => 'id', :value => logical_port_2.id)
   end
-  let(:logger) { Logger.new('/dev/null') }
 
   let(:grouping_obj_svc) do
     NSXT::GroupingObjectsApi.new(client)
@@ -85,7 +84,7 @@ describe VSphereCloud::NSXTProvider do
   end
 
   subject(:nsxt_provider) do
-    described_class.new(nsxt_config, logger).tap do |provider|
+    described_class.new(nsxt_config).tap do |provider|
       provider.instance_variable_set('@client', client)
     end
   end

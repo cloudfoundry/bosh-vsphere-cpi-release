@@ -2,25 +2,23 @@ require 'spec_helper'
 require 'timecop'
 
 module VSphereCloud
-  describe VCenterClient do
+  describe VCenterClient, fake_logger: true do
     include FakeFS::SpecHelpers
 
     subject(:client) do
       described_class.new(
         vcenter_api_uri: vcenter_api_uri,
-        http_client: http_client,
-        logger: logger,
+        http_client: http_client
       )
     end
     let(:vcenter_api_uri) { URI.parse('https://fake-host') }
     let(:fake_service_content) { double('service content', root_folder: double('fake-root-folder')) }
     let(:fake_search_index) { double(:search_index) }
-    let(:logger) { instance_double('Logger') }
     let(:http_client) { instance_double(CpiHttpClient) }
     let(:cloud_searcher) { instance_double('VSphereCloud::CloudSearcher') }
-    before { allow(CloudSearcher).to receive(:new).with(fake_service_content, logger).and_return(cloud_searcher) }
+    before { allow(CloudSearcher).to receive(:new).with(fake_service_content).and_return(cloud_searcher) }
     let(:task_runner) { instance_double(TaskRunner) }
-    before { allow(TaskRunner).to receive(:new).with(cloud_searcher: cloud_searcher, logger: logger).and_return(task_runner) }
+    before { allow(TaskRunner).to receive(:new).with(cloud_searcher: cloud_searcher).and_return(task_runner) }
 
     before do
       fake_instance = double('service instance', content: fake_service_content)
@@ -32,7 +30,7 @@ module VSphereCloud
       it 'creates soap stub' do
         stub_adapter = instance_double(VimSdk::Soap::StubAdapter)
         soap_stub = instance_double(VSphereCloud::SoapStub, create: stub_adapter)
-        expect(SoapStub).to receive(:new).with(vcenter_api_uri, http_client, logger).and_return(soap_stub)
+        expect(SoapStub).to receive(:new).with(vcenter_api_uri, http_client).and_return(soap_stub)
         expect(client.soap_stub).to eq(stub_adapter)
       end
     end
@@ -488,7 +486,6 @@ module VSphereCloud
       before do
         allow(datastore).to receive(:mob).and_return(datastore_mob)
         allow(datastore_mob).to receive(:browser).and_return(datastore_browser)
-        allow(logger).to receive(:debug)
       end
 
       context 'disk exists' do
@@ -542,7 +539,6 @@ module VSphereCloud
       before do
         allow(environment_browser).to receive(:datastore_browser).and_return(datastore_browser)
         allow(vm_mob).to receive(:environment_browser).and_return(environment_browser)
-        allow(logger).to receive(:debug)
       end
 
       context 'path exists' do
@@ -583,7 +579,6 @@ module VSphereCloud
       before do
         allow(vm).to receive(:disk_by_cid).with(disk.cid).and_return(vm_disk)
         allow(vm).to receive(:get_vapp_property_by_key).with('disk-key').and_return(nil)
-        allow(logger).to receive(:debug)
       end
       it 'reconfigures the vm' do
         expect(client).to receive(:reconfig_vm)
@@ -606,7 +601,6 @@ module VSphereCloud
       let(:vm_disk) { instance_double(VimSdk::Vim::Vm::Device::VirtualDisk, key: 'disk-key') }
       before do
         allow(vm).to receive(:get_vapp_property_by_key).with(vm_disk.key).and_return('something')
-        allow(logger).to receive(:debug)
       end
       it 'reconfigures the vm' do
         expect(client).to receive(:reconfig_vm)
@@ -649,7 +643,6 @@ module VSphereCloud
 
       context 'when called on existing key' do
         before do
-          allow(logger).to receive(:warn)
           error = VimSdk::SoapError.new("message", VimSdk::Vim::Fault::DuplicateName.new)
           allow(custom_fields_manager).to receive(:add_field_definition).and_raise(error)
         end

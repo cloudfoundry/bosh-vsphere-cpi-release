@@ -1,11 +1,10 @@
 require 'spec_helper'
 
 module VSphereCloud
-  describe LeaseObtainer do
+  describe LeaseObtainer, fake_logger: true do
     describe '#obtain' do
-      subject(:lease_obtainer) { described_class.new(cloud_searcher, logger) }
+      subject(:lease_obtainer) { described_class.new(cloud_searcher) }
       let(:cloud_searcher) { instance_double('VSphereCloud::CloudSearcher') }
-      let(:logger) { instance_double(Logger, info: nil) }
 
       let(:resource_pool) { instance_double('VSphereCloud::Resources::ResourcePool', mob: resource_pool_mob) }
       let(:resource_pool_mob) { instance_double('VimSdk::Vim::ResourcePool') }

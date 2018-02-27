@@ -1,7 +1,7 @@
 require 'spec_helper'
 
 module VSphereCloud
-  describe VCenterClient do
+  describe VCenterClient, fake_logger: true do
     before do
       @client, @datacenter, @datastore, @disk_folder = setup
     end
@@ -155,19 +155,16 @@ module VSphereCloud
       resource_pool_name = ENV.fetch('BOSH_VSPHERE_CPI_RESOURCE_POOL')
 
       cluster_configs = {cluster_name => ClusterConfig.new(cluster_name, {'resource_pool' => resource_pool_name})}
-      logger = Logger.new(StringIO.new(''))
 
       client = VSphereCloud::VCenterClient.new(
         vcenter_api_uri: URI.parse("https://#{host}/sdk/vimService"),
-        http_client: VSphereCloud::CpiHttpClient.new(logger),
-        logger: logger,
+        http_client: VSphereCloud::CpiHttpClient.new(logger)
       )
       client.login(user, password, 'en')
 
       cluster_provider = Resources::ClusterProvider.new(
         datacenter_name: datacenter_name,
-        client: client,
-        logger: logger
+        client: client
       )
       datacenter = Resources::Datacenter.new(
         client: client,
@@ -179,8 +176,7 @@ module VSphereCloud
         ephemeral_pattern: ephemeral_datastore_pattern,
         persistent_pattern: persistent_datastore_pattern,
         clusters: cluster_configs,
-        cluster_provider: cluster_provider,
-        logger: logger
+        cluster_provider: cluster_provider
       )
 
       regexp = Regexp.new(persistent_datastore_pattern)

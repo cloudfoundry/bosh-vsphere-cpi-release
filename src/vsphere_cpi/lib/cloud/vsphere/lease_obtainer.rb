@@ -1,17 +1,19 @@
+require 'cloud/vsphere/logger'
+
 module VSphereCloud
   class LeaseObtainer
     include VimSdk
+    extend Logger
 
-    def initialize(cloud_searcher, logger)
+    def initialize(cloud_searcher)
       @cloud_searcher = cloud_searcher
-      @logger = logger
     end
 
     def obtain(resource_pool, import_spec, template_folder)
-      @logger.info('Importing VApp')
+      logger.info('Importing VApp')
       nfc_lease = resource_pool.mob.import_vapp(import_spec, template_folder.mob, nil)
 
-      @logger.info('Waiting for NFC lease to become ready')
+      logger.info('Waiting for NFC lease to become ready')
       state = wait_for_nfc_lease(nfc_lease)
 
       if state == Vim::HttpNfcLease::State::ERROR

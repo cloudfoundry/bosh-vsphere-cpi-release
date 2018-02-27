@@ -8,9 +8,8 @@ module VSphereCloud
 
     PC = Vmodl::Query::PropertyCollector
 
-    def initialize(service_content, logger)
+    def initialize(service_content)
       @service_content = service_content
-      @logger = logger
     end
 
     def get_property(obj, type, property, options = {})

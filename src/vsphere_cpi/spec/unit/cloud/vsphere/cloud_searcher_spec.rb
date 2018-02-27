@@ -2,10 +2,9 @@ require 'spec_helper'
 # require 'cloud/vsphere/cloud_searcher'
 
 describe VSphereCloud::CloudSearcher do
-  subject(:cloud_searcher) { VSphereCloud::CloudSearcher.new(service_content, logger) }
+  subject(:cloud_searcher) { VSphereCloud::CloudSearcher.new(service_content) }
 
   let(:service_content) { double('service content', root_folder: double('fake-root-folder')) }
-  let(:logger) { instance_double('Logger') }
 
   let(:property_collector) { instance_double('VimSdk::Vmodl::Query::PropertyCollector') }
 

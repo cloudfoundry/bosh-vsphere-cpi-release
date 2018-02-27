@@ -1,10 +1,12 @@
+require 'cloud/vsphere/logger'
+
 module VSphereCloud
   class FileProvider
+    extend Logger
 
-    def initialize(http_client:, vcenter_host:, logger:, retryer: nil)
+    def initialize(http_client:, vcenter_host:, retryer: nil)
       @vcenter_host = vcenter_host
       @http_client = http_client
-      @logger = logger
       @retryer = retryer || Retryer.new
     end
 
@@ -12,14 +14,14 @@ module VSphereCloud
       url ="https://#{@vcenter_host}/folder/#{path}?dcPath=#{URI.escape(datacenter_name)}" +
         "&dsName=#{URI.escape(datastore_name)}"
 
-      @logger.info("Fetching file from #{url}...")
+      logger.info("Fetching file from #{url}...")
       response = do_request(request_type: 'GET', url: url, allow_not_found: true)
 
       if response.nil?
-        @logger.info("Could not find file at #{url}.")
+        logger.info("Could not find file at #{url}.")
         nil
       else
-        @logger.info('Successfully downloaded file.')
+        logger.info('Successfully downloaded file.')
         response.body
       end
     end
@@ -27,18 +29,18 @@ module VSphereCloud
     def upload_file_to_datastore(datacenter_name, datastore_name, path, contents)
       url = "https://#{@vcenter_host}/folder/#{path}?dcPath=#{URI.escape(datacenter_name)}" +
         "&dsName=#{URI.escape(datastore_name)}"
-      @logger.info("Uploading file to #{url}...")
+      logger.info("Uploading file to #{url}...")
 
       do_request(request_type: 'PUT', url: url, body: contents,
         headers: { 'Content-Type' => 'application/octet-stream' })
-      @logger.info('Successfully uploaded file.')
+      logger.info('Successfully uploaded file.')
     end
 
     def upload_file_to_url(url, body, headers)
-      @logger.info("Uploading file to #{url}...")
+      logger.info("Uploading file to #{url}...")
 
       do_request(request_type: 'POST', url: url, body: body, headers: headers)
-      @logger.info('Successfully uploaded file.')
+      logger.info('Successfully uploaded file.')
     end
 
     private
@@ -75,7 +77,7 @@ module VSphereCloud
           [nil, nil]
         elsif resp.code >= 400
           err = "Could not transfer file '#{url}', received status code '#{resp.code}'"
-          @logger.warn(err)
+          logger.warn(err)
           [nil, err]
         else
           [resp, nil]

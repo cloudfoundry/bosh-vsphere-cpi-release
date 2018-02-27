@@ -22,6 +22,12 @@ class VSphereSpecConfig
   attr_accessor :logger, :uuid
 end
 
+RSpec.shared_context 'with a fake logger' do
+  require 'cloud/vsphere/logger'
+  before { VSphereCloud::Logger.logger = logger }
+  let(:logger) { Logger.new(StringIO.new('')) }
+end
+
 RSpec.configure do |config|
   config.include Support
 
@@ -32,4 +38,6 @@ RSpec.configure do |config|
   config.before do
     expect(RUBY_VERSION).to eq(PROJECT_RUBY_VERSION)
   end
+
+  config.include_context 'with a fake logger', fake_logger: true
 end

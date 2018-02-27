@@ -1,9 +1,12 @@
+require 'cloud/vsphere/logger'
+
 module VSphereCloud
   class VmCreator
-    def initialize(client:, cloud_searcher:, logger:, cpi:, datacenter:, agent_env:, ip_conflict_detector:, default_disk_type:, enable_auto_anti_affinity_drs_rules:, stemcell:, upgrade_hw_version:)
+    extend Logger
+
+    def initialize(client:, cloud_searcher:, cpi:, datacenter:, agent_env:, ip_conflict_detector:, default_disk_type:, enable_auto_anti_affinity_drs_rules:, stemcell:, upgrade_hw_version:)
       @client = client
       @cloud_searcher = cloud_searcher
-      @logger = logger
       @cpi = cpi
       @datacenter = datacenter
       @agent_env = agent_env
@@ -16,14 +19,14 @@ module VSphereCloud
 
     def create(vm_config)
       cluster = vm_config.cluster
-      storage = StoragePicker.choose_ephemeral_storage(vm_config.ephemeral_datastore_name, vm_config.cluster.accessible_datastores, vm_config.vm_type, @logger)
+      storage = StoragePicker.choose_ephemeral_storage(vm_config.ephemeral_datastore_name, vm_config.cluster.accessible_datastores, vm_config.vm_type)
 
       datastore, datastore_cluster = storage.is_a?(Resources::StoragePod) ? [nil, storage] : [storage, nil]
 
       @ip_conflict_detector.ensure_no_conflicts(vm_config.vsphere_networks)
 
-      @logger.info("Creating vm: #{vm_config.name} on #{cluster.mob} stored in #{datastore.mob}") if datastore
-      @logger.info("Creating vm: #{vm_config.name} on #{cluster.mob} stored in datastore cluster: #{datastore_cluster.name}") if datastore_cluster
+      logger.info("Creating vm: #{vm_config.name} on #{cluster.mob} stored in #{datastore.mob}") if datastore
+      logger.info("Creating vm: #{vm_config.name} on #{cluster.mob} stored in datastore cluster: #{datastore_cluster.name}") if datastore_cluster
 
       # Replicate stemcell stage
       replicated_stemcell_vm_mob = @stemcell.replicate(@datacenter, cluster, datastore, datastore_cluster)
@@ -37,7 +40,7 @@ module VSphereCloud
       if datastore_cluster
         datastore = Resources::Datastore.build_from_client(@client, replicated_stemcell_properties['datastore']).first
       end
-      replicated_stemcell_vm = Resources::VM.new(vm_config.stemcell_cid, replicated_stemcell_vm_mob, @client, @logger)
+      replicated_stemcell_vm = Resources::VM.new(vm_config.stemcell_cid, replicated_stemcell_vm_mob, @client)
       snapshot = replicated_stemcell_properties['snapshot']
 
       # Create device_change config
@@ -91,7 +94,7 @@ module VSphereCloud
       end
 
       # Clone VM
-      @logger.info("Cloning vm: #{replicated_stemcell_vm} to #{vm_config.name}")
+      logger.info("Cloning vm: #{replicated_stemcell_vm} to #{vm_config.name}")
       created_vm_mob = @client.wait_for_task do
         @cpi.clone_vm(replicated_stemcell_vm.mob,
           vm_config.name,
@@ -104,7 +107,7 @@ module VSphereCloud
           datastore_cluster: datastore_cluster
         )
       end
-      created_vm = Resources::VM.new(vm_config.name, created_vm_mob, @client, @logger)
+      created_vm = Resources::VM.new(vm_config.name, created_vm_mob, @client)
 
       # Set agent env settings
       begin
@@ -136,15 +139,15 @@ module VSphereCloud
         end
 
         # Power on VM
-        @logger.info("Powering on VM: #{created_vm}")
+        logger.info("Powering on VM: #{created_vm}")
         created_vm.power_on
       rescue => e
         e.vm_cid = vm_config.name if e.instance_of?(Cloud::NetworkException)
-        @logger.info("#{e} - #{e.backtrace.join("\n")}")
+        logger.info("#{e} - #{e.backtrace.join("\n")}")
         begin
           created_vm.delete if created_vm
         rescue => ex
-          @logger.info("Failed to delete vm '#{vm_config.name}' with message:  #{ex.inspect}")
+          logger.info("Failed to delete vm '#{vm_config.name}' with message:  #{ex.inspect}")
         end
         raise e
       end
@@ -171,8 +174,7 @@ module VSphereCloud
         drs_rule_name,
         @client,
         @cloud_searcher,
-        cluster.mob,
-        @logger
+        cluster.mob
       )
       drs_rule.add_vm(vm_mob)
     end
