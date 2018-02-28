@@ -54,9 +54,7 @@ require 'cloud/vsphere/sdk_helpers/log_filter'
 require 'cloud/vsphere/sdk_helpers/retryable_stub_adapter'
 require 'cloud/vsphere/sdk_helpers/retry_judge'
 require 'cloud/vsphere/helpers/xml'
-
-require 'nsxt/client'
-require 'nsxt/resources'
+require 'nsxt/nsxt_client'
 
 module Bosh
   module Clouds

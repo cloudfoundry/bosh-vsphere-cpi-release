@@ -1,0 +1,71 @@
+require 'fileutils'
+
+# Remove did_you_mean as it's very annoying in a Rakefile
+DidYouMean::Correctable.send(:remove_method, :to_s) if defined? DidYouMean
+
+# Colorize error messages when the trace output is a TTY
+module ColorizeExceptionMessageDetails
+  def display_exception_message_details(ex)
+    return super unless (options.trace_output || $stderr)&.isatty
+    if ex.instance_of?(RuntimeError)
+      trace "\e[31;01m#{ex.message}\e[0m"
+    else
+      trace "\e[31;01m#{ex.class.name}: \e[0m#{ex.message}"
+    end
+  end
+end
+Rake::Application.send(:prepend, ColorizeExceptionMessageDetails)
+
+desc 'Create swagger client from swagger spec'
+task :swagger do
+
+  rm_rf(["./lib/nsxt/*"])
+
+  sh [
+    "swagger-codegen generate",
+    "-i ./data/nsx_api.json",
+    "-l ruby",
+    "-o ./lib/nsxt",
+    "-c ./data/config.json -t ./data/swagger-nsxt-template"
+  ].join(' ')
+
+  rm_rf (["./lib/nsxt/.swagger-codegen-ignore",
+    "./lib/nsxt/.swagger-codegen",
+    "./lib/nsxt/README.md",
+    "./lib/nsxt/.rspec",
+    "./lib/nsxt/.gitignore",
+    "./lib/nsxt/Gemfile",
+    "./lib/nsxt/git_push.sh",
+    "./lib/nsxt/docs",
+    "./lib/nsxt/spec",
+    "./lib/nsxt/nsxt_client.gemspec",
+    "./lib/nsxt/Rakefile",
+    "./lib/nsxt/nsxt_client"
+  ])
+
+  mv("./lib/nsxt/lib/nsxt_client", "./lib/nsxt/nsxt_client")
+
+  mv("./lib/nsxt/lib/nsxt_client.rb", "./lib/nsxt/nsxt_client.rb")
+
+  rm_rf(["./lib/nsxt/lib"])
+
+  # Prepend load.unshift line
+  # read the file
+  f = File.open("lib/nsxt/nsxt_client.rb", "r+")
+  lines = f.readlines
+  f.close
+  # Add line
+  str = "$LOAD_PATH.unshift(File.join(File.dirname(__FILE__), '..', 'nsxt'))\n"
+  lines = [str] + lines
+  output = File.new("lib/nsxt/nsxt_client.rb", "w")
+  lines.each { |line| output.write line }
+  output.close
+
+  # sh 'echo "\$LOAD_PATH.unshift'+
+  #    '(File.join(File.dirname(__FILE__), \'..\', \'nsxt\'))\n'+
+  #    '$(cat ./lib/nsxt/nsxt_client.rb)"'+
+  #    ' >  lib/nsxt/nsxt_client.rb'
+
+end
+
+task default: :swagger

@@ -11,7 +11,20 @@ describe 'CPI', nsx_transformers: true do
     }))
   end
   let(:nsxt) do
-    NSXT::Client.new(@nsxt_host,@nsxt_username, @nsxt_password)
+    configuration = NSXT::Configuration.new
+    configuration.host = @nsxt_host
+    configuration.username = @nsxt_username
+    configuration.password = @nsxt_password
+    configuration.client_side_validation = false
+
+    if ENV['BOSH_NSXT_CA_CERT_FILE']
+      configuration.ssl_ca_cert = ENV['BOSH_NSXT_CA_CERT_FILE']
+    end
+    if ENV['NSXT_SKIP_SSL_VERIFY']
+      configuration.verify_ssl = false
+      configuration.verify_ssl_host = false
+    end
+    NSXT::ApiClient.new(configuration)
   end
   let(:nsgroup_name_1) { "BOSH-CPI-test-#{SecureRandom.uuid}" }
   let(:nsgroup_name_2) { "BOSH-CPI-test-#{SecureRandom.uuid}" }
@@ -82,9 +95,7 @@ describe 'CPI', nsx_transformers: true do
         simple_vm_lifecycle(cpi, '', vm_type, network_spec) do |vm_id|
           verify_ports(vm_id) do |lport|
             expect(lport).not_to be_nil
-
-            expected_context = { 'resource_type' => 'VifAttachmentContext', 'vif_type' => 'PARENT' }
-            expect(lport.attachment['context']).to eq(expected_context)
+            expect(lport.attachment.context.resource_type).to eq('VifAttachmentContext')
           end
         end
       end
@@ -104,7 +115,7 @@ describe 'CPI', nsx_transformers: true do
             verify_ports(vm_id) do |lport|
               expect(lport).not_to be_nil
 
-              expect(lport.attachment['context']).to be_nil
+              expect(lport.attachment.context).to be_nil
             end
           end
         end
@@ -116,7 +127,7 @@ describe 'CPI', nsx_transformers: true do
         simple_vm_lifecycle(cpi, '', vm_type, network_spec) do |vm_id|
           verify_ports(vm_id) do |lport|
             expect(lport).not_to be_nil
-            expect(lport.attachment['context']).to be_nil
+            expect(lport.attachment.context).to be_nil
           end
         end
       end
@@ -146,8 +157,8 @@ describe 'CPI', nsx_transformers: true do
         before do
           expect(nsgroup_1).to_not be_nil
           expect(nsgroup_2).to_not be_nil
-
-          nsgroups = nsxt.nsgroups.select do |nsgroup|
+          grouping_object_svc = NSXT::GroupingObjectsApi.new(nsxt)
+          nsgroups = grouping_object_svc.list_ns_groups.results.select do |nsgroup|
             [nsgroup_name_1, nsgroup_name_2].include?(nsgroup.display_name)
           end
           expect(nsgroups.length).to eq(2)
@@ -172,12 +183,13 @@ describe 'CPI', nsx_transformers: true do
           it 'does NOT add VM to NSGroups' do
             simple_vm_lifecycle(cpi, @vlan, vm_type) do |vm_id|
               retryer do
-                nsxt_vms = nsxt.virtual_machines(display_name: vm_id)
+                fabric_svc = NSXT::FabricApi.new(nsxt)
+                nsxt_vms = fabric_svc.list_virtual_machines(:display_name => vm_id).results
                 raise VSphereCloud::VirtualMachineNotFound.new(vm_id) if nsxt_vms.empty?
                 raise VSphereCloud::MultipleVirtualMachinesFound.new(vm_id, nsxt_vms.length) if nsxt_vms.length > 1
 
                 external_id = nsxt_vms.first.external_id
-                vifs = nsxt.vifs(owner_vm_id: external_id)
+                vifs = fabric_svc.list_vifs(:owner_vm_id => external_id).results
                 expect(vifs.length).to eq(1)
                 expect(vifs.first.lport_attachment_id).to be_nil
               end
@@ -215,14 +227,15 @@ describe 'CPI', nsx_transformers: true do
         simple_vm_lifecycle(cpi, '', vm_type, network_spec) do |vm_id|
           verify_ports(vm_id) do |lport|
             expect(lport).not_to be_nil
-
             lport_ids << lport.id
           end
         end
         expect(lport_ids.length).to eq(2)
 
         lport_ids.each do |id|
-          nsgroups = nsxt.nsgroups.select do |nsgroup|
+          grouping_object_svc = NSXT::GroupingObjectsApi.new(nsxt)
+          nsgroups = grouping_object_svc.list_ns_groups.results.select do |nsgroup|
+            next unless nsgroup.members
             nsgroup.members.find do |member|
               member.target_type == 'LogicalPort' && member.target_property == 'id' && member.value == id
             end
@@ -242,9 +255,8 @@ describe 'CPI', nsx_transformers: true do
         simple_vm_lifecycle(cpi, '', vm_type, network_spec) do |vm_id|
           cpi.set_vm_metadata(vm_id, 'id' => bosh_id)
           verify_ports(vm_id) do |logical_port|
-            expect(logical_port.tags).to include(
-              { 'scope' => 'bosh/id', 'tag' => Digest::SHA1.hexdigest(bosh_id) }
-            )
+            expect(logical_port.tags.first.scope).to eq('bosh/id')
+            expect(logical_port.tags.first.tag).to eq(Digest::SHA1.hexdigest(bosh_id))
           end
         end
       end
@@ -253,20 +265,22 @@ describe 'CPI', nsx_transformers: true do
 
   def verify_ports(vm_id, expected_vif_number = 2)
     retryer do
-      nsxt_vms = nsxt.virtual_machines(display_name: vm_id)
+      fabric_svc = NSXT::FabricApi.new(nsxt)
+      nsxt_vms = fabric_svc.list_virtual_machines(:display_name => vm_id).results
       raise VSphereCloud::VirtualMachineNotFound.new(vm_id) if nsxt_vms.empty?
       raise VSphereCloud::MultipleVirtualMachinesFound.new(vm_id, nsxt_vms.length) if nsxt_vms.length > 1
 
       expect(nsxt_vms.length).to eq(1)
       expect(nsxt_vms.first.external_id).not_to be_nil
 
-      vifs = nsxt.vifs(owner_vm_id: nsxt_vms.first.external_id)
+      vifs = fabric_svc.list_vifs(:owner_vm_id => nsxt_vms.first.external_id).results
       expect(vifs.length).to eq(expected_vif_number)
       expect(vifs.map(&:lport_attachment_id).compact.length).to eq(expected_vif_number)
 
+      logical_switching_svc = NSXT::LogicalSwitchingApi.new(nsxt)
       vifs.each do |vif|
-        lport = nsxt.logical_ports(attachment_id: vif.lport_attachment_id).first
-        yield lport if block_given?
+        lports = logical_switching_svc.list_logical_ports(attachment_id: vif.lport_attachment_id).results.first
+        yield lports if block_given?
       end
     end
   end
@@ -276,19 +290,20 @@ describe 'CPI', nsx_transformers: true do
   end
 
   def create_nsgroup(display_name)
-    json = nsxt_client.post('ns-groups', body: {
-      display_name: display_name
-    }).body
-    NSXT::NSGroup.new(nsxt_client,json['id'], json['display_name'], json['members'])
+    nsgrp = NSXT::NSGroup.new(:display_name => display_name)
+    grouping_object_svc = NSXT::GroupingObjectsApi.new(nsxt)
+    grouping_object_svc.create_ns_group(nsgrp)
   end
 
   def delete_nsgroup(nsgroup)
-    nsxt_client.delete("ns-groups/#{nsgroup.id}")
+    grouping_object_svc = NSXT::GroupingObjectsApi.new(nsxt)
+    grouping_object_svc.delete_ns_group(nsgroup.id)
   end
 
   def nsgroup_effective_logical_port_member_ids(nsgroup)
-    json = nsxt_client.get("ns-groups/#{nsgroup.id}/effective-logical-port-members").body
-    json['results'].map { |member| member['target_id'] }
+    grouping_object_svc = NSXT::GroupingObjectsApi.new(nsxt)
+    results = grouping_object_svc.get_effective_logical_port_members(nsgroup.id).results
+    results.map { |member| member.target_id }
   end
 
   def retryer
