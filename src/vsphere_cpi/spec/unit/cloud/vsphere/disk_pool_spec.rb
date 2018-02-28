@@ -5,7 +5,7 @@ module VSphereCloud
     let(:datacenter_mob)  { instance_double('VimSdk::Vim::Datacenter') }
     let(:datacenter) { double('Dataceneter', mob: datacenter_mob)}
     let(:datastores) {['ds-1', 'ds-2', 'clusters' => [{ 'sp-1' => {} }]]}
-    let(:disk_pool) { DiskPool.new(datacenter, 'thin', datastores) }
+    let(:disk_pool) { DiskPool.new(datacenter, datastores) }
 
     describe '#datastore_names' do
       context 'with datastores' do

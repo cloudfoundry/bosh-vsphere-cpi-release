@@ -16,6 +16,8 @@ module VSphereCloud
         cluster_provider: cluster_provider
       )
     end
+    let(:datacenter) { double(name: 'fake_datacenter') }
+    let(:vm_type) { VmType.new(datacenter, cloud_properties)}
     let(:cluster_picker) { ClusterPicker.new(0, 0) }
     let(:cluster_provider) { nil }
 
@@ -134,7 +136,8 @@ module VSphereCloud
     end
 
     describe '#ephemeral_disk_size' do
-      let(:input) { { vm_type: { 'disk' => 1234 } } }
+      let(:cloud_properties) { { 'disk' => 1234 } }
+      let(:input) { { vm_type: vm_type } }
       it 'returns the provided disk size' do
         expect(vm_config.ephemeral_disk_size).to eq(1234)
       end
@@ -174,20 +177,23 @@ module VSphereCloud
       let(:global_clusters) { [fake_cluster] }
 
       context 'when multiple clusters are specified within vm_type' do
+        let(:cloud_properties) {
+          {
+            'datacenters' => [
+              {
+                'name' => 'datacenter-1',
+                'clusters' => [
+                  { 'fake-cluster-name' => {} },
+                  { 'fake-cluster-name-2' => {} }
+                ]
+              }
+            ],
+            'ram' => ram,
+          }
+        }
         let(:input) do
           {
-            vm_type: {
-              'datacenters' => [
-                {
-                  'name' => 'datacenter-1',
-                  'clusters' => [
-                    { 'fake-cluster-name' => {} },
-                    { 'fake-cluster-name-2' => {} }
-                  ]
-                }
-              ],
-              'ram' => ram,
-            },
+            vm_type: vm_type,
             global_clusters: global_clusters,
           }
         end
@@ -220,12 +226,15 @@ module VSphereCloud
           allow(larger_datastore_mob).to receive_message_chain('summary.maintenance_mode').and_return("normal")
           allow(smaller_datastore_mob).to receive_message_chain('summary.maintenance_mode').and_return("normal")
         end
+        let(:cloud_properties) {
+          {
+            'ram' => 1024,
+            'disk' => 4096
+          }
+        }
         let(:input) do
           {
-            vm_type: {
-              'ram' => 1024,
-              'disk' => 4096
-            },
+            vm_type: vm_type,
             disk_configurations: disk_configurations,
             global_clusters: global_clusters,
           }
@@ -286,12 +295,15 @@ module VSphereCloud
         end
 
         context 'when a disk configuration includes target_datastore_pattern' do
+          let(:cloud_properties){
+            {
+              'ram' => 1024,
+              'disk' => 4096
+            }
+          }
           let(:input) do
             {
-              vm_type: {
-                'ram' => 1024,
-                'disk' => 4096
-              },
+              vm_type: vm_type,
               disk_configurations: disk_configurations,
               global_clusters: global_clusters,
             }
@@ -320,11 +332,10 @@ module VSphereCloud
         allow(target_ds_mob).to receive_message_chain('summary.maintenance_mode').and_return("normal")
         allow(other_ds_mob).to receive_message_chain('summary.maintenance_mode').and_return("normal")
       end
+      let(:cloud_properties) { { 'ram' => 512 } }
       let(:input) do
         {
-          vm_type: {
-            'ram' => 512,
-          },
+          vm_type: vm_type,
           disk_configurations: disk_configurations,
           global_clusters: global_clusters,
         }
@@ -409,27 +420,26 @@ module VSphereCloud
 
       context 'when drs_rules are specified under cluster' do
         let(:ram) { 512 }
-        let(:input) do
+        let(:cloud_properties) {
           {
-            vm_type: {
-              'ram' => ram,
-              'datacenters' => [
-                'clusters' => [
-                  {
-                    'fake-cluster-name' => {
-                      'drs_rules' => [
-                        { 'name' => 'fake-rule', 'type' => 'fake-type' }
-                      ]
-                    }
-                  },
-                  {
-                    'fake-cluster-name-2' => {}
+            'ram' => ram,
+            'datacenters' => [
+              'clusters' => [
+                {
+                  'fake-cluster-name' => {
+                    'drs_rules' => [
+                      { 'name' => 'fake-rule', 'type' => 'fake-type' }
+                    ]
                   }
-                ]
+                },
+                {
+                  'fake-cluster-name-2' => {}
+                }
               ]
-            }
+            ]
           }
-        end
+        }
+        let(:input) { { vm_type: vm_type } }
 
         it 'returns the provided drs_rule' do
           expect(VSphereCloud::ClusterConfig).to receive(:new).with('fake-cluster-name', {'drs_rules' =>[{'name' => 'fake-rule', 'type' => 'fake-type'}]}).and_return(cluster_config)
@@ -454,22 +464,21 @@ module VSphereCloud
       end
 
       context 'when drs_rules are not provided' do
-        let(:input) do
+        let(:cloud_properties) {
           {
-            vm_type: {
-              'ram' => 512,
-              'datacenters' => [
-                'clusters' => [
-                  {
-                    'fake-cluster-name' => {
-                      'drs_rules' => []
-                    }
+            'ram' => 512,
+            'datacenters' => [
+              'clusters' => [
+                {
+                  'fake-cluster-name' => {
+                    'drs_rules' => []
                   }
-                ]
+                }
               ]
-            }
+            ]
           }
-        end
+        }
+        let(:input) { { vm_type: vm_type } }
 
         it 'returns nil' do
           expect(VSphereCloud::ClusterConfig).to receive(:new).with('fake-cluster-name', {'drs_rules' =>[]}).and_return(cluster_config)
@@ -492,20 +501,19 @@ module VSphereCloud
       end
 
       context 'when drs_rules are not provided' do
-        let(:input) do
+        let(:cloud_properties) {
           {
-            vm_type: {
-              'ram' => 512,
-              'datacenters' => [
-                'clusters' => [
-                  {
-                    'fake-cluster-name' => {}
-                  }
-                ]
+            'ram' => 512,
+            'datacenters' => [
+              'clusters' => [
+                {
+                  'fake-cluster-name' => {}
+                }
               ]
-            }
+            ]
           }
-        end
+        }
+        let(:input) { { vm_type: vm_type } }
 
         it 'returns nil' do
           expect(VSphereCloud::ClusterConfig).to receive(:new).with('fake-cluster-name', {}).and_return(cluster_config)
@@ -530,7 +538,8 @@ module VSphereCloud
 
     describe '#config_spec_params' do
       context 'when number of CPUs is provided' do
-        let(:input) { { vm_type: { 'cpu' => 2 } } }
+        let(:cloud_properties){ { 'cpu' => 2 } }
+        let(:input) { { vm_type: vm_type } }
         let(:output) { { num_cpus: 2 } }
 
         it 'maps to num_cpus' do
@@ -539,7 +548,8 @@ module VSphereCloud
       end
 
       context 'when memory in MB is provided' do
-        let(:input) { { vm_type: { 'ram' => 4096 } } }
+        let(:cloud_properties){ { 'ram' => 4096 } }
+        let(:input) { { vm_type: vm_type } }
         let(:output) { { memory_mb: 4096 } }
 
         it 'maps to memory_mb' do
@@ -548,7 +558,9 @@ module VSphereCloud
       end
 
       context 'when nested_hardware_virtualization is true' do
-        let(:input) { { vm_type: { 'nested_hardware_virtualization' => true } } }
+        let(:cloud_properties) { { 'nested_hardware_virtualization' => true } }
+        let(:input) { { vm_type: vm_type } }
+
         let(:output) { { nested_hv_enabled: true } }
 
         it 'maps to num_cpus' do
@@ -557,7 +569,8 @@ module VSphereCloud
       end
 
       context 'when nested_hardware_virtualization is false' do
-        let(:input) { { vm_type: { 'nested_hardware_virtualization' => false } } }
+        let(:cloud_properties) { { 'nested_hardware_virtualization' => false } }
+        let(:input) { { vm_type: vm_type } }
         let(:output) { {} }
 
         it 'does not set any value in the config spec params' do
@@ -566,7 +579,8 @@ module VSphereCloud
       end
 
       context 'when cpu_hot_add_enabled is true' do
-        let(:input) { { vm_type: { 'cpu_hot_add_enabled' => true } } }
+        let(:cloud_properties) { { 'cpu_hot_add_enabled' => true } }
+        let(:input) { { vm_type: vm_type } }
         let(:output) { { cpu_hot_add_enabled: true } }
 
         it 'sets it to true' do
@@ -575,7 +589,8 @@ module VSphereCloud
       end
 
       context 'when memory_hot_add_enabled is true' do
-        let(:input) { { vm_type: { 'memory_hot_add_enabled' => true } } }
+        let(:cloud_properties) { { 'memory_hot_add_enabled' => true } }
+        let(:input) { { vm_type: vm_type } }
         let(:output) { { memory_hot_add_enabled: true }  }
 
         it 'sets it to true' do
@@ -614,19 +629,18 @@ module VSphereCloud
       end
 
       context 'when a cluster is specified but no DRS rules are specified' do
-        let(:input) do
+        let(:cloud_properties) {
           {
-            vm_type: {
-              'datacenters' => [
-                'clusters' => [
-                  {
-                    'fake-cluster-name' => {}
-                  }
-                ]
+            'datacenters' => [
+              'clusters' => [
+                {
+                  'fake-cluster-name' => {}
+                }
               ]
-            }
+            ]
           }
-        end
+        }
+        let(:input) { { vm_type: vm_type } }
 
         it 'validation passes' do
           expect{
@@ -636,24 +650,24 @@ module VSphereCloud
       end
 
       context 'when several DRS rules are specified in cloud properties' do
-        let(:input) do
+        let(:cloud_properties) {
           {
-            vm_type: {
-              'datacenters' => [
-                'clusters' => [
-                  {
-                    'fake-cluster-name' => {
-                      'drs_rules' => [
-                        { 'name' => 'fake-rule-1', 'type' => drs_rule_type },
-                        { 'name' => 'fake-rule-2', 'type' => drs_rule_type }
-                      ]
-                    }
+            'datacenters' => [
+              'clusters' => [
+                {
+                  'fake-cluster-name' => {
+                    'drs_rules' => [
+                      { 'name' => 'fake-rule-1', 'type' => drs_rule_type },
+                      { 'name' => 'fake-rule-2', 'type' => drs_rule_type }
+                    ]
                   }
-                ]
+                }
               ]
-            }
+            ]
           }
-        end
+        }
+        let(:input) { { vm_type: vm_type } }
+
         let(:drs_rule_type) { 'separate_vms' }
 
         it 'raises an error' do
@@ -664,23 +678,22 @@ module VSphereCloud
       end
 
       context 'when one DRS rule is specified' do
-        let(:input) do
+        let(:cloud_properties) {
           {
-            vm_type: {
-              'datacenters' => [
-                'clusters' => [
-                  {
-                    'fake-cluster-name' => {
-                      'drs_rules' => [
-                        { 'name' => 'fake-rule', 'type' => drs_rule_type}
-                      ]
-                    }
+            'datacenters' => [
+              'clusters' => [
+                {
+                  'fake-cluster-name' => {
+                    'drs_rules' => [
+                      { 'name' => 'fake-rule', 'type' => drs_rule_type}
+                    ]
                   }
-                ]
+                }
               ]
-            }
+            ]
           }
-        end
+        }
+        let(:input) { { vm_type: vm_type } }
 
         context 'when DRS rule type is separate_vms' do
           let(:drs_rule_type) { 'separate_vms' }
@@ -706,15 +719,14 @@ module VSphereCloud
 
     describe '#vmx_options' do
       context 'vmx_options are specified' do
-        let(:input) do
+        let(:cloud_properties){
           {
-            vm_type: {
-              'vmx_options' => {
-                'sched.mem.maxmemctl' => '0'
-              }
+            'vmx_options' => {
+              'sched.mem.maxmemctl' => '0'
             }
           }
-        end
+        }
+        let(:input) { { vm_type: vm_type } }
 
         it 'should return the vmx_options' do
           expect(vm_config.vmx_options).to eq({ 'sched.mem.maxmemctl' => '0' })
@@ -722,71 +734,14 @@ module VSphereCloud
       end
 
       context 'vmx_options are NOT specified' do
-        let(:input) do
-          {
-            vm_type: {}
-          }
-        end
+        let(:cloud_properties) { {} }
+        let(:input) { { vm_type: vm_type } }
 
         it 'should return empty hash' do
           expect(vm_config.vmx_options).to eq({})
         end
       end
 
-    end
-
-    describe '#datastore_clusters' do
-      context 'datastore_clusters are NOT specified' do
-        let(:input) do
-          {
-            vm_type: {
-              'datastores' => ['fake-datastore']
-            }
-          }
-        end
-        it 'should return empty array' do
-          expect(vm_config.datastore_clusters).to eq([])
-        end
-      end
-
-      context 'datastore_clusters are specified inside datastores' do
-        let(:input) do
-          {
-            vm_type: {
-              'datastores' => ['fake-datastore', { 'clusters' => [{'fake-sp1' => {}}, {'fake-sp2' => {} }] }]
-            }
-          }
-        end
-        it 'should return array of datastore clusters' do
-          expect(vm_config.datastore_clusters).to eq([{'fake-sp1' => {}}, {'fake-sp2' => {} }])
-        end
-      end
-    end
-
-    describe '#sdrs_enabled_datastore_clusters' do
-      let(:client) { instance_double(VSphereCloud::VCenterClient) }
-      let(:cluster_provider) do
-        instance_double(VSphereCloud::Resources::ClusterProvider,
-                        client: client,
-                        datacenter_name: 'fake-datacenter-name')
-      end
-      let(:input) do
-        {
-          vm_type: {
-            'datastores' => ['fake-datastore', { 'clusters' => [{drs_enabled_datastore_cluster.name => {}}, {drs_disabled_datastore_cluster.name => {} }] }]
-          }
-        }
-      end
-      let(:datastore_clusters) {[drs_enabled_datastore_cluster, drs_disabled_datastore_cluster]}
-      let(:drs_enabled_datastore_cluster) { double('StoragePod', drs_enabled?: true, name: 'fake-sp1') }
-      let(:drs_disabled_datastore_cluster) { double('StoragePodDrsDsiabled', drs_enabled?: false, name: 'fake-sp2') }
-
-      it 'should return array of datastore clusters which have sdrs enabled' do
-        allow(VSphereCloud::Resources::StoragePod).to receive(:find).with(drs_enabled_datastore_cluster.name, 'fake-datacenter-name', client ).and_return(drs_enabled_datastore_cluster)
-        allow(VSphereCloud::Resources::StoragePod).to receive(:find).with(drs_disabled_datastore_cluster.name, 'fake-datacenter-name', client ).and_return(drs_disabled_datastore_cluster)
-        expect(vm_config.sdrs_enabled_datastore_clusters.length).to eq(1)
-        expect(vm_config.sdrs_enabled_datastore_clusters.first.name).to eq('fake-sp1')
-      end
     end
   end
 end

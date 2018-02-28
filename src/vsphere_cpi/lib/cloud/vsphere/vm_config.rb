@@ -40,7 +40,7 @@ module VSphereCloud
     end
 
     def ephemeral_disk_size
-      vm_type['disk']
+      vm_type.disk
     end
 
     def stemcell_cid
@@ -78,11 +78,11 @@ module VSphereCloud
 
     def config_spec_params
       params = {}
-      params[:num_cpus] = vm_type['cpu']
-      params[:memory_mb] = vm_type['ram']
-      params[:nested_hv_enabled] = true if vm_type['nested_hardware_virtualization']
-      params[:cpu_hot_add_enabled] = true if vm_type['cpu_hot_add_enabled']
-      params[:memory_hot_add_enabled] = true if vm_type['memory_hot_add_enabled']
+      params[:num_cpus] = vm_type.cpu
+      params[:memory_mb] = vm_type.ram
+      params[:nested_hv_enabled] = true if vm_type.nested_hardware_virtualization
+      params[:cpu_hot_add_enabled] = true if vm_type.cpu_hot_add_enabled
+      params[:memory_hot_add_enabled] = true if vm_type.memory_hot_add_enabled
       params.delete_if { |k, v| v.nil? }
     end
 
@@ -99,17 +99,7 @@ module VSphereCloud
     end
 
     def vmx_options
-      vm_type['vmx_options'] || {}
-    end
-
-    def datastore_clusters
-      @datastore_clusters ||= datastore_clusters_spec
-    end
-
-    def sdrs_enabled_datastore_clusters
-      datastore_clusters.map do |datastore_cluster_spec|
-        VSphereCloud::Resources::StoragePod.find(datastore_cluster_spec.keys.first, @cluster_provider.datacenter_name, @cluster_provider.client)
-      end.select(&:drs_enabled?)
+      vm_type.vmx_options || {}
     end
 
     private
@@ -147,8 +137,9 @@ module VSphereCloud
       clusters
     end
 
+    #VSphereCloud::VmType
     def vm_type
-      @manifest_params[:vm_type] || {}
+      @manifest_params[:vm_type]
     end
 
     def global_clusters
@@ -164,7 +155,7 @@ module VSphereCloud
     end
 
     def datacenters_spec
-      vm_type['datacenters'] || []
+      vm_type&.datacenters || []
     end
 
     def resource_pool_clusters_spec
@@ -183,23 +174,9 @@ module VSphereCloud
 
       @cluster_picker.update(clusters)
       @cluster_placement = @cluster_picker.best_cluster_placement(
-        req_memory: vm_type['ram'],
+        req_memory: vm_type.ram,
         disk_configurations: disk_configurations,
       )
-    end
-
-    def datastore_clusters_spec
-      datastore_clusters_spec = []
-      return datastore_clusters_spec unless vm_type['datastores'] && vm_type['datastores'].any?
-      vm_type['datastores'].each do |entry|
-        hash = Hash.try_convert(entry)
-        next if hash.nil?
-        if hash.key?('clusters')
-          datastore_clusters_spec = hash['clusters']
-          break
-        end
-      end
-      datastore_clusters_spec
     end
   end
 end

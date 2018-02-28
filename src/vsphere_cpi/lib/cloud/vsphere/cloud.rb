@@ -123,12 +123,11 @@ module VSphereCloud
           @logger.info("Generated name: #{name}")
 
           stemcell_size = File.size(image) / (1024 * 1024)
+          vm_type = VmType.new(@datacenter, {'ram' => 0})
 
           # TODO: this code re-use is messy, extract the necessary functionality out of vm_config
           manifest_params = {
-            vm_type: {
-              'ram' => 0,
-            },
+            vm_type: vm_type,
             global_clusters: @datacenter.clusters,
             disk_configurations: [
               VSphereCloud::DiskConfig.new(
@@ -234,16 +233,7 @@ module VSphereCloud
           )
           stemcell_size /= 1024 * 1024
 
-          disk_config_factory = DiskConfigFactory.new(
-            datacenter: @datacenter,
-            vm_type: vm_type,
-            client: @client
-          )
-          disk_configurations = existing_disk_cids.map do |cid|
-            disk_config_factory.disk_config_from_persistent_disk(DirectorDiskCID.new(cid))
-          end
-          ephemeral_disk_config = disk_config_factory.new_ephemeral_disk_config
-          disk_configurations.push(ephemeral_disk_config)
+          vm_type = VmType.new(@datacenter, vm_type)
 
           manifest_params = {
             vm_type: vm_type,
@@ -255,7 +245,7 @@ module VSphereCloud
               size: stemcell_size
             },
             global_clusters: @datacenter.clusters,
-            disk_configurations: disk_configurations,
+            disk_configurations: disk_configurations(vm_type,  existing_disk_cids),
           }
 
           vm_config = VmConfig.new(
@@ -280,13 +270,14 @@ module VSphereCloud
           )
           created_vm = vm_creator.create(vm_config)
         rescue => e
-          @logger.error("Error in creating vm: Backtrace - #{e.backtrace.join("\n")}")
+          @logger.error("Error in creating vm: #{e.message}, Backtrace - #{e.backtrace.join("\n")}")
           raise e
         end
+
         begin
           if @config.nsxt_enabled?
-            @nsxt_provider.add_vm_to_nsgroups(created_vm, vm_type['nsxt'])
-            @nsxt_provider.set_vif_type(created_vm, vm_type['nsxt'])
+            @nsxt_provider.add_vm_to_nsgroups(created_vm, vm_type.nsxt)
+            @nsxt_provider.set_vif_type(created_vm, vm_type.nsxt)
           end
         rescue => e
           @logger.info("Failed to add VM '#{created_vm.cid}' to NSGroups with error: #{e}")
@@ -300,8 +291,8 @@ module VSphereCloud
         end
 
         begin
-          if vm_type.key?('nsx') && !vm_type['nsx']['security_groups'].nil?
-            vm_type['nsx']['security_groups'].each do |security_group|
+          unless vm_type.nsx_security_groups.nil?
+            vm_type.nsx_security_groups.each do |security_group|
               nsx.add_vm_to_security_group(security_group, created_vm.mob_id)
             end
           end
@@ -313,10 +304,10 @@ module VSphereCloud
             end
           end
 
-          if vm_type.key?('nsx') && !vm_type['nsx']['lbs'].nil?
-            security_groups = vm_type['nsx']['lbs'].map { |m| m['security_group'] }.uniq
+          unless vm_type.nsx_lbs.nil?
+            security_groups = vm_type.nsx_lbs.map { |m| m['security_group'] }.uniq
             security_groups.each { |sg| nsx.add_vm_to_security_group(sg, created_vm.mob_id) }
-            nsx.add_members_to_lbs(vm_type['nsx']['lbs'])
+            nsx.add_members_to_lbs(vm_type.nsx['lbs'])
           end
         rescue => e
           @logger.info("Failed to apply NSX properties to VM '#{created_vm.cid}' with error: #{e}")
@@ -477,7 +468,7 @@ module VSphereCloud
           accessible_datastores = @datacenter.accessible_datastores
         end
 
-        disk_pool = DiskPool.new(@datacenter, cloud_properties['type'], cloud_properties['datastores'])
+        disk_pool = DiskPool.new(@datacenter,  cloud_properties['datastores'])
         target_datastore_pattern = StoragePicker.choose_persistent_pattern(disk_pool, @logger)
         datastore_name = StoragePicker.choose_persistent_storage(size_in_mb, target_datastore_pattern, accessible_datastores)
 
@@ -715,6 +706,29 @@ module VSphereCloud
           raise "Must specify '#{prop}' in #{type} cloud properties."
         end
       end
+    end
+
+    #returns disk_configuration for existing_disks and ephemeral_disk
+    def disk_configurations(vm_type, existing_disk_cids=[])
+      #existing persistent disk configurations
+      disk_configurations = existing_disk_cids.map do |cid|
+        directory_disk_cid = DirectorDiskCID.new(cid)
+        disk = @datacenter.find_disk(directory_disk_cid)
+        VSphereCloud::DiskConfig.new(
+          cid: disk.cid,
+          size: disk.size_in_mb,
+          existing_datastore_name: disk.datastore.name,
+          target_datastore_pattern: directory_disk_cid.target_datastore_pattern || @datacenter.persistent_pattern
+        )
+      end
+      #ephemeral disk configuration
+      ephemeral_pattern = StoragePicker.choose_ephemeral_pattern(vm_type, @logger)
+      ephemeral_disk_config = VSphereCloud::DiskConfig.new(
+        size: vm_type.disk,
+        ephemeral: true,
+        target_datastore_pattern: ephemeral_pattern
+      )
+      disk_configurations.push(ephemeral_disk_config)
     end
   end
 end

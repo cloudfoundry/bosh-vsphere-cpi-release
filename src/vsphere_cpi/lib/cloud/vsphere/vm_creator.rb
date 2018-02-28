@@ -15,7 +15,7 @@ module VSphereCloud
 
     def create(vm_config)
       cluster = vm_config.cluster
-      storage = choose_storage(vm_config)
+      storage = StoragePicker.choose_ephemeral_storage(vm_config.ephemeral_datastore_name, vm_config.cluster.accessible_datastores, vm_config.vm_type, )
 
       datastore, datastore_cluster = storage.is_a?(Resources::StoragePod) ? [nil, storage] : [storage, nil]
 
@@ -163,26 +163,6 @@ module VSphereCloud
         @logger
       )
       drs_rule.add_vm(vm_mob)
-    end
-
-    # choose storage from set of datastore and sdrs enabled datastore clusters
-    # using weight based algorithm on free space to choose the storage
-    # if datastore clusters are provided and none of them have sdrs enabled log an error
-    def choose_storage(vm_config)
-      storage_options = [vm_config.cluster.accessible_datastores[vm_config.ephemeral_datastore_name]]
-      @logger.debug("Initial Storage Options for creating ephemeral disk from pattern: #{storage_options.map(&:name)}")
-
-      if vm_config.datastore_clusters.any?
-        sdrs_enabled_datastore_clusters = vm_config.sdrs_enabled_datastore_clusters
-        @logger.debug("Storage DRS enabled clusters:#{sdrs_enabled_datastore_clusters.map(&:name)}") if sdrs_enabled_datastore_clusters.any?
-
-        @logger.info("None of the datastore clusters have Storage DRS enabled") unless sdrs_enabled_datastore_clusters.any?
-        storage_options.concat(vm_config.sdrs_enabled_datastore_clusters)
-      end
-      storage_options.compact!
-      @logger.debug("Storage Options for creating ephemeral disk are: #{storage_options.map(&:name)}")
-
-      StoragePicker.choose_best_from(storage_options)
     end
   end
 end

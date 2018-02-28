@@ -373,6 +373,7 @@ module VSphereCloud
       let(:director_disk_cid) { VSphereCloud::DirectorDiskCID.new(encoded_disk_cid) }
       let(:nsxt_provider) { instance_double(VSphereCloud::NSXTProvider) }
       let(:stemcell) { VSphereCloud::Stemcell.new('fake-stemcell-cid', logger) }
+      let(:disk_pool) { VSphereCloud::DiskPool.new(datacenter,vm_type['datastores']) }
 
       before do
         allow(VSphereCloud::NSXTProvider).to receive(:new).with(any_args).and_return(nsxt_provider)
@@ -411,7 +412,7 @@ module VSphereCloud
 
       it 'creates a new VM with provided manifest properties' do
         expected_manifest_params = {
-          vm_type: vm_type,
+          vm_type: an_instance_of(VSphereCloud::VmType),
           networks_spec: 'fake-networks-hash',
           agent_id: 'fake-agent-id',
           agent_env:     {},
@@ -458,7 +459,7 @@ module VSphereCloud
 
       it 'creates a new VM with no existing disks and default environment' do
         expected_manifest_params = {
-          vm_type: vm_type,
+          vm_type: an_instance_of(VSphereCloud::VmType),
           networks_spec: 'fake-networks-hash',
           agent_id: 'fake-agent-id',
           agent_env:     nil,
@@ -490,7 +491,7 @@ module VSphereCloud
             default_disk_type: default_disk_type,
             enable_auto_anti_affinity_drs_rules: false,
             stemcell: stemcell
-          )
+        )
           .and_return(vm_creator)
         expect(vm_creator).to receive(:create)
           .with(vm_config)
@@ -624,7 +625,7 @@ module VSphereCloud
 
         it 'creates a new VM with a thinly-provisioned ephemeral disk' do
           expected_manifest_params = {
-            vm_type: vm_type,
+            vm_type: an_instance_of(VSphereCloud::VmType),
             networks_spec: 'fake-networks-hash',
             agent_id: 'fake-agent-id',
             agent_env:     {},
