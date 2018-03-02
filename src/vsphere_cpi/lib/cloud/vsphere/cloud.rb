@@ -280,7 +280,7 @@ module VSphereCloud
           )
           created_vm = vm_creator.create(vm_config)
         rescue => e
-          @logger.info("Error in creating vm: #{e} - #{e.backtrace.join("\n")}")
+          @logger.error("Error in creating vm: Backtrace - #{e.backtrace.join("\n")}")
           raise e
         end
         begin
