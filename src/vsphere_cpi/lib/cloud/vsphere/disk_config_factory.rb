@@ -50,6 +50,8 @@ module VSphereCloud
 
     #datastores is a list of datastores and datastore_clusters. Eg.
     #[datastore1, clusters: [{datastore_cluster1: {}, datatore_cluster2: {}}]]
+    #if datastores is set use that else use global pattern
+
     def target_ephemeral_pattern
       escaped_names = []
       if @vm_type['datastores'] && !@vm_type['datastores'].empty?
@@ -62,8 +64,10 @@ module VSphereCloud
           escaped_names << datastores.map { |datastore| Regexp.escape(datastore.name) }
         end
         escaped_names = escaped_names.compact
+        "^(#{escaped_names.join('|')})$"
+      else
+        @datacenter.ephemeral_pattern
       end
-      escaped_names.empty? ?  @datacenter.ephemeral_pattern : "^(#{escaped_names.join('|')})$"
     end
   end
 end

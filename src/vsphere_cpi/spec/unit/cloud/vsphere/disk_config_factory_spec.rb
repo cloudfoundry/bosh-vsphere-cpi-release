@@ -91,27 +91,30 @@ module VSphereCloud
 
     describe '#new_ephemeral_disk_config' do
       context 'when datastore clusters are specified under vm_type' do
+        let(:disk_config) do
+          instance_double(VSphereCloud::DiskConfig,
+                          size: 1024,
+                          ephemeral?: true,
+                          target_datastore_pattern: target_datastore_pattern,
+          )
+        end
+        let(:vm_type) do
+          {
+            'disk' => 1024,
+            'datastores' => datastores
+          }
+        end
+
         before do
-          expect(VSphereCloud::Resources::StoragePod).to receive(:find).with('sp-1',anything,anything).and_return(sdrs_enabled_datastore_cluster1)
-          expect(VSphereCloud::Resources::StoragePod).to receive(:find).with('sp-2',anything,anything).and_return(sdrs_enabled_datastore_cluster2)
+          allow(VSphereCloud::Resources::StoragePod).to receive(:find).with('sp-1',anything,anything).and_return(sdrs_enabled_datastore_cluster1)
+          allow(VSphereCloud::Resources::StoragePod).to receive(:find).with('sp-2',anything,anything).and_return(sdrs_enabled_datastore_cluster2)
           expect(VSphereCloud::Resources::StoragePod).to receive(:find).with('sp-3',anything,anything).and_return(sdrs_disabled_datastore_cluster)
         end
 
         context 'along with datastores' do
-          let(:vm_type) do
-            {
-              'disk' => 1024,
-              'datastores' => ['ds-1', 'ds-2', 'clusters' => datastore_clusters],
-            }
-          end
-          let(:disk_config) do
-            instance_double(VSphereCloud::DiskConfig,
-                            size: 1024,
-                            ephemeral?: true,
-                            target_datastore_pattern: '^(ds\-1|ds\-2|sp\-1\-ds\-1|sp\-2\-ds\-1)$',
-            )
-          end
+          let(:datastores){ ['ds-1', 'ds-2', 'clusters' => datastore_clusters] }
 
+          let(:target_datastore_pattern) { '^(ds\-1|ds\-2|sp\-1\-ds\-1|sp\-2\-ds\-1)$' }
           it 'includes a pattern constructed from vm_type along with datastores from sdrs enabled datastore clusters' do
             expect(VSphereCloud::DiskConfig).to receive(:new).with(
               size: 1024, ephemeral: true, target_datastore_pattern: '^(ds\-1|ds\-2|sp\-1\-ds\-1|sp\-2\-ds\-1)$',
@@ -122,23 +125,26 @@ module VSphereCloud
           end
         end
         context 'and no datastores are specified' do
-          let(:vm_type) do
-            {
-              'disk' => 1024,
-              'datastores' => ['clusters' => datastore_clusters],
-            }
-          end
-          let(:disk_config) do
-            instance_double(VSphereCloud::DiskConfig,
-                            size: 1024,
-                            ephemeral?: true,
-                            target_datastore_pattern: '^(sp\-1\-ds\-1|sp\-2\-ds\-1)$',
-            )
-          end
+          let(:datastores){ ['clusters' => datastore_clusters] }
+
+          let(:target_datastore_pattern) { '^(sp\-1\-ds\-1|sp\-2\-ds\-1)$' }
 
           it 'includes the datastores from sdrs enabled datastore clusters' do
             expect(VSphereCloud::DiskConfig).to receive(:new).with(
               size: 1024, ephemeral: true, target_datastore_pattern: '^(sp\-1\-ds\-1|sp\-2\-ds\-1)$',
+            ).and_return(disk_config)
+
+            returned_disk_config = disk_config_factory.new_ephemeral_disk_config
+            expect(returned_disk_config).to eq(disk_config)
+          end
+        end
+        context 'and sdrs is disabled for all of them' do
+          let(:datastores){ ['clusters' => [{ 'sp-3' => {} }] ] }
+          let(:target_datastore_pattern) { '^()$' }
+
+          it 'includes empty pattern' do
+            expect(VSphereCloud::DiskConfig).to receive(:new).with(
+              size: 1024, ephemeral: true, target_datastore_pattern: '^()$',
             ).and_return(disk_config)
 
             returned_disk_config = disk_config_factory.new_ephemeral_disk_config

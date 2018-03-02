@@ -18,7 +18,8 @@ module VSphereCloud
         end
       end
 
-      if datastore_names.empty?
+      #if datastores is set use that else use global pattern
+      if datastore_names.empty? && disk_pool.datastore_clusters.empty?
         logger.info("Using global persistent disk datastore pattern: #{disk_pool.datacenter.persistent_pattern}")
         disk_pool.datacenter.persistent_pattern
       else
