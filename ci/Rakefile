@@ -104,7 +104,7 @@ task :pipeline, :name do |t, args|
     "-v dbc_host=#{DBCHOST.shellescape}",
     "-v dbc_user=#{DBCUSER.shellescape}",
     '-v dbc_key="$(cat ~/.ssh/id_rsa)"',
-    '-v s3_vsphere_cpi_bucket=vcpi-ci-test',
+    '-v s3_vsphere_cpi_bucket=bosh-vsphere-cpi-release',
     '-l <(secret show ~/.dot/vcpi-ci.gpg)'
   ].join(' ')
 end
