@@ -464,25 +464,35 @@ module LifecycleHelpers
   def turn_maintenance_on_for_half_hosts(cpi, cluster_name)
     cluster = cpi.client.cloud_searcher.get_managed_object(VimSdk::Vim::ClusterComputeResource, name: cluster_name)
     half_host_mob_array = cluster.host[0, cluster.host.length/2]
-    half_host_mob_array.each { |host_mob| host_mob.enter_maintenance_mode(0, true, nil) }
-    # Sleep for 10 seconds to allow hosts to enter maintenance mode
-    sleep 10
+    half_host_mob_array.each do |host_mob|
+      cpi.client.wait_for_task do
+        host_mob.enter_maintenance_mode(0, true, nil)
+      end
+    end
   end
 
   def turn_maintenance_off_for_all_hosts(cpi, cluster_name)
     cluster = cpi.client.cloud_searcher.get_managed_object(VimSdk::Vim::ClusterComputeResource, name: cluster_name)
     host_mob_array = cluster.host
-    host_mob_array.each { |host_mob| host_mob.exit_maintenance_mode(0) }
-    # Sleep for 10 seconds to allow hosts to exit maintenance mode
-    sleep 10
+    host_mob_array.each do |host_mob|
+      begin
+        cpi.client.wait_for_task do
+          host_mob.exit_maintenance_mode(0)
+        end
+      rescue VSphereCloud::VCenterClient::TaskException => e
+      end
+    end
   end
+
 
   def turn_maintenance_on_for_all_hosts(cpi, cluster_name)
     cluster = cpi.client.cloud_searcher.get_managed_object(VimSdk::Vim::ClusterComputeResource, name: cluster_name)
     host_mob_array = cluster.host
-    host_mob_array.each { |host_mob| host_mob.enter_maintenance_mode(0, true, nil) }
-    # Sleep for 10 seconds to allow hosts to enter maintenance mode
-    sleep 10
+    host_mob_array.each do |host_mob|
+      cpi.client.wait_for_task do
+        host_mob.enter_maintenance_mode(0, true, nil)
+      end
+    end
   end
 
 
