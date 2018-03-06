@@ -4,7 +4,7 @@ gem 'bosh_common', '1.3262.24.0'
 gem 'bosh_cpi',    '2.4.1'
 gem 'membrane',    '~>1.1.0'
 gem 'builder',     '~>3.2.3'
-gem 'nokogiri',    '~>1.7.1'
+gem 'nokogiri',    '~>1.8.1'
 gem 'mono_logger', '~>1.1.0'
 gem 'oga', '2.3'
 
