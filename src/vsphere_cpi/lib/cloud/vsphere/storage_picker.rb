@@ -24,9 +24,7 @@ module VSphereCloud
         disk_pool.datacenter.persistent_pattern
       else
         logger.info("Using datastore list: #{datastore_names.join(', ')}")
-        "^(#{datastore_names.map do |name|
-          Regexp.escape(name)
-        end.join('|')})$"
+        "^(#{datastore_names.map { |name| Regexp.escape(name) }.join('|')})$"
       end
     end
 
@@ -77,9 +75,7 @@ module VSphereCloud
         vm_type.datacenter.ephemeral_pattern
       else
         logger.info("Using datastore list: #{datastore_names.join(', ')}")
-        "^(#{datastore_names.map do |name|
-          Regexp.escape(name)
-        end.join('|')})$"
+        "^(#{datastore_names.map { |name| Regexp.escape(name) }.join('|')})$"
       end
     end
   end

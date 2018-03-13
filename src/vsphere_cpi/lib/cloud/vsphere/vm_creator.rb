@@ -15,7 +15,7 @@ module VSphereCloud
 
     def create(vm_config)
       cluster = vm_config.cluster
-      storage = StoragePicker.choose_ephemeral_storage(vm_config.ephemeral_datastore_name, vm_config.cluster.accessible_datastores, vm_config.vm_type, )
+      storage = StoragePicker.choose_ephemeral_storage(vm_config.ephemeral_datastore_name, vm_config.cluster.accessible_datastores, vm_config.vm_type, @logger)
 
       datastore, datastore_cluster = storage.is_a?(Resources::StoragePod) ? [nil, storage] : [storage, nil]
 

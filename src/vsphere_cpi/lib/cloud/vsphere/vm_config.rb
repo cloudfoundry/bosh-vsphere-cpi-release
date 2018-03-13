@@ -102,6 +102,11 @@ module VSphereCloud
       vm_type.vmx_options || {}
     end
 
+    #VSphereCloud::VmType
+    def vm_type
+      @manifest_params[:vm_type]
+    end
+
     private
 
     def validate_drs_rules
@@ -135,11 +140,6 @@ module VSphereCloud
         clusters.push(@cluster_provider.find(cluster_spec.keys.first, cluster_config))
       end
       clusters
-    end
-
-    #VSphereCloud::VmType
-    def vm_type
-      @manifest_params[:vm_type]
     end
 
     def global_clusters

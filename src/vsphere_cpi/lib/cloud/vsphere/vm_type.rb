@@ -10,11 +10,14 @@ module VSphereCloud
     def initialize(datacenter, cloud_properties)
       @datacenter = datacenter
       @cloud_properties = cloud_properties
-      @storage_list = cloud_properties['datastores'] || []
     end
 
     %w[cpu ram disk cpu_hot_add_enabled memory_hot_add_enabled nsx vmx_options nsxt nested_hardware_virtualization datacenters ].each do |name|
       define_method(name) { @cloud_properties[name] }
+    end
+
+    def storage_list
+      @storage_list = @cloud_properties['datastores'] || []
     end
 
     def nsx_security_groups

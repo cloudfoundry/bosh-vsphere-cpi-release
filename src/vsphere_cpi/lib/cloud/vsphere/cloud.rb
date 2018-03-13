@@ -270,7 +270,7 @@ module VSphereCloud
           )
           created_vm = vm_creator.create(vm_config)
         rescue => e
-          @logger.error("Error in creating vm: #{e.message}, Backtrace - #{e.backtrace.join("\n")}")
+          @logger.error("Error in creating vm: #{e}, Backtrace - #{e.backtrace.join("\n")}")
           raise e
         end
 
@@ -291,11 +291,11 @@ module VSphereCloud
         end
 
         begin
-          unless vm_type.nsx_security_groups.nil?
-            vm_type.nsx_security_groups.each do |security_group|
-              nsx.add_vm_to_security_group(security_group, created_vm.mob_id)
-            end
-          end
+
+          vm_type.nsx_security_groups.each do |security_group|
+            nsx.add_vm_to_security_group(security_group, created_vm.mob_id)
+          end unless vm_type.nsx_security_groups.nil?
+
 
           if @config.nsx_enabled?
             bosh_groups = (environment || {}).fetch('bosh', {}).fetch('groups', [])
@@ -307,7 +307,7 @@ module VSphereCloud
           unless vm_type.nsx_lbs.nil?
             security_groups = vm_type.nsx_lbs.map { |m| m['security_group'] }.uniq
             security_groups.each { |sg| nsx.add_vm_to_security_group(sg, created_vm.mob_id) }
-            nsx.add_members_to_lbs(vm_type.nsx['lbs'])
+            nsx.add_members_to_lbs(vm_type.nsx_lbs)
           end
         rescue => e
           @logger.info("Failed to apply NSX properties to VM '#{created_vm.cid}' with error: #{e}")
@@ -488,7 +488,7 @@ module VSphereCloud
         disk = @datacenter.create_disk(datastore, size_in_mb, disk_type)
         @logger.info("Created disk: #{disk.inspect}")
 
-        disk_pool.datastores.any? ? DirectorDiskCID.encode(disk.cid, target_datastore_pattern: target_datastore_pattern) : disk.cid
+        disk_pool.storage_list.any? ? DirectorDiskCID.encode(disk.cid, target_datastore_pattern: target_datastore_pattern) : disk.cid
       end
     end
 
