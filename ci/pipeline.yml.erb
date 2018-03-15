@@ -52,8 +52,10 @@ jobs:
       - aggregate:
         - get: source-ci
         - get: bosh-cpi-src
+          passed: [build-candidate]
+        - get: bosh-cpi-artifacts
           trigger: true
-          passed: [unit-test]
+          passed: [build-candidate]
       - do:
         - put: environment
           resource: nimbus-environments-6.5
@@ -74,7 +76,7 @@ jobs:
     plan:
       - aggregate:
         - get: source-ci
-        - {get: cpi-release,              trigger: false, resource: bosh-cpi-artifacts, passed: [build-candidate]}
+        - {get: cpi-release,              trigger: false, resource: bosh-cpi-artifacts, passed: [lock-and-extend-bats]}
         - {get: environment,              trigger: true,  passed: [lock-and-extend-bats], resource: nimbus-environments-6.5 }
         - {get: bosh-release,             trigger: false, resource: old-bosh-release}
         - {get: stemcell,                 trigger: false, resource: old-stemcell}
@@ -142,15 +144,9 @@ jobs:
     - aggregate:
       - get: source-ci
       - get: bosh-cpi-artifacts
-        passed: [build-candidate]
+        passed: [bats]
       - get: bosh-cpi-src
-        passed:
-        - lifecycle-6.0
-        - lifecycle-6.5
-        - bats
-        - lifecycle-6.5-NSXV
-        - lifecycle-6.0-NSXV
-        - lifecycle-5.5
+        passed: [bats]
       - get: release-version-semver
         params: { bump: major }
     - task: promote
