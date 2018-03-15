@@ -396,35 +396,35 @@ resources:
     source:
       uri:          git@github.com:ktchen14/vcpi-pool.git
       branch:       master
-      pool:         TA65-NSXV
+      pool:         v6.5-nsxv
       private_key:  {{vcpi-pool_deployment_key}}
   - name: nimbus-environments-6.0-NSXV
     type: pool
     source:
       uri:          git@github.com:ktchen14/vcpi-pool.git
       branch:       master
-      pool:         TA60-NSXV
+      pool:         v6.0-nsxv
       private_key:  {{vcpi-pool_deployment_key}}
   - name: nimbus-environments-6.5
     type: pool
     source:
       uri:          git@github.com:ktchen14/vcpi-pool.git
       branch:       master
-      pool:         TA65
+      pool:         v6.5
       private_key:  {{vcpi-pool_deployment_key}}
   - name: nimbus-environments-5.5
     type: pool
     source:
       uri:          git@github.com:ktchen14/vcpi-pool.git
       branch:       master
-      pool:         TA55
+      pool:         v5.5
       private_key:  {{vcpi-pool_deployment_key}}
   - name: nimbus-environments-6.0
     type: pool
     source:
       uri:          git@github.com:ktchen14/vcpi-pool.git
       branch:       master
-      pool:         TA60
+      pool:         v6.0
       private_key:  {{vcpi-pool_deployment_key}}
   - name: bosh-cpi-artifacts
     type: s3
