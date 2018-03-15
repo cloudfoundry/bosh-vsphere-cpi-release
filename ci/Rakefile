@@ -1,3 +1,4 @@
+require 'open3'
 require 'time'
 require 'shellwords'
 
@@ -17,6 +18,8 @@ module ColorizeExceptionMessageDetails
 end
 Rake::Application.send(:prepend, ColorizeExceptionMessageDetails)
 
+# A Concourse target as recognized by `fly`. For more information see the
+# {https://concourse.ci/fly-cli.html documentation} on the `fly` CLI.
 class Target
   # @return [[Target]] a list of the targets currently known to `fly`
   def self.list
@@ -50,7 +53,7 @@ desc "Pull, build, and push the docker image '#{DOCKER_NAME}'"
 task docker: %w[docker:pull docker:make docker:push]
 
 desc 'Create or update the pipeline configuration'
-task :pipeline, :name do |t, args|
+task :pipeline, [:name] => 'pipeline.yml' do |t, args|
   # Default to the unexpired target expiring furthest in the future known to
   # `fly`
   CONCOURSE = ENV.fetch('CONCOURSE') do
@@ -78,9 +81,18 @@ task :pipeline, :name do |t, args|
     break record[1] unless record.nil?
   end || (require 'etc'; Etc.getpwuid.name)
 
+  # Find the SSH identity file to use from the SSH configuration for DBCHOST
+  output, _, status = Open3.capture3('ssh', '-G', dbcfqdn)
+  fail "Unable to get SSH configuration for #{DBCHOST}" unless status.success?
+  dbc_ssh_key = output.each_line(chomp: true).map do |text|
+    text.split(nil, 2)
+  end.find do |option, v|
+    option == 'identityfile' && File.exist?(File.expand_path(v))
+  end or fail "No SSH identity file available for #{DBCHOST}"
+  dbc_ssh_key = File.expand_path(dbc_ssh_key[1])
+
   # Get the git branch name
-  branch = ENV.fetch('BRANCH') { `git symbolic-ref -q --short HEAD` }
-  branch.strip!
+  branch = ENV.fetch('BRANCH') { `git symbolic-ref -q --short HEAD`.strip }
 
   # Set the pipeline name to be vSphere-CPI when on the master branch or
   # vSphere-CPI-#{branch} when on another branch. If the branch name is
@@ -98,12 +110,13 @@ task :pipeline, :name do |t, args|
   branch = !branch.empty? ? branch : 'master'
 
   sh '/bin/bash', '-ec', [
-    "fly -t #{CONCOURSE.shellescape}",
-    "set-pipeline -p #{args.name.shellescape} -c pipeline.yml",
+    "fly -t #{CONCOURSE.shellescape} set-pipeline",
+    "-p #{args.name.shellescape}",
+    "-c #{t.prerequisites.first.shellescape}",
     "-v vcpi_branch=#{branch.shellescape}",
     "-v dbc_host=#{DBCHOST.shellescape}",
     "-v dbc_user=#{DBCUSER.shellescape}",
-    '-v dbc_key="$(cat ~/.ssh/id_rsa)"',
+    "-v dbc_key=\"$(cat #{dbc_ssh_key.shellescape})\"",
     '-v s3_vsphere_cpi_bucket=bosh-vsphere-cpi-release',
     '-l <(secret show ~/.dot/vcpi-ci.gpg)'
   ].join(' ')
