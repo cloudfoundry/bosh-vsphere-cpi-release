@@ -3,10 +3,11 @@ image_resource:
   { type: docker-image, source: { repository: vcpici/vcpi-main } }
 
 inputs:
+  - name: source-ci
   - name: certification
   - name: director-state
   - name: bosh-cpi-src
   - name: environment
 
 run:
-  path: bosh-cpi-src/ci/tasks/teardown.sh
+  path: source-ci/ci/tasks/teardown.sh

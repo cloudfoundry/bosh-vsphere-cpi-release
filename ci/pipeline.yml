@@ -1,15 +1,18 @@
 jobs:
   - name: pyvmomi_to_ruby-tests
     plan:
-      - get: bosh-cpi-src
-        trigger: true
+      - aggregate:
+        - get: source-ci
+        - get: bosh-cpi-src
+          trigger: true
       - task: test
-        file: bosh-cpi-src/ci/tasks/test-pyvmomi_to_ruby.yml
+        file: source-ci/ci/tasks/test-pyvmomi_to_ruby.yml
 
   - name: build-candidate
     serial: true
     plan:
       - aggregate:
+        - get: source-ci
         - get: bosh-cpi-src
           trigger: true
         - get: version-semver
@@ -20,22 +23,24 @@ jobs:
         params:
           file: version-semver/number
       - task: build
-        file: bosh-cpi-src/ci/tasks/build-candidate.yml
+        file: source-ci/ci/tasks/build-candidate.yml
       - put: bosh-cpi-artifacts
         params:
           file: 'dev-artifacts/*.tgz'
 
   - name: lock-and-extend-6.0-NSXV
     plan:
-      - get: bosh-cpi-src
-        trigger: true
-        passed: [build-candidate]
+      - aggregate:
+        - get: source-ci
+        - get: bosh-cpi-src
+          trigger: true
+          passed: [build-candidate]
       - do:
         - put: environment
           resource: nimbus-environments-6.0-NSXV
           params: {acquire: true}
         - task: extend-lease-6.0
-          file: bosh-cpi-src/ci/tasks/extend-lease.yml
+          file: source-ci/ci/tasks/extend-lease.yml
           params:
             DBCUSER: {{dbc_user}}
             DBCHOST: {{dbc_host}}
@@ -50,12 +55,13 @@ jobs:
     serial: true
     plan:
       - aggregate:
+        - get: source-ci
         - {trigger: false,  passed: [build-candidate], get: bosh-cpi-artifacts}
         - {trigger: false, passed: [lock-and-extend-6.0-NSXV], get: bosh-cpi-src}
         - {trigger: true, passed: [lock-and-extend-6.0-NSXV], get: environment, resource: nimbus-environments-6.0-NSXV}
         - get: stemcell
       - task: test
-        file: bosh-cpi-src/ci/tasks/run-lifecycle.yml
+        file: source-ci/ci/tasks/run-lifecycle.yml
         params:
           RSPEC_FLAGS: "--tag nsx_vsphere"
           NSXT_SKIP_SSL_VERIFY: "true"
@@ -71,15 +77,17 @@ jobs:
 
   - name: lock-and-extend-6.5-NSXV
     plan:
-      - get: bosh-cpi-src
-        trigger: true
-        passed: [build-candidate]
+      - aggregate:
+        - get: source-ci
+        - get: bosh-cpi-src
+          trigger: true
+          passed: [build-candidate]
       - do:
         - put: environment
           resource: nimbus-environments-6.5-NSXV
           params: {acquire: true}
         - task: extend-lease-6.5
-          file: bosh-cpi-src/ci/tasks/extend-lease.yml
+          file: source-ci/ci/tasks/extend-lease.yml
           params:
             DBCUSER: {{dbc_user}}
             DBCHOST: {{dbc_host}}
@@ -93,12 +101,13 @@ jobs:
     serial: true
     plan:
       - aggregate:
+        - get: source-ci
         - {trigger: false,  passed: [build-candidate], get: bosh-cpi-artifacts}
         - {trigger: false, passed: [lock-and-extend-6.5-NSXV], get: bosh-cpi-src}
         - {trigger: true, passed: [lock-and-extend-6.5-NSXV], get: environment, resource: nimbus-environments-6.5-NSXV}
         - get: stemcell
       - task: test
-        file: bosh-cpi-src/ci/tasks/run-lifecycle.yml
+        file: source-ci/ci/tasks/run-lifecycle.yml
         params:
           RSPEC_FLAGS: "--tag nsx_vsphere"
           NSXT_SKIP_SSL_VERIFY: "true"
@@ -114,15 +123,17 @@ jobs:
 
   - name: lock-and-extend-5.5
     plan:
-      - get: bosh-cpi-src
-        trigger: true
-        passed: [build-candidate]
+      - aggregate:
+        - get: source-ci
+        - get: bosh-cpi-src
+          trigger: true
+          passed: [build-candidate]
       - do:
         - put: environment
           resource: nimbus-environments-5.5
           params: {acquire: true}
         - task: extend-lease-5.5
-          file: bosh-cpi-src/ci/tasks/extend-lease.yml
+          file: source-ci/ci/tasks/extend-lease.yml
           params:
             DBCUSER: {{dbc_user}}
             DBCHOST: {{dbc_host}}
@@ -137,12 +148,13 @@ jobs:
     serial: true
     plan:
       - aggregate:
+        - get: source-ci
         - {trigger: false,  passed: [build-candidate], get: bosh-cpi-artifacts}
         - {trigger: false, passed: [lock-and-extend-5.5], get: bosh-cpi-src}
         - {trigger: true, passed: [lock-and-extend-5.5], get: environment, resource: nimbus-environments-5.5}
         - get: stemcell
       - task: test
-        file: bosh-cpi-src/ci/tasks/run-lifecycle-55.yml
+        file: source-ci/ci/tasks/run-lifecycle-55.yml
         params:
           RSPEC_FLAGS: "--tag ~replicate_stemcell_two_threads --tag ~vsan_datastore --tag ~nsx_vsphere --tag ~nsx_transformers --tag ~log_creds"
           NSXT_SKIP_SSL_VERIFY: "true"
@@ -158,15 +170,17 @@ jobs:
 
   - name: lock-and-extend-6.5
     plan:
-      - get: bosh-cpi-src
-        trigger: true
-        passed: [build-candidate]
+      - aggregate:
+        - get: source-ci
+        - get: bosh-cpi-src
+          trigger: true
+          passed: [build-candidate]
       - do:
         - put: environment
           resource: nimbus-environments-6.5
           params: {acquire: true}
         - task: extend-lease-6.5
-          file: bosh-cpi-src/ci/tasks/extend-lease.yml
+          file: source-ci/ci/tasks/extend-lease.yml
           params:
             DBCUSER: {{dbc_user}}
             DBCHOST: {{dbc_host}}
@@ -181,12 +195,13 @@ jobs:
     serial: true
     plan:
       - aggregate:
+        - get: source-ci
         - {trigger: false,  passed: [build-candidate], get: bosh-cpi-artifacts}
         - {trigger: false, passed: [lock-and-extend-6.5], get: bosh-cpi-src}
         - {trigger: true, passed: [lock-and-extend-6.5], get: environment, resource: nimbus-environments-6.5}
         - get: stemcell
       - task: test
-        file: bosh-cpi-src/ci/tasks/run-lifecycle.yml
+        file: source-ci/ci/tasks/run-lifecycle.yml
         params:
           RSPEC_FLAGS: "--tag ~nsx_vsphere --tag ~disk_migration"
           NSXT_SKIP_SSL_VERIFY: "true"
@@ -202,6 +217,7 @@ jobs:
 
   - name: lock-and-extend-6.0
     plan:
+      - get: source-ci
       - get: bosh-cpi-src
         trigger: true
         passed: [build-candidate]
@@ -210,7 +226,7 @@ jobs:
           resource: nimbus-environments-6.0
           params: {acquire: true}
         - task: extend-lease-6.0
-          file: bosh-cpi-src/ci/tasks/extend-lease.yml
+          file: source-ci/ci/tasks/extend-lease.yml
           params:
             DBCUSER: {{dbc_user}}
             DBCHOST: {{dbc_host}}
@@ -224,12 +240,13 @@ jobs:
     serial: true
     plan:
       - aggregate:
+        - get: source-ci
         - {trigger: false,  passed: [build-candidate], get: bosh-cpi-artifacts}
         - {trigger: false, passed: [lock-and-extend-6.0], get: bosh-cpi-src}
         - {trigger: true, passed: [lock-and-extend-6.0], get: environment, resource: nimbus-environments-6.0}
         - get: stemcell
       - task: test
-        file: bosh-cpi-src/ci/tasks/run-lifecycle.yml
+        file: source-ci/ci/tasks/run-lifecycle.yml
         params:
           RSPEC_FLAGS: "--tag ~nsx_vsphere --tag ~nsxt_version_two"
           NSXT_SKIP_SSL_VERIFY: "true"
@@ -245,15 +262,17 @@ jobs:
 
   - name: lock-and-extend-bats
     plan:
-      - get: bosh-cpi-src
-        trigger: true
-        passed: [build-candidate]
+      - aggregate:
+        - get: source-ci
+        - get: bosh-cpi-src
+          trigger: true
+          passed: [build-candidate]
       - do:
         - put: environment
           resource: nimbus-environments-6.5
           params: {acquire: true}
         - task: extend-lease-6.5
-          file: bosh-cpi-src/ci/tasks/extend-lease.yml
+          file: source-ci/ci/tasks/extend-lease.yml
           params:
             DBCUSER: {{dbc_user}}
             DBCHOST: {{dbc_host}}
@@ -267,6 +286,7 @@ jobs:
     serial: true
     plan:
       - aggregate:
+        - get: source-ci
         - {get: cpi-release,              trigger: false, resource: bosh-cpi-artifacts, passed: [build-candidate]}
         - {get: environment,              trigger: true,  passed: [lock-and-extend-bats], resource: nimbus-environments-6.5 }
         - {get: bosh-release,             trigger: false, resource: old-bosh-release}
@@ -277,12 +297,12 @@ jobs:
         - {get: bosh-cli,                 trigger: false}
         - {get: bosh-cpi-src,             trigger: false, passed: [lock-and-extend-bats]} # Passthrough
       - task: prepare-director
-        file: bosh-cpi-src/ci/tasks/prepare-director.yml
+        file: source-ci/ci/tasks/prepare-director.yml
       - do:
         - task: deploy-director
-          file: bosh-cpi-src/ci/tasks/deploy-director.yml
+          file: source-ci/ci/tasks/deploy-director.yml
         - task: run-bats
-          file: bosh-cpi-src/ci/tasks/run-bats.yml
+          file: source-ci/ci/tasks/run-bats.yml
           params:
             BAT_INFRASTRUCTURE: vsphere
             BAT_NETWORKING:     manual
@@ -300,7 +320,7 @@ jobs:
         ensure:
           do:
             - task: teardown
-              file: bosh-cpi-src/ci/tasks/teardown.yml
+              file: source-ci/ci/tasks/teardown.yml
       - put: notify
         params:
           username: 'CPI-Doctor'
@@ -327,6 +347,7 @@ jobs:
     serial: true
     plan:
     - aggregate:
+      - get: source-ci
       - get: bosh-cpi-artifacts
         passed:
         - lifecycle-6.0
@@ -346,7 +367,7 @@ jobs:
       - get: release-version-semver
         params: { bump: major }
     - task: promote
-      file: bosh-cpi-src/ci/tasks/promote-candidate.yml
+      file: source-ci/ci/tasks/promote-candidate.yml
       params:
         AWS_ACCESS_KEY_ID:     {{s3_vsphere_cpi_blobwriter_access_key}}
         AWS_SECRET_ACCESS_KEY: {{s3_vsphere_cpi_blobwriter_secret_key}}
@@ -412,12 +433,20 @@ resources:
       bucket:            {{s3_vsphere_cpi_bucket}}
       access_key_id:     {{s3_vsphere_cpi_blobwriter_access_key}}
       secret_access_key: {{s3_vsphere_cpi_blobwriter_secret_key}}
+  - name: source-ci
+    type: git
+    source:
+      uri:         git@github.com:cloudfoundry-incubator/bosh-vsphere-cpi-release.git
+      branch:      {{vcpi_branch}}
+      private_key: {{github_deployment_key__bosh-vsphere-cpi-release}}
+      paths:       [ci]
   - name: bosh-cpi-src
     type: git
     source:
       uri:         git@github.com:cloudfoundry-incubator/bosh-vsphere-cpi-release.git
       branch:      {{vcpi_branch}}
       private_key: {{github_deployment_key__bosh-vsphere-cpi-release}}
+      ignore_paths: [ci]
   - name: version-semver
     type: semver
     source:

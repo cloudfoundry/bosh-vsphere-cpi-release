@@ -3,6 +3,7 @@ image_resource:
   { type: docker-image, source: { repository: vcpici/vcpi-main } }
 
 inputs:
+  - name: source-ci
   - name: certification
   - name: director-config
   - name: bosh-release
@@ -15,4 +16,4 @@ outputs:
   - name: director-state
 
 run:
-  path: bosh-cpi-src/ci/tasks/deploy-director.sh
+  path: source-ci/ci/tasks/deploy-director.sh
