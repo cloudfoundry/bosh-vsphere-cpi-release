@@ -1,32 +1,21 @@
 jobs:
   - name: pyvmomi_to_ruby-tests
     plan:
-      - aggregate:
-        - get: source-ci
-        - get: bosh-cpi-src
-          trigger: true
-      - task: test
-        file: source-ci/ci/tasks/test-pyvmomi_to_ruby.yml
+    - aggregate:
+      - get: source-ci
+      - get: bosh-cpi-src
+        trigger: true
+    - task: test
+      file: source-ci/ci/tasks/test-pyvmomi_to_ruby.yml
 
-  - name: build-candidate
-    serial: true
+  - name: unit-test
     plan:
-      - aggregate:
-        - get: source-ci
-        - get: bosh-cpi-src
-          trigger: true
-        - get: version-semver
-          trigger: false
-          params:
-            bump: patch
-      - put: version-semver
-        params:
-          file: version-semver/number
-      - task: build
-        file: source-ci/ci/tasks/build-candidate.yml
-      - put: bosh-cpi-artifacts
-        params:
-          file: 'dev-artifacts/*.tgz'
+    - aggregate:
+      - get: source-ci
+      - get: bosh-cpi-src
+        trigger: true
+    - task: test
+      file: source-ci/ci/tasks/unit-test.yml
 
 <%= render('partition.yml.erb', pool: @pool_5_5) %>
 <%= render('partition.yml.erb', pool: @pool_6_0) %>
@@ -40,7 +29,7 @@ jobs:
         - get: source-ci
         - get: bosh-cpi-src
           trigger: true
-          passed: [build-candidate]
+          passed: [unit-test]
       - do:
         - put: environment
           resource: nimbus-environments-6.5
@@ -61,7 +50,7 @@ jobs:
     plan:
       - aggregate:
         - get: source-ci
-        - {get: cpi-release,              trigger: false, resource: bosh-cpi-artifacts, passed: [build-candidate]}
+        - {get: cpi-release,              trigger: false, resource: bosh-cpi-artifacts, passed: [unit-test]}
         - {get: environment,              trigger: true,  passed: [lock-and-extend-bats], resource: nimbus-environments-6.5 }
         - {get: bosh-release,             trigger: false, resource: old-bosh-release}
         - {get: stemcell,                 trigger: false, resource: old-stemcell}
@@ -284,7 +273,7 @@ groups:
 - name: Complete-View
   jobs:
   - pyvmomi_to_ruby-tests
-  - build-candidate
+  - unit-test
   - bats
   - lock-and-extend-bats
   - unlock-bats
@@ -319,11 +308,11 @@ groups:
 - name: Unit
   jobs:
   - pyvmomi_to_ruby-tests
-  - build-candidate
+  - unit-test
 
 - name: bats
   jobs:
-  - build-candidate
+  - unit-test
   - bats
   - lock-and-extend-bats
   - unlock-bats
@@ -331,7 +320,7 @@ groups:
 
 - name: v6.5
   jobs:
-  - build-candidate
+  - unit-test
   - lock-and-extend-6.5
   - lifecycle-6.5
   - unlock-6.5
@@ -341,7 +330,7 @@ groups:
 
 - name: v6.0
   jobs:
-  - build-candidate
+  - unit-test
   - lifecycle-6.0
   - lock-and-extend-6.0
   - unlock-6.0
@@ -351,7 +340,7 @@ groups:
 
 - name: v5.5
   jobs:
-  - build-candidate
+  - unit-test
   - lifecycle-5.5
   - lock-and-extend-5.5
   - unlock-5.5

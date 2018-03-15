@@ -5,7 +5,7 @@
       - get: source-ci
       - get: bosh-cpi-src
         trigger: true
-        passed: [build-candidate]
+        passed: [unit-test]
     - do:
       - put: environment
         resource: <%= e "nimbus-environments-#{pool}" %>
@@ -28,8 +28,6 @@
       - get: source-ci
       - get: bosh-cpi-src
         passed: [<%= e "lock-and-extend-#{pool}" %>]
-      - get: bosh-cpi-artifacts
-        passed: [build-candidate]
       - get: environment
         resource: <%= e "nimbus-environments-#{pool}" %>
         trigger: true
