@@ -1,4 +1,4 @@
-  - name: <%= e "lock-and-extend-#{pool}" %>
+  - name: <%= e "lock-#{pool}" %>
     serial_groups: [<%= e pool %>]
     plan:
     - aggregate:
@@ -27,11 +27,11 @@
     - aggregate:
       - get: source-ci
       - get: bosh-cpi-src
-        passed: [<%= e "lock-and-extend-#{pool}" %>]
+        passed: [<%= e "lock-#{pool}" %>]
       - get: environment
         resource: <%= e "nimbus-environments-#{pool}" %>
         trigger: true
-        passed: [<%= e "lock-and-extend-#{pool}" %>]
+        passed: [<%= e "lock-#{pool}" %>]
       - get: stemcell
     - task: test
       file: source-ci/ci/tasks/run-lifecycle.yml

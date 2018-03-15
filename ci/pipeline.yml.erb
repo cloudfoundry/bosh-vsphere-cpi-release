@@ -47,7 +47,7 @@ jobs:
       params:
         file: 'dev-artifacts/*.tgz'
 
-  - name: lock-and-extend-bats
+  - name: lock-bats
     plan:
       - aggregate:
         - get: source-ci
@@ -76,8 +76,8 @@ jobs:
     plan:
       - aggregate:
         - get: source-ci
-        - {get: cpi-release,              trigger: false, resource: bosh-cpi-artifacts, passed: [lock-and-extend-bats]}
-        - {get: environment,              trigger: true,  passed: [lock-and-extend-bats], resource: nimbus-environments-6.5 }
+        - {get: cpi-release,              trigger: false, resource: bosh-cpi-artifacts, passed: [lock-bats]}
+        - {get: environment,              trigger: true,  passed: [lock-bats], resource: nimbus-environments-6.5 }
         - {get: bosh-release,             trigger: false, resource: old-bosh-release}
         - {get: stemcell,                 trigger: false, resource: old-stemcell}
         - {get: certification,            trigger: false}
@@ -86,7 +86,7 @@ jobs:
         - {get: bosh-cli,                 trigger: false}
         - get: bosh-cpi-src
           passed:
-          - lock-and-extend-bats
+          - lock-bats
       - task: prepare-director
         file: source-ci/ci/tasks/prepare-director.yml
       - do:
@@ -296,23 +296,23 @@ groups:
   - unit-test
   - build-candidate
   - bats
-  - lock-and-extend-bats
+  - lock-bats
   - unlock-bats
-  - lock-and-extend-6.5
+  - lock-6.5
   - lifecycle-6.5
   - unlock-6.5
   - lifecycle-6.0
-  - lock-and-extend-6.0
+  - lock-6.0
   - unlock-6.0
   - promote-candidate
-  - lock-and-extend-6.5-NSXV
+  - lock-6.5-NSXV
   - lifecycle-6.5-NSXV
   - unlock-6.5-NSXV
   - lifecycle-6.0-NSXV
-  - lock-and-extend-6.0-NSXV
+  - lock-6.0-NSXV
   - unlock-6.0-NSXV
   - lifecycle-5.5
-  - lock-and-extend-5.5
+  - lock-5.5
   - unlock-5.5
 
 
@@ -335,17 +335,17 @@ groups:
   jobs:
   - unit-test
   - bats
-  - lock-and-extend-bats
+  - lock-bats
   - unlock-bats
 
 
 - name: v6.5
   jobs:
   - unit-test
-  - lock-and-extend-6.5
+  - lock-6.5
   - lifecycle-6.5
   - unlock-6.5
-  - lock-and-extend-6.5-NSXV
+  - lock-6.5-NSXV
   - lifecycle-6.5-NSXV
   - unlock-6.5-NSXV
 
@@ -353,15 +353,15 @@ groups:
   jobs:
   - unit-test
   - lifecycle-6.0
-  - lock-and-extend-6.0
+  - lock-6.0
   - unlock-6.0
   - lifecycle-6.0-NSXV
-  - lock-and-extend-6.0-NSXV
+  - lock-6.0-NSXV
   - unlock-6.0-NSXV
 
 - name: v5.5
   jobs:
   - unit-test
   - lifecycle-5.5
-  - lock-and-extend-5.5
+  - lock-5.5
   - unlock-5.5
