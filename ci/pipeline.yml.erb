@@ -1,21 +1,15 @@
 jobs:
-  - name: pyvmomi_to_ruby-tests
-    plan:
-    - aggregate:
-      - get: source-ci
-      - get: bosh-cpi-src
-        trigger: true
-    - task: test
-      file: source-ci/ci/tasks/test-pyvmomi_to_ruby.yml
-
   - name: unit-test
     plan:
     - aggregate:
       - get: source-ci
       - get: bosh-cpi-src
         trigger: true
-    - task: test
-      file: source-ci/ci/tasks/unit-test.yml
+    - aggregate:
+      - task: test-pyvmomi_to_ruby
+        file: source-ci/ci/tasks/test-pyvmomi_to_ruby.yml
+      - task: unit-test
+        file: source-ci/ci/tasks/unit-test.yml
 
 <%= render('partition.yml.erb', pool: @pool_5_5) %>
 <%= render('partition.yml.erb', pool: @pool_6_0) %>
@@ -292,7 +286,6 @@ groups:
 
 - name: Complete-View
   jobs:
-  - pyvmomi_to_ruby-tests
   - unit-test
   - build-candidate
   - bats
@@ -325,11 +318,6 @@ groups:
   - lifecycle-6.0-NSXV
   - bats
   - delivery
-
-- name: Unit
-  jobs:
-  - pyvmomi_to_ruby-tests
-  - unit-test
 
 - name: bats
   jobs:
