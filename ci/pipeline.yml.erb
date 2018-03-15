@@ -30,16 +30,14 @@ jobs:
       - get: bosh-cpi-src
         trigger: true
         passed:
-          - lifecycle-5.5
-          - lifecycle-6.0
-          - lifecycle-6.0-NSXV
-          - lifecycle-6.5
-          - lifecycle-6.5-NSXV
-          - bats
+        - lifecycle-5.5
+        - lifecycle-6.0
+        - lifecycle-6.0-NSXV
+        - lifecycle-6.5
+        - lifecycle-6.5-NSXV
       - get: version-semver
         trigger: false
-        params:
-          bump: patch
+        params: { bump: patch }
     - put: version-semver
       params:
         file: version-semver/number
