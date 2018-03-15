@@ -105,7 +105,7 @@ file 'pipeline.yml' => ['pipeline.yml.erb', 'partition.yml.erb'] do |t|
 
   @pool_6_0_nsxv = Pool.new('6.0-NSXV')
   @pool_6_0_nsxv.params = {
-    RSPEC_FLAGS: "--tag nsx_vsphere"
+    RSPEC_FLAGS: "--tag nsx_vsphere",
     NSXT_SKIP_SSL_VERIFY: "true"
   }
 
@@ -117,7 +117,7 @@ file 'pipeline.yml' => ['pipeline.yml.erb', 'partition.yml.erb'] do |t|
 
   @pool_6_5_nsxv = Pool.new('6.5-NSXV')
   @pool_6_5_nsxv.params = {
-    RSPEC_FLAGS: "--tag nsx_vsphere"
+    RSPEC_FLAGS: "--tag nsx_vsphere",
     NSXT_SKIP_SSL_VERIFY: "true"
   }
 

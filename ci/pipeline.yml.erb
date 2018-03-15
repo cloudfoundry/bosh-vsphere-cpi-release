@@ -52,7 +52,7 @@ jobs:
           passed: [build-candidate]
       - do:
         - put: environment
-          resource: nimbus-environments-6.5
+          resource: pool-6.5
           params: {acquire: true}
         - task: extend-lease-6.5
           file: source-ci/ci/tasks/extend-lease.yml
@@ -61,7 +61,7 @@ jobs:
             DBCHOST: {{dbc_host}}
             DBC_SSH_KEY: {{dbc_key}}
           on_failure:
-            put: nimbus-environments-6.5
+            put: pool-6.5
             params : {release: environment}
         attempts: 4
 
@@ -71,7 +71,7 @@ jobs:
       - aggregate:
         - get: source-ci
         - {get: cpi-release,              trigger: false, resource: bosh-cpi-artifacts, passed: [lock-bats]}
-        - {get: environment,              trigger: true,  passed: [lock-bats], resource: nimbus-environments-6.5 }
+        - {get: environment,              trigger: true,  passed: [lock-bats], resource: pool-6.5 }
         - {get: bosh-release,             trigger: false, resource: old-bosh-release}
         - {get: stemcell,                 trigger: false, resource: old-stemcell}
         - {get: certification,            trigger: false}
@@ -95,7 +95,7 @@ jobs:
             STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-trusty-go_agent
         on_failure:
           aggregate:
-          - put: nimbus-environments-6.5
+          - put: pool-6.5
             params : {remove: environment}
           - put: notify
             params:
@@ -114,9 +114,9 @@ jobs:
 
   - name: unlock-bats
     plan:
-      - {trigger: true, passed: [bats], get: nimbus-environments-6.5}
-      - put: nimbus-environments-6.5
-        params : {release: nimbus-environments-6.5}
+      - {trigger: true, passed: [bats], get: pool-6.5}
+      - put: pool-6.5
+        params : {release: pool-6.5}
 
   - name: delivery
     plan:
@@ -168,35 +168,35 @@ resources:
     type: slack-notification
     source:
       url: {{slack_webhook}}
-  - name: nimbus-environments-6.5-NSXV
+  - name: pool-6.5-NSXV
     type: pool
     source:
       uri:          git@github.com:ktchen14/vcpi-pool.git
       branch:       master
       pool:         v6.5-nsxv
       private_key:  {{vcpi-pool_deployment_key}}
-  - name: nimbus-environments-6.0-NSXV
+  - name: pool-6.0-NSXV
     type: pool
     source:
       uri:          git@github.com:ktchen14/vcpi-pool.git
       branch:       master
       pool:         v6.0-nsxv
       private_key:  {{vcpi-pool_deployment_key}}
-  - name: nimbus-environments-6.5
+  - name: pool-6.5
     type: pool
     source:
       uri:          git@github.com:ktchen14/vcpi-pool.git
       branch:       master
       pool:         v6.5
       private_key:  {{vcpi-pool_deployment_key}}
-  - name: nimbus-environments-5.5
+  - name: pool-5.5
     type: pool
     source:
       uri:          git@github.com:ktchen14/vcpi-pool.git
       branch:       master
       pool:         v5.5
       private_key:  {{vcpi-pool_deployment_key}}
-  - name: nimbus-environments-6.0
+  - name: pool-6.0
     type: pool
     source:
       uri:          git@github.com:ktchen14/vcpi-pool.git

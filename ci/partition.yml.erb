@@ -8,7 +8,7 @@
         passed: [unit-test]
     - do:
       - put: environment
-        resource: <%= e "nimbus-environments-#{pool}" %>
+        resource: <%= e "pool-#{pool}" %>
         params: { acquire: true }
       - task: extend-lease
         file: source-ci/ci/tasks/extend-lease.yml
@@ -17,7 +17,7 @@
           DBCHOST: {{dbc_host}}
           DBC_SSH_KEY: {{dbc_key}}
         on_failure:
-          put: <%= e "nimbus-environments-#{pool}" %>
+          put: <%= e "pool-#{pool}" %>
           params : { release: environment }
       attempts: 4
 
@@ -29,7 +29,7 @@
       - get: bosh-cpi-src
         passed: [<%= e "lock-#{pool}" %>]
       - get: environment
-        resource: <%= e "nimbus-environments-#{pool}" %>
+        resource: <%= e "pool-#{pool}" %>
         trigger: true
         passed: [<%= e "lock-#{pool}" %>]
       - get: stemcell
@@ -40,14 +40,14 @@
         <%= e k %>: <%= e v %>
 <% end -%>
       on_failure:
-        put: <%= e "nimbus-environments-#{pool}" %>
+        put: <%= e "pool-#{pool}" %>
         params : { remove: environment }
 
   - name: <%= e "unlock-#{pool}" %>
     serial_groups: [<%= e pool %>]
     plan:
-    - get: <%= e "nimbus-environments-#{pool}" %>
+    - get: <%= e "pool-#{pool}" %>
       trigger: true
       passed: [<%= e "lifecycle-#{pool}" %>]
-    - put: <%= e "nimbus-environments-#{pool}" %>
-      params : { release: <%= e "nimbus-environments-#{pool}" %> }
+    - put: <%= e "pool-#{pool}" %>
+      params : { release: <%= e "pool-#{pool}" %> }
