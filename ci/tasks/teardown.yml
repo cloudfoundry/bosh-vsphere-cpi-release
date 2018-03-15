@@ -6,7 +6,6 @@ inputs:
   - name: source-ci
   - name: certification
   - name: director-state
-  - name: bosh-cpi-src
   - name: environment
 
 run:

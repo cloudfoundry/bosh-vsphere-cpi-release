@@ -39,7 +39,7 @@ export BOSH_ALL_PROXY=socks5://localhost:5000
 
 mkdir -p bats-config
 
-bosh int bosh-cpi-src/ci/bats-spec.yml \
+bosh int source-ci/ci/bats-spec.yml \
   -v "stemcell_name=${STEMCELL_NAME}" \
   -v network1-staticIP-2=192.168.111.154 \
   -v network1-staticIP-1=192.168.111.153 \

@@ -82,7 +82,9 @@ jobs:
         - {get: bosh-deployment,          trigger: false}
         - {get: bats,                     trigger: false}
         - {get: bosh-cli,                 trigger: false}
-        - {get: bosh-cpi-src,             trigger: false, passed: [lock-and-extend-bats]} # Passthrough
+        - get: bosh-cpi-src
+          passed:
+          - lock-and-extend-bats
       - task: prepare-director
         file: source-ci/ci/tasks/prepare-director.yml
       - do:
