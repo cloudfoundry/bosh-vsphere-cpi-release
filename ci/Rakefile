@@ -1,3 +1,4 @@
+require 'erb'
 require 'open3'
 require 'time'
 require 'shellwords'
@@ -51,6 +52,75 @@ end
 
 desc "Pull, build, and push the docker image '#{DOCKER_NAME}'"
 task docker: %w[docker:pull docker:make docker:push]
+
+# Format an object for inclusion into a YAML document
+#
+# This actually uses `#to_json` rather than `#to_yaml` because the latter
+# produces an entire YAML document. If `object` doesn't respond to
+# `#to_json` then it's converted to a `String` by calling `to_s` on it
+# first.
+#
+# @return [String] `object` formatted for inclusion into a YAML document
+def e(object)
+  require 'json'
+  object.respond_to?(:to_json) ? object.to_json : object.to_s.to_json
+end
+
+def render(file, **kwargs)
+  erb = ERB.new(File.read(file), nil, '-')
+  erb.filename = file.to_s
+  erb.result(binding.tap do |b|
+    kwargs.each { |k, v| b.local_variable_set(k, v) }
+  end)
+end
+
+class Pool
+  attr_reader :name
+
+  attr_writer :params
+
+  def initialize(name)
+    @name = name
+  end
+
+  def params
+    @params ||= {}
+  end
+
+  alias to_s name
+end
+
+file 'pipeline.yml' => ['pipeline.yml.erb', 'partition.yml.erb'] do |t|
+  @pool_5_5 = Pool.new('5.5')
+  @pool_5_5.params = {
+    RSPEC_FLAGS: "--tag ~replicate_stemcell_two_threads --tag ~vsan_datastore --tag ~nsx_vsphere --tag ~nsx_transformers --tag ~log_creds",
+    NSXT_SKIP_SSL_VERIFY: "true"
+  }
+
+  @pool_6_0 = Pool.new('6.0')
+  @pool_6_0.params = {
+    RSPEC_FLAGS: "--tag ~nsx_vsphere --tag ~nsxt_version_two",
+    NSXT_SKIP_SSL_VERIFY: "true"
+  }
+
+  @pool_6_0_nsxv = Pool.new('6.0-NSXV')
+  @pool_6_0_nsxv.params = {
+    RSPEC_FLAGS: "--tag nsx_vsphere"
+  }
+
+  @pool_6_5 = Pool.new('6.5')
+  @pool_6_5.params = {
+    RSPEC_FLAGS: "--tag ~nsx_vsphere --tag ~disk_migration",
+    NSXT_SKIP_SSL_VERIFY: "true"
+  }
+
+  @pool_6_5_nsxv = Pool.new('6.5-NSXV')
+  @pool_6_5_nsxv.params = {
+    RSPEC_FLAGS: "--tag nsx_vsphere"
+  }
+
+  File.write(t.name, render(t.prerequisites.first))
+end
 
 desc 'Create or update the pipeline configuration'
 task :pipeline, [:name] => 'pipeline.yml' do |t, args|
