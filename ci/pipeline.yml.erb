@@ -23,6 +23,32 @@ jobs:
 <%= render('partition.yml.erb', pool: @pool_6_5) %>
 <%= render('partition.yml.erb', pool: @pool_6_5_nsxv) %>
 
+  - name: build-candidate
+    plan:
+    - aggregate:
+      - get: source-ci
+      - get: bosh-cpi-src
+        trigger: true
+        passed:
+          - lifecycle-5.5
+          - lifecycle-6.0
+          - lifecycle-6.0-NSXV
+          - lifecycle-6.5
+          - lifecycle-6.5-NSXV
+          - bats
+      - get: version-semver
+        trigger: false
+        params:
+          bump: patch
+    - put: version-semver
+      params:
+        file: version-semver/number
+    - task: build
+      file: source-ci/ci/tasks/build-candidate.yml
+    - put: bosh-cpi-artifacts
+      params:
+        file: 'dev-artifacts/*.tgz'
+
   - name: lock-and-extend-bats
     plan:
       - aggregate:
@@ -50,7 +76,7 @@ jobs:
     plan:
       - aggregate:
         - get: source-ci
-        - {get: cpi-release,              trigger: false, resource: bosh-cpi-artifacts, passed: [unit-test]}
+        - {get: cpi-release,              trigger: false, resource: bosh-cpi-artifacts, passed: [build-candidate]}
         - {get: environment,              trigger: true,  passed: [lock-and-extend-bats], resource: nimbus-environments-6.5 }
         - {get: bosh-release,             trigger: false, resource: old-bosh-release}
         - {get: stemcell,                 trigger: false, resource: old-stemcell}
@@ -99,12 +125,16 @@ jobs:
   - name: delivery
     plan:
     - aggregate:
-      - {trigger: true, passed: [lifecycle-6.0, lifecycle-6.5, lifecycle-5.5, bats, lifecycle-6.5-NSXV, lifecycle-6.0-NSXV], get: bosh-cpi-artifacts}
-      - {trigger: false, passed: [lifecycle-6.0, lifecycle-6.5,lifecycle-5.5, bats, lifecycle-6.5-NSXV, lifecycle-6.0-NSXV], get: bosh-cpi-src}
+      - get: bosh-cpi-src
+        passed:
+        - lifecycle-5.5
+        - lifecycle-6.0
+        - lifecycle-6.0-NSXV
+        - lifecycle-6.5
+        - lifecycle-6.5-NSXV
+        - bats
     - put: tracker-output
-      params:
-        repos:
-        - bosh-cpi-src
+      params: { repos: [bosh-cpi-src] }
 
   - name: promote-candidate
     serial: true
@@ -112,13 +142,7 @@ jobs:
     - aggregate:
       - get: source-ci
       - get: bosh-cpi-artifacts
-        passed:
-        - lifecycle-6.0
-        - lifecycle-6.5
-        - bats
-        - lifecycle-6.5-NSXV
-        - lifecycle-6.0-NSXV
-        - lifecycle-5.5
+        passed: [build-candidate]
       - get: bosh-cpi-src
         passed:
         - lifecycle-6.0
@@ -274,6 +298,7 @@ groups:
   jobs:
   - pyvmomi_to_ruby-tests
   - unit-test
+  - build-candidate
   - bats
   - lock-and-extend-bats
   - unlock-bats
