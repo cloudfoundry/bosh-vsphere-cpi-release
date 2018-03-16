@@ -29,9 +29,11 @@ module VSphereCloud
     let(:service_content) do
       instance_double('VimSdk::Vim::ServiceInstanceContent',
         virtual_disk_manager: virtual_disk_manager,
+        setting: option_manager,
       )
     end
     let(:virtual_disk_manager) { instance_double('VimSdk::Vim::VirtualDiskManager') }
+    let(:option_manager) { instance_double('VimSdk::Vim::Option::OptionManager') }
     let(:agent_env) { instance_double('VSphereCloud::AgentEnv') }
     let(:vcenter_host) { 'fake-host' }
     let(:vcenter_api_uri) { URI.parse("https://#{vcenter_host}") }
@@ -68,6 +70,25 @@ module VSphereCloud
     before { allow(vm_provider).to receive(:find).with('vm-id').and_return(vm) }
     let(:cluster_provider) { instance_double(VSphereCloud::Resources::ClusterProvider) }
     before { allow(Resources::ClusterProvider).to receive(:new).and_return(cluster_provider) }
+
+    describe '#add_cpi_telemetry_config' do
+      context 'when advanced config option is not present' do
+        it 'calls update option once' do
+          allow(option_manager).to receive(:query_view).with(any_args).
+            and_raise(VimSdk::SoapError.new('message', VimSdk::Vim::Fault::InvalidName.new))
+          expect(option_manager).to receive(:update_values).once
+          vsphere_cloud.add_cpi_telemetry_config
+        end
+      end
+      context 'when advanced config option is  present' do
+        it 'calls update option once' do
+          allow(option_manager).to receive(:query_view).with(any_args).
+            and_return ([VimSdk::Vim::Option::OptionValue.new])
+          expect(option_manager).not_to receive(:update_values)
+          vsphere_cloud.add_cpi_telemetry_config
+        end
+      end
+    end
 
     describe '#has_vm?' do
       context 'the vm is found' do

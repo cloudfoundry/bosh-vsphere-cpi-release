@@ -122,6 +122,23 @@ describe 'RetryableStubAdapter' do
           retryable_stub_adapter.invoke_method(managed_object, method_info, method_args)
         }.to raise_error(Errno::ECONNRESET)
       end
+
+      context 'when method invoked is one in SILENT_RUN_METHOD or SILENT_ERROR_METHOD' do
+        let(:method_info) { double('some-method-info', wsdl_name: 'UpdateOptions') }
+        it 'does not log and run or error warning messages' do
+          expect(retryer).to receive(:sleep).with(any_args).exactly(5).times
+
+          expect(stub_adapter).to receive(:invoke_method).exactly(6).times
+            .with(managed_object, method_info, method_args, retryable_stub_adapter)
+            .and_raise(Errno::ECONNRESET)
+
+          expect {
+            retryable_stub_adapter.invoke_method(managed_object, method_info, method_args)
+          }.to raise_error(Errno::ECONNRESET)
+          expect(retryable_stub_adapter.instance_variable_get(:@logger).
+            instance_variable_get(:@logdev).dev.string).to eql("")
+        end
+      end
     end
   end
 

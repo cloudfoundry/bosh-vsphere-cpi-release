@@ -18,6 +18,23 @@ module VSphereCloud
     attr_accessor :client, :logger # exposed for testing
     attr_reader :config, :datacenter, :heartbeat_thread
 
+    def add_cpi_telemetry_config
+      # Add telemetry option to vsphere
+      cpi_advanced_prop=VimSdk::Vim::Option::OptionValue.new
+      cpi_advanced_prop.key='config.SDDC.cpi'
+      cpi_advanced_prop.value='true'
+      begin
+        client.service_content.setting.query_view(cpi_advanced_prop.key)
+      rescue => e
+        if e.fault.class == VimSdk::Vim::Fault::InvalidName
+          begin
+            client.service_content.setting.update_values([cpi_advanced_prop])
+          rescue Exception
+          end
+        end
+      end
+    end
+
     def initialize(options)
       @config = Config.build(options)
 
@@ -109,6 +126,8 @@ module VSphereCloud
 
     def create_stemcell(image, _)
       with_thread_name("create_stemcell(#{image}, _)") do
+        # Add cpi telemetry advanced config to vc
+        add_cpi_telemetry_config
         result = nil
         Dir.mktmpdir do |temp_dir|
           @logger.info("Extracting stemcell to: #{temp_dir}")

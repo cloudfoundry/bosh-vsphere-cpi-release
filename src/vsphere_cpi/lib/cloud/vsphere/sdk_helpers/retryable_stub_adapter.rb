@@ -10,16 +10,31 @@ module VSphereCloud
         @retryer = retryer || Retryer.new
       end
 
+
+      SILENT_RUN_METHOD = Set[
+        'QueryOptions',
+        'UpdateOptions',
+        'RetrievePropertiesEx',
+        'RetrieveProperties',
+      ]
+
+      SILENT_ERROR_METHOD = Set[
+        'QueryOptions',
+        'UpdateOptions',
+      ]
+
       def invoke_method(managed_object, method_info, arguments)
         method_name = method_info.wsdl_name
         method_result = @retryer.try do |i|
           result = nil
           err = nil
 
-          if i == 0
-            @logger.debug("Running method '#{method_name}'...")
-          else
-            @logger.warn("Retrying method '#{method_name}', #{i} attempts so far...")
+          unless SILENT_RUN_METHOD.include?(method_name)
+            if i == 0
+              @logger.debug("Running method '#{method_name}'...")
+            else
+              @logger.warn("Retrying method '#{method_name}', #{i} attempts so far...")
+            end
           end
 
           begin
@@ -34,7 +49,9 @@ module VSphereCloud
             HTTPClient::KeepAliveDisconnected,
             OpenSSL::SSL::SSLError,
             OpenSSL::X509::StoreError => e
-            @logger.warn("Error running method '#{method_name}'. Failed with '#{e.class}: #{e.message}'")
+            unless SILENT_ERROR_METHOD.include?(method_name)
+              @logger.warn("Error running method '#{method_name}'. Failed with '#{e.class}: #{e.message}'")
+            end
             err = e
           else
             if status.between?(200, 299)
@@ -46,7 +63,9 @@ module VSphereCloud
             end
 
             if err
-              @logger.warn(fault_message(method_name, err))
+              unless SILENT_ERROR_METHOD.include?(method_name)
+                @logger.warn(fault_message(method_name, err))
+              end
               unless @retry_judge.retryable?(managed_object, method_info.wsdl_name, object)
                 raise err
               end
