@@ -4,6 +4,7 @@ image_resource:
 inputs:
 - name: source-ci
 - name: bosh-cpi-src
+- name: version-semver
 outputs:
 - name: dev-artifacts
 run:
