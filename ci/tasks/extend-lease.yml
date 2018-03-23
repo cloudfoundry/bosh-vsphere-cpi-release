@@ -2,9 +2,9 @@ platform: linux
 image_resource:
   { type: docker-image, source: { repository: vcpici/vcpi-main } }
 inputs:
+  - name: source-ci
   - name: environment
-  - name: bosh-cpi-src
 outputs:
   - name: dummy # dummy output to avoid sending the entire task over the network
 run:
-  path: bosh-cpi-src/ci/tasks/extend-lease.sh
+  path: source-ci/ci/tasks/extend-lease.sh

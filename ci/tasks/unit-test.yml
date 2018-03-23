@@ -4,8 +4,5 @@ image_resource:
 inputs:
 - name: source-ci
 - name: bosh-cpi-src
-- name: version-semver
-outputs:
-- name: dev-artifacts
 run:
-  path: source-ci/ci/tasks/build-candidate.sh
+  path: source-ci/ci/tasks/unit-test.sh

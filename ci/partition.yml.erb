@@ -1,0 +1,53 @@
+  - name: <%= e "lock-#{pool}" %>
+    serial_groups: [<%= e pool %>]
+    plan:
+    - aggregate:
+      - get: source-ci
+      - get: bosh-cpi-src
+        trigger: true
+        passed: [unit-test]
+    - do:
+      - put: environment
+        resource: <%= e "pool-#{pool}" %>
+        params: { acquire: true }
+      - task: extend-lease
+        file: source-ci/ci/tasks/extend-lease.yml
+        params:
+          DBCUSER: {{dbc_user}}
+          DBCHOST: {{dbc_host}}
+          DBC_SSH_KEY: {{dbc_key}}
+        on_failure:
+          put: <%= e "pool-#{pool}" %>
+          params : { release: environment }
+      attempts: 4
+
+  - name: <%= e "lifecycle-#{pool}" %>
+    serial_groups: [<%= e pool %>]
+    plan:
+    - aggregate:
+      - get: source-ci
+      - get: bosh-cpi-src
+        passed: [<%= e "lock-#{pool}" %>]
+      - get: environment
+        resource: <%= e "pool-#{pool}" %>
+        trigger: true
+        passed: [<%= e "lock-#{pool}" %>]
+      - get: stemcell
+    - task: test
+      file: source-ci/ci/tasks/run-lifecycle.yml
+      params:
+<% pool.params.each do |k, v| -%>
+        <%= e k %>: <%= e v %>
+<% end -%>
+      on_failure:
+        put: <%= e "pool-#{pool}" %>
+        params : { remove: environment }
+
+  - name: <%= e "unlock-#{pool}" %>
+    serial_groups: [<%= e pool %>]
+    plan:
+    - get: <%= e "pool-#{pool}" %>
+      trigger: true
+      passed: [<%= e "lifecycle-#{pool}" %>]
+    - put: <%= e "pool-#{pool}" %>
+      params : { release: <%= e "pool-#{pool}" %> }

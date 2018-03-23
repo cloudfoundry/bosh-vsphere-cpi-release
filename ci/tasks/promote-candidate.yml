@@ -4,6 +4,7 @@ image_resource:
   { type: docker-image, source: { repository: vcpici/vcpi-main } }
 
 inputs:
+  - name: source-ci
   - name: bosh-cpi-src
   - name: bosh-cpi-artifacts
   - name: release-version-semver
@@ -13,7 +14,7 @@ outputs:
   - name: integer-version
 
 run:
-  path: bosh-cpi-src/ci/tasks/promote-candidate.sh
+  path: source-ci/ci/tasks/promote-candidate.sh
 
 params:
   AWS_ACCESS_KEY_ID:     ""

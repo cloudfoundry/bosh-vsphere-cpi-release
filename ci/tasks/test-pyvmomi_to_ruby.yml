@@ -2,6 +2,7 @@ platform: linux
 image_resource:
   { type: docker-image, source: { repository: python, tag: '2.7' } }
 inputs:
+  - name: source-ci
   - name: bosh-cpi-src
 run:
-  path: bosh-cpi-src/ci/tasks/test-pyvmomi_to_ruby.sh
+  path: source-ci/ci/tasks/test-pyvmomi_to_ruby.sh
