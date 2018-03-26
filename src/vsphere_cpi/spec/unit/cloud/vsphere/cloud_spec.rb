@@ -830,7 +830,7 @@ module VSphereCloud
         end
 
         context 'and an error occurs when setting vif_type' do
-          let(:nsxt_error) { NSXT::Error.new(404) }
+          let(:nsxt_error) { NSXT::ApiCallError.new }
           before do
             allow(nsxt_provider).to receive(:add_vm_to_nsgroups)
             expect(nsxt_provider).to receive(:set_vif_type).and_raise(nsxt_error)

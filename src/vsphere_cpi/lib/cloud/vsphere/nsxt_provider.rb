@@ -66,12 +66,38 @@ module VSphereCloud
 
   class NSXTProvider
     def initialize(config, logger)
-      @client = NSXT::Client.new(config.host, config.username, config.password, logger)
+      configuration = NSXT::Configuration.new
+      configuration.host = config.host
+      configuration.username = config.username
+      configuration.password = config.password
+      configuration.logger = logger
+      configuration.client_side_validation = false
+      if ENV['BOSH_NSXT_CA_CERT_FILE']
+        configuration.ssl_ca_cert = ENV['BOSH_NSXT_CA_CERT_FILE']
+      end
+      if ENV['NSXT_SKIP_SSL_VERIFY']
+        configuration.verify_ssl = false
+        configuration.verify_ssl_host = false
+      end
+      @client = NSXT::ApiClient.new(configuration)
       @logger = logger
       @max_tries = MAX_TRIES
       @sleep_time = DEFAULT_SLEEP_TIME
       @default_vif_type = config.default_vif_type
     end
+
+    private def grouping_obj_svc
+      @grouping_obj_svc ||= NSXT::GroupingObjectsApi.new(@client)
+    end
+
+    private def logical_switching_svc
+      @logical_switching_svc ||= NSXT::LogicalSwitchingApi.new(@client)
+    end
+
+    private def fabric_svc
+      @fabric_svc ||= NSXT::FabricApi.new(@client)
+    end
+
 
     def add_vm_to_nsgroups(vm, vm_type_nsxt)
       return if vm_type_nsxt.nil? || vm_type_nsxt['ns_groups'].nil? || vm_type_nsxt['ns_groups'].empty?
@@ -83,7 +109,11 @@ module VSphereCloud
       lports = logical_ports(vm)
       nsgroups.each do |nsgroup|
         @logger.info("Adding LogicalPorts: #{lports.map(&:id)} to NSGroup '#{nsgroup.id}'")
-        nsgroup.add_members(*to_simple_expressions(lports))
+        grouping_obj_svc.add_or_remove_ns_group_expression(
+          nsgroup.id,
+          *to_simple_expressions(lports),
+          'ADD_MEMBERS'
+        )
       end
     end
 
@@ -93,17 +123,21 @@ module VSphereCloud
       lports = logical_ports(vm)
 
       lport_ids = lports.map(&:id)
-      nsgroups = @client.nsgroups.select do |nsgroup|
-        not nsgroup.members.select do |member|
-          member.is_a?(NSXT::NSGroup::SimpleExpression) &&
-            member.target_property == 'id' &&
-            lport_ids.include?(member.value)
-        end.empty?
+      nsgroups = grouping_obj_svc.list_ns_groups.results.select do |nsgroup|
+        nsgroup.members.any? do |member|
+          member.is_a?(NSXT::NSGroupSimpleExpression) &&
+          member.target_property == 'id' &&
+          lport_ids.include?(member.value)
+        end
       end
 
       nsgroups.each do |nsgroup|
         @logger.info("Removing LogicalPorts: #{lport_ids} to NSGroup '#{nsgroup.id}'")
-        nsgroup.remove_members(*to_simple_expressions(lports))
+        grouping_obj_svc.add_or_remove_ns_group_expression(
+          nsgroup.id,
+          *to_simple_expressions(lports),
+          'REMOVE_MEMBERS'
+        )
       end
     end
 
@@ -114,22 +148,25 @@ module VSphereCloud
       logical_ports(vm).each do |logical_port|
         loop do
           tags = logical_port.tags || []
-          tags_by_scope = tags.group_by { |tag| tag['scope'] }
+          tags_by_scope = tags.group_by { |tag| tag.scope }
           bosh_id_tags = tags_by_scope.fetch('bosh/id', [])
 
           raise InvalidLogicalPortError.new(logical_port) if bosh_id_tags.uniq.length > 1
 
-          id_tag = { 'scope' => 'bosh/id', 'tag' => Digest::SHA1.hexdigest(metadata['id']) }
-          tags.delete_if {|tag| tag['scope'] == 'bosh/id'}
+          id_tag = NSXT::Tag.new('scope' => 'bosh/id', 'tag' => Digest::SHA1.hexdigest(metadata['id']))
+          tags.delete_if {|tag| tag.scope == 'bosh/id'}
           tags << id_tag
 
-          response = logical_port.update('tags' => tags)
-          if response.ok?
-            break
-          elsif response.status == 412
-            logical_port.reload!
-          else
-            raise NSXT::Error.new(response.status_code), response.body
+          logical_port.tags = tags
+          begin
+            lport = logical_switching_svc.update_logical_port_with_http_info(logical_port.id, logical_port)
+            break if lport
+          rescue NSXT::ApiCallError => e
+            if e.code == 412
+              logical_port = logical_switching_svc.get_logical_port(logical_port.id)
+            else
+              raise e
+            end
           end
         end
       end
@@ -139,21 +176,22 @@ module VSphereCloud
       vif_type = (vm_type_nsxt || {}).has_key?('vif_type') ? vm_type_nsxt['vif_type'] : @default_vif_type
       return if vif_type.nil?
       return if nsxt_nics(vm).empty?
-
-      logical_ports(vm).each do |logical_port|
+      ports = logical_ports(vm)
+      ports.each do |logical_port|
         @logger.info("Setting VIF attachment on logical port #{logical_port.id} to have vif_type '#{vif_type}'")
         loop do
-          attachment = logical_port.attachment.merge('context' => {
-            'resource_type' => 'VifAttachmentContext', 'vif_type' => vif_type
-          })
-
-          response = logical_port.update('attachment' => attachment)
-          if response.ok?
-            break
-          elsif response.status == 412
-            logical_port.reload!
-          else
-            raise NSXT::Error.new(response.status_code), response.body
+          logical_port.attachment.context = NSXT::VifAttachmentContext.new
+          logical_port.attachment.context.resource_type = 'VifAttachmentContext'
+          logical_port.attachment.context.vif_type = vif_type
+          begin
+            lport = logical_switching_svc.update_logical_port_with_http_info(logical_port.id, logical_port)
+            break if lport
+          rescue NSXT::ApiCallError => e
+            if e.code == 412
+              logical_port = logical_switching_svc.get_logical_port(logical_port.id)
+            else
+              raise e
+            end
           end
         end
       end
@@ -167,7 +205,7 @@ module VSphereCloud
 
     def retrieve_nsgroups(nsgroup_names)
       @logger.info("Searching for groups: #{nsgroup_names}")
-      nsgroups_by_name = @client.nsgroups.each_with_object({}) do |nsgroup, hash|
+      nsgroups_by_name = grouping_obj_svc.list_ns_groups.results.each_with_object({}) do |nsgroup, hash|
         hash[nsgroup.display_name] = nsgroup
       end
 
@@ -191,19 +229,19 @@ module VSphereCloud
         on: [VirtualMachineNotFound, MultipleVirtualMachinesFound, VIFNotFound, LogicalPortNotFound]
       ).retryer do |i|
         @logger.info("Searching for LogicalPorts for vm '#{vm.cid}'")
-        virtual_machines = @client.virtual_machines(display_name: vm.cid)
+        virtual_machines = fabric_svc.list_virtual_machines(:display_name => vm.cid).results
         raise VirtualMachineNotFound.new(vm.cid) if virtual_machines.empty?
         raise MultipleVirtualMachinesFound.new(vm.cid, virtual_machines.length) if virtual_machines.length > 1
         external_id = virtual_machines.first.external_id
 
         @logger.info("Searching VIFs with 'owner_vm_id: #{external_id}'")
-        vifs = @client.vifs(owner_vm_id: external_id)
+        vifs = fabric_svc.list_vifs(:owner_vm_id => external_id).results
         vifs.select! { |vif| !vif.lport_attachment_id.nil? }
         raise VIFNotFound.new(vm.cid, external_id) if vifs.empty?
 
         lports = vifs.inject([]) do |lports, vif|
           @logger.info("Searching LogicalPorts with 'attachment_id: #{vif.lport_attachment_id}'")
-          lports << @client.logical_ports(attachment_id: vif.lport_attachment_id).first
+          lports << logical_switching_svc.list_logical_ports(attachment_id: vif.lport_attachment_id).results.first
         end.compact
         raise LogicalPortNotFound.new(vm.cid, external_id) if lports.empty?
         @logger.info("LogicalPorts found for vm '#{vm.cid}': #{lports.map(&:id)}'")
@@ -213,9 +251,18 @@ module VSphereCloud
     end
 
     def to_simple_expressions(lports)
-      lports.map do |lport|
-        NSXT::NSGroup::SimpleExpression.from_resource(lport, 'id')
+      ns_grp_exprn_lst = NSXT::NSGroupExpressionList.new
+      ns_grp_exprn_lst.members = []
+      lports.each do |lport|
+        ns_grp_exprn_lst.members.push({
+          op: 'EQUALS',
+          target_type: lport.resource_type,
+          target_property: "id",
+          value: lport.id,
+          resource_type: "NSGroupSimpleExpression"
+        })
       end
+      ns_grp_exprn_lst
     end
 
     def nsxt_nics(vm)

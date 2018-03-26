@@ -2,7 +2,7 @@ require 'digest'
 require 'spec_helper'
 
 describe VSphereCloud::NSXTProvider do
-  let(:client) { instance_double(NSXT::Client) }
+  let(:client) { instance_double(NSXT::ApiClient) }
   let(:nsxt_config) { VSphereCloud::NSXTConfig.new('fake-host', 'fake-username', 'fake-password') }
   let(:opaque_nsxt) do
     instance_double(
@@ -46,24 +46,40 @@ describe VSphereCloud::NSXTProvider do
     NSXT::VirtualMachine.new(external_id: 'fake-external-id')
   end
   let(:vif) do
-    NSXT::VIF.new('fake-vif-id', 'fake-lport-attachment-id')
+    NSXT::VirtualNetworkInterface.new(:lport_attachment_id => 'fake-lport-attachment-id')
   end
   let(:vif_without_lport_attachment) do
-    NSXT::VIF.new
+    NSXT::VirtualNetworkInterface.new
   end
   let(:logical_port_1) do
-    NSXT::LogicalPort.new(client, 'fake-logical-port-id', nil, { 'attachment_type' => 'VIF', 'id' => vif.id })
+    NSXT::LogicalPort.new(:id =>'fake-logical-port-id', :tags => nil,
+      :attachment => NSXT::LogicalPortAttachment.new(:attachment_type => 'VIF', :id => 'fake-id'))
   end
   let(:logical_port_2) do
-    NSXT::LogicalPort.new(client, 'fake-logical-port-id-2')
+    NSXT::LogicalPort.new(:id => 'fake-logical-port-id-2')
   end
   let(:simple_expression_1) do
-    NSXT::NSGroup::SimpleExpression.from_resource(logical_port_1, 'id')
+    NSXT::NSGroupSimpleExpression.new(:op => 'EQUALS', :resource_type => 'NSXT::LogicalPort',
+                                      :target_property => 'id', :value => logical_port_1.id)
   end
   let(:simple_expression_2) do
-    NSXT::NSGroup::SimpleExpression.from_resource(logical_port_2, 'id')
+    NSXT::NSGroupSimpleExpression.new(:op => 'EQUALS', :resource_type => 'NSXT::LogicalPort',
+      :target_property => 'id', :value => logical_port_2.id)
   end
   let(:logger) { Logger.new('/dev/null') }
+
+  let(:grouping_obj_svc) do
+    NSXT::GroupingObjectsApi.new(client)
+  end
+
+  let(:logical_switching_svc) do
+    NSXT::LogicalSwitchingApi.new(client)
+  end
+
+  let(:fabric_svc) do
+    NSXT::FabricApi.new(client)
+  end
+
 
   subject(:nsxt_provider) do
     described_class.new(nsxt_config, logger).tap do |provider|
@@ -84,11 +100,8 @@ describe VSphereCloud::NSXTProvider do
     end
 
     it "sets all of the VM's VIF attachments to the vif_type in vm_type" do
-      expect(logical_port_1).to receive(:update).with(
-        'attachment' => logical_port_1.attachment.merge({ 'context' => {
-          'resource_type' => 'VifAttachmentContext', 'vif_type' => 'PARENT',
-        }})
-      ).and_return(success_response)
+      allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:logical_switching_svc).and_return(logical_switching_svc)
+      expect(logical_switching_svc).to receive(:update_logical_port_with_http_info).with(any_args).and_return(logical_port_1)
       nsxt_provider.set_vif_type(vm, 'vif_type' => 'PARENT')
     end
 
@@ -98,32 +111,22 @@ describe VSphereCloud::NSXTProvider do
       end
 
       it 'sets all VIF attachments on the VM to the default_vif_type' do
-        expect(logical_port_1).to receive(:update).with(
-          'attachment' => logical_port_1.attachment.merge({ 'context' => {
-            'resource_type' => 'VifAttachmentContext', 'vif_type' => 'CHILD',
-          }})
-        ).and_return(success_response)
+        allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:logical_switching_svc).and_return(logical_switching_svc)
+        expect(logical_switching_svc).to receive(:update_logical_port_with_http_info).with(any_args).and_return(logical_port_1)
         nsxt_provider.set_vif_type(vm, nil)
       end
     end
 
     context 'when an update fails due to a revision mismatch error' do
       let(:failure_response) do
-        HTTP::Message.new_response('{
-          "error_code": 206,
-          "error_message": "The object LogicalPort/...",
-          "httpStatus": "PRECONDITION_FAILED",
-          "module_name": "common-services"
-        }').tap { |r| r.status = 412 }
+        NSXT::ApiCallError.new(:code => 412 )
       end
 
       before do
-        expect(logical_port_1).to receive(:update).with(
-          'attachment' => logical_port_1.attachment.merge({ 'context' => {
-            'resource_type' => 'VifAttachmentContext', 'vif_type' => 'PARENT',
-          }})
-        ).and_return(failure_response, success_response)
-        expect(logical_port_1).to receive(:reload!)
+        allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:logical_switching_svc).and_return(logical_switching_svc)
+        expect(logical_switching_svc).to receive(:update_logical_port_with_http_info).with(any_args).and_raise(failure_response)
+        expect(logical_switching_svc).to receive(:update_logical_port_with_http_info).with(any_args).and_return(logical_port_1)
+        expect(logical_switching_svc).to receive(:get_logical_port).with(any_args).and_return(logical_port_1)
       end
 
       it 'retries' do
@@ -145,14 +148,15 @@ describe VSphereCloud::NSXTProvider do
         { 'ns_groups' => %w(test-nsgroup-1 test-nsgroup-2) }
       end
       let(:nsgroup_1) do
-        NSXT::NSGroup.new(client, 'id-1', 'test-nsgroup-1')
+        NSXT::NSGroup.new(:id => 'id-1', :display_name => 'test-nsgroup-1')
       end
       let(:nsgroup_2) do
-        NSXT::NSGroup.new(client, 'id-2', 'test-nsgroup-2')
+        NSXT::NSGroup.new(:id => 'id-2', :display_name => 'test-nsgroup-2')
       end
 
       before do
-        allow(client).to receive(:nsgroups).and_return([nsgroup_1, nsgroup_2])
+        allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:grouping_obj_svc).and_return(grouping_obj_svc)
+        allow(grouping_obj_svc).to receive_message_chain(:list_ns_groups, :results).and_return([nsgroup_1, nsgroup_2])
       end
 
       context 'but VM does NOT have any NSX-T opaque network' do
@@ -170,6 +174,7 @@ describe VSphereCloud::NSXTProvider do
         end
 
         it 'should raise a NSGroupsNotFound error' do
+          expect(grouping_obj_svc).to receive_message_chain(:list_ns_groups, :results).and_return([nsgroup_1, nsgroup_2])
           expect do
             nsxt_provider.add_vm_to_nsgroups(vm, vm_type_nsxt)
           end.to raise_error(VSphereCloud::NSGroupsNotFound)
@@ -183,9 +188,7 @@ describe VSphereCloud::NSXTProvider do
         end
 
         it 'adds simple expressions containing the logical ports to each NSGroup' do
-          expect(nsgroup_1).to receive(:add_members).with(simple_expression_1, simple_expression_2)
-          expect(nsgroup_2).to receive(:add_members).with(simple_expression_1, simple_expression_2)
-
+          expect(grouping_obj_svc).to receive(:add_or_remove_ns_group_expression).with(any_args).twice
           nsxt_provider.add_vm_to_nsgroups(vm, vm_type_nsxt)
         end
       end
@@ -194,31 +197,30 @@ describe VSphereCloud::NSXTProvider do
 
   describe '#remove_vm_from_nsgroups' do
     let(:simple_member) do
-      NSXT::NSGroup::SimpleExpression.new('EQUALS', 'LogicalPort', 'id', logical_port_1.id)
+      NSXT::NSGroupSimpleExpression.new(:op => 'EQUALS', :target_type => 'LogicalPort', :target_property => 'id', :value => logical_port_1.id)
       end
     let(:tag_member) do
-      NSXT::NSGroup::TagExpression.new('Tenant', 'EQUALS', 'my-tag', 'EQUALS', 'LogicalPort')
+      NSXT::NSGroupTagExpression.new(:scope => 'Tenant', :scope_op => 'EQUALS', :tag => 'my-tag', :tag_op => 'EQUALS', :target_type => 'LogicalPort')
     end
     let(:nsgroup_1) do
-      NSXT::NSGroup.new(client, 'id-1', 'test-nsgroup-1', [simple_member, tag_member])
+      NSXT::NSGroup.new(:id => 'id-1', :display_name => 'test-nsgroup-1', :members => [simple_member, tag_member])
     end
     let(:nsgroup_2) do
-      NSXT::NSGroup.new(client, 'id-2', 'test-nsgroup-2', [simple_member])
+      NSXT::NSGroup.new(:id => 'id-2', :display_name => 'test-nsgroup-2', :members => [simple_member])
     end
     let(:nsgroup_3) do
-      NSXT::NSGroup.new(client, 'id-2', 'test-nsgroup-2', [])
+      NSXT::NSGroup.new(:is => 'id-2', :display_name => 'test-nsgroup-2', :members => [])
     end
 
     before do
+      allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:grouping_obj_svc).and_return(grouping_obj_svc)
+      allow(grouping_obj_svc).to receive_message_chain(:list_ns_groups, :results).and_return([nsgroup_1, nsgroup_2])
       allow(nsxt_provider).to receive(:logical_ports).with(vm)
         .and_return([logical_port_1, logical_port_2])
-      allow(client).to receive(:nsgroups).and_return([nsgroup_1, nsgroup_2, nsgroup_3])
     end
 
     it "removes VM's logical ports from all NSGroups" do
-      expect(nsgroup_1).to receive(:remove_members).with(simple_expression_1, simple_expression_2)
-      expect(nsgroup_2).to receive(:remove_members).with(simple_expression_1, simple_expression_2)
-
+      expect(grouping_obj_svc).to receive(:add_or_remove_ns_group_expression).with(any_args).twice
       nsxt_provider.remove_vm_from_nsgroups(vm)
     end
 
@@ -234,10 +236,14 @@ describe VSphereCloud::NSXTProvider do
 
   describe '#update_vm_metadata_on_logical_ports' do
     let(:metadata) { { 'id' => 'new-bosh-id' } }
-    let(:old_vm_id_tag) { { 'scope' => 'bosh/id', 'tag' => Digest::SHA1.hexdigest('old-bosh-id') } }
-    let(:new_vm_id_tag) { { 'scope' => 'bosh/id', 'tag' => Digest::SHA1.hexdigest('new-bosh-id') } }
+    let(:old_vm_id_tag) {
+      NSXT::Tag.new('scope' => 'bosh/id', 'tag' => Digest::SHA1.hexdigest('old-bosh-id'))
+    }
+    let(:new_vm_id_tag) {
+      NSXT::Tag.new('scope' => 'bosh/id', 'tag' => Digest::SHA1.hexdigest('new-bosh-id'))
+    }
     let(:new_data) do
-      { 'tags' => [{ 'scope' => 'bosh/fake', 'tag' => 'fake-data' }, new_vm_id_tag] }
+      { 'tags' => [NSXT::Tag.new('scope' => 'bosh/fake', 'tag' => 'fake-data'), new_vm_id_tag] }
     end
     let(:existing_tags) { [] }
     let(:success_response) { HTTP::Message.new_response('') }
@@ -248,36 +254,38 @@ describe VSphereCloud::NSXTProvider do
         allow(logical_port_2).to receive(:tags).and_return(existing_tags)
         expect(nsxt_provider).to receive(:logical_ports).with(vm)
           .and_return([logical_port_1, logical_port_2])
+        allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:logical_switching_svc).and_return(logical_switching_svc)
       end
 
       context 'when logical ports do not have any tags' do
         let(:existing_tags) { nil }
         let(:new_data) { { 'tags' => [new_vm_id_tag] } }
         it 'adds the id tag' do
-          expect(logical_port_1).to receive(:update).with(new_data).and_return(success_response)
-          expect(logical_port_2).to receive(:update).with(new_data).and_return(success_response)
+          expect(logical_switching_svc).to receive(:update_logical_port_with_http_info).with(any_args).and_return(logical_port_1)
+          expect(logical_switching_svc).to receive(:update_logical_port_with_http_info).with(any_args).and_return(logical_port_2)
           nsxt_provider.update_vm_metadata_on_logical_ports(vm, metadata)
         end
       end
 
       context 'when logical ports do not have the id tag' do
-        let(:existing_tags) { [{ 'scope' => 'bosh/fake', 'tag' => 'fake-data' }] }
-
+        let(:existing_tags) {
+          [NSXT::Tag.new('scope' => 'bosh/fake', 'tag' => 'fake-data')]
+        }
         it 'adds the id tag' do
-          expect(logical_port_1).to receive(:update).with(new_data).and_return(success_response)
-          expect(logical_port_2).to receive(:update).with(new_data).and_return(success_response)
+          expect(logical_switching_svc).to receive(:update_logical_port_with_http_info).with(any_args).and_return(logical_port_1)
+          expect(logical_switching_svc).to receive(:update_logical_port_with_http_info).with(any_args).and_return(logical_port_2)
           nsxt_provider.update_vm_metadata_on_logical_ports(vm, metadata)
         end
       end
 
       context 'when logical ports have one id tag' do
         let(:existing_tags) do
-          [{ 'scope' => 'bosh/fake', 'tag' => 'fake-data' }, old_vm_id_tag]
+          [NSXT::Tag.new('scope' => 'bosh/fake', 'tag' => 'fake-data'), old_vm_id_tag]
         end
 
         it 'sets the existing id tag' do
-          expect(logical_port_1).to receive(:update).with(new_data).and_return(success_response)
-          expect(logical_port_2).to receive(:update).with(new_data).and_return(success_response)
+          expect(logical_switching_svc).to receive(:update_logical_port_with_http_info).with(any_args).and_return(logical_port_1)
+          expect(logical_switching_svc).to receive(:update_logical_port_with_http_info).with(any_args).and_return(logical_port_2)
           nsxt_provider.update_vm_metadata_on_logical_ports(vm, metadata)
         end
       end
@@ -285,19 +293,19 @@ describe VSphereCloud::NSXTProvider do
       context 'when a logical port has more than one relevant tag' do
         context 'when the relevant tags have the same value' do
           let(:existing_tags) do
-            [{ 'scope' => 'bosh/fake', 'tag' => 'fake-data' }, old_vm_id_tag, old_vm_id_tag]
+            [NSXT::Tag.new('scope' => 'bosh/fake', 'tag' => 'fake-data'), old_vm_id_tag, old_vm_id_tag]
           end
 
           it 'consolidates the existing id tags and sets it' do
-            expect(logical_port_1).to receive(:update).with(new_data).and_return(success_response)
-            expect(logical_port_2).to receive(:update).with(new_data).and_return(success_response)
+            expect(logical_switching_svc).to receive(:update_logical_port_with_http_info).with(any_args).and_return(logical_port_1)
+            expect(logical_switching_svc).to receive(:update_logical_port_with_http_info).with(any_args).and_return(logical_port_2)
             nsxt_provider.update_vm_metadata_on_logical_ports(vm, metadata)
           end
         end
 
         context 'when the relevant tags have different values' do
           let(:existing_tags) do
-            [{ 'scope' => 'bosh/fake', 'tag' => 'fake-data' }, old_vm_id_tag, new_vm_id_tag]
+            [NSXT::Tag.new('scope' => 'bosh/fake', 'tag' => 'fake-data'), old_vm_id_tag, new_vm_id_tag]
           end
 
           it 'raises an error' do
@@ -311,21 +319,18 @@ describe VSphereCloud::NSXTProvider do
 
     context 'when an update fails due to a revision mismatch error' do
       let(:logical_port) { logical_port_1 }
-      let(:existing_tags) { [{ 'scope' => 'bosh/fake', 'tag' => 'fake-data' }] }
+      let(:existing_tags) { [NSXT::Tag.new('scope' => 'bosh/fake', 'tag' => 'fake-data' )] }
       let(:failure_response) do
-        HTTP::Message.new_response('{
-          "error_code": 206,
-          "error_message": "The object LogicalPort/...",
-          "httpStatus": "PRECONDITION_FAILED",
-          "module_name": "common-services"
-        }').tap { |r| r.status = 412 }
+        NSXT::ApiCallError.new(:code => 412 )
       end
 
       before do
+        allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:logical_switching_svc).and_return(logical_switching_svc)
         expect(logical_port).to receive(:tags).at_least(:once).and_return(existing_tags)
         expect(nsxt_provider).to receive(:logical_ports).with(vm).and_return([logical_port])
-        expect(logical_port).to receive(:reload!)
-        expect(logical_port).to receive(:update).with(new_data).and_return(failure_response, success_response)
+        expect(logical_switching_svc).to receive(:update_logical_port_with_http_info).with(any_args).and_raise(failure_response)
+        expect(logical_switching_svc).to receive(:update_logical_port_with_http_info).with(any_args).and_return(logical_port_1)
+        expect(logical_switching_svc).to receive(:get_logical_port).with(any_args).and_return(logical_port_1)
       end
 
       it 'retries' do
@@ -355,21 +360,23 @@ describe VSphereCloud::NSXTProvider do
       before do
         nsxt_provider.instance_variable_set('@max_tries', 4)
         nsxt_provider.instance_variable_set('@sleep_time', 0.0)
+        allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:fabric_svc).and_return(fabric_svc)
+        allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:logical_switching_svc).and_return(logical_switching_svc)
+        expect(fabric_svc).to receive(:list_virtual_machines).with(display_name: vm.cid)
+          .and_return(NSXT::VirtualMachineListResult.new(:results => []),
+                      NSXT::VirtualMachineListResult.new(:results => [virtual_machine]),
+                      NSXT::VirtualMachineListResult.new(:results => [virtual_machine]),
+                      NSXT::VirtualMachineListResult.new(:results => [virtual_machine]))
 
-        expect(client).to receive(:virtual_machines).with(display_name: vm.cid).once
-          .and_return([])
-        expect(client).to receive(:virtual_machines).with(display_name: vm.cid).exactly(3).times
-          .and_return([virtual_machine])
+        expect(fabric_svc).to receive(:list_vifs).with(owner_vm_id: virtual_machine.external_id)
+          .and_return(NSXT::VirtualNetworkInterfaceListResult.new(:results =>[vif_without_lport_attachment]),
+                      NSXT::VirtualNetworkInterfaceListResult.new(:results =>[vif, vif_without_lport_attachment]),
+                      NSXT::VirtualNetworkInterfaceListResult.new(:results =>[vif, vif_without_lport_attachment]))
 
-        expect(client).to receive(:vifs).with(owner_vm_id: virtual_machine.external_id).once
-          .and_return([vif_without_lport_attachment])
-        expect(client).to receive(:vifs).with(owner_vm_id: virtual_machine.external_id).twice
-          .and_return([vif, vif_without_lport_attachment])
-
-        expect(client).to receive(:logical_ports).with(attachment_id: vif.lport_attachment_id).once
-          .and_return([])
-        expect(client).to receive(:logical_ports).with(attachment_id: vif.lport_attachment_id).once
-          .and_return([logical_port_1])
+        expect(logical_switching_svc).to receive(:list_logical_ports).with(attachment_id: vif.lport_attachment_id).once
+          .and_return(NSXT::LogicalPortListResult.new(:results => []))
+        expect(logical_switching_svc).to receive(:list_logical_ports).with(attachment_id: vif.lport_attachment_id).once
+          .and_return(NSXT::LogicalPortListResult.new(:results => [logical_port_1]))
       end
 
       it 'VirtualMachineNotFound, VIFNotFound or LogicalPortNotFound exception is raised' do
@@ -385,8 +392,9 @@ describe VSphereCloud::NSXTProvider do
 
       context 'when the virtual machine cannot be found in NSX-T' do
         before do
-          expect(client).to receive(:virtual_machines).with(display_name: vm.cid)
-            .and_return([])
+          allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:fabric_svc).and_return(fabric_svc)
+          expect(fabric_svc).to receive(:list_virtual_machines).with(display_name: vm.cid)
+            .and_return(NSXT::VirtualMachineListResult.new(:results => []))
         end
 
         it 'raises an error' do
@@ -398,8 +406,9 @@ describe VSphereCloud::NSXTProvider do
 
       context 'when multiple virtual machines are found with same cid' do
         before do
-          expect(client).to receive(:virtual_machines).with(display_name: vm.cid)
-            .and_return([virtual_machine, virtual_machine])
+          allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:fabric_svc).and_return(fabric_svc)
+          expect(fabric_svc).to receive(:list_virtual_machines).with(display_name: vm.cid)
+            .and_return(NSXT::VirtualMachineListResult.new(:results => [virtual_machine, virtual_machine]))
         end
 
         it 'raises an error' do
@@ -411,10 +420,13 @@ describe VSphereCloud::NSXTProvider do
 
       context 'when no VIF with logical port attachment can be found' do
         before do
-          expect(client).to receive(:virtual_machines).with(display_name: vm.cid)
-            .and_return([virtual_machine])
-          expect(client).to receive(:vifs).with(owner_vm_id: virtual_machine.external_id)
-            .and_return([vif_without_lport_attachment])
+          allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:fabric_svc).and_return(fabric_svc)
+          allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:logical_switching_svc).and_return(logical_switching_svc)
+          expect(fabric_svc).to receive(:list_virtual_machines).with(display_name: vm.cid)
+            .and_return(NSXT::VirtualMachineListResult.new(:results => [virtual_machine]))
+          expect(fabric_svc).to receive(:list_vifs).with(owner_vm_id: virtual_machine.external_id)
+            .and_return(NSXT::VirtualNetworkInterfaceListResult.new(:results => [vif_without_lport_attachment]))
+
         end
 
         it 'raises an error' do
@@ -426,12 +438,14 @@ describe VSphereCloud::NSXTProvider do
 
       context 'when no logical ports can be found' do
         before do
-          expect(client).to receive(:virtual_machines).with(display_name: vm.cid)
-            .and_return([virtual_machine])
-          expect(client).to receive(:vifs).with(owner_vm_id: virtual_machine.external_id)
-            .and_return([vif])
-          expect(client).to receive(:logical_ports).with(attachment_id: vif.lport_attachment_id)
-            .and_return([])
+          allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:fabric_svc).and_return(fabric_svc)
+          allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:logical_switching_svc).and_return(logical_switching_svc)
+          expect(fabric_svc).to receive(:list_virtual_machines).with(display_name: vm.cid)
+            .and_return(NSXT::VirtualMachineListResult.new(:results => [virtual_machine]))
+          expect(fabric_svc).to receive(:list_vifs).with(owner_vm_id: virtual_machine.external_id)
+            .and_return(NSXT::VirtualNetworkInterfaceListResult.new(:results => [vif]))
+          expect(logical_switching_svc).to receive(:list_logical_ports).with(attachment_id: vif.lport_attachment_id)
+            .and_return(NSXT::LogicalPortListResult.new(:results =>[]))
         end
 
         it 'raises an error' do
@@ -443,12 +457,14 @@ describe VSphereCloud::NSXTProvider do
     end
 
     it 'returns array of logical ports' do
-      expect(client).to receive(:virtual_machines).with(display_name: vm.cid)
-        .and_return([virtual_machine])
-      expect(client).to receive(:vifs).with(owner_vm_id: virtual_machine.external_id)
-        .and_return([vif, vif_without_lport_attachment])
-      expect(client).to receive(:logical_ports).with(attachment_id: vif.lport_attachment_id)
-        .and_return([logical_port_1])
+      allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:fabric_svc).and_return(fabric_svc)
+      allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:logical_switching_svc).and_return(logical_switching_svc)
+      expect(fabric_svc).to receive(:list_virtual_machines).with(display_name: vm.cid)
+        .and_return(NSXT::VirtualMachineListResult.new(:results => [virtual_machine]))
+      expect(fabric_svc).to receive(:list_vifs).with(owner_vm_id: virtual_machine.external_id)
+        .and_return(NSXT::VirtualNetworkInterfaceListResult.new(:results => [vif, vif_without_lport_attachment]))
+      expect(logical_switching_svc).to receive(:list_logical_ports).with(attachment_id: vif.lport_attachment_id)
+        .and_return(NSXT::LogicalPortListResult.new(:results => [logical_port_1]))
 
       expect(nsxt_provider.send(:logical_ports, vm)).to eq([logical_port_1])
     end
