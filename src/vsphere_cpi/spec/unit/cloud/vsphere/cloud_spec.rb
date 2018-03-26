@@ -71,13 +71,13 @@ module VSphereCloud
     let(:cluster_provider) { instance_double(VSphereCloud::Resources::ClusterProvider) }
     before { allow(Resources::ClusterProvider).to receive(:new).and_return(cluster_provider) }
 
-    describe '#add_cpi_telemetry_config' do
+    describe '#enable_telemetry' do
       context 'when advanced config option is not present' do
         it 'calls update option once' do
           allow(option_manager).to receive(:query_view).with(any_args).
             and_raise(VimSdk::SoapError.new('message', VimSdk::Vim::Fault::InvalidName.new))
           expect(option_manager).to receive(:update_values).once
-          vsphere_cloud.add_cpi_telemetry_config
+          vsphere_cloud.enable_telemetry
         end
       end
       context 'when advanced config option is  present' do
@@ -85,7 +85,7 @@ module VSphereCloud
           allow(option_manager).to receive(:query_view).with(any_args).
             and_return ([VimSdk::Vim::Option::OptionValue.new])
           expect(option_manager).not_to receive(:update_values)
-          vsphere_cloud.add_cpi_telemetry_config
+          vsphere_cloud.enable_telemetry
         end
       end
     end

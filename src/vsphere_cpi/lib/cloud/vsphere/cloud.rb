@@ -18,21 +18,23 @@ module VSphereCloud
     attr_accessor :client, :logger # exposed for testing
     attr_reader :config, :datacenter, :heartbeat_thread
 
-    def add_cpi_telemetry_config
-      # Add telemetry option to vsphere
-      cpi_advanced_prop=VimSdk::Vim::Option::OptionValue.new
-      cpi_advanced_prop.key='config.SDDC.cpi'
-      cpi_advanced_prop.value='true'
-      begin
-        client.service_content.setting.query_view(cpi_advanced_prop.key)
-      rescue => e
-        if e.fault.class == VimSdk::Vim::Fault::InvalidName
-          begin
-            client.service_content.setting.update_values([cpi_advanced_prop])
-          rescue Exception
-          end
-        end
-      end
+    def enable_telemetry
+      http_client = VSphereCloud::CpiHttpClient.new(@config.soap_log)
+
+      other_client = VCenterClient.new(
+        vcenter_api_uri: @config.vcenter_api_uri,
+        http_client: http_client,
+        logger: @logger,
+      )
+
+      option = Vim::Option::OptionValue.new
+      option.key = 'config.SDDC.cpi'
+      option.value = 'true'
+
+      other_client.service_content.setting.query_view(option.key)
+    rescue Exception => e
+      return unless e.fault.is_a?(Vim::Fault::InvalidName)
+      other_client.service_content.setting.update_values([option]) rescue nil
     end
 
     def initialize(options)
@@ -126,8 +128,13 @@ module VSphereCloud
 
     def create_stemcell(image, _)
       with_thread_name("create_stemcell(#{image}, _)") do
-        # Add cpi telemetry advanced config to vc
-        add_cpi_telemetry_config
+        # Add cpi telemetry advanced config to vc in a separate process by performing a double fork
+        # Use new client in enable_telemetry so that the main client connection is not closed when the sub-process exits
+        unless fork
+          Process.setsid
+          exit! if fork
+          enable_telemetry
+        end
         result = nil
         Dir.mktmpdir do |temp_dir|
           @logger.info("Extracting stemcell to: #{temp_dir}")

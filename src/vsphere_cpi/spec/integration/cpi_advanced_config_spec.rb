@@ -11,8 +11,9 @@ describe '#add advanced cpi config' do
       begin
         stemcell_id = upload_stemcell(cpi)
         cpi_advanced_prop_key='config.SDDC.cpi'
-        expect(cpi.client.service_content.setting.
-          query_view(cpi_advanced_prop_key).first.value).to eql('true')
+        cpi_advanced_prop_value = cpi.client.service_content.setting.
+          query_view(cpi_advanced_prop_key).first.value
+        expect(cpi_advanced_prop_value).to eql('true')
       ensure
         cpi.delete_stemcell(stemcell_id)
       end
