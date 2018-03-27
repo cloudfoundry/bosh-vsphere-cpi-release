@@ -1,33 +1,15 @@
+require 'cloud/vsphere/storage_list'
+
 module VSphereCloud
   class DiskPool
-    attr_reader :datacenter, :type, :datastores
+    include VSphereCloud::StorageList
+    attr_reader :datacenter, :storage_list
 
-    # @param datastores It is a list of datastores and datastore_clusters.
-    # Eg. [datastore1, clusters: [{datastore_cluster1: {}, datatore_cluster2: {}}]]
-    def initialize(datacenter, type, datastores)
+    # @param [Resources::Datacenter] datacenter
+    # @param [Hash] storage_list is a list of datastores and datastore_clusters defined as 'datastores' in cloud_properties.
+    def initialize(datacenter, storage_list)
       @datacenter = datacenter
-      @type = type
-      @datastores = datastores || []
-    end
-
-    def datastore_names
-      @datastores.select do |entry|
-        entry.is_a?(String)
-      end
-    end
-
-    #Returns list of StoragePod objects for datastore_clusters
-    def datastore_clusters
-      clusters_hash = @datastores.find do |entry|
-        hash = Hash.try_convert(entry)
-        next if hash.nil?
-        hash.key?('clusters')
-      end
-      return [] if clusters_hash.nil?
-      clusters = clusters_hash['clusters']
-      clusters.map do |cluster|
-        Resources::StoragePod.find_storage_pod(cluster.keys.first, @datacenter.mob)
-      end
+      @storage_list = storage_list || []
     end
   end
 end
