@@ -301,9 +301,10 @@ module VSphereCloud
           if @config.nsxt_enabled?
             @nsxt_provider.add_vm_to_nsgroups(created_vm, vm_type.nsxt)
             @nsxt_provider.set_vif_type(created_vm, vm_type.nsxt)
+            @nsxt_provider.add_vm_to_lbs(created_vm, vm_type.nsxt_lbs) if vm_type.nsxt_lbs
           end
         rescue => e
-          @logger.info("Failed to add VM '#{created_vm.cid}' to NSGroups with error: #{e}")
+          @logger.info("Failed to apply NSXT properties to VM '#{created_vm.cid}' with error: #{e}")
           begin
             @logger.info("Deleting VM '#{created_vm.cid}'...")
             delete_vm(created_vm.cid)
@@ -314,7 +315,6 @@ module VSphereCloud
         end
 
         begin
-
           vm_type.nsx_security_groups.each do |security_group|
             nsx.add_vm_to_security_group(security_group, created_vm.mob_id)
           end unless vm_type.nsx_security_groups.nil?

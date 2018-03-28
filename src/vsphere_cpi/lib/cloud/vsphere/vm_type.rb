@@ -27,5 +27,9 @@ module VSphereCloud
     def nsx_lbs
       nsx['lbs'] if nsx
     end
+
+    def nsxt_lbs
+      nsxt['lbs'] if nsxt
+    end
   end
 end
