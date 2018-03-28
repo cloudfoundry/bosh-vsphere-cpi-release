@@ -852,7 +852,7 @@ module VSphereCloud
             expect(nsxt_provider).to receive(:add_vm_to_nsgroups).with(any_args).and_raise(nsxt_error)
           end
 
-          it 'delete created VM and raises error' do
+          it 'deletes created VM and raises error' do
             expect(vsphere_cloud).to receive(:delete_vm).with(fake_vm.cid)
 
             expect do

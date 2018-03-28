@@ -98,6 +98,9 @@ module VSphereCloud
       @fabric_svc ||= NSXT::FabricApi.new(@client)
     end
 
+    private def services_svc
+      @services_svc ||= NSXT::ServicesApi.new(@client)
+    end
 
     def add_vm_to_nsgroups(vm, vm_type_nsxt)
       return if vm_type_nsxt.nil? || vm_type_nsxt['ns_groups'].nil? || vm_type_nsxt['ns_groups'].empty?
@@ -124,7 +127,7 @@ module VSphereCloud
 
       lport_ids = lports.map(&:id)
       nsgroups = grouping_obj_svc.list_ns_groups.results.select do |nsgroup|
-        nsgroup.members.any? do |member|
+        nsgroup.members&.any? do |member|
           member.is_a?(NSXT::NSGroupSimpleExpression) &&
           member.target_property == 'id' &&
           lport_ids.include?(member.value)
@@ -197,6 +200,33 @@ module VSphereCloud
       end
     end
 
+    def add_vm_to_lbs(vm, load_balancers)
+      server_pools = load_balancers['server_pools']
+      return if server_pools.nil? ||  server_pools.empty?
+      load_balancer_pools = retrieve_load_balancer_pools(server_pools)
+      vm_ip = vm.mob.guest&.ip_address
+      while vm_ip.nil?
+        sleep(5)
+        vm_ip =  vm.mob.guest&.ip_address
+        vm_ip =  vm.mob.guest&.ip_address
+      end
+      raise("Cannot add VM: #{vm.cid} to Load balancer as it does not have primary ip") unless vm_ip
+      load_balancer_pools.each do |load_balancer_pool|
+        @logger.info("Adding vm: '#{vm.cid}' to ServerPools: #{load_balancer_pool} ")
+        pool_member = NSXT::PoolMemberSetting.new(ip_address: vm_ip, port: 80)
+        pool_member_setting_list = NSXT::PoolMemberSettingList.new(members: [pool_member])
+        services_svc.perform_pool_member_action(load_balancer_pool.id, pool_member_setting_list, 'ADD_MEMBERS')
+      end
+    end
+
+    def retrieve_load_balancer_pools(server_pools)
+      pool_name = server_pools.first['pool_name']
+      server_pools = services_svc.list_load_balancer_pools.results
+      server_pools.select do |server_pool|
+        server_pool.display_name == pool_name
+      end
+    end
+
     private
 
     MAX_TRIES = 20
@@ -221,6 +251,8 @@ module VSphereCloud
 
       found_nsgroups
     end
+
+
 
     def logical_ports(vm)
       Bosh::Retryable.new(
