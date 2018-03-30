@@ -6,6 +6,7 @@ templates:
   cpi.json.erb: config/cpi.json
   nsx_cacert.pem.erb: config/nsx_cacert.pem
   nsxt_cacert.pem.erb: config/nsxt_cacert.pem
+  post-start.erb: bin/post-start
 
 packages:
 - iso9660wrap

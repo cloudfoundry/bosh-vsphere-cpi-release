@@ -15,6 +15,12 @@ module VSphereCloud
           method_name: 'DeleteDatastoreFile_Task',
         },
         {
+          # Don't retry optionManager querying for an advanced option
+          fault_class: VimSdk::Vim::Fault::InvalidName,
+          entity_class: VimSdk::Vim::Option::OptionManager,
+          method_name: 'QueryOptions',
+        },
+        {
           # Don't retry delete as sometimes the disk is already gone
           fault_class: VimSdk::Vim::Fault::FileFault,
           entity_class: VimSdk::Vim::VirtualDiskManager,
