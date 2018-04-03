@@ -31,5 +31,9 @@ module VSphereCloud
     def nsxt_lbs
       nsxt['lbs'] if nsxt
     end
+
+    def ns_groups
+      nsxt['nsgroups'] if nsxt
+    end
   end
 end

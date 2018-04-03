@@ -102,12 +102,12 @@ module VSphereCloud
       @services_svc ||= NSXT::ServicesApi.new(@client)
     end
 
-    def add_vm_to_nsgroups(vm, vm_type_nsxt)
-      return if vm_type_nsxt.nil? || vm_type_nsxt['ns_groups'].nil? || vm_type_nsxt['ns_groups'].empty?
+    def add_vm_to_nsgroups(vm, ns_groups)
+      return if ns_groups.nil? || ns_groups.empty?
       return if nsxt_nics(vm).empty?
 
-      @logger.info("Adding vm '#{vm.cid}' to NSGroups: #{vm_type_nsxt['ns_groups']}")
-      nsgroups = retrieve_nsgroups(vm_type_nsxt['ns_groups'])
+      @logger.info("Adding vm '#{vm.cid}' to NSGroups: #{ns_groups}")
+      nsgroups = retrieve_nsgroups(ns_groups)
 
       lports = logical_ports(vm)
       nsgroups.each do |nsgroup|
