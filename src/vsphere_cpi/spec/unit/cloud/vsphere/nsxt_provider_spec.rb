@@ -136,17 +136,14 @@ describe VSphereCloud::NSXTProvider do
   end
 
   describe '#add_vm_to_nsgroups' do
-    it 'does nothing when vm_type_nsxt is absent or empty' do
+    it 'does nothing when ns_groups is absent or empty' do
       # No call to client should be made
       nsxt_provider.add_vm_to_nsgroups(vm, nil)
-      nsxt_provider.add_vm_to_nsgroups(vm, {})
-      nsxt_provider.add_vm_to_nsgroups(vm, { 'ns_groups' => [] })
+      nsxt_provider.add_vm_to_nsgroups(vm, [])
     end
 
-    context 'when nsgroups are specified in vm_type_nsxt' do
-      let(:vm_type_nsxt) do
-        { 'ns_groups' => %w(test-nsgroup-1 test-nsgroup-2) }
-      end
+    context 'when nsgroups are specified' do
+      let(:ns_groups) { %w(test-nsgroup-1 test-nsgroup-2) }
       let(:nsgroup_1) do
         NSXT::NSGroup.new(:id => 'id-1', :display_name => 'test-nsgroup-1')
       end
@@ -164,19 +161,17 @@ describe VSphereCloud::NSXTProvider do
 
         it 'should no-op' do
           # No call to client should be made
-          nsxt_provider.add_vm_to_nsgroups(vm, vm_type_nsxt)
+          nsxt_provider.add_vm_to_nsgroups(vm, ns_groups)
         end
       end
 
       context 'if any of the nsgroups cannot be found in NSXT' do
-        let(:vm_type_nsxt) do
-          { 'ns_groups' => %w(other-nsgroup-1 other-nsgroup-2) }
-        end
+        let(:ns_groups) { %w(other-nsgroup-1 other-nsgroup-2) }
 
         it 'should raise a NSGroupsNotFound error' do
           expect(grouping_obj_svc).to receive_message_chain(:list_ns_groups, :results).and_return([nsgroup_1, nsgroup_2])
           expect do
-            nsxt_provider.add_vm_to_nsgroups(vm, vm_type_nsxt)
+            nsxt_provider.add_vm_to_nsgroups(vm, ns_groups)
           end.to raise_error(VSphereCloud::NSGroupsNotFound)
         end
       end
@@ -189,11 +184,12 @@ describe VSphereCloud::NSXTProvider do
 
         it 'adds simple expressions containing the logical ports to each NSGroup' do
           expect(grouping_obj_svc).to receive(:add_or_remove_ns_group_expression).with(any_args).twice
-          nsxt_provider.add_vm_to_nsgroups(vm, vm_type_nsxt)
+          nsxt_provider.add_vm_to_nsgroups(vm, ns_groups)
         end
       end
     end
   end
+
 
   describe '#remove_vm_from_nsgroups' do
     let(:simple_member) do

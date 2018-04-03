@@ -299,7 +299,7 @@ module VSphereCloud
 
         begin
           if @config.nsxt_enabled?
-            @nsxt_provider.add_vm_to_nsgroups(created_vm, vm_type.nsxt)
+            @nsxt_provider.add_vm_to_nsgroups(created_vm, vm_type.ns_groups)
             @nsxt_provider.set_vif_type(created_vm, vm_type.nsxt)
             @nsxt_provider.add_vm_to_lbs(created_vm, vm_type.nsxt_lbs) if vm_type.nsxt_lbs
           end

@@ -819,7 +819,7 @@ module VSphereCloud
         end
 
         it "adds the VM's logical port to NSGroups" do
-          expect(nsxt_provider).to receive(:add_vm_to_nsgroups).with(fake_vm, vm_type['nsxt'])
+          expect(nsxt_provider).to receive(:add_vm_to_nsgroups).with(fake_vm, vm_type['nsxt']['nsgroups'])
           allow(nsxt_provider).to receive(:set_vif_type)
 
           vsphere_cloud.create_vm(
