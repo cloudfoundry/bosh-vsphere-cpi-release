@@ -11,6 +11,16 @@ module VSphereCloud
     end
   end
 
+  class VirtualMachineIpNotFound < StandardError
+    def initialize(vm_id)
+      @vm_id = vm_id
+    end
+
+    def to_s
+      "Did not find primary IP for VM #{@vm_id}"
+    end
+  end
+
   class MultipleVirtualMachinesFound < StandardError
     def initialize(vm_id, count)
       @vm_id = vm_id
@@ -51,6 +61,16 @@ module VSphereCloud
 
     def to_s
       "NSGroups [#{@display_names.join(', ')}] was not found in NSX-T"
+    end
+  end
+
+  class ServerPoolsNotFound < StandardError
+    def initialize(*display_names)
+      @display_names = display_names
+    end
+
+    def to_s
+      "ServerPools [#{@display_names.join(', ')}] was not found in NSX-T"
     end
   end
 
@@ -200,31 +220,38 @@ module VSphereCloud
       end
     end
 
-    def add_vm_to_lbs(vm, load_balancers)
-      server_pools = load_balancers['server_pools']
-      return if server_pools.nil? ||  server_pools.empty?
-      load_balancer_pools = retrieve_load_balancer_pools(server_pools)
-      vm_ip = vm.mob.guest&.ip_address
-      while vm_ip.nil?
-        sleep(5)
-        vm_ip =  vm.mob.guest&.ip_address
-        vm_ip =  vm.mob.guest&.ip_address
-      end
-      raise("Cannot add VM: #{vm.cid} to Load balancer as it does not have primary ip") unless vm_ip
+    def add_vm_to_server_pools(vm, load_balancer_pools)
+      return if load_balancer_pools.nil? ||  load_balancer_pools.empty?
+      vm_ip =  vm.mob.guest&.ip_address #Bosh.retryable? for VmIpNotFound
+      raise VirtualMachineIpNotFound.new(vm) unless vm_ip
       load_balancer_pools.each do |load_balancer_pool|
         @logger.info("Adding vm: '#{vm.cid}' to ServerPools: #{load_balancer_pool} ")
         pool_member = NSXT::PoolMemberSetting.new(ip_address: vm_ip, port: 80)
         pool_member_setting_list = NSXT::PoolMemberSettingList.new(members: [pool_member])
-        services_svc.perform_pool_member_action(load_balancer_pool.id, pool_member_setting_list, 'ADD_MEMBERS')
+        begin
+          services_svc.perform_pool_member_action(load_balancer_pool.id, pool_member_setting_list, 'ADD_MEMBERS')
+        rescue NSXT::ApiCallError => e
+          raise e unless e.code == 23613 #TODO figure out which code to use or should we raise an error ?
+        end
       end
     end
 
-    def retrieve_load_balancer_pools(server_pools)
-      pool_name = server_pools.first['pool_name']
-      server_pools = services_svc.list_load_balancer_pools.results
-      server_pools.select do |server_pool|
-        server_pool.display_name == pool_name
+    def retrieve_server_pools(server_pools)
+      return [] if server_pools.nil? || server_pools.empty?
+      server_pools_by_name = services_svc.list_load_balancer_pools.results.each_with_object({}) do |server_pool, hash|
+        hash[server_pool.display_name] = server_pool
       end
+      missing = server_pools.reject do |server_pool|
+        server_pools_by_name.key?(server_pool['name'])
+      end
+      raise ServerPoolsNotFound.new(*missing) unless missing.empty?
+
+      static_server_pools, dynamic_server_pools = [],[]
+      server_pools.each do |server_pool|
+        server_pool_name = server_pool['name']
+        server_pools_by_name[server_pool_name].member_group ? dynamic_server_pools << server_pools_by_name[server_pool_name] : static_server_pools << server_pools_by_name[server_pool_name]
+      end
+      return static_server_pools, dynamic_server_pools
     end
 
     private
