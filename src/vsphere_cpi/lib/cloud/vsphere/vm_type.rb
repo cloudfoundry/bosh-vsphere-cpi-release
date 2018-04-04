@@ -28,12 +28,12 @@ module VSphereCloud
       nsx['lbs'] if nsx
     end
 
-    def nsxt_lbs
-      nsxt['lbs'] if nsxt
+    def nsxt_server_pools
+      nsxt['lb']['server_pools'] if nsxt && nsxt['lb']
     end
 
     def ns_groups
-      nsxt['nsgroups'] if nsxt
+      nsxt['ns_groups'] if nsxt
     end
   end
 end

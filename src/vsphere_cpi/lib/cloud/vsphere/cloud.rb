@@ -299,9 +299,17 @@ module VSphereCloud
 
         begin
           if @config.nsxt_enabled?
-            @nsxt_provider.add_vm_to_nsgroups(created_vm, vm_type.ns_groups)
+            ns_groups = vm_type.ns_groups || []
+            if vm_type.nsxt_server_pools
+              #For static server pools add vm as server pool member
+              #For dynamic server pools add vm to the corresponding nsgroup
+              static_server_pools, dynamic_server_pools = @nsxt_provider.retrieve_server_pools(vm_type.nsxt_server_pools)
+              lb_ns_groups = dynamic_server_pools.map{ |server_pool| server_pool.member_group.grouping_object.target_display_name } if dynamic_server_pools
+              ns_groups.concat(lb_ns_groups) if lb_ns_groups
+              @nsxt_provider.add_vm_to_server_pools(created_vm, static_server_pools) if static_server_pools
+            end
+            @nsxt_provider.add_vm_to_nsgroups(created_vm, ns_groups)
             @nsxt_provider.set_vif_type(created_vm, vm_type.nsxt)
-            @nsxt_provider.add_vm_to_lbs(created_vm, vm_type.nsxt_lbs) if vm_type.nsxt_lbs
           end
         rescue => e
           @logger.info("Failed to apply NSXT properties to VM '#{created_vm.cid}' with error: #{e}")

@@ -80,6 +80,9 @@ describe VSphereCloud::NSXTProvider do
     NSXT::FabricApi.new(client)
   end
 
+  let(:services_svc) do
+    NSXT::ServicesApi.new(client)
+  end
 
   subject(:nsxt_provider) do
     described_class.new(nsxt_config, logger).tap do |provider|
@@ -138,8 +141,8 @@ describe VSphereCloud::NSXTProvider do
   describe '#add_vm_to_nsgroups' do
     it 'does nothing when ns_groups is absent or empty' do
       # No call to client should be made
-      nsxt_provider.add_vm_to_nsgroups(vm, nil)
       nsxt_provider.add_vm_to_nsgroups(vm, [])
+      nsxt_provider.add_vm_to_nsgroups(vm, nil)
     end
 
     context 'when nsgroups are specified' do
@@ -189,7 +192,6 @@ describe VSphereCloud::NSXTProvider do
       end
     end
   end
-
 
   describe '#remove_vm_from_nsgroups' do
     let(:simple_member) do
@@ -463,6 +465,95 @@ describe VSphereCloud::NSXTProvider do
         .and_return(NSXT::LogicalPortListResult.new(:results => [logical_port_1]))
 
       expect(nsxt_provider.send(:logical_ports, vm)).to eq([logical_port_1])
+    end
+  end
+
+  describe 'add_vm_to_server_pools' do
+    let(:serverpool_1) do
+      NSXT::LbPool.new(:id => 'id-1', :display_name => 'test-static-serverpool-1')
+    end
+    let(:server_pools) { [serverpool_1] }
+    let(:failure_response) do
+      NSXT::ApiCallError.new(:code => 412 )
+    end
+    before do
+      allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:services_svc).and_return(services_svc)
+    end
+    context "when vm's primary ip is present" do
+      before do
+        allow(vm).to receive_message_chain(:mob, :guest, :ip_address).and_return('192.168.111.1')
+      end
+      it 'does nothing if server_pools is not present' do
+        nsxt_provider.add_vm_to_server_pools(vm, [])
+        nsxt_provider.add_vm_to_server_pools(vm, nil)
+      end
+      it 'adds vm to server_pools' do
+        expect(services_svc).to receive(:perform_pool_member_action).with(serverpool_1.id, an_instance_of( NSXT::PoolMemberSettingList), 'ADD_MEMBERS')
+        nsxt_provider.add_vm_to_server_pools(vm, server_pools)
+      end
+      it 'should not error out if vm is already a member of the server pool' do
+        failure_response =  NSXT::ApiCallError.new(:code => 23613 )
+        expect(services_svc).to receive(:perform_pool_member_action).with(serverpool_1.id, anything, anything).and_raise(failure_response)
+        nsxt_provider.add_vm_to_server_pools(vm, server_pools)
+      end
+      it 'should raise an error if there is error adding vm to the server pool' do
+        expect(services_svc).to receive(:perform_pool_member_action).with(serverpool_1.id, anything, anything).and_raise(failure_response)
+        expect do
+          nsxt_provider.add_vm_to_server_pools(vm, server_pools)
+        end.to raise_error(NSXT::ApiCallError)
+      end
+    end
+    context "when vm's primary ip is missing" do
+      before do
+        allow(vm).to receive_message_chain(:mob, :guest, :ip_address).and_return(nil)
+      end
+      it "raises an error" do
+        expect do
+          nsxt_provider.add_vm_to_server_pools(vm, server_pools)
+        end.to raise_error(VSphereCloud::VirtualMachineIpNotFound)
+      end
+    end
+  end
+
+  describe 'retrieve_server_pools' do
+    before do
+      allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:services_svc).and_return(services_svc)
+    end
+    it 'does nothing when there are no pools' do
+      nsxt_provider.retrieve_server_pools([])
+      nsxt_provider.retrieve_server_pools(nil)
+    end
+    context 'when server_pools are present' do
+      let(:serverpool_1) do
+        NSXT::LbPool.new(:id => 'id-1', :display_name => 'test-static-serverpool-1')
+      end
+      let(:serverpool_2) do
+        NSXT::LbPool.new(:id => 'id-2', :display_name => 'test-dynamic-serverpool-2')
+      end
+
+        let(:server_pools) do
+        [
+          {
+            'name' => 'test-static-serverpool-1',
+            'port' => 80
+          },
+          {
+            'name' => 'test-dynamic-serverpool-2',
+            'port'  => 443
+          }
+        ]
+      end
+      it 'raises an error when any server pool cannot be found' do
+        expect(services_svc).to receive_message_chain(:list_load_balancer_pools, :results).and_return([serverpool_1])
+        expect do
+          nsxt_provider.retrieve_server_pools(server_pools)
+        end.to raise_error(VSphereCloud::ServerPoolsNotFound)
+      end
+      it 'returns list of server pool objects back' do
+        allow(serverpool_2).to receive(:member_group).and_return('test-nsgroup1')
+        expect(services_svc).to receive_message_chain(:list_load_balancer_pools, :results).and_return([serverpool_1, serverpool_2])
+        expect(nsxt_provider.retrieve_server_pools(server_pools)).to eq([[serverpool_1], [serverpool_2]])
+      end
     end
   end
 end

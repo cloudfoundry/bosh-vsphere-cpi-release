@@ -207,14 +207,14 @@ describe 'CPI', nsx_transformers: true do
           'disk' => 2048,
           'cpu' => 1,
           'nsxt' => {
-            'lbs' => {
+            'lb' => {
                 'server_pools' => [
                   {
-                    'pool_name' => server_pool_1.display_name,
+                    'name' => server_pool_name_1,
                     'port' => 80
                   },
                   {
-                    'pool_name' => server_pool_2.display_name,
+                    'name' => server_pool_name_2,
                     'port' => 80
                   }
                 ]
@@ -224,11 +224,10 @@ describe 'CPI', nsx_transformers: true do
       end
 
       context 'but atleast one server pool does not exist' do
-        let(:nsxt_server_pool_name) { 'vcpi-test-server-pool' }
         it 'raises an error' do
           expect do
             simple_vm_lifecycle(cpi, @nsxt_opaque_vlan_1, vm_type)
-          end.to raise_error(VSphereCloud::ServerPoolNotFound)
+          end.to raise_error(VSphereCloud::ServerPoolsNotFound)
         end
       end
       context 'and all server pool exists' do
@@ -297,6 +296,9 @@ describe 'CPI', nsx_transformers: true do
 
           expect(nsgroups).to eq([])
         end
+      end
+      xit 'removes VM from all server pools' do
+
       end
     end
   end
