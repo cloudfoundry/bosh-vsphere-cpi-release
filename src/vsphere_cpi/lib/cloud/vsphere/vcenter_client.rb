@@ -85,7 +85,11 @@ module VSphereCloud
 
         vms_powering_on = result.attempted
         if vms_powering_on.empty?
-          raise "Could not power on VM '#{vm}': #{result.not_attempted.map(&:fault).map(&:msg).join(', ')}"
+          # Since we are only powering on single vm, the not_attempted member
+          # of result will have length equal to one. Thus getting first one
+          # from not_attempted list is the right thing to do.
+          fault = result.not_attempted.first.fault
+          raise VSphereCloud::VMPowerOnError.new(fault), "Could not power on VM '#{vm}'"
         end
         vms_powering_on.first.task
       end

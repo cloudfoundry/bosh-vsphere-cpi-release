@@ -293,7 +293,7 @@ describe 'DRS rules', drs: true do
                 {'key' => 'value'}
               )
               vms.push(failed_vm)
-            end.to raise_error(/.*DRS cannot find a host to power on or migrate the virtual machine.*/)
+            end.to raise_error(VSphereCloud::VMPowerOnError) { |e| e.unplaceable? }
           ensure
             vms.each {|vm_id| delete_vm(one_cluster_cpi, vm_id)}
           end
