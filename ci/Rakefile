@@ -121,6 +121,11 @@ file 'pipeline.yml' => ['pipeline.yml.erb', 'partition.yml.erb'] do |t|
     NSXT_SKIP_SSL_VERIFY: "true"
   }
 
+  @pool_6_7 = Pool.new('6.7')
+  @pool_6_7.params = {
+    RSPEC_FLAGS: "--tag ~nsx_vsphere --tag ~nsx_transformers --tag ~disk_migration",
+  }
+
   File.write(t.name, render(t.prerequisites.first))
 end
 

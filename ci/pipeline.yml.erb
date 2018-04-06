@@ -12,6 +12,7 @@ jobs:
         file: source-ci/ci/tasks/unit-test.yml
 
 <%= render('partition.yml.erb', pool: @pool_5_5) %>
+<%= render('partition.yml.erb', pool: @pool_6_7) %>
 <%= render('partition.yml.erb', pool: @pool_6_0) %>
 <%= render('partition.yml.erb', pool: @pool_6_0_nsxv) %>
 <%= render('partition.yml.erb', pool: @pool_6_5) %>
@@ -29,6 +30,7 @@ jobs:
         - lifecycle-6.0-NSXV
         - lifecycle-6.5
         - lifecycle-6.5-NSXV
+        - lifecycle-6.7
       - get: version-semver
         trigger: false
         params: { bump: patch }
@@ -203,6 +205,13 @@ resources:
       branch:       master
       pool:         v6.0
       private_key:  {{vcpi-pool_deployment_key}}
+  - name: pool-6.7
+    type: pool
+    source:
+      uri:          git@github.com:ktchen14/vcpi-pool.git
+      branch:       master
+      pool:         v6.7
+      private_key:  {{vcpi-pool_deployment_key}}
   - name: bosh-cpi-artifacts
     type: s3
     source:
@@ -294,6 +303,9 @@ groups:
   - lock-6.5
   - lifecycle-6.5
   - unlock-6.5
+  - lock-6.7
+  - lifecycle-6.7
+  - unlock-6.7
   - lifecycle-6.0
   - lock-6.0
   - unlock-6.0
@@ -314,6 +326,7 @@ groups:
   - lifecycle-6.5
   - lifecycle-6.0
   - lifecycle-5.5
+  - lifecycle-6.7
   - lifecycle-6.5-NSXV
   - lifecycle-6.0-NSXV
   - bats
@@ -353,3 +366,10 @@ groups:
   - lifecycle-5.5
   - lock-5.5
   - unlock-5.5
+
+- name: v6.7
+  jobs:
+  - unit-test
+  - lifecycle-6.7
+  - lock-6.7
+  - unlock-6.7
