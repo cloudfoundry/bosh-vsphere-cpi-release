@@ -1,5 +1,6 @@
 require 'digest'
 require 'spec_helper'
+require 'pry-byebug'
 
 describe VSphereCloud::NSXTProvider do
   let(:client) { instance_double(NSXT::ApiClient) }
@@ -472,28 +473,27 @@ describe VSphereCloud::NSXTProvider do
     let(:serverpool_1) do
       NSXT::LbPool.new(:id => 'id-1', :display_name => 'test-static-serverpool-1')
     end
-    let(:server_pools) { [serverpool_1] }
+    let(:ip_address) { '192.168.111.1' }
+    let(:port_no) { 443 }
+    let(:server_pools) { [[serverpool_1, port_no]] }
     let(:failure_response) do
       NSXT::ApiCallError.new(:code => 412 )
     end
     before do
       allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:services_svc).and_return(services_svc)
     end
+
     context "when vm's primary ip is present" do
       before do
-        allow(vm).to receive_message_chain(:mob, :guest, :ip_address).and_return('192.168.111.1')
+        allow(vm).to receive_message_chain(:mob, :guest, :ip_address).and_return(ip_address)
       end
       it 'does nothing if server_pools is not present' do
         nsxt_provider.add_vm_to_server_pools(vm, [])
         nsxt_provider.add_vm_to_server_pools(vm, nil)
       end
-      it 'adds vm to server_pools' do
+      it 'adds vm to server_pools with given port' do
+        expect(NSXT::PoolMemberSetting).to receive(:new).with(ip_address: ip_address, port: port_no)
         expect(services_svc).to receive(:perform_pool_member_action).with(serverpool_1.id, an_instance_of( NSXT::PoolMemberSettingList), 'ADD_MEMBERS')
-        nsxt_provider.add_vm_to_server_pools(vm, server_pools)
-      end
-      it 'should not error out if vm is already a member of the server pool' do
-        failure_response =  NSXT::ApiCallError.new(:code => 23613 )
-        expect(services_svc).to receive(:perform_pool_member_action).with(serverpool_1.id, anything, anything).and_raise(failure_response)
         nsxt_provider.add_vm_to_server_pools(vm, server_pools)
       end
       it 'should raise an error if there is error adding vm to the server pool' do
@@ -549,10 +549,12 @@ describe VSphereCloud::NSXTProvider do
           nsxt_provider.retrieve_server_pools(server_pools)
         end.to raise_error(VSphereCloud::ServerPoolsNotFound)
       end
-      it 'returns list of server pool objects back' do
+      it 'returns list of static and dynamic server pools back' do
         allow(serverpool_2).to receive(:member_group).and_return('test-nsgroup1')
         expect(services_svc).to receive_message_chain(:list_load_balancer_pools, :results).and_return([serverpool_1, serverpool_2])
-        expect(nsxt_provider.retrieve_server_pools(server_pools)).to eq([[serverpool_1], [serverpool_2]])
+        static_server_pools, dynamic_server_pools = nsxt_provider.retrieve_server_pools(server_pools)
+        expect(static_server_pools.first).to eq([serverpool_1, 80])
+        expect(dynamic_server_pools).to eq([serverpool_2])
       end
     end
   end
