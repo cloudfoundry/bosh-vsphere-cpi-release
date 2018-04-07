@@ -71,7 +71,7 @@ describe 'CPI', nsx_transformers: true do
       ENV['BOSH_NSXT_CA_CERT_FILE'] = @ca_cert_file.path
     end
 
-    @nsxt_opaque_vlan_1 = 'pks-vif-switch'
+    @nsxt_opaque_vlan_1 = 'pks-vif-switch' #TODO update this in nimbus and then revert this change
     @nsxt_opaque_vlan_2 = 'service-vif-switch'
   end
 
@@ -200,7 +200,9 @@ describe 'CPI', nsx_transformers: true do
         end
       end
     end
+
     context 'when load balancers are specified' do
+      let(:port_no) { '443' }
       let(:vm_type) do
         {
           'ram' => 512,
@@ -211,7 +213,7 @@ describe 'CPI', nsx_transformers: true do
                 'server_pools' => [
                   {
                     'name' => server_pool_name_1,
-                    'port' => 80
+                    'port' => port_no
                   },
                   {
                     'name' => server_pool_name_2,
@@ -231,22 +233,33 @@ describe 'CPI', nsx_transformers: true do
         end
       end
       context 'and all server pool exists' do
+        let(:nsgroup_1) { create_nsgroup(nsgroup_name_1) }
         let(:server_pool_1) { create_server_pool(server_pool_name_1) }
-        let(:server_pool_2) { create_server_pool(server_pool_name_2) } #dynamic server pool add nsgroup to this
+        let(:server_pool_2) { create_server_pool(server_pool_name_2, nsgroup_1) }
+
+        before do
+          expect(server_pool_1).to_not be_nil
+          expect(server_pool_2).to_not be_nil
+        end
 
         after do
           delete_server_pool(server_pool_1)
           delete_server_pool(server_pool_2)
+          delete_nsgroup(nsgroup_1)
         end
 
-        it 'adds vm to existing server pools' do
+        it 'adds vm to existing static server pools and adds all logical ports of the VM to NSGroups associated with the dynamic server pool' do
           simple_vm_lifecycle(cpi, @nsxt_opaque_vlan_1, vm_type) do |vm_id|
             vm = cpi.vm_provider.find(vm_id)
             expect(vm).to_not be_nil
             vm_ip = vm.mob.guest&.ip_address
             expect(vm_ip).to_not be_nil
-            expect(get_pool_members_ip_addresses(server_pool_1)).to include(vm_ip)
-            expect(get_pool_members_ip_addresses(server_pool_2)).to include(vm_ip)
+            verify_pool_member(server_pool_1, vm_ip, port_no)
+            verify_ports(vm_id, 1) do |lport|
+              expect(lport).not_to be_nil
+
+              expect(nsgroup_effective_logical_port_member_ids(nsgroup_1)).to include(lport.id)
+            end
           end
         end
       end
@@ -365,14 +378,18 @@ describe 'CPI', nsx_transformers: true do
   end
 
   def create_server_pool(pool_name, nsgroup=nil)
-    lb_pool = NSXT::LbPool.new(display_name: pool_name)
-    lb_pool.member_group = NSXT::PoolMemberGroup.new(grouping_object: nsgroup, max_ip_list_size: 2) if nsgroup
-    services_svc.create_load_balancer_pool(lb_pool)
+    server_pool = NSXT::LbPool.new(display_name: pool_name)
+    if nsgroup
+      resource = NSXT::ResourceReference.new(target_id: nsgroup.id, target_type: nsgroup.resource_type, target_display_name: nsgroup.display_name)
+      server_pool.member_group = NSXT::PoolMemberGroup.new(grouping_object: resource, max_ip_list_size: 2)
+    end
+    services_svc.create_load_balancer_pool(server_pool)
   end
 
-  def get_pool_members_ip_addresses(server_pool)
+  def verify_pool_member(server_pool, ip_address, port_no)
     server_pool = services_svc.read_load_balancer_pool(server_pool.id)
-    server_pool.members&.map(&:ip_address) || []
+    matching_members = server_pool.members.select{ |member| member.ip_address == ip_address && member.port == port_no }
+    expect(matching_members.count).to eq(1)
   end
 
   def delete_server_pool(server_pool)

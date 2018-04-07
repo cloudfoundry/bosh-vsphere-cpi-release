@@ -305,6 +305,7 @@ module VSphereCloud
               #For dynamic server pools add vm to the corresponding nsgroup
               static_server_pools, dynamic_server_pools = @nsxt_provider.retrieve_server_pools(vm_type.nsxt_server_pools)
               lb_ns_groups = dynamic_server_pools.map{ |server_pool| server_pool.member_group.grouping_object.target_display_name } if dynamic_server_pools
+              @logger.info("NSGroup names corresponding to load balancer's dynamic server pools are: #{lb_ns_groups}")
               ns_groups.concat(lb_ns_groups) if lb_ns_groups
               @nsxt_provider.add_vm_to_server_pools(created_vm, static_server_pools) if static_server_pools
             end

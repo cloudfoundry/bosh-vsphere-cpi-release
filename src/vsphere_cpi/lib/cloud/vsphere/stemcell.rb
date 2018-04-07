@@ -22,7 +22,7 @@ module VSphereCloud
     end
 
     # Replicating a stemcell allows the creation of linked clones which can share files with a snapshot.
-    # For details see https://www.vmware.com/support/ws5/doc/ws_clone_overview.html.
+    # For details see https://www.vmware.com/support/ws55/doc/ws_clone_overview.html.
     #
     # @param [Resources::Datacenter] datacenter
     # @param [Resources::Cluster] cluster

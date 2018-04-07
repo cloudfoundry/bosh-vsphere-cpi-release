@@ -220,27 +220,36 @@ module VSphereCloud
       end
     end
 
+    # Add vm to given list of static Load Balancer Server Pools
+    # @param [Resources::VM] vm
+    # @param [[NSXT::LbPool, integer][]] load_balancer_pools Array of Load_balancer_pool and port no
     def add_vm_to_server_pools(vm, load_balancer_pools)
       return if load_balancer_pools.nil? ||  load_balancer_pools.empty?
-      vm_ip =  vm.mob.guest&.ip_address #Bosh.retryable? for VmIpNotFound
-      raise VirtualMachineIpNotFound.new(vm) unless vm_ip
-      load_balancer_pools.each do |load_balancer_pool|
-        @logger.info("Adding vm: '#{vm.cid}' to ServerPools: #{load_balancer_pool} ")
-        pool_member = NSXT::PoolMemberSetting.new(ip_address: vm_ip, port: 80)
-        pool_member_setting_list = NSXT::PoolMemberSettingList.new(members: [pool_member])
-        begin
+      Bosh::Retryable.new(
+        tries: 50,
+        sleep: ->(try_count, retry_exception) { 2 },
+        on: [VirtualMachineIpNotFound]
+      ).retryer do |i|
+        vm_ip =  vm.mob.guest&.ip_address
+        raise VirtualMachineIpNotFound.new(vm) unless vm_ip
+        load_balancer_pools.each do |load_balancer_pool, port_no|
+          @logger.info("Adding vm: '#{vm.cid}' with ip:#{vm_ip} to ServerPool: #{load_balancer_pool} on Port: #{port_no} ")
+          pool_member = NSXT::PoolMemberSetting.new(ip_address: vm_ip, port: port_no)
+          pool_member_setting_list = NSXT::PoolMemberSettingList.new(members: [pool_member])
           services_svc.perform_pool_member_action(load_balancer_pool.id, pool_member_setting_list, 'ADD_MEMBERS')
-        rescue NSXT::ApiCallError => e
-          raise e unless e.code == 23613 #TODO figure out which code to use or should we raise an error ?
         end
       end
     end
 
+    # Returns an array of Static Load Balancer Server Pools and Dynamic Load Balancer Pools
+    # For Static Server Pools corresponding port no is also returned
+    # @param [array] server_pools It is an array of hashes with server_pool names and port
     def retrieve_server_pools(server_pools)
       return [] if server_pools.nil? || server_pools.empty?
       server_pools_by_name = services_svc.list_load_balancer_pools.results.each_with_object({}) do |server_pool, hash|
         hash[server_pool.display_name] = server_pool
       end
+
       missing = server_pools.reject do |server_pool|
         server_pools_by_name.key?(server_pool['name'])
       end
@@ -249,7 +258,9 @@ module VSphereCloud
       static_server_pools, dynamic_server_pools = [],[]
       server_pools.each do |server_pool|
         server_pool_name = server_pool['name']
-        server_pools_by_name[server_pool_name].member_group ? dynamic_server_pools << server_pools_by_name[server_pool_name] : static_server_pools << server_pools_by_name[server_pool_name]
+        server_pool_port = server_pool['port']
+        server_pool_obj = server_pools_by_name[server_pool_name]
+        server_pool_obj.member_group ? dynamic_server_pools <<  server_pool_obj : static_server_pools << [server_pool_obj, server_pool_port]
       end
       return static_server_pools, dynamic_server_pools
     end

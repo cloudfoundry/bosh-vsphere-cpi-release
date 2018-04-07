@@ -833,7 +833,7 @@ module VSphereCloud
         end
 
         context 'and load balancer(lb) is set' do
-          let(:server_pool) { double('Server Pool')}
+          let(:server_pool) { NSXT::LbPool.new(:id => 'id-1', :display_name => 'test-static-serverpool-1')}
           let(:server_pools) { [server_pool]}
           let(:vm_type) do
             {
