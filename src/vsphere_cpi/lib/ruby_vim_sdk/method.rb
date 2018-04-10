@@ -32,6 +32,11 @@ module VimSdk
     def result_type_optional?
       @result_type_optional
     end
+
+    def num_optional_args
+      return @num_optional_args_at_end if @num_optional_args_at_end
+      @num_optional_args_at_end = @arguments.reverse.take_while(&:optional?).length
+    end
   end
 
 end
