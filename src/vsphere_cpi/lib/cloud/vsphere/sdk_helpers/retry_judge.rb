@@ -40,6 +40,11 @@ module VSphereCloud
           # sometimes called to confirm a disk does not exist
           method_name: 'SearchDatastore_Task',
           fault_class: VimSdk::Vim::Fault::FileNotFound,
+        },
+        {
+          # called to upgrade a vm
+          method_name: 'UpgradeVM_Task',
+          fault_class: VimSdk::Vim::Fault::AlreadyUpgraded,
         }
       ]
 

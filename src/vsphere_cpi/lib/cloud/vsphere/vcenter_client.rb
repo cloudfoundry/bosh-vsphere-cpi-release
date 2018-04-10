@@ -5,6 +5,7 @@ module VSphereCloud
     class TaskException < StandardError; end
     class FileNotFoundException < TaskException; end
     class DuplicateName < TaskException; end
+    class AlreadyUpgraded < TaskException; end
     class AlreadyLoggedInException < StandardError; end
     class NotLoggedInException < StandardError; end
 
@@ -73,6 +74,13 @@ module VSphereCloud
 
     def answer_vm(vm, question, answer)
       vm.answer(question, answer)
+    end
+
+    def upgrade_vm_virtual_hardware(vm)
+      @logger.info("Upgrading virtual hardware on VM")
+      wait_for_task do
+        vm.upgrade_virtual_hardware
+      end
     end
 
     def power_on_vm(datacenter, vm)

@@ -181,6 +181,10 @@ module VSphereCloud
         @client.power_on_vm(datacenter_mob, @mob)
       end
 
+      def upgrade_vm_virtual_hardware
+        @client.upgrade_vm_virtual_hardware(@mob)
+      end
+
       def delete
         @client.delete_vm(@mob)
       end

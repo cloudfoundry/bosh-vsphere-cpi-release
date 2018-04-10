@@ -123,6 +123,12 @@ module VSphereCloud
         # DRS Rules
         create_drs_rules(vm_config, created_vm.mob, cluster)
 
+        begin
+          # Upgrade to latest virtual hardware version
+          created_vm.upgrade_vm_virtual_hardware if vm_config.vm_type.upgrade_hw_version
+        rescue VSphereCloud::VCenterClient::AlreadyUpgraded
+        end
+
         # Power on VM
         @logger.info("Powering on VM: #{created_vm}")
         created_vm.power_on
