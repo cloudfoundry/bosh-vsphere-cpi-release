@@ -1,0 +1,493 @@
+---
+shared:
+  - &prepare-director-latest
+    task: prepare-director
+    file: source-ci/ci/tasks/prepare-director.yml
+    params:
+      OPTIONAL_OPS_FILE:  |
+        -o bosh-deployment/vsphere/resource-pool.yml
+        -o certification/shared/assets/ops/remove-hm.yml
+  - &prepare-director-old
+    task: prepare-director
+    file: source-ci/ci/tasks/prepare-director.yml
+    params:
+      OPTIONAL_OPS_FILE:  |
+        -o certification/shared/assets/ops/redis.yml
+        -o certification/shared/assets/ops/remove-hm.yml
+        -o bosh-deployment/vsphere/resource-pool.yml
+        -o certification/shared/assets/ops/remove-provider-cert.yml
+  - &prepare-director-ipv6
+    task: prepare-director
+    file: source-ci/ci/tasks/prepare-director.yml
+    params:
+      OPTIONAL_OPS_FILE:  |
+        -o bosh-deployment/vsphere/resource-pool.yml
+        -o certification/shared/assets/ops/remove-hm.yml
+        -o bosh-deployment/misc/ipv6/bosh.yml
+        -o certification/vsphere/assets/ipv6-director.yml
+        -o bosh-deployment/misc/second-network.yml
+        -o bosh-deployment/vsphere/second-network.yml
+  - &deploy-director
+    task: deploy-director
+    file: source-ci/ci/tasks/deploy-director.yml
+  - &run-bats
+    task: run-bats
+    file: source-ci/ci/tasks/run-bats.yml
+    params: &run-bats-params
+      BAT_INFRASTRUCTURE: vsphere
+      BAT_NETWORKING:     manual
+      BAT_RSPEC_FLAGS:    "--tag ~dns --tag ~vip_networking --tag ~dynamic_networking --tag ~root_partition --tag ~raw_ephemeral_storage"
+  - &test-stemcell
+    task: test-stemcell
+    file: source-ci/ci/tasks/test-stemcell.yml
+    params:
+      BOSH_os_name: ubuntu-trusty
+      package: ipv4director
+  - &update-cloud-config
+    task: update-cloud-config
+    file: source-ci/ci/tasks/update-cloud-config.yml
+  - &teardown
+    task: teardown
+    file: source-ci/ci/tasks/teardown.yml
+
+jobs:
+  - name: lock-test-upgrade
+    plan:
+      - aggregate:
+        - get: after-midnight
+          trigger: true
+        - get: source-ci
+      - do:
+        - put: environment
+          resource: pool-6.5
+          params: {acquire: true}
+        - task: extend-lease-6.5
+          file: source-ci/ci/tasks/extend-lease.yml
+          params:
+            DBCUSER: {{dbc_user}}
+            DBCHOST: {{dbc_host}}
+            DBC_SSH_KEY: {{dbc_key}}
+          on_failure:
+            put: pool-6.5
+            params : {release: environment}
+
+  - name: test-upgrade
+    plan:
+      - aggregate:
+        - get: source-ci
+        - {get: environment,     trigger: true,  passed: [lock-test-upgrade], resource: pool-6.5 }
+        - {get: bosh-release,     trigger: true}
+        - {get: cpi-release,      trigger: true}
+        - {get: stemcell,         trigger: true, resource: ubuntu-stemcell}
+        - {get: certification,    trigger: false}
+        - {get: bosh-cli,         trigger: false}
+        - {get: centos-stemcell,  trigger: false} # pass-through
+        - {get: old-stemcell,     trigger: false}
+        - {get: old-bosh-release, trigger: false, version: {version: "255.8"}, resource: bosh-release}
+        - {get: old-cpi-release,  trigger: false, version: {version: "45"},  resource: cpi-release}
+        - {get: bosh-deployment,  trigger: false}
+      - <<: *prepare-director-old
+        input_mapping:
+          stemcell:     old-stemcell
+          bosh-release: old-bosh-release
+          cpi-release:  old-cpi-release
+      - do:
+        - <<: *deploy-director
+          input_mapping:
+            stemcell:     old-stemcell
+            bosh-release: old-bosh-release
+            cpi-release:  old-cpi-release
+        - <<: *update-cloud-config
+        - task: create-deployment
+          file: source-ci/ci/tasks/create-deployment.yml
+          input_mapping:
+            stemcell: old-stemcell
+          params:
+            STEMCELL_NAME: bosh-vsphere-esxi-ubuntu-trusty-go_agent
+        - <<: *prepare-director-latest
+        - task: test-upgrade
+          file: source-ci/ci/tasks/test-upgrade.yml
+          input_mapping:
+            old-director-state: director-state
+            new-director-config: director-config
+          output_mapping:
+            new-director-state: director-state
+        on_failure:
+          aggregate:
+          - put: notify
+            params:
+              username: 'CPI-Doctor'
+              text: |
+                The test-upgrade test failed. Check it out at: https://pksci.vcna.io/teams/$BUILD_TEAM_NAME/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME
+        ensure:
+          do:
+            - <<: *teardown
+
+  - name: unlock-test-upgrade
+    plan:
+      - {trigger: true, passed: [test-upgrade], get: pool-6.5}
+      - put: pool-6.5
+        params : {release: pool-6.5}
+
+  - name: lock-test-stemcell-ipv4
+    plan:
+      - aggregate:
+        - get: after-midnight
+          trigger: true
+        - get: source-ci
+      - do:
+        - put: environment
+          resource: pool-6.5
+          params: {acquire: true}
+        - task: extend-lease-6.5
+          file: source-ci/ci/tasks/extend-lease.yml
+          params:
+            DBCUSER: {{dbc_user}}
+            DBCHOST: {{dbc_host}}
+            DBC_SSH_KEY: {{dbc_key}}
+          on_failure:
+            put: pool-6.5
+            params : {release: environment}
+
+  - name: test-stemcell-ipv4
+    serial: true
+    plan:
+      - aggregate:
+        - get: source-ci
+        - {get: bosh-release,    trigger: true}
+        - {get: cpi-release,     trigger: true}
+        - {get: stemcell,        trigger: true, resource: ubuntu-stemcell}
+        - {get: certification,   trigger: false}
+        - {get: environment,     trigger: true,  passed: [lock-test-stemcell-ipv4], resource: pool-6.5 }
+        - {get: bosh-cli,        trigger: false}
+        - {get: bats,            trigger: false}
+        - {get: bosh-deployment, trigger: false}
+        - {get: syslog-release,  trigger: false}
+        - {get: os-conf-release, trigger: false}
+        - {get: bosh-linux-stemcell-builder, trigger: false}
+      - do:
+        - <<: *prepare-director-latest
+        - do:
+          - <<: *deploy-director
+          - <<: *update-cloud-config
+            params:
+              OPTIONAL_OPS_FILE: |
+                -o certification/vsphere/assets/reserve-ips.yml
+          - <<: *test-stemcell
+          on_failure:
+            aggregate:
+            - put: notify
+              params:
+                username: 'CPI-Doctor'
+                text: |
+                  The test-stemcell-ipv4 test failed. Check it out at: https://pksci.vcna.io/teams/$BUILD_TEAM_NAME/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME
+          ensure:
+            do:
+              - <<: *teardown
+
+  - name: unlock-test-stemcell-ipv4
+    plan:
+      - {trigger: true, passed: [test-stemcell-ipv4], get: pool-6.5}
+      - put: pool-6.5
+        params : {release: pool-6.5}
+
+  - name: lock-test-stemcell-ipv6
+    plan:
+      - aggregate:
+        - get: after-midnight
+          trigger: true
+        - get: source-ci
+      - do:
+        - put: environment
+          resource: pool-6.5
+          params: {acquire: true}
+        - task: extend-lease-6.5
+          file: source-ci/ci/tasks/extend-lease.yml
+          params:
+            DBCUSER: {{dbc_user}}
+            DBCHOST: {{dbc_host}}
+            DBC_SSH_KEY: {{dbc_key}}
+          on_failure:
+            put: pool-6.5
+            params : {release: environment}
+        attempts: 4
+
+  - name: test-stemcell-ipv6
+    plan:
+      - aggregate:
+        - get: source-ci
+        - {get: bosh-release,    trigger: true}
+        - {get: cpi-release,     trigger: true}
+        - {get: stemcell,        trigger: true, resource: ubuntu-stemcell}
+        - {get: environment,     trigger: true,  passed: [lock-test-stemcell-ipv6], resource: pool-6.5 }
+        - {get: certification,   trigger: false}
+        - {get: bosh-cli,        trigger: false}
+        - {get: bats,            trigger: false}
+        - {get: bosh-deployment, trigger: false}
+        - {get: syslog-release,  trigger: false}
+        - {get: os-conf-release, trigger: false}
+        - {get: bosh-linux-stemcell-builder, trigger: false}
+      - <<: *prepare-director-ipv6
+      - do:
+        - <<: *deploy-director
+        - <<: *update-cloud-config
+          params:
+            OPTIONAL_OPS_FILE: |
+              -o certification/vsphere/assets/ipv6-cc.yml
+              -o source-ci/ci/reserve_ip_ipv6.yml
+        - <<: *test-stemcell
+        on_failure:
+          aggregate:
+          - put: notify
+            params:
+              username: 'CPI-Doctor'
+              text: |
+                The test-stemcell-ipv6 test failed. Check it out at: https://pksci.vcna.io/teams/$BUILD_TEAM_NAME/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME
+        ensure:
+          do:
+            - <<: *teardown
+
+  - name: unlock-test-stemcell-ipv6
+    plan:
+      - {trigger: true, passed: [test-stemcell-ipv6], get: pool-6.5}
+      - put: pool-6.5
+        params : {release: pool-6.5}
+
+  - name: lock-bats-centos
+    plan:
+      - aggregate:
+        - get: after-midnight
+          trigger: true
+        - get: source-ci
+      - do:
+        - put: environment
+          resource: pool-6.5
+          params: {acquire: true}
+        - task: extend-lease-6.5
+          file: source-ci/ci/tasks/extend-lease.yml
+          params:
+            DBCUSER: {{dbc_user}}
+            DBCHOST: {{dbc_host}}
+            DBC_SSH_KEY: {{dbc_key}}
+          on_failure:
+            put: pool-6.5
+            params : {release: environment}
+        attempts: 4
+
+  - name: bats-centos
+    serial: true
+    plan:
+      - aggregate:
+        - get: source-ci
+        - {get: environment,     trigger: true,  passed: [lock-bats-centos], resource: pool-6.5 }
+        - {get: certification,   trigger: false}
+        - {get: bosh-cli,        trigger: false}
+        - {get: bosh-release,    trigger: true}
+        - {get: cpi-release,     trigger: true}
+        - {get: stemcell,        trigger: true, resource: centos-stemcell}
+        - {get: bats,            trigger: false}
+        - {get: bosh-deployment, trigger: false}
+      - <<: *prepare-director-latest
+      - do:
+        - <<: *deploy-director
+        - <<: *run-bats
+          params:
+            <<: *run-bats-params
+            STEMCELL_NAME: bosh-vsphere-esxi-centos-7-go_agent
+        on_failure:
+          aggregate:
+          - put: notify
+            params:
+              username: 'CPI-Doctor'
+              text: |
+                The bats-centos test failed. Check it out at: https://pksci.vcna.io/teams/$BUILD_TEAM_NAME/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME
+        ensure:
+          do:
+            - <<: *teardown
+
+  - name: unlock-bats-centos
+    plan:
+      - {trigger: true, passed: [bats-centos], get: pool-6.5}
+      - put: pool-6.5
+        params : {release: pool-6.5}
+
+  - name: lock-bats-ubuntu
+    plan:
+      - aggregate:
+        - get: after-midnight
+          trigger: true
+        - get: source-ci
+      - do:
+        - put: environment
+          resource: pool-6.5
+          params: {acquire: true}
+        - task: extend-lease-6.5
+          file: source-ci/ci/tasks/extend-lease.yml
+          params:
+            DBCUSER: {{dbc_user}}
+            DBCHOST: {{dbc_host}}
+            DBC_SSH_KEY: {{dbc_key}}
+          on_failure:
+            put: pool-6.5
+            params : {release: environment}
+        attempts: 4
+
+  - name: bats-ubuntu
+    serial: true
+    plan:
+      - aggregate:
+        - get: source-ci
+        - {get: environment,     trigger: true,  passed: [lock-bats-ubuntu], resource: pool-6.5 }
+        - {get: certification,   trigger: false}
+        - {get: bosh-cli,        trigger: false}
+        - {get: bosh-release,    trigger: true}
+        - {get: cpi-release,     trigger: true}
+        - {get: stemcell,        trigger: true, resource: ubuntu-stemcell}
+        - {get: bats,            trigger: false}
+        - {get: bosh-deployment, trigger: false}
+      - <<: *prepare-director-latest
+      - do:
+        - <<: *deploy-director
+        - <<: *run-bats
+          params:
+            <<: *run-bats-params
+            STEMCELL_NAME: bosh-vsphere-esxi-ubuntu-trusty-go_agent
+        on_failure:
+          aggregate:
+          - put: notify
+            params:
+              username: 'CPI-Doctor'
+              text: |
+                The bats-ubuntu test failed. Check it out at: https://pksci.vcna.io/teams/$BUILD_TEAM_NAME/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME
+        ensure:
+          do:
+            - <<: *teardown
+
+  - name: unlock-bats-ubuntu
+    plan:
+      - {trigger: true, passed: [bats-ubuntu], get: pool-6.5}
+      - put: pool-6.5
+        params : {release: pool-6.5}
+
+  - name: certify-centos
+    plan:
+      - aggregate:
+        - {get: bosh-release, trigger: true, passed: [bats-centos]}
+        - {get: cpi-release,  trigger: true, passed: [bats-centos]}
+        - {get: stemcell,     trigger: true, passed: [bats-centos, test-upgrade], resource: centos-stemcell}
+        - {get: pipelines,    trigger: false, resource: certification}
+      - task: generate
+        file: pipelines/shared/tasks/generate-receipt.yml
+        params:
+          CPI_RELEASE_NAME: bosh-vsphere-cpi
+          STEMCELL_NAME:    bosh-vsphere-esxi-centos-7-go_agent
+      - {put: receipt, params: {file: certification/*-receipt.json}}
+
+  - name: certify-ubuntu
+    plan:
+      - aggregate:
+        - {get: bosh-release, trigger: true, passed: [bats-ubuntu]}
+        - {get: cpi-release,  trigger: true, passed: [bats-ubuntu]}
+        - {get: stemcell,     trigger: true, passed: [bats-ubuntu, test-upgrade, test-stemcell-ipv4], resource: ubuntu-stemcell} # add test-stemcell-ipv6
+        - {get: pipelines,trigger: false, resource: certification}
+      - task: generate
+        file: pipelines/shared/tasks/generate-receipt.yml
+        params:
+          CPI_RELEASE_NAME: bosh-vsphere-cpi
+          STEMCELL_NAME:    bosh-vsphere-esxi-ubuntu-trusty-go_agent
+      - {put: receipt, params: {file: certification/*-receipt.json}}
+
+resource_types:
+  - name: slack-notification
+    type: docker-image
+    source:
+      repository: cfcommunity/slack-notification-resource
+
+resources:
+  - name: receipt
+    type: s3
+    source:
+      access_key_id: {{certification__bucket_access_key}}
+      secret_access_key: {{certification__bucket_secret_key}}
+      bucket: {{certification__bucket}}
+      regexp: .*-(\d+)-receipt\.json
+      region_name: us-west-1
+  - name: notify
+    type: slack-notification
+    source:
+      url: {{slack_webhook}}
+  - name: after-midnight
+    type: time
+    source:
+      start: 12:00 AM -0700
+      stop: 2:00 AM -0700
+  - name: certification
+    type: git
+    source:
+      uri: https://github.com/cloudfoundry-incubator/bosh-cpi-certification
+      branch: master
+  - name: bosh-deployment
+    type: git
+    source:
+      uri: https://github.com/cloudfoundry/bosh-deployment
+      branch: master
+  - name: cpi-release
+    type: bosh-io-release
+    source:
+      repository: cloudfoundry-incubator/bosh-vsphere-cpi-release
+  - name: bosh-release
+    type: bosh-io-release
+    source:
+      repository: cloudfoundry/bosh
+  - name: bats
+    type: git
+    source:
+      uri: https://github.com/cloudfoundry/bosh-acceptance-tests.git
+      branch: gocli-bats
+  - name: old-stemcell
+    type: s3
+    source:
+      bucket: bosh-cpi-certification-fixtures
+      regexp: bosh-stemcell-(3213)-vsphere-esxi-ubuntu-trusty-go_agent.tgz
+      region_name: us-east-1
+  - name: centos-stemcell
+    type: bosh-io-stemcell
+    source:
+      name: bosh-vsphere-esxi-centos-7-go_agent
+  - name: ubuntu-stemcell
+    type: bosh-io-stemcell
+    source:
+      name: bosh-vsphere-esxi-ubuntu-trusty-go_agent
+  - name: bosh-cli
+    type: s3
+    source:
+      regexp:       bosh-cli-([0-9.]+)-linux-amd64
+      bucket:       bosh-cli-artifacts
+      region_name:  us-east-1
+  - name: pool-6.5
+    type: pool
+    source:
+      uri:          git@github.com:ktchen14/vcpi-pool.git
+      branch:       master
+      pool:         TA65
+      private_key:  {{vcpi-pool_deployment_key}}
+  - name: source-ci
+    type: git
+    source:
+      uri:         git@github.com:cloudfoundry-incubator/bosh-vsphere-cpi-release.git
+      branch:      {{vcpi_branch}}
+      private_key: {{github_deployment_key__bosh-vsphere-cpi-release}}
+      paths:       [ci]
+  - name: syslog-release
+    type: bosh-io-release
+    source:
+      repository: cloudfoundry/syslog-release
+  - name: os-conf-release
+    type: bosh-io-release
+    source:
+      repository: cloudfoundry/os-conf-release
+  - name: bosh-linux-stemcell-builder
+    type: git
+    source:
+      uri: https://github.com/cloudfoundry/bosh-linux-stemcell-builder
+      branch: master

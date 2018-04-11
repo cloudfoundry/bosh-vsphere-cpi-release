@@ -1,0 +1,19 @@
+platform: linux
+image_resource:
+  { type: docker-image, source: { repository: vcpici/vcpi-main } }
+
+inputs:
+  - name: certification
+  - name: environment
+  - name: director-state
+  - name: stemcell
+  - name: bosh-cli
+  - name: source-ci
+
+run:
+  path: source-ci/ci/tasks/create-deployment.sh
+
+params:
+  DEPLOYMENT_NAME:      certification
+  RELEASE_NAME:         certification
+  STEMCELL_NAME:        ""

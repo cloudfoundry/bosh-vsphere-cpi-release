@@ -1,0 +1,17 @@
+platform: linux
+image_resource:
+  { type: docker-image, source: { repository: vcpici/vcpi-main } }
+
+inputs:
+  - name: certification
+  - name: bosh-cli
+  - name: bosh-deployment
+  - name: environment
+  - name: director-state
+  - name: source-ci
+
+params:
+  OPTIONAL_OPS_FILE:  ""
+
+run:
+  path: source-ci/ci/tasks/update-cloud-config.sh

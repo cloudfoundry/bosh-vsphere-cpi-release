@@ -1,0 +1,4 @@
+---
+- type: replace
+  path: /networks/name=ipv6/subnets/0/reserved
+  value: ((reserved_range_ipv6))

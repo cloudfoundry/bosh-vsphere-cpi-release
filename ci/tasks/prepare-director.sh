@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -eu
+
 # A regular expression matching the names of potential datastores the director
 # will use for storing VMs and associated persistent disks. Note that the name
 # of each datastore matched by this regular expression must correspond to a
@@ -38,6 +40,7 @@ bosh int \
   -v internal_cidr=192.168.111.0/24 \
   -v internal_gw=192.168.111.1 \
   -v internal_ip=192.168.111.152 \
+  -v reserved_range=192.168.111.2-192.168.111.152 \
   -v network_name="$BOSH_VSPHERE_VLAN" \
   -v vcenter_dc="$BOSH_VSPHERE_CPI_DATACENTER" \
   -v vcenter_ds="$unambiguous_ds" \
@@ -53,4 +56,10 @@ bosh int \
   -v http_proxy="http://$BOSH_VSPHERE_JUMPER_HOST:80" \
   -v https_proxy="http://$BOSH_VSPHERE_JUMPER_HOST:80" \
   -v no_proxy="localhost,127.0.0.1" \
+  -v second_network_name="$BOSH_VSPHERE_VLAN" \
+  -v second_internal_cidr=2013:930:0:0:0:0:0:0/64 \
+  -v second_internal_gw=2013:930:0:0:0:0:0:1 \
+  -v second_internal_ip=2013:930:0:0:0:0:0:98 \
+  -v DNS=2013:930:0:0:0:0:0:1 \
+  -v reserved_range_ipv6=2013:930:0:0:0:0:0:1-2013:930:0:0:0:0:0:98 \
   bosh-deployment/bosh.yml > director-config/director.yml

@@ -1,0 +1,23 @@
+platform: linux
+image_resource:
+  { type: docker-image, source: { repository: vcpici/vcpi-main } }
+
+inputs:
+  - name: certification
+  - name: bosh-release
+  - name: cpi-release
+  - name: stemcell
+  - name: bosh-cli
+  - name: new-director-config
+  - name: old-director-state
+  - name: source-ci
+  - name: environment
+
+outputs:
+  - name: new-director-state
+
+run:
+  path: source-ci/ci/tasks/test-upgrade.sh
+
+params:
+  DEPLOYMENT_NAME: certification
