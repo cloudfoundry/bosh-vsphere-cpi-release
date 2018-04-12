@@ -85,6 +85,12 @@ jobs:
           - lock-bats
       - task: prepare-director
         file: source-ci/ci/tasks/prepare-director.yml
+        params:
+          OPTIONAL_OPS_FILE:  |
+            -o certification/shared/assets/ops/redis.yml
+            -o certification/shared/assets/ops/remove-hm.yml
+            -o bosh-deployment/vsphere/resource-pool.yml
+            -o certification/shared/assets/ops/remove-provider-cert.yml
       - do:
         - task: deploy-director
           file: source-ci/ci/tasks/deploy-director.yml

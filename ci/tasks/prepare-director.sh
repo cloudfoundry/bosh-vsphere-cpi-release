@@ -28,12 +28,9 @@ bosh int \
   -o bosh-deployment/misc/powerdns.yml \
   -o bosh-deployment/misc/proxy.yml \
   -o bosh-deployment/jumpbox-user.yml \
-  -o bosh-deployment/vsphere/resource-pool.yml \
+  $( echo ${OPTIONAL_OPS_FILE} ) \
   -o certification/shared/assets/ops/custom-releases.yml \
   -o certification/vsphere/assets/ops/custom-cpi-release.yml \
-  -o certification/shared/assets/ops/redis.yml \
-  -o certification/shared/assets/ops/remove-hm.yml \
-  -o certification/shared/assets/ops/remove-provider-cert.yml \
   -v bosh_release_uri="file://$(echo bosh-release/*.tgz)" \
   -v cpi_release_uri="file://$(echo cpi-release/*.tgz)" \
   -v stemcell_uri="file://$(echo stemcell/*.tgz)" \
