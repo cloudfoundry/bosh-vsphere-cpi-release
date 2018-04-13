@@ -98,7 +98,6 @@ module VSphereCloud
       @fabric_svc ||= NSXT::FabricApi.new(@client)
     end
 
-
     def add_vm_to_nsgroups(vm, vm_type_nsxt)
       return if vm_type_nsxt.nil? || vm_type_nsxt['ns_groups'].nil? || vm_type_nsxt['ns_groups'].empty?
       return if nsxt_nics(vm).empty?
@@ -197,6 +196,86 @@ module VSphereCloud
       end
     end
 
+    def create_t1_router(edge_cluster_id, name = nil)
+      name = SecureRandom.base64(8) if name.nil?
+      raise 'edge_cluster_id param can not be nil' if edge_cluster_id.nil?
+      router_api.create_logical_router({ :edge_cluster_id => edge_cluster_id,
+                                         :router_type => 'TIER1',
+                                         :display_name => name})
+    end
+
+    def attach_t1_to_t0(t0_router_id, t1_router_id)
+      raise 'T0 router id can not be nil' if t0_router_id.nil?
+      raise 'T1 router id can not be nil' if t1_router_id.nil?
+      begin
+        t0_router_port =  NSXT::LogicalRouterLinkPortOnTIER0.new({
+           :logical_router_id => t0_router_id,
+           :resource_type => 'LogicalRouterLinkPortOnTIER0'})
+        t0_router_port = router_api.create_logical_router_port(t0_router_port)
+      rescue Exception => e
+        @logger.error("Error creating port on T0 router #{t0_router_id}. Exception: #{e}")
+        raise "Error creating port on #{t0_router_id} T0 router. Exception: #{e}"
+      end
+
+      begin
+        t0_reference = NSXT::ResourceReference.new({
+            :target_id => t0_router_port.id,
+            :target_type => 'LogicalRouterLinkPortOnTIER0',
+            :is_valid => true })
+        t1_router_port = NSXT::LogicalRouterLinkPortOnTIER1.new({
+            :linked_logical_router_port_id => t0_reference,
+            :logical_router_id => t1_router_id,
+            :resource_type => 'LogicalRouterLinkPortOnTIER1'})
+        router_api.create_logical_router_port(t1_router_port)
+      rescue Exception => e
+        @logger.error("Error creating port on T1 router #{t1_router_id} and attaching it to T0 port #{t0_router_port.id}. Exception: #{e}")
+        raise "Error creating port on T1 (#{t1_router_id}) and attaching it to T0 port #{t0_router_port.id}. Exception: #{e}"
+      end
+    end
+
+    def create_logical_switch(transport_zone_id, name = nil)
+      raise 'Transport zone id can not be nil' if transport_zone_id.nil?
+
+      switch = NSXT::LogicalSwitch.new({
+           :admin_state => 'UP',
+           :transport_zone_id => transport_zone_id,
+           :replication_mode => 'MTEP',
+           :display_name => name })
+      switch_api.create_logical_switch(switch)
+    end
+
+    def attach_switch_to_t1(switch_id, t1_router_id, subnet)
+      raise 'Switch id can not be nil' if switch_id.nil?
+      raise 'Router id can not be nil' if t1_router_id.nil?
+      raise 'Subnet can not be nil' if subnet.nil?
+
+      begin
+        logical_port = NSXT::LogicalPort.new({
+            :admin_state => 'UP',
+            :logical_switch_id => switch_id})
+        logical_port = switch_api.create_logical_port(logical_port)
+      rescue Exception => e
+        @logger.error("Failed to create logical port for switch #{switch_id}. Exception: #{e}")
+        raise "Failed to create logical port for switch #{switch_id}. Exception: #{e}"
+      end
+
+      begin
+        switch_port_ref = NSXT::ResourceReference.new({:target_id => logical_port.id,
+                                     :target_type => 'LogicalPort',
+                                     :is_valid => true })
+
+        t1_router_port = NSXT::LogicalRouterDownLinkPort.new({
+           :logical_router_id => t1_router_id,
+           :linked_logical_switch_port_id => switch_port_ref,
+           :resource_type => 'LogicalRouterDownLinkPort',
+           :subnets => [subnet]})
+        router_api.create_logical_router_port(t1_router_port)
+      rescue Exception => e
+        @logger.error("Failed to create logical port for router #{t1_router_id} and switch #{switch_id}. Exception: #{e}")
+        raise "Failed to create logical port for router #{t1_router_id} and switch #{switch_id}. Exception: #{e}"
+      end
+    end
+
     private
 
     MAX_TRIES = 20
@@ -273,6 +352,14 @@ module VSphereCloud
       @logger.info("NSX-T networks found for vm '#{vm.cid}': #{nics.map(&:device_info).map(&:summary)}")
 
       nics
+    end
+
+    def router_api
+      @router_api ||= NSXT::LogicalRoutingAndServicesApi.new(@client)
+    end
+
+    def switch_api
+      @switch_api ||= NSXT::LogicalSwitchingApi.new(@client)
     end
   end
 end

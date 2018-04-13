@@ -648,6 +648,15 @@ module VSphereCloud
       {'stemcell_formats' =>  ['vsphere-ovf', 'vsphere-ova']}
     end
 
+    #creates T1 router and virtual switch attached to it
+    def create_subnet(cloud_properties)
+      t1_router = @nsxt_provider.create_t1_router(cloud_properties['edge_cluster_id'], cloud_properties['t1_name'])
+      @nsxt_provider.attach_t1_to_t0(cloud_properties['t0_router_id'], t1_router.id)
+      switch = @nsxt_provider.create_logical_switch(cloud_properties['transport_zone_id'], cloud_properties['switch_name'])
+      subnet = create_subnet_obj(cloud_properties['ip_address'], cloud_properties['prefix_length'])
+      @nsxt_provider.attach_switch_to_t1(switch.id, t1_router.id, subnet)
+    end
+
     private
 
     def import_ovf(name, ovf, resource_pool, datastore)
@@ -752,6 +761,11 @@ module VSphereCloud
         target_datastore_pattern: ephemeral_pattern
       )
       disk_configurations.push(ephemeral_disk_config)
+    end
+
+    def create_subnet_obj(ip_address, prefix_length)
+      NSXT::IPSubnet.new({:ip_addresses => [ip_address],
+                          :prefix_length => prefix_length})
     end
   end
 end
