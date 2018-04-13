@@ -649,12 +649,16 @@ module VSphereCloud
     end
 
     #creates T1 router and virtual switch attached to it
-    def create_subnet(cloud_properties)
+    def create_subnet(subnet_definition)
+      cloud_properties = subnet_definition['cloud_properties']
+      raise 'cloud_properties must be provided' if cloud_properties.nil?
+      subnet = create_subnet_obj(subnet_definition['range'])
+
       t1_router = @nsxt_provider.create_t1_router(cloud_properties['edge_cluster_id'], cloud_properties['t1_name'])
       @nsxt_provider.attach_t1_to_t0(cloud_properties['t0_router_id'], t1_router.id)
       switch = @nsxt_provider.create_logical_switch(cloud_properties['transport_zone_id'], cloud_properties['switch_name'])
-      subnet = create_subnet_obj(cloud_properties['ip_address'], cloud_properties['prefix_length'])
       @nsxt_provider.attach_switch_to_t1(switch.id, t1_router.id, subnet)
+      {:network_cid => t1_router.id, :cloud_properties => {:name => switch.display_name } }
     end
 
     private
@@ -763,9 +767,13 @@ module VSphereCloud
       disk_configurations.push(ephemeral_disk_config)
     end
 
-    def create_subnet_obj(ip_address, prefix_length)
-      NSXT::IPSubnet.new({:ip_addresses => [ip_address],
-                          :prefix_length => prefix_length})
+    def create_subnet_obj(range)
+      if (!range.nil? && range.include?('/'))
+        addr, mask = range.split("/")
+        return NSXT::IPSubnet.new({:ip_addresses => [addr],
+                                   :prefix_length => mask.to_i})
+      end
+      raise 'Incorrect subnet definition. Proper CIDR block must be given'
     end
   end
 end
