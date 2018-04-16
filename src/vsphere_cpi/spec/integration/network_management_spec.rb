@@ -78,7 +78,7 @@ describe 'network management', :network_management => true do
       t1_router = get_t1_router(result[:network_cid])
       expect(t1_router).not_to be_nil
       @t1_router_id = t1_router.id
-      expect(@t1_router_id).not_to be_  nil
+      expect(@t1_router_id).not_to be_nil
 
       #get router port attached to created switch
       router_ports = router_api.list_logical_router_ports({:logical_switch_id => switch.id})
