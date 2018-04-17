@@ -71,8 +71,8 @@ describe 'CPI', nsx_transformers: true do
       ENV['BOSH_NSXT_CA_CERT_FILE'] = @ca_cert_file.path
     end
 
-    @nsxt_opaque_vlan_1 = 'pks-vif-switch' #TODO update this in nimbus and then revert this change
-    @nsxt_opaque_vlan_2 = 'service-vif-switch'
+    @nsxt_opaque_vlan_1 = fetch_property('BOSH_VSPHERE_OPAQUE_VLAN')
+    @nsxt_opaque_vlan_2 = fetch_property('BOSH_VSPHERE_SECOND_OPAQUE_VLAN')
   end
 
   after do
