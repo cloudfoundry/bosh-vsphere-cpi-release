@@ -36,9 +36,5 @@ export HOME=~
 export BUNDLE_GEMFILE=$BOSH_PACKAGES_DIR/vsphere_cpi/Gemfile
 bundle_cmd="${BOSH_PACKAGES_DIR}/ruby-2.4-r3/bin/bundle"
 
-pushd $BOSH_PACKAGES_DIR/vsphere_cpi > /dev/null
-  $bundle_cmd install > /dev/null
-popd > /dev/null
-
 exec $bundle_cmd exec $BOSH_PACKAGES_DIR/vsphere_cpi/bin/vsphere_cpi \
   $BOSH_JOBS_DIR/vsphere_cpi/config/cpi.json
