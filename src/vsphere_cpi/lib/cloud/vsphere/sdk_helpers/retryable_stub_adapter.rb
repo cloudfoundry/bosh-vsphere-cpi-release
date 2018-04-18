@@ -16,6 +16,8 @@ module VSphereCloud
         'UpdateOptions',
         'RetrievePropertiesEx',
         'RetrieveProperties',
+        'HttpNfcLeaseProgress',
+        'CurrentTime'
       ]
 
       SILENT_ERROR_METHOD = Set[
