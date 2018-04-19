@@ -19,32 +19,22 @@ module VSphereCloud
     attr_reader :config, :datacenter, :heartbeat_thread
 
     def enable_telemetry
-      http_client = VSphereCloud::CpiHttpClient.new(@config.soap_log)
-
+      http_client = VSphereCloud::CpiHttpClient.new
       other_client = VCenterClient.new(
         vcenter_api_uri: @config.vcenter_api_uri,
         http_client: http_client,
-        logger: @logger,
+        logger: Logger.new('/dev/null'),
       )
       other_client.login(@config.vcenter_user, @config.vcenter_password, 'en')
-
       option = Vim::Option::OptionValue.new
       option.key = 'config.SDDC.cpi'
       option.value = 'true'
-      @logger.debug('Enabling telemetry')
       other_client.service_content.setting.query_view(option.key)
-    rescue Exception => e
-      @logger.debug('Error in enabling telemetry')
-      @logger.debug(e.fault)
+    rescue => e
       return unless e.fault.is_a?(Vim::Fault::InvalidName)
-      @logger.debug('Updating and creating the new telemetry value')
-      begin
-        other_client.service_content.setting.update_values([option])
-        @logger.debug('Done updating')
-      rescue Exception => e
-        @logger.debug('Error in updating telemetry')
-        @logger.debug(e.fault)
-      end
+      other_client.service_content.setting.update_values([option]) rescue nil
+    ensure
+      other_client.logout rescue nil
     end
 
     def initialize(options)
