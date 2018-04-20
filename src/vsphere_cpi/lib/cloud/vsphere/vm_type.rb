@@ -29,7 +29,7 @@ module VSphereCloud
     end
 
     def nsxt_server_pools
-      nsxt['lb']['server_pools'] if nsxt && nsxt['lb']
+      nsxt&.dig('lb', 'server_pools')
     end
 
     def ns_groups

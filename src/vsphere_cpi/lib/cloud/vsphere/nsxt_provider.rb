@@ -149,8 +149,8 @@ module VSphereCloud
       nsgroups = grouping_obj_svc.list_ns_groups.results.select do |nsgroup|
         nsgroup.members&.any? do |member|
           member.is_a?(NSXT::NSGroupSimpleExpression) &&
-          member.target_property == 'id' &&
-          lport_ids.include?(member.value)
+            member.target_property == 'id' &&
+            lport_ids.include?(member.value)
         end
       end
 
@@ -177,7 +177,7 @@ module VSphereCloud
           raise InvalidLogicalPortError.new(logical_port) if bosh_id_tags.uniq.length > 1
 
           id_tag = NSXT::Tag.new('scope' => 'bosh/id', 'tag' => Digest::SHA1.hexdigest(metadata['id']))
-          tags.delete_if {|tag| tag.scope == 'bosh/id'}
+          tags.delete_if { |tag| tag.scope == 'bosh/id' }
           tags << id_tag
 
           logical_port.tags = tags
@@ -224,13 +224,13 @@ module VSphereCloud
     # @param [Resources::VM] vm
     # @param [[NSXT::LbPool, integer][]] load_balancer_pools Array of Load_balancer_pool and port no
     def add_vm_to_server_pools(vm, load_balancer_pools)
-      return if load_balancer_pools.nil? ||  load_balancer_pools.empty?
+      return if load_balancer_pools.nil? || load_balancer_pools.empty?
       Bosh::Retryable.new(
         tries: 50,
         sleep: ->(try_count, retry_exception) { 2 },
         on: [VirtualMachineIpNotFound]
       ).retryer do |i|
-        vm_ip =  vm.mob.guest&.ip_address
+        vm_ip = vm.mob.guest&.ip_address
         raise VirtualMachineIpNotFound.new(vm) unless vm_ip
         load_balancer_pools.each do |load_balancer_pool, port_no|
           @logger.info("Adding vm: '#{vm.cid}' with ip:#{vm_ip} to ServerPool: #{load_balancer_pool} on Port: #{port_no} ")
@@ -246,8 +246,10 @@ module VSphereCloud
     # @param [array] server_pools It is an array of hashes with server_pool names and port
     def retrieve_server_pools(server_pools)
       return [] if server_pools.nil? || server_pools.empty?
+
+      #Create a hash of server_pools with key as their name and value as list of matching server_pools
       server_pools_by_name = services_svc.list_load_balancer_pools.results.each_with_object({}) do |server_pool, hash|
-        hash[server_pool.display_name] = server_pool
+        hash[server_pool.display_name] ? hash[server_pool.display_name] << server_pool : hash[server_pool.display_name] = [server_pool]
       end
 
       missing = server_pools.reject do |server_pool|
@@ -255,12 +257,14 @@ module VSphereCloud
       end
       raise ServerPoolsNotFound.new(*missing) unless missing.empty?
 
-      static_server_pools, dynamic_server_pools = [],[]
+      static_server_pools, dynamic_server_pools = [], []
       server_pools.each do |server_pool|
         server_pool_name = server_pool['name']
         server_pool_port = server_pool['port']
-        server_pool_obj = server_pools_by_name[server_pool_name]
-        server_pool_obj.member_group ? dynamic_server_pools <<  server_pool_obj : static_server_pools << [server_pool_obj, server_pool_port]
+        matching_server_pools = server_pools_by_name[server_pool_name]
+        matching_server_pools.each do |matching_server_pool|
+          matching_server_pool.member_group ? dynamic_server_pools << matching_server_pool : static_server_pools << [matching_server_pool, server_pool_port]
+        end
       end
       return static_server_pools, dynamic_server_pools
     end
@@ -289,8 +293,6 @@ module VSphereCloud
 
       found_nsgroups
     end
-
-
 
     def logical_ports(vm)
       Bosh::Retryable.new(
