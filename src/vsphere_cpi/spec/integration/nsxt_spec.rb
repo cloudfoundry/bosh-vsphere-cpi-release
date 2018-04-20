@@ -145,7 +145,7 @@ describe 'CPI', nsx_transformers: true do
         }
       end
 
-      context 'but at least one of the NSGroups does NOT exist' do
+      context 'but at least one of the NSGroups does NOT exists' do
         it 'raises NSGroupsNotFound' do
           expect do
             simple_vm_lifecycle(cpi, @nsxt_opaque_vlan_1, vm_type)
@@ -154,11 +154,9 @@ describe 'CPI', nsx_transformers: true do
       end
 
       context 'and all the NSGroups exist' do
-        let(:nsgroup_1) { create_nsgroup(nsgroup_name_1) }
-        let(:nsgroup_2) { create_nsgroup(nsgroup_name_2) }
+        let!(:nsgroup_1) { create_nsgroup(nsgroup_name_1) }
+        let!(:nsgroup_2) { create_nsgroup(nsgroup_name_2) }
         before do
-          expect(nsgroup_1).to_not be_nil
-          expect(nsgroup_2).to_not be_nil
           grouping_object_svc = NSXT::GroupingObjectsApi.new(nsxt)
           nsgroups = grouping_object_svc.list_ns_groups.results.select do |nsgroup|
             [nsgroup_name_1, nsgroup_name_2].include?(nsgroup.display_name)
@@ -201,7 +199,7 @@ describe 'CPI', nsx_transformers: true do
       end
     end
 
-    context 'when load balancers are specified' do
+    context 'when server_pools are specified' do
       let(:port_no) { '443' }
       let(:vm_type) do
         {
@@ -210,37 +208,32 @@ describe 'CPI', nsx_transformers: true do
           'cpu' => 1,
           'nsxt' => {
             'lb' => {
-                'server_pools' => [
-                  {
-                    'name' => server_pool_name_1,
-                    'port' => port_no
-                  },
-                  {
-                    'name' => server_pool_name_2,
-                    'port' => 80
-                  }
-                ]
-              }
+              'server_pools' => [
+                {
+                  'name' => server_pool_name_1,
+                  'port' => port_no
+                },
+                {
+                  'name' => server_pool_name_2,
+                  'port' => 80
+                }
+              ]
             }
           }
+        }
       end
 
-      context 'but atleast one server pool does not exist' do
+      context 'but atleast one server pool does not exists' do
         it 'raises an error' do
           expect do
             simple_vm_lifecycle(cpi, @nsxt_opaque_vlan_1, vm_type)
           end.to raise_error(VSphereCloud::ServerPoolsNotFound)
         end
       end
-      context 'and all server pool exists' do
+      context 'and all server pools exist' do
         let(:nsgroup_1) { create_nsgroup(nsgroup_name_1) }
-        let(:server_pool_1) { create_server_pool(server_pool_name_1) }
-        let(:server_pool_2) { create_server_pool(server_pool_name_2, nsgroup_1) }
-
-        before do
-          expect(server_pool_1).to_not be_nil
-          expect(server_pool_2).to_not be_nil
-        end
+        let!(:server_pool_1) { create_static_server_pool(server_pool_name_1) }
+        let!(:server_pool_2) { create_dynamic_server_pool(server_pool_name_2, nsgroup_1) }
 
         after do
           delete_server_pool(server_pool_1)
@@ -251,7 +244,6 @@ describe 'CPI', nsx_transformers: true do
         it 'adds vm to existing static server pools and adds all logical ports of the VM to NSGroups associated with the dynamic server pool' do
           simple_vm_lifecycle(cpi, @nsxt_opaque_vlan_1, vm_type) do |vm_id|
             vm = cpi.vm_provider.find(vm_id)
-            expect(vm).to_not be_nil
             vm_ip = vm.mob.guest&.ip_address
             expect(vm_ip).to_not be_nil
             verify_pool_member(server_pool_1, vm_ip, port_no)
@@ -260,6 +252,20 @@ describe 'CPI', nsx_transformers: true do
 
               expect(nsgroup_effective_logical_port_member_ids(nsgroup_1)).to include(lport.id)
             end
+          end
+        end
+        it 'adds vm to all existing static server pools with given name' do
+          begin
+            server_pool_3 = create_static_server_pool(server_pool_name_1) #server pool with same name as server_pool_1
+            simple_vm_lifecycle(cpi, @nsxt_opaque_vlan_1, vm_type) do |vm_id|
+              vm = cpi.vm_provider.find(vm_id)
+              vm_ip = vm.mob.guest&.ip_address
+              expect(vm_ip).to_not be_nil
+              verify_pool_member(server_pool_1, vm_ip, port_no)
+              verify_pool_member(server_pool_3, vm_ip, port_no)
+            end
+          ensure
+            delete_server_pool(server_pool_3)
           end
         end
       end
@@ -377,18 +383,23 @@ describe 'CPI', nsx_transformers: true do
     results.map { |member| member.target_id }
   end
 
-  def create_server_pool(pool_name, nsgroup=nil)
+  def create_static_server_pool(pool_name)
     server_pool = NSXT::LbPool.new(display_name: pool_name)
-    if nsgroup
-      resource = NSXT::ResourceReference.new(target_id: nsgroup.id, target_type: nsgroup.resource_type, target_display_name: nsgroup.display_name)
-      server_pool.member_group = NSXT::PoolMemberGroup.new(grouping_object: resource, max_ip_list_size: 2)
-    end
+    services_svc.create_load_balancer_pool(server_pool)
+  end
+
+  def create_dynamic_server_pool(pool_name, nsgroup)
+    server_pool = NSXT::LbPool.new(display_name: pool_name)
+    resource = NSXT::ResourceReference.new(target_id: nsgroup.id, target_type: nsgroup.resource_type, target_display_name: nsgroup.display_name)
+    server_pool.member_group = NSXT::PoolMemberGroup.new(grouping_object: resource, max_ip_list_size: 2)
     services_svc.create_load_balancer_pool(server_pool)
   end
 
   def verify_pool_member(server_pool, ip_address, port_no)
     server_pool = services_svc.read_load_balancer_pool(server_pool.id)
-    matching_members = server_pool.members.select{ |member| member.ip_address == ip_address && member.port == port_no }
+    matching_members = server_pool.members.select do |member|
+      member.ip_address == ip_address && member.port == port_no
+    end
     expect(matching_members.count).to eq(1)
   end
 
