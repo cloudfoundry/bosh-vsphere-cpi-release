@@ -1624,15 +1624,8 @@ module VSphereCloud
     end
 
     describe 'create_subnet' do
-      # let(:subnet_definition) { {'edge_cluster_id' => 'cluster_id',
-      #                           't0_router_id' => 't0-router-id',
-      #                           't1_name' => 'router_name',
-      #                           'transport_zone_id' => 'zone-id',
-      #                           'switch_name' => 'switch-name',
-      #                           'ip_address' => '192.168.111.111',
-      #                           'prefix_length' => 24} }
       let(:subnet_definition) { {
-                                 'range' => '192.168.111.111/24',
+                                 'range' => '192.168.111.0/24',
                                  'gateway' => '192.168.111.1',
                                  'cloud_properties' => {
                                      'edge_cluster_id' => 'cluster_id',
@@ -1664,7 +1657,7 @@ module VSphereCloud
         expect(nsxt_provider).to receive(:create_logical_switch)
           .with('zone-id', 'switch-name').and_return(logical_switch)
         expect(vsphere_cloud).to receive(:create_subnet_obj)
-          .with( '192.168.111.111/24').and_return(subnet)
+          .with( '192.168.111.0/24', '192.168.111.1').and_return(subnet)
         expect(nsxt_provider).to receive(:attach_switch_to_t1)
           .with('switch-id', 't1-router-id', subnet)
         result = vsphere_cloud.create_subnet(subnet_definition)
@@ -1674,7 +1667,7 @@ module VSphereCloud
 
       context 'when optional params are not provided' do
         let(:subnet_definition) { {
-            'range' => '192.168.111.111/24',
+            'range' => '192.168.111.0/24',
             'gateway' => '192.168.111.1',
             'cloud_properties' => {
                 'edge_cluster_id' => 'cluster_id',
@@ -1695,7 +1688,7 @@ module VSphereCloud
           expect(nsxt_provider).to receive(:create_logical_switch)
                                        .with('zone-id', nil).and_return(logical_switch)
           expect(vsphere_cloud).to receive(:create_subnet_obj)
-                                       .with( '192.168.111.111/24').and_return(subnet)
+                                       .with( '192.168.111.0/24', '192.168.111.1').and_return(subnet)
           expect(nsxt_provider).to receive(:attach_switch_to_t1)
                                        .with('switch-id', 't1-router-id', subnet)
 

@@ -652,7 +652,7 @@ module VSphereCloud
     def create_subnet(subnet_definition)
       cloud_properties = subnet_definition['cloud_properties']
       raise 'cloud_properties must be provided' if cloud_properties.nil?
-      subnet = create_subnet_obj(subnet_definition['range'])
+      subnet = create_subnet_obj(subnet_definition['range'], subnet_definition['gateway'])
 
       t1_router = @nsxt_provider.create_t1_router(cloud_properties['edge_cluster_id'], cloud_properties['t1_name'])
       @nsxt_provider.attach_t1_to_t0(cloud_properties['t0_router_id'], t1_router.id)
@@ -767,10 +767,12 @@ module VSphereCloud
       disk_configurations.push(ephemeral_disk_config)
     end
 
-    def create_subnet_obj(range)
+    #This subnet will be used in create_logical_router_port.
+    # ip_addresses is going to be a gateway IP for subnet - aka IP for router.
+    def create_subnet_obj(range, gateway)
       if (!range.nil? && range.include?('/'))
-        addr, mask = range.split("/")
-        return NSXT::IPSubnet.new({:ip_addresses => [addr],
+        _, mask = range.split("/")
+        return NSXT::IPSubnet.new({:ip_addresses => [gateway],
                                    :prefix_length => mask.to_i})
       end
       raise 'Incorrect subnet definition. Proper CIDR block must be given'

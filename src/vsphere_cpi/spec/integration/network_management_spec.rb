@@ -50,7 +50,8 @@ describe 'network management', :network_management => true do
 
   let(:subnet_definition) {
     {
-        'range' => '192.168.99.99/24',
+        'range' => '192.168.99.0/24',
+        'gateway' => '192.168.99.1',
         'cloud_properties' => {
           'edge_cluster_id' => @edge_cluster_id,
           't0_router_id' => @t0_router_id,
