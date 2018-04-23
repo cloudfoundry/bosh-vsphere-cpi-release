@@ -255,8 +255,8 @@ module VSphereCloud
             :logical_switch_id => switch_id})
         logical_port = switch_api.create_logical_port(logical_port)
       rescue Exception => e
-        @logger.error("Failed to create logical port for switch #{switch_id}. Exception: #{e}")
-        raise "Failed to create logical port for switch #{switch_id}. Exception: #{e}"
+        @logger.error("Failed to create logical port for switch #{switch_id}. Exception: #{e.to_s}")
+        raise "Failed to create logical port for switch #{switch_id}. Exception: #{e.to_s}"
       end
 
       begin
@@ -271,8 +271,8 @@ module VSphereCloud
            :subnets => [subnet]})
         router_api.create_logical_router_port(t1_router_port)
       rescue Exception => e
-        @logger.error("Failed to create logical port for router #{t1_router_id} and switch #{switch_id}. Exception: #{e}")
-        raise "Failed to create logical port for router #{t1_router_id} and switch #{switch_id}. Exception: #{e}"
+        @logger.error("Failed to create logical port for router #{t1_router_id} and switch #{switch_id}. Exception: #{e.to_s}")
+        raise "Failed to create logical port for router #{t1_router_id} and switch #{switch_id}. Exception: #{e.to_s}"
       end
     end
 
