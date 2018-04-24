@@ -655,6 +655,7 @@ module VSphereCloud
       subnet = create_subnet_obj(subnet_definition['range'], subnet_definition['gateway'])
 
       t1_router = @nsxt_provider.create_t1_router(cloud_properties['edge_cluster_id'], cloud_properties['t1_name'])
+      @nsxt_provider.enable_route_advertisement(t1_router.id)
       @nsxt_provider.attach_t1_to_t0(cloud_properties['t0_router_id'], t1_router.id)
       switch = @nsxt_provider.create_logical_switch(cloud_properties['transport_zone_id'], cloud_properties['switch_name'])
       @nsxt_provider.attach_switch_to_t1(switch.id, t1_router.id, subnet)
