@@ -12,9 +12,7 @@
 #
 # Due to the different design philosophies of CLI and CPI,
 # proxy environment variables are needed at both places.
-source environment/metadata
-export HTTP_PROXY="http://$BOSH_VSPHERE_JUMPER_HOST:80"
-export HTTPS_PROXY="http://$BOSH_VSPHERE_JUMPER_HOST:80"
+source source-ci/ci/shared/tasks/setup-env-proxy.sh
 
 # inputs
 input_dir=$(realpath director-config/)
@@ -44,6 +42,7 @@ finish() {
 
   cp -r $HOME/.bosh director-state
   rm -f $logfile
+  master_exit
 }
 trap finish EXIT
 

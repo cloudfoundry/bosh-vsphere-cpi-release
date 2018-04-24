@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 
-source environment/metadata
-export HTTP_PROXY="http://$BOSH_VSPHERE_JUMPER_HOST:80"
-export HTTPS_PROXY="http://$BOSH_VSPHERE_JUMPER_HOST:80"
+source source-ci/ci/shared/tasks/setup-env-proxy.sh
 
 if [ ! -e director-state/director-state.json ]; then
   echo "director-state.json does not exist, skipping..."

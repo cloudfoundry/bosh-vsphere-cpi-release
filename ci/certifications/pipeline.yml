@@ -37,12 +37,18 @@ shared:
       BAT_INFRASTRUCTURE: vsphere
       BAT_NETWORKING:     manual
       BAT_RSPEC_FLAGS:    "--tag ~dns --tag ~vip_networking --tag ~dynamic_networking --tag ~root_partition --tag ~raw_ephemeral_storage"
-  - &test-stemcell
+  - &test-stemcell-ipv4
     task: test-stemcell
     file: source-ci/ci/tasks/test-stemcell.yml
     params:
       BOSH_os_name: ubuntu-trusty
       package: ipv4director
+  - &test-stemcell-ipv6
+    task: test-stemcell
+    file: source-ci/ci/tasks/test-stemcell.yml
+    params:
+      BOSH_os_name: ubuntu-trusty
+      package: ipv6director
   - &update-cloud-config
     task: update-cloud-config
     file: source-ci/ci/tasks/update-cloud-config.yml
@@ -173,7 +179,7 @@ jobs:
             params:
               OPTIONAL_OPS_FILE: |
                 -o certification/vsphere/assets/reserve-ips.yml
-          - <<: *test-stemcell
+          - <<: *test-stemcell-ipv4
           on_failure:
             aggregate:
             - put: notify
@@ -234,9 +240,9 @@ jobs:
           params:
             OPTIONAL_OPS_FILE: |
               -o certification/vsphere/assets/ipv6-cc.yml
-              -o source-ci/ci/reserve_ip_ipv6.yml
+              -o source-ci/ci/shared/ops/reserve_ip_ipv6.yml
               -o certification/vsphere/assets/reserve-ips.yml
-        - <<: *test-stemcell
+        - <<: *test-stemcell-ipv6
         on_failure:
           aggregate:
           - put: notify
@@ -470,7 +476,7 @@ resources:
     source:
       uri:          git@github.com:ktchen14/vcpi-pool.git
       branch:       master
-      pool:         TA65
+      pool:         v6.5
       private_key:  {{vcpi-pool_deployment_key}}
   - name: source-ci
     type: git

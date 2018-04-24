@@ -4,9 +4,8 @@ set -e
 
 source bosh-cpi-src/.envrc
 
-source environment/metadata
-export HTTP_PROXY="http://$BOSH_VSPHERE_JUMPER_HOST:80"
-export HTTPS_PROXY="http://$BOSH_VSPHERE_JUMPER_HOST:80"
+source source-ci/ci/shared/tasks/setup-env-proxy.sh
+
 stemcell_dir="$( cd stemcell && pwd )"
 export BOSH_VSPHERE_STEMCELL=${stemcell_dir}/stemcell.tgz
 
