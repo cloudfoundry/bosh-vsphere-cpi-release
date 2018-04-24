@@ -235,6 +235,7 @@ jobs:
             OPTIONAL_OPS_FILE: |
               -o certification/vsphere/assets/ipv6-cc.yml
               -o source-ci/ci/reserve_ip_ipv6.yml
+              -o certification/vsphere/assets/reserve-ips.yml
         - <<: *test-stemcell
         on_failure:
           aggregate:
