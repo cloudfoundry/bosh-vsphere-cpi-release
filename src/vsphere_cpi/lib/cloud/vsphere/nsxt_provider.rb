@@ -233,6 +233,13 @@ module VSphereCloud
       end
     end
 
+    def enable_route_advertisement(router_id)
+      config = router_api.read_advertisement_config(router_id)
+      config.advertise_nsx_connected_routes = true
+      config.enabled = true
+      router_api.update_advertisement_config(router_id, config)
+    end
+
     def create_logical_switch(transport_zone_id, name = nil)
       raise 'Transport zone id can not be nil' if transport_zone_id.nil?
 

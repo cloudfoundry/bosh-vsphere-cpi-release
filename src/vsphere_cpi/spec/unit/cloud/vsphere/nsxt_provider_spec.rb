@@ -529,6 +529,35 @@ describe VSphereCloud::NSXTProvider do
     end
   end
 
+  describe '#enable_route_advertisement' do
+    let(:router_id) { 't1-router-id' }
+    let(:advertisement_config) { instance_double(NSXT::AdvertisementConfig) }
+    let(:router_api) { instance_double(NSXT::LogicalRoutingAndServicesApi) }
+    before do
+      allow(nsxt_provider).to receive(:router_api).and_return(router_api)
+      allow(NSXT::AdvertisementConfig).to receive(:new)
+        .with({:advertise_nsx_connected_routes => true,
+               :enabled => true})
+        .and_return(advertisement_config)
+    end
+
+    context 'when route id is provided' do
+      it 'enables route advertisement' do
+        expect(router_api).to receive(:read_advertisement_config)
+          .with('t1-router-id').and_return(advertisement_config)
+        expect(advertisement_config).to receive(:advertise_nsx_connected_routes=)
+          .with(true)
+        expect(advertisement_config).to receive(:enabled=)
+          .with(true)
+        expect(router_api).to receive(:update_advertisement_config) do |router_id, ad_config|
+          expect(router_id).to eq('t1-router-id')
+          expect(ad_config).to eq(advertisement_config)
+        end
+
+        nsxt_provider.enable_route_advertisement(router_id)
+      end
+    end
+  end
   describe '#attach_t1_to_t0' do
     let(:router_api) { instance_double(NSXT::LogicalRoutingAndServicesApi) }
     let(:t0_router_port) {

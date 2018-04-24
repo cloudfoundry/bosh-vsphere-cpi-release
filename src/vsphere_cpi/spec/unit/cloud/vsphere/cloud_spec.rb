@@ -1652,6 +1652,8 @@ module VSphereCloud
       it 'creates T1 router and attaches it to T0, creates logical switch and attaches it to T1' do
         expect(nsxt_provider).to receive(:create_t1_router)
           .with('cluster_id', 'router-name').and_return(t1_router)
+        expect(nsxt_provider).to receive(:enable_route_advertisement)
+          .with('t1-router-id')
         expect(nsxt_provider).to receive(:attach_t1_to_t0)
           .with('t0-router-id', 't1-router-id')
         expect(nsxt_provider).to receive(:create_logical_switch)
@@ -1683,6 +1685,8 @@ module VSphereCloud
         it 'creates T1 router and attaches it to T0, creates logical switch and attaches it to T1' do
           expect(nsxt_provider).to receive(:create_t1_router)
                                        .with('cluster_id', nil).and_return(t1_router)
+          expect(nsxt_provider).to receive(:enable_route_advertisement)
+                                       .with('t1-router-id')
           expect(nsxt_provider).to receive(:attach_t1_to_t0)
                                        .with('t0-router-id', 't1-router-id')
           expect(nsxt_provider).to receive(:create_logical_switch)
@@ -1717,15 +1721,15 @@ module VSphereCloud
 
       context 'when CIDR block is given' do
         it 'returns IPSubnet' do
-          result = vsphere_cloud.create_subnet_obj('192.168.111.111/24')
-          expect(result.ip_addresses).to eq(['192.168.111.111'])
+          result = vsphere_cloud.create_subnet_obj('192.168.111.111/24', '192.168.111.1')
+          expect(result.ip_addresses).to eq(['192.168.111.1'])
           expect(result.prefix_length).to eq(24)
         end
       end
 
       context 'when CIDR block is incorrect' do
         it 'raises en error' do
-          expect {vsphere_cloud.create_subnet_obj('192.168.111.1113124')}
+          expect {vsphere_cloud.create_subnet_obj('192.168.111.1113124', '192.168.111.2')}
             .to raise_error('Incorrect subnet definition. Proper CIDR block must be given')
         end
       end
