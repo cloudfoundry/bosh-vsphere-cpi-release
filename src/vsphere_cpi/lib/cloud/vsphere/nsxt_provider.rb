@@ -222,9 +222,9 @@ module VSphereCloud
 
     # Add vm to given list of static Load Balancer Server Pools
     # @param [Resources::VM] vm
-    # @param [[NSXT::LbPool, integer][]] load_balancer_pools Array of Load_balancer_pool and port no
-    def add_vm_to_server_pools(vm, load_balancer_pools)
-      return if load_balancer_pools.nil? || load_balancer_pools.empty?
+    # @param [[NSXT::LbPool, integer][]] server_pools Array of Load_balancer_pool and port no
+    def add_vm_to_server_pools(vm, server_pools)
+      return if server_pools.nil? || server_pools.empty?
       Bosh::Retryable.new(
         tries: 50,
         sleep: ->(try_count, retry_exception) { 2 },
@@ -232,16 +232,16 @@ module VSphereCloud
       ).retryer do |i|
         vm_ip = vm.mob.guest&.ip_address
         raise VirtualMachineIpNotFound.new(vm) unless vm_ip
-        load_balancer_pools.each do |load_balancer_pool, port_no|
-          @logger.info("Adding vm: '#{vm.cid}' with ip:#{vm_ip} to ServerPool: #{load_balancer_pool} on Port: #{port_no} ")
+        server_pools.each do |server_pool, port_no|
+          @logger.info("Adding vm: '#{vm.cid}' with ip:#{vm_ip} to ServerPool: #{server_pool.id} on Port: #{port_no} ")
           pool_member = NSXT::PoolMemberSetting.new(ip_address: vm_ip, port: port_no)
           pool_member_setting_list = NSXT::PoolMemberSettingList.new(members: [pool_member])
-          services_svc.perform_pool_member_action(load_balancer_pool.id, pool_member_setting_list, 'ADD_MEMBERS')
+          services_svc.perform_pool_member_action(server_pool.id, pool_member_setting_list, 'ADD_MEMBERS')
         end
       end
     end
 
-    # Returns an array of Static Load Balancer Server Pools and Dynamic Load Balancer Pools
+    # Returns an array of Static Server Pools and Dynamic Server Pools
     # For Static Server Pools corresponding port no is also returned
     # @param [array] server_pools It is an array of hashes with server_pool names and port
     def retrieve_server_pools(server_pools)
@@ -267,6 +267,17 @@ module VSphereCloud
         end
       end
       return static_server_pools, dynamic_server_pools
+    end
+
+    def remove_vm_from_server_pools(vm_ip)
+        services_svc.list_load_balancer_pools.results.each do |server_pool|
+        member_found = server_pool.members&.find {|member| member.ip_address == vm_ip}
+        next unless member_found
+        @logger.info("Removing vm with ip: '#{vm_ip}' from ServerPool: #{server_pool.id} ")
+        pool_member = NSXT::PoolMemberSetting.new(ip_address: vm_ip, port: member_found.port)
+        pool_member_setting_list = NSXT::PoolMemberSettingList.new(members: [pool_member])
+        services_svc.perform_pool_member_action(server_pool.id, pool_member_setting_list, 'REMOVE_MEMBERS')
+      end
     end
 
     private
