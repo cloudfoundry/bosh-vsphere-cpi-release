@@ -565,4 +565,24 @@ describe VSphereCloud::NSXTProvider do
       end
     end
   end
+
+  describe '#remove_vm_from_server_pools' do
+    let(:vm_ip_address) { '192.168.111.5' }
+    let(:pool_member) { NSXT::PoolMember.new(ip_address: vm_ip_address, port: '80') }
+    let(:server_pool_1) do
+      NSXT::LbPool.new(id: 'id-1', display_name: 'test-static-serverpool', members: [pool_member])
+    end
+    let(:server_pool_2) do
+      NSXT::LbPool.new(id: 'id-2', display_name: 'test-dynamic-serverpool', members: nil)
+    end
+    before do
+      allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:services_svc).and_return(services_svc)
+      expect(services_svc).to receive_message_chain(:list_load_balancer_pools, :results).and_return([server_pool_1, server_pool_2])
+    end
+
+    it 'removes VM from all server pools' do
+      expect(services_svc).to receive(:perform_pool_member_action).with(server_pool_1.id,an_instance_of(NSXT::PoolMemberSettingList),'REMOVE_MEMBERS').once
+      nsxt_provider.remove_vm_from_server_pools(vm_ip_address)
+    end
+  end
 end

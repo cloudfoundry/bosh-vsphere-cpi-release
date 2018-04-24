@@ -1265,9 +1265,11 @@ module VSphereCloud
     end
 
     describe '#delete_vm' do
+      let(:ip_address) {'192.168.111.5'}
       before do
         allow(vm).to receive(:persistent_disks).and_return([])
         allow(vm).to receive(:cdrom).and_return(nil)
+        allow(vm_mob).to receive_message_chain(:guest, :ip_address).and_return(ip_address)
       end
 
       it 'deletes vm' do
@@ -1307,7 +1309,7 @@ module VSphereCloud
       context 'when NSX-T is enabled' do
         let(:nsxt_provider) { instance_double(VSphereCloud::NSXTProvider) }
         let(:nsxt_config) { VSphereCloud::NSXTConfig.new('fake-host', 'fake-username', 'fake-password') }
-        let(:vm) { instance_double(VSphereCloud::Resources::VM, cid: ' vm-id') }
+        # let(:vm) { instance_double(VSphereCloud::Resources::VM, cid: ' vm-id') }
 
         before do
           allow(cloud_config).to receive(:nsxt_enabled?).and_return(true)
@@ -1315,22 +1317,35 @@ module VSphereCloud
           expect(VSphereCloud::NSXTProvider).to receive(:new).with(any_args).and_return(nsxt_provider)
         end
 
-        it "removes the VM's logical port from NSGroups" do
+        it "removes the VM's logical port from NSGroups and vm's ip from server-pool" do
           expect(vm).to receive(:power_off)
           expect(vm).to receive(:delete)
           expect(nsxt_provider).to receive(:remove_vm_from_nsgroups).with(vm)
+          expect(nsxt_provider).to receive(:remove_vm_from_server_pools).with(ip_address)
 
           vsphere_cloud.delete_vm('vm-id')
         end
 
-        context 'and NSXTProvider fails to remove member' do
+        context 'and NSXTProvider fails to remove member from nsgroups' do
           it 'deletes the VM' do
             expect(vm).to receive(:power_off)
             expect(vm).to receive(:delete)
             expect(nsxt_provider).to receive(:remove_vm_from_nsgroups).with(vm).and_raise(
               VIFNotFound.new('vm-id', 'fake-external-id')
             )
+            expect(nsxt_provider).to receive(:remove_vm_from_server_pools).with(ip_address)
 
+            vsphere_cloud.delete_vm('vm-id')
+          end
+        end
+        context 'and NSXTProvider fails to remove vm from server pool' do
+          it 'deletes the VM' do
+            expect(vm).to receive(:power_off)
+            expect(vm).to receive(:delete)
+            expect(nsxt_provider).to receive(:remove_vm_from_nsgroups).with(vm)
+            expect(nsxt_provider).to receive(:remove_vm_from_server_pools).with(ip_address).and_raise(
+              NSXT::ApiCallError.new('NSX=T API error')
+            )
             vsphere_cloud.delete_vm('vm-id')
           end
         end

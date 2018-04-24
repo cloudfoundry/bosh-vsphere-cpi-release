@@ -367,8 +367,8 @@ module VSphereCloud
     def delete_vm(vm_cid)
       with_thread_name("delete_vm(#{vm_cid})") do
         @logger.info("Deleting vm: #{vm_cid}")
-
         vm = vm_provider.find(vm_cid)
+        vm_ip = vm.mob.guest&.ip_address
         vm.power_off
 
         persistent_disks = vm.persistent_disks
@@ -384,6 +384,13 @@ module VSphereCloud
             @nsxt_provider.remove_vm_from_nsgroups(vm)
           rescue => e
             @logger.info("Failed to remove VM from NSGroups: #{e.message}")
+          end
+          begin
+            @nsxt_provider.remove_vm_from_server_pools(vm_ip)
+          rescue NSXT::ApiCallError => e
+            @logger.info("Failed to remove VM from ServerPool: #{e.response_body}")
+          rescue => e
+            @logger.info("Failed to remove VM from ServerPool: #{e.message}")
           end
         end
 
