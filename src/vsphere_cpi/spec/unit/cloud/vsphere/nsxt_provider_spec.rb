@@ -543,6 +543,12 @@ describe VSphereCloud::NSXTProvider do
 
     context 'when route id is provided' do
       it 'enables route advertisement' do
+        expect(router_api).to receive(:read_advertisement_config)
+          .with('t1-router-id').and_return(advertisement_config)
+        expect(advertisement_config).to receive(:advertise_nsx_connected_routes=)
+          .with(true)
+        expect(advertisement_config).to receive(:enabled=)
+          .with(true)
         expect(router_api).to receive(:update_advertisement_config) do |router_id, ad_config|
           expect(router_id).to eq('t1-router-id')
           expect(ad_config).to eq(advertisement_config)

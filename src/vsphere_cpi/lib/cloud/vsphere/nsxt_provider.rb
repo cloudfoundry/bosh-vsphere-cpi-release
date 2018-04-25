@@ -234,9 +234,9 @@ module VSphereCloud
     end
 
     def enable_route_advertisement(router_id)
-      config = NSXT::AdvertisementConfig.new({
-          :advertise_nsx_connected_routes => true,
-          :enabled => true })
+      config = router_api.read_advertisement_config(router_id)
+      config.advertise_nsx_connected_routes = true
+      config.enabled = true
       router_api.update_advertisement_config(router_id, config)
     end
 
