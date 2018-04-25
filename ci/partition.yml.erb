@@ -1,5 +1,4 @@
   - name: <%= e "lock-#{pool}" %>
-    serial_groups: [<%= e pool %>]
     plan:
     - aggregate:
       - get: source-ci
@@ -22,7 +21,7 @@
       attempts: 4
 
   - name: <%= e "lifecycle-#{pool}" %>
-    serial_groups: [<%= e pool %>]
+    serial: true
     plan:
     - aggregate:
       - get: source-ci
@@ -44,7 +43,6 @@
         params : { remove: environment }
 
   - name: <%= e "unlock-#{pool}" %>
-    serial_groups: [<%= e pool %>]
     plan:
     - get: <%= e "pool-#{pool}" %>
       trigger: true
