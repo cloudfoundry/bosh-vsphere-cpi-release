@@ -29,9 +29,11 @@ module VSphereCloud
     let(:service_content) do
       instance_double('VimSdk::Vim::ServiceInstanceContent',
         virtual_disk_manager: virtual_disk_manager,
+        setting: option_manager,
       )
     end
     let(:virtual_disk_manager) { instance_double('VimSdk::Vim::VirtualDiskManager') }
+    let(:option_manager) { instance_double('VimSdk::Vim::Option::OptionManager') }
     let(:agent_env) { instance_double('VSphereCloud::AgentEnv') }
     let(:vcenter_host) { 'fake-host' }
     let(:vcenter_api_uri) { URI.parse("https://#{vcenter_host}") }
@@ -42,18 +44,21 @@ module VSphereCloud
     let(:cloud_searcher) { instance_double('VSphereCloud::CloudSearcher') }
     before { allow(CloudSearcher).to receive(:new).and_return(cloud_searcher) }
 
-    before do
+    before do |example|
       allow(Config).to receive(:build).with(config).and_return(cloud_config)
-      allow(CpiHttpClient).to receive(:new)
-        .with('fake-log-file')
-        .and_return(http_client)
-      allow(VCenterClient).to receive(:new)
-        .with(
-          vcenter_api_uri: vcenter_api_uri,
-          http_client: http_client,
-          logger: logger,
-        )
-        .and_return(vcenter_client)
+      unless example.metadata[:skip_before]
+        allow(CpiHttpClient).to receive(:new)
+          .with('fake-log-file')
+          .and_return(http_client)
+        allow(VCenterClient).to receive(:new)
+                                  .with(
+                                    vcenter_api_uri: vcenter_api_uri,
+                                    http_client: http_client,
+                                    logger: logger,
+                                  )
+                                  .and_return(vcenter_client)
+      end
+
       allow_any_instance_of(Cloud).to receive(:at_exit)
     end
 
@@ -68,6 +73,39 @@ module VSphereCloud
     before { allow(vm_provider).to receive(:find).with('vm-id').and_return(vm) }
     let(:cluster_provider) { instance_double(VSphereCloud::Resources::ClusterProvider) }
     before { allow(Resources::ClusterProvider).to receive(:new).and_return(cluster_provider) }
+
+    describe '#enable_telemetry' do
+      before do
+        allow(CpiHttpClient).to receive(:new)
+                                  .and_return(http_client)
+        allow(VCenterClient).to receive(:new)
+                                  .with(
+                                    vcenter_api_uri: vcenter_api_uri,
+                                    http_client: http_client,
+                                    logger: anything,
+                                  )
+                                  .and_return(vcenter_client)
+
+        allow(vcenter_client).to receive(:logout)
+      end
+
+      context 'when advanced config option is not present' do
+        it 'calls update option once', :skip_before  do
+          allow(option_manager).to receive(:query_view).with(any_args).
+            and_raise(VimSdk::SoapError.new('message', VimSdk::Vim::Fault::InvalidName.new))
+          expect(option_manager).to receive(:update_values).once
+          vsphere_cloud.enable_telemetry
+        end
+      end
+      context 'when advanced config option is  present' do
+        it 'calls update option once', :skip_before do
+          allow(option_manager).to receive(:query_view).with(any_args).
+            and_return ([VimSdk::Vim::Option::OptionValue.new])
+          expect(option_manager).not_to receive(:update_values)
+          vsphere_cloud.enable_telemetry
+        end
+      end
+    end
 
     describe '#has_vm?' do
       context 'the vm is found' do

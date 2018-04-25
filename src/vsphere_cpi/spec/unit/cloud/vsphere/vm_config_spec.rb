@@ -1,5 +1,4 @@
 require 'spec_helper'
-require 'pry-byebug'
 
 module VSphereCloud
   describe VmConfig do
