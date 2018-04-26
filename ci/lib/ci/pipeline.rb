@@ -1,8 +1,24 @@
 require 'erb'
 
+require 'ci/pool'
+
 # A pipeline to be generated. Each ERB template in the pipeline is evaluated in
 # the context of an instance of {Pipeline}.
 class Pipeline
+  def pool(name)
+    pool = Pool.new(name)
+    pool.instance_eval { yield pool } if block_given?
+    @pool ||= {}
+    @pool[name] = pool
+  end
+
+  # Calls the given block once for each pool in the pipeline, passing that pool
+  # as a parameter. If no block is given an Enumerator is returned.
+  def each_pool
+    return enum_for(__method__) unless block_given?
+    @pool.each { |_, pool| yield pool }
+  end
+
   # Format an object for inclusion into a YAML document
   #
   # This actually uses `#to_json` rather than `#to_yaml` because the latter
