@@ -102,4 +102,78 @@ task :pipeline, [:name] => 'pipeline.yml' do |t, args|
   ].join(' ')
 end
 
+desc 'Create or update the certification pipeline configuration'
+task 'pipeline:certification', [:name] => 'certifications/pipeline.yml' do |t, args|
+  # Default to the unexpired target expiring furthest in the future known to
+  # `fly`
+  CONCOURSE = ENV.fetch('CONCOURSE') do
+    authorized = Target.list.select { |t| t.expiry > Time.now }
+    unless target = authorized.max_by(&:expiry)
+      fail 'No Concourse target specified and all targets are expired'
+    end
+    target.name
+  end
+
+  # Ensure that the remote host is set from DBCHOST
+  DBCHOST = ENV.fetch('DBCHOST') do
+    fail 'DBCHOST must be set to the unqualified hostname of your DBC host'
+  end
+  dbcfqdn = "#{DBCHOST}.eng.vmware.com"
+
+  # Get the remote user name from DBCUSER, the SSH configuration for DBCHOST, or
+  # the current user name
+  DBCUSER = ENV.fetch('DBCUSER') do
+    output, _, status = Open3.capture3('ssh', '-G', dbcfqdn)
+    break nil unless status.success?
+    record = output.each_line(chomp: true).map do |text|
+      text.split(nil, 2)
+    end.find { |option, _| option == 'user' }
+    break record[1] unless record.nil?
+  end || (require 'etc'; Etc.getpwuid.name)
+
+  # Find the SSH identity file to use from the SSH configuration for DBCHOST
+  output, _, status = Open3.capture3('ssh', '-G', dbcfqdn)
+  fail "Unable to get SSH configuration for #{DBCHOST}" unless status.success?
+  dbc_ssh_key = output.each_line(chomp: true).map do |text|
+    text.split(nil, 2)
+  end.find do |option, v|
+    option == 'identityfile' && File.exist?(File.expand_path(v))
+  end or fail "No SSH identity file available for #{DBCHOST}"
+  dbc_ssh_key = File.expand_path(dbc_ssh_key[1])
+
+  # Get the git branch name
+  branch = ENV.fetch('BRANCH') { `git symbolic-ref -q --short HEAD`.strip }
+
+  # Set the pipeline name to be vSphere-CPI when on the master branch or
+  # vSphere-CPI-#{branch} when on another branch. If the branch name is
+  # indeterminate (because HEAD is detached) then the pipeline name must be
+  # provided as the name argument to this task.
+  args.with_defaults(name: ENV.fetch('PIPELINE') do
+    if branch.empty?
+      fail 'Pipeline name must be specified if HEAD is detached'
+    end
+    if branch == 'master'
+      'vSphere-CPI-Certification'
+    else
+      "vcpi-#{branch}-certification"
+    end
+  end)
+
+  # Default to master if the branch name is indeterminate (because HEAD is
+  # detached).
+  branch = !branch.empty? ? branch : 'master'
+
+  sh '/bin/bash', '-ec', [
+    "fly -t #{CONCOURSE.shellescape} set-pipeline",
+    "-p #{args.name.shellescape}",
+    "-c #{t.prerequisites.first.shellescape}",
+    "-v vcpi_branch=#{branch.shellescape}",
+    "-v dbc_host=#{DBCHOST.shellescape}",
+    "-v dbc_user=#{DBCUSER.shellescape}",
+    "-v dbc_key=\"$(cat #{dbc_ssh_key.shellescape})\"",
+    '-v s3_vsphere_cpi_bucket=bosh-vsphere-cpi-release',
+    '-l <(secret show ~/.dot/vcpi-ci.gpg)'
+  ].join(' ')
+end
+
 task default: :pipeline
