@@ -1,41 +1,14 @@
-require 'erb'
+$LOAD_PATH.unshift(File.join(File.dirname(__FILE__), 'lib'))
+
+require 'ci/rake'
+
 require 'open3'
 require 'time'
 require 'shellwords'
 
-# Remove did_you_mean as it's very annoying in a Rakefile
-DidYouMean::Correctable.send(:remove_method, :to_s) if defined? DidYouMean
-
-# Colorize error messages when the trace output is a TTY
-module ColorizeExceptionMessageDetails
-  def display_exception_message_details(ex)
-    return super unless (options.trace_output || $stderr)&.isatty
-    if ex.instance_of?(RuntimeError)
-      trace "\e[31;01m#{ex.message}\e[0m"
-    else
-      trace "\e[31;01m#{ex.class.name}: \e[0m#{ex.message}"
-    end
-  end
-end
-Rake::Application.send(:prepend, ColorizeExceptionMessageDetails)
-
-# A Concourse target as recognized by `fly`. For more information see the
-# {https://concourse.ci/fly-cli.html documentation} on the `fly` CLI.
-class Target
-  # @return [[Target]] a list of the targets currently known to `fly`
-  def self.list
-    @list ||= IO.popen(%w[fly targets]).map { |t| new(*t.split(nil, 4)) }
-  end
-
-  attr_reader :name, :url, :team
-
-  # @return [Time] the expiry time of the target's authentication token
-  attr_reader :expiry
-
-  def initialize(name, url, team, expiry)
-    @name, @url, @team, @expiry = name, url, team, Time.rfc2822(expiry)
-  end
-end
+require 'ci/pipeline'
+require 'ci/pool'
+require 'ci/target'
 
 DOCKER_NAME = ENV.fetch('DOCKER_NAME', 'vcpici/vcpi-main')
 
@@ -53,80 +26,51 @@ end
 desc "Pull, build, and push the docker image '#{DOCKER_NAME}'"
 task docker: %w[docker:pull docker:make docker:push]
 
-# Format an object for inclusion into a YAML document
-#
-# This actually uses `#to_json` rather than `#to_yaml` because the latter
-# produces an entire YAML document. If `object` doesn't respond to
-# `#to_json` then it's converted to a `String` by calling `to_s` on it
-# first.
-#
-# @return [String] `object` formatted for inclusion into a YAML document
-def e(object)
-  require 'json'
-  object.respond_to?(:to_json) ? object.to_json : object.to_s.to_json
-end
+file 'pipeline.yml' => FileList['pipeline/*.yml.erb'] do |t|
+  pipeline = Pipeline.new
 
-def render(file, **kwargs)
-  erb = ERB.new(File.read(file), nil, '-')
-  erb.filename = file.to_s
-  erb.result(binding.tap do |b|
-    kwargs.each { |k, v| b.local_variable_set(k, v) }
-  end)
-end
-
-class Pool
-  attr_reader :name
-
-  attr_writer :params
-
-  def initialize(name)
-    @name = name
-  end
-
-  def params
-    @params ||= {}
-  end
-
-  alias to_s name
-end
-
-file 'pipeline.yml' => ['pipeline.yml.erb', 'partition.yml.erb'] do |t|
-  @pool_5_5 = Pool.new('5.5')
-  @pool_5_5.params = {
+  pool_5_5 = Pool.new('5.5')
+  pool_5_5.params = {
     RSPEC_FLAGS: "--tag ~replicate_stemcell_two_threads --tag ~vsan_datastore --tag ~nsx_vsphere --tag ~nsx_transformers --tag ~log_creds",
     NSXT_SKIP_SSL_VERIFY: "true"
   }
+  pipeline.instance_variable_set(:@pool_5_5, pool_5_5)
 
-  @pool_6_0 = Pool.new('6.0')
-  @pool_6_0.params = {
+  pool_6_0 = Pool.new('6.0')
+  pool_6_0.params = {
     RSPEC_FLAGS: "--tag ~nsx_vsphere --tag ~nsxt_version_two",
     NSXT_SKIP_SSL_VERIFY: "true"
   }
+  pipeline.instance_variable_set(:@pool_6_0, pool_6_0)
 
-  @pool_6_0_nsxv = Pool.new('6.0-NSXV')
-  @pool_6_0_nsxv.params = {
+  pool_6_0_nsxv = Pool.new('6.0-NSXV')
+  pool_6_0_nsxv.params = {
     RSPEC_FLAGS: "--tag nsx_vsphere",
     NSXT_SKIP_SSL_VERIFY: "true"
   }
+  pipeline.instance_variable_set(:@pool_6_0_nsxv, pool_6_0_nsxv)
 
-  @pool_6_5 = Pool.new('6.5')
-  @pool_6_5.params = {
+  pool_6_5 = Pool.new('6.5')
+  pool_6_5.params = {
     RSPEC_FLAGS: "--tag ~nsx_vsphere --tag ~disk_migration",
     NSXT_SKIP_SSL_VERIFY: "true"
   }
+  pipeline.instance_variable_set(:@pool_6_5, pool_6_5)
 
-  @pool_6_5_nsxv = Pool.new('6.5-NSXV')
-  @pool_6_5_nsxv.params = {
+  pool_6_5_nsxv = Pool.new('6.5-NSXV')
+  pool_6_5_nsxv.params = {
     RSPEC_FLAGS: "--tag nsx_vsphere",
     NSXT_SKIP_SSL_VERIFY: "true"
   }
+  pipeline.instance_variable_set(:@pool_6_5_nsxv, pool_6_5_nsxv)
 
-  @pool_6_7 = Pool.new('6.7')
-  @pool_6_7.params = {
+  pool_6_7 = Pool.new('6.7')
+  pool_6_7.params = {
     RSPEC_FLAGS: "--tag ~nsx_vsphere --tag ~nsx_transformers --tag ~disk_migration",
   }
 
-  File.write(t.name, render(t.prerequisites.first))
+  pipeline.instance_variable_set(:@pool_6_7, pool_6_7)
+  File.write(t.name, pipeline.render)
 end
 
 desc 'Create or update the pipeline configuration'
