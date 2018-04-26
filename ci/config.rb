@@ -1,7 +1,7 @@
 $pipeline.pool('5.5') do |pool|
   pool.params = {
     RSPEC_FLAGS: [
-      '--tag ~log_creds'
+      '--tag ~log_creds',
       '--tag ~nsx_transformers',
       '--tag ~nsx_vsphere',
       '--tag ~replicate_stemcell_two_threads',
