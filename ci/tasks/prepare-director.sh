@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -eu
+set -e
 
 # A regular expression matching the names of potential datastores the director
 # will use for storing VMs and associated persistent disks. Note that the name
@@ -31,7 +31,7 @@ bosh int \
   -o bosh-deployment/misc/proxy.yml \
   -o bosh-deployment/jumpbox-user.yml \
   -o source-ci/ci/shared/ops/ntp.yml \
-  $( echo ${OPTIONAL_OPS_FILE} ) \
+  $OPTIONAL_OPS_FILE \
   -o certification/shared/assets/ops/custom-releases.yml \
   -o certification/vsphere/assets/ops/custom-cpi-release.yml \
   -v bosh_release_uri="file://$(echo bosh-release/*.tgz)" \
