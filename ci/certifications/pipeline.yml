@@ -120,6 +120,8 @@ jobs:
             new-director-state: director-state
         on_failure:
           aggregate:
+          - put: pool-6.5
+            params : {remove: environment}
           - put: notify
             params:
               username: 'CPI-Doctor'
@@ -182,6 +184,8 @@ jobs:
           - <<: *test-stemcell-ipv4
           on_failure:
             aggregate:
+            - put: pool-6.5
+              params : {remove: environment}
             - put: notify
               params:
                 username: 'CPI-Doctor'
@@ -245,6 +249,8 @@ jobs:
         - <<: *test-stemcell-ipv6
         on_failure:
           aggregate:
+          - put: pool-6.5
+            params : {remove: environment}
           - put: notify
             params:
               username: 'CPI-Doctor'
@@ -303,6 +309,8 @@ jobs:
             STEMCELL_NAME: bosh-vsphere-esxi-centos-7-go_agent
         on_failure:
           aggregate:
+          - put: pool-6.5
+            params : {remove: environment}
           - put: notify
             params:
               username: 'CPI-Doctor'
@@ -361,6 +369,8 @@ jobs:
             STEMCELL_NAME: bosh-vsphere-esxi-ubuntu-trusty-go_agent
         on_failure:
           aggregate:
+          - put: pool-6.5
+            params : {remove: environment}
           - put: notify
             params:
               username: 'CPI-Doctor'
@@ -450,7 +460,7 @@ resources:
     type: git
     source:
       uri: https://github.com/cloudfoundry/bosh-acceptance-tests.git
-      branch: gocli-bats
+      branch: master
   - name: old-stemcell
     type: s3
     source:
