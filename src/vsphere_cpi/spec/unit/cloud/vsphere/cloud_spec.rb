@@ -1734,5 +1734,49 @@ module VSphereCloud
         end
       end
     end
+
+    describe '#delete_subnet' do
+      let(:nsxt_enabled) { true }
+      let(:nsxt_provider) { instance_double(VSphereCloud::NSXTProvider) }
+      let(:attached_switches) { [ instance_double(NSXT::LogicalSwitch, :id => 'switch-1'),
+                                  instance_double(NSXT::LogicalSwitch, :id => 'switch-2')] }
+      before do
+        allow(VSphereCloud::NSXTProvider).to receive(:new)
+         .with(any_args).and_return(nsxt_provider)
+      end
+
+      context 'when t1 router id is provided' do
+        it 'deletes t1 router and attached switches' do
+          expect(nsxt_provider).to receive(:get_attached_switches)
+            .with('t1-router-id').and_return(attached_switches)
+          expect(nsxt_provider).to receive(:delete_logical_switch)
+            .with('switch-1')
+          expect(nsxt_provider).to receive(:delete_logical_switch)
+            .with('switch-2')
+          expect(nsxt_provider).to receive(:delete_t1_router)
+            .with('t1-router-id')
+          vsphere_cloud.delete_subnet('t1-router-id')
+        end
+      end
+
+      context 'when no switches attached' do
+        it 'deletes t1 router' do
+          expect(nsxt_provider).to receive(:get_attached_switches)
+             .with('t1-router-id').and_return([])
+          expect(nsxt_provider).not_to receive(:delete_logical_switch)
+          expect(nsxt_provider).to receive(:delete_t1_router)
+              .with('t1-router-id')
+
+          vsphere_cloud.delete_subnet('t1-router-id')
+        end
+      end
+
+      context 'when router id is nil' do
+        it 'raises an error' do
+          expect{ vsphere_cloud.delete_subnet(nil) }
+            .to raise_error('t1 router id must be provided for deleting a subnet')
+        end
+      end
+    end
   end
 end

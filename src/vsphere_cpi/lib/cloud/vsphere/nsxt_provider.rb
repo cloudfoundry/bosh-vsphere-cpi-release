@@ -283,6 +283,18 @@ module VSphereCloud
       end
     end
 
+    def get_attached_switches(t1_router_id)
+      []
+    end
+
+    def delete_logical_switch(switch_id)
+
+    end
+
+    def delete_t1_router(t1_router_id)
+      router_api.delete_logical_router(t1_router_id, :force => true)
+    end
+
     private
 
     MAX_TRIES = 20
