@@ -662,6 +662,15 @@ module VSphereCloud
       {:network_cid => t1_router.id, :cloud_properties => {:name => switch.display_name } }
     end
 
+    def delete_subnet(switch_id)
+      raise 'switch id must be provided for deleting a subnet' if switch_id.nil?
+      t1_router_id = @nsxt_provider.get_attached_router_id(switch_id)
+      @nsxt_provider.delete_logical_switch(switch_id)
+      attached_switches = @nsxt_provider.get_attched_switches_ids(t1_router_id)
+      raise "Can not delete router #{t1_router_id}. It has extra ports that are not created by BOSH." if attached_switches.length != 0
+      @nsxt_provider.delete_t1_router(t1_router_id)
+    end
+
     private
 
     def import_ovf(name, ovf, resource_pool, datastore)

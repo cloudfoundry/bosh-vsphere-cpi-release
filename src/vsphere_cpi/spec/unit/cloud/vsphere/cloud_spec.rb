@@ -1734,5 +1734,60 @@ module VSphereCloud
         end
       end
     end
+
+    describe '#delete_subnet' do
+      let(:nsxt_enabled) { true }
+      let(:nsxt_provider) { instance_double(VSphereCloud::NSXTProvider) }
+      let(:attached_switches) { [ instance_double(NSXT::LogicalSwitch, :id => 'switch-1'),
+                                  instance_double(NSXT::LogicalSwitch, :id => 'switch-2')] }
+      before do
+        allow(VSphereCloud::NSXTProvider).to receive(:new)
+         .with(any_args).and_return(nsxt_provider)
+      end
+
+      context 'when switch id is provided' do
+        it 'deletes switch and attached router' do
+          expect(nsxt_provider).to receive(:get_attached_router_id)
+            .with('switch-id').and_return('t1-router-id')
+          expect(nsxt_provider).to receive(:delete_t1_router)
+            .with('t1-router-id')
+          expect(nsxt_provider).to receive(:get_attched_switches_ids)
+            .with('t1-router-id').and_return([])
+          expect(nsxt_provider).to receive(:delete_logical_switch)
+            .with('switch-id')
+          vsphere_cloud.delete_subnet('switch-id')
+        end
+      end
+
+      context 'when multiple switches attached to router' do
+        it 'raises an error' do
+          expect(nsxt_provider).to receive(:get_attached_router_id)
+            .with('switch-id').and_return('t1-router-id')
+          expect(nsxt_provider).to receive(:get_attched_switches_ids)
+            .with('t1-router-id').and_return(['switch2-id'])
+          expect(nsxt_provider).to receive(:delete_logical_switch)
+            .with('switch-id')
+          expect { vsphere_cloud.delete_subnet('switch-id') }
+            .to raise_error('Can not delete router t1-router-id. It has extra ports that are not created by BOSH.')
+        end
+      end
+
+      context 'when no routers attached' do
+        it 'raises an error' do
+          expect(nsxt_provider).to receive(:get_attached_router_id)
+               .with('switch-id').and_raise('Expected only one port attached to switch . Found 0')
+          expect {
+            vsphere_cloud.delete_subnet('switch-id')
+          }.to raise_error('Expected only one port attached to switch . Found 0')
+        end
+      end
+
+      context 'when switch id is nil' do
+        it 'raises an error' do
+          expect{ vsphere_cloud.delete_subnet(nil) }
+            .to raise_error('switch id must be provided for deleting a subnet')
+        end
+      end
+    end
   end
 end

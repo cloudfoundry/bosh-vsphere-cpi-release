@@ -74,7 +74,7 @@ module Bosh
                      :current_vm_id, :get_disks, :ping, :resize_disk,
                      :calculate_vm_cloud_properties,
                      :info, :set_disk_metadata,
-                     :create_subnet
+                     :create_subnet, :delete_subnet
 
       def initialize(options)
         @delegate = VSphereCloud::Cloud.new(options)

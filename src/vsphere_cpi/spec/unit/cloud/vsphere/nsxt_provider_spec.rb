@@ -785,4 +785,109 @@ describe VSphereCloud::NSXTProvider do
       end
     end
   end
+
+  describe '#delete_t1_router' do
+    let(:router_api) { instance_double(NSXT::LogicalRoutingAndServicesApi) }
+    before do
+      allow(nsxt_provider).to receive(:router_api).and_return(router_api)
+    end
+
+    it 'deletes router with force' do
+      expect(router_api).to receive(:delete_logical_router)
+        .with('t1-router-id', :force => true)
+      nsxt_provider.delete_t1_router('t1-router-id')
+    end
+  end
+
+  describe '#delete_logical_switch' do
+    let(:switch_api) { instance_double(NSXT::LogicalSwitchingApi) }
+    before do
+      allow(nsxt_provider).to receive(:switch_api).and_return(switch_api)
+    end
+
+    it 'deletes logical switch with force and cascade' do
+      expect(switch_api).to receive(:delete_logical_switch)
+        .with('switch-id', :cascade => true, :detach=> true)
+      nsxt_provider.delete_logical_switch('switch-id')
+    end
+  end
+
+  describe '#get_attached_router_id' do
+    let(:router_api) { instance_double(NSXT::LogicalRoutingAndServicesApi) }
+    let(:router_port) { instance_double(NSXT::LogicalRouterPort,
+                          :logical_router_id => 'router-id') }
+    let(:router_ports) { instance_double(NSXT::LogicalRouterPortListResult,
+                          :results => [ router_port ]) }
+
+    before do
+      allow(nsxt_provider).to receive(:router_api).and_return(router_api)
+    end
+
+    context 'when one router attached' do
+      it 'returns router id' do
+        expect(router_api).to receive(:list_logical_router_ports)
+          .with(:logical_switch_id => 'switch-id').and_return(router_ports)
+        expect(nsxt_provider.get_attached_router_id('switch-id'))
+          .to eq('router-id')
+      end
+    end
+
+    context 'when multiple routers attached ' do
+      let(:router_ports) { instance_double(NSXT::LogicalRouterPortListResult,
+                             :results => [ router_port, router_port ]) }
+      it 'raises an error' do
+        expect(router_api).to receive(:list_logical_router_ports)
+          .with(:logical_switch_id => 'switch-id').and_return(router_ports)
+        expect{
+          nsxt_provider.get_attached_router_id('switch-id')
+        }.to raise_error('Expected only one port attached to switch switch-id. Found 2')
+      end
+    end
+
+    context 'when no routers attached' do
+      let(:router_ports) { instance_double(NSXT::LogicalRouterPortListResult,
+                              :results => [ ]) }
+      it 'raises an error' do
+        expect(router_api).to receive(:list_logical_router_ports)
+          .with(:logical_switch_id => 'switch-id').and_return(router_ports)
+        expect{
+          nsxt_provider.get_attached_router_id('switch-id')
+        }.to raise_error('Expected only one port attached to switch switch-id. Found 0')
+      end
+    end
+  end
+
+  describe '#get_attached_switches_ids' do
+    let(:router_api) { instance_double(NSXT::LogicalRoutingAndServicesApi) }
+    let(:switch_port_ref) { instance_double(NSXT::ResourceReference,
+                                            :is_valid => true,
+                                            :target_id => 'switch-id'
+                              ) }
+    let(:invalid_switch_port_ref) { instance_double(NSXT::ResourceReference,
+                                            :is_valid => false
+                              ) }
+
+    let(:router_port) { instance_double(NSXT::LogicalRouterDownLinkPort,
+                            :linked_logical_switch_port_id =>
+                                switch_port_ref) }
+    let(:invalid_port) {  instance_double(NSXT::LogicalRouterDownLinkPort,
+                            :linked_logical_switch_port_id =>
+                                invalid_switch_port_ref) }
+    let(:router_ports) { instance_double(NSXT::LogicalRouterPortListResult,
+                                 :results => [ router_port, invalid_port ]) }
+
+    before do
+      allow(nsxt_provider).to receive(:router_api).and_return(router_api)
+    end
+
+    context 'when router id is provided' do
+      it 'returns attached switches ids with valid ports' do
+        expect(router_api).to receive(:list_logical_router_ports)
+          .with(:logical_router_id => 't1-router-id',:resource_type => 'LogicalRouterDownLinkPort')
+          .and_return(router_ports)
+        expect(nsxt_provider.get_attched_switches_ids('t1-router-id'))
+          .to eq(['switch-id'])
+      end
+    end
+  end
 end

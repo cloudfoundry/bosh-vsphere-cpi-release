@@ -283,6 +283,31 @@ module VSphereCloud
       end
     end
 
+    def delete_logical_switch(switch_id)
+      switch_api.delete_logical_switch(switch_id, :cascade => true, :detach=> true)
+    end
+
+    def delete_t1_router(t1_router_id)
+      router_api.delete_logical_router(t1_router_id, :force => true)
+    end
+
+    def get_attached_router_id(switch_id)
+      router_ports = router_api.list_logical_router_ports(:logical_switch_id => switch_id)
+      raise "Expected only one port attached to switch #{switch_id}. Found #{router_ports.results.length}" if router_ports.results.length != 1
+      router_ports.results.first.logical_router_id
+    end
+
+    def get_attched_switches_ids(t1_router_id)
+      hack_nsxt_client
+      router_ports = router_api.list_logical_router_ports(:logical_router_id => t1_router_id,
+                                           :resource_type => 'LogicalRouterDownLinkPort')
+      router_ports.results.select do |port|
+        port.linked_logical_switch_port_id.is_valid
+      end.map do |valid_port|
+        valid_port.linked_logical_switch_port_id.target_id
+      end
+    end
+
     private
 
     MAX_TRIES = 20
@@ -367,6 +392,28 @@ module VSphereCloud
 
     def switch_api
       @switch_api ||= NSXT::LogicalSwitchingApi.new(@client)
+    end
+
+    def hack_nsxt_client
+      NSXT::LogicalRouterPortListResult.send(:include, ResultWithDownlinkPort)
+    end
+    module ResultWithDownlinkPort
+      def self.included(base)
+        base.class_eval do
+          def self.swagger_types
+            {
+                :'_self' => :'SelfResourceLink',
+                :'_links' => :'Array<ResourceLink>',
+                :'_schema' => :'String',
+                :'cursor' => :'String',
+                :'sort_ascending' => :'BOOLEAN',
+                :'sort_by' => :'String',
+                :'result_count' => :'Integer',
+                :'results' => :'Array<LogicalRouterDownLinkPort>'
+            }
+          end
+        end
+      end
     end
   end
 end
