@@ -271,12 +271,14 @@ module VSphereCloud
 
     def remove_vm_from_server_pools(vm_ip)
         services_svc.list_load_balancer_pools.results.each do |server_pool|
-        member_found = server_pool.members&.find {|member| member.ip_address == vm_ip}
-        next unless member_found
-        @logger.info("Removing vm with ip: '#{vm_ip}' from ServerPool: #{server_pool.id} ")
-        pool_member = NSXT::PoolMemberSetting.new(ip_address: vm_ip, port: member_found.port)
-        pool_member_setting_list = NSXT::PoolMemberSettingList.new(members: [pool_member])
-        services_svc.perform_pool_member_action(server_pool.id, pool_member_setting_list, 'REMOVE_MEMBERS')
+        members_found = server_pool.members&.select {|member| member.ip_address == vm_ip}
+        next unless members_found&.any?
+        members_found.each do |member_found|
+          @logger.info("Removing vm with ip: '#{vm_ip}', port_no: #{member_found.port} from ServerPool: #{server_pool.id} ")
+          pool_member = NSXT::PoolMemberSetting.new(ip_address: vm_ip, port: member_found.port)
+          pool_member_setting_list = NSXT::PoolMemberSettingList.new(members: [pool_member])
+          services_svc.perform_pool_member_action(server_pool.id, pool_member_setting_list, 'REMOVE_MEMBERS')
+        end
       end
     end
 
