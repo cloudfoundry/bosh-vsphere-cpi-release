@@ -321,18 +321,23 @@ describe 'CPI', nsx_transformers: true do
       end
     end
     context 'when server pools are specified', nsxt_21: true do
-      let(:port_no) {'80'}
+      let(:port_no1) {'80'}
+      let(:port_no2) {'443'}
       let(:nsxt_spec) {
         {
           'lb' => {
             'server_pools' => [
               {
                 'name' => server_pool_name_1,
-                'port' => port_no
+                'port' => port_no1
+              },
+              {
+                'name' => server_pool_name_1,
+                'port' => port_no2
               },
               {
                 'name' => server_pool_name_2,
-                'port' => port_no
+                'port' => port_no1
               }
             ]
           }
@@ -374,8 +379,9 @@ describe 'CPI', nsx_transformers: true do
           vm_ip = vm.mob.guest&.ip_address
           expect(vm_ip).to_not be_nil
 
-          server_poo1_1_members = find_pool_members(server_pool_1, vm_ip, port_no)
-          expect(server_poo1_1_members.count).to eq(1)
+          server_poo1_1_members = find_pool_members(server_pool_1, vm_ip, port_no1)
+          server_poo1_1_members.concat(find_pool_members(server_pool_1, vm_ip, port_no2))
+          expect(server_poo1_1_members.count).to eq(2)
         end
 
         server_poo1_1_members = services_svc.read_load_balancer_pool(server_pool_1.id).members

@@ -1,6 +1,6 @@
 require 'integration/spec_helper'
 
-describe 'Give a cluster with DRS On ' do
+describe 'Give a cluster with DRS On ', host_maintenance: true  do
   before (:all) do
     @datacenter_name = fetch_and_verify_datacenter('BOSH_VSPHERE_CPI_DATACENTER')
     # We actually use a healthy cluster but manipulate it before the test and restore after we are done
@@ -103,7 +103,7 @@ describe 'Give a cluster with DRS On ' do
     before do
       turn_maintenance_on_for_all_hosts(cpi, @cluster_name_maintenance)
     end
-    xit 'cpi should fail to replicate stemcell (create vm and create ephemeral disk) on a datastore ' do
+    it 'cpi should fail to replicate stemcell (create vm and create ephemeral disk) on a datastore ' do
       begin
         expect do
           @vm_id = cpi.create_vm(
@@ -117,7 +117,7 @@ describe 'Give a cluster with DRS On ' do
          end.to raise_error(/No valid placement found/)
       end
     end
-    xit 'cpi should fail to create persistent disk on a datastore ' do
+    it 'cpi should fail to create persistent disk on a datastore ' do
       begin
         expect do
           cpi.create_disk(2048, {}, nil)
@@ -159,7 +159,7 @@ describe 'Give a cluster with DRS On ' do
     before do
       turn_maintenance_on_for_all_hosts(cpi, @cluster_name_maintenance)
     end
-    xit 'cpi should fail to replicate stemcell (create vm and create ephemeral disk) on a datastore ' do
+    it 'cpi should fail to replicate stemcell (create vm and create ephemeral disk) on a datastore ' do
       begin
         expect do
           @vm_id = cpi.create_vm(
@@ -173,7 +173,7 @@ describe 'Give a cluster with DRS On ' do
         end.to raise_error(/No valid placement/)
       end
     end
-    xit 'cpi should be able to create persistent disk on a datastore ' do
+    it 'cpi should be able to create persistent disk on a datastore ' do
       begin
         @disk_id = cpi.create_disk(2048, {}, nil)
         expect(@disk_id).to_not be_nil
