@@ -236,7 +236,12 @@ module VSphereCloud
           @logger.info("Adding vm: '#{vm.cid}' with ip:#{vm_ip} to ServerPool: #{server_pool.id} on Port: #{port_no} ")
           pool_member = NSXT::PoolMemberSetting.new(ip_address: vm_ip, port: port_no)
           pool_member_setting_list = NSXT::PoolMemberSettingList.new(members: [pool_member])
-          services_svc.perform_pool_member_action(server_pool.id, pool_member_setting_list, 'ADD_MEMBERS')
+          begin
+            services_svc.perform_pool_member_action(server_pool.id, pool_member_setting_list, 'ADD_MEMBERS')
+          rescue NSXT::ApiCallError => e
+            retry if e.code == 409 || e.code == 412 #Conflict or PreconditionFailed
+            raise e
+          end
         end
       end
     end

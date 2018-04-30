@@ -476,7 +476,7 @@ describe VSphereCloud::NSXTProvider do
     let(:port_no) { 443 }
     let(:server_pools) { [[serverpool_1, port_no]] }
     let(:failure_response) do
-      NSXT::ApiCallError.new(:code => 412)
+      NSXT::ApiCallError.new(:code => 400)
     end
     before do
       allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:services_svc).and_return(services_svc)
@@ -500,6 +500,18 @@ describe VSphereCloud::NSXTProvider do
         expect do
           nsxt_provider.add_vm_to_server_pools(vm, server_pools)
         end.to raise_error(NSXT::ApiCallError)
+      end
+      it "should retry when there is a CONFLICT in server_pool's version" do
+        conflict_response = NSXT::ApiCallError.new(:code => 409, :response_body => 'The object was modified by somebody else')
+        expect(services_svc).to receive(:perform_pool_member_action).with(serverpool_1.id, anything, anything).and_raise(conflict_response)
+        expect(services_svc).to receive(:perform_pool_member_action).with(serverpool_1.id, anything, anything).and_return(serverpool_1)
+        nsxt_provider.add_vm_to_server_pools(vm, server_pools)
+      end
+      it "should retry when there is a PreconditionFailed in server_pool's version" do
+        conflict_response = NSXT::ApiCallError.new(:code => 412, :response_body => 'PreconditionFailed')
+        expect(services_svc).to receive(:perform_pool_member_action).with(serverpool_1.id, anything, anything).and_raise(conflict_response)
+        expect(services_svc).to receive(:perform_pool_member_action).with(serverpool_1.id, anything, anything).and_return(serverpool_1)
+        nsxt_provider.add_vm_to_server_pools(vm, server_pools)
       end
     end
     context "when vm's primary ip is missing" do
