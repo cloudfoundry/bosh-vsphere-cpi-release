@@ -668,7 +668,7 @@ describe VSphereCloud::NSXTProvider do
       let(:logical_switches) { instance_double(NSXT::LogicalSwitchListResult,
                                 :results => [logical_switch] ) }
       let(:linked_logical_switch_port_id) {
-        instance_double(NSXT::ResourceReference, :target_id => 'switch-port-id')
+        instance_double(NSXT::ResourceReference, :target_id => 'switch-port-id', :is_valid => true)
       }
       let(:router_port) { instance_double(NSXT::LogicalRouterDownLinkPort,
                               :linked_logical_switch_port_id => linked_logical_switch_port_id) }
@@ -686,6 +686,22 @@ describe VSphereCloud::NSXTProvider do
         switches = nsxt_provider.get_attached_switches_ids('t1-router-id')
         expect(switches.length).to eq(1)
         expect(switches.first).to eq('switch-id')
+      end
+
+      context 'when ports are not connected to switches' do
+        let(:linked_logical_switch_port_id) {
+          instance_double(NSXT::ResourceReference, :target_id => 'switch-port-id',
+                          :is_valid => false)
+        }
+        it 'returns empty array' do
+          expect(router_api).to receive(:list_logical_router_ports)
+                                    .with(:logical_router_id => 't1-router-id',
+                                          :resource_type=>'LogicalRouterDownLinkPort')
+                                    .and_return( router_ports )
+          expect(switch_api).not_to receive(:get_logical_port).with(any_args)
+
+          expect(nsxt_provider.get_attached_switches_ids('t1-router-id')).to eq([])
+        end
       end
     end
 
@@ -843,6 +859,19 @@ describe VSphereCloud::NSXTProvider do
       expect(router_api).to receive(:delete_logical_router)
         .with('t1-router-id', :force => true)
       nsxt_provider.delete_t1_router('t1-router-id')
+    end
+  end
+
+  describe '#delete_logical_switch' do
+    let(:switch_api) { instance_double(NSXT::LogicalSwitchingApi) }
+    before do
+      allow(nsxt_provider).to receive(:switch_api).and_return(switch_api)
+    end
+
+    it 'deletes logical switch with force and cascade' do
+      expect(switch_api).to receive(:delete_logical_switch)
+        .with('switch-id', :cascade => true, :detach=> true)
+      nsxt_provider.delete_logical_switch('switch-id')
     end
   end
 end

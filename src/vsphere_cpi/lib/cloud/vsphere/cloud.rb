@@ -664,10 +664,10 @@ module VSphereCloud
 
     def delete_subnet(t1_router_id)
       raise 't1 router id must be provided for deleting a subnet' if t1_router_id.nil?
-      @nsxt_provider.get_attached_switches_ids(t1_router_id).each do |switch|
-        @nsxt_provider.delete_logical_switch switch.id
+      @nsxt_provider.get_attached_switches_ids(t1_router_id).each do |switch_id|
+        @nsxt_provider.delete_logical_switch(switch_id)
       end
-      #@nsxt_provider.delete_t1_router(t1_router_id)
+      @nsxt_provider.delete_t1_router(t1_router_id)
     end
 
     private
