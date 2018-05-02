@@ -283,21 +283,6 @@ module VSphereCloud
       end
     end
 
-    def get_attached_switches_ids(t1_router_id)
-      hack_nsxt_client
-
-      router_ports = router_api.list_logical_router_ports(:logical_router_id => t1_router_id, :resource_type=>'LogicalRouterDownLinkPort')
-      if router_ports.results.length > 0
-        #We only take first switch because we only create one switch
-        switch_port = router_ports.results.first.linked_logical_switch_port_id
-        if(switch_port.is_valid)
-          port = switch_api.get_logical_port(switch_port.target_id)
-          return [ port.logical_switch_id ]
-        end
-      end
-      return []
-    end
-
     def delete_logical_switch(switch_id)
       switch_api.delete_logical_switch(switch_id, :cascade => true, :detach=> true)
     end
@@ -310,6 +295,17 @@ module VSphereCloud
       router_ports = router_api.list_logical_router_ports(:logical_switch_id => switch_id)
       raise "Expected only one port attached to switch #{switch_id}. Found #{router_ports.results.length}" if router_ports.results.length != 1
       router_ports.results.first.logical_router_id
+    end
+
+    def get_attched_switches_ids(t1_router_id)
+      hack_nsxt_client
+      router_ports = router_api.list_logical_router_ports(:logical_router_id => t1_router_id,
+                                           :resource_type => 'LogicalRouterDownLinkPort')
+      router_ports.results.select do |port|
+        port.linked_logical_switch_port_id.is_valid
+      end.map do |valid_port|
+        valid_port.linked_logical_switch_port_id.target_id
+      end
     end
 
     private
