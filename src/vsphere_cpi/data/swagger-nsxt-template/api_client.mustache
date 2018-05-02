@@ -59,7 +59,7 @@ module {{moduleName}}
           fail ApiCallError.new(:code => response.code,
                             :response_headers => response.headers,
                             :response_body => response.body,
-                            :message => error_message.to_s),
+                            :message => error_message),
                response.status_message
         end
       end
