@@ -2,6 +2,7 @@ require 'cloud/vsphere/logger'
 require 'json'
 require 'membrane'
 require 'cloud'
+require 'cloud/vsphere/cpi_extension'
 
 module VSphereCloud
   class Cloud < Bosh::Cloud
@@ -138,6 +139,7 @@ module VSphereCloud
       with_thread_name("create_stemcell(#{image}, _)") do
         # Add cpi telemetry advanced config to vc in a separate thread
         telemetry_thread = Thread.new { enable_telemetry }
+        VCPIExtension.create_cpi_extension(client)
         result = nil
         Dir.mktmpdir do |temp_dir|
           logger.info("Extracting stemcell to: #{temp_dir}")
@@ -207,6 +209,16 @@ module VSphereCloud
               nic_config = Resources::VM.create_delete_device_spec(nic)
               config.device_change << nic_config
             end
+
+            # add extension managed by info to config spec only if extension exists
+            if @client.service_content.extension_manager.find_extension(
+              VCPIExtension::DEFAULT_VSPHERE_CPI_EXTENSION_KEY) then
+              managed_by_info = VimSdk::Vim::Ext::ManagedByInfo.new
+              managed_by_info.extension_key = VCPIExtension::DEFAULT_VSPHERE_CPI_EXTENSION_KEY
+              managed_by_info.type =  VCPIExtension::DEFAULT_VSPHERE_MANAGED_BY_INFO_RESOURCE
+              config.managed_by = managed_by_info
+            end
+
             client.reconfig_vm(vm, config)
 
             logger.info('Taking initial snapshot')
@@ -220,7 +232,6 @@ module VSphereCloud
           end
         end
         telemetry_thread.join #Join back the thread created to enable telemetry
-
         result
       end
     end

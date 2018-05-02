@@ -1,4 +1,5 @@
 require 'cloud/vsphere/logger'
+require 'cloud/vsphere/cpi_extension'
 
 module VSphereCloud
   class VmCreator
@@ -68,6 +69,16 @@ module VSphereCloud
           disk_controller_id: replicated_stemcell_vm.system_disk.controller_key,
         )
         config_spec.device_change << ephemeral_disk_config
+
+        # add extension managed by info to config spec only if extension exists
+        if @client.service_content.extension_manager.find_extension(
+          VCPIExtension::DEFAULT_VSPHERE_CPI_EXTENSION_KEY) then
+          managed_by_info = VimSdk::Vim::Ext::ManagedByInfo.new
+          managed_by_info.extension_key = VCPIExtension::DEFAULT_VSPHERE_CPI_EXTENSION_KEY
+          managed_by_info.type =  VCPIExtension::DEFAULT_VSPHERE_MANAGED_BY_INFO_RESOURCE
+          config_spec.managed_by = managed_by_info
+        end
+
 
         dvs_index = {}
         vm_config.vsphere_networks.each do |network_name, ips|
