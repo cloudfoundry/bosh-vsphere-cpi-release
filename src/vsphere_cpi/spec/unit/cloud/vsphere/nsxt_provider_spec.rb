@@ -874,4 +874,49 @@ describe VSphereCloud::NSXTProvider do
       nsxt_provider.delete_logical_switch('switch-id')
     end
   end
+
+  describe '#get_attached_router_id' do
+    let(:router_api) { instance_double(NSXT::LogicalRoutingAndServicesApi) }
+    let(:router_port) { instance_double(NSXT::LogicalRouterPort,
+                          :logical_router_id => 'router-id') }
+    let(:router_ports) { instance_double(NSXT::LogicalRouterPortListResult,
+                          :results => [ router_port ]) }
+
+    before do
+      allow(nsxt_provider).to receive(:router_api).and_return(router_api)
+    end
+
+    context 'when one router attached' do
+      it 'returns router id' do
+        expect(router_api).to receive(:list_logical_router_ports)
+          .with(:logical_switch_id => 'switch-id').and_return(router_ports)
+        expect(nsxt_provider.get_attached_router_id('switch-id'))
+          .to eq('router-id')
+      end
+    end
+
+    context 'when multiple routers attached ' do
+      let(:router_ports) { instance_double(NSXT::LogicalRouterPortListResult,
+                             :results => [ router_port, router_port ]) }
+      it 'raises an error' do
+        expect(router_api).to receive(:list_logical_router_ports)
+          .with(:logical_switch_id => 'switch-id').and_return(router_ports)
+        expect{
+          nsxt_provider.get_attached_router_id('switch-id')
+        }.to raise_error('Expected only one port attached to switch switch-id. Found 2')
+      end
+    end
+
+    context 'when no routers attached' do
+      let(:router_ports) { instance_double(NSXT::LogicalRouterPortListResult,
+                              :results => [ ]) }
+      it 'raises an error' do
+        expect(router_api).to receive(:list_logical_router_ports)
+          .with(:logical_switch_id => 'switch-id').and_return(router_ports)
+        expect{
+          nsxt_provider.get_attached_router_id('switch-id')
+        }.to raise_error('Expected only one port attached to switch switch-id. Found 0')
+      end
+    end
+  end
 end
