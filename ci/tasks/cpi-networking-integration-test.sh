@@ -23,6 +23,9 @@ echo "BOSH_VSPHERE_T0_ROUTER_ID=${BOSH_VSPHERE_T0_ROUTER_ID}"
 echo "BOSH_VSPHERE_TRANSPORT_ZONE_ID=${BOSH_VSPHERE_TRANSPORT_ZONE_ID}"
 sleep 10
 
+stemcell_dir="$( cd stemcell && pwd )"
+export BOSH_VSPHERE_STEMCELL=${stemcell_dir}/stemcell.tgz
+
 pushd bosh-cpi-src/src/vsphere_cpi
   bundle install
   bundle exec rspec spec/integration/ --tag ~nsx_vsphere --tag ~disk_migration --exclude-pattern "**/host_maintenance_mode_spec.rb"

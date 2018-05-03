@@ -43,6 +43,7 @@ jobs:
         passed: [lock-v6.5-nsxt21-mikhail-ci]
         resource: v6.5-nsxt21-mikhail-ci
         trigger: true
+      - get: stemcell
     - task: integration-tests
       file: source-ci/ci/tasks/cpi-networking-integration-test.yml
       params:
@@ -122,6 +123,11 @@ resources:
       branch:      {{vcpi_branch}}
       private_key: {{github_deployment_key__bosh-vsphere-cpi-release}}
       ignore_paths: [ci]
+  - name: stemcell
+    type: bosh-io-stemcell
+    source:
+      name: bosh-vsphere-esxi-ubuntu-trusty-go_agent
+
 #  - name: version-semver
 #    type: semver
 #    source:
@@ -136,10 +142,6 @@ resources:
 #      bucket:            {{s3_vsphere_cpi_bucket}}
 #      access_key_id:     {{s3_vsphere_cpi_blobwriter_access_key}}
 #      secret_access_key: {{s3_vsphere_cpi_blobwriter_secret_key}}
-#  - name: stemcell
-#    type: bosh-io-stemcell
-#    source:
-#      name: bosh-vsphere-esxi-ubuntu-trusty-go_agent
 #  - name: bosh-deployment
 #    type: git
 #    source:

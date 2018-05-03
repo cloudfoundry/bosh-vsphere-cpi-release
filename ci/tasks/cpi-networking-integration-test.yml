@@ -5,6 +5,7 @@ inputs:
 - name: source-ci
 - name: environment
 - name: bosh-cpi-src
+- name: stemcell
 run:
   path: source-ci/ci/tasks/cpi-networking-integration-test.sh
 params:
