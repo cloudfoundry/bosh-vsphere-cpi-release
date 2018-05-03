@@ -50,6 +50,9 @@ jobs:
         BOSH_VSPHERE_EDGE_CLUSTER_ID: c78e185c-799b-407f-90b9-c34bc08caf57
         BOSH_VSPHERE_T0_ROUTER_ID: fa47375e-8696-436b-b266-241e89e72b05
         BOSH_VSPHERE_TRANSPORT_ZONE_ID: 7011302e-1ee9-4074-842f-ef88a41ec507
+      on_failure:
+        put: v6.5-nsxt21-mikhail-ci
+        params : {release: environment}
 
   - name: unlock-v6.5-nsxt21-mikhail-ci
     plan:
