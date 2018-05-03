@@ -25,6 +25,7 @@ sleep 10
 
 stemcell_dir="$( cd stemcell && pwd )"
 export BOSH_VSPHERE_STEMCELL=${stemcell_dir}/stemcell.tgz
+export NSXT_SKIP_SSL_VERIFY=true
 
 pushd bosh-cpi-src/src/vsphere_cpi
   bundle install
