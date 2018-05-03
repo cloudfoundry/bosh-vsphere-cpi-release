@@ -27,6 +27,7 @@ jobs:
         - lifecycle-6.0-NSXV
         - lifecycle-6.5
         - lifecycle-6.5-NSXV
+        - lifecycle-6.5-NSXT21
         - lifecycle-6.7
       - get: version-semver
         trigger: false
@@ -133,11 +134,12 @@ jobs:
         - lifecycle-6.0-NSXV
         - lifecycle-6.5
         - lifecycle-6.5-NSXV
+        - lifecycle-6.5-NSXT21
         - bats
     - put: tracker-output
       params: { repos: [bosh-cpi-src] }
 
-  - name: promote-candidate
+  - name: inspect-candidate
     serial: true
     plan:
     - aggregate:
@@ -146,6 +148,20 @@ jobs:
         passed: [bats]
       - get: bosh-cpi-src
         passed: [bats]
+      - get: release-version-semver
+        params: { bump: major }
+    - task: inspect
+      file: source-ci/ci/tasks/inspect-candidate.yml
+
+  - name: promote-candidate
+    serial: true
+    plan:
+    - aggregate:
+      - get: source-ci
+      - get: bosh-cpi-artifacts
+        passed: [inspect-candidate]
+      - get: bosh-cpi-src
+        passed: [inspect-candidate]
       - get: release-version-semver
         params: { bump: major }
     - task: promote
@@ -179,6 +195,13 @@ resources:
       uri:          git@github.com:ktchen14/vcpi-pool.git
       branch:       master
       pool:         v6.5-nsxv
+      private_key:  {{vcpi-pool_deployment_key}}
+  - name: pool-6.5-NSXT21
+    type: pool
+    source:
+      uri:          git@github.com:ktchen14/vcpi-pool.git
+      branch:       master
+      pool:         v6.5-nsxt21
       private_key:  {{vcpi-pool_deployment_key}}
   - name: pool-6.0-NSXV
     type: pool
@@ -312,10 +335,14 @@ groups:
   - lifecycle-6.0
   - lock-6.0
   - unlock-6.0
+  - inspect-candidate
   - promote-candidate
   - lock-6.5-NSXV
   - lifecycle-6.5-NSXV
   - unlock-6.5-NSXV
+  - lock-6.5-NSXT21
+  - lifecycle-6.5-NSXT21
+  - unlock-6.5-NSXT21
   - lifecycle-6.0-NSXV
   - lock-6.0-NSXV
   - unlock-6.0-NSXV
@@ -331,6 +358,7 @@ groups:
   - lifecycle-5.5
   - lifecycle-6.7
   - lifecycle-6.5-NSXV
+  - lifecycle-6.5-NSXT21
   - lifecycle-6.0-NSXV
   - bats
   - delivery
@@ -352,6 +380,9 @@ groups:
   - lock-6.5-NSXV
   - lifecycle-6.5-NSXV
   - unlock-6.5-NSXV
+  - lock-6.5-NSXT21
+  - lifecycle-6.5-NSXT21
+  - unlock-6.5-NSXT21
 
 - name: v6.0
   jobs:
