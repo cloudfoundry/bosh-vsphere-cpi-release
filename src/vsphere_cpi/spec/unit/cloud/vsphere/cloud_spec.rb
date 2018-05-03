@@ -1663,7 +1663,7 @@ module VSphereCloud
         expect(nsxt_provider).to receive(:attach_switch_to_t1)
           .with('switch-id', 't1-router-id', subnet)
         result = vsphere_cloud.create_subnet(subnet_definition)
-        expect(result).to eq( { :network_cid => 't1-router-id',
+        expect(result).to eq( { :network_cid => 'switch-id',
                                 :cloud_properties => {:name => 'switch-name'}})
       end
 
@@ -1697,7 +1697,7 @@ module VSphereCloud
                                        .with('switch-id', 't1-router-id', subnet)
 
           result = vsphere_cloud.create_subnet(subnet_definition)
-          expect(result).to eq( { :network_cid => 't1-router-id',
+          expect(result).to eq( { :network_cid => 'switch-id',
                                   :cloud_properties => {:name => 'switch-id'}})
         end
       end

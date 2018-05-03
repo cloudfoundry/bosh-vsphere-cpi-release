@@ -659,7 +659,7 @@ module VSphereCloud
       @nsxt_provider.attach_t1_to_t0(cloud_properties['t0_router_id'], t1_router.id)
       switch = @nsxt_provider.create_logical_switch(cloud_properties['transport_zone_id'], cloud_properties['switch_name'])
       @nsxt_provider.attach_switch_to_t1(switch.id, t1_router.id, subnet)
-      {:network_cid => t1_router.id, :cloud_properties => {:name => switch.display_name } }
+      {:network_cid => switch.id, :cloud_properties => {:name => switch.display_name } }
     end
 
     def delete_subnet(switch_id)
