@@ -53,16 +53,10 @@ describe 'network management', :network_management => true  do
   context 'when create_subnet command is issued' do
     after do
       if @t1_router_id
-        ports = router_api.list_logical_router_ports( {:logical_router_id => @t1_router_id} ).results
-        ports.each do |port|
-          router_api.delete_logical_router_port(port.id)
-        end
-        router_api.delete_logical_router(@t1_router_id)
+        router_api.delete_logical_router(@t1_router_id, :force => true)
       end
       if @switch_id
-        ports = switch_api.list_logical_ports( {:logical_switch_id => @switch_id} ).results
-        switch_api.delete_logical_port(ports.first.id)
-        switch_api.delete_logical_switch(@switch_id)
+        switch_api.delete_logical_switch(@switch_id, :cascade => true, :detach=> true)
       end
     end
 
@@ -94,8 +88,7 @@ describe 'network management', :network_management => true  do
       result = @cloud.create_subnet(subnet_definition)
       expect(result).not_to be_nil
 
-      switch_ports = router_api.list_logical_router_ports({:logical_switch_id => result[:network_cid]})
-      router_id = switch_ports.results.first.logical_router_id
+      router_id = get_attached_router_id(result[:network_cid])
 
       @cloud.delete_subnet(result[:network_cid])
 
@@ -105,6 +98,36 @@ describe 'network management', :network_management => true  do
       expect{
         get_t1_router(router_id)
       }.to raise_error(NSXT::ApiCallError)
+    end
+
+    context 'when t1 router has extra switches attached' do
+      after do
+        if @switch_id
+          switch_api.delete_logical_switch(@switch_id, :cascade => true, :detach=> true)
+        end
+        if @extra_switch_id
+          switch_api.delete_logical_switch(@extra_switch_id, :cascade => true, :detach=> true)
+        end
+        if @t1_router_id
+          router_api.delete_logical_router(@t1_router_id, :force => true)
+        end
+      end
+
+      it 'raises an error' do
+        result = @cloud.create_subnet(subnet_definition)
+        expect(result).not_to be_nil
+        @switch_id = result[:network_cid]
+
+        @t1_router_id = get_attached_router_id(@switch_id)
+
+        extra_switch = create_switch
+        @extra_switch_id = extra_switch.id
+        attach_switch_to_t1(@extra_switch_id, @t1_router_id)
+
+        expect{
+          @cloud.delete_subnet(@switch_id)
+        }.to raise_error("Can not delete router #{@t1_router_id}. It has extra ports that are not created by BOSH.")
+      end
     end
   end
 
@@ -117,4 +140,36 @@ describe 'network management', :network_management => true  do
   def get_t1_router(t1_router_id)
     router_api.read_logical_router(t1_router_id)
   end
+
+  def get_attached_router_id(switch_id)
+    switch_ports = router_api.list_logical_router_ports({:logical_switch_id => switch_id})
+    switch_ports.results.first.logical_router_id
+  end
+
+  def create_switch
+    switch = NSXT::LogicalSwitch.new({
+       :admin_state => 'UP',
+       :transport_zone_id => @transport_zone_id,
+       :replication_mode => 'MTEP',
+       :display_name => 'extra_switch' })
+    switch_api.create_logical_switch(switch)
+  end
+
+  def attach_switch_to_t1(switch_id, t1_router_id)
+      logical_port = NSXT::LogicalPort.new({:admin_state => 'UP',
+                                            :logical_switch_id => switch_id})
+      logical_port = switch_api.create_logical_port(logical_port)
+
+      switch_port_ref = NSXT::ResourceReference.new({:target_id => logical_port.id,
+                                                     :target_type => 'LogicalPort',
+                                                     :is_valid => true })
+      subnet = NSXT::IPSubnet.new({:ip_addresses => [ '192.168.200.1'],
+                          :prefix_length => 30})
+
+      t1_router_port = NSXT::LogicalRouterDownLinkPort.new({:logical_router_id => t1_router_id,
+                                                             :linked_logical_switch_port_id => switch_port_ref,
+                                                             :resource_type => 'LogicalRouterDownLinkPort',
+                                                             :subnets => [subnet]})
+      router_api.create_logical_router_port(t1_router_port)
+    end
 end
