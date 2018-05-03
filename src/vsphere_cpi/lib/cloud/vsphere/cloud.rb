@@ -313,8 +313,7 @@ module VSphereCloud
             @nsxt_provider.set_vif_type(created_vm, vm_type.nsxt)
           end
         rescue => e
-          error_message = e.is_a?(NSXT::ApiCallError) ? e.response_body : e.message
-          @logger.info("Failed to apply NSX properties to VM '#{created_vm.cid}' with error: #{error_message}")
+          @logger.info("Failed to apply NSX properties to VM '#{created_vm.cid}' with error: #{e.message}")
           begin
             @logger.info("Deleting VM '#{created_vm.cid}'...")
             delete_vm(created_vm.cid)
@@ -389,8 +388,7 @@ module VSphereCloud
           begin
             @nsxt_provider.remove_vm_from_server_pools(vm_ip)
           rescue => e
-            error_message = e.is_a?(NSXT::ApiCallError) ? e.response_body : e.message
-            @logger.info("Failed to remove VM from ServerPool: #{error_message}")
+            @logger.info("Failed to remove VM from ServerPool: #{e.message}")
           end
         end
 
