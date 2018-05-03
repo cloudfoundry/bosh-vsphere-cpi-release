@@ -1,0 +1,13 @@
+platform: linux
+image_resource:
+  { type: docker-image, source: { repository: vcpici/vcpi-main } }
+inputs:
+- name: source-ci
+- name: environment
+- name: bosh-cpi-src
+run:
+  path: source-ci/ci/tasks/cpi-networking-integration-test.sh
+params:
+  BOSH_VSPHERE_EDGE_CLUSTER_ID:
+  BOSH_VSPHERE_T0_ROUTER_ID:
+  BOSH_VSPHERE_TRANSPORT_ZONE_ID:
