@@ -60,6 +60,9 @@ jobs:
   - name: lock-test-upgrade
     plan:
       - aggregate:
+        - {get: bosh-release,     trigger: true}
+        - {get: cpi-release,      trigger: true}
+        - {get: stemcell,         trigger: true, resource: ubuntu-stemcell}
         - get: after-midnight
           trigger: true
         - get: source-ci
@@ -82,9 +85,9 @@ jobs:
       - aggregate:
         - get: source-ci
         - {get: environment,     trigger: true,  passed: [lock-test-upgrade], resource: pool-6.5 }
-        - {get: bosh-release,     trigger: true}
-        - {get: cpi-release,      trigger: true}
-        - {get: stemcell,         trigger: true, resource: ubuntu-stemcell}
+        - {get: bosh-release,     trigger: false, passed: [lock-test-upgrade]}
+        - {get: cpi-release,      trigger: false, passed: [lock-test-upgrade]}
+        - {get: stemcell,         trigger: false, passed: [lock-test-upgrade], resource: ubuntu-stemcell}
         - {get: certification,    trigger: false}
         - {get: bosh-cli,         trigger: false}
         - {get: centos-stemcell,  trigger: false} # pass-through
@@ -140,6 +143,9 @@ jobs:
   - name: lock-test-stemcell-ipv4
     plan:
       - aggregate:
+        - {get: bosh-release,    trigger: true}
+        - {get: cpi-release,     trigger: true}
+        - {get: stemcell,        trigger: true, resource: ubuntu-stemcell}
         - get: after-midnight
           trigger: true
         - get: source-ci
@@ -162,9 +168,9 @@ jobs:
     plan:
       - aggregate:
         - get: source-ci
-        - {get: bosh-release,    trigger: true}
-        - {get: cpi-release,     trigger: true}
-        - {get: stemcell,        trigger: true, resource: ubuntu-stemcell}
+        - {get: bosh-release,    trigger: false, passed: [lock-test-stemcell-ipv4]}
+        - {get: cpi-release,     trigger: false, passed: [lock-test-stemcell-ipv4]}
+        - {get: stemcell,        trigger: false, passed: [lock-test-stemcell-ipv4], resource: ubuntu-stemcell}
         - {get: certification,   trigger: false}
         - {get: environment,     trigger: true,  passed: [lock-test-stemcell-ipv4], resource: pool-6.5 }
         - {get: bosh-cli,        trigger: false}
@@ -204,6 +210,9 @@ jobs:
   - name: lock-test-stemcell-ipv6
     plan:
       - aggregate:
+        - {get: bosh-release,    trigger: true}
+        - {get: cpi-release,     trigger: true}
+        - {get: stemcell,        trigger: true, resource: ubuntu-stemcell}
         - get: after-midnight
           trigger: true
         - get: source-ci
@@ -226,9 +235,9 @@ jobs:
     plan:
       - aggregate:
         - get: source-ci
-        - {get: bosh-release,    trigger: true}
-        - {get: cpi-release,     trigger: true}
-        - {get: stemcell,        trigger: true, resource: ubuntu-stemcell}
+        - {get: bosh-release,    trigger: false, passed: [lock-test-stemcell-ipv6]}
+        - {get: cpi-release,     trigger: false, passed: [lock-test-stemcell-ipv6]}
+        - {get: stemcell,        trigger: false, passed: [lock-test-stemcell-ipv6], resource: ubuntu-stemcell}
         - {get: environment,     trigger: true,  passed: [lock-test-stemcell-ipv6], resource: pool-6.5 }
         - {get: certification,   trigger: false}
         - {get: bosh-cli,        trigger: false}
@@ -269,6 +278,9 @@ jobs:
   - name: lock-bats-centos
     plan:
       - aggregate:
+        - {get: bosh-release,    trigger: true}
+        - {get: cpi-release,     trigger: true}
+        - {get: stemcell,        trigger: true, resource: centos-stemcell}
         - get: after-midnight
           trigger: true
         - get: source-ci
@@ -295,9 +307,9 @@ jobs:
         - {get: environment,     trigger: true,  passed: [lock-bats-centos], resource: pool-6.5 }
         - {get: certification,   trigger: false}
         - {get: bosh-cli,        trigger: false}
-        - {get: bosh-release,    trigger: true}
-        - {get: cpi-release,     trigger: true}
-        - {get: stemcell,        trigger: true, resource: centos-stemcell}
+        - {get: bosh-release,    trigger: false, passed: [lock-bats-centos]}
+        - {get: cpi-release,     trigger: false, passed: [lock-bats-centos]}
+        - {get: stemcell,        trigger: false, passed: [lock-bats-centos], resource: centos-stemcell}
         - {get: bats,            trigger: false}
         - {get: bosh-deployment, trigger: false}
       - <<: *prepare-director-latest
@@ -329,6 +341,9 @@ jobs:
   - name: lock-bats-ubuntu
     plan:
       - aggregate:
+        - {get: bosh-release,    trigger: true}
+        - {get: cpi-release,     trigger: true}
+        - {get: stemcell,        trigger: true, resource: ubuntu-stemcell}
         - get: after-midnight
           trigger: true
         - get: source-ci
@@ -355,9 +370,9 @@ jobs:
         - {get: environment,     trigger: true,  passed: [lock-bats-ubuntu], resource: pool-6.5 }
         - {get: certification,   trigger: false}
         - {get: bosh-cli,        trigger: false}
-        - {get: bosh-release,    trigger: true}
-        - {get: cpi-release,     trigger: true}
-        - {get: stemcell,        trigger: true, resource: ubuntu-stemcell}
+        - {get: bosh-release,    trigger: false, passed: [lock-bats-ubuntu]}
+        - {get: cpi-release,     trigger: false, passed: [lock-bats-ubuntu]}
+        - {get: stemcell,        trigger: false, passed: [lock-bats-ubuntu], resource: ubuntu-stemcell}
         - {get: bats,            trigger: false}
         - {get: bosh-deployment, trigger: false}
       - <<: *prepare-director-latest
