@@ -67,14 +67,12 @@ jobs:
     - aggregate:
       - get: source-ci
       - get: bosh-cpi-src
-        passed: [unlock-v6.5-nsxt21-mikhail-ci]
-    - task:
+        passed: [integration-tests]
+    - task: create-bosh-release
       file: source-ci/ci/tasks/cpi-networking-release-and-publish.yml
-      outputs:
-      - name: bosh-vsphere-cpi-networking-release
-        path: bosh-vsphere-cpi-networking-release/
     - put: vsphere-cpi-networking-release
-      file: bosh-vsphere-cpi-networking-release/bosh-vsphere-cpi-networking-release.tgz
+      params:
+        file: bosh-vsphere-cpi-networking-release/bosh-vsphere-cpi-networking-release.tgz
 
 resources:
 #  - name: pool-6.0-NSXV
