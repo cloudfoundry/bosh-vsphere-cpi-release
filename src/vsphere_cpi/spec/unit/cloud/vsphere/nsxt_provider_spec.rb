@@ -807,7 +807,7 @@ describe VSphereCloud::NSXTProvider do
 
     it 'deletes logical switch with force and cascade' do
       expect(switch_api).to receive(:delete_logical_switch)
-        .with('switch-id', :cascade => true, :detach=> true)
+        .with('switch-id', :cascade => true, :detach => true)
       nsxt_provider.delete_logical_switch('switch-id')
     end
   end
@@ -887,6 +887,26 @@ describe VSphereCloud::NSXTProvider do
           .and_return(router_ports)
         expect(nsxt_provider.get_attched_switches_ids('t1-router-id'))
           .to eq(['switch-id'])
+      end
+    end
+  end
+
+  describe '#get_attached_switch_ports' do
+    let(:switch_api) { instance_double(NSXT::LogicalSwitchingApi)}
+    before do
+      allow(nsxt_provider).to receive(:switch_api).and_return(switch_api)
+    end
+
+    context 'when switch id is provided' do
+      let(:switch_port) { instance_double(NSXT::LogicalPort) }
+      let(:switch_ports) { instance_double(NSXT::LogicalPortListResult,
+                                          :results => [switch_port]) }
+
+      it 'returns switch ports' do
+        expect(switch_api).to receive(:list_logical_ports)
+          .with(:logical_switch_id => 'switch-id').and_return(switch_ports)
+        result = nsxt_provider.get_attached_switch_ports('switch-id')
+        expect(result.length).to eq(1)
       end
     end
   end
