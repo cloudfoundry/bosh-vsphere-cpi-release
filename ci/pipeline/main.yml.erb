@@ -139,7 +139,7 @@ jobs:
     - put: tracker-output
       params: { repos: [bosh-cpi-src] }
 
-  - name: promote-candidate
+  - name: inspect-candidate
     serial: true
     plan:
     - aggregate:
@@ -148,6 +148,20 @@ jobs:
         passed: [bats]
       - get: bosh-cpi-src
         passed: [bats]
+      - get: release-version-semver
+        params: { bump: major }
+    - task: inspect
+      file: source-ci/ci/tasks/inspect-candidate.yml
+
+  - name: promote-candidate
+    serial: true
+    plan:
+    - aggregate:
+      - get: source-ci
+      - get: bosh-cpi-artifacts
+        passed: [inspect-candidate]
+      - get: bosh-cpi-src
+        passed: [inspect-candidate]
       - get: release-version-semver
         params: { bump: major }
     - task: promote
@@ -321,6 +335,7 @@ groups:
   - lifecycle-6.0
   - lock-6.0
   - unlock-6.0
+  - inspect-candidate
   - promote-candidate
   - lock-6.5-NSXV
   - lifecycle-6.5-NSXV

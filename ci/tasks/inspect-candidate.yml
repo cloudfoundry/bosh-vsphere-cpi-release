@@ -1,0 +1,12 @@
+platform: linux
+image_resource:
+  { type: docker-image, source: { repository: vcpici/vcpi-main } }
+
+inputs:
+- name: source-ci
+- name: bosh-cpi-src
+- name: bosh-cpi-artifacts
+- name: release-version-semver
+
+run:
+  path: source-ci/ci/tasks/inspect-candidate.sh
