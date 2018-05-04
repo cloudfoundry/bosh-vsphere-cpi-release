@@ -114,9 +114,9 @@ resources:
     type: s3
     source:
       versioned_file:    bosh-vsphere-cpi-networking.tgz
-      bucket:            vsphere-cpi-networking-release
-      access_key_id:     {{s3_vsphere_cpi_blobwriter_access_key}}
-      secret_access_key: {{s3_vsphere_cpi_blobwriter_secret_key}}
+      bucket:            bosh-vsphere-cpi-networking-release
+      access_key_id:     {{certification__bucket_access_key}}
+      secret_access_key: {{certification__bucket_secret_key}}
   - name: v6.5-nsxt21-mikhail-ci
     type: pool
     source:
