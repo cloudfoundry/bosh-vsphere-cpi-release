@@ -3,18 +3,8 @@
 
 mkdir  bosh-vsphere-cpi-networking-release
 
-install_iso9660wrap() {
-  pushd bosh-cpi-src
-    pushd src/iso9660wrap
-      go build ./...
-      export PATH="$PATH:$PWD"
-    popd
-  popd
-}
-
-install_iso9660wrap
-
 pushd bosh-cpi-src
+    ./compile-iso9660wrap.sh
     bosh create-release --tarball bosh-vsphere-cpi-networking-release.tgz --force
 popd
 
