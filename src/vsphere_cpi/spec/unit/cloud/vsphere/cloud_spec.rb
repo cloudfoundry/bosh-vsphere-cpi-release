@@ -1740,6 +1740,8 @@ module VSphereCloud
       let(:nsxt_provider) { instance_double(VSphereCloud::NSXTProvider) }
       let(:attached_switches) { [ instance_double(NSXT::LogicalSwitch, :id => 'switch-1'),
                                   instance_double(NSXT::LogicalSwitch, :id => 'switch-2')] }
+      let(:switch_ports) { [instance_double(NSXT::LogicalPort)] }
+
       before do
         allow(VSphereCloud::NSXTProvider).to receive(:new)
          .with(any_args).and_return(nsxt_provider)
@@ -1751,6 +1753,8 @@ module VSphereCloud
             .with('switch-id').and_return('t1-router-id')
           expect(nsxt_provider).to receive(:delete_t1_router)
             .with('t1-router-id')
+          expect(nsxt_provider).to receive(:get_attached_switch_ports)
+            .with('switch-id').and_return(switch_ports)
           expect(nsxt_provider).to receive(:get_attched_switches_ids)
             .with('t1-router-id').and_return([])
           expect(nsxt_provider).to receive(:delete_logical_switch)
@@ -1765,6 +1769,8 @@ module VSphereCloud
             .with('switch-id').and_return('t1-router-id')
           expect(nsxt_provider).to receive(:get_attched_switches_ids)
             .with('t1-router-id').and_return(['switch2-id'])
+          expect(nsxt_provider).to receive(:get_attached_switch_ports)
+            .with('switch-id').and_return(switch_ports)
           expect(nsxt_provider).to receive(:delete_logical_switch)
             .with('switch-id')
           expect { vsphere_cloud.delete_subnet('switch-id') }
@@ -1782,6 +1788,32 @@ module VSphereCloud
         end
       end
 
+      context 'when not 1 port attached to switch' do
+        context 'if 0 ports attached 'do
+          let(:switch_ports) { [] }
+          it 'raises an error' do
+            expect(nsxt_provider).to receive(:get_attached_router_id)
+             .with('switch-id').and_return('t1-router-id')
+            expect(nsxt_provider).to receive(:get_attached_switch_ports)
+              .with('switch-id').and_return(switch_ports)
+            expect{
+              vsphere_cloud.delete_subnet('switch-id')
+            }.to raise_error("Expected switch switch-id to have only one port. Got 0")
+          end
+        end
+        context 'if more than 1 attached' do
+          let(:switch_ports) { [instance_double(NSXT::LogicalPort), instance_double(NSXT::LogicalPort)] }
+          it 'raises an error' do
+            expect(nsxt_provider).to receive(:get_attached_router_id)
+             .with('switch-id').and_return('t1-router-id')
+            expect(nsxt_provider).to receive(:get_attached_switch_ports)
+             .with('switch-id').and_return(switch_ports)
+            expect{
+              vsphere_cloud.delete_subnet('switch-id')
+            }.to raise_error("Expected switch switch-id to have only one port. Got 2")
+          end
+        end
+      end
       context 'when switch id is nil' do
         it 'raises an error' do
           expect{ vsphere_cloud.delete_subnet(nil) }

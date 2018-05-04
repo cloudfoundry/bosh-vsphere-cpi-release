@@ -284,7 +284,7 @@ module VSphereCloud
     end
 
     def delete_logical_switch(switch_id)
-      switch_api.delete_logical_switch(switch_id, :cascade => true, :detach=> true)
+      switch_api.delete_logical_switch(switch_id, :cascade => true, :detach => true)
     end
 
     def delete_t1_router(t1_router_id)
@@ -295,6 +295,10 @@ module VSphereCloud
       router_ports = router_api.list_logical_router_ports(:logical_switch_id => switch_id)
       raise "Expected only one port attached to switch #{switch_id}. Found #{router_ports.results.length}" if router_ports.results.length != 1
       router_ports.results.first.logical_router_id
+    end
+
+    def get_attached_switch_ports(switch_id)
+      switch_api.list_logical_ports(:logical_switch_id => switch_id).results
     end
 
     def get_attched_switches_ids(t1_router_id)
