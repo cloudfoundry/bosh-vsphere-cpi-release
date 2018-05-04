@@ -62,6 +62,20 @@ jobs:
       - put: v6.5-nsxt21-mikhail-ci
         params : {release: v6.5-nsxt21-mikhail-ci}
 
+  - name: release-and-publish
+    plan:
+    - aggregate:
+      - get: source-ci
+      - get: bosh-cpi-src
+        passed: [unlock-v6.5-nsxt21-mikhail-ci]
+    - task:
+      file: source-ci/ci/tasks/cpi-networking-release-and-publish.yml
+      outputs:
+      - name: bosh-vsphere-cpi-networking-release
+        path: bosh-vsphere-cpi-networking-release/
+    - put: vsphere-cpi-networking-release
+      file: bosh-vsphere-cpi-networking-release/bosh-vsphere-cpi-networking-release.tgz
+
 resources:
 #  - name: pool-6.0-NSXV
 #    type: pool
@@ -98,13 +112,13 @@ resources:
 #      branch:       master
 #      pool:         v6.7
 #      private_key:  {{vcpi-pool_deployment_key}}
-#  - name: bosh-cpi-artifacts
-#    type: s3
-#    source:
-#      regexp:            bosh-vsphere-cpi-([\d\.]+)\.tgz
-#      bucket:            {{s3_vsphere_cpi_bucket}}
-#      access_key_id:     {{s3_vsphere_cpi_blobwriter_access_key}}
-#      secret_access_key: {{s3_vsphere_cpi_blobwriter_secret_key}}
+  - name: vsphere-cpi-networking-release
+    type: s3
+    source:
+      versioned_file:    bosh-vsphere-cpi-networking.tgz
+      bucket:            vsphere-cpi-networking-release
+      access_key_id:     {{s3_vsphere_cpi_blobwriter_access_key}}
+      secret_access_key: {{s3_vsphere_cpi_blobwriter_secret_key}}
   - name: v6.5-nsxt21-mikhail-ci
     type: pool
     source:

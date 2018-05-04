@@ -1,0 +1,13 @@
+platform: linux
+image_resource:
+  { type: docker-image, source: { repository: vcpici/vcpi-main } }
+inputs:
+- name: source-ci
+- name: bosh-cpi-src
+
+outputs:
+- name: bosh-vsphere-cpi-networking-release
+
+run:
+  path: source-ci/ci/tasks/cpi-networking-release-and-publish.sh
+params:
