@@ -12,7 +12,7 @@ Swagger Codegen version: 2.3.1
 
 module NSXT
   class ApiCallError < StandardError
-    attr_reader :code, :response_headers, :response_body
+    attr_reader :code, :response_headers, :response_body, :message
 
     # Usage examples:
     #   ApiError.new

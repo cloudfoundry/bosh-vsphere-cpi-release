@@ -1,6 +1,6 @@
 require 'integration/spec_helper'
 
-describe 'Give a cluster with DRS On ' do
+describe 'Give a cluster with DRS On ', host_maintenance: true  do
   before (:all) do
     @datacenter_name = fetch_and_verify_datacenter('BOSH_VSPHERE_CPI_DATACENTER')
     # We actually use a healthy cluster but manipulate it before the test and restore after we are done

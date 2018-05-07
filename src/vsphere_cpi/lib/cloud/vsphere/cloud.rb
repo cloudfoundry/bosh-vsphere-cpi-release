@@ -299,11 +299,21 @@ module VSphereCloud
 
         begin
           if @config.nsxt_enabled?
-            @nsxt_provider.add_vm_to_nsgroups(created_vm, vm_type.nsxt)
+            ns_groups = vm_type.ns_groups || []
+            if vm_type.nsxt_server_pools
+              #For static server pools add vm as server pool member
+              #For dynamic server pools add vm to the corresponding nsgroup
+              static_server_pools, dynamic_server_pools = @nsxt_provider.retrieve_server_pools(vm_type.nsxt_server_pools)
+              lb_ns_groups = dynamic_server_pools.map{ |server_pool| server_pool.member_group.grouping_object.target_display_name } if dynamic_server_pools
+              @logger.info("NSGroup names corresponding to load balancer's dynamic server pools are: #{lb_ns_groups}")
+              ns_groups.concat(lb_ns_groups) if lb_ns_groups
+              @nsxt_provider.add_vm_to_server_pools(created_vm, static_server_pools) if static_server_pools
+            end
+            @nsxt_provider.add_vm_to_nsgroups(created_vm, ns_groups)
             @nsxt_provider.set_vif_type(created_vm, vm_type.nsxt)
           end
         rescue => e
-          @logger.info("Failed to add VM '#{created_vm.cid}' to NSGroups with error: #{e}")
+          @logger.info("Failed to apply NSX properties to VM '#{created_vm.cid}' with error: #{e.message}")
           begin
             @logger.info("Deleting VM '#{created_vm.cid}'...")
             delete_vm(created_vm.cid)
@@ -314,7 +324,6 @@ module VSphereCloud
         end
 
         begin
-
           vm_type.nsx_security_groups.each do |security_group|
             nsx.add_vm_to_security_group(security_group, created_vm.mob_id)
           end unless vm_type.nsx_security_groups.nil?
@@ -358,8 +367,8 @@ module VSphereCloud
     def delete_vm(vm_cid)
       with_thread_name("delete_vm(#{vm_cid})") do
         @logger.info("Deleting vm: #{vm_cid}")
-
         vm = vm_provider.find(vm_cid)
+        vm_ip = vm.mob.guest&.ip_address
         vm.power_off
 
         persistent_disks = vm.persistent_disks
@@ -375,6 +384,11 @@ module VSphereCloud
             @nsxt_provider.remove_vm_from_nsgroups(vm)
           rescue => e
             @logger.info("Failed to remove VM from NSGroups: #{e.message}")
+          end
+          begin
+            @nsxt_provider.remove_vm_from_server_pools(vm_ip)
+          rescue => e
+            @logger.info("Failed to remove VM from ServerPool: #{e.message}")
           end
         end
 
