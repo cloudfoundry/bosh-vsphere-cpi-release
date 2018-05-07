@@ -313,6 +313,10 @@ module VSphereCloud
       end
     end
 
+    def get_switch(switch_id)
+      switch_api.get_logical_switch(switch_id)
+    end
+
     private
 
     MAX_TRIES = 20

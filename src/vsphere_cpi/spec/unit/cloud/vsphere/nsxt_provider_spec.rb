@@ -911,4 +911,21 @@ describe VSphereCloud::NSXTProvider do
       end
     end
   end
+
+  describe '#get_switch' do
+    let(:switch_api) { instance_double(NSXT::LogicalSwitchingApi)}
+    before do
+      allow(nsxt_provider).to receive(:switch_api).and_return(switch_api)
+    end
+
+    context 'when switch_id is provided' do
+      let(:switch) { instance_double(NSXT::LogicalSwitch) }
+      it 'returns switch' do
+        expect(switch_api).to receive(:get_logical_switch)
+          .with('switch-id').and_return(switch)
+        result = nsxt_provider.get_switch('switch-id')
+        expect(result).not_to be_nil
+      end
+    end
+  end
 end
