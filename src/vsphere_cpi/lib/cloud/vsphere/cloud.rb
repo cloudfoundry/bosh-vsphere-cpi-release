@@ -689,16 +689,6 @@ module VSphereCloud
       @nsxt_provider.delete_t1_router(t1_router_id)
     end
 
-    def has_subnet(switch_id)
-      raise 'switch id must be provided for has_subnet' if switch_id.nil?
-      switch = @nsxt_provider.get_switch(switch_id)
-      if switch.nil?
-        return {exists: false}
-      end
-      router_ids = @nsxt_provider.get_attached_router_ids(switch_id)
-      return {exists: router_ids.length != 0}
-    end
-
     private
 
     def import_ovf(name, ovf, resource_pool, datastore)
