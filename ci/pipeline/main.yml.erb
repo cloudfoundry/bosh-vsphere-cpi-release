@@ -4,7 +4,6 @@ jobs:
     - aggregate:
       - get: source-ci
       - get: bosh-cpi-src
-        trigger: true
     - aggregate:
       - task: unit-tests
         file: source-ci/ci/tasks/cpi-networking-unit-test.yml
