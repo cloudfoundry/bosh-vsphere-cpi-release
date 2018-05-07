@@ -289,7 +289,8 @@ module VSphereCloud
             ip_conflict_detector: IPConflictDetector.new(@logger, @client),
             default_disk_type: @config.vcenter_default_disk_type,
             enable_auto_anti_affinity_drs_rules: @config.vcenter_enable_auto_anti_affinity_drs_rules,
-            stemcell: Stemcell.new(stemcell_cid, @logger)
+            stemcell: Stemcell.new(stemcell_cid, @logger),
+            upgrade_hw_version: @config.upgrade_hw_version
           )
           created_vm = vm_creator.create(vm_config)
         rescue => e

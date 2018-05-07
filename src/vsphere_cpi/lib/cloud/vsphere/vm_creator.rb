@@ -1,6 +1,6 @@
 module VSphereCloud
   class VmCreator
-    def initialize(client:, cloud_searcher:, logger:, cpi:, datacenter:, agent_env:, ip_conflict_detector:, default_disk_type:, enable_auto_anti_affinity_drs_rules:, stemcell:)
+    def initialize(client:, cloud_searcher:, logger:, cpi:, datacenter:, agent_env:, ip_conflict_detector:, default_disk_type:, enable_auto_anti_affinity_drs_rules:, stemcell:, upgrade_hw_version:)
       @client = client
       @cloud_searcher = cloud_searcher
       @logger = logger
@@ -11,6 +11,7 @@ module VSphereCloud
       @default_disk_type = default_disk_type
       @enable_auto_anti_affinity_drs_rules = enable_auto_anti_affinity_drs_rules
       @stemcell = stemcell
+      @upgrade_hw_version = upgrade_hw_version
     end
 
     def create(vm_config)
@@ -125,7 +126,12 @@ module VSphereCloud
 
         begin
           # Upgrade to latest virtual hardware version
-          created_vm.upgrade_vm_virtual_hardware if vm_config.vm_type.upgrade_hw_version
+          # We decide to upgrade hardware version on basis of two params
+          # 1. vm_type specification of upgrade hardware flag and
+          # 2. Global upgrade hardware flag @upgrade_hw_version
+          if vm_config.upgrade_hw_version?(vm_config.vm_type.upgrade_hw_version, @upgrade_hw_version)
+            created_vm.upgrade_vm_virtual_hardware
+          end
         rescue VSphereCloud::VCenterClient::AlreadyUpgraded
         end
 

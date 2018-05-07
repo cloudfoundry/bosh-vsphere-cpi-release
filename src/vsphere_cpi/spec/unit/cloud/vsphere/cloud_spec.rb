@@ -17,6 +17,7 @@ module VSphereCloud
         vcenter_default_disk_type: default_disk_type,
         soap_log: 'fake-log-file',
         vcenter_enable_auto_anti_affinity_drs_rules: false,
+        upgrade_hw_version: true,
         vcenter_http_logging: true,
         nsxt_enabled?: false
       ).as_null_object
@@ -481,7 +482,8 @@ module VSphereCloud
             ip_conflict_detector: ip_conflict_detector,
             default_disk_type: default_disk_type,
             enable_auto_anti_affinity_drs_rules: false,
-            stemcell: stemcell
+            stemcell: stemcell,
+            upgrade_hw_version: true
           ).and_return(vm_creator)
         expect(vm_creator).to receive(:create).with(vm_config).and_return(fake_vm)
 
@@ -528,6 +530,7 @@ module VSphereCloud
             ip_conflict_detector: ip_conflict_detector,
             default_disk_type: default_disk_type,
             enable_auto_anti_affinity_drs_rules: false,
+            upgrade_hw_version: true,
             stemcell: stemcell
         )
           .and_return(vm_creator)
@@ -695,6 +698,7 @@ module VSphereCloud
                                    ip_conflict_detector: ip_conflict_detector,
                                    default_disk_type: 'thin',
                                    enable_auto_anti_affinity_drs_rules: false,
+                                   upgrade_hw_version: true,
                                    stemcell: stemcell
                                  )
                                  .and_return(vm_creator)

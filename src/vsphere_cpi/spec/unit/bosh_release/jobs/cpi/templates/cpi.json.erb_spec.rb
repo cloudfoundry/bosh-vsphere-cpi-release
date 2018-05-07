@@ -23,6 +23,7 @@ describe 'cpi.json.erb' do
           'user' => 'vcenter-user',
           'password' => 'vcenter-password',
           'enable_auto_anti_affinity_drs_rules' => true,
+          'upgrade_hw_version' => true,
           'http_logging' => true,
           'datacenters' => [
             {
@@ -92,6 +93,7 @@ describe 'cpi.json.erb' do
               'user' => 'vcenter-user',
               'default_disk_type' => 'preallocated',
               'enable_auto_anti_affinity_drs_rules' => true,
+              'upgrade_hw_version' => true,
               'http_logging' => true,
             }
           ],
