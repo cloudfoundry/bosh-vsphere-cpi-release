@@ -650,6 +650,7 @@ module VSphereCloud
 
     #creates T1 router and virtual switch attached to it
     def create_subnet(subnet_definition)
+      raise 'NSXT must be enabled in CPI to use create_subnet' if !@config.nsxt_enabled?
       cloud_properties = subnet_definition['cloud_properties']
       raise 'cloud_properties must be provided' if cloud_properties.nil?
       subnet = create_subnet_obj(subnet_definition['range'], subnet_definition['gateway'])
@@ -663,6 +664,7 @@ module VSphereCloud
     end
 
     def delete_subnet(switch_id)
+      raise 'NSXT must be enabled in CPI to use delete_subnet' if !@config.nsxt_enabled?
       raise 'switch id must be provided for deleting a subnet' if switch_id.nil?
       t1_router_ids = @nsxt_provider.get_attached_router_ids(switch_id)
       raise "Expected switch #{switch_id} to have one router attached. Found #{t1_router_ids.length}" if t1_router_ids.length != 1

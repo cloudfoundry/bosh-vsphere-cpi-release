@@ -1649,6 +1649,16 @@ module VSphereCloud
           .with(any_args).and_return(nsxt_provider)
       end
 
+      context 'when nsxt disabled' do
+        let(:nsxt_enabled) { false }
+
+        it 'raises an error' do
+          expect{
+            vsphere_cloud.create_subnet(subnet_definition)
+          }.to raise_error('NSXT must be enabled in CPI to use create_subnet')
+        end
+      end
+
       it 'creates T1 router and attaches it to T0, creates logical switch and attaches it to T1' do
         expect(nsxt_provider).to receive(:create_t1_router)
           .with('cluster_id', 'router-name').and_return(t1_router)
@@ -1746,6 +1756,17 @@ module VSphereCloud
         allow(VSphereCloud::NSXTProvider).to receive(:new)
          .with(any_args).and_return(nsxt_provider)
       end
+
+      context 'when nsxt disabled' do
+        let(:nsxt_enabled) { false }
+
+        it 'raises an error' do
+          expect{
+            vsphere_cloud.delete_subnet('switch-id')
+          }.to raise_error('NSXT must be enabled in CPI to use delete_subnet')
+        end
+      end
+
 
       context 'when switch id is provided' do
         it 'deletes switch and attached router' do
