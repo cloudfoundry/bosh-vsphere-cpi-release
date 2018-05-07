@@ -1749,13 +1749,13 @@ module VSphereCloud
 
       context 'when switch id is provided' do
         it 'deletes switch and attached router' do
-          expect(nsxt_provider).to receive(:get_attached_router_id)
-            .with('switch-id').and_return('t1-router-id')
+          expect(nsxt_provider).to receive(:get_attached_router_ids)
+            .with('switch-id').and_return(['t1-router-id'])
           expect(nsxt_provider).to receive(:delete_t1_router)
             .with('t1-router-id')
           expect(nsxt_provider).to receive(:get_attached_switch_ports)
             .with('switch-id').and_return(switch_ports)
-          expect(nsxt_provider).to receive(:get_attched_switches_ids)
+          expect(nsxt_provider).to receive(:get_attached_switches_ids)
             .with('t1-router-id').and_return([])
           expect(nsxt_provider).to receive(:delete_logical_switch)
             .with('switch-id')
@@ -1765,9 +1765,9 @@ module VSphereCloud
 
       context 'when multiple switches attached to router' do
         it 'raises an error' do
-          expect(nsxt_provider).to receive(:get_attached_router_id)
-            .with('switch-id').and_return('t1-router-id')
-          expect(nsxt_provider).to receive(:get_attched_switches_ids)
+          expect(nsxt_provider).to receive(:get_attached_router_ids)
+            .with('switch-id').and_return(['t1-router-id'])
+          expect(nsxt_provider).to receive(:get_attached_switches_ids)
             .with('t1-router-id').and_return(['switch2-id'])
           expect(nsxt_provider).to receive(:get_attached_switch_ports)
             .with('switch-id').and_return(switch_ports)
@@ -1778,13 +1778,26 @@ module VSphereCloud
         end
       end
 
-      context 'when no routers attached' do
-        it 'raises an error' do
-          expect(nsxt_provider).to receive(:get_attached_router_id)
-               .with('switch-id').and_raise('Expected only one port attached to switch . Found 0')
-          expect {
-            vsphere_cloud.delete_subnet('switch-id')
-          }.to raise_error('Expected only one port attached to switch . Found 0')
+      context 'when not 1 router attached to switch' do
+        context 'when no routers attached' do
+          it 'raises an error' do
+            expect(nsxt_provider).to receive(:get_attached_router_ids)
+                 .with('switch-id').and_return([])
+            expect(nsxt_provider).not_to receive(:get_attached_switch_ports)
+            expect {
+              vsphere_cloud.delete_subnet('switch-id')
+            }.to raise_error('Expected switch switch-id to have one router attached. Found 0')
+          end
+        end
+        context 'when more than one router attached' do
+          it 'raises an error' do
+            expect(nsxt_provider).to receive(:get_attached_router_ids)
+              .with('switch-id').and_return(['router-id','router-id2'])
+            expect(nsxt_provider).not_to receive(:get_attached_switch_ports)
+            expect {
+              vsphere_cloud.delete_subnet('switch-id')
+            }.to raise_error('Expected switch switch-id to have one router attached. Found 2')
+          end
         end
       end
 
@@ -1792,8 +1805,8 @@ module VSphereCloud
         context 'if 0 ports attached 'do
           let(:switch_ports) { [] }
           it 'raises an error' do
-            expect(nsxt_provider).to receive(:get_attached_router_id)
-             .with('switch-id').and_return('t1-router-id')
+            expect(nsxt_provider).to receive(:get_attached_router_ids)
+             .with('switch-id').and_return(['t1-router-id'])
             expect(nsxt_provider).to receive(:get_attached_switch_ports)
               .with('switch-id').and_return(switch_ports)
             expect{
@@ -1804,8 +1817,8 @@ module VSphereCloud
         context 'if more than 1 attached' do
           let(:switch_ports) { [instance_double(NSXT::LogicalPort), instance_double(NSXT::LogicalPort)] }
           it 'raises an error' do
-            expect(nsxt_provider).to receive(:get_attached_router_id)
-             .with('switch-id').and_return('t1-router-id')
+            expect(nsxt_provider).to receive(:get_attached_router_ids)
+             .with('switch-id').and_return(['t1-router-id'])
             expect(nsxt_provider).to receive(:get_attached_switch_ports)
              .with('switch-id').and_return(switch_ports)
             expect{

@@ -812,7 +812,7 @@ describe VSphereCloud::NSXTProvider do
     end
   end
 
-  describe '#get_attached_router_id' do
+  describe '#get_attached_router_ids' do
     let(:router_api) { instance_double(NSXT::LogicalRoutingAndServicesApi) }
     let(:router_port) { instance_double(NSXT::LogicalRouterPort,
                           :logical_router_id => 'router-id') }
@@ -824,35 +824,36 @@ describe VSphereCloud::NSXTProvider do
     end
 
     context 'when one router attached' do
-      it 'returns router id' do
+      it 'returns array with one router id' do
         expect(router_api).to receive(:list_logical_router_ports)
           .with(:logical_switch_id => 'switch-id').and_return(router_ports)
-        expect(nsxt_provider.get_attached_router_id('switch-id'))
-          .to eq('router-id')
+        expect(nsxt_provider.get_attached_router_ids('switch-id'))
+          .to eq(['router-id'])
       end
     end
 
     context 'when multiple routers attached ' do
+      let(:router_port2) { instance_double(NSXT::LogicalRouterPort,
+                             :logical_router_id => 'router-id2') }
+
       let(:router_ports) { instance_double(NSXT::LogicalRouterPortListResult,
-                             :results => [ router_port, router_port ]) }
-      it 'raises an error' do
+                             :results => [ router_port, router_port2 ]) }
+      it 'returns all router ids' do
         expect(router_api).to receive(:list_logical_router_ports)
           .with(:logical_switch_id => 'switch-id').and_return(router_ports)
-        expect{
-          nsxt_provider.get_attached_router_id('switch-id')
-        }.to raise_error('Expected only one port attached to switch switch-id. Found 2')
+        expect(nsxt_provider.get_attached_router_ids('switch-id'))
+          .to eq(['router-id','router-id2'])
       end
     end
 
     context 'when no routers attached' do
       let(:router_ports) { instance_double(NSXT::LogicalRouterPortListResult,
                               :results => [ ]) }
-      it 'raises an error' do
+      it 'returns empty array' do
         expect(router_api).to receive(:list_logical_router_ports)
           .with(:logical_switch_id => 'switch-id').and_return(router_ports)
-        expect{
-          nsxt_provider.get_attached_router_id('switch-id')
-        }.to raise_error('Expected only one port attached to switch switch-id. Found 0')
+        expect(nsxt_provider.get_attached_router_ids('switch-id'))
+          .to eq([])
       end
     end
   end
@@ -885,7 +886,7 @@ describe VSphereCloud::NSXTProvider do
         expect(router_api).to receive(:list_logical_router_ports)
           .with(:logical_router_id => 't1-router-id',:resource_type => 'LogicalRouterDownLinkPort')
           .and_return(router_ports)
-        expect(nsxt_provider.get_attched_switches_ids('t1-router-id'))
+        expect(nsxt_provider.get_attached_switches_ids('t1-router-id'))
           .to eq(['switch-id'])
       end
     end
