@@ -50,9 +50,7 @@ end
 $pipeline.pool('6.5-NSXT21') do |pool|
   pool.params = {
     RSPEC_FLAGS: [
-      '--tag ~disk_migration',
-      '--tag ~nsx_vsphere',
-      '--tag ~host_maintenance',
+      '--tag nsxt_21'
     ].join(' '),
     NSXT_SKIP_SSL_VERIFY: "true"
   }
