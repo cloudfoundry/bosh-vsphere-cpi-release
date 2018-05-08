@@ -29,5 +29,5 @@ export NSXT_SKIP_SSL_VERIFY=true
 
 pushd bosh-cpi-src/src/vsphere_cpi
   bundle install
-  bundle exec rspec spec/integration/ --tag ~nsx_vsphere --tag ~disk_migration --exclude-pattern "**/host_maintenance_mode_spec.rb"
+  bundle exec rspec spec/integration/ --tag ~nsx_vsphere --tag ~disk_migration --tag ~host_maintenance
 popd
