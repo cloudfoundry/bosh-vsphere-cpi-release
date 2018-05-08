@@ -46,9 +46,9 @@ jobs:
     - task: integration-tests
       file: source-ci/ci/tasks/cpi-networking-integration-test.yml
       params:
-        BOSH_VSPHERE_EDGE_CLUSTER_ID: c78e185c-799b-407f-90b9-c34bc08caf57
-        BOSH_VSPHERE_T0_ROUTER_ID: fa47375e-8696-436b-b266-241e89e72b05
-        BOSH_VSPHERE_TRANSPORT_ZONE_ID: 7011302e-1ee9-4074-842f-ef88a41ec507
+        BOSH_VSPHERE_EDGE_CLUSTER_ID: d8b8ad76-53b0-45fb-b851-5eef27a33c72
+        BOSH_VSPHERE_T0_ROUTER_ID: b72c2fc1-3ec8-4337-baff-84085ebf69f7
+        BOSH_VSPHERE_TRANSPORT_ZONE_ID: 89f166b6-b15c-4a23-9861-3699a58ec9ad
       on_failure:
         put: v6.5-nsxt21-mikhail-ci
         params : {release: environment}
@@ -72,43 +72,9 @@ jobs:
     - put: vsphere-cpi-networking-release
       params:
         file: bosh-vsphere-cpi-networking-release/bosh-vsphere-cpi-networking-release.tgz
+        acl: public-read
 
 resources:
-#  - name: pool-6.0-NSXV
-#    type: pool
-#    source:
-#      uri:          git@github.com:ktchen14/vcpi-pool.git
-#      branch:       master
-#      pool:         v6.0-nsxv
-#      private_key:  {{vcpi-pool_deployment_key}}
-#  - name: pool-6.5
-#    type: pool
-#    source:
-#      uri:          git@github.com:ktchen14/vcpi-pool.git
-#      branch:       master
-#      pool:         v6.5
-#      private_key:  {{vcpi-pool_deployment_key}}
-#  - name: pool-5.5
-#    type: pool
-#    source:
-#      uri:          git@github.com:ktchen14/vcpi-pool.git
-#      branch:       master
-#      pool:         v5.5
-#      private_key:  {{vcpi-pool_deployment_key}}
-#  - name: pool-6.0
-#    type: pool
-#    source:
-#      uri:          git@github.com:ktchen14/vcpi-pool.git
-#      branch:       master
-#      pool:         v6.0
-#      private_key:  {{vcpi-pool_deployment_key}}
-#  - name: pool-6.7
-#    type: pool
-#    source:
-#      uri:          git@github.com:ktchen14/vcpi-pool.git
-#      branch:       master
-#      pool:         v6.7
-#      private_key:  {{vcpi-pool_deployment_key}}
   - name: vsphere-cpi-networking-release
     type: s3
     source:
@@ -141,140 +107,3 @@ resources:
     type: bosh-io-stemcell
     source:
       name: bosh-vsphere-esxi-ubuntu-trusty-go_agent
-
-#  - name: version-semver
-#    type: semver
-#    source:
-#      key:               current-version
-#      bucket:            {{s3_vsphere_cpi_bucket}}
-#      access_key_id:     {{s3_vsphere_cpi_blobwriter_access_key}}
-#      secret_access_key: {{s3_vsphere_cpi_blobwriter_secret_key}}
-#  - name: release-version-semver
-#    type: semver
-#    source:
-#      key:               release-current-version
-#      bucket:            {{s3_vsphere_cpi_bucket}}
-#      access_key_id:     {{s3_vsphere_cpi_blobwriter_access_key}}
-#      secret_access_key: {{s3_vsphere_cpi_blobwriter_secret_key}}
-#  - name: bosh-deployment
-#    type: git
-#    source:
-#      uri: https://github.com/cloudfoundry/bosh-deployment
-#      branch: master
-#  - name: certification
-#    type: git
-#    source:
-#      uri: https://github.com/cloudfoundry-incubator/bosh-cpi-certification
-#      branch: master
-#  - name: old-bosh-release
-#    type: s3
-#    source:
-#      bucket: bosh-cpi-certification-fixtures
-#      regexp: precompiled-bosh-(255.8)-on-ubuntu-3232.3.tgz
-#      region_name: us-east-1
-#  - name: old-stemcell
-#    type: s3
-#    source:
-#      bucket: bosh-cpi-certification-fixtures
-#      regexp: bosh-stemcell-(3232.3)-vsphere-esxi-ubuntu-trusty-go_agent.tgz
-#      region_name: us-east-1
-#  - name: bosh-cli
-#    type: s3
-#    source:
-#      regexp: bosh-cli-([0-9.]+)-linux-amd64
-#      bucket: bosh-cli-artifacts
-#      region_name: us-east-1
-#  - name: bats
-#    type: git
-#    source:
-#      uri: https://github.com/cloudfoundry/bosh-acceptance-tests.git
-#      branch: master
-#  - name: tracker-output
-#    type: tracker
-#    source:
-#      token: {{tracker_api_token}}
-#      project_id: {{tracker_project_id}}
-#      tracker_url: https://www.pivotaltracker.com
-#
-#groups:
-#
-#- name: Complete-View
-#  jobs:
-#  - unit-test
-#  - build-candidate
-#  - bats
-#  - lock-bats
-#  - unlock-bats
-#  - lock-6.5
-#  - lifecycle-6.5
-#  - unlock-6.5
-#  - lock-6.7
-#  - lifecycle-6.7
-#  - unlock-6.7
-#  - lifecycle-6.0
-#  - lock-6.0
-#  - unlock-6.0
-#  - promote-candidate
-#  - lock-6.5-NSXV
-#  - lifecycle-6.5-NSXV
-#  - unlock-6.5-NSXV
-#  - lifecycle-6.0-NSXV
-#  - lock-6.0-NSXV
-#  - unlock-6.0-NSXV
-#  - lifecycle-5.5
-#  - lock-5.5
-#  - unlock-5.5
-#
-#
-#- name: Delivery
-#  jobs:
-#  - lifecycle-6.5
-#  - lifecycle-6.0
-#  - lifecycle-5.5
-#  - lifecycle-6.7
-#  - lifecycle-6.5-NSXV
-#  - lifecycle-6.0-NSXV
-#  - bats
-#  - delivery
-#
-#- name: bats
-#  jobs:
-#  - unit-test
-#  - bats
-#  - lock-bats
-#  - unlock-bats
-#
-#
-#- name: v6.5
-#  jobs:
-#  - unit-test
-#  - lock-6.5
-#  - lifecycle-6.5
-#  - unlock-6.5
-#  - lock-6.5-NSXV
-#  - lifecycle-6.5-NSXV
-#  - unlock-6.5-NSXV
-#
-#- name: v6.0
-#  jobs:
-#  - unit-test
-#  - lifecycle-6.0
-#  - lock-6.0
-#  - unlock-6.0
-#  - lifecycle-6.0-NSXV
-#  - lock-6.0-NSXV
-#  - unlock-6.0-NSXV
-#
-#- name: v5.5
-#  jobs:
-#  - unit-test
-#  - lifecycle-5.5
-#  - lock-5.5
-#  - unlock-5.5
-#
-#- name: v6.7
-#  jobs:
-#  - unit-test
-#  - lifecycle-6.7
-#  - lock-6.7
-#  - unlock-6.7
