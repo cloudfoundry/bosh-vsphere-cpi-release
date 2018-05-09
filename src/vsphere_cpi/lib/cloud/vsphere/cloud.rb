@@ -66,6 +66,7 @@ module VSphereCloud
         client: @client,
         ephemeral_pattern: @config.datacenter_datastore_pattern,
         persistent_pattern: @config.datacenter_persistent_datastore_pattern,
+        datastore_fill_pattern: @config.datacenter_datastore_fill_pattern,
         use_sub_folder: @config.datacenter_use_sub_folder,
         vm_folder: @config.datacenter_vm_folder,
         template_folder: @config.datacenter_template_folder,
@@ -467,7 +468,7 @@ module VSphereCloud
         unless disk_is_accessible && disk_is_in_target_datastore
           datastore_picker = DatastorePicker.new
           datastore_picker.update(accessible_datastores)
-          datastore_name = datastore_picker.pick_datastore_for_single_disk(disk_config)
+          datastore_name = datastore_picker.pick_datastore_for_single_disk(disk_config, @datacenter.datastore_fill_pattern.to_s)
 
           destination_datastore = @datacenter.find_datastore(datastore_name)
           disk_to_attach = @datacenter.move_disk_to_datastore(disk_to_attach, destination_datastore)
@@ -507,7 +508,7 @@ module VSphereCloud
 
         disk_pool = DiskPool.new(@datacenter,  cloud_properties['datastores'])
         target_datastore_pattern = StoragePicker.choose_persistent_pattern(disk_pool, @logger)
-        datastore_name = StoragePicker.choose_persistent_storage(size_in_mb, target_datastore_pattern, accessible_datastores)
+        datastore_name = StoragePicker.choose_persistent_storage(size_in_mb, target_datastore_pattern, accessible_datastores, @datacenter.datastore_fill_pattern.to_s)
 
         if vm_cid
           #This is to take into account datastore which might be accessible from cluster defined in cloud config

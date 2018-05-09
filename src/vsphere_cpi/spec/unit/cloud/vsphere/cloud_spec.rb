@@ -1162,6 +1162,7 @@ module VSphereCloud
         end
 
         before do
+          allow(datacenter).to receive(:datastore_fill_pattern).and_return('')
           allow(vm).to receive(:accessible_datastore_names).and_return(['datastore-without-disk'])
         end
 
@@ -1188,6 +1189,7 @@ module VSphereCloud
 
         before do
           allow(datacenter).to receive(:persistent_pattern).and_return(/datastore\-without\-disk/)
+          allow(datacenter).to receive(:datastore_fill_pattern).and_return('')
           allow(vm).to receive(:accessible_datastore_names).and_return(['datastore-with-disk', 'datastore-without-disk'])
         end
 
@@ -1245,6 +1247,7 @@ module VSphereCloud
               'current-datastore' => current_datastore,
             )
           allow(vm).to receive(:accessible_datastore_names).and_return(['target-datastore', 'current-datastore'])
+          allow(datacenter).to receive(:datastore_fill_pattern).and_return('')
           expect(datacenter).to receive(:find_disk).with(director_disk_cid).and_return(disk)
           expect(VSphereCloud::DirectorDiskCID).to receive(:new).with(encoded_disk_cid).and_return(director_disk_cid)
         end
@@ -1523,6 +1526,8 @@ module VSphereCloud
       before do
         allow(datacenter).to receive(:persistent_pattern)
           .and_return('small-ds')
+        allow(datacenter).to receive(:datastore_fill_pattern)
+          .and_return('')
         allow(datacenter).to receive(:accessible_datastores)
           .and_return(accessible_datastores)
         allow(datacenter).to receive(:find_datastore)
