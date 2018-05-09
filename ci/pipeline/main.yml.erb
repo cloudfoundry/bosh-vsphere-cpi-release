@@ -45,10 +45,6 @@ jobs:
       - get: stemcell
     - task: integration-tests
       file: source-ci/ci/tasks/cpi-networking-integration-test.yml
-      params:
-        BOSH_VSPHERE_EDGE_CLUSTER_ID: d8b8ad76-53b0-45fb-b851-5eef27a33c72
-        BOSH_VSPHERE_T0_ROUTER_ID: b72c2fc1-3ec8-4337-baff-84085ebf69f7
-        BOSH_VSPHERE_TRANSPORT_ZONE_ID: 89f166b6-b15c-4a23-9861-3699a58ec9ad
       on_failure:
         put: v6.5-nsxt21-mikhail-ci
         params : {release: environment}

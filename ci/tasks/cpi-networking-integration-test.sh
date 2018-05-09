@@ -17,12 +17,6 @@ install_iso9660wrap() {
 
 install_iso9660wrap
 
-echo  "CHECK THAT FOLLOWING ENV VARIABLES ARE CORRECT:"
-echo "BOSH_VSPHERE_EDGE_CLUSTER_ID=${BOSH_VSPHERE_EDGE_CLUSTER_ID}"
-echo "BOSH_VSPHERE_T0_ROUTER_ID=${BOSH_VSPHERE_T0_ROUTER_ID}"
-echo "BOSH_VSPHERE_TRANSPORT_ZONE_ID=${BOSH_VSPHERE_TRANSPORT_ZONE_ID}"
-sleep 10
-
 stemcell_dir="$( cd stemcell && pwd )"
 export BOSH_VSPHERE_STEMCELL=${stemcell_dir}/stemcell.tgz
 export NSXT_SKIP_SSL_VERIFY=true
