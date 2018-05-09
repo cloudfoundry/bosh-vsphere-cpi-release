@@ -26,7 +26,7 @@ end
 
 $pipeline.pool('6.0-NSXV') do |pool|
   pool.params = {
-    RSPEC_FLAGS: ['--tag nsx_vsphere','--tag ~network_management'],
+    RSPEC_FLAGS: ['--tag nsx_vsphere','--tag ~network_management'].join(' '),
     NSXT_SKIP_SSL_VERIFY: "true"
   }
 end
@@ -47,7 +47,7 @@ $pipeline.pool('6.5-NSXV') do |pool|
   pool.params = {
     RSPEC_FLAGS: [
       '--tag nsx_vsphere',
-      '--tag ~network_management'],
+      '--tag ~network_management'].join(' '),
     NSXT_SKIP_SSL_VERIFY: "true"
   }
 end

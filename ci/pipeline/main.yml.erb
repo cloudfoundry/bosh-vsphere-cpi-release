@@ -15,6 +15,20 @@ jobs:
 <%= render('partition', pool: pool) %>
 <% end -%>
 
+  - name: release-and-publish
+    plan:
+    - aggregate:
+      - get: source-ci
+      - get: bosh-cpi-src
+        passed: [lifecycle-6.5-NSXT21]
+    - task: create-bosh-release
+      file: source-ci/ci/tasks/cpi-networking-release-and-publish.yml
+    - put: vsphere-cpi-networking-release
+      params:
+        file: bosh-vsphere-cpi-networking-release/bosh-vsphere-cpi-networking-release.tgz
+        acl: public-read
+
+
 resource_types:
   - name: slack-notification
     type: docker-image
@@ -71,13 +85,13 @@ resources:
       branch:       master
       pool:         v6.7
       private_key:  {{vcpi-pool_deployment_key}}
-#  - name: vsphere-cpi-networking-release
-#    type: s3
-#    source:
-#      versioned_file:    bosh-vsphere-cpi-networking.tgz
-#      bucket:            bosh-vsphere-cpi-networking-release
-#      access_key_id:     {{certification__bucket_access_key}}
-#      secret_access_key: {{certification__bucket_secret_key}}
+  - name: vsphere-cpi-networking-release
+    type: s3
+    source:
+      versioned_file:    bosh-vsphere-cpi-networking.tgz
+      bucket:            bosh-vsphere-cpi-networking-release
+      access_key_id:     {{certification__bucket_access_key}}
+      secret_access_key: {{certification__bucket_secret_key}}
   - name: source-ci
     type: git
     source:
@@ -123,6 +137,7 @@ groups:
   - lifecycle-5.5
   - lock-5.5
   - unlock-5.5
+  - release-and-publish
 
 
 - name: Delivery
