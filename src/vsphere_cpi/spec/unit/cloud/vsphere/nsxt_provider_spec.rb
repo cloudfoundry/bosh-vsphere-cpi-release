@@ -514,11 +514,17 @@ describe VSphereCloud::NSXTProvider do
         nsxt_provider.add_vm_to_server_pools(vm, server_pools)
       end
     end
-    context "when vm's primary ip is missing" do
+    context "when vm's primary ip is missing it retries 50 times" do
+      let(:retryable) { Bosh::Retryable.new(tries: 1, sleep: 1)}
+
       before do
         allow(vm).to receive_message_chain(:mob, :guest, :ip_address).and_return(nil)
       end
-      it "raises an error" do
+      xit "and raises an error" do
+        allow(Bosh::Retryable)
+          .to receive(:new)
+                .with(hash_including(tries: 50))
+                .and_return(retryable)
         expect do
           nsxt_provider.add_vm_to_server_pools(vm, server_pools)
         end.to raise_error(VSphereCloud::VirtualMachineIpNotFound)
