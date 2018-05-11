@@ -1715,7 +1715,7 @@ module VSphereCloud
       end
     end
 
-    describe 'create_subnet' do
+    describe '#create_subnet' do
       let(:subnet_definition) { {
                                  'range' => '192.168.111.0/24',
                                  'gateway' => '192.168.111.1',
@@ -1739,6 +1739,7 @@ module VSphereCloud
       before do
         allow(VSphereCloud::NSXTProvider).to receive(:new)
           .with(any_args).and_return(nsxt_provider)
+        allow(logger).to receive(:error)
       end
 
       context 'when nsxt disabled' do
@@ -1838,6 +1839,55 @@ module VSphereCloud
           subnet['cloud_properties']['transport_zone_id'] = nil
           expect { vsphere_cloud.create_subnet(subnet) }
               .to raise_error(/transport_zone_id cloud property can not be empty/)
+        end
+      end
+
+      context 'when failed to enable_route_advertisement' do
+        it 'deletes created router' do
+          expect(nsxt_provider).to receive(:create_t1_router)
+            .with('cluster_id','router-name').and_return(t1_router)
+          expect(nsxt_provider).to receive(:enable_route_advertisement)
+            .with('t1-router-id').and_raise('Some nsxt error')
+          expect(nsxt_provider).to receive(:delete_t1_router)
+            .with('t1-router-id')
+          expect { vsphere_cloud.create_subnet(subnet_definition) }
+            .to raise_error(/Failed to create subnet/)
+        end
+      end
+
+      context 'when failed to attach_t1_to_t0' do
+        it 'deletes created router' do
+          expect(nsxt_provider).to receive(:create_t1_router)
+            .with('cluster_id','router-name').and_return(t1_router)
+          expect(nsxt_provider).to receive(:enable_route_advertisement)
+            .with('t1-router-id')
+          expect(nsxt_provider).to receive(:attach_t1_to_t0)
+            .with('t0-router-id', 't1-router-id').and_raise('Some nsxt error')
+          expect(nsxt_provider).to receive(:delete_t1_router)
+            .with('t1-router-id')
+          expect { vsphere_cloud.create_subnet(subnet_definition) }
+            .to raise_error(/Failed to create subnet/)
+        end
+      end
+      context 'when failed to attach_switch_to_t1' do
+        it 'deletes created router and switch' do
+          expect(nsxt_provider).to receive(:create_t1_router)
+            .with('cluster_id','router-name').and_return(t1_router)
+          expect(nsxt_provider).to receive(:enable_route_advertisement)
+            .with('t1-router-id')
+          expect(nsxt_provider).to receive(:attach_t1_to_t0)
+            .with('t0-router-id', 't1-router-id')
+          expect(nsxt_provider).to receive(:create_logical_switch)
+           .with('zone-id', 'switch-name').and_return(logical_switch)
+          expect(nsxt_provider).to receive(:attach_switch_to_t1)
+           .and_raise('Some nsxt error')
+
+          expect(nsxt_provider).to receive(:delete_t1_router)
+            .with('t1-router-id')
+          expect(nsxt_provider).to receive(:delete_logical_switch)
+           .with('switch-id')
+          expect { vsphere_cloud.create_subnet(subnet_definition) }
+            .to raise_error(/Failed to create subnet/)
         end
       end
     end
