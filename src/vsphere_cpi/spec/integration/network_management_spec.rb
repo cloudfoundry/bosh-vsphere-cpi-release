@@ -80,6 +80,68 @@ describe 'network management', :network_management => true  do
       expect(t1_router).not_to be_nil
       @t1_router_id = t1_router.id
     end
+
+    context 'when failed to create a switch' do
+      let(:subnet_definition) {
+        {
+            'range' => '192.168.99.0/24',
+            'gateway' => '192.168.99.1',
+            'cloud_properties' => {
+                'edge_cluster_id' => @edge_cluster_id,
+                't0_router_id' => @t0_router_id,
+                'transport_zone_id' => 'WRONG_ZONE',
+
+                't1_name' => 't1-test-router',
+                'switch_name' => 'bosh-test-switch'
+            }
+        }
+      }
+
+      it 'cleans up router' do
+        expect {
+          @cloud.create_subnet(subnet_definition)
+        }.to raise_error(/Failed to create subnet. Has router been created: true. Has switch been created: false/)
+
+        fail_if_router_exist('t1-test-router')
+      end
+    end
+
+    context 'when failed to attach switch to t1 router' do
+      let(:subnet_definition) {
+        {
+            'range' => '192.168.200.0/32',
+            'gateway' => '192.168.200.1',
+            'cloud_properties' => {
+                'edge_cluster_id' => @edge_cluster_id,
+                't0_router_id' => @t0_router_id,
+                'transport_zone_id' => @transport_zone_id,
+
+                't1_name' => 't1-test-router',
+                'switch_name' => 'bosh-test-switch'
+            }
+        }
+      }
+      before do
+        @t1_router2 = create_t1_router('t1-test-router-2')
+        @test_switch2 = create_switch('test-switch-2')
+        #attach switch with subnet 192.168.200.1
+        attach_switch_to_t1(@test_switch2.id, @t1_router2.id)
+      end
+
+      after do
+        router_api.delete_logical_router(@t1_router2.id, {:force => true})
+        switch_api.delete_logical_switch(@test_switch2.id, {:cascade => true, :detach => true})
+      end
+
+      it 'cleans up router and switch' do
+        expect {
+          @cloud.create_subnet(subnet_definition)
+        }.to raise_error(/Failed to create subnet. Has router been created: true. Has switch been created: true/)
+
+        fail_if_router_exist('t1-test-router')
+        fail_if_switch_exist('bosh-test-switch')
+      end
+    end
   end
 
   context 'when delete_subnet command is issued' do
@@ -120,7 +182,7 @@ describe 'network management', :network_management => true  do
 
         @t1_router_id = get_attached_router_id(@switch_id)
 
-        extra_switch = create_switch
+        extra_switch = create_switch('extra-switch')
         @extra_switch_id = extra_switch.id
         attach_switch_to_t1(@extra_switch_id, @t1_router_id)
 
@@ -146,13 +208,19 @@ describe 'network management', :network_management => true  do
     switch_ports.results.first.logical_router_id
   end
 
-  def create_switch
+  def create_switch(switch_name)
     switch = NSXT::LogicalSwitch.new({
        :admin_state => 'UP',
        :transport_zone_id => @transport_zone_id,
        :replication_mode => 'MTEP',
-       :display_name => 'extra_switch' })
-    switch_api.create_logical_switch(switch)
+       :display_name => switch_name })
+      switch_api.create_logical_switch(switch)
+  end
+
+  def create_t1_router(router_name)
+    router_api.create_logical_router({ :edge_cluster_id => @edge_cluster_id,
+                                       :router_type => 'TIER1',
+                                       :display_name => router_name})
   end
 
   def attach_switch_to_t1(switch_id, t1_router_id)
@@ -171,5 +239,22 @@ describe 'network management', :network_management => true  do
                                                              :resource_type => 'LogicalRouterDownLinkPort',
                                                              :subnets => [subnet]})
       router_api.create_logical_router_port(t1_router_port)
+  end
+
+  def list_logical_t1_routers
+    router_api.list_logical_routers({:router_type => 'TIER1'}).results
+  end
+
+  def fail_if_router_exist(router_name)
+    list_logical_t1_routers.each do |router|
+      if router.display_name == router_name
+        fail("Found router #{router_name} created by test and not cleaned up by CPI. Was it there before the test?")
+      end
     end
+  end
+
+  def fail_if_switch_exist(switch_name)
+    found = logical_switches(switch_name)
+    fail("Found switch #{switch_name} was created by test and not cleaned up by CPI.  Was it there before the test?") if found.any?
+  end
 end

@@ -680,11 +680,23 @@ module VSphereCloud
       raise 'transport_zone_id cloud property can not be empty' if cloud_properties['transport_zone_id'].nil?
       subnet = create_subnet_obj(subnet_definition['range'], subnet_definition['gateway'])
 
-      t1_router = @nsxt_provider.create_t1_router(cloud_properties['edge_cluster_id'], cloud_properties['t1_name'])
-      @nsxt_provider.enable_route_advertisement(t1_router.id)
-      @nsxt_provider.attach_t1_to_t0(cloud_properties['t0_router_id'], t1_router.id)
-      switch = @nsxt_provider.create_logical_switch(cloud_properties['transport_zone_id'], cloud_properties['switch_name'])
-      @nsxt_provider.attach_switch_to_t1(switch.id, t1_router.id, subnet)
+      t1_router_id = nil
+      switch_id = nil
+      begin
+        t1_router = @nsxt_provider.create_t1_router(cloud_properties['edge_cluster_id'], cloud_properties['t1_name'])
+        t1_router_id = t1_router.id
+        @nsxt_provider.enable_route_advertisement(t1_router_id)
+        @nsxt_provider.attach_t1_to_t0(cloud_properties['t0_router_id'], t1_router_id)
+        switch = @nsxt_provider.create_logical_switch(cloud_properties['transport_zone_id'], cloud_properties['switch_name'])
+        switch_id = switch.id
+        @nsxt_provider.attach_switch_to_t1(switch_id, t1_router_id, subnet)
+      rescue Exception => e
+        @logger.error('Failed to create subnet. Trying to clean up')
+        @nsxt_provider.delete_t1_router(t1_router_id) unless t1_router_id.nil?
+        @nsxt_provider.delete_logical_switch(switch_id) unless switch_id.nil?
+
+        raise "Failed to create subnet. Has router been created: #{!t1_router_id.nil?}. Has switch been created: #{!switch_id.nil?}. Exception: #{e}"
+      end
       {:network_cid => switch.id, :cloud_properties => {:name => switch.display_name } }
     end
 
