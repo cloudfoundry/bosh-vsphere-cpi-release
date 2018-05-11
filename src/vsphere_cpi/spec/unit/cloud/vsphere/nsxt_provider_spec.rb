@@ -644,12 +644,6 @@ describe VSphereCloud::NSXTProvider, fake_logger: true do
       end
     end
 
-    context 'when edge_cluster_id is nil' do
-      it 'throws an error' do
-        expect { nsxt_provider.create_t1_router(nil) }.to raise_error(/edge_cluster_id param can not be nil/)
-      end
-    end
-
     context 'when api call is failing' do
       it 'propogates an error' do
         expect(router_api).to receive(:create_logical_router)
@@ -770,21 +764,6 @@ describe VSphereCloud::NSXTProvider, fake_logger: true do
         }
       end
     end
-
-    context 'when T0 id is nil' do
-      it 'raises an error' do
-        expect {
-          nsxt_provider.attach_t1_to_t0(nil, 't1_router_id')
-        }.to raise_error /T0 router id can not be nil/
-      end
-    end
-    context 'when T1 id is nil' do
-      it 'raises an error' do
-        expect {
-          nsxt_provider.attach_t1_to_t0('t0_router_id', nil)
-        }.to raise_error /T1 router id can not be nil/
-      end
-    end
   end
 
   describe '#create_logical_switch' do
@@ -806,12 +785,7 @@ describe VSphereCloud::NSXTProvider, fake_logger: true do
         nsxt_provider.create_logical_switch('zone_id', 'Switch name')
       end
     end
-    context 'when transport zone id is nil' do
-      it 'raises an error' do
-        expect { nsxt_provider.create_logical_switch(nil, 'name') }
-            .to raise_error(/Transport zone id can not be nil/)
-      end
-    end
+
     context 'when switch name is empty' do
       it 'Does not fail' do
         expect(NSXT::LogicalSwitch).to receive(:new)
@@ -891,30 +865,6 @@ describe VSphereCloud::NSXTProvider, fake_logger: true do
           expect(error.to_s).to match(/switch-id/)
           expect(error.to_s).to match(/t1-router-id/)
         }
-      end
-    end
-
-    context 'when switch id is empty' do
-      it 'raises an error' do
-        expect {
-          nsxt_provider.attach_switch_to_t1(nil, 't1-router-id', subnet)
-        }.to raise_error(/Switch id can not be nil/)
-      end
-    end
-
-    context 'when t1 router id is empty' do
-      it 'raises an error' do
-        expect {
-          nsxt_provider.attach_switch_to_t1('switch-id', nil, subnet)
-        }.to raise_error(/Router id can not be nil/)
-      end
-    end
-
-    context 'when subnet is null' do
-      it 'raises an error' do
-        expect {
-          nsxt_provider.attach_switch_to_t1('switch-id', 't1-router-id', nil)
-        }.to raise_error(/Subnet can not be nil/)
       end
     end
   end
