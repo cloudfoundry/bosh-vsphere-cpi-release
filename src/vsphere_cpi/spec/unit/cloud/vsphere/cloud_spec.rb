@@ -1813,6 +1813,33 @@ module VSphereCloud
               .to raise_error('cloud_properties must be provided')
         end
       end
+
+      context 'when edge_cluster_id is empty' do
+        it 'raises an error' do
+          subnet = subnet_definition
+          subnet['cloud_properties']['edge_cluster_id'] = nil
+          expect { vsphere_cloud.create_subnet(subnet) }
+              .to raise_error(/edge_cluster_id cloud property can not be empty/)
+        end
+      end
+
+      context 'when T0 id is empty' do
+        it 'raises an error' do
+          subnet = subnet_definition
+          subnet['cloud_properties']['t0_router_id'] = nil
+          expect { vsphere_cloud.create_subnet(subnet) }
+              .to raise_error(/t0_router_id cloud property can not be empty/)
+        end
+      end
+
+      context 'when transport zone id is empty' do
+        it 'raises an error' do
+          subnet = subnet_definition
+          subnet['cloud_properties']['transport_zone_id'] = nil
+          expect { vsphere_cloud.create_subnet(subnet) }
+              .to raise_error(/transport_zone_id cloud property can not be empty/)
+        end
+      end
     end
 
     describe '#create_subnet_obj' do

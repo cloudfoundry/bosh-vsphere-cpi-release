@@ -667,6 +667,9 @@ module VSphereCloud
       raise 'NSXT must be enabled in CPI to use create_subnet' if !@config.nsxt_enabled?
       cloud_properties = subnet_definition['cloud_properties']
       raise 'cloud_properties must be provided' if cloud_properties.nil?
+      raise 'edge_cluster_id cloud property can not be empty' if cloud_properties['edge_cluster_id'].nil?
+      raise 't0_router_id cloud property can not be empty' if cloud_properties['t0_router_id'].nil?
+      raise 'transport_zone_id cloud property can not be empty' if cloud_properties['transport_zone_id'].nil?
       subnet = create_subnet_obj(subnet_definition['range'], subnet_definition['gateway'])
 
       t1_router = @nsxt_provider.create_t1_router(cloud_properties['edge_cluster_id'], cloud_properties['t1_name'])
