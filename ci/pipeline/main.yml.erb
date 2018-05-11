@@ -128,6 +128,7 @@ jobs:
     plan:
     - aggregate:
       - get: bosh-cpi-src
+        trigger: ((trigger_delivery_job))
         passed:
         - lifecycle-5.5
         - lifecycle-6.0
