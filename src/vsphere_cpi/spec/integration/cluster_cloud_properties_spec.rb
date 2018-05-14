@@ -101,7 +101,7 @@ describe 'cloud_properties related to clusters' do
       cpi = VSphereCloud::Cloud.new(options)
       # @cluster_more_memory should have more memory than @cluster_less_memory and
       # both clusters need to have the specified @shared_datastore
-      verify_cluster_free_space(cpi, @cluster_more_datastore_free_space, @cluster_less_datastore_free_space)
+      verify_cluster_free_space_balanced_score(cpi, @cluster_more_datastore_free_space, @cluster_less_datastore_free_space)
     end
 
     let(:vm_type) do
