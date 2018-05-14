@@ -255,6 +255,6 @@ describe 'network management', :network_management => true, :order => :defined  
 
   def fail_if_switch_exist(switch_name)
     found = logical_switches(switch_name)
-    fail("Found switch #{switch_name} was created by test and not cleaned up by CPI.  Was it there before the test?") if !found.nil?
+    fail("Found switch #{switch_name} was created by test and not cleaned up by CPI.  Was it there before the test?") if found.any?
   end
 end
