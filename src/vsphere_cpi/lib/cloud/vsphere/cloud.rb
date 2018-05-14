@@ -687,7 +687,7 @@ module VSphereCloud
         @nsxt_provider.delete_t1_router(t1_router_id) unless t1_router_id.nil?
         @nsxt_provider.delete_logical_switch(switch_id) unless switch_id.nil?
 
-        raise "Failed to create subnet. Exception: #{e}"
+        raise "Failed to create subnet. Has router been created: #{!t1_router_id.nil?}. Has switch been created: #{!switch_id.nil?}. Exception: #{e}"
       end
       {:network_cid => switch.id, :cloud_properties => {:name => switch.display_name } }
     end
