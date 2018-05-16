@@ -28,12 +28,12 @@ module VSphereCloud
       end
     end
 
-    def choose_persistent_storage(size_in_mb, target_datastore_pattern, available_datastores)
+    def choose_persistent_storage(size_in_mb, target_datastore_pattern, available_datastores, datastore_fill_pattern = "")
       disk_config = DiskConfig.new(size: size_in_mb, target_datastore_pattern: target_datastore_pattern)
 
       datastore_picker = DatastorePicker.new
       datastore_picker.update(available_datastores)
-      datastore_name = datastore_picker.pick_datastore_for_single_disk(disk_config)
+      datastore_name = datastore_picker.pick_datastore_for_single_disk(disk_config, datastore_fill_pattern)
       datastore_name
     end
 

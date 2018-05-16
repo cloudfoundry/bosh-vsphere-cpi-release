@@ -18,12 +18,13 @@ module VSphereCloud
         @disk_path = attrs.fetch(:disk_path)
         @ephemeral_pattern = attrs.fetch(:ephemeral_pattern)
         @persistent_pattern = attrs.fetch(:persistent_pattern)
+        @datastore_fill_pattern = attrs.fetch(:datastore_fill_pattern)
         @clusters = attrs.fetch(:clusters)
         @cluster_provider = attrs.fetch(:cluster_provider)
         @logger = attrs.fetch(:logger)
       end
 
-      attr_reader :name, :disk_path, :ephemeral_pattern, :persistent_pattern, :client
+      attr_reader :name, :disk_path, :ephemeral_pattern, :persistent_pattern, :datastore_fill_pattern, :client
 
       def mob
         mob = @client.find_by_inventory_path(name)

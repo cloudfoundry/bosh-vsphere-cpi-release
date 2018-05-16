@@ -18,7 +18,7 @@ module VSphereCloud
     # This means the largest datastores have the highest chance of being first, but adds a bit of randomization.
     # After the sort, disks are placed into the first datastore that has enough space for that disk.
     #
-    def best_disk_placement(disks)
+    def best_disk_placement(disks, datastore_fill_pattern = "")
       datastores = {}
       placement = { datastores: datastores, migration_size: 0, balance_score: 0 }
 
@@ -44,12 +44,14 @@ module VSphereCloud
 
         if existing_ds_name =~ Regexp.new(disk.target_datastore_pattern) && datastores.keys.include?(existing_ds_name)
           datastores[existing_ds_name][:disks].push(disk)
+          break if datastore_fill_pattern != "" && datastore_fill_pattern != "none"
           next
         end
 
         migration_size_accounted_for = false
 
         weighted_datastores = weighted_random_sort(datastores)
+        weighted_datastores.reverse! if datastore_fill_pattern == "most"
         weighted_datastores.each do |ds|
           additional_required_space = disk.size + @headroom
 
@@ -64,6 +66,8 @@ module VSphereCloud
             placement[:migration_size] += additional_required_space
             migration_size_accounted_for = true
           end
+
+          break if datastore_fill_pattern != "" && datastore_fill_pattern != "none"
         end
 
       end
@@ -92,8 +96,8 @@ module VSphereCloud
       placements
     end
 
-    def pick_datastore_for_single_disk(disk)
-      placement = best_disk_placement([disk])
+    def pick_datastore_for_single_disk(disk, datastore_fill_pattern = "")
+      placement = best_disk_placement([disk], datastore_fill_pattern)
       # Filter out placements where the datastore has no active hosts
       # (host under maintenance) or if there are any active host,
       # they belong to a different cluster

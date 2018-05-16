@@ -147,6 +147,10 @@ module VSphereCloud
       vcenter_datacenter['persistent_datastore_pattern']
     end
 
+    def datacenter_datastore_fill_pattern
+      vcenter_datacenter['datastore_fill_pattern']
+    end
+
     def datacenter_clusters
       @cluster_objs ||= cluster_objs
     end
@@ -225,6 +229,7 @@ module VSphereCloud
               'disk_path' => String,
               'datastore_pattern' => String,
               'persistent_datastore_pattern' => String,
+              optional('datastore_fill_pattern') => String,
               optional('allow_mixed_datastores') => bool,
               'clusters' => [enum(String, dict(String, {optional('resource_pool') => String})
               )]

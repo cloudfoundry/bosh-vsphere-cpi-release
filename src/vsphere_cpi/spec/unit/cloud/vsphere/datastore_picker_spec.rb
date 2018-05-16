@@ -147,6 +147,84 @@ module VSphereCloud
           })
         end
 
+        it 'evaluates all datastores by default' do
+          picker.update(available_datastores)
+
+          disks = [disk1, disk2]
+          expect(picker.best_disk_placement(disks)[:datastores].size).to eq(2)
+        end
+
+
+        context 'when datastore_fill_pattern is set to "least"' do
+          let(:ds_1) { instance_double(VSphereCloud::Resources::Datastore, free_space: 2048, mob: ds_1_mob) }
+          let(:ds_2) { instance_double(VSphereCloud::Resources::Datastore, free_space: 4096, mob: ds_1_mob) }
+          let(:available_datastores) do
+           {
+             'ds-1' => ds_1,
+             'ds-2' => ds_2
+           }
+          end
+          let(:disk) do
+            instance_double(VSphereCloud::DiskConfig,
+              size: 512,
+              target_datastore_pattern: '.*',
+              existing_datastore_name: nil
+            )
+          end
+
+          it 'only picks the emptiest datastore' do
+            picker = DatastorePicker.new
+            picker.update(available_datastores)
+
+            expect(picker.best_disk_placement([disk], "least")[:datastores]).to eq(
+              {
+                'ds-2' => {
+                  free_space: 2560,
+                  disks: [disk],
+                  mob: ds_1_mob
+                }
+              }
+            )
+            expect(picker.best_disk_placement([disk], "least")[:datastores].size).to eq(1)
+          end
+        end
+
+        context 'when datastore_fill_pattern is set to "most"' do
+          let(:ds_1) { instance_double(VSphereCloud::Resources::Datastore, free_space: 1536, mob: ds_1_mob) }
+          let(:ds_2) { instance_double(VSphereCloud::Resources::Datastore, free_space: 2048, mob: ds_1_mob) }
+          let(:ds_3) { instance_double(VSphereCloud::Resources::Datastore, free_space: 4096, mob: ds_1_mob) }
+          let(:available_datastores) do
+           {
+             'ds-1' => ds_1,
+             'ds-2' => ds_2,
+             'ds-3' => ds_3,
+           }
+          end
+          let(:disk) do
+            instance_double(VSphereCloud::DiskConfig,
+              size: 512,
+              target_datastore_pattern: '.*',
+              existing_datastore_name: nil
+            )
+          end
+
+          it 'only picks the fullest datastore' do
+            picker = DatastorePicker.new
+            picker.update(available_datastores)
+
+            expect(picker.best_disk_placement([disk], "most")[:datastores]).to eq(
+              {
+                'ds-1' => {
+                  free_space: 0,
+                  disks: [disk],
+                  mob: ds_1_mob
+                }
+              }
+            )
+            expect(picker.best_disk_placement([disk], "most")[:datastores].size).to eq(1)
+          end
+        end
+
         context 'when headroom is not specified' do
           let(:ds_1) { instance_double(VSphereCloud::Resources::Datastore, free_space: 1536, mob: ds_1_mob) }
           let(:ds_2) { instance_double(VSphereCloud::Resources::Datastore, free_space: 2048, mob: ds_1_mob) }
@@ -267,6 +345,40 @@ module VSphereCloud
                 mob: ds_1_mob
               },
             })
+          end
+        end
+
+        context 'when given existing_datastore_name and datastore_fill_pattern is set' do
+          let(:ds_1) { instance_double(VSphereCloud::Resources::Datastore, free_space: 1536, mob: ds_1_mob) }
+          let(:ds_2) { instance_double(VSphereCloud::Resources::Datastore, free_space: 2048, mob: ds_1_mob) }
+          let(:available_datastores) do
+           {
+             'ds-1' => ds_1,
+             'ds-2' => ds_2,
+           }
+          end
+          let(:disk) do
+            instance_double(VSphereCloud::DiskConfig,
+              size: 512,
+              existing_datastore_name: 'ds-1',
+              target_datastore_pattern: '.*',
+            )
+          end
+
+          it 'keeps the disk in its existing datastore' do
+            picker = DatastorePicker.new(0)
+            picker.update(available_datastores)
+
+            expect(picker.best_disk_placement([disk], "most")[:datastores]).to eq(
+              {
+                'ds-1' => {
+                  free_space: 1536,
+                  disks: [disk],
+                  mob: ds_1_mob
+                }
+              }
+            )
+            expect(picker.best_disk_placement([disk], "most")[:datastores].size).to eq(1)
           end
         end
 
@@ -482,7 +594,7 @@ module VSphereCloud
           existing_datastore_name: nil
         )
       end
-    
+
       it 'calculates the same balance score for both clusters' do
         picker = DatastorePicker.new(0)
         picker.update(available_datastores_cluster1)
