@@ -289,7 +289,6 @@ module VSphereCloud
     end
 
     def create_t1_router(edge_cluster_id, name = nil)
-      name = SecureRandom.base64(8) if name.nil?
       router_api.create_logical_router({ edge_cluster_id: edge_cluster_id,
                                          router_type: 'TIER1',
                                          display_name: name})

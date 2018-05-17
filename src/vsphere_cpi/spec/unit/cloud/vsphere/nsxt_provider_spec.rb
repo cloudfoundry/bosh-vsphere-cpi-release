@@ -630,14 +630,11 @@ describe VSphereCloud::NSXTProvider do
     context 'when display_name is empty' do
       let(:router_name) { nil }
       let(:random_name) { 'very random' }
-      before do
-        allow(SecureRandom).to receive(:base64).with(8).and_return(random_name)
-      end
       it 'randomly generates name' do
         expect(router_api).to receive(:create_logical_router)
           .with( { :edge_cluster_id => 'c9c4d0b1-47f7-4975-bdfa-ba7bdfecea28',
                    :router_type => 'TIER1',
-                   :display_name => random_name } )
+                   :display_name => nil } )
           .and_return(t1_router)
         result = nsxt_provider.create_t1_router('c9c4d0b1-47f7-4975-bdfa-ba7bdfecea28', router_name)
         expect(result).not_to be_nil
