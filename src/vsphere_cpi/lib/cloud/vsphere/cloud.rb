@@ -665,31 +665,9 @@ module VSphereCloud
     #creates T1 router and virtual switch attached to it
     def create_subnet(subnet_definition)
       raise 'NSXT must be enabled in CPI to use create_subnet' if !@config.nsxt_enabled?
-      cloud_properties = subnet_definition['cloud_properties']
-      raise 'cloud_properties must be provided' if cloud_properties.nil?
-      raise 'edge_cluster_id cloud property can not be empty' if cloud_properties['edge_cluster_id'].nil?
-      raise 't0_router_id cloud property can not be empty' if cloud_properties['t0_router_id'].nil?
-      raise 'transport_zone_id cloud property can not be empty' if cloud_properties['transport_zone_id'].nil?
-      subnet = create_subnet_obj(subnet_definition['range'], subnet_definition['gateway'])
-
-      t1_router_id = nil
-      switch_id = nil
-      begin
-        t1_router = @nsxt_provider.create_t1_router(cloud_properties['edge_cluster_id'], cloud_properties['t1_name'])
-        t1_router_id = t1_router.id
-        @nsxt_provider.enable_route_advertisement(t1_router_id)
-        @nsxt_provider.attach_t1_to_t0(cloud_properties['t0_router_id'], t1_router_id)
-        switch = @nsxt_provider.create_logical_switch(cloud_properties['transport_zone_id'], cloud_properties['switch_name'])
-        switch_id = switch.id
-        @nsxt_provider.attach_switch_to_t1(switch_id, t1_router_id, subnet)
-      rescue Exception => e
-        @logger.error('Failed to create subnet. Trying to clean up')
-        @nsxt_provider.delete_t1_router(t1_router_id) unless t1_router_id.nil?
-        @nsxt_provider.delete_logical_switch(switch_id) unless switch_id.nil?
-
-        raise "Failed to create subnet. Has router been created: #{!t1_router_id.nil?}. Has switch been created: #{!switch_id.nil?}. Exception: #{e}"
-      end
-      {:network_cid => switch.id, :cloud_properties => {:name => switch.display_name } }
+      subnet = Subnet.build(@nsxt_provider, subnet_definition, @logger)
+      switch = subnet.create_infrastructure
+      {network_cid: switch.id, cloud_properties: {name: switch.display_name } }
     end
 
     def delete_subnet(switch_id)
@@ -810,17 +788,6 @@ module VSphereCloud
         target_datastore_pattern: ephemeral_pattern
       )
       disk_configurations.push(ephemeral_disk_config)
-    end
-
-    #This subnet will be used in create_logical_router_port.
-    # ip_addresses is going to be a gateway IP for subnet - aka IP for router.
-    def create_subnet_obj(range, gateway)
-      if (!range.nil? && range.include?('/'))
-        _, mask = range.split("/")
-        return NSXT::IPSubnet.new({:ip_addresses => [gateway],
-                                   :prefix_length => mask.to_i})
-      end
-      raise 'Incorrect subnet definition. Proper CIDR block must be given'
     end
   end
 end

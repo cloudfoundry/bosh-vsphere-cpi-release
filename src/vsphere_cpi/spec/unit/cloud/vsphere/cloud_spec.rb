@@ -1735,7 +1735,8 @@ module VSphereCloud
       let(:t1_router) { instance_double(NSXT::LogicalRouter,
                           id: 't1-router-id',
                           display_name: 'router-name' ) }
-      let(:subnet) { instance_double(NSXT::IPSubnet) }
+      let(:subnet) { instance_double(VSphereCloud::Subnet) }
+
       before do
         allow(VSphereCloud::NSXTProvider).to receive(:new)
           .with(any_args).and_return(nsxt_provider)
@@ -1752,168 +1753,19 @@ module VSphereCloud
         end
       end
 
-      it 'creates T1 router and attaches it to T0, creates logical switch and attaches it to T1' do
-        expect(nsxt_provider).to receive(:create_t1_router)
-          .with('cluster_id', 'router-name').and_return(t1_router)
-        expect(nsxt_provider).to receive(:enable_route_advertisement)
-          .with('t1-router-id')
-        expect(nsxt_provider).to receive(:attach_t1_to_t0)
-          .with('t0-router-id', 't1-router-id')
-        expect(nsxt_provider).to receive(:create_logical_switch)
-          .with('zone-id', 'switch-name').and_return(logical_switch)
-        expect(vsphere_cloud).to receive(:create_subnet_obj)
-          .with( '192.168.111.0/24', '192.168.111.1').and_return(subnet)
-        expect(nsxt_provider).to receive(:attach_switch_to_t1)
-          .with('switch-id', 't1-router-id', subnet)
-        result = vsphere_cloud.create_subnet(subnet_definition)
-        expect(result).to eq( { :network_cid => 'switch-id',
-                                :cloud_properties => {:name => 'switch-name'}})
-      end
-
-      context 'when optional params are not provided' do
-        let(:subnet_definition) { {
-            'range' => '192.168.111.0/24',
-            'gateway' => '192.168.111.1',
-            'cloud_properties' => {
-                'edge_cluster_id' => 'cluster_id',
-                't0_router_id' => 't0-router-id',
-                'transport_zone_id' => 'zone-id',
-            } } }
-        let(:logical_switch) { instance_double(NSXT::LogicalSwitch,
-                                               :id => 'switch-id',
-                                               :display_name => 'switch-id') }
-        let(:t1_router) { instance_double(NSXT::LogicalRouter,
-                                          id: 't1-router-id',
-                                          display_name: 't1-router-id' ) }
-        it 'creates T1 router and attaches it to T0, creates logical switch and attaches it to T1' do
-          expect(nsxt_provider).to receive(:create_t1_router)
-                                       .with('cluster_id', nil).and_return(t1_router)
-          expect(nsxt_provider).to receive(:enable_route_advertisement)
-                                       .with('t1-router-id')
-          expect(nsxt_provider).to receive(:attach_t1_to_t0)
-                                       .with('t0-router-id', 't1-router-id')
-          expect(nsxt_provider).to receive(:create_logical_switch)
-                                       .with('zone-id', nil).and_return(logical_switch)
-          expect(vsphere_cloud).to receive(:create_subnet_obj)
-                                       .with( '192.168.111.0/24', '192.168.111.1').and_return(subnet)
-          expect(nsxt_provider).to receive(:attach_switch_to_t1)
-                                       .with('switch-id', 't1-router-id', subnet)
-
+      context 'when nsxt enabled' do
+        it 'creates a subnet' do
+          expect(VSphereCloud::Subnet).to receive(:build)
+            .and_return(subnet)
+          expect(subnet).to receive(:create_infrastructure)
+            .and_return(logical_switch)
           result = vsphere_cloud.create_subnet(subnet_definition)
-          expect(result).to eq( { :network_cid => 'switch-id',
-                                  :cloud_properties => {:name => 'switch-id'}})
+          expect(result).to eq( { network_cid: 'switch-id',
+                                  cloud_properties: {name: 'switch-name'}})
         end
       end
 
-      context 'when cloud properties are empty' do
-        let(:subnet_definition) { {
-            'range' => '192.168.111.111/33',
-            'gateway' => '192.168.111.1' } }
-        it 'raises an error' do
-          expect { vsphere_cloud.create_subnet(subnet_definition) }
-              .to raise_error('cloud_properties must be provided')
-        end
-      end
-
-      context 'when edge_cluster_id is empty' do
-        it 'raises an error' do
-          subnet = subnet_definition
-          subnet['cloud_properties']['edge_cluster_id'] = nil
-          expect { vsphere_cloud.create_subnet(subnet) }
-              .to raise_error(/edge_cluster_id cloud property can not be empty/)
-        end
-      end
-
-      context 'when T0 id is empty' do
-        it 'raises an error' do
-          subnet = subnet_definition
-          subnet['cloud_properties']['t0_router_id'] = nil
-          expect { vsphere_cloud.create_subnet(subnet) }
-              .to raise_error(/t0_router_id cloud property can not be empty/)
-        end
-      end
-
-      context 'when transport zone id is empty' do
-        it 'raises an error' do
-          subnet = subnet_definition
-          subnet['cloud_properties']['transport_zone_id'] = nil
-          expect { vsphere_cloud.create_subnet(subnet) }
-              .to raise_error(/transport_zone_id cloud property can not be empty/)
-        end
-      end
-
-      context 'when failed to enable_route_advertisement' do
-        it 'deletes created router' do
-          expect(nsxt_provider).to receive(:create_t1_router)
-            .with('cluster_id','router-name').and_return(t1_router)
-          expect(nsxt_provider).to receive(:enable_route_advertisement)
-            .with('t1-router-id').and_raise('Some nsxt error')
-          expect(nsxt_provider).to receive(:delete_t1_router)
-            .with('t1-router-id')
-          expect { vsphere_cloud.create_subnet(subnet_definition) }
-            .to raise_error(/Failed to create subnet/)
-        end
-      end
-
-      context 'when failed to attach_t1_to_t0' do
-        it 'deletes created router' do
-          expect(nsxt_provider).to receive(:create_t1_router)
-            .with('cluster_id','router-name').and_return(t1_router)
-          expect(nsxt_provider).to receive(:enable_route_advertisement)
-            .with('t1-router-id')
-          expect(nsxt_provider).to receive(:attach_t1_to_t0)
-            .with('t0-router-id', 't1-router-id').and_raise('Some nsxt error')
-          expect(nsxt_provider).to receive(:delete_t1_router)
-            .with('t1-router-id')
-          expect { vsphere_cloud.create_subnet(subnet_definition) }
-            .to raise_error(/Failed to create subnet/)
-        end
-      end
-      context 'when failed to attach_switch_to_t1' do
-        it 'deletes created router and switch' do
-          expect(nsxt_provider).to receive(:create_t1_router)
-            .with('cluster_id','router-name').and_return(t1_router)
-          expect(nsxt_provider).to receive(:enable_route_advertisement)
-            .with('t1-router-id')
-          expect(nsxt_provider).to receive(:attach_t1_to_t0)
-            .with('t0-router-id', 't1-router-id')
-          expect(nsxt_provider).to receive(:create_logical_switch)
-           .with('zone-id', 'switch-name').and_return(logical_switch)
-          expect(nsxt_provider).to receive(:attach_switch_to_t1)
-           .and_raise('Some nsxt error')
-
-          expect(nsxt_provider).to receive(:delete_t1_router)
-            .with('t1-router-id')
-          expect(nsxt_provider).to receive(:delete_logical_switch)
-           .with('switch-id')
-          expect { vsphere_cloud.create_subnet(subnet_definition) }
-            .to raise_error(/Failed to create subnet/)
-        end
-      end
     end
-
-    describe '#create_subnet_obj' do
-      before do
-        #make private method public
-        Cloud.send(:public, *Cloud.private_instance_methods)
-      end
-
-      context 'when CIDR block is given' do
-        it 'returns IPSubnet' do
-          result = vsphere_cloud.create_subnet_obj('192.168.111.111/24', '192.168.111.1')
-          expect(result.ip_addresses).to eq(['192.168.111.1'])
-          expect(result.prefix_length).to eq(24)
-        end
-      end
-
-      context 'when CIDR block is incorrect' do
-        it 'raises en error' do
-          expect {vsphere_cloud.create_subnet_obj('192.168.111.1113124', '192.168.111.2')}
-            .to raise_error('Incorrect subnet definition. Proper CIDR block must be given')
-        end
-      end
-    end
-
     describe '#delete_subnet' do
       let(:nsxt_enabled) { true }
       let(:nsxt_provider) { instance_double(VSphereCloud::NSXTProvider) }
