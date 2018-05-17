@@ -273,7 +273,7 @@ module VSphereCloud
           matching_server_pool.member_group ? dynamic_server_pools << matching_server_pool : static_server_pools << [matching_server_pool, server_pool_port]
         end
       end
-      return static_server_pools, dynamic_server_pools
+      [static_server_pools, dynamic_server_pools]
     end
 
     def remove_vm_from_server_pools(vm_ip)
@@ -291,35 +291,32 @@ module VSphereCloud
 
     def create_t1_router(edge_cluster_id, name = nil)
       name = SecureRandom.base64(8) if name.nil?
-      router_api.create_logical_router({ :edge_cluster_id => edge_cluster_id,
-                                         :router_type => 'TIER1',
-                                         :display_name => name})
+      router_api.create_logical_router(edge_cluster_id: edge_cluster_id,
+                                       router_type: 'TIER1',
+                                       display_name: name)
     end
 
     def attach_t1_to_t0(t0_router_id, t1_router_id)
       begin
-        t0_router_port =  NSXT::LogicalRouterLinkPortOnTIER0.new({
-                                                                     :logical_router_id => t0_router_id,
-                                                                     :resource_type => 'LogicalRouterLinkPortOnTIER0'})
+        t0_router_port =  NSXT::LogicalRouterLinkPortOnTIER0.new(logical_router_id: t0_router_id,
+                                                                 resource_type: 'LogicalRouterLinkPortOnTIER0')
         t0_router_port = router_api.create_logical_router_port(t0_router_port)
-      rescue Exception => e
-        logger.error("Error creating port on T0 router #{t0_router_id}. Exception: #{e}")
-        raise "Error creating port on #{t0_router_id} T0 router. Exception: #{e}"
+      rescue => e
+        logger.error("Error creating port on T0 router #{t0_router_id}. Exception: #{e.inspect}")
+        raise "Error creating port on #{t0_router_id} T0 router. Exception: #{e.inspect}"
       end
 
       begin
-        t0_reference = NSXT::ResourceReference.new({
-                                                       :target_id => t0_router_port.id,
-                                                       :target_type => 'LogicalRouterLinkPortOnTIER0',
-                                                       :is_valid => true })
-        t1_router_port = NSXT::LogicalRouterLinkPortOnTIER1.new({
-                                                                    :linked_logical_router_port_id => t0_reference,
-                                                                    :logical_router_id => t1_router_id,
-                                                                    :resource_type => 'LogicalRouterLinkPortOnTIER1'})
+        t0_reference = NSXT::ResourceReference.new(target_id: t0_router_port.id,
+                                                   target_type: 'LogicalRouterLinkPortOnTIER0',
+                                                   is_valid: true)
+        t1_router_port = NSXT::LogicalRouterLinkPortOnTIER1.new(linked_logical_router_port_id: t0_reference,
+                                                                logical_router_id: t1_router_id,
+                                                                resource_type: 'LogicalRouterLinkPortOnTIER1')
         router_api.create_logical_router_port(t1_router_port)
-      rescue Exception => e
-        logger.error("Error creating port on T1 router #{t1_router_id} and attaching it to T0 port #{t0_router_port.id}. Exception: #{e}")
-        raise "Error creating port on T1 (#{t1_router_id}) and attaching it to T0 port #{t0_router_port.id}. Exception: #{e}"
+      rescue => e
+        logger.error("Error creating port on T1 router #{t1_router_id} and attaching it to T0 port #{t0_router_port.id}. Exception: #{e.inspect}")
+        raise "Error creating port on T1 (#{t1_router_id}) and attaching it to T0 port #{t0_router_port.id}. Exception: #{e.inspect}"
       end
     end
 
@@ -331,67 +328,60 @@ module VSphereCloud
     end
 
     def create_logical_switch(transport_zone_id, name = nil)
-
-
-      switch = NSXT::LogicalSwitch.new({
-                                           :admin_state => 'UP',
-                                           :transport_zone_id => transport_zone_id,
-                                           :replication_mode => 'MTEP',
-                                           :display_name => name })
+      switch = NSXT::LogicalSwitch.new(admin_state: 'UP',
+                                       transport_zone_id: transport_zone_id,
+                                       replication_mode: 'MTEP',
+                                       display_name: name)
       switch_api.create_logical_switch(switch)
     end
 
     def attach_switch_to_t1(switch_id, t1_router_id, subnet)
       begin
-        logical_port = NSXT::LogicalPort.new({
-                                                 :admin_state => 'UP',
-                                                 :logical_switch_id => switch_id})
+        logical_port = NSXT::LogicalPort.new(admin_state: 'UP',
+                                             logical_switch_id: switch_id)
         logical_port = switch_api.create_logical_port(logical_port)
-      rescue Exception => e
-        logger.error("Failed to create logical port for switch #{switch_id}. Exception: #{e}")
-        raise "Failed to create logical port for switch #{switch_id}. Exception: #{e}"
+      rescue => e
+        logger.error("Failed to create logical port for switch #{switch_id}. Exception: #{e.inspect}")
+        raise "Failed to create logical port for switch #{switch_id}. Exception: #{e.inspect}"
       end
 
       begin
-        switch_port_ref = NSXT::ResourceReference.new({:target_id => logical_port.id,
-                                     :target_type => 'LogicalPort',
-                                     :is_valid => true })
+        switch_port_ref = NSXT::ResourceReference.new(target_id: logical_port.id,
+                                                      target_type: 'LogicalPort',
+                                                      is_valid: true)
 
-        t1_router_port = NSXT::LogicalRouterDownLinkPort.new({
-                                                                 :logical_router_id => t1_router_id,
-                                                                 :linked_logical_switch_port_id => switch_port_ref,
-                                                                 :resource_type => 'LogicalRouterDownLinkPort',
-                                                                 :subnets => [subnet]})
+        t1_router_port = NSXT::LogicalRouterDownLinkPort.new(logical_router_id: t1_router_id,
+                                                             linked_logical_switch_port_id: switch_port_ref,
+                                                             resource_type: 'LogicalRouterDownLinkPort',
+                                                             subnets: [subnet])
         router_api.create_logical_router_port(t1_router_port)
-      rescue Exception => e
-        logger.error("Failed to create logical port for router #{t1_router_id} and switch #{switch_id}. Exception: #{e}")
-        raise "Failed to create logical port for router #{t1_router_id} and switch #{switch_id}. Exception: #{e}"
+      rescue => e
+        logger.error("Failed to create logical port for router #{t1_router_id} and switch #{switch_id}. Exception: #{e.inspect}")
+        raise "Failed to create logical port for router #{t1_router_id} and switch #{switch_id}. Exception: #{e.inspect}"
       end
     end
 
     def delete_logical_switch(switch_id)
-      switch_api.delete_logical_switch(switch_id, :cascade => true, :detach => true)
+      switch_api.delete_logical_switch(switch_id, cascade: true, detach: true)
     end
 
     def delete_t1_router(t1_router_id)
-      router_api.delete_logical_router(t1_router_id, :force => true)
+      router_api.delete_logical_router(t1_router_id, force: true)
     end
 
     def get_attached_router_ids(switch_id)
-      router_ports = router_api.list_logical_router_ports(:logical_switch_id => switch_id)
-      router_ports.results.map do |port|
-        port.logical_router_id
-      end
+      router_ports = router_api.list_logical_router_ports(logical_switch_id: switch_id)
+      router_ports.results.map(&:logical_router_id)
     end
 
     def get_attached_switch_ports(switch_id)
-      switch_api.list_logical_ports(:logical_switch_id => switch_id).results
+      switch_api.list_logical_ports(logical_switch_id: switch_id).results
     end
 
     def get_attached_switches_ids(t1_router_id)
       hack_nsxt_client
-      router_ports = router_api.list_logical_router_ports(:logical_router_id => t1_router_id,
-                                           :resource_type => 'LogicalRouterDownLinkPort')
+      router_ports = router_api.list_logical_router_ports(logical_router_id: t1_router_id,
+                                                          resource_type: 'LogicalRouterDownLinkPort')
       router_ports.results.select do |port|
         port.linked_logical_switch_port_id.is_valid
       end.map do |valid_port|
@@ -431,13 +421,13 @@ module VSphereCloud
         on: [VirtualMachineNotFound, MultipleVirtualMachinesFound, VIFNotFound, LogicalPortNotFound]
       ).retryer do |i|
         logger.info("Searching for LogicalPorts for vm '#{vm.cid}'")
-        virtual_machines = fabric_svc.list_virtual_machines(:display_name => vm.cid).results
+        virtual_machines = fabric_svc.list_virtual_machines(display_name: vm.cid).results
         raise VirtualMachineNotFound.new(vm.cid) if virtual_machines.empty?
         raise MultipleVirtualMachinesFound.new(vm.cid, virtual_machines.length) if virtual_machines.length > 1
         external_id = virtual_machines.first.external_id
 
         logger.info("Searching VIFs with 'owner_vm_id: #{external_id}'")
-        vifs = fabric_svc.list_vifs(:owner_vm_id => external_id).results
+        vifs = fabric_svc.list_vifs(owner_vm_id: external_id).results
         vifs.select! { |vif| !vif.lport_attachment_id.nil? }
         raise VIFNotFound.new(vm.cid, external_id) if vifs.empty?
 
@@ -456,13 +446,13 @@ module VSphereCloud
       ns_grp_exprn_lst = NSXT::NSGroupExpressionList.new
       ns_grp_exprn_lst.members = []
       lports.each do |lport|
-        ns_grp_exprn_lst.members.push({
+        ns_grp_exprn_lst.members.push(
           op: 'EQUALS',
           target_type: lport.resource_type,
           target_property: "id",
           value: lport.id,
           resource_type: "NSGroupSimpleExpression"
-        })
+        )
       end
       ns_grp_exprn_lst
     end
@@ -493,14 +483,14 @@ module VSphereCloud
         base.class_eval do
           def self.swagger_types
             {
-                :'_self' => :'SelfResourceLink',
-                :'_links' => :'Array<ResourceLink>',
-                :'_schema' => :'String',
-                :'cursor' => :'String',
-                :'sort_ascending' => :'BOOLEAN',
-                :'sort_by' => :'String',
-                :'result_count' => :'Integer',
-                :'results' => :'Array<LogicalRouterDownLinkPort>'
+              _self: :'SelfResourceLink',
+              _links: :'Array<ResourceLink>',
+              _schema: :'String',
+              cursor: :'String',
+              sort_ascending: :'BOOLEAN',
+              sort_by: :'String',
+              result_count: :'Integer',
+              results: :'Array<LogicalRouterDownLinkPort>'
             }
           end
         end

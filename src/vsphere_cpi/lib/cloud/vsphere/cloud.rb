@@ -670,7 +670,6 @@ module VSphereCloud
       {'stemcell_formats' =>  ['vsphere-ovf', 'vsphere-ova']}
     end
 
-    #creates T1 router and virtual switch attached to it
     def create_subnet(subnet_definition)
       raise 'NSXT must be enabled in CPI to use create_subnet' if !@config.nsxt_enabled?
       subnet = Subnet.build(@nsxt_provider, subnet_definition, logger)

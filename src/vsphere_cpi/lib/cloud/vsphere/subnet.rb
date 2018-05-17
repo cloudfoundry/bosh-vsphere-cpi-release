@@ -14,6 +14,7 @@ module VSphereCloud
       @subnet_definition = subnet_definition
     end
 
+    # Create T1 router and virtual switch attached to it
     def create
       begin
         cloud_properties = @subnet_definition['cloud_properties']
@@ -26,11 +27,11 @@ module VSphereCloud
         switch = @nsxt_provider.create_logical_switch(cloud_properties['transport_zone_id'], cloud_properties['switch_name'])
         switch_id = switch.id
         @nsxt_provider.attach_switch_to_t1(switch_id, t1_router_id, ip_subnet)
-      rescue Exception => e
+      rescue => e
         logger.error('Failed to create subnet. Trying to clean up')
         @nsxt_provider.delete_t1_router(t1_router_id) unless t1_router_id.nil?
         @nsxt_provider.delete_logical_switch(switch_id) unless switch_id.nil?
-        raise "Failed to create subnet. Has router been created: #{!t1_router_id.nil?}. Has switch been created: #{!switch_id.nil?}. Exception: #{e}"
+        raise "Failed to create subnet. Has router been created: #{!t1_router_id.nil?}. Has switch been created: #{!switch_id.nil?}. Exception: #{e.inspect}"
       end
       switch
     end
