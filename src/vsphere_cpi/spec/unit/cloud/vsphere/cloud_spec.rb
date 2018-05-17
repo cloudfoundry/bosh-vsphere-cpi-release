@@ -1727,14 +1727,10 @@ module VSphereCloud
                                      'switch_name' => 'switch-name',
                                  } } }
       let(:nsxt_provider) { instance_double(VSphereCloud::NSXTProvider) }
-      let(:nsxt_config) { VSphereCloud::NSXTConfig.new('fake-host', 'fake-username', 'fake-password') }
       let(:nsxt_enabled) { true }
       let(:logical_switch) { instance_double(NSXT::LogicalSwitch,
                                              :id => 'switch-id',
                                              :display_name => 'switch-name') }
-      let(:t1_router) { instance_double(NSXT::LogicalRouter,
-                          id: 't1-router-id',
-                          display_name: 'router-name' ) }
       let(:subnet) { instance_double(VSphereCloud::Subnet) }
 
       before do
@@ -1757,14 +1753,13 @@ module VSphereCloud
         it 'creates a subnet' do
           expect(VSphereCloud::Subnet).to receive(:build)
             .and_return(subnet)
-          expect(subnet).to receive(:create_infrastructure)
+          expect(subnet).to receive(:create)
             .and_return(logical_switch)
           result = vsphere_cloud.create_subnet(subnet_definition)
           expect(result).to eq( { network_cid: 'switch-id',
                                   cloud_properties: {name: 'switch-name'}})
         end
       end
-
     end
     describe '#delete_subnet' do
       let(:nsxt_enabled) { true }

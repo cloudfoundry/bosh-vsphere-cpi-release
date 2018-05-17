@@ -144,7 +144,7 @@ module VSphereCloud
       end
     end
 
-    describe '#create_infrastructure' do
+    describe '#create' do
       let(:logical_switch) { instance_double(NSXT::LogicalSwitch,
                                              :id => 'switch-id',
                                              :display_name => 'switch-name') }
@@ -163,7 +163,7 @@ module VSphereCloud
           .with('zone-id', 'switch-name').and_return(logical_switch)
         expect(nsxt_provider).to receive(:attach_switch_to_t1)
           .with('switch-id', 't1-router-id', instance_of(NSXT::IPSubnet))
-        result = subnet.create_infrastructure
+        result = subnet.create
         expect(result.id).to eq('switch-id')
         expect(result.display_name).to eq('switch-name')
       end
@@ -195,7 +195,7 @@ module VSphereCloud
           expect(nsxt_provider).to receive(:attach_switch_to_t1)
              .with('switch-id', 't1-router-id', instance_of(NSXT::IPSubnet))
 
-          result = subnet.create_infrastructure
+          result = subnet.create
           expect(result.id).to eq('switch-id')
           expect(result.display_name).to eq('switch-id')
         end
@@ -214,7 +214,7 @@ module VSphereCloud
                .with('t1-router-id').and_raise('Some nsxt error')
             expect(nsxt_provider).to receive(:delete_t1_router)
                .with('t1-router-id')
-            expect { subnet.create_infrastructure }
+            expect { subnet.create }
                 .to raise_error(/Failed to create subnet/)
           end
         end
@@ -228,7 +228,7 @@ module VSphereCloud
                .with('t0-router-id', 't1-router-id').and_raise('Some nsxt error')
             expect(nsxt_provider).to receive(:delete_t1_router)
                .with('t1-router-id')
-            expect { subnet.create_infrastructure }
+            expect { subnet.create }
                 .to raise_error(/Failed to create subnet/)
           end
         end
@@ -249,7 +249,7 @@ module VSphereCloud
                .with('t1-router-id')
             expect(nsxt_provider).to receive(:delete_logical_switch)
                .with('switch-id')
-            expect {subnet.create_infrastructure }
+            expect {subnet.create }
                 .to raise_error(/Failed to create subnet/)
           end
         end

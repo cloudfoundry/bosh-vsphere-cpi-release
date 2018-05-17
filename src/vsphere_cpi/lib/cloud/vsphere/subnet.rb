@@ -10,9 +10,9 @@ module VSphereCloud
       @nsxt_provider = nsxt_provider
       @subnet_definition = subnet_definition
       @logger = logger
-  end
+    end
 
-    def create_infrastructure
+    def create
       begin
         cloud_properties = @subnet_definition['cloud_properties']
         ip_subnet = NSXT::IPSubnet.new({ip_addresses: [@gateway.ip],
