@@ -63,6 +63,8 @@ describe 'network management', :network_management => true  do
 
     it 'creates T0<-T1<-Switch infrastructure' do
       result = @cloud.create_subnet(subnet_definition)
+      expect(result).not_to be_nil
+      result = result.as_hash
 
       #get created switch by name. make sure it's only one
       switch_name = result[:cloud_properties][:name]
@@ -150,7 +152,7 @@ describe 'network management', :network_management => true  do
     it 'deletes switch and attached router' do
       result = @cloud.create_subnet(subnet_definition)
       expect(result).not_to be_nil
-
+      result = result.as_hash
       router_id = get_attached_router_id(result[:network_cid])
 
       @cloud.delete_subnet(result[:network_cid])
@@ -179,6 +181,7 @@ describe 'network management', :network_management => true  do
       it 'raises an error' do
         result = @cloud.create_subnet(subnet_definition)
         expect(result).not_to be_nil
+        result = result.as_hash
         @switch_id = result[:network_cid]
 
         @t1_router_id = get_attached_router_id(@switch_id)

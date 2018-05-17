@@ -673,8 +673,7 @@ module VSphereCloud
     def create_subnet(subnet_definition)
       raise 'NSXT must be enabled in CPI to use create_subnet' if !@config.nsxt_enabled?
       subnet = Subnet.build(@nsxt_provider, subnet_definition, logger)
-      switch = subnet.create
-      {network_cid: switch.id, cloud_properties: {name: switch.display_name } }
+      subnet.create
     end
 
     def delete_subnet(switch_id)

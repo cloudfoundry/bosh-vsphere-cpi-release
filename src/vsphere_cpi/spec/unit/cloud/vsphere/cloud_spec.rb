@@ -1742,9 +1742,7 @@ module VSphereCloud
                                  } } }
       let(:nsxt_provider) { instance_double(VSphereCloud::NSXTProvider) }
       let(:nsxt_enabled) { true }
-      let(:logical_switch) { instance_double(NSXT::LogicalSwitch,
-                                             :id => 'switch-id',
-                                             :display_name => 'switch-name') }
+      let(:subnet_result) { instance_double(Subnet::SubnetResult) }
       let(:subnet) { instance_double(VSphereCloud::Subnet) }
 
       before do
@@ -1768,10 +1766,8 @@ module VSphereCloud
           expect(VSphereCloud::Subnet).to receive(:build)
             .and_return(subnet)
           expect(subnet).to receive(:create)
-            .and_return(logical_switch)
-          result = vsphere_cloud.create_subnet(subnet_definition)
-          expect(result).to eq( { network_cid: 'switch-id',
-                                  cloud_properties: {name: 'switch-name'}})
+            .and_return(subnet_result)
+          expect(vsphere_cloud.create_subnet(subnet_definition)).to eq(subnet_result)
         end
       end
     end
