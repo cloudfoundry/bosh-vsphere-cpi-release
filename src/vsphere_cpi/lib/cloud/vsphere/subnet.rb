@@ -12,6 +12,7 @@ module VSphereCloud
       @logger = logger
     end
 
+    #creates T1 router and virtual switch attached to it
     def create
       begin
         cloud_properties = @subnet_definition['cloud_properties']

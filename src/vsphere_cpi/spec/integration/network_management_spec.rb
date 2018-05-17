@@ -13,7 +13,7 @@ describe 'network management', :network_management => true  do
     @transport_zone_id = fetch_property('BOSH_VSPHERE_TRANSPORT_ZONE_ID')
 
     @cloud = VSphereCloud::Cloud.new(cpi_options({
-        :nsxt => {
+        nsxt: {
             host: @nsxt_host,
             username: @nsxt_username,
             password: @nsxt_password
@@ -53,10 +53,10 @@ describe 'network management', :network_management => true  do
   context 'when create_subnet command is issued' do
     after do
       if @t1_router_id
-        router_api.delete_logical_router(@t1_router_id, :force => true)
+        router_api.delete_logical_router(@t1_router_id, force: true)
       end
       if @switch_id
-        switch_api.delete_logical_switch(@switch_id, :cascade => true, :detach=> true)
+        switch_api.delete_logical_switch(@switch_id, cascade: true, detach: true)
       end
     end
 
@@ -71,7 +71,7 @@ describe 'network management', :network_management => true  do
       @switch_id = switch.id
       expect(@switch_id).not_to be_nil
 
-      switch_ports = router_api.list_logical_router_ports({:logical_switch_id => result[:network_cid]})
+      switch_ports = router_api.list_logical_router_ports({logical_switch_id: result[:network_cid]})
       expect(switch_ports.results.length).to eq(1)
       expect(switch_ports.results.first.id).not_to be_nil
 
@@ -129,8 +129,8 @@ describe 'network management', :network_management => true  do
       end
 
       after do
-        router_api.delete_logical_router(@t1_router2.id, {:force => true})
-        switch_api.delete_logical_switch(@test_switch2.id, {:cascade => true, :detach => true})
+        router_api.delete_logical_router(@t1_router2.id, {force: true})
+        switch_api.delete_logical_switch(@test_switch2.id, {cascade: true, detach: true})
       end
 
       it 'cleans up router and switch' do
@@ -165,13 +165,13 @@ describe 'network management', :network_management => true  do
     context 'when t1 router has extra switches attached' do
       after do
         if @switch_id
-          switch_api.delete_logical_switch(@switch_id, :cascade => true, :detach=> true)
+          switch_api.delete_logical_switch(@switch_id, cascade: true, detach: true)
         end
         if @extra_switch_id
-          switch_api.delete_logical_switch(@extra_switch_id, :cascade => true, :detach=> true)
+          switch_api.delete_logical_switch(@extra_switch_id, cascade: true, detach: true)
         end
         if @t1_router_id
-          router_api.delete_logical_router(@t1_router_id, :force => true)
+          router_api.delete_logical_router(@t1_router_id, force: true)
         end
       end
 
@@ -204,45 +204,45 @@ describe 'network management', :network_management => true  do
   end
 
   def get_attached_router_id(switch_id)
-    switch_ports = router_api.list_logical_router_ports({:logical_switch_id => switch_id})
+    switch_ports = router_api.list_logical_router_ports({logical_switch_id: switch_id})
     switch_ports.results.first.logical_router_id
   end
 
   def create_switch(switch_name)
     switch = NSXT::LogicalSwitch.new({
-       :admin_state => 'UP',
-       :transport_zone_id => @transport_zone_id,
-       :replication_mode => 'MTEP',
-       :display_name => switch_name })
+       admin_state: 'UP',
+       transport_zone_id: @transport_zone_id,
+       replication_mode: 'MTEP',
+       display_name: switch_name })
       switch_api.create_logical_switch(switch)
   end
 
   def create_t1_router(router_name)
-    router_api.create_logical_router({ :edge_cluster_id => @edge_cluster_id,
-                                       :router_type => 'TIER1',
-                                       :display_name => router_name})
+    router_api.create_logical_router({ edge_cluster_id: @edge_cluster_id,
+                                       router_type: 'TIER1',
+                                       display_name: router_name})
   end
 
   def attach_switch_to_t1(switch_id, t1_router_id)
-      logical_port = NSXT::LogicalPort.new({:admin_state => 'UP',
-                                            :logical_switch_id => switch_id})
+      logical_port = NSXT::LogicalPort.new({admin_state: 'UP',
+                                            logical_switch_id: switch_id})
       logical_port = switch_api.create_logical_port(logical_port)
 
-      switch_port_ref = NSXT::ResourceReference.new({:target_id => logical_port.id,
-                                                     :target_type => 'LogicalPort',
-                                                     :is_valid => true })
-      subnet = NSXT::IPSubnet.new({:ip_addresses => [ '192.168.200.1'],
-                          :prefix_length => 30})
+      switch_port_ref = NSXT::ResourceReference.new({target_id: logical_port.id,
+                                                     target_type: 'LogicalPort',
+                                                     is_valid: true })
+      subnet = NSXT::IPSubnet.new({ip_addresses: [ '192.168.200.1'],
+                                   prefix_length: 30})
 
-      t1_router_port = NSXT::LogicalRouterDownLinkPort.new({:logical_router_id => t1_router_id,
-                                                             :linked_logical_switch_port_id => switch_port_ref,
-                                                             :resource_type => 'LogicalRouterDownLinkPort',
-                                                             :subnets => [subnet]})
+      t1_router_port = NSXT::LogicalRouterDownLinkPort.new({logical_router_id: t1_router_id,
+                                                             linked_logical_switch_port_id: switch_port_ref,
+                                                             resource_type: 'LogicalRouterDownLinkPort',
+                                                             subnets: [subnet]})
       router_api.create_logical_router_port(t1_router_port)
   end
 
   def list_logical_t1_routers
-    router_api.list_logical_routers({:router_type => 'TIER1'}).results
+    router_api.list_logical_routers({router_type: 'TIER1'}).results
   end
 
   def fail_if_router_exist(router_name)
