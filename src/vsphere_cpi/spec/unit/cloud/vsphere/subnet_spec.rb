@@ -151,6 +151,7 @@ module VSphereCloud
       let(:t1_router) { instance_double(NSXT::LogicalRouter,
                                         id: 't1-router-id',
                                         display_name: 'router-name' ) }
+      let(:subnet_result) { instance_double(Subnet::SubnetResult) }
 
       it 'creates T1 router and attaches it to T0, creates logical switch and attaches it to T1' do
         expect(nsxt_provider).to receive(:create_t1_router)
@@ -163,9 +164,9 @@ module VSphereCloud
           .with('zone-id', 'switch-name').and_return(logical_switch)
         expect(nsxt_provider).to receive(:attach_switch_to_t1)
           .with('switch-id', 't1-router-id', instance_of(NSXT::IPSubnet))
-        result = subnet.create
-        expect(result.id).to eq('switch-id')
-        expect(result.display_name).to eq('switch-name')
+        expect(Subnet::SubnetResult).to receive(:new)
+          .with(logical_switch).and_return(subnet_result)
+        expect(subnet.create).to eq(subnet_result)
       end
 
       context 'when optional params are not provided' do
@@ -195,9 +196,10 @@ module VSphereCloud
           expect(nsxt_provider).to receive(:attach_switch_to_t1)
              .with('switch-id', 't1-router-id', instance_of(NSXT::IPSubnet))
 
-          result = subnet.create
-          expect(result.id).to eq('switch-id')
-          expect(result.display_name).to eq('switch-id')
+          expect(Subnet::SubnetResult).to receive(:new)
+              .with(logical_switch).and_return(subnet_result)
+
+          expect(subnet.create).to eq(subnet_result)
         end
       end
 
@@ -346,6 +348,17 @@ module VSphereCloud
           expect{  Subnet.destroy(nsxt_provider, nil) }
               .to raise_error('switch id must be provided for deleting a subnet')
         end
+      end
+    end
+
+    describe 'SubnetResult' do
+      let(:logical_switch) { instance_double(NSXT::LogicalSwitch,
+                                             :id => 'switch-id',
+                                             :display_name => 'switch-name') }
+
+      it 'deserializes to correct JSON' do
+        result = Subnet::SubnetResult.new(logical_switch)
+        expect(JSON.dump(result)).to eq("{ network_cid: \"switch-id\", cloud_properties: {name: \"switch-name\"}}")
       end
     end
   end

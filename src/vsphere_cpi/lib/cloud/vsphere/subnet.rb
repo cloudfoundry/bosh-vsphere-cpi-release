@@ -31,7 +31,7 @@ module VSphereCloud
         @nsxt_provider.delete_logical_switch(switch_id) unless switch_id.nil?
         raise "Failed to create subnet. Has router been created: #{!t1_router_id.nil?}. Has switch been created: #{!switch_id.nil?}. Exception: #{e.inspect}"
       end
-      switch
+      SubnetResult.new(switch)
     end
 
     def self.destroy(nsxt_provider, switch_id)
@@ -59,6 +59,16 @@ module VSphereCloud
       @range = NetAddr::CIDR.create(@subnet_definition['range'])
       @gateway = NetAddr::CIDR.create(@subnet_definition['gateway'])
       raise 'Incorrect subnet definition. Proper gateway must be given' if @gateway.size > 1
+    end
+
+    class SubnetResult
+      def initialize(switch)
+        @switch = switch
+      end
+
+      def to_json(opts)
+        "{ network_cid: \"#{@switch.id}\", cloud_properties: {name: \"#{@switch.display_name}\"}}"
+      end
     end
 
     private
