@@ -255,5 +255,98 @@ module VSphereCloud
         end
       end
     end
+
+    describe '#destroy' do
+      let(:switch_ports) { [instance_double(NSXT::LogicalPort)] }
+
+      context 'when switch id is provided' do
+        it 'deletes switch and attached router' do
+          expect(nsxt_provider).to receive(:get_attached_router_ids)
+             .with('switch-id').and_return(['t1-router-id'])
+          expect(nsxt_provider).to receive(:delete_t1_router)
+             .with('t1-router-id')
+          expect(nsxt_provider).to receive(:get_attached_switch_ports)
+             .with('switch-id').and_return(switch_ports)
+          expect(nsxt_provider).to receive(:get_attached_switches_ids)
+             .with('t1-router-id').and_return([])
+          expect(nsxt_provider).to receive(:delete_logical_switch)
+             .with('switch-id')
+          Subnet.destroy(nsxt_provider, 'switch-id')
+        end
+      end
+
+      context 'when multiple switches attached to router' do
+        it 'raises an error' do
+          expect(nsxt_provider).to receive(:get_attached_router_ids)
+             .with('switch-id').and_return(['t1-router-id'])
+          expect(nsxt_provider).to receive(:get_attached_switches_ids)
+             .with('t1-router-id').and_return(['switch2-id'])
+          expect(nsxt_provider).to receive(:get_attached_switch_ports)
+             .with('switch-id').and_return(switch_ports)
+          expect(nsxt_provider).to receive(:delete_logical_switch)
+             .with('switch-id')
+          expect {  Subnet.destroy(nsxt_provider, 'switch-id') }
+              .to raise_error('Can not delete router t1-router-id. It has extra ports that are not created by BOSH.')
+        end
+      end
+
+      context 'when not 1 router attached to switch' do
+        context 'when no routers attached' do
+          it 'raises an error' do
+            expect(nsxt_provider).to receive(:get_attached_router_ids)
+                                         .with('switch-id').and_return([])
+            expect(nsxt_provider).not_to receive(:get_attached_switch_ports)
+            expect {
+              Subnet.destroy(nsxt_provider, 'switch-id')
+            }.to raise_error('Expected switch switch-id to have one router attached. Found 0')
+          end
+        end
+        context 'when more than one router attached' do
+          it 'raises an error' do
+            expect(nsxt_provider).to receive(:get_attached_router_ids)
+                                         .with('switch-id').and_return(['router-id','router-id2'])
+            expect(nsxt_provider).not_to receive(:get_attached_switch_ports)
+            expect {
+              Subnet.destroy(nsxt_provider, 'switch-id')
+            }.to raise_error('Expected switch switch-id to have one router attached. Found 2')
+          end
+        end
+      end
+
+      context 'when not 1 port attached to switch' do
+        context 'if 0 ports attached 'do
+          let(:switch_ports) { [] }
+          it 'raises an error' do
+            expect(nsxt_provider).to receive(:get_attached_router_ids)
+               .with('switch-id').and_return(['t1-router-id'])
+            expect(nsxt_provider).to receive(:get_attached_switch_ports)
+               .with('switch-id').and_return(switch_ports)
+            expect{
+              Subnet.destroy(nsxt_provider, 'switch-id')
+            }.to raise_error('Expected switch switch-id to have only one port. Got 0')
+          end
+        end
+
+        context 'if more than 1 attached' do
+          let(:switch_ports) { [instance_double(NSXT::LogicalPort), instance_double(NSXT::LogicalPort)] }
+          it 'raises an error' do
+            expect(nsxt_provider).to receive(:get_attached_router_ids)
+              .with('switch-id').and_return(['t1-router-id'])
+            expect(nsxt_provider).to receive(:get_attached_switch_ports)
+              .with('switch-id').and_return(switch_ports)
+            expect{
+              Subnet.destroy(nsxt_provider, 'switch-id')
+            }.to raise_error('Expected switch switch-id to have only one port. Got 2')
+          end
+        end
+      end
+
+      context 'when switch id is nil' do
+        it 'raises an error' do
+          expect{  Subnet.destroy(nsxt_provider, nil) }
+              .to raise_error('switch id must be provided for deleting a subnet')
+        end
+      end
+    end
   end
 end
