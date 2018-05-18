@@ -66,8 +66,17 @@ module VSphereCloud
         @switch = switch
       end
 
+      def as_hash
+        {
+            network_cid: @switch.id,
+            cloud_properties: {
+                name: @switch.display_name
+            }
+        }
+      end
+
       def to_json(opts)
-        "{ network_cid: \"#{@switch.id}\", cloud_properties: {name: \"#{@switch.display_name}\"}}"
+        as_hash.to_json
       end
     end
 

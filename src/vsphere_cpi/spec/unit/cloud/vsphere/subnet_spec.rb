@@ -358,7 +358,7 @@ module VSphereCloud
 
       it 'deserializes to correct JSON' do
         result = Subnet::SubnetResult.new(logical_switch)
-        expect(JSON.dump(result)).to eq("{ network_cid: \"switch-id\", cloud_properties: {name: \"switch-name\"}}")
+        expect(JSON.dump(result)).to eq("{\"network_cid\":\"switch-id\",\"cloud_properties\":{\"name\":\"switch-name\"}}")
       end
     end
   end
