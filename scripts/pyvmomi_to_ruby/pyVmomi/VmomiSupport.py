@@ -8,6 +8,16 @@ import pyvmomi_to_ruby.formatter
 F_LINK = pyvmomi_to_ruby.or_list.OrList(['link'])
 F_LINKABLE = pyvmomi_to_ruby.or_list.OrList(['linkable'])
 F_OPTIONAL = pyvmomi_to_ruby.or_list.OrList(['optional'])
+F_SECRET = pyvmomi_to_ruby.or_list.OrList(['secret'])
+
+class VersionsStub(object):
+    def Add(*args):
+        pass
+
+newestVersions = VersionsStub()
+stableVersions = VersionsStub()
+publicVersions = VersionsStub()
+oldestVersions = VersionsStub()
 
 def CreateDataType(a, b, c, d, e, out=sys.stdout):
     e=pyvmomi_to_ruby.formatter.zero_to_empty_hash(e)

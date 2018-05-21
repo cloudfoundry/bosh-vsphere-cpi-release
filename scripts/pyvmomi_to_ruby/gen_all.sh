@@ -13,7 +13,7 @@ fi
 
 echo "Fetching version '${tag}' ...'"
 vmware_pyvmimu_url="https://raw.githubusercontent.com/vmware/pyvmomi"
-files_to_download="{ServerObjects.py,CoreTypes.py}"
+files_to_download="{ServerObjects.py,CoreTypes.py,QueryTypes.py}"
 
 curl --remote-name "${vmware_pyvmimu_url}/${version_tag}/pyVmomi/${files_to_download}"
 

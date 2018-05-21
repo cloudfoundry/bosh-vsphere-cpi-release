@@ -6,6 +6,7 @@ from pyVmomi.VmomiSupport import CreateDataType
 from pyVmomi.VmomiSupport import F_LINK
 from pyVmomi.VmomiSupport import F_LINKABLE
 from pyVmomi.VmomiSupport import F_OPTIONAL
+from pyVmomi.VmomiSupport import F_SECRET
 
 class TestCreateDataType(unittest.TestCase):
 
@@ -24,6 +25,6 @@ class TestCreateDataType(unittest.TestCase):
 
     def test_f(self):
         CreateDataType('a', 'b', 'c', 'd',
-            [(F_LINK | F_LINKABLE | F_OPTIONAL, 0)], self.out)
+            [(F_LINK | F_LINKABLE | F_OPTIONAL | F_SECRET, 0)], self.out)
         self.assertEqual(self.out.getvalue(),
-            '    create_data_type("a", "b", "c", "d", [[{:link => true, :linkable => true, :optional => true}]])\n')
+            '    create_data_type("a", "b", "c", "d", [[{:link => true, :linkable => true, :optional => true, :secret => true}]])\n')
