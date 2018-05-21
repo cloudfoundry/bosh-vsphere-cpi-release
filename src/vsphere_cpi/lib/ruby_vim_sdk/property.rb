@@ -18,6 +18,8 @@ module VimSdk
       @optional = false
       @link = false
       @linkable = false
+      # Initialize new property
+      @secret = false
 
       flags.each do |key, value|
         case key
@@ -27,6 +29,9 @@ module VimSdk
             @link = value
           when :linkable
             @linkable = value
+          #This is a new property so added it here
+          when :secret
+            @secret = value
           else
             raise "Unknown flag: #{key}"
         end
@@ -43,6 +48,11 @@ module VimSdk
 
     def linkable?
       @linkable
+    end
+
+    #Define new method for secret
+    def secret?
+      @secret
     end
   end
 

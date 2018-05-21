@@ -12,7 +12,7 @@ Usage:
 
 Version used by current BOSH vSphere CPI:
 ```
-./gen_all.sh "v5.5.0.2014.1.1"
+./gen_all.sh "v6.5.0.2017.5-1"
 ```
 
 ## Running tests
