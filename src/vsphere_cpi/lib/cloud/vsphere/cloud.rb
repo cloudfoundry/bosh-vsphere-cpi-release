@@ -26,7 +26,7 @@ module VSphereCloud
         vcenter_api_uri: @config.vcenter_api_uri,
         http_client: http_client
       )
-      def other_client.logger
+      other_client.define_singleton_method(:logger) do
         @logger ||= ::Logger.new('/dev/null')
       end
       other_client.login(@config.vcenter_user, @config.vcenter_password, 'en')
