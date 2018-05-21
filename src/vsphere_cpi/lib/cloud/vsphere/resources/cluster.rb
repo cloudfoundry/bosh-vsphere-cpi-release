@@ -6,7 +6,7 @@ module VSphereCloud
     class Cluster
       include VimSdk
       include ObjectStringifier
-      extend Logger
+      include Logger
       stringify_with :name
 
       PROPERTIES = %w(name datastore resourcePool host)

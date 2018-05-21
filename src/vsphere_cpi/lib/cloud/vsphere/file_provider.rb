@@ -2,7 +2,7 @@ require 'cloud/vsphere/logger'
 
 module VSphereCloud
   class FileProvider
-    extend Logger
+    include Logger
 
     def initialize(http_client:, vcenter_host:, retryer: nil)
       @vcenter_host = vcenter_host

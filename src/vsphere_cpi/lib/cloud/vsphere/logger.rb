@@ -2,8 +2,8 @@ require 'logger'
 
 module VSphereCloud
   module Logger
-    def self.extended(base)
-      base.__send__(:include, self)
+    def self.included(base)
+      base.extend(self)
     end
 
     def self.logger

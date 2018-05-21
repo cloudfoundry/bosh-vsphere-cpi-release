@@ -6,7 +6,7 @@ module VSphereCloud
     class Datacenter
       include VimSdk
       include ObjectStringifier
-      extend Logger
+      include Logger
       stringify_with :name
 
       attr_accessor :config

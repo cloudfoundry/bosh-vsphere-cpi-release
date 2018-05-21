@@ -4,7 +4,7 @@ require 'cloud/vsphere/logger'
 
 module VSphereCloud
   class Stemcell
-    extend Logger
+    include Logger
 
     attr_reader :id
 

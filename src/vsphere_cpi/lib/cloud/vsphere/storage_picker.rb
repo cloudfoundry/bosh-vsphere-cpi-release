@@ -2,7 +2,7 @@ require 'cloud/vsphere/logger'
 
 module VSphereCloud
   module StoragePicker
-    extend Logger
+    include Logger
 
     module_function
 

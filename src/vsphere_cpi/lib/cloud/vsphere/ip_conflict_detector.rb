@@ -2,7 +2,7 @@ require 'cloud/vsphere/logger'
 
 module VSphereCloud
   class IPConflictDetector
-    extend Logger
+    include Logger
 
     def initialize(client)
       @client = client

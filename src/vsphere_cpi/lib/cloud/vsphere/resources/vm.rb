@@ -5,7 +5,7 @@ module VSphereCloud
     class VM
       include VimSdk
       include ObjectStringifier
-      extend Logger
+      include Logger
 
       stringify_with :cid
 

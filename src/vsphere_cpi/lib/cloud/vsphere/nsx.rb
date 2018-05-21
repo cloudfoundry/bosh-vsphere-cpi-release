@@ -3,7 +3,7 @@ require 'cloud/vsphere/logger'
 
 module VSphereCloud
   class NSX
-    extend Logger
+    include Logger
 
     # use a large number of retries as we investigate NSX error messages around finding VM ID
     # <error>

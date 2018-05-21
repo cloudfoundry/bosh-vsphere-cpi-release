@@ -3,7 +3,7 @@ require 'cloud/vsphere/logger'
 module VSphereCloud
   class LeaseObtainer
     include VimSdk
-    extend Logger
+    include Logger
 
     def initialize(cloud_searcher)
       @cloud_searcher = cloud_searcher

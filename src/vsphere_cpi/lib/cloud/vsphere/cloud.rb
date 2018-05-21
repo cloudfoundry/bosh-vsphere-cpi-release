@@ -6,7 +6,7 @@ require 'cloud'
 module VSphereCloud
   class Cloud < Bosh::Cloud
     include VimSdk
-    extend Logger
+    include Logger
 
     class TimeoutException < StandardError; end
     class NetworkException < StandardError
