@@ -4,7 +4,7 @@ module VSphereCloud
   module Resources
     class ResourcePool
       include VimSdk
-      extend Logger
+      include Logger
 
       # Creates a new ResourcePool resource.
       #

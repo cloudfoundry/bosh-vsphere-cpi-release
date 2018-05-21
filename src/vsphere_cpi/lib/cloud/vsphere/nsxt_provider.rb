@@ -86,7 +86,7 @@ module VSphereCloud
   end
 
   class NSXTProvider
-    extend Logger
+    include Logger
 
     def initialize(config)
       configuration = NSXT::Configuration.new

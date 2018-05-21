@@ -2,7 +2,7 @@ require 'cloud/vsphere/logger'
 
 module VSphereCloud
   class VMAttributeManager
-    extend Logger
+    include Logger
 
     def initialize(custom_fields_manager)
       @custom_fields_manager = custom_fields_manager

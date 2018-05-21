@@ -3,7 +3,7 @@ require 'cloud/vsphere/logger'
 module VSphereCloud
   class VCenterClient
     include VimSdk
-    extend Logger
+    include Logger
 
     class TaskException < StandardError; end
     class FileNotFoundException < TaskException; end

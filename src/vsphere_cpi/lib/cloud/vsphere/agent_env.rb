@@ -3,7 +3,7 @@ require 'cloud/vsphere/logger'
 module VSphereCloud
   class AgentEnv
     include VimSdk
-    extend Logger
+    include Logger
 
     def initialize(client:, file_provider:, cloud_searcher:)
       @client = client

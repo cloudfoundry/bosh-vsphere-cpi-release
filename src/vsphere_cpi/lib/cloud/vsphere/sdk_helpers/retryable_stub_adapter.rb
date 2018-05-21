@@ -3,7 +3,7 @@ require 'cloud/vsphere/logger'
 module VSphereCloud
   module SdkHelpers
     class RetryableStubAdapter
-      extend Logger
+      include Logger
 
       PC = VimSdk::Vmodl::Query::PropertyCollector
 

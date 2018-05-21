@@ -2,7 +2,7 @@ require 'cloud/vsphere/logger'
 
 module VSphereCloud
   class TaskRunner
-    extend Logger
+    include Logger
 
     def initialize(cloud_searcher:, retry_judge: nil, retryer: nil)
       @cloud_searcher = cloud_searcher

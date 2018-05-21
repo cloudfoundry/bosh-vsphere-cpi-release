@@ -2,7 +2,7 @@ require 'cloud/vsphere/logger'
 
 module VSphereCloud
   class VmCreator
-    extend Logger
+    include Logger
 
     def initialize(client:, cloud_searcher:, cpi:, datacenter:, agent_env:, ip_conflict_detector:, default_disk_type:, enable_auto_anti_affinity_drs_rules:, stemcell:, upgrade_hw_version:)
       @client = client

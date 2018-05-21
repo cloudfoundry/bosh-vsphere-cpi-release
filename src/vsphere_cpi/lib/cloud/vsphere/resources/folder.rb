@@ -3,7 +3,7 @@ require 'cloud/vsphere/logger'
 module VSphereCloud
   module Resources
     class Folder
-      extend Logger
+      include Logger
 
       attr_reader :mob, :path, :path_components
 

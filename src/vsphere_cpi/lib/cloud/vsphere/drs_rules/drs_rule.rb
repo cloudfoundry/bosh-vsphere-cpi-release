@@ -2,7 +2,7 @@ require 'cloud/vsphere/logger'
 
 module VSphereCloud
   class DrsRule
-    extend Logger
+    include Logger
 
     CUSTOM_ATTRIBUTE_NAME = 'drs_rule'
 

@@ -2,7 +2,7 @@ require 'cloud/vsphere/logger'
 
 module VSphereCloud
   class DrsLock
-    extend Logger
+    include Logger
 
     DRS_LOCK_NAME = 'drs_lock'
     MAX_LOCK_TIMEOUT_IN_SECONDS = 30

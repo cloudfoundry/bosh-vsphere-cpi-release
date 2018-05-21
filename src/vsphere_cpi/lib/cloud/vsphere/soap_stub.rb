@@ -3,7 +3,7 @@ require 'cloud/vsphere/logger'
 
 module VSphereCloud
   class SoapStub
-    extend Logger
+    include Logger
 
     def initialize(vcenter_api_uri, http_client)
       @vcenter_api_uri = vcenter_api_uri
