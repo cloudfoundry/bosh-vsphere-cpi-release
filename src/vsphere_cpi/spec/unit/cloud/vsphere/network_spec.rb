@@ -2,7 +2,7 @@ require 'spec_helper'
 
 module VSphereCloud
   describe Network do
-    subject(:subnet) { Network.build(nsxt_provider, network_definition, logger) }
+    subject(:network) { Network.build(nsxt_provider, network_definition, logger) }
     let(:logger) { instance_double('Bosh::Cpi::Logger', info: nil, debug: nil) }
     let(:nsxt_provider) { instance_double(VSphereCloud::NSXTProvider) }
     let(:network_definition) { {
@@ -29,7 +29,7 @@ module VSphereCloud
         let(:cloud_props) { '' }
 
         it 'raises an error' do
-          expect{ subnet }.to raise_error('cloud_properties must be provided')
+          expect{ network }.to raise_error('cloud_properties must be provided')
         end
       end
       context 'when no cloud_properties given' do
@@ -39,7 +39,7 @@ module VSphereCloud
         }
 
         it 'raises an error' do
-          expect{ subnet }.to raise_error('cloud_properties must be provided')
+          expect{ network }.to raise_error('cloud_properties must be provided')
         end
       end
 
@@ -50,13 +50,13 @@ module VSphereCloud
         } }
 
         it 'raises an error' do
-          expect{ subnet }.to raise_error('t0_router_id cloud property can not be empty')
+          expect{ network }.to raise_error('t0_router_id cloud property can not be empty')
         end
       end
       context 'when t0_router_id is empty' do
         let(:t0_router_id) { '' }
         it 'raises an error' do
-          expect{ subnet }.to raise_error('t0_router_id cloud property can not be empty')
+          expect{ network }.to raise_error('t0_router_id cloud property can not be empty')
         end
       end
 
@@ -66,14 +66,14 @@ module VSphereCloud
             'transport_zone_id' => transport_zone_id,
         } }
         it 'raises an error' do
-          expect{ subnet }.to raise_error('edge_cluster_id cloud property can not be empty')
+          expect{ network }.to raise_error('edge_cluster_id cloud property can not be empty')
         end
       end
       context 'when edge_cluster_id is empty' do
         let(:edge_cluster_id) { '' }
 
         it 'raises an error' do
-          expect{ subnet }.to raise_error('edge_cluster_id cloud property can not be empty')
+          expect{ network }.to raise_error('edge_cluster_id cloud property can not be empty')
         end
       end
 
@@ -83,21 +83,21 @@ module VSphereCloud
             't0_router_id' => t0_router_id
         } }
         it 'raises an error' do
-          expect{ subnet }.to raise_error('transport_zone_id cloud property can not be empty')
+          expect{ network }.to raise_error('transport_zone_id cloud property can not be empty')
         end
       end
       context 'when transport_zone_id is empty' do
         let(:transport_zone_id) { '' }
 
         it 'raises an error' do
-          expect{ subnet }.to raise_error('transport_zone_id cloud property can not be empty')
+          expect{ network }.to raise_error('transport_zone_id cloud property can not be empty')
         end
       end
 
       context 'when range is empty' do
         let(:range) { '' }
         it 'raises an error' do
-          expect{ subnet }.to raise_error('Incorrect subnet definition. Proper CIDR block range must be given')
+          expect{ network }.to raise_error('Incorrect network definition. Proper CIDR block range must be given')
         end
       end
 
@@ -107,21 +107,21 @@ module VSphereCloud
             'cloud_properties' => cloud_props }
         }
         it 'raises an error' do
-          expect{ subnet }.to raise_error('Incorrect subnet definition. Proper CIDR block range must be given')
+          expect{ network }.to raise_error('Incorrect network definition. Proper CIDR block range must be given')
         end
       end
 
       context 'when incorrect range is provided' do
         let(:range) { '192.168.111.111/33' }
         it 'raises an error' do
-          expect{ subnet }.to raise_error(/Netmask, 33, is out of bounds for IPv4/)
+          expect{ network }.to raise_error(/Netmask, 33, is out of bounds for IPv4/)
         end
       end
 
       context 'when gateway is empty' do
         let(:gateway) { '' }
         it 'raises an error' do
-          expect{ subnet }.to raise_error('Incorrect subnet definition. Proper gateway must be given')
+          expect{ network }.to raise_error('Incorrect network definition. Proper gateway must be given')
         end
       end
 
@@ -132,14 +132,14 @@ module VSphereCloud
         }
 
         it 'raises an error' do
-          expect{ subnet }.to raise_error('Incorrect subnet definition. Proper gateway must be given')
+          expect{ network }.to raise_error('Incorrect network definition. Proper gateway must be given')
         end
       end
 
       context 'when incorrect gateway is provided' do
         let(:gateway) { '192.168.111.111/31' }
         it 'raises an error' do
-          expect{ subnet }.to raise_error('Incorrect subnet definition. Proper gateway must be given')
+          expect{ network }.to raise_error('Incorrect network definition. Proper gateway must be given')
         end
       end
     end
@@ -151,7 +151,7 @@ module VSphereCloud
       let(:t1_router) { instance_double(NSXT::LogicalRouter,
                                         id: 't1-router-id',
                                         display_name: 'router-name' ) }
-      let(:subnet_result) { instance_double(Network::ManagedNetwork) }
+      let(:network_result) { instance_double(Network::ManagedNetwork) }
 
       it 'creates T1 router and attaches it to T0, creates logical switch and attaches it to T1' do
         expect(nsxt_provider).to receive(:create_t1_router)
@@ -165,8 +165,8 @@ module VSphereCloud
         expect(nsxt_provider).to receive(:attach_switch_to_t1)
           .with('switch-id', 't1-router-id', instance_of(NSXT::IPSubnet))
         expect(Network::ManagedNetwork).to receive(:new)
-          .with(logical_switch).and_return(subnet_result)
-        expect(subnet.create).to eq(subnet_result)
+          .with(logical_switch).and_return(network_result)
+        expect(network.create).to eq(network_result)
       end
 
       context 'when optional params are not provided' do
@@ -197,9 +197,9 @@ module VSphereCloud
              .with('switch-id', 't1-router-id', instance_of(NSXT::IPSubnet))
 
           expect(Network::ManagedNetwork).to receive(:new)
-              .with(logical_switch).and_return(subnet_result)
+              .with(logical_switch).and_return(network_result)
 
-          expect(subnet.create).to eq(subnet_result)
+          expect(network.create).to eq(network_result)
         end
       end
 
@@ -216,8 +216,8 @@ module VSphereCloud
                .with('t1-router-id').and_raise('Some nsxt error')
             expect(nsxt_provider).to receive(:delete_t1_router)
                .with('t1-router-id')
-            expect { subnet.create }
-                .to raise_error(/Failed to create subnet/)
+            expect { network.create }
+                .to raise_error(/Failed to create network/)
           end
         end
         context 'when failed to attach_t1_to_t0' do
@@ -230,8 +230,8 @@ module VSphereCloud
                .with('t0-router-id', 't1-router-id').and_raise('Some nsxt error')
             expect(nsxt_provider).to receive(:delete_t1_router)
                .with('t1-router-id')
-            expect { subnet.create }
-                .to raise_error(/Failed to create subnet/)
+            expect { network.create }
+                .to raise_error(/Failed to create network/)
           end
         end
         context 'when failed to attach_switch_to_t1' do
@@ -251,8 +251,8 @@ module VSphereCloud
                .with('t1-router-id')
             expect(nsxt_provider).to receive(:delete_logical_switch)
                .with('switch-id')
-            expect {subnet.create }
-                .to raise_error(/Failed to create subnet/)
+            expect {network.create }
+                .to raise_error(/Failed to create network/)
           end
         end
       end
@@ -346,7 +346,7 @@ module VSphereCloud
       context 'when switch id is nil' do
         it 'raises an error' do
           expect{  Network.destroy(nsxt_provider, nil) }
-              .to raise_error('switch id must be provided for deleting a subnet')
+              .to raise_error('switch id must be provided for deleting a network')
         end
       end
     end
