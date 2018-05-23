@@ -670,15 +670,15 @@ module VSphereCloud
       {'stemcell_formats' =>  ['vsphere-ovf', 'vsphere-ova']}
     end
 
-    def create_subnet(subnet_definition)
-      raise 'NSXT must be enabled in CPI to use create_subnet' if !@config.nsxt_enabled?
-      subnet = Subnet.build(@nsxt_provider, subnet_definition, logger)
-      subnet.create
+    def create_network(network_definition)
+      raise 'NSXT must be enabled in CPI to use create_network' if !@config.nsxt_enabled?
+      network = Network.build(@nsxt_provider, network_definition, logger)
+      network.create
     end
 
-    def delete_subnet(switch_id)
-      raise 'NSXT must be enabled in CPI to use delete_subnet' if !@config.nsxt_enabled?
-      Subnet.destroy(@nsxt_provider, switch_id)
+    def delete_network(switch_id)
+      raise 'NSXT must be enabled in CPI to use delete_network' if !@config.nsxt_enabled?
+      Network.destroy(@nsxt_provider, switch_id)
     end
 
     private

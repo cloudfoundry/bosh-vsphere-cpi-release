@@ -2,22 +2,22 @@ require 'cloud/vsphere/logger'
 require 'netaddr'
 
 module VSphereCloud
-  class Subnet
+  class Network
     include Logger
 
-    def self.build(nsxt_provider, subnet_definition)
-      new(nsxt_provider, subnet_definition).tap(&:validate)
+    def self.build(nsxt_provider, network_definition)
+      new(nsxt_provider, network_definition).tap(&:validate)
     end
 
-    def initialize(nsxt_provider, subnet_definition)
+    def initialize(nsxt_provider, network_definition)
       @nsxt_provider = nsxt_provider
-      @subnet_definition = subnet_definition
+      @network_definition = network_definition
     end
 
     # Create T1 router and virtual switch attached to it
     def create
       begin
-        cloud_properties = @subnet_definition['cloud_properties']
+        cloud_properties = @network_definition['cloud_properties']
         ip_subnet = NSXT::IPSubnet.new({ip_addresses: [@gateway.ip],
                                         prefix_length: @range.netmask[1..-1].to_i})
         t1_router = @nsxt_provider.create_t1_router(cloud_properties['edge_cluster_id'], cloud_properties['t1_name'])
@@ -28,16 +28,16 @@ module VSphereCloud
         switch_id = switch.id
         @nsxt_provider.attach_switch_to_t1(switch_id, t1_router_id, ip_subnet)
       rescue => e
-        logger.error('Failed to create subnet. Trying to clean up')
+        logger.error('Failed to create network. Trying to clean up')
         @nsxt_provider.delete_t1_router(t1_router_id) unless t1_router_id.nil?
         @nsxt_provider.delete_logical_switch(switch_id) unless switch_id.nil?
-        raise "Failed to create subnet. Has router been created: #{!t1_router_id.nil?}. Has switch been created: #{!switch_id.nil?}. Exception: #{e.inspect}"
+        raise "Failed to create network. Has router been created: #{!t1_router_id.nil?}. Has switch been created: #{!switch_id.nil?}. Exception: #{e.inspect}"
       end
-      SubnetResult.new(switch)
+      ManagedNetwork.new(switch)
     end
 
     def self.destroy(nsxt_provider, switch_id)
-      raise 'switch id must be provided for deleting a subnet' if switch_id.nil?
+      raise 'switch id must be provided for deleting a network' if switch_id.nil?
       t1_router_ids = nsxt_provider.get_attached_router_ids(switch_id)
       raise "Expected switch #{switch_id} to have one router attached. Found #{t1_router_ids.length}" if t1_router_ids.length != 1
       switch_ports = nsxt_provider.get_attached_switch_ports(switch_id)
@@ -50,20 +50,20 @@ module VSphereCloud
     end
 
     def validate
-      cloud_properties = @subnet_definition['cloud_properties']
+      cloud_properties = @network_definition['cloud_properties']
       raise 'cloud_properties must be provided' if nil_or_empty(cloud_properties)
       raise 't0_router_id cloud property can not be empty' if nil_or_empty(cloud_properties['t0_router_id'])
       raise 'edge_cluster_id cloud property can not be empty' if nil_or_empty(cloud_properties['edge_cluster_id'])
       raise 'transport_zone_id cloud property can not be empty' if nil_or_empty(cloud_properties['transport_zone_id'])
 
-      raise 'Incorrect subnet definition. Proper CIDR block range must be given' if nil_or_empty(@subnet_definition['range'])
-      raise 'Incorrect subnet definition. Proper gateway must be given' if nil_or_empty(@subnet_definition['gateway'])
-      @range = NetAddr::CIDR.create(@subnet_definition['range'])
-      @gateway = NetAddr::CIDR.create(@subnet_definition['gateway'])
-      raise 'Incorrect subnet definition. Proper gateway must be given' if @gateway.size > 1
+      raise 'Incorrect network definition. Proper CIDR block range must be given' if nil_or_empty(@network_definition['range'])
+      raise 'Incorrect network definition. Proper gateway must be given' if nil_or_empty(@network_definition['gateway'])
+      @range = NetAddr::CIDR.create(@network_definition['range'])
+      @gateway = NetAddr::CIDR.create(@network_definition['gateway'])
+      raise 'Incorrect network definition. Proper gateway must be given' if @gateway.size > 1
     end
 
-    class SubnetResult
+    class ManagedNetwork
       def initialize(switch)
         @switch = switch
       end

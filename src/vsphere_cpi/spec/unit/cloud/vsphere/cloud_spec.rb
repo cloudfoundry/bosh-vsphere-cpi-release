@@ -1729,8 +1729,8 @@ module VSphereCloud
       end
     end
 
-    describe '#create_subnet' do
-      let(:subnet_definition) { {
+    describe '#create_network' do
+      let(:network_definition) { {
                                  'range' => '192.168.111.0/24',
                                  'gateway' => '192.168.111.1',
                                  'cloud_properties' => {
@@ -1742,8 +1742,8 @@ module VSphereCloud
                                  } } }
       let(:nsxt_provider) { instance_double(VSphereCloud::NSXTProvider) }
       let(:nsxt_enabled) { true }
-      let(:subnet_result) { instance_double(Subnet::SubnetResult) }
-      let(:subnet) { instance_double(VSphereCloud::Subnet) }
+      let(:subnet_result) { instance_double(Network::ManagedNetwork) }
+      let(:subnet) { instance_double(VSphereCloud::Network) }
 
       before do
         allow(VSphereCloud::NSXTProvider).to receive(:new)
@@ -1756,23 +1756,23 @@ module VSphereCloud
 
         it 'raises an error' do
           expect{
-            vsphere_cloud.create_subnet(subnet_definition)
-          }.to raise_error('NSXT must be enabled in CPI to use create_subnet')
+            vsphere_cloud.create_network(network_definition)
+          }.to raise_error('NSXT must be enabled in CPI to use create_network')
         end
       end
 
       context 'when nsxt enabled' do
         it 'creates a subnet' do
-          expect(VSphereCloud::Subnet).to receive(:build)
+          expect(VSphereCloud::Network).to receive(:build)
             .and_return(subnet)
           expect(subnet).to receive(:create)
             .and_return(subnet_result)
-          expect(vsphere_cloud.create_subnet(subnet_definition)).to eq(subnet_result)
+          expect(vsphere_cloud.create_network(network_definition)).to eq(subnet_result)
         end
       end
     end
 
-    describe '#delete_subnet' do
+    describe '#delete_network' do
       let(:nsxt_provider) { instance_double(VSphereCloud::NSXTProvider) }
 
       before do
@@ -1785,8 +1785,8 @@ module VSphereCloud
 
         it 'raises an error' do
           expect{
-            vsphere_cloud.delete_subnet('switch-id')
-          }.to raise_error('NSXT must be enabled in CPI to use delete_subnet')
+            vsphere_cloud.delete_network('switch-id')
+          }.to raise_error('NSXT must be enabled in CPI to use delete_network')
         end
       end
 
@@ -1794,9 +1794,9 @@ module VSphereCloud
         let(:nsxt_enabled) { true }
 
         it 'deletes a subnet' do
-          expect(Subnet).to receive(:destroy)
+          expect(Network).to receive(:destroy)
             .with(nsxt_provider, 'switch-id')
-          vsphere_cloud.delete_subnet('switch-id')
+          vsphere_cloud.delete_network('switch-id')
         end
       end
     end

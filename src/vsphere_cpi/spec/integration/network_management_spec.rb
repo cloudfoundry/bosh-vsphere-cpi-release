@@ -36,7 +36,7 @@ describe 'network management', :network_management => true  do
   let(:switch_api) { NSXT::LogicalSwitchingApi.new(client) }
   let(:router_api) { NSXT::LogicalRoutingAndServicesApi.new(client) }
 
-  let(:subnet_definition) {
+  let(:network_definition) {
     {
         'range' => '192.168.99.0/24',
         'gateway' => '192.168.99.1',
@@ -51,7 +51,7 @@ describe 'network management', :network_management => true  do
     }
   }
 
-  context 'when create_subnet command is issued' do
+  context 'when create_network command is issued' do
     after do
       if @t1_router_id
         router_api.delete_logical_router(@t1_router_id, force: true)
@@ -62,7 +62,7 @@ describe 'network management', :network_management => true  do
     end
 
     it 'creates T0<-T1<-Switch infrastructure' do
-      result = @cloud.create_subnet(subnet_definition)
+      result = @cloud.create_network(network_definition)
       expect(result).not_to be_nil
       result = result.as_hash
 
@@ -85,7 +85,7 @@ describe 'network management', :network_management => true  do
     end
 
     context 'when failed to create a switch' do
-      let(:subnet_definition) {
+      let(:network_definition) {
         {
             'range' => '192.168.99.0/24',
             'gateway' => '192.168.99.1',
@@ -102,15 +102,15 @@ describe 'network management', :network_management => true  do
 
       it 'cleans up router' do
         expect {
-          @cloud.create_subnet(subnet_definition)
-        }.to raise_error(/Failed to create subnet. Has router been created: true. Has switch been created: false/)
+          @cloud.create_network(network_definition)
+        }.to raise_error(/Failed to create network. Has router been created: true. Has switch been created: false/)
 
         fail_if_router_exist('t1-test-router')
       end
     end
 
     context 'when failed to attach switch to t1 router' do
-      let(:subnet_definition) {
+      let(:network_definition) {
         {
             'range' => '192.168.200.0/32',
             'gateway' => '192.168.200.1',
@@ -138,8 +138,8 @@ describe 'network management', :network_management => true  do
 
       it 'cleans up router and switch' do
         expect {
-          @cloud.create_subnet(subnet_definition)
-        }.to raise_error(/Failed to create subnet. Has router been created: true. Has switch been created: true/)
+          @cloud.create_network(network_definition)
+        }.to raise_error(/Failed to create network. Has router been created: true. Has switch been created: true/)
 
         fail_if_router_exist('t1-test-router')
         fail_if_switch_exist('bosh-test-switch')
@@ -147,15 +147,15 @@ describe 'network management', :network_management => true  do
     end
   end
 
-  context 'when delete_subnet command is issued' do
+  context 'when delete_network command is issued' do
 
     it 'deletes switch and attached router' do
-      result = @cloud.create_subnet(subnet_definition)
+      result = @cloud.create_network(network_definition)
       expect(result).not_to be_nil
       result = result.as_hash
       router_id = get_attached_router_id(result[:network_cid])
 
-      @cloud.delete_subnet(result[:network_cid])
+      @cloud.delete_network(result[:network_cid])
 
       switches = logical_switches('bosh-test-switch')
       expect(switches.length).to eq(0)
@@ -179,7 +179,7 @@ describe 'network management', :network_management => true  do
       end
 
       it 'raises an error' do
-        result = @cloud.create_subnet(subnet_definition)
+        result = @cloud.create_network(network_definition)
         expect(result).not_to be_nil
         result = result.as_hash
         @switch_id = result[:network_cid]
@@ -191,7 +191,7 @@ describe 'network management', :network_management => true  do
         attach_switch_to_t1(@extra_switch_id, @t1_router_id)
 
         expect{
-          @cloud.delete_subnet(@switch_id)
+          @cloud.delete_network(@switch_id)
         }.to raise_error("Can not delete router #{@t1_router_id}. It has extra ports that are not created by BOSH.")
       end
     end

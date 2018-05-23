@@ -57,7 +57,7 @@ require 'cloud/vsphere/sdk_helpers/retryable_stub_adapter'
 require 'cloud/vsphere/sdk_helpers/retry_judge'
 require 'cloud/vsphere/helpers/xml'
 require 'nsxt/nsxt_client'
-require 'cloud/vsphere/subnet'
+require 'cloud/vsphere/network'
 
 module Bosh
   module Clouds
@@ -75,7 +75,7 @@ module Bosh
                      :current_vm_id, :get_disks, :ping, :resize_disk,
                      :calculate_vm_cloud_properties,
                      :info, :set_disk_metadata,
-                     :create_subnet, :delete_subnet
+                     :create_network, :delete_network
 
       def initialize(options)
         @delegate = VSphereCloud::Cloud.new(options)
