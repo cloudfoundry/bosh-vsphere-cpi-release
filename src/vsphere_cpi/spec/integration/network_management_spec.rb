@@ -102,7 +102,7 @@ describe 'network management', :network_management => true  do
       it 'cleans up router' do
         expect {
           @cloud.create_network(network_definition)
-        }.to raise_error(/Failed to create subnet. Has router been created: true. Has switch been created: false/)
+        }.to raise_error(/Failed to create network. Has router been created: true. Has switch been created: false/)
 
         fail_if_router_exist('t1-test-router')
       end
@@ -138,7 +138,7 @@ describe 'network management', :network_management => true  do
       it 'cleans up router and switch' do
         expect {
           @cloud.create_network(network_definition)
-        }.to raise_error(/Failed to create subnet. Has router been created: true. Has switch been created: true/)
+        }.to raise_error(/Failed to create network. Has router been created: true. Has switch been created: true/)
 
         fail_if_router_exist('t1-test-router')
         fail_if_switch_exist('bosh-test-switch')
