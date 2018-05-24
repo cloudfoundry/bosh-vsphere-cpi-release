@@ -15,6 +15,21 @@ module VSphereCloud
         mob.summary.free_space.to_i / BYTES_IN_MB
       end
 
+      def maintenance_mode
+        mob.child_entity.each do |ds|
+          return 'normal' if ds.summary.maintenance_mode == 'normal'
+        end
+        return 'in_maintenance'
+      end
+
+      def accessible?
+        mob.child_entity.any? do |ds|
+          ds.host.any? do |host_mount|
+            !host_mount.key.runtime.in_maintenance_mode
+          end
+        end
+      end
+
       def capacity
         mob.summary.capacity
       end
@@ -42,6 +57,12 @@ module VSphereCloud
       def datastores
         mob.child_entity
       end
+
+      # @return [String] debug storagePod information.
+      def inspect
+        "<StoragePod: #@mob / #{name}>"
+      end
+
     end
   end
 end

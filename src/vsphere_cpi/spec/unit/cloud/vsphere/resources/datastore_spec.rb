@@ -7,11 +7,18 @@ describe VSphereCloud::Resources::Datastore do
   end
 
   let(:mob) do
-    instance_double('VimSdk::Vim::Datastore', to_s: 'mob_as_string')
+    instance_double('VimSdk::Vim::Datastore', to_s: 'mob_as_string', summary: summary)
+  end
+  let(:summary) do
+    double(:fake_summary, maintenance_mode: 'normal')
   end
 
   describe '#mob' do
     it('returns the mob') { expect(subject.mob).to eq(mob) }
+  end
+
+  describe '#maintenance_mode' do
+    it('returns the maintenance mode of datastore') { expect(subject.maintenance_mode).to eq('normal') }
   end
 
   describe '#name' do

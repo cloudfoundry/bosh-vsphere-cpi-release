@@ -6,7 +6,7 @@ describe VSphereCloud::Resources::StoragePod do
   }
   let(:pod_storage_drs_entry) { instance_double('VimSdk::Vim::StorageResourceManager::PodStorageDrsEntry')}
   let(:summary) { double(:fake_summary, name: 'cpi-sp1', free_space: 1048576, capacity: 1060000)}
-  let(:storage_pod_mob)  { instance_double('VimSdk::Vim::StoragePod', summary: summary, pod_storage_drs_entry: pod_storage_drs_entry) }
+  let(:storage_pod_mob)  { instance_double('VimSdk::Vim::StoragePod', summary: summary, pod_storage_drs_entry: pod_storage_drs_entry, to_s: 'storage pod mob') }
 
   describe '#mob' do
     it 'returns the mob' do
@@ -17,6 +17,38 @@ describe VSphereCloud::Resources::StoragePod do
   describe '#name' do
     it 'returns the name' do
       expect(storage_pod.name).to eq('cpi-sp1')
+    end
+  end
+
+  describe '#inspect' do
+    it 'returns the printable form' do
+      expect(storage_pod.inspect). to eq("<StoragePod: #{storage_pod_mob} / cpi-sp1>")
+    end
+  end
+
+  describe '#accessible?' do
+    let (:dsone_mob) { instance_double('VimSdk::Vim::Datastore', host: [host_mount]) }
+    let (:dstwo_mob) { instance_double('VimSdk::Vim::Datastore', host: [host_mount]) }
+    let (:host_mount) { instance_double(VimSdk::Vim::Datastore::HostMount) }
+    before do
+      expect(storage_pod_mob).to receive(:child_entity).and_return([dsone_mob, dstwo_mob])
+      allow(host_mount).to receive_message_chain(:key, :runtime, :in_maintenance_mode).and_return(maintenance_mode)
+    end
+
+    context 'when all hosts attached to all datastores are in maintenance mode' do
+      let(:maintenance_mode) { true }
+
+      it 'is false' do
+        expect(subject).to_not be_accessible
+      end
+    end
+
+    context 'when at least one of the hosts attached to each datastore is not in maintenance mode' do
+      let(:maintenance_mode) { false }
+
+      it 'is true' do
+        expect(subject).to be_accessible
+      end
     end
   end
 
@@ -36,6 +68,32 @@ describe VSphereCloud::Resources::StoragePod do
     it 'returns true when drs is enabled' do
       allow(pod_storage_drs_entry).to receive_message_chain(:storage_drs_config, :pod_config, :enabled).and_return(true)
       expect(storage_pod.drs_enabled?).to eq(true)
+    end
+  end
+
+  describe '#maintenance_mode' do
+    let (:dsone_mob) { instance_double('VimSdk::Vim::Datastore') }
+    let (:dstwo_mob) { instance_double('VimSdk::Vim::Datastore') }
+
+    before do
+      expect(storage_pod_mob).to receive(:child_entity).and_return([dsone_mob, dstwo_mob])
+      allow(dsone_mob).to receive_message_chain(:summary, :maintenance_mode).and_return('entering_maintenance')
+      allow(dstwo_mob).to receive_message_chain(:summary, :maintenance_mode).and_return('normal')
+    end
+
+    context 'when storage pod has two datastores and one of them is in maintenance mode' do
+      it 'should return normal' do
+        expect(subject.maintenance_mode).to eq('normal')
+      end
+    end
+
+    context 'when storage pod has two datastores and both of them are in maintenance state' do
+      before do
+        allow(dstwo_mob).to receive_message_chain(:summary, :maintenance_mode).and_return('entering_maintenance')
+      end
+      it 'should return in_maintenance' do
+        expect(subject.maintenance_mode).to eq('in_maintenance')
+      end
     end
   end
 
