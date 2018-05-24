@@ -59,6 +59,10 @@ module VSphereCloud
         end
       end
 
+      def maintenance_mode
+        mob.summary.maintenance_mode
+      end
+
       def accessible?
         @mob.host.any? do |host_mount|
           !host_mount.key.runtime.in_maintenance_mode
