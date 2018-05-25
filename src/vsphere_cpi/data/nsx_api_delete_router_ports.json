@@ -1,0 +1,46 @@
+{
+  "responses": {
+    "200": {
+      "description": "OK"
+    },
+    "404": {
+      "$ref": "#/responses/NotFound"
+    },
+    "403": {
+      "$ref": "#/responses/Forbidden"
+    },
+    "412": {
+      "$ref": "#/responses/PreconditionFailed"
+    },
+    "400": {
+      "$ref": "#/responses/BadRequest"
+    },
+    "503": {
+      "$ref": "#/responses/ServiceUnavailable"
+    },
+    "500": {
+      "$ref": "#/responses/InternalServerError"
+    }
+  },
+  "description": "Deletes the specified logical router port. You must delete logical router ports before you can delete the associated logical router. To Delete Tier0 router link port you must have to delete attached tier1 router link port, otherwise pass 'force=true' as query param to force delete the Tier0 router link port. \n",
+  "parameters": [
+    {
+      "default": false,
+      "description": "Force delete the resource even if it is being used somewhere\n",
+      "type": "boolean",
+      "name": "force",
+      "in": "query"
+    }
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "tags": [
+    "Logical Routing And Services"
+  ],
+  "summary": "Delete a Logical Router Port",
+  "consumes": [
+    "application/json"
+  ],
+  "operationId": "DeleteLogicalRouterPorts"
+}
