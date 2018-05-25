@@ -53,7 +53,16 @@ describe 'network management', :network_management => true  do
   context 'when create_network command is issued' do
     after do
       if @t1_router_id
+        hack_nsxt_client
+        t0_ports = router_api.list_logical_router_ports(logical_router_id: @t0_router_id,
+                                                        resource_type: 'LogicalRouterLinkPortOnTIER0')
+        t1_ports = router_api.list_logical_router_ports(logical_router_id: @t1_router_id)
+        t1_ports_ids = t1_ports.results.map(&:id)
+        t0_port_to_t1 = t0_ports.results.find do |t0_port|
+          t1_ports_ids.include? t0_port.linked_logical_router_port_id
+        end
         router_api.delete_logical_router(@t1_router_id, force: true)
+        router_api.delete_logical_router_port(t0_port_to_t1.id)
       end
       if @switch_id
         switch_api.delete_logical_switch(@switch_id, cascade: true, detach: true)
@@ -260,4 +269,26 @@ describe 'network management', :network_management => true  do
     found = logical_switches(switch_name)
     fail("Found switch #{switch_name} was created by test and not cleaned up by CPI.  Was it there before the test?") if found.any?
   end
+  def hack_nsxt_client
+    NSXT::LogicalRouterPortListResult.send(:include, ResultWithDownlinkPort)
+  end
+  module ResultWithDownlinkPort
+    def self.included(base)
+      base.class_eval do
+        def self.swagger_types
+          {
+              :'_self' => :'SelfResourceLink',
+              :'_links' => :'Array<ResourceLink>',
+              :'_schema' => :'String',
+              :'cursor' => :'String',
+              :'sort_ascending' => :'BOOLEAN',
+              :'sort_by' => :'String',
+              :'result_count' => :'Integer',
+              :'results' => :'Array<LogicalRouterLinkPortOnTIER0>'
+          }
+        end
+      end
+    end
+  end
 end
+

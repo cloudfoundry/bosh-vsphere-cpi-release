@@ -20,6 +20,10 @@ desc 'Create swagger client from swagger spec'
 task :swagger do
 
   rm_rf(["./lib/nsxt/*"])
+  rm_rf(["./data/nsx_api.json"])
+
+  #create new nsx_api.json with including changes
+  sh "./data/generate_nsx_api_json.sh"
 
   sh [
     "swagger-codegen generate",
