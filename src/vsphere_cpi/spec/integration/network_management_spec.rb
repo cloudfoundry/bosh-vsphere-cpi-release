@@ -35,6 +35,10 @@ describe 'network management', :network_management => true  do
   let(:switch_api) { NSXT::LogicalSwitchingApi.new(client) }
   let(:router_api) { NSXT::LogicalRoutingAndServicesApi.new(client) }
 
+  let(:random_switch_name) { "test-switch-" + [*('A'..'Z')].sample(8).join }
+  let(:random_router_name) { "test-router-" + [*('A'..'Z')].sample(8).join }
+
+
   let(:network_definition) {
     {
         'range' => '192.168.99.0/24',
@@ -44,8 +48,8 @@ describe 'network management', :network_management => true  do
           't0_router_id' => @t0_router_id,
           'transport_zone_id' => @transport_zone_id,
 
-          't1_name' => 't1-test-router',
-          'switch_name' => 'bosh-test-switch'
+          't1_name' => random_router_name,
+          'switch_name' => random_switch_name
         }
     }
   }
@@ -101,8 +105,8 @@ describe 'network management', :network_management => true  do
                 't0_router_id' => @t0_router_id,
                 'transport_zone_id' => 'WRONG_ZONE',
 
-                't1_name' => 't1-test-router',
-                'switch_name' => 'bosh-test-switch'
+                't1_name' => random_router_name,
+                'switch_name' => random_switch_name
             }
         }
       }
@@ -112,7 +116,7 @@ describe 'network management', :network_management => true  do
           @cloud.create_network(network_definition)
         }.to raise_error(/Failed to create network. Has router been created: true. Has switch been created: false/)
 
-        fail_if_router_exist('t1-test-router')
+        fail_if_router_exist(random_switch_name)
       end
     end
 
@@ -126,8 +130,8 @@ describe 'network management', :network_management => true  do
                 't0_router_id' => @t0_router_id,
                 'transport_zone_id' => @transport_zone_id,
 
-                't1_name' => 't1-test-router',
-                'switch_name' => 'bosh-test-switch'
+                't1_name' => random_router_name,
+                'switch_name' => random_switch_name
             }
         }
       }
@@ -148,8 +152,8 @@ describe 'network management', :network_management => true  do
           @cloud.create_network(network_definition)
         }.to raise_error(/Failed to create network. Has router been created: true. Has switch been created: true/)
 
-        fail_if_router_exist('t1-test-router')
-        fail_if_switch_exist('bosh-test-switch')
+        fail_if_router_exist(random_router_name)
+        fail_if_switch_exist(random_switch_name)
       end
     end
   end
@@ -164,7 +168,7 @@ describe 'network management', :network_management => true  do
 
       @cloud.delete_network(result[:network_cid])
 
-      switches = logical_switches('bosh-test-switch')
+      switches = logical_switches(random_switch_name)
       expect(switches.length).to eq(0)
 
       expect{
@@ -259,14 +263,14 @@ describe 'network management', :network_management => true  do
   def fail_if_router_exist(router_name)
     list_logical_t1_routers.each do |router|
       if router.display_name == router_name
-        fail("Found router #{router_name} created by test and not cleaned up by CPI. Was it there before the test?")
+        fail("Found router #{router_name} created by test and not cleaned up by CPI.")
       end
     end
   end
 
   def fail_if_switch_exist(switch_name)
     found = logical_switches(switch_name)
-    fail("Found switch #{switch_name} was created by test and not cleaned up by CPI.  Was it there before the test?") if found.any?
+    fail("Found switch #{switch_name} was created by test and not cleaned up by CPI.") if found.any?
   end
 end
 
