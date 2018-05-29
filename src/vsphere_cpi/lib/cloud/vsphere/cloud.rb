@@ -658,7 +658,7 @@ module VSphereCloud
 
     def create_network(network_definition)
       raise 'NSXT must be enabled in CPI to use create_network' if !@config.nsxt_enabled?
-      network = Network.build(@nsxt_provider, network_definition, @logger)
+      network = Network.build(@nsxt_provider, network_definition, logger)
       network.create
     end
 

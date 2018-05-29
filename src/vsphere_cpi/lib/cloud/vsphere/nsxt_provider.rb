@@ -302,7 +302,7 @@ module VSphereCloud
                                                                   resource_type: 'LogicalRouterLinkPortOnTIER0'})
         t0_router_port = router_api.create_logical_router_port(t0_router_port)
       rescue => e
-        @logger.error("Error creating port on T0 router #{t0_router_id}. Exception: #{e.inspect}")
+        logger.error("Error creating port on T0 router #{t0_router_id}. Exception: #{e.inspect}")
         raise "Error creating port on #{t0_router_id} T0 router. Exception: #{e.inspect}"
       end
 
@@ -315,7 +315,7 @@ module VSphereCloud
                                                                  resource_type: 'LogicalRouterLinkPortOnTIER1'})
         router_api.create_logical_router_port(t1_router_port)
       rescue => e
-        @logger.error("Error creating port on T1 router #{t1_router_id} and attaching it to T0 port #{t0_router_port.id}. Exception: #{e.inspect}")
+        logger.error("Error creating port on T1 router #{t1_router_id} and attaching it to T0 port #{t0_router_port.id}. Exception: #{e.inspect}")
         raise "Error creating port on T1 (#{t1_router_id}) and attaching it to T0 port #{t0_router_port.id}. Exception: #{e.inspect}"
       end
     end
@@ -341,7 +341,7 @@ module VSphereCloud
                                               :logical_switch_id => switch_id})
         logical_port = switch_api.create_logical_port(logical_port)
       rescue => e
-        @logger.error("Failed to create logical port for switch #{switch_id}. Exception: #{e.inspect}")
+        logger.error("Failed to create logical port for switch #{switch_id}. Exception: #{e.inspect}")
         raise "Failed to create logical port for switch #{switch_id}. Exception: #{e.inspect}"
       end
 
@@ -356,7 +356,7 @@ module VSphereCloud
                                                               subnets: [subnet]})
         router_api.create_logical_router_port(t1_router_port)
       rescue => e
-        @logger.error("Failed to create logical port for router #{t1_router_id} and switch #{switch_id}. Exception: #{e.inspect}")
+        logger.error("Failed to create logical port for router #{t1_router_id} and switch #{switch_id}. Exception: #{e.inspect}")
         raise "Failed to create logical port for router #{t1_router_id} and switch #{switch_id}. Exception: #{e.inspect}"
       end
     end
