@@ -9,7 +9,6 @@ module VSphereCloud
     def initialize(object, *args)
       raise ArgumentError, 'No gather block provided' unless block_given?
       @object = object
-
       @gather = Proc.new
     end
 
@@ -76,7 +75,9 @@ module VSphereCloud
   end
 
   class DiskPlacementSelectionPipeline < SelectionPipeline
-    with_filter FreeSpaceFilter
-    with_scorer FreeSpaceScorer
+    def initialize(object, *args)
+      super
+      with_filter Filter_Maintenance_Mode_DS, Filter_Free_Space_DS, Filter_Target_Pattern_DS, Filter_Inaccessible_DS
+    end
   end
 end
