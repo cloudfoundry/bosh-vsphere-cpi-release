@@ -9,7 +9,7 @@ describe 'Give a cluster with DRS On ', host_maintenance: true  do
     @datastore_pattern_maintenance_cluster = fetch_and_verify_datastore('BOSH_VSPHERE_CPI_DATASTORE_PATTERN_MAINTENANCE_MODE_HOST', @cluster_name_maintenance)
   end
 
-  context 'when regex matches one or more of datastores that are accessible by one or few non-maintenace mode hosts in a cluster (datastore-*) ' do
+  context 'when regex matches one or more of datastores that are accessible by one or few non-maintenance mode hosts in a cluster (datastore-*) ' do
     let(:vm_type) do
       {
           'ram' => 512,
@@ -121,7 +121,7 @@ describe 'Give a cluster with DRS On ', host_maintenance: true  do
       begin
         expect do
           cpi.create_disk(2048, {}, nil)
-        end.to raise_error(/No valid placement found/)
+        end.to raise_error(/Unable to create disk on any storage entity provided. Possible errors can be/)
       end
     end
     after do
