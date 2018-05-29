@@ -1535,6 +1535,8 @@ module VSphereCloud
       end
 
       before do
+        allow(small_ds).to receive(:accessible?).and_return(true)
+        allow(large_ds).to receive(:accessible?).and_return(true)
         allow(datacenter).to receive(:persistent_pattern)
           .and_return('small-ds')
         allow(datacenter).to receive(:accessible_datastores)
@@ -1592,9 +1594,10 @@ module VSphereCloud
         let(:host_system) {instance_double(VimSdk::Vim::HostSystem, runtime: host_runtime_info)}
         let(:datastore_host_mount) { [instance_double('VimSdk::Vim::Datastore::HostMount', key: host_system)]}
         let(:ds_mob) { instance_double('VimSdk::Vim::Datastore', host: datastore_host_mount) }
-        let(:datastore) { double(:datastore, free_space: 2048, name: 'small-ds', mob: ds_mob, accessible?: true) }
+        let(:datastore) { VSphereCloud::Resources::Datastore.new('small-ds', ds_mob, true, 2048, 4096) }
         let(:accessible_datastores) { {  'small-ds' => datastore} }
         before do
+          allow(datastore).to receive(:accessible?).and_return(true)
           allow(vm_provider).to receive(:find)
             .with('fake-vm-cid')
             .and_return(vm)

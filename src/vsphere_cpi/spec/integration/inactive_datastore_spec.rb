@@ -46,7 +46,7 @@ describe 'inactive datastore handling' do
     it 'returns an error creating a disk' do
       expect {
         inactive_cpi.create_disk(128, disk_pool)
-      }.to raise_error(/No valid placement found/)
+      }.to raise_error(/Unable to create disk on any storage entity provided/)
     end
   end
 

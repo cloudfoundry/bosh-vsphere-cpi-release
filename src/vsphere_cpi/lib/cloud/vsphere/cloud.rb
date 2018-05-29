@@ -516,38 +516,56 @@ module VSphereCloud
     def create_disk(size_in_mb, cloud_properties, vm_cid = nil)
       with_thread_name("create_disk(#{size_in_mb}, _)") do
         logger.info("Creating disk with size: #{size_in_mb}")
-        if vm_cid
-          vm = vm_provider.find(vm_cid)
-          accessible_datastores = vm.accessible_datastores
-        else
-          accessible_datastores = @datacenter.accessible_datastores
-        end
 
-        # Pick datastores that are accessible from at least 1 active host they are attached to
-        accessible_datastores.select! do |_, ds_resource|
-          ds_resource.accessible?
-        end
+        # Create a  disk pool to hold possible datastyores
+        disk_pool = DiskPool.new(@datacenter,  cloud_properties['datastores'])
 
-        disk_pool = DiskPool.new(@datacenter, cloud_properties['datastores'])
+        # Get a persistent disk pattern from disk pools. Storage pod names are handled inside this function.
         target_datastore_pattern = StoragePicker.choose_persistent_pattern(disk_pool)
-        datastore_name = StoragePicker.choose_persistent_storage(size_in_mb, target_datastore_pattern, accessible_datastores)
 
-        if vm_cid
-          # This is to take into account datastore which might be accessible from cluster defined in cloud config
-          # datacenter.accessible_datastores includes datastores based on global config, so cannot use that here
-          datastore = accessible_datastores[datastore_name]
-          raise "Can't find datastore '#{datastore_name}'" if datastore.nil?
-        else
-          datastore = @datacenter.find_datastore(datastore_name)
+        # Create a new disk selection pipeline with a gathering block.
+        # Specific filters are pre-defined in the constructor itself
+        # Criteria Object for filter passed in the constructor is a hash of size and pattern.
+        disk_select_pipe = DiskPlacementSelectionPipeline.new(
+          {size_in_mb: size_in_mb, target_datastore_pattern: target_datastore_pattern}
+        ) do
+          if vm_cid
+            vm = vm_provider.find(vm_cid)
+            accessible_datastores = vm.accessible_datastores
+          else
+            accessible_datastores = @datacenter.accessible_datastores
+          end
+          # Pick datastores that are accessible from at least 1 active host they are attached to
+          accessible_datastores.select! do |_, ds_resource|
+            ds_resource.accessible?
+          end
+          accessible_datastores.values.collect do |ds|
+            StoragePlacement.new(ds)
+          end
         end
 
-        logger.info("Using datastore #{datastore.name} to store persistent disk")
+        # For each possible placement try to create a disk
+        disk_select_pipe.each do |storage_placement|
+          if vm_cid
+            # This is to take into account datastore which might be accessible from cluster defined in cloud config
+            # #datacenter.accessible_datastores includes datastores based on global config, so cannot use that here
+            vm = vm_provider.find(vm_cid)
+            datastore = vm.accessible_datastores[storage_placement.name]
+            raise "Can't find datastore '#{storage_placement.name}'" if datastore.nil?
+          else
+            datastore = @datacenter.find_datastore(storage_placement.name)
+          end
 
-        disk_type = cloud_properties.fetch('type', @config.vcenter_default_disk_type)
-        disk = @datacenter.create_disk(datastore, size_in_mb, disk_type)
-        logger.info("Created disk: #{disk.inspect}")
-
-        disk_pool.storage_list.any? ? DirectorDiskCID.encode(disk.cid, target_datastore_pattern: target_datastore_pattern) : disk.cid
+          logger.info("Trying disk creation : Using datastore #{datastore.name} to store persistent disk")
+          disk_type = cloud_properties.fetch('type', @config.vcenter_default_disk_type)
+          disk = @datacenter.create_disk(datastore, size_in_mb, disk_type)
+          next if disk.nil?
+          logger.info("Created disk: #{disk.inspect}")
+          raw_director_disk_cid = disk_pool.storage_list.any? ? DirectorDiskCID.encode(disk.cid, target_datastore_pattern: target_datastore_pattern) : disk.cid
+          # Return disk cid if we create a valid disk
+          return raw_director_disk_cid unless disk.nil?
+        end
+        raise "Unable to create disk on any storage entity provided. Possible errors can be not enough free space, datastore in maintenance mode or datastores are not accessible by any host"
       end
     end
 
