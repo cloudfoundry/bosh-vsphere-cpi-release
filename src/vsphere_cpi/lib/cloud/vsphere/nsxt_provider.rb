@@ -377,7 +377,6 @@ module VSphereCloud
     end
 
     def get_attached_switches_ids(t1_router_id)
-      hack_nsxt_client
       router_ports = router_api.list_logical_router_ports(logical_router_id: t1_router_id,
                                                           resource_type: 'LogicalRouterDownLinkPort')
       router_ports.results.select do |port|
@@ -471,28 +470,6 @@ module VSphereCloud
 
     def switch_api
       @switch_api ||= NSXT::LogicalSwitchingApi.new(@client)
-    end
-
-    def hack_nsxt_client
-      NSXT::LogicalRouterPortListResult.send(:include, ResultWithDownlinkPort)
-    end
-    module ResultWithDownlinkPort
-      def self.included(base)
-        base.class_eval do
-          def self.swagger_types
-            {
-                :'_self' => :'SelfResourceLink',
-                :'_links' => :'Array<ResourceLink>',
-                :'_schema' => :'String',
-                :'cursor' => :'String',
-                :'sort_ascending' => :'BOOLEAN',
-                :'sort_by' => :'String',
-                :'result_count' => :'Integer',
-                :'results' => :'Array<LogicalRouterDownLinkPort>'
-            }
-          end
-        end
-      end
     end
   end
 end
