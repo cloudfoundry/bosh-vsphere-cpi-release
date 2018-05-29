@@ -97,6 +97,8 @@ builds:
     version: "24"
   e0207902-8701-4ffa-bb61-2ad1860d7f6b:
     version: "32"
+  e609507f-732a-459f-476f-c4354c0364bf:
+    version: "49"
   ed00ba82-195f-465a-b3c9-bb8afea93c03:
     version: "20"
 format-version: "2"

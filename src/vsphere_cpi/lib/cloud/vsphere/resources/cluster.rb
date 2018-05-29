@@ -1,3 +1,4 @@
+require 'cloud/vsphere/logger'
 require 'cloud/vsphere/resources/resource_pool'
 
 module VSphereCloud
@@ -5,6 +6,7 @@ module VSphereCloud
     class Cluster
       include VimSdk
       include ObjectStringifier
+      include Logger
       stringify_with :name
 
       PROPERTIES = %w(name datastore resourcePool host)
@@ -28,14 +30,13 @@ module VSphereCloud
       # @param [ClusterConfig] config cluster configuration as specified by the
       #   operator.
       # @param [Hash] properties prefetched vSphere properties for the cluster.
-      def initialize(cluster_config, properties, logger, client)
-        @logger = logger
+      def initialize(cluster_config, properties, client)
         @client = client
         @properties = properties
 
         @config = cluster_config
         @mob = properties[:obj]
-        @resource_pool = ResourcePool.new(@client, @logger, cluster_config, properties['resourcePool'])
+        @resource_pool = ResourcePool.new(@client, cluster_config, properties['resourcePool'])
       end
 
       # @return [Integer] amount of free memory in the cluster
@@ -73,7 +74,7 @@ module VSphereCloud
 
       private
 
-      attr_reader :config, :client, :properties, :logger
+      attr_reader :config, :client, :properties
 
       def select_datastores(pattern)
         accessible_datastores.select { |name, datastore| name =~ pattern }

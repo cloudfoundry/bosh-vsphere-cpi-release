@@ -1,11 +1,10 @@
 module VSphereCloud
   module Resources
     class Task
-      def initialize(cloud_searcher, task_mob, retry_judge, logger)
+      def initialize(cloud_searcher, task_mob, retry_judge)
         @cloud_searcher = cloud_searcher
         @task_mob = task_mob
         @retry_judge = retry_judge
-        @logger = logger
       end
 
       def name

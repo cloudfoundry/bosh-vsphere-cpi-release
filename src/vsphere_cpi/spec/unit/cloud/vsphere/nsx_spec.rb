@@ -2,10 +2,9 @@ require 'spec_helper'
 require 'oga'
 
 module VSphereCloud
-  describe NSX do
+  describe NSX, fake_logger: true do
 
     let(:http_client)           { instance_double(NsxHttpClient) }
-    let(:logger)                { Logger.new('/dev/null') }
     let(:vm_id)                 { 'my-vm-id' }
     let(:vm_name)               { 'my-vm-name' }
     let(:nsx_address)           { 'my-nsx-manager' }
@@ -35,7 +34,7 @@ module VSphereCloud
     }
 
     subject(:nsx) do
-      described_class.new(nsx_address, http_client, logger).tap do |nsx|
+      described_class.new(nsx_address, http_client).tap do |nsx|
         nsx.sleep_time = 0
       end
     end

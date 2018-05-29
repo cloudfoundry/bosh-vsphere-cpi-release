@@ -1,22 +1,20 @@
 require 'spec_helper'
 
 module VSphereCloud
-  describe AgentEnv do
+  describe AgentEnv, fake_logger: true do
     include FakeFS::SpecHelpers
 
-    subject(:agent_env) do
+    subject do
       described_class.new(
         client: client,
         file_provider: file_provider,
-        cloud_searcher: cloud_searcher,
-        logger: logger,
+        cloud_searcher: cloud_searcher
       )
     end
 
     let(:client) { instance_double('VSphereCloud::VCenterClient') }
     let(:file_provider) { double('VSphereCloud::FileProvider') }
     let(:cloud_searcher) { double('VSphereCloud::CloudSearcher') }
-    let(:logger) { Logger.new(StringIO.new("")) }
 
     let(:location) do
       {
@@ -61,7 +59,7 @@ module VSphereCloud
           'fake-vm-name/env.json',
         ).and_return('{"fake-response-json" : "some-value"}')
 
-        expect(agent_env.get_current_env(vm, 'fake-datacenter-name 1')).to eq({'fake-response-json' => 'some-value'})
+        expect(subject.get_current_env(vm, 'fake-datacenter-name 1')).to eq({'fake-response-json' => 'some-value'})
       end
 
       it 'raises if env.json is empty' do
@@ -72,7 +70,7 @@ module VSphereCloud
         ).and_return(nil)
 
         expect {
-          agent_env.get_current_env(vm, 'fake-datacenter-name 1')
+          subject.get_current_env(vm, 'fake-datacenter-name 1')
         }.to raise_error(Bosh::Clouds::CloudError)
       end
     end
@@ -112,7 +110,7 @@ module VSphereCloud
         expect(client).to receive(:delete_path).with(datacenter, '[fake-old-datastore-name 1] fake-vm-name/env.json')
         expect(client).to receive(:delete_path).with(datacenter, '[fake-old-datastore-name 1] fake-vm-name/env.iso')
 
-        agent_env.clean_env(vm)
+        subject.clean_env(vm)
       end
 
       context 'when no cdrom exists' do
@@ -121,7 +119,7 @@ module VSphereCloud
         it 'does not delete anything' do
           expect(client).to_not receive(:delete_path)
 
-          agent_env.clean_env(vm)
+          subject.clean_env(vm)
         end
       end
     end
@@ -200,7 +198,7 @@ module VSphereCloud
           path = "#{iso_generator} /some/tmp/dir/env /some/tmp/dir/env.iso 2>&1"
         end
 
-        expect(agent_env).to receive(:`).with(path) do
+        expect(subject).to receive(:`).with(path) do
           expect(File.read('/some/tmp/dir/env')).to eq('["fake-json"]')
           File.open('/some/tmp/dir/env.iso', 'w') { |f| f.write('iso contents') }
           `:`
@@ -237,7 +235,7 @@ module VSphereCloud
         it_uploads_environment_iso.ordered
         it_reconfigures_cdrom.ordered
 
-        agent_env.set_env(vm, location, env)
+        subject.set_env(vm, location, env)
       end
 
       context 'when cdrom is disconnected' do
@@ -250,7 +248,7 @@ module VSphereCloud
           it_uploads_environment_iso.ordered
           it_reconfigures_cdrom.ordered
 
-          agent_env.set_env(vm, location, env)
+          subject.set_env(vm, location, env)
         end
       end
 
@@ -269,7 +267,7 @@ module VSphereCloud
           it_uploads_environment_iso.ordered
           it_reconfigures_cdrom.ordered
 
-          agent_env.set_env(vm, location, env)
+          subject.set_env(vm, location, env)
         end
       end
 
@@ -288,7 +286,7 @@ module VSphereCloud
           it_uploads_environment_iso.ordered
           it_reconfigures_cdrom.ordered
 
-          agent_env.set_env(vm, location, env)
+          subject.set_env(vm, location, env)
         end
       end
 
@@ -307,7 +305,7 @@ module VSphereCloud
           it_cleans_up_old_env_files.ordered
 
           expect {
-            agent_env.set_env(vm, location, env)
+            subject.set_env(vm, location, env)
           }.to raise_error 'Could not upload file'
         end
       end
@@ -321,7 +319,7 @@ module VSphereCloud
           it_uploads_environment_json.ordered
 
           expect {
-            agent_env.set_env(vm, location, env)
+            subject.set_env(vm, location, env)
           }.to raise_error /some-exit-status/
         end
       end
@@ -340,7 +338,7 @@ module VSphereCloud
 
           expect(client).not_to receive(:delete_path)
 
-          agent_env.set_env(vm, location, env)
+          subject.set_env(vm, location, env)
         end
       end
     end
@@ -355,7 +353,7 @@ module VSphereCloud
         end
 
         it 'returns iso parent folder' do
-          expect(agent_env.env_iso_folder(cdrom)).to eql('[fake-old-datastore-name 1] fake-vm-name')
+          expect(subject.env_iso_folder(cdrom)).to eql('[fake-old-datastore-name 1] fake-vm-name')
         end
       end
 
@@ -365,7 +363,7 @@ module VSphereCloud
         end
 
         it 'returns nil' do
-          expect(agent_env.env_iso_folder(cdrom)).to be_nil
+          expect(subject.env_iso_folder(cdrom)).to be_nil
         end
       end
     end

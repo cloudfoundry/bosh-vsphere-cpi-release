@@ -2,7 +2,7 @@ require 'spec_helper'
 require 'ostruct'
 
 module VSphereCloud
-  describe Cloud do
+  describe Cloud, fake_logger: true do
     subject(:vsphere_cloud) { Cloud.new(config) }
 
     let(:config) { { 'vcenters' => [fake: 'config'] } }
@@ -17,13 +17,13 @@ module VSphereCloud
         vcenter_default_disk_type: default_disk_type,
         soap_log: 'fake-log-file',
         vcenter_enable_auto_anti_affinity_drs_rules: false,
+        upgrade_hw_version: true,
         vcenter_http_logging: true,
         nsxt_enabled?: nsxt_enabled
       ).as_null_object
     end
     let(:nsxt_enabled) { false }
     let(:default_disk_type) { 'preallocated' }
-    let(:logger) { instance_double('Bosh::Cpi::Logger', info: nil, debug: nil) }
     let(:vcenter_client) { instance_double('VSphereCloud::VCenterClient', login: nil, service_content: service_content) }
     let(:http_basic_auth_client) { instance_double('VSphereCloud::NsxHttpClient') }
     let(:http_client) { instance_double('VSphereCloud::CpiHttpClient') }
@@ -54,8 +54,7 @@ module VSphereCloud
         allow(VCenterClient).to receive(:new)
                                   .with(
                                     vcenter_api_uri: vcenter_api_uri,
-                                    http_client: http_client,
-                                    logger: logger,
+                                    http_client: http_client
                                   )
                                   .and_return(vcenter_client)
       end
@@ -83,10 +82,15 @@ module VSphereCloud
                                   .with(
                                     vcenter_api_uri: vcenter_api_uri,
                                     http_client: http_client,
-                                    logger: anything,
                                   )
                                   .and_return(vcenter_client)
-
+        allow(VCenterClient).to receive(:new)
+                                  .with(
+                                    vcenter_api_uri: vcenter_api_uri,
+                                    http_client: http_client,
+                                    logger: an_instance_of(::Logger)
+                                  )
+                                  .and_return(vcenter_client)
         allow(vcenter_client).to receive(:logout)
       end
 
@@ -411,7 +415,7 @@ module VSphereCloud
       let(:encoded_disk_cid) { 'fake-disk-cid' }
       let(:director_disk_cid) { VSphereCloud::DirectorDiskCID.new(encoded_disk_cid) }
       let(:nsxt_provider) { instance_double(VSphereCloud::NSXTProvider) }
-      let(:stemcell) { VSphereCloud::Stemcell.new('fake-stemcell-cid', logger) }
+      let(:stemcell) { VSphereCloud::Stemcell.new('fake-stemcell-cid') }
       let(:disk_pool) { VSphereCloud::DiskPool.new(datacenter,vm_type['datastores']) }
 
       before do
@@ -431,9 +435,9 @@ module VSphereCloud
         allow(datacenter).to receive(:find_disk).with(director_disk_cid).and_return(fake_disk)
         allow(VSphereCloud::DirectorDiskCID).to receive(:new).with(encoded_disk_cid).and_return(director_disk_cid)
 
-        allow(IPConflictDetector).to receive(:new).with(logger, vcenter_client).and_return(ip_conflict_detector)
+        allow(IPConflictDetector).to receive(:new).with(vcenter_client).and_return(ip_conflict_detector)
         allow(ClusterPicker).to receive(:new).and_return(cluster_picker)
-        allow(IPConflictDetector).to receive(:new).with(logger, vcenter_client).and_return(ip_conflict_detector)
+        allow(IPConflictDetector).to receive(:new).with(vcenter_client).and_return(ip_conflict_detector)
         allow(DiskConfig).to receive(:new)
           .with(
             cid: fake_disk.cid,
@@ -475,14 +479,14 @@ module VSphereCloud
           .with(
             client: vcenter_client,
             cloud_searcher: cloud_searcher,
-            logger: logger,
             cpi: vsphere_cloud,
             datacenter: datacenter,
             agent_env: agent_env,
             ip_conflict_detector: ip_conflict_detector,
             default_disk_type: default_disk_type,
             enable_auto_anti_affinity_drs_rules: false,
-            stemcell: stemcell
+            stemcell: stemcell,
+            upgrade_hw_version: true
           ).and_return(vm_creator)
         expect(vm_creator).to receive(:create).with(vm_config).and_return(fake_vm)
 
@@ -522,13 +526,13 @@ module VSphereCloud
           .with(
             client: vcenter_client,
             cloud_searcher: cloud_searcher,
-            logger: logger,
             cpi: vsphere_cloud,
             datacenter: datacenter,
             agent_env: agent_env,
             ip_conflict_detector: ip_conflict_detector,
             default_disk_type: default_disk_type,
             enable_auto_anti_affinity_drs_rules: false,
+            upgrade_hw_version: true,
             stemcell: stemcell
         )
           .and_return(vm_creator)
@@ -689,13 +693,13 @@ module VSphereCloud
                                  .with(
                                    client: vcenter_client,
                                    cloud_searcher: cloud_searcher,
-                                   logger: logger,
                                    cpi: vsphere_cloud,
                                    datacenter: datacenter,
                                    agent_env: agent_env,
                                    ip_conflict_detector: ip_conflict_detector,
                                    default_disk_type: 'thin',
                                    enable_auto_anti_affinity_drs_rules: false,
+                                   upgrade_hw_version: true,
                                    stemcell: stemcell
                                  )
                                  .and_return(vm_creator)

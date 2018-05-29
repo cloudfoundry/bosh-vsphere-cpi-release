@@ -1,3 +1,4 @@
+require 'cloud/vsphere/logger'
 require 'json'
 require 'membrane'
 require 'cloud'
@@ -5,6 +6,7 @@ require 'cloud'
 module VSphereCloud
   class Cloud < Bosh::Cloud
     include VimSdk
+    include Logger
 
     class TimeoutException < StandardError; end
     class NetworkException < StandardError
@@ -15,16 +17,18 @@ module VSphereCloud
       end
     end
 
-    attr_accessor :client, :logger # exposed for testing
+    attr_accessor :client
     attr_reader :config, :datacenter, :heartbeat_thread
 
     def enable_telemetry
       http_client = VSphereCloud::CpiHttpClient.new
       other_client = VCenterClient.new(
         vcenter_api_uri: @config.vcenter_api_uri,
-        http_client: http_client,
-        logger: Logger.new('/dev/null'),
+        http_client: http_client
       )
+      other_client.define_singleton_method(:logger) do
+        @logger ||= ::Logger.new('/dev/null')
+      end
       other_client.login(@config.vcenter_user, @config.vcenter_password, 'en')
       option = Vim::Option::OptionValue.new
       option.key = 'config.SDDC.cpi'
@@ -40,27 +44,24 @@ module VSphereCloud
     def initialize(options)
       @config = Config.build(options)
 
-      @logger = config.logger
+      Logger.logger = config.logger
 
-      request_id = options['vcenters'][0]['request_id']
-      if request_id
-        @logger.set_request_id(request_id)
+      if request_id = options['vcenters'][0]['request_id']
+        Logger.logger.set_request_id(request_id)
       end
 
       @http_client = VSphereCloud::CpiHttpClient.new(@config.soap_log)
 
       @client = VCenterClient.new(
         vcenter_api_uri: @config.vcenter_api_uri,
-        http_client: @http_client,
-        logger: @logger,
+        http_client: @http_client
       )
       @client.login(@config.vcenter_user, @config.vcenter_password, 'en')
 
-      @cloud_searcher = CloudSearcher.new(@client.service_content, @logger)
+      @cloud_searcher = CloudSearcher.new(@client.service_content)
       @cluster_provider = Resources::ClusterProvider.new(
         datacenter_name: @config.datacenter_name,
-        client: @client,
-        logger: @logger,
+        client: @client
       )
       @datacenter = Resources::Datacenter.new(
         client: @client,
@@ -72,23 +73,20 @@ module VSphereCloud
         name: @config.datacenter_name,
         disk_path: @config.datacenter_disk_path,
         clusters: @config.datacenter_clusters,
-        cluster_provider: @cluster_provider,
-        logger: @logger,
+        cluster_provider: @cluster_provider
       )
       @file_provider = FileProvider.new(
         http_client: @http_client,
-        vcenter_host: @config.vcenter_host,
-        logger: @logger
+        vcenter_host: @config.vcenter_host
       )
       @agent_env = AgentEnv.new(
         client: client,
         file_provider: @file_provider,
-        cloud_searcher: @cloud_searcher,
-        logger: @logger,
+        cloud_searcher: @cloud_searcher
       )
 
       # Setup NSX-T Provider
-      @nsxt_provider = NSXTProvider.new(@config.nsxt, @logger) if @config.nsxt_enabled?
+      @nsxt_provider = NSXTProvider.new(@config.nsxt) if @config.nsxt_enabled?
 
       # We get disconnected if the connection is inactive for a long period.
       @heartbeat_thread = Thread.new do
@@ -132,7 +130,7 @@ module VSphereCloud
         telemetry_thread = Thread.new { enable_telemetry }
         result = nil
         Dir.mktmpdir do |temp_dir|
-          @logger.info("Extracting stemcell to: #{temp_dir}")
+          logger.info("Extracting stemcell to: #{temp_dir}")
           output = `tar -C #{temp_dir} -xzf #{image} 2>&1`
           raise "Corrupt image '#{image}', tar exit status: #{$?.exitstatus}, output: #{output}" if $?.exitstatus != 0
 
@@ -141,7 +139,7 @@ module VSphereCloud
           ovf_file = File.join(temp_dir, ovf_file)
 
           name = "sc-#{SecureRandom.uuid}"
-          @logger.info("Generated name: #{name}")
+          logger.info("Generated name: #{name}")
 
           stemcell_size = File.size(image) / (1024 * 1024)
           vm_type = VmType.new(@datacenter, {'ram' => 0})
@@ -166,7 +164,7 @@ module VSphereCloud
           cluster = vm_config.cluster
           datastore = @datacenter.find_datastore(datastore_name)
 
-          @logger.info("Deploying to: #{cluster.mob} / #{datastore.mob}")
+          logger.info("Deploying to: #{cluster.mob} / #{datastore.mob}")
 
           import_spec_result = import_ovf(name, ovf_file, cluster.resource_pool.mob, datastore.mob)
 
@@ -175,18 +173,18 @@ module VSphereCloud
           end.device
           system_disk.backing.thin_provisioned = @config.vcenter_default_disk_type == 'thin'
 
-          lease_obtainer = LeaseObtainer.new(@cloud_searcher, @logger)
+          lease_obtainer = LeaseObtainer.new(@cloud_searcher)
           nfc_lease = lease_obtainer.obtain(
             cluster.resource_pool,
             import_spec_result.import_spec,
             @datacenter.template_folder,
           )
 
-          @logger.info('Uploading')
+          logger.info('Uploading')
           vm = upload_ovf(ovf_file, nfc_lease, import_spec_result.file_item)
           result = name
 
-          @logger.info('Removing NICs')
+          logger.info('Removing NICs')
           devices = @cloud_searcher.get_property(vm, Vim::VirtualMachine, 'config.hardware.device', ensure_all: true)
           config = Vim::Vm::ConfigSpec.new
           config.device_change = []
@@ -198,7 +196,7 @@ module VSphereCloud
           end
           client.reconfig_vm(vm, config)
 
-          @logger.info('Taking initial snapshot')
+          logger.info('Taking initial snapshot')
 
           # Despite the naming, this has nothing to do with the Cloud notion of a disk snapshot
           # (which comes from AWS). This is a vm snapshot.
@@ -214,17 +212,17 @@ module VSphereCloud
 
     def delete_stemcell(stemcell)
       with_thread_name("delete_stemcell(#{stemcell})") do
-        Bosh::ThreadPool.new(max_threads: 32, logger: @logger).wrap do |pool|
-          @logger.info("Looking for stemcell replicas in: #{@datacenter.name}")
+        Bosh::ThreadPool.new(max_threads: 32, logger: logger).wrap do |pool|
+          logger.info("Looking for stemcell replicas in: #{@datacenter.name}")
           matches = client.find_all_stemcell_replicas(@datacenter.mob, stemcell)
 
           matches.each do |sc|
             sc_name = sc.name
-            @logger.info("Found: #{sc_name}")
+            logger.info("Found: #{sc_name}")
             pool.process do
-              @logger.info("Deleting: #{sc_name}")
+              logger.info("Deleting: #{sc_name}")
               client.delete_vm(sc)
-              @logger.info("Deleted: #{sc_name}")
+              logger.info("Deleted: #{sc_name}")
             end
           end
 
@@ -282,18 +280,18 @@ module VSphereCloud
           vm_creator = VmCreator.new(
             client: @client,
             cloud_searcher: @cloud_searcher,
-            logger: @logger,
             cpi: self,
             datacenter: @datacenter,
             agent_env: @agent_env,
-            ip_conflict_detector: IPConflictDetector.new(@logger, @client),
+            ip_conflict_detector: IPConflictDetector.new(@client),
             default_disk_type: @config.vcenter_default_disk_type,
             enable_auto_anti_affinity_drs_rules: @config.vcenter_enable_auto_anti_affinity_drs_rules,
-            stemcell: Stemcell.new(stemcell_cid, @logger)
+            stemcell: Stemcell.new(stemcell_cid),
+            upgrade_hw_version: @config.upgrade_hw_version
           )
           created_vm = vm_creator.create(vm_config)
         rescue => e
-          @logger.error("Error in creating vm: #{e}, Backtrace - #{e.backtrace.join("\n")}")
+          logger.error("Error in creating vm: #{e}, Backtrace - #{e.backtrace.join("\n")}")
           raise e
         end
 
@@ -305,7 +303,7 @@ module VSphereCloud
               #For dynamic server pools add vm to the corresponding nsgroup
               static_server_pools, dynamic_server_pools = @nsxt_provider.retrieve_server_pools(vm_type.nsxt_server_pools)
               lb_ns_groups = dynamic_server_pools.map{ |server_pool| server_pool.member_group.grouping_object.target_display_name } if dynamic_server_pools
-              @logger.info("NSGroup names corresponding to load balancer's dynamic server pools are: #{lb_ns_groups}")
+              logger.info("NSGroup names corresponding to load balancer's dynamic server pools are: #{lb_ns_groups}")
               ns_groups.concat(lb_ns_groups) if lb_ns_groups
               @nsxt_provider.add_vm_to_server_pools(created_vm, static_server_pools) if static_server_pools
             end
@@ -313,12 +311,12 @@ module VSphereCloud
             @nsxt_provider.set_vif_type(created_vm, vm_type.nsxt)
           end
         rescue => e
-          @logger.info("Failed to apply NSX properties to VM '#{created_vm.cid}' with error: #{e.message}")
+          logger.info("Failed to apply NSX properties to VM '#{created_vm.cid}' with error: #{e.message}")
           begin
-            @logger.info("Deleting VM '#{created_vm.cid}'...")
+            logger.info("Deleting VM '#{created_vm.cid}'...")
             delete_vm(created_vm.cid)
           rescue => ex
-            @logger.info("Failed to delete VM '#{created_vm.cid}' with message: #{ex.inspect}")
+            logger.info("Failed to delete VM '#{created_vm.cid}' with message: #{ex.inspect}")
           end
           raise e
         end
@@ -342,12 +340,12 @@ module VSphereCloud
             nsx.add_members_to_lbs(vm_type.nsx_lbs)
           end
         rescue => e
-          @logger.info("Failed to apply NSX properties to VM '#{created_vm.cid}' with error: #{e}")
+          logger.info("Failed to apply NSX properties to VM '#{created_vm.cid}' with error: #{e}")
           begin
-            @logger.info("Deleting VM '#{created_vm.cid}'...")
+            logger.info("Deleting VM '#{created_vm.cid}'...")
             delete_vm(created_vm.cid)
           rescue => ex
-            @logger.info("Failed to delete vm '#{created_vm.cid}' with message:  #{ex.inspect}")
+            logger.info("Failed to delete vm '#{created_vm.cid}' with message:  #{ex.inspect}")
           end
           raise e
         end
@@ -366,7 +364,8 @@ module VSphereCloud
 
     def delete_vm(vm_cid)
       with_thread_name("delete_vm(#{vm_cid})") do
-        @logger.info("Deleting vm: #{vm_cid}")
+        logger.info("Deleting vm: #{vm_cid}")
+
         vm = vm_provider.find(vm_cid)
         vm_ip = vm.mob.guest&.ip_address
         vm.power_off
@@ -383,17 +382,17 @@ module VSphereCloud
           begin
             @nsxt_provider.remove_vm_from_nsgroups(vm)
           rescue => e
-            @logger.info("Failed to remove VM from NSGroups: #{e.message}")
+            logger.info("Failed to remove VM from NSGroups: #{e.message}")
           end
           begin
             @nsxt_provider.remove_vm_from_server_pools(vm_ip)
           rescue => e
-            @logger.info("Failed to remove VM from ServerPool: #{e.message}")
+            logger.info("Failed to remove VM from ServerPool: #{e.message}")
           end
         end
 
         vm.delete
-        @logger.info("Deleted vm: #{vm_cid}")
+        logger.info("Deleted vm: #{vm_cid}")
       end
     end
 
@@ -401,17 +400,17 @@ module VSphereCloud
       with_thread_name("reboot_vm(#{vm_cid})") do
         vm = vm_provider.find(vm_cid)
 
-        @logger.info("Reboot vm = #{vm_cid}")
+        logger.info("Reboot vm = #{vm_cid}")
 
         unless vm.powered_on?
-          @logger.info("VM not in POWERED_ON state. Current state : #{vm.power_state}")
+          logger.info("VM not in POWERED_ON state. Current state : #{vm.power_state}")
         end
 
         begin
           vm.reboot
         rescue => e
-          @logger.error("Soft reboot failed #{e} -#{e.backtrace.join("\n")}")
-          @logger.info('Try hard reboot')
+          logger.error("Soft reboot failed #{e} -#{e.backtrace.join("\n")}")
+          logger.info('Try hard reboot')
 
           # if we fail to perform a soft-reboot we force a hard-reboot
           vm.power_off if vm.powered_on?
@@ -484,7 +483,7 @@ module VSphereCloud
       with_thread_name("detach_disk(#{vm_cid}, #{raw_director_disk_cid})") do
         director_disk_cid = DirectorDiskCID.new(raw_director_disk_cid)
 
-        @logger.info("Detaching disk: #{director_disk_cid.value} from vm: #{vm_cid}")
+        logger.info("Detaching disk: #{director_disk_cid.value} from vm: #{vm_cid}")
 
         vm = vm_provider.find(vm_cid)
         disk = vm.disk_by_cid(director_disk_cid.value)
@@ -497,7 +496,7 @@ module VSphereCloud
 
     def create_disk(size_in_mb, cloud_properties, vm_cid = nil)
       with_thread_name("create_disk(#{size_in_mb}, _)") do
-        @logger.info("Creating disk with size: #{size_in_mb}")
+        logger.info("Creating disk with size: #{size_in_mb}")
         if vm_cid
           vm = vm_provider.find(vm_cid)
           accessible_datastores = vm.accessible_datastores
@@ -505,8 +504,8 @@ module VSphereCloud
           accessible_datastores = @datacenter.accessible_datastores
         end
 
-        disk_pool = DiskPool.new(@datacenter,  cloud_properties['datastores'])
-        target_datastore_pattern = StoragePicker.choose_persistent_pattern(disk_pool, @logger)
+        disk_pool = DiskPool.new(@datacenter, cloud_properties['datastores'])
+        target_datastore_pattern = StoragePicker.choose_persistent_pattern(disk_pool)
         datastore_name = StoragePicker.choose_persistent_storage(size_in_mb, target_datastore_pattern, accessible_datastores)
 
         if vm_cid
@@ -518,12 +517,11 @@ module VSphereCloud
           datastore = @datacenter.find_datastore(datastore_name)
         end
 
-
-        @logger.info("Using datastore #{datastore.name} to store persistent disk")
+        logger.info("Using datastore #{datastore.name} to store persistent disk")
 
         disk_type = cloud_properties.fetch('type', @config.vcenter_default_disk_type)
         disk = @datacenter.create_disk(datastore, size_in_mb, disk_type)
-        @logger.info("Created disk: #{disk.inspect}")
+        logger.info("Created disk: #{disk.inspect}")
 
         disk_pool.storage_list.any? ? DirectorDiskCID.encode(disk.cid, target_datastore_pattern: target_datastore_pattern) : disk.cid
       end
@@ -532,11 +530,11 @@ module VSphereCloud
     def delete_disk(raw_director_disk_cid)
       with_thread_name("delete_disk(#{raw_director_disk_cid})") do
         director_disk_cid = DirectorDiskCID.new(raw_director_disk_cid)
-        @logger.info("Deleting disk: #{director_disk_cid.value}")
+        logger.info("Deleting disk: #{director_disk_cid.value}")
         disk = @datacenter.find_disk(director_disk_cid)
         client.delete_disk(@datacenter.mob, disk.path)
 
-        @logger.info('Finished deleting disk')
+        logger.info('Finished deleting disk')
       end
     end
 
@@ -616,14 +614,14 @@ module VSphereCloud
     def get_vms
       subfolders = []
       with_thread_name('get_vms') do
-        @logger.info("Looking for VMs in: #{@datacenter.name} - #{@datacenter.master_vm_folder.path}")
+        logger.info("Looking for VMs in: #{@datacenter.name} - #{@datacenter.master_vm_folder.path}")
         subfolders += @datacenter.master_vm_folder.mob.child_entity
-        @logger.info("Looking for Stemcells in: #{@datacenter.name} - #{@datacenter.master_template_folder.path}")
+        logger.info("Looking for Stemcells in: #{@datacenter.name} - #{@datacenter.master_template_folder.path}")
         subfolders += @datacenter.master_template_folder.mob.child_entity
       end
       mobs = subfolders.map { |folder| folder.child_entity }.flatten
       mobs.map do |mob|
-        VSphereCloud::Resources::VM.new(mob.name, mob, @client, @logger)
+        VSphereCloud::Resources::VM.new(mob.name, mob, @client)
       end
     end
 
@@ -632,11 +630,7 @@ module VSphereCloud
     end
 
     def vm_provider
-      VMProvider.new(
-        @datacenter,
-        @client,
-        @logger
-      )
+      VMProvider.new(@datacenter, @client)
     end
 
     def nsx
@@ -649,7 +643,7 @@ module VSphereCloud
         @config.nsx_password,
         @config.soap_log,
       )
-      @nsx = NSX.new(@config.nsx_url, nsx_http_client, @logger)
+      @nsx = NSX.new(@config.nsx_url, nsx_http_client)
     end
 
     def cleanup
@@ -710,7 +704,7 @@ module VSphereCloud
               end
             end
 
-            @logger.info("Uploading disk to: #{device_url.url}")
+            logger.info("Uploading disk to: #{device_url.url}")
 
             @file_provider.upload_file_to_url(device_url.url,
                              disk_file,
@@ -770,7 +764,7 @@ module VSphereCloud
         )
       end
       #ephemeral disk configuration
-      ephemeral_pattern = StoragePicker.choose_ephemeral_pattern(vm_type, @logger)
+      ephemeral_pattern = StoragePicker.choose_ephemeral_pattern(vm_type)
       ephemeral_disk_config = VSphereCloud::DiskConfig.new(
         size: vm_type.disk,
         ephemeral: true,

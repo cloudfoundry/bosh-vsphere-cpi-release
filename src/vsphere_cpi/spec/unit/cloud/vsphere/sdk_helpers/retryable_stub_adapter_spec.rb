@@ -1,9 +1,9 @@
 require 'spec_helper'
 require 'ruby_vim_sdk'
 
-describe 'RetryableStubAdapter' do
+describe 'RetryableStubAdapter', fake_logger: true do
   subject(:retryable_stub_adapter) do
-    VSphereCloud::SdkHelpers::RetryableStubAdapter.new(stub_adapter, logger, retry_judge, retryer)
+    VSphereCloud::SdkHelpers::RetryableStubAdapter.new(stub_adapter, retry_judge, retryer)
   end
 
   let(:stub_adapter) { instance_double(VimSdk::Soap::StubAdapter) }
@@ -12,7 +12,6 @@ describe 'RetryableStubAdapter' do
   let(:method_info) { double('some-method-info', wsdl_name: 'PowerOnVM_Task') }
   let(:method_args) { nil }
   let(:retry_judge) { VSphereCloud::SdkHelpers::RetryJudge.new }
-  let(:logger) { Logger.new(StringIO.new("")) }
   let(:retryer) { VSphereCloud::Retryer.new }
 
   describe '#invoke_method' do
@@ -135,8 +134,7 @@ describe 'RetryableStubAdapter' do
           expect {
             retryable_stub_adapter.invoke_method(managed_object, method_info, method_args)
           }.to raise_error(Errno::ECONNRESET)
-          expect(retryable_stub_adapter.instance_variable_get(:@logger).
-            instance_variable_get(:@logdev).dev.string).to eql("")
+          expect(retryable_stub_adapter.logger.instance_variable_get(:@logdev).dev.string).to eql("")
         end
       end
     end

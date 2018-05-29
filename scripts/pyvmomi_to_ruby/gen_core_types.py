@@ -7,6 +7,7 @@ module VimSdk
 """)
 
 import CoreTypes
+import QueryTypes
 
 print("""  end
 end

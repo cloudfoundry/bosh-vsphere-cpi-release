@@ -168,6 +168,10 @@ module VSphereCloud
       vcenter['nsx']['password']
     end
 
+    def upgrade_hw_version
+      vcenter['upgrade_hw_version']
+    end
+
     def nsxt
       return nil unless nsxt_enabled?
       NSXTConfig.new(
@@ -211,6 +215,7 @@ module VSphereCloud
             'password' => String,
             optional('http_logging') => bool,
             optional('enable_auto_anti_affinity_drs_rules') => bool,
+            optional('upgrade_hw_version') => bool,
             optional('nsxt') => dict(String, String),
             'datacenters' => [{
               'name' => String,

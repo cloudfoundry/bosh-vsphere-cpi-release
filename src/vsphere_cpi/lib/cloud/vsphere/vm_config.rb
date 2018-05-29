@@ -7,6 +7,10 @@ module VSphereCloud
       @cluster_provider = cluster_provider
     end
 
+    def upgrade_hw_version?(vmtype_hw_version, global_hw_version)
+      vmtype_hw_version.nil? ? global_hw_version : vmtype_hw_version
+    end
+
     def name
       @vm_cid ||= "vm-#{SecureRandom.uuid}"
     end
