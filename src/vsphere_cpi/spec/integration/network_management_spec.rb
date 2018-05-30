@@ -55,6 +55,7 @@ describe 'network management', :network_management => true  do
   context 'when create_network command is issued' do
     after do
       if @t1_router_id
+        hack_nsxt_client
         t0_ports = router_api.list_logical_router_ports(logical_router_id: @t0_router_id,
                                                         resource_type: 'LogicalRouterLinkPortOnTIER0')
         t1_ports = router_api.list_logical_router_ports(logical_router_id: @t1_router_id)
@@ -266,6 +267,27 @@ describe 'network management', :network_management => true  do
   def fail_if_switch_exist(switch_name)
     found = logical_switches(switch_name)
     fail("Found switch #{switch_name} was created by test and not cleaned up by CPI.") if found.any?
+  end
+  def hack_nsxt_client
+    NSXT::LogicalRouterPortListResult.send(:include, ResultWithDownlinkPort)
+  end
+  module ResultWithDownlinkPort
+    def self.included(base)
+      base.class_eval do
+        def self.swagger_types
+          {
+              :'_self' => :'SelfResourceLink',
+              :'_links' => :'Array<ResourceLink>',
+              :'_schema' => :'String',
+              :'cursor' => :'String',
+              :'sort_ascending' => :'BOOLEAN',
+              :'sort_by' => :'String',
+              :'result_count' => :'Integer',
+              :'results' => :'Array<LogicalRouterLinkPortOnTIER0>'
+          }
+        end
+      end
+    end
   end
 end
 

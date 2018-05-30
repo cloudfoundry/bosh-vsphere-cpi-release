@@ -429,10 +429,6 @@ module NSXT
           end
         end
       else # model
-        #If value has resource_type - use it to deserialize
-        unless value[:resource_type ].nil?
-          type = value[:resource_type].to_sym
-        end
         temp_model = NSXT.const_get(type).new
         temp_model.build_from_hash(value)
       end
@@ -479,6 +475,7 @@ module NSXT
         value
       end
     end
+
   end
 
 end
