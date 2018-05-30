@@ -10,7 +10,6 @@ module VSphereCloud
       'cloud_properties' => cloud_props }
     }
     let(:cloud_props) { {
-          'edge_cluster_id' => edge_cluster_id,
           't0_router_id' => t0_router_id,
           't1_name' => 'router-name',
           'transport_zone_id' => transport_zone_id,
@@ -21,7 +20,6 @@ module VSphereCloud
     let(:gateway) {'192.168.111.1'}
     let(:t0_router_id) { 't0-router-id' }
     let(:transport_zone_id) { 'zone-id' }
-    let(:edge_cluster_id) { 'cluster_id' }
 
     context 'when invalid network_definition is given' do
       context 'when cloud_properties is empty' do
@@ -44,7 +42,6 @@ module VSphereCloud
 
       context 'when t0_router_id is not provided' do
         let(:cloud_props) { {
-            'edge_cluster_id' => 'cluster_id',
             'transport_zone_id' => 'zone-id',
         } }
 
@@ -59,26 +56,8 @@ module VSphereCloud
         end
       end
 
-      context 'when edge_cluster_id is not provided' do
-        let(:cloud_props) { {
-            't0_router_id' => t0_router_id,
-            'transport_zone_id' => transport_zone_id,
-        } }
-        it 'raises an error' do
-          expect{ network }.to raise_error('edge_cluster_id cloud property can not be empty')
-        end
-      end
-      context 'when edge_cluster_id is empty' do
-        let(:edge_cluster_id) { '' }
-
-        it 'raises an error' do
-          expect{ network }.to raise_error('edge_cluster_id cloud property can not be empty')
-        end
-      end
-
       context 'when transport_zone_id is not provided' do
         let(:cloud_props) { {
-            'edge_cluster_id' => edge_cluster_id,
             't0_router_id' => t0_router_id
         } }
         it 'raises an error' do
@@ -153,8 +132,10 @@ module VSphereCloud
       let(:network_result) { instance_double(Network::ManagedNetwork) }
 
       it 'creates T1 router and attaches it to T0, creates logical switch and attaches it to T1' do
+        expect(nsxt_provider).to receive(:get_edge_cluster_id)
+          .with('t0-router-id').and_return('cluster-id')
         expect(nsxt_provider).to receive(:create_t1_router)
-          .with('cluster_id', 'router-name').and_return(t1_router)
+          .with('cluster-id', 'router-name').and_return(t1_router)
         expect(nsxt_provider).to receive(:enable_route_advertisement)
           .with('t1-router-id')
         expect(nsxt_provider).to receive(:attach_t1_to_t0)
@@ -173,7 +154,6 @@ module VSphereCloud
             'range' => '192.168.111.0/24',
             'gateway' => '192.168.111.1',
             'cloud_properties' => {
-                'edge_cluster_id' => 'cluster_id',
                 't0_router_id' => 't0-router-id',
                 'transport_zone_id' => 'zone-id',
             } } }
@@ -184,8 +164,10 @@ module VSphereCloud
                                           id: 't1-router-id',
                                           display_name: 't1-router-id' ) }
         it 'creates T1 router and attaches it to T0, creates logical switch and attaches it to T1' do
+          expect(nsxt_provider).to receive(:get_edge_cluster_id)
+             .with('t0-router-id').and_return('cluster-id')
           expect(nsxt_provider).to receive(:create_t1_router)
-             .with('cluster_id', nil).and_return(t1_router)
+             .with('cluster-id', nil).and_return(t1_router)
           expect(nsxt_provider).to receive(:enable_route_advertisement)
              .with('t1-router-id')
           expect(nsxt_provider).to receive(:attach_t1_to_t0)
@@ -209,8 +191,10 @@ module VSphereCloud
 
         context 'when failed to enable_route_advertisement' do
           it 'deletes created router' do
+            expect(nsxt_provider).to receive(:get_edge_cluster_id)
+               .with('t0-router-id').and_return('cluster-id')
             expect(nsxt_provider).to receive(:create_t1_router)
-               .with('cluster_id','router-name').and_return(t1_router)
+               .with('cluster-id','router-name').and_return(t1_router)
             expect(nsxt_provider).to receive(:enable_route_advertisement)
                .with('t1-router-id').and_raise('Some nsxt error')
             expect(nsxt_provider).to receive(:delete_t1_router)
@@ -221,8 +205,10 @@ module VSphereCloud
         end
         context 'when failed to attach_t1_to_t0' do
           it 'deletes created router' do
+            expect(nsxt_provider).to receive(:get_edge_cluster_id)
+               .with('t0-router-id').and_return('cluster-id')
             expect(nsxt_provider).to receive(:create_t1_router)
-               .with('cluster_id','router-name').and_return(t1_router)
+               .with('cluster-id','router-name').and_return(t1_router)
             expect(nsxt_provider).to receive(:enable_route_advertisement)
                .with('t1-router-id')
             expect(nsxt_provider).to receive(:attach_t1_to_t0)
@@ -235,8 +221,10 @@ module VSphereCloud
         end
         context 'when failed to attach_switch_to_t1' do
           it 'deletes created router and switch' do
+            expect(nsxt_provider).to receive(:get_edge_cluster_id)
+               .with('t0-router-id').and_return('cluster-id')
             expect(nsxt_provider).to receive(:create_t1_router)
-               .with('cluster_id','router-name').and_return(t1_router)
+               .with('cluster-id','router-name').and_return(t1_router)
             expect(nsxt_provider).to receive(:enable_route_advertisement)
                .with('t1-router-id')
             expect(nsxt_provider).to receive(:attach_t1_to_t0)

@@ -387,6 +387,11 @@ module VSphereCloud
       end
     end
 
+    def get_edge_cluster_id(t0_router_id)
+      router = router_api.read_logical_router(t0_router_id)
+      raise "Router #{t0_router_id} does not have edge cluster id." if router.edge_cluster_id.nil?
+      router.edge_cluster_id
+    end
     private
 
     MAX_TRIES = 20

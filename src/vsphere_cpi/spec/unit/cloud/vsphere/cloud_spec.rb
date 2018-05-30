@@ -1734,7 +1734,6 @@ module VSphereCloud
                                  'range' => '192.168.111.0/24',
                                  'gateway' => '192.168.111.1',
                                  'cloud_properties' => {
-                                     'edge_cluster_id' => 'cluster_id',
                                      't0_router_id' => 't0-router-id',
                                      't1_name' => 'router-name',
                                      'transport_zone_id' => 'zone-id',
@@ -1742,8 +1741,8 @@ module VSphereCloud
                                  } } }
       let(:nsxt_provider) { instance_double(VSphereCloud::NSXTProvider) }
       let(:nsxt_enabled) { true }
-      let(:subnet_result) { instance_double(Network::ManagedNetwork) }
-      let(:subnet) { instance_double(VSphereCloud::Network) }
+      let(:network_result) { instance_double(Network::ManagedNetwork) }
+      let(:network) { instance_double(VSphereCloud::Network) }
 
       before do
         allow(VSphereCloud::NSXTProvider).to receive(:new)
@@ -1762,12 +1761,12 @@ module VSphereCloud
       end
 
       context 'when nsxt enabled' do
-        it 'creates a subnet' do
+        it 'creates a network' do
           expect(VSphereCloud::Network).to receive(:build)
-            .and_return(subnet)
-          expect(subnet).to receive(:create)
-            .and_return(subnet_result)
-          expect(vsphere_cloud.create_network(network_definition)).to eq(subnet_result)
+            .and_return(network)
+          expect(network).to receive(:create)
+            .and_return(network_result)
+          expect(vsphere_cloud.create_network(network_definition)).to eq(network_result)
         end
       end
     end
@@ -1793,7 +1792,7 @@ module VSphereCloud
       context 'when nsxt enabled' do
         let(:nsxt_enabled) { true }
 
-        it 'deletes a subnet' do
+        it 'deletes a network' do
           expect(Network).to receive(:destroy)
             .with(nsxt_provider, 'switch-id')
           vsphere_cloud.delete_network('switch-id')
