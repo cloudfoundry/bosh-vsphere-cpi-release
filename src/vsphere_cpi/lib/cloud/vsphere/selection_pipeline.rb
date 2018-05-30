@@ -54,8 +54,10 @@ module VSphereCloud
     end
 
     # Need to be figured out.
-    # TODO: make this return an enumerator if a block is not given
     def each(&block)
+      # make this return an enumerator if a block is not given
+      return enum_for(:each) unless block_given?
+
       @gather.call.select do |placement|
         accept?(placement)
       end.each do |placement|
