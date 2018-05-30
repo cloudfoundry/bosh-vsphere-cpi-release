@@ -990,4 +990,43 @@ describe VSphereCloud::NSXTProvider, fake_logger: true do
       end
     end
   end
+
+  describe '#get_edge_cluster_id' do
+    let(:router_api) { instance_double(NSXT::LogicalRoutingAndServicesApi) }
+
+    before do
+      allow(nsxt_provider).to receive(:router_api).and_return(router_api)
+    end
+    context 'when t0 router exists' do
+      context 'when it has edge_cluster_id' do
+        let(:t0_router) { instance_double(NSXT::LogicalRouter,
+                                          :edge_cluster_id => 'edge-cluster-id') }
+        it 'returns edge_cluster_id' do
+          expect(router_api).to receive(:read_logical_router)
+            .with('t0-router-id').and_return(t0_router)
+          edge_cluster_id = nsxt_provider.get_edge_cluster_id('t0-router-id')
+          expect(edge_cluster_id).to eq('edge-cluster-id')
+        end
+      end
+      context 'when it does not have edge_cluster_id' do
+        let(:t0_router) { instance_double(NSXT::LogicalRouter,
+                            :edge_cluster_id => nil) }
+        it 'raises an error' do
+          expect(router_api).to receive(:read_logical_router)
+            .with('t0-router-id').and_return(t0_router)
+          expect{ nsxt_provider.get_edge_cluster_id('t0-router-id') }
+              .to raise_error(/Router t0-router-id does not have edge cluster id./)
+        end
+      end
+    end
+    context 'when rt0 router does not exist' do
+      it 'raises an error' do
+        expect(router_api).to receive(:read_logical_router)
+          .with('t0-router-id').and_raise('T0 router not found')
+        expect { nsxt_provider.get_edge_cluster_id('t0-router-id') }
+          .to raise_error('T0 router not found')
+      end
+    end
+
+  end
 end

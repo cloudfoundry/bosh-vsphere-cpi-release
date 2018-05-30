@@ -8,7 +8,6 @@ describe 'network management', :network_management => true  do
     @nsxt_username = fetch_property('BOSH_VSPHERE_CPI_NSXT_USERNAME')
     @nsxt_password = fetch_property('BOSH_VSPHERE_CPI_NSXT_PASSWORD')
 
-    @edge_cluster_id = fetch_property('BOSH_VSPHERE_EDGE_CLUSTER_ID')
     @t0_router_id = fetch_property('BOSH_VSPHERE_T0_ROUTER_ID')
     @transport_zone_id = fetch_property('BOSH_VSPHERE_TRANSPORT_ZONE_ID')
 
@@ -44,7 +43,6 @@ describe 'network management', :network_management => true  do
         'range' => '192.168.99.0/24',
         'gateway' => '192.168.99.1',
         'cloud_properties' => {
-          'edge_cluster_id' => @edge_cluster_id,
           't0_router_id' => @t0_router_id,
           'transport_zone_id' => @transport_zone_id,
 
@@ -101,7 +99,6 @@ describe 'network management', :network_management => true  do
             'range' => '192.168.99.0/24',
             'gateway' => '192.168.99.1',
             'cloud_properties' => {
-                'edge_cluster_id' => @edge_cluster_id,
                 't0_router_id' => @t0_router_id,
                 'transport_zone_id' => 'WRONG_ZONE',
 
@@ -126,7 +123,6 @@ describe 'network management', :network_management => true  do
             'range' => '192.168.200.0/32',
             'gateway' => '192.168.200.1',
             'cloud_properties' => {
-                'edge_cluster_id' => @edge_cluster_id,
                 't0_router_id' => @t0_router_id,
                 'transport_zone_id' => @transport_zone_id,
 
@@ -233,8 +229,7 @@ describe 'network management', :network_management => true  do
   end
 
   def create_t1_router(router_name)
-    router_api.create_logical_router({ edge_cluster_id: @edge_cluster_id,
-                                       router_type: 'TIER1',
+    router_api.create_logical_router({ router_type: 'TIER1',
                                        display_name: router_name})
   end
 
