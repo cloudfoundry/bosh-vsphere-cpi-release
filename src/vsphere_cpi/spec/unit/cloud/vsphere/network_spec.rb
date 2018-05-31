@@ -130,10 +130,13 @@ module VSphereCloud
                                         id: 't1-router-id',
                                         display_name: 'router-name' ) }
       let(:network_result) { instance_double(Network::ManagedNetwork) }
+      let(:existing_logical_switches) { [] }
 
       it 'creates T1 router and attaches it to T0, creates logical switch and attaches it to T1' do
         expect(nsxt_provider).to receive(:get_edge_cluster_id)
           .with('t0-router-id').and_return('cluster-id')
+        expect(nsxt_provider).to receive(:get_switches_by_name)
+          .with('switch-name').and_return(existing_logical_switches)
         expect(nsxt_provider).to receive(:create_t1_router)
           .with('cluster-id', 'router-name').and_return(t1_router)
         expect(nsxt_provider).to receive(:enable_route_advertisement)
@@ -166,6 +169,8 @@ module VSphereCloud
         it 'creates T1 router and attaches it to T0, creates logical switch and attaches it to T1' do
           expect(nsxt_provider).to receive(:get_edge_cluster_id)
              .with('t0-router-id').and_return('cluster-id')
+          expect(nsxt_provider).not_to receive(:get_switches_by_name)
+             .with(nil)
           expect(nsxt_provider).to receive(:create_t1_router)
              .with('cluster-id', nil).and_return(t1_router)
           expect(nsxt_provider).to receive(:enable_route_advertisement)
@@ -193,6 +198,8 @@ module VSphereCloud
           it 'deletes created router' do
             expect(nsxt_provider).to receive(:get_edge_cluster_id)
                .with('t0-router-id').and_return('cluster-id')
+            expect(nsxt_provider).to receive(:get_switches_by_name)
+               .with('switch-name').and_return(existing_logical_switches)
             expect(nsxt_provider).to receive(:create_t1_router)
                .with('cluster-id','router-name').and_return(t1_router)
             expect(nsxt_provider).to receive(:enable_route_advertisement)
@@ -207,6 +214,8 @@ module VSphereCloud
           it 'deletes created router' do
             expect(nsxt_provider).to receive(:get_edge_cluster_id)
                .with('t0-router-id').and_return('cluster-id')
+            expect(nsxt_provider).to receive(:get_switches_by_name)
+               .with('switch-name').and_return(existing_logical_switches)
             expect(nsxt_provider).to receive(:create_t1_router)
                .with('cluster-id','router-name').and_return(t1_router)
             expect(nsxt_provider).to receive(:enable_route_advertisement)
@@ -223,6 +232,8 @@ module VSphereCloud
           it 'deletes created router and switch' do
             expect(nsxt_provider).to receive(:get_edge_cluster_id)
                .with('t0-router-id').and_return('cluster-id')
+            expect(nsxt_provider).to receive(:get_switches_by_name)
+               .with('switch-name').and_return(existing_logical_switches)
             expect(nsxt_provider).to receive(:create_t1_router)
                .with('cluster-id','router-name').and_return(t1_router)
             expect(nsxt_provider).to receive(:enable_route_advertisement)
@@ -241,6 +252,19 @@ module VSphereCloud
             expect {network.create }
                 .to raise_error(/Failed to create network/)
           end
+        end
+      end
+
+      context 'when switch with given name already exists' do
+        let(:existing_logical_switches) { [ instance_double(NSXT::LogicalSwitch) ] }
+
+        it 'throws error' do
+          expect(nsxt_provider).to receive(:get_switches_by_name)
+            .with('switch-name').and_return(existing_logical_switches)
+          expect(nsxt_provider).to receive(:get_edge_cluster_id)
+            .with('t0-router-id').and_return('cluster-id')
+          expect { network.create }
+              .to raise_error(/Failed to create network/)
         end
       end
     end
