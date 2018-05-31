@@ -23,6 +23,10 @@ module VSphereCloud
       #   @return [ResourcePool] resource pool.
       attr_reader :resource_pool
 
+      # @!attribute host
+      #   @return [Array<Host>] List of hosts.
+      attr_reader :hosts
+
       # Creates a new Cluster resource from the specified datacenter, cluster
       # configuration, and prefetched properties.
       #
@@ -68,6 +72,18 @@ module VSphereCloud
         ).select { |datastore| datastore.accessible }
         .inject({}) do |acc, datastore|
           acc[datastore.name] = datastore
+          acc
+        end
+      end
+
+      def active_hosts
+        return @hosts if @hosts
+        @hosts ||= Host.build_from_client(
+          @client,
+          properties['host']
+        ).select { |host| host.active? }
+          .inject({}) do |acc, host|
+          acc[host.name] = host
           acc
         end
       end

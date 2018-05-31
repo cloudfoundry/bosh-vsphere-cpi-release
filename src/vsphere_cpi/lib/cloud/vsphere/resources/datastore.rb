@@ -68,13 +68,18 @@ module VSphereCloud
       # Returns whether there is any host which can access
       # the datastore from the cluster passed.
       #
+      # if host_map is also passed as non-nil, it selects host which are a part of host map first
+      # and then checks their accessibility and maintenance mode
+      #
       # @param [VSphereCloud::Resource::Cluster]
       #
       # @return [Boolean] Whether there exists a host that is not in maintenance mode and
       # is part of the very same cluster that datastore can access
       #
-      def accessible_from?(cluster)
-        @mob.host.any? do |host_mount|
+      def accessible_from?(cluster, host_map = nil)
+        @mob.host.select do |host_mount|
+          host_map.nil? || host_map.has_key?(host_mount.key.name)
+        end.any? do |host_mount|
           next if host_mount.key.runtime.in_maintenance_mode
           cluster.mob.host.include?(host_mount.key)
         end

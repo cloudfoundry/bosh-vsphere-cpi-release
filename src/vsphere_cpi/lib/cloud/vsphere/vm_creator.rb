@@ -93,6 +93,19 @@ module VSphereCloud
         raise "Unable to parse vmx options: 'vmx_options' is not a Hash"
       end
 
+      if vm_config.attach_gpu?
+        # This should be non-breaking as host-resource will be nil in case no gpu calc happens
+        # Get final cluster placements
+        cluster_placement = vm_config.cluster_placements
+        # get the first host resource that satisfies criteria
+        host_resource = cluster_placement[cluster.name][:host_array]&.first
+        add_gpu_device(config_spec, replicated_stemcell_vm, cluster, host_resource, vm_config.gpu_config['number_of_gpus'])
+      else
+        host_resource = nil
+      end
+
+      logger.info("Cloning VM on Datastore: #{datastore.name}, Cluster: #{cluster.name}, Host: #{host_resource.nil? ? "Determined by DRS" : host_resource.name} ")
+
       # Clone VM
       logger.info("Cloning vm: #{replicated_stemcell_vm} to #{vm_config.name}")
       created_vm_mob = @client.wait_for_task do
@@ -101,6 +114,7 @@ module VSphereCloud
           @datacenter.vm_folder.mob,
           cluster.resource_pool.mob,
           datastore: datastore.mob,
+          host: host_resource,
           linked: true,
           snapshot: snapshot.current_snapshot,
           config: config_spec,
@@ -153,6 +167,37 @@ module VSphereCloud
       end
 
       created_vm
+    end
+
+    def add_gpu_device(config_spec, replicated_stemcell_vm, cluster, host_resource, num_gpus)
+
+      qct = cluster.mob.environment_browser.query_config_target(host_resource.mob)
+      sysid_map = qct.pci_passthrough.map { |x| [x.pci_device.id, x.system_id]}.to_h
+
+      host_resource.available_gpu.each do |gpu_dev|
+        device_config_spec = VimSdk::Vim::Vm::Device::VirtualDeviceSpec.new
+        dev = VimSdk::Vim::Vm::Device::VirtualPCIPassthrough.new
+        dev.key = -1
+        dev.controller_key=replicated_stemcell_vm.pci_controller.key
+
+        back = VimSdk::Vim::Vm::Device::VirtualPCIPassthrough::DeviceBackingInfo.new
+        back.id=gpu_dev.id
+        back.system_id=sysid_map[back.id]
+        back.vendor_id=gpu_dev.vendor_id
+        back.device_id=gpu_dev.device_id.to_i.to_s(16)
+
+        dev.device_info = VimSdk::Vim::Description.new
+        dev.device_info.label = 'CPI:GPU'
+        dev.device_info.summary = 'This GPU Passthrough has been attached by BOSH vSphereCPI'
+        dev.backing=back
+        device_config_spec.device=dev
+        device_config_spec.operation = VimSdk::Vim::Vm::Device::VirtualDeviceSpec::Operation::ADD
+        config_spec.device_change << device_config_spec
+
+        num_gpus = num_gpus - 1
+        break if num_gpus == 0
+      end
+      config_spec.memory_reservation_locked_to_max = true
     end
 
     private

@@ -1,6 +1,8 @@
 module VSphereCloud
   class VmConfig
 
+    attr_reader :cluster_placements
+
     def initialize(manifest_params:, cluster_picker: nil, cluster_provider: nil)
       @manifest_params = manifest_params
       @cluster_picker = cluster_picker
@@ -80,6 +82,12 @@ module VSphereCloud
       networks_map
     end
 
+    def attach_gpu?
+      !(gpu_config.nil? ||
+      gpu_config['number_of_gpus'].nil? ||
+      gpu_config['number_of_gpus'] == 0)
+    end
+
     def config_spec_params
       params = {}
       params[:num_cpus] = vm_type.cpu
@@ -109,6 +117,21 @@ module VSphereCloud
     #VSphereCloud::VmType
     def vm_type
       @manifest_params[:vm_type]
+    end
+
+    def gpu_config
+      vm_type.gpu
+    end
+
+    def cluster_placement(clusters:)
+      return @cluster_placements if @cluster_placements
+
+      @cluster_picker.update(clusters)
+      @cluster_placements = @cluster_picker.best_cluster_placement(
+        req_memory: vm_type.ram,
+        disk_configurations: disk_configurations,
+        gpu_config: gpu_config
+      )
     end
 
     private
@@ -171,16 +194,6 @@ module VSphereCloud
       if global_clusters.empty? && !has_custom_cluster_properties?
         raise Bosh::Clouds::CloudError, 'No valid clusters were provided'
       end
-    end
-
-    def cluster_placement(clusters:)
-      return @cluster_placement if @cluster_placement
-
-      @cluster_picker.update(clusters)
-      @cluster_placement = @cluster_picker.best_cluster_placement(
-        req_memory: vm_type.ram,
-        disk_configurations: disk_configurations,
-      )
     end
   end
 end

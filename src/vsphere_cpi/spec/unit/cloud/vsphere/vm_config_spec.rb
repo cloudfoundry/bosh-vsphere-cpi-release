@@ -237,6 +237,7 @@ module VSphereCloud
           expect(cluster_picker).to receive(:best_cluster_placement).with(
             req_memory: ram,
             disk_configurations: anything,
+            gpu_config: anything
           ).and_return(
             {
               'fake-cluster-name-2' => {
@@ -479,6 +480,7 @@ module VSphereCloud
           expect(cluster_picker).to receive(:best_cluster_placement).with(
             req_memory: ram,
             disk_configurations: anything,
+            gpu_config: anything,
           ).and_return(
             {
               'fake-cluster-name' => {
@@ -515,6 +517,7 @@ module VSphereCloud
           expect(cluster_picker).to receive(:best_cluster_placement).with(
               req_memory: 512,
               disk_configurations: anything,
+              gpu_config: anything,
           ).and_return(
               {
                   'fake-cluster-name' => {
@@ -550,6 +553,7 @@ module VSphereCloud
           expect(cluster_picker).to receive(:best_cluster_placement).with(
               req_memory: 512,
               disk_configurations: anything,
+              gpu_config: anything,
           ).and_return(
               {
                   'fake-cluster-name' => {

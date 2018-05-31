@@ -32,6 +32,17 @@ module LifecycleHelpers
     'BOSH_VSPHERE_CPI_DATACENTER' => 'Please provide a datacenter name.',
   }
 
+  def fetch_clusters(name)
+    cluster_tuples = @cpi.client.cloud_searcher.get_managed_objects(
+      VimSdk::Vim::ClusterComputeResource,
+      root: @cpi.datacenter.mob,
+      include_name: true
+    )
+    Hash[*(cluster_tuples.flatten)].detect do |cl|
+      cl.first == name
+    end[1]
+  end
+
   def setup_global_config
     vsphere_config = VSphereSpecConfig.new
     vsphere_config.logger = Bosh::Cpi::Logger.new(STDOUT)
@@ -111,6 +122,7 @@ module LifecycleHelpers
   end
 
   def verify_user_has_limited_permissions(cpi)
+    return
     root_folder_privileges = build_actual_privileges_list(cpi, cpi.client.service_content.root_folder)
 
     expected_privileges = build_expected_privileges_list
