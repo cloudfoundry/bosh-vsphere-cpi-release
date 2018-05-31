@@ -25,6 +25,7 @@ task :swagger do
   #create new nsx_api.json with including changes
   sh "./data/generate_nsx_api_json.sh"
 
+  #generate all models
   sh [
     "swagger-codegen generate",
     "-i ./data/nsx_api.json",
@@ -32,6 +33,16 @@ task :swagger do
     "-o ./lib/nsxt",
     "-c ./data/config.json -t ./data/swagger-nsxt-template"
   ].join(' ')
+
+  #Patch models that have wrong _deserialize method
+  sh [
+     "swagger-codegen generate",
+     "-i ./data/nsx_api.json",
+     "-l ruby",
+     "-o ./lib/nsxt",
+     "-c ./data/config.json -t ./data/swagger-nsxt-template-deserialization",
+     "-Dmodels=LogicalRouterPortListResult"
+   ].join(' ')
 
   rm_rf (["./lib/nsxt/.swagger-codegen-ignore",
     "./lib/nsxt/.swagger-codegen",
