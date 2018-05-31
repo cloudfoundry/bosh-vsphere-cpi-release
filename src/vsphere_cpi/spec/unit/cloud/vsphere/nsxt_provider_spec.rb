@@ -1029,4 +1029,27 @@ describe VSphereCloud::NSXTProvider, fake_logger: true do
     end
 
   end
+
+  describe '#get_switches_by_name' do
+    let(:switch_api) { instance_double(NSXT::LogicalSwitchingApi) }
+    let(:results) { [
+        instance_double(NSXT::LogicalSwitch, :id => '1', :display_name => 'switch'),
+        instance_double(NSXT::LogicalSwitch, :id => '2', :display_name => 'switch2'),
+        instance_double(NSXT::LogicalSwitch, :id => '3', :display_name => 'switch'),
+        ]}
+    let(:logical_switches) {
+      instance_double(NSXT::LogicalSwitchListResult, :results => results)
+    }
+    before do
+      allow(nsxt_provider).to receive(:switch_api).and_return(switch_api)
+    end
+    it 'returns switches with given name' do
+      expect(switch_api).to receive(:list_logical_switches)
+        .and_return(logical_switches)
+      switches = nsxt_provider.get_switches_by_name('switch')
+      expect(switches.length).to eq(2)
+      expect(switches.first.id).to eq('1')
+      expect(switches.last.id).to eq('3')
+    end
+  end
 end

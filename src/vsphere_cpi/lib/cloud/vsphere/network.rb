@@ -19,10 +19,14 @@ module VSphereCloud
         ip_subnet = NSXT::IPSubnet.new({ip_addresses: [@gateway.ip],
                                         prefix_length: @range.netmask[1..-1].to_i})
         edge_cluster_id = @nsxt_provider.get_edge_cluster_id(cloud_properties['t0_router_id'])
+        fail_if_switch_exists(cloud_properties['switch_name'])
+
         t1_router = @nsxt_provider.create_t1_router(edge_cluster_id, cloud_properties['t1_name'])
         t1_router_id = t1_router.id
         @nsxt_provider.enable_route_advertisement(t1_router_id)
         @nsxt_provider.attach_t1_to_t0(cloud_properties['t0_router_id'], t1_router_id)
+
+
         switch = @nsxt_provider.create_logical_switch(cloud_properties['transport_zone_id'], cloud_properties['switch_name'])
         switch_id = switch.id
         @nsxt_provider.attach_switch_to_t1(switch_id, t1_router_id, ip_subnet)
@@ -81,6 +85,12 @@ module VSphereCloud
     end
 
     private
+
+    def fail_if_switch_exists(switch_name)
+      return if nil_or_empty(switch_name)
+      switches = @nsxt_provider.get_switches_by_name(switch_name)
+      raise "Switch #{switch_name} already exists. Please use different name." if switches.length > 0
+    end
 
     def nil_or_empty(val)
       val.nil? || val.empty?

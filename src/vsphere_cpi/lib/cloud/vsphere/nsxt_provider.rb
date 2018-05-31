@@ -393,6 +393,13 @@ module VSphereCloud
       raise "Router #{t0_router_id} does not have edge cluster id." if router.edge_cluster_id.nil?
       router.edge_cluster_id
     end
+
+    def get_switches_by_name(switch_name)
+      switch_api.list_logical_switches.results.find_all do |switch|
+        switch.display_name == switch_name
+      end
+    end
+
     private
 
     MAX_TRIES = 20
