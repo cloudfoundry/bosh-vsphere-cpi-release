@@ -458,7 +458,16 @@ module VSphereCloud
 
         accessible_datastores = @datacenter.accessible_datastores
         reachable_datastores = vm.accessible_datastore_names
-        accessible_datastores.select! { |name| reachable_datastores.include?(name) }
+
+        # Filter out datastores that are reachable from the VM
+        # and those which are accessible from at least one active host
+        # Note: Since vm is active , it must be on a host that is active too, therefore, the second select might be redundant.
+        accessible_datastores = accessible_datastores.select do |name|
+          reachable_datastores.include?(name)
+        end.select do |_, ds_resource|
+          ds_resource.accessible?
+        end
+
         disk_is_accessible = accessible_datastores.include?(disk_config.existing_datastore_name)
 
         disk_is_in_target_datastore = disk_config.existing_datastore_name =~ Regexp.new(disk_config.target_datastore_pattern)
@@ -504,13 +513,18 @@ module VSphereCloud
           accessible_datastores = @datacenter.accessible_datastores
         end
 
+        # Pick datastores that are accessible from at least 1 active host they are attached to
+        accessible_datastores.select! do |_, ds_resource|
+          ds_resource.accessible?
+        end
+
         disk_pool = DiskPool.new(@datacenter, cloud_properties['datastores'])
         target_datastore_pattern = StoragePicker.choose_persistent_pattern(disk_pool)
         datastore_name = StoragePicker.choose_persistent_storage(size_in_mb, target_datastore_pattern, accessible_datastores)
 
         if vm_cid
-          #This is to take into account datastore which might be accessible from cluster defined in cloud config
-          ##datacenter.accessible_datastores includes datastores based on global config, so cannot use that here
+          # This is to take into account datastore which might be accessible from cluster defined in cloud config
+          # datacenter.accessible_datastores includes datastores based on global config, so cannot use that here
           datastore = accessible_datastores[datastore_name]
           raise "Can't find datastore '#{datastore_name}'" if datastore.nil?
         else
