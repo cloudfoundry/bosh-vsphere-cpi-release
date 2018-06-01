@@ -5,12 +5,13 @@ module VSphereCloud
   class Network
     include Logger
 
-    def self.build(nsxt_provider, network_definition)
-      new(nsxt_provider, network_definition).tap(&:validate)
+    def self.build(nsxt_provider, switch_provider, network_definition)
+      new(nsxt_provider, switch_provider, network_definition).tap(&:validate)
     end
 
-    def initialize(nsxt_provider, network_definition)
+    def initialize(nsxt_provider, switch_provider, network_definition)
       @nsxt_provider = nsxt_provider
+      @switch_provider = switch_provider
       @network_definition = network_definition
     end
 
@@ -29,25 +30,25 @@ module VSphereCloud
         @nsxt_provider.attach_t1_to_t0(cloud_properties['t0_router_id'], t1_router_id)
 
 
-        switch = @nsxt_provider.create_logical_switch(cloud_properties['transport_zone_id'], cloud_properties['switch_name'])
+        switch = @switch_provider.create_logical_switch(cloud_properties['transport_zone_id'], cloud_properties['switch_name'])
         switch_id = switch.id
         @nsxt_provider.attach_switch_to_t1(switch_id, t1_router_id, ip_subnet)
       rescue => e
         logger.error('Failed to create network. Trying to clean up')
         @nsxt_provider.delete_t1_router(t1_router_id) unless t1_router_id.nil?
-        @nsxt_provider.delete_logical_switch(switch_id) unless switch_id.nil?
+        @switch_provider.delete_logical_switch(switch_id) unless switch_id.nil?
         raise "Failed to create network. Has router been created: #{!t1_router_id.nil?}. Has switch been created: #{!switch_id.nil?}. Exception: #{e.inspect}"
       end
       ManagedNetwork.new(switch)
     end
 
-    def self.destroy(nsxt_provider, switch_id)
+    def self.destroy(nsxt_provider, switch_provider, switch_id)
       raise 'switch id must be provided for deleting a network' if switch_id.nil?
       t1_router_ids = nsxt_provider.get_attached_router_ids(switch_id)
       raise "Expected switch #{switch_id} to have one router attached. Found #{t1_router_ids.length}" if t1_router_ids.length != 1
-      switch_ports = nsxt_provider.get_attached_switch_ports(switch_id)
+      switch_ports = switch_provider.get_attached_switch_ports(switch_id)
       raise "Expected switch #{switch_id} to have only one port. Got #{switch_ports.length}" if switch_ports.length != 1
-      nsxt_provider.delete_logical_switch(switch_id)
+      switch_provider.delete_logical_switch(switch_id)
       t1_router_id = t1_router_ids.first
       attached_switches = nsxt_provider.get_attached_switches_ids(t1_router_id)
       raise "Can not delete router #{t1_router_id}. It has extra ports that are not created by BOSH." if attached_switches.length != 0
@@ -90,7 +91,7 @@ module VSphereCloud
 
     def fail_if_switch_exists(switch_name)
       return if nil_or_empty(switch_name)
-      switches = @nsxt_provider.get_switches_by_name(switch_name)
+      switches = @switch_provider.get_switches_by_name(switch_name)
       raise "Switch #{switch_name} already exists. Please use different name." if switches.length > 0
     end
 

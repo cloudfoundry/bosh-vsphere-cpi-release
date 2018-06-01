@@ -83,8 +83,10 @@ describe VSphereCloud::NSXTProvider, fake_logger: true do
     NSXT::ServicesApi.new(client)
   end
 
+  let(:default_vif_type) { 'PARENT' }
+
   subject(:nsxt_provider) do
-    described_class.new(nsxt_config).tap do |provider|
+    described_class.new(client, default_vif_type).tap do |provider|
       provider.instance_variable_set('@client', client)
     end
   end
@@ -96,9 +98,12 @@ describe VSphereCloud::NSXTProvider, fake_logger: true do
       allow(nsxt_provider).to receive(:logical_ports).with(vm).and_return([logical_port_1])
     end
 
-    it 'does nothing when both default_vif_type and vif_type are nil' do
-      # No call to client should be made
-      nsxt_provider.set_vif_type(vm, nil)
+    context ' when both default_vif_type and vif_type are nil' do
+      let(:default_vif_type) { nil }
+      it 'does nothing' do
+        # No call to client should be made
+        nsxt_provider.set_vif_type(vm, nil)
+      end
     end
 
     it "sets all of the VM's VIF attachments to the vif_type in vm_type" do
@@ -763,41 +768,6 @@ describe VSphereCloud::NSXTProvider, fake_logger: true do
     end
   end
 
-  describe '#create_logical_switch' do
-    let(:switch_api) { instance_double(NSXT::LogicalSwitchingApi) }
-    let(:logical_switch) { instance_double(NSXT::LogicalSwitch) }
-    before do
-      allow(nsxt_provider).to receive(:switch_api).and_return(switch_api)
-    end
-    context 'when transport zone id is provided' do
-      it 'creates switch' do
-        expect(NSXT::LogicalSwitch).to receive(:new)
-          .with({ :admin_state => 'UP',
-                  :transport_zone_id => 'zone_id',
-                  :replication_mode => 'MTEP',
-                  :display_name => 'Switch name'})
-          .and_return(logical_switch)
-        expect(switch_api).to receive(:create_logical_switch)
-          .with(logical_switch)
-        nsxt_provider.create_logical_switch('zone_id', 'Switch name')
-      end
-    end
-
-    context 'when switch name is empty' do
-      it 'Does not fail' do
-        expect(NSXT::LogicalSwitch).to receive(:new)
-           .with({ :admin_state => 'UP',
-                   :transport_zone_id => 'zone_id',
-                   :replication_mode => 'MTEP',
-                   :display_name => nil})
-           .and_return(logical_switch)
-        expect(switch_api).to receive(:create_logical_switch)
-            .with(logical_switch)
-        nsxt_provider.create_logical_switch('zone_id')
-      end
-    end
-  end
-
   describe '#attach_switch_to_t1' do
     let(:router_api) { instance_double(NSXT::LogicalRoutingAndServicesApi) }
     let(:switch_api) { instance_double(NSXT::LogicalSwitchingApi)}
@@ -876,19 +846,6 @@ describe VSphereCloud::NSXTProvider, fake_logger: true do
       expect(router_api).to receive(:delete_logical_router)
         .with('t1-router-id', :force => true)
       nsxt_provider.delete_t1_router('t1-router-id')
-    end
-  end
-
-  describe '#delete_logical_switch' do
-    let(:switch_api) { instance_double(NSXT::LogicalSwitchingApi) }
-    before do
-      allow(nsxt_provider).to receive(:switch_api).and_return(switch_api)
-    end
-
-    it 'deletes logical switch with force and cascade' do
-      expect(switch_api).to receive(:delete_logical_switch)
-        .with('switch-id', :cascade => true, :detach => true)
-      nsxt_provider.delete_logical_switch('switch-id')
     end
   end
 
@@ -972,26 +929,6 @@ describe VSphereCloud::NSXTProvider, fake_logger: true do
     end
   end
 
-  describe '#get_attached_switch_ports' do
-    let(:switch_api) { instance_double(NSXT::LogicalSwitchingApi)}
-    before do
-      allow(nsxt_provider).to receive(:switch_api).and_return(switch_api)
-    end
-
-    context 'when switch id is provided' do
-      let(:switch_port) { instance_double(NSXT::LogicalPort) }
-      let(:switch_ports) { instance_double(NSXT::LogicalPortListResult,
-                                          :results => [switch_port]) }
-
-      it 'returns switch ports' do
-        expect(switch_api).to receive(:list_logical_ports)
-          .with(:logical_switch_id => 'switch-id').and_return(switch_ports)
-        result = nsxt_provider.get_attached_switch_ports('switch-id')
-        expect(result.length).to eq(1)
-      end
-    end
-  end
-
   describe '#get_edge_cluster_id' do
     let(:router_api) { instance_double(NSXT::LogicalRoutingAndServicesApi) }
 
@@ -1031,26 +968,4 @@ describe VSphereCloud::NSXTProvider, fake_logger: true do
 
   end
 
-  describe '#get_switches_by_name' do
-    let(:switch_api) { instance_double(NSXT::LogicalSwitchingApi) }
-    let(:results) { [
-        instance_double(NSXT::LogicalSwitch, :id => '1', :display_name => 'switch'),
-        instance_double(NSXT::LogicalSwitch, :id => '2', :display_name => 'switch2'),
-        instance_double(NSXT::LogicalSwitch, :id => '3', :display_name => 'switch'),
-        ]}
-    let(:logical_switches) {
-      instance_double(NSXT::LogicalSwitchListResult, :results => results)
-    }
-    before do
-      allow(nsxt_provider).to receive(:switch_api).and_return(switch_api)
-    end
-    it 'returns switches with given name' do
-      expect(switch_api).to receive(:list_logical_switches)
-        .and_return(logical_switches)
-      switches = nsxt_provider.get_switches_by_name('switch')
-      expect(switches.length).to eq(2)
-      expect(switches.first.id).to eq('1')
-      expect(switches.last.id).to eq('3')
-    end
-  end
 end

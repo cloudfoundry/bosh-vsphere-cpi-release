@@ -19,10 +19,12 @@ module VSphereCloud
         vcenter_enable_auto_anti_affinity_drs_rules: false,
         upgrade_hw_version: true,
         vcenter_http_logging: true,
-        nsxt_enabled?: nsxt_enabled
+        nsxt_enabled?: nsxt_enabled,
+        nsxt: nsxt
       ).as_null_object
     end
     let(:nsxt_enabled) { false }
+    let(:nsxt) { instance_double(VSphereCloud::NSXTConfig, default_vif_type: 'vif_type')}
     let(:default_disk_type) { 'preallocated' }
     let(:vcenter_client) { instance_double('VSphereCloud::VCenterClient', login: nil, service_content: service_content) }
     let(:http_basic_auth_client) { instance_double('VSphereCloud::NsxHttpClient') }
@@ -1743,8 +1745,11 @@ module VSphereCloud
       let(:nsxt_enabled) { true }
       let(:network_result) { instance_double(Network::ManagedNetwork) }
       let(:network) { instance_double(VSphereCloud::Network) }
+      let(:nsxt_client) { instance_double(NSXT::ApiClient) }
 
       before do
+        allow(VSphereCloud::NSXTApiClientBuilder).to receive(:build_api_client)
+          .with(any_args).and_return(nsxt_client)
         allow(VSphereCloud::NSXTProvider).to receive(:new)
           .with(any_args).and_return(nsxt_provider)
         allow(logger).to receive(:error)
@@ -1773,8 +1778,11 @@ module VSphereCloud
 
     describe '#delete_network' do
       let(:nsxt_provider) { instance_double(VSphereCloud::NSXTProvider) }
+      let(:nsxt_client) { instance_double(NSXT::ApiClient) }
 
       before do
+        allow(VSphereCloud::NSXTApiClientBuilder).to receive(:build_api_client)
+         .with(any_args).and_return(nsxt_client)
         allow(VSphereCloud::NSXTProvider).to receive(:new)
          .with(any_args).and_return(nsxt_provider)
       end
@@ -1791,10 +1799,15 @@ module VSphereCloud
 
       context 'when nsxt enabled' do
         let(:nsxt_enabled) { true }
+        let(:switch_provider) { instance_double(VSphereCloud::NSXTSwitchProvider) }
 
+        before do
+          allow(NSXTSwitchProvider).to receive(:new)
+            .and_return(switch_provider)
+        end
         it 'deletes a network' do
           expect(Network).to receive(:destroy)
-            .with(nsxt_provider, 'switch-id')
+            .with(nsxt_provider, switch_provider, 'switch-id')
           vsphere_cloud.delete_network('switch-id')
         end
       end

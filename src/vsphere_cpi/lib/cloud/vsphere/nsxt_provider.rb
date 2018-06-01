@@ -88,24 +88,11 @@ module VSphereCloud
   class NSXTProvider
     include Logger
 
-    def initialize(config)
-      configuration = NSXT::Configuration.new
-      configuration.host = config.host
-      configuration.username = config.username
-      configuration.password = config.password
-      configuration.logger = logger
-      configuration.client_side_validation = false
-      if ENV['BOSH_NSXT_CA_CERT_FILE']
-        configuration.ssl_ca_cert = ENV['BOSH_NSXT_CA_CERT_FILE']
-      end
-      if ENV['NSXT_SKIP_SSL_VERIFY']
-        configuration.verify_ssl = false
-        configuration.verify_ssl_host = false
-      end
-      @client = NSXT::ApiClient.new(configuration)
+    def initialize(client, default_vif_type)
+      @client = client
       @max_tries = MAX_TRIES
       @sleep_time = DEFAULT_SLEEP_TIME
-      @default_vif_type = config.default_vif_type
+      @default_vif_type = default_vif_type
     end
 
     private def grouping_obj_svc
@@ -326,14 +313,6 @@ module VSphereCloud
       router_api.update_advertisement_config(router_id, config)
     end
 
-    def create_logical_switch(transport_zone_id, name = nil)
-      switch = NSXT::LogicalSwitch.new(admin_state: 'UP',
-                                       transport_zone_id: transport_zone_id,
-                                       replication_mode: 'MTEP',
-                                       display_name: name)
-      switch_api.create_logical_switch(switch)
-    end
-
     def attach_switch_to_t1(switch_id, t1_router_id, subnet)
       begin
         logical_port = NSXT::LogicalPort.new(admin_state: 'UP',
@@ -360,9 +339,6 @@ module VSphereCloud
       end
     end
 
-    def delete_logical_switch(switch_id)
-      switch_api.delete_logical_switch(switch_id, cascade: true, detach: true)
-    end
 
     def delete_t1_router(t1_router_id)
       router_api.delete_logical_router(t1_router_id, force: true)
@@ -371,10 +347,6 @@ module VSphereCloud
     def get_attached_router_ids(switch_id)
       router_ports = router_api.list_logical_router_ports(logical_switch_id: switch_id)
       router_ports.results.map(&:logical_router_id)
-    end
-
-    def get_attached_switch_ports(switch_id)
-      switch_api.list_logical_ports(logical_switch_id: switch_id).results
     end
 
     def get_attached_switches_ids(t1_router_id)
@@ -391,12 +363,6 @@ module VSphereCloud
       router = router_api.read_logical_router(t0_router_id)
       raise "Router #{t0_router_id} does not have edge cluster id." if router.edge_cluster_id.nil?
       router.edge_cluster_id
-    end
-
-    def get_switches_by_name(switch_name)
-      switch_api.list_logical_switches.results.find_all do |switch|
-        switch.display_name == switch_name
-      end
     end
 
     private
@@ -479,10 +445,6 @@ module VSphereCloud
 
     def router_api
       @router_api ||= NSXT::LogicalRoutingAndServicesApi.new(@client)
-    end
-
-    def switch_api
-      @switch_api ||= NSXT::LogicalSwitchingApi.new(@client)
     end
   end
 end
