@@ -85,8 +85,14 @@ module VSphereCloud
         cloud_searcher: @cloud_searcher
       )
 
-      # Setup NSX-T Provider
-      @nsxt_provider = NSXTProvider.new(@config.nsxt) if @config.nsxt_enabled?
+      if @config.nsxt_enabled?
+        nsxt_client = NSXTApiClientBuilder::build_api_client(@config.nsxt, logger)
+
+        # Setup NSX-T Provider
+        @nsxt_provider = NSXTProvider.new(nsxt_client, @config.nsxt.default_vif_type)
+
+        @switch_provider = NSXTSwitchProvider.new(nsxt_client)
+      end
 
       # We get disconnected if the connection is inactive for a long period.
       @heartbeat_thread = Thread.new do
@@ -658,13 +664,13 @@ module VSphereCloud
 
     def create_network(network_definition)
       raise 'NSXT must be enabled in CPI to use create_network' if !@config.nsxt_enabled?
-      network = Network.build(@nsxt_provider, network_definition, logger)
+      network = Network.build(@nsxt_provider, @switch_provider, network_definition, logger)
       network.create
     end
 
     def delete_network(switch_id)
       raise 'NSXT must be enabled in CPI to use delete_network' if !@config.nsxt_enabled?
-      Network.destroy(@nsxt_provider, switch_id)
+      Network.destroy(@nsxt_provider, @switch_provider, switch_id)
     end
 
     private

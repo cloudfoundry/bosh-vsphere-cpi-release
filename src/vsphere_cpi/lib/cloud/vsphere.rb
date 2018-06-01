@@ -58,6 +58,8 @@ require 'cloud/vsphere/sdk_helpers/retry_judge'
 require 'cloud/vsphere/helpers/xml'
 require 'nsxt/nsxt_client'
 require 'cloud/vsphere/network'
+require 'cloud/vsphere/nsxt_helpers/nsxt_switch_provider'
+require 'cloud/vsphere/nsxt_helpers/nsxt_api_client_builder'
 
 module Bosh
   module Clouds
