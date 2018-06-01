@@ -67,7 +67,7 @@ module VSphereCloud
 
         context 'when all hosts are in maintenance mode' do
           let(:host_runtime_info) { instance_double(VimSdk::Vim::Host::RuntimeInfo, in_maintenance_mode: true) }
-          it 'returns the no active host exception' do
+          it 'raises the error' do
             disks = [
                 instance_double(VSphereCloud::DiskConfig,
                                 size: 256,
@@ -87,7 +87,7 @@ module VSphereCloud
 
             expect do
               picker.best_cluster_placement(req_memory: 1024, disk_configurations: disks)
-            end.to raise_error(/No valid placement found due to no active host/)
+            end.to raise_error(/No valid placement found/)
           end
         end
 
@@ -128,6 +128,7 @@ module VSphereCloud
       context 'when no cluster fits' do
         before do
           allow(not_matching_ds.mob).to receive_message_chain('summary.maintenance_mode').and_return("normal")
+          allow(not_matching_ds).to receive(:accessible_from?).with(any_args).and_return(true)
         end
         let(:available_clusters) { [cluster_1] }
         let(:cluster_1) do

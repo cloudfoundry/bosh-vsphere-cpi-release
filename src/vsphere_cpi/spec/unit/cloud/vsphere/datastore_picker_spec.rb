@@ -42,7 +42,7 @@ module VSphereCloud
 
             expect {
               picker.best_disk_placement(disks)
-            }.to raise_error(/Datastores matching criteria are in maintenance mode. No valid placement found/)
+            }.to raise_error(/Datastores matching criteria are in maintenance mode or not accessible/)
           end
         end
         context 'when datastore is not in maintenance mode' do
@@ -196,7 +196,7 @@ module VSphereCloud
         context 'when headroom is specified' do
           let(:headroom) { 512}
           let(:ds_1) { instance_double(VSphereCloud::Resources::Datastore, free_space: 1536, mob: ds_1_mob) }
-          let(:ds_2) { instance_double(VSphereCloud::Resources::Datastore, free_space: 2048, mob: ds_1_mob) }
+          let(:ds_2) { instance_double(VSphereCloud::Resources::Datastore, free_space: 1536, mob: ds_1_mob) }
           let(:available_datastores) do
            {
              'ds-1' => ds_1,
@@ -223,20 +223,9 @@ module VSphereCloud
             picker.update(available_datastores)
 
             disks = [disk1, disk2]
-            expect(picker.best_disk_placement(disks)).to include({
-              datastores: {
-                'ds-1' => {
-                  free_space: 512,
-                  disks: [disk2],
-                  mob:ds_1_mob
-                },
-                'ds-2' => {
-                  free_space: 256,
-                  disks: [disk1, disk2],
-                  mob:ds_1_mob
-                },
-              }
-            })
+            placements = picker.best_disk_placement(disks)
+            expect(placements[:datastores].size).to eql(2)
+            expect(placements[:datastores]['ds-1'][:disks].first).to_not eql(placements[:datastores]['ds-2'][:disks].first)
           end
         end
 
@@ -274,23 +263,18 @@ module VSphereCloud
           let(:disk1) do
             instance_double(VSphereCloud::DiskConfig,
               size: 256,
-              existing_datastore_name: 'non-accessible-ds',
+              existing_datastore_name: 'non-available-ds',
               target_datastore_pattern: '.*',
             )
           end
-          let(:disk2) do
-            instance_double(VSphereCloud::DiskConfig,
-              size: 512,
-              target_datastore_pattern: '.*',
-              existing_datastore_name: nil
-            )
-          end
+
+          let(:available_datastores) { {'ds-1' => ds_1} }
 
           it 'places the disk in an available datastore and includes the migration size' do
             picker = DatastorePicker.new(0)
             picker.update(available_datastores)
 
-            disks = [disk1, disk2]
+            disks = [disk1]
 
             expect(picker.best_disk_placement(disks)).to include({
               migration_size: 256,
@@ -299,13 +283,8 @@ module VSphereCloud
                   disks: [disk1],
                   free_space: 256,
                   mob: ds_1_mob
-                },
-                'ds-2' => {
-                  disks: [disk1, disk2],
-                  free_space: 256,
-                  mob: ds_1_mob
-                },
-              },
+                }
+              }
             })
           end
         end
@@ -399,10 +378,6 @@ module VSphereCloud
           sorted_datastores = available_datastores.sort do |x, y|
             y[1].free_space <=> x[1].free_space
           end
-          puts 'Summary of simulated placements'
-          sorted_datastores.each do |ds|
-            print "#{ds[0]}: free_space => #{ds[1].free_space}, disk_counts => #{disk_counts_hash[ds[0]]}\n"
-          end
         end
       end
     end
@@ -438,17 +413,17 @@ module VSphereCloud
         end
       end
 
-      context 'when all the hosts for larger datastore are in maintenance mode' do
-        let(:larger_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 1024, mob: ds_mob, accessible?: false) }
+      context 'when there are no valid datastores for the placement' do
+        let(:available_datastores){ { 'smaller-ds' => smaller_ds } }
 
-        it 'raises an error for no active hosts' do
+        it 'raises an error' do
           picker = DatastorePicker.new(0)
           picker.update(available_datastores)
 
           expect do
             picker.pick_datastore_for_single_disk(disk)
 
-          end.to raise_error(/No valid placement found due to no active host /)
+          end.to raise_error(/No valid placement found/)
         end
       end
     end
