@@ -2,22 +2,22 @@ require 'netaddr'
 
 module VSphereCloud
   class Network
-    def self.build(nsxt_provider, switch_provider, router_provider, network_definition, logger)
-      new(nsxt_provider, switch_provider, router_provider, network_definition, logger).tap(&:validate)
+    include Logger
+
+    def self.build(switch_provider, router_provider)
+      new(switch_provider, router_provider)
     end
 
-    def initialize(nsxt_provider, switch_provider, router_provider, network_definition, logger)
-      @nsxt_provider = nsxt_provider
+    def initialize(switch_provider, router_provider)
       @switch_provider = switch_provider
       @router_provider = router_provider
-      @network_definition = network_definition
-      @logger = logger
     end
 
     #creates T1 router and virtual switch attached to it
-    def create
+    def create(network_definition)
+      validate(network_definition)
       begin
-        cloud_properties = @network_definition['cloud_properties']
+        cloud_properties = network_definition['cloud_properties']
         ip_subnet = NSXT::IPSubnet.new({ip_addresses: [@gateway.ip],
                                         prefix_length: @range.netmask[1..-1].to_i})
         edge_cluster_id = @router_provider.get_edge_cluster_id(cloud_properties['t0_router_id'])
@@ -32,7 +32,7 @@ module VSphereCloud
         switch_id = switch.id
         attach_switch_to_t1(switch_id, t1_router_id, ip_subnet)
       rescue => e
-        @logger.error('Failed to create network. Trying to clean up')
+        logger.error('Failed to create network. Trying to clean up')
         @router_provider.delete_t1_router(t1_router_id) unless t1_router_id.nil?
         @switch_provider.delete_logical_switch(switch_id) unless switch_id.nil?
         raise "Failed to create network. Has router been created: #{!t1_router_id.nil?}. Has switch been created: #{!switch_id.nil?}. Exception: #{e.inspect}"
@@ -40,29 +40,30 @@ module VSphereCloud
       ManagedNetwork.new(switch)
     end
 
-    def self.destroy(nsxt_provider, switch_provider, router_provider, switch_id)
+    def destroy(switch_id)
       raise 'switch id must be provided for deleting a network' if switch_id.nil?
-      t1_router_ids = router_provider.get_attached_router_ids(switch_id)
+      t1_router_ids = @router_provider.get_attached_router_ids(switch_id)
       raise "Expected switch #{switch_id} to have one router attached. Found #{t1_router_ids.length}" if t1_router_ids.length != 1
-      switch_ports = switch_provider.get_attached_switch_ports(switch_id)
+      switch_ports = @switch_provider.get_attached_switch_ports(switch_id)
       raise "Expected switch #{switch_id} to have only one port. Got #{switch_ports.length}" if switch_ports.length != 1
-      switch_provider.delete_logical_switch(switch_id)
+      @switch_provider.delete_logical_switch(switch_id)
       t1_router_id = t1_router_ids.first
-      attached_switches = router_provider.get_attached_switches_ids(t1_router_id)
+      attached_switches = @router_provider.get_attached_switches_ids(t1_router_id)
       raise "Can not delete router #{t1_router_id}. It has extra ports that are not created by BOSH." if attached_switches.length != 0
-      router_provider.delete_t1_router(t1_router_id)
+      @router_provider.delete_t1_router(t1_router_id)
     end
 
-    def validate
-      cloud_properties = @network_definition['cloud_properties']
+    private 
+    def validate(network_definition)
+      cloud_properties = network_definition['cloud_properties']
       raise 'cloud_properties must be provided' if nil_or_empty(cloud_properties)
       raise 't0_router_id cloud property can not be empty' if nil_or_empty(cloud_properties['t0_router_id'])
       raise 'transport_zone_id cloud property can not be empty' if nil_or_empty(cloud_properties['transport_zone_id'])
 
-      raise 'Incorrect network definition. Proper CIDR block range must be given' if nil_or_empty(@network_definition['range'])
-      raise 'Incorrect network definition. Proper gateway must be given' if nil_or_empty(@network_definition['gateway'])
-      @range = NetAddr::CIDR.create(@network_definition['range'])
-      @gateway = NetAddr::CIDR.create(@network_definition['gateway'])
+      raise 'Incorrect network definition. Proper CIDR block range must be given' if nil_or_empty(network_definition['range'])
+      raise 'Incorrect network definition. Proper gateway must be given' if nil_or_empty(network_definition['gateway'])
+      @range = NetAddr::CIDR.create(network_definition['range'])
+      @gateway = NetAddr::CIDR.create(network_definition['gateway'])
       raise 'Incorrect network definition. Proper gateway must be given' if @gateway.size > 1
     end
 
