@@ -1516,8 +1516,8 @@ module VSphereCloud
       let(:host_system) {instance_double(VimSdk::Vim::HostSystem, runtime: host_runtime_info)}
       let(:datastore_host_mount) { [instance_double('VimSdk::Vim::Datastore::HostMount', key: host_system)]}
       let(:ds_mob) { instance_double('VimSdk::Vim::Datastore', host: datastore_host_mount) }
-      let(:small_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 2048, mob: ds_mob, accessible?: accessible) }
-      let(:large_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 4096, mob: ds_mob, accessible?: accessible) }
+      let(:small_ds) { VSphereCloud::Resources::Datastore.new('small-ds', ds_mob, true, 4096, 3048) }
+      let(:large_ds) { VSphereCloud::Resources::Datastore.new('large-ds', ds_mob, true, 8192, 4096) }
       let(:accessible_datastores) do
         {
           'small-ds' => small_ds,
@@ -1535,8 +1535,8 @@ module VSphereCloud
       end
 
       before do
-        allow(small_ds).to receive(:accessible?).and_return(true)
-        allow(large_ds).to receive(:accessible?).and_return(true)
+        allow(small_ds).to receive(:accessible?).and_return(accessible)
+        allow(large_ds).to receive(:accessible?).and_return(accessible)
         allow(datacenter).to receive(:persistent_pattern)
           .and_return('small-ds')
         allow(datacenter).to receive(:accessible_datastores)
@@ -1655,7 +1655,7 @@ module VSphereCloud
         it 'raises an error' do
           expect {
             vsphere_cloud.create_disk(1024, {})
-          }.to raise_error(/Datastores matching criteria are in maintenance mode or not accessible/)
+          }.to raise_error(/Unable to create disk on any storage entity provided. Possible errors can be/)
         end
       end
     end
