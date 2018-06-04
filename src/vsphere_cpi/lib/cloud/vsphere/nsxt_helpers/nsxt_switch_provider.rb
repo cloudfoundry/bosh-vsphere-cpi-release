@@ -1,5 +1,6 @@
 module VSphereCloud
   class NSXTSwitchProvider
+    include Logger
 
     def initialize(client)
       @client = client
@@ -29,8 +30,8 @@ module VSphereCloud
 
     def create_logical_port(switch_id)
       begin
-        logical_port = NSXT::LogicalPort.new({:admin_state => 'UP',
-                                              :logical_switch_id => switch_id})
+        logical_port = NSXT::LogicalPort.new({admin_state: 'UP',
+                                              logical_switch_id: switch_id})
         return switch_api.create_logical_port(logical_port)
       rescue => e
         logger.error("Failed to create logical port for switch #{switch_id}. Exception: #{e.inspect}")

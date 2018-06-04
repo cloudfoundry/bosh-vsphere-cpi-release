@@ -27,7 +27,6 @@ module VSphereCloud
         @nsxt_provider.enable_route_advertisement(t1_router_id)
         @nsxt_provider.attach_t1_to_t0(cloud_properties['t0_router_id'], t1_router_id)
 
-
         switch = @switch_provider.create_logical_switch(cloud_properties['transport_zone_id'], cloud_properties['switch_name'])
         switch_id = switch.id
         @nsxt_provider.attach_switch_to_t1(switch_id, t1_router_id, ip_subnet)
