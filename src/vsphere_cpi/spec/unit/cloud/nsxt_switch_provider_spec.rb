@@ -2,18 +2,20 @@ require 'digest'
 require 'spec_helper'
 
 describe VSphereCloud::NSXTSwitchProvider, fake_logger: true do
+  let(:switch_api) { instance_double(NSXT::LogicalSwitchingApi) }
   let(:nsxt_config) { VSphereCloud::NSXTConfig.new('fake-host', 'fake-username', 'fake-password') }
   let(:client) { instance_double(NSXT::ApiClient) }
   subject(:switch_provider) do
     described_class.new(client)
   end
 
+  before do
+    allow(switch_provider).to receive(:switch_api).and_return(switch_api)
+  end
+
   describe '#create_logical_switch' do
-    let(:switch_api) { instance_double(NSXT::LogicalSwitchingApi) }
     let(:logical_switch) { instance_double(NSXT::LogicalSwitch) }
-    before do
-      allow(switch_provider).to receive(:switch_api).and_return(switch_api)
-    end
+
     context 'when transport zone id is provided' do
       it 'creates switch' do
         expect(NSXT::LogicalSwitch).to receive(:new)
@@ -43,11 +45,6 @@ describe VSphereCloud::NSXTSwitchProvider, fake_logger: true do
   end
 
   describe '#delete_logical_switch' do
-    let(:switch_api) { instance_double(NSXT::LogicalSwitchingApi) }
-    before do
-      allow(switch_provider).to receive(:switch_api).and_return(switch_api)
-    end
-
     it 'deletes logical switch with force and cascade' do
       expect(switch_api).to receive(:delete_logical_switch)
                                 .with('switch-id', cascade: true, detach: true)
@@ -56,11 +53,6 @@ describe VSphereCloud::NSXTSwitchProvider, fake_logger: true do
   end
 
   describe '#get_attached_switch_ports' do
-    let(:switch_api) { instance_double(NSXT::LogicalSwitchingApi)}
-    before do
-      allow(switch_provider).to receive(:switch_api).and_return(switch_api)
-    end
-
     context 'when switch id is provided' do
       let(:switch_port) { instance_double(NSXT::LogicalPort) }
       let(:switch_ports) { instance_double(NSXT::LogicalPortListResult,
@@ -76,7 +68,6 @@ describe VSphereCloud::NSXTSwitchProvider, fake_logger: true do
   end
 
   describe '#get_switches_by_name' do
-    let(:switch_api) { instance_double(NSXT::LogicalSwitchingApi) }
     let(:results) { [
         instance_double(NSXT::LogicalSwitch, id: '1', display_name: 'switch'),
         instance_double(NSXT::LogicalSwitch, id: '2', display_name: 'switch2'),
@@ -85,9 +76,7 @@ describe VSphereCloud::NSXTSwitchProvider, fake_logger: true do
     let(:logical_switches) {
       instance_double(NSXT::LogicalSwitchListResult, results: results)
     }
-    before do
-      allow(switch_provider).to receive(:switch_api).and_return(switch_api)
-    end
+
     it 'returns switches with given name' do
       expect(switch_api).to receive(:list_logical_switches)
                                 .and_return(logical_switches)
@@ -95,6 +84,37 @@ describe VSphereCloud::NSXTSwitchProvider, fake_logger: true do
       expect(switches.length).to eq(2)
       expect(switches.first.id).to eq('1')
       expect(switches.last.id).to eq('3')
+    end
+  end
+
+  describe '#create_logical_port' do
+    let(:logical_port_obj) { instance_double(NSXT::LogicalPort) }
+    let(:created_logical_port) { instance_double(NSXT::LogicalPort)}
+
+    context 'when switch id is valid' do
+      it 'creates logical port' do
+        expect(NSXT::LogicalPort).to receive(:new)
+          .with({admin_state: 'UP',
+                 logical_switch_id: 'switch-id'})
+          .and_return(logical_port_obj)
+
+        expect(switch_api).to receive(:create_logical_port)
+          .with(logical_port_obj).and_return(created_logical_port)
+        expect(switch_provider.create_logical_port('switch-id'))
+            .to eq(created_logical_port)
+      end
+    end
+
+    context 'when api returns an exception' do
+      it 'raises an error with switch id' do
+        expect(switch_api).to receive(:create_logical_port)
+          .with(any_args).and_raise('Some IAAS exception')
+        expect {
+          switch_provider.create_logical_port('switch-id')
+        }.to raise_error{ |error|
+          expect(error.to_s).to match(/switch-id/)
+        }
+      end
     end
   end
 end
