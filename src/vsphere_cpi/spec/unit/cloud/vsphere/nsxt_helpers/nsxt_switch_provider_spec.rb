@@ -3,7 +3,6 @@ require 'spec_helper'
 
 describe VSphereCloud::NSXTSwitchProvider, fake_logger: true do
   let(:switch_api) { instance_double(NSXT::LogicalSwitchingApi) }
-  let(:nsxt_config) { VSphereCloud::NSXTConfig.new('fake-host', 'fake-username', 'fake-password') }
   let(:client) { instance_double(NSXT::ApiClient) }
   subject(:switch_provider) do
     described_class.new(client)

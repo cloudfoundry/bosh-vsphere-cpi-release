@@ -1742,6 +1742,8 @@ module VSphereCloud
                                      'switch_name' => 'switch-name',
                                  } } }
       let(:nsxt_provider) { instance_double(VSphereCloud::NSXTProvider) }
+      let(:switch_provider) { instance_double(VSphereCloud::NSXTSwitchProvider) }
+      let(:router_provider) { instance_double(VSphereCloud::NSXTRouterProvider) }
       let(:nsxt_enabled) { true }
       let(:network_result) { instance_double(Network::ManagedNetwork) }
       let(:network) { instance_double(VSphereCloud::Network) }
@@ -1752,6 +1754,11 @@ module VSphereCloud
           .with(any_args).and_return(nsxt_client)
         allow(VSphereCloud::NSXTProvider).to receive(:new)
           .with(any_args).and_return(nsxt_provider)
+        allow(VSphereCloud::NSXTSwitchProvider).to receive(:new)
+          .with(any_args).and_return(switch_provider)
+        allow(VSphereCloud::NSXTRouterProvider).to receive(:new)
+          .with(any_args).and_return(router_provider)
+
         allow(logger).to receive(:error)
       end
 
@@ -1768,7 +1775,7 @@ module VSphereCloud
       context 'when nsxt enabled' do
         it 'creates a network' do
           expect(VSphereCloud::Network).to receive(:build)
-            .and_return(network)
+            .with(nsxt_provider, switch_provider, router_provider, network_definition, logger).and_return(network)
           expect(network).to receive(:create)
             .and_return(network_result)
           expect(vsphere_cloud.create_network(network_definition)).to eq(network_result)
@@ -1779,6 +1786,8 @@ module VSphereCloud
     describe '#delete_network' do
       let(:nsxt_provider) { instance_double(VSphereCloud::NSXTProvider) }
       let(:nsxt_client) { instance_double(NSXT::ApiClient) }
+      let(:switch_provider) { instance_double(VSphereCloud::NSXTSwitchProvider) }
+      let(:router_provider) { instance_double(VSphereCloud::NSXTRouterProvider) }
 
       before do
         allow(VSphereCloud::NSXTApiClientBuilder).to receive(:build_api_client)
@@ -1804,10 +1813,13 @@ module VSphereCloud
         before do
           allow(NSXTSwitchProvider).to receive(:new)
             .and_return(switch_provider)
+          allow(VSphereCloud::NSXTRouterProvider).to receive(:new)
+            .with(any_args).and_return(router_provider)
         end
+
         it 'deletes a network' do
           expect(Network).to receive(:destroy)
-            .with(nsxt_provider, switch_provider, 'switch-id')
+            .with(nsxt_provider, switch_provider, router_provider, 'switch-id')
           vsphere_cloud.delete_network('switch-id')
         end
       end
