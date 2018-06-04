@@ -2,13 +2,14 @@ require 'netaddr'
 
 module VSphereCloud
   class Network
-    def self.build(nsxt_provider, switch_provider, network_definition, logger)
-      new(nsxt_provider, switch_provider, network_definition, logger).tap(&:validate)
+    def self.build(nsxt_provider, switch_provider, router_provider, network_definition, logger)
+      new(nsxt_provider, switch_provider, router_provider, network_definition, logger).tap(&:validate)
     end
 
-    def initialize(nsxt_provider, switch_provider, network_definition, logger)
+    def initialize(nsxt_provider, switch_provider, router_provider, network_definition, logger)
       @nsxt_provider = nsxt_provider
       @switch_provider = switch_provider
+      @router_provider = router_provider
       @network_definition = network_definition
       @logger = logger
     end
@@ -19,37 +20,37 @@ module VSphereCloud
         cloud_properties = @network_definition['cloud_properties']
         ip_subnet = NSXT::IPSubnet.new({ip_addresses: [@gateway.ip],
                                         prefix_length: @range.netmask[1..-1].to_i})
-        edge_cluster_id = @nsxt_provider.get_edge_cluster_id(cloud_properties['t0_router_id'])
+        edge_cluster_id = @router_provider.get_edge_cluster_id(cloud_properties['t0_router_id'])
         fail_if_switch_exists(cloud_properties['switch_name'])
 
-        t1_router = @nsxt_provider.create_t1_router(edge_cluster_id, cloud_properties['t1_name'])
+        t1_router = @router_provider.create_t1_router(edge_cluster_id, cloud_properties['t1_name'])
         t1_router_id = t1_router.id
-        @nsxt_provider.enable_route_advertisement(t1_router_id)
-        @nsxt_provider.attach_t1_to_t0(cloud_properties['t0_router_id'], t1_router_id)
+        @router_provider.enable_route_advertisement(t1_router_id)
+        @router_provider.attach_t1_to_t0(cloud_properties['t0_router_id'], t1_router_id)
 
         switch = @switch_provider.create_logical_switch(cloud_properties['transport_zone_id'], cloud_properties['switch_name'])
         switch_id = switch.id
-        @nsxt_provider.attach_switch_to_t1(switch_id, t1_router_id, ip_subnet)
+        attach_switch_to_t1(switch_id, t1_router_id, ip_subnet)
       rescue => e
         @logger.error('Failed to create network. Trying to clean up')
-        @nsxt_provider.delete_t1_router(t1_router_id) unless t1_router_id.nil?
+        @router_provider.delete_t1_router(t1_router_id) unless t1_router_id.nil?
         @switch_provider.delete_logical_switch(switch_id) unless switch_id.nil?
         raise "Failed to create network. Has router been created: #{!t1_router_id.nil?}. Has switch been created: #{!switch_id.nil?}. Exception: #{e.inspect}"
       end
       ManagedNetwork.new(switch)
     end
 
-    def self.destroy(nsxt_provider, switch_provider, switch_id)
+    def self.destroy(nsxt_provider, switch_provider, router_provider, switch_id)
       raise 'switch id must be provided for deleting a network' if switch_id.nil?
-      t1_router_ids = nsxt_provider.get_attached_router_ids(switch_id)
+      t1_router_ids = router_provider.get_attached_router_ids(switch_id)
       raise "Expected switch #{switch_id} to have one router attached. Found #{t1_router_ids.length}" if t1_router_ids.length != 1
       switch_ports = switch_provider.get_attached_switch_ports(switch_id)
       raise "Expected switch #{switch_id} to have only one port. Got #{switch_ports.length}" if switch_ports.length != 1
       switch_provider.delete_logical_switch(switch_id)
       t1_router_id = t1_router_ids.first
-      attached_switches = nsxt_provider.get_attached_switches_ids(t1_router_id)
+      attached_switches = router_provider.get_attached_switches_ids(t1_router_id)
       raise "Can not delete router #{t1_router_id}. It has extra ports that are not created by BOSH." if attached_switches.length != 0
-      nsxt_provider.delete_t1_router(t1_router_id)
+      router_provider.delete_t1_router(t1_router_id)
     end
 
     def validate
@@ -85,6 +86,11 @@ module VSphereCloud
     end
 
     private
+
+    def attach_switch_to_t1(switch_id, t1_router_id, subnet)
+      logical_port = @switch_provider.create_logical_port(switch_id)
+      @router_provider.attach_switch_to_t1(logical_port.id, t1_router_id, subnet)
+    end
 
     def fail_if_switch_exists(switch_name)
       return if nil_or_empty(switch_name)

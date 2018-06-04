@@ -2,10 +2,11 @@ require 'spec_helper'
 
 module VSphereCloud
   describe Network do
-    subject(:network) { Network.build(nsxt_provider, switch_provider, network_definition, logger) }
+    subject(:network) { Network.build(nsxt_provider, switch_provider, router_provider, network_definition, logger) }
     let(:logger) { instance_double('Bosh::Cpi::Logger', info: nil, debug: nil) }
     let(:nsxt_provider) { instance_double(VSphereCloud::NSXTProvider) }
     let(:switch_provider) { instance_double(VSphereCloud::NSXTSwitchProvider) }
+    let(:router_provider) { instance_double(VSphereCloud::NSXTRouterProvider) }
     let(:network_definition) { {
       'range' => range,
       'gateway' => gateway,
@@ -133,22 +134,26 @@ module VSphereCloud
                                         display_name: 'router-name' ) }
       let(:network_result) { instance_double(Network::ManagedNetwork) }
       let(:existing_logical_switches) { [] }
+      let(:logical_port) { instance_double(NSXT::LogicalPort, id: 'logical-port-id') }
 
       it 'creates T1 router and attaches it to T0, creates logical switch and attaches it to T1' do
-        expect(nsxt_provider).to receive(:get_edge_cluster_id)
+        expect(router_provider).to receive(:get_edge_cluster_id)
           .with('t0-router-id').and_return('cluster-id')
         expect(switch_provider).to receive(:get_switches_by_name)
           .with('switch-name').and_return(existing_logical_switches)
-        expect(nsxt_provider).to receive(:create_t1_router)
+        expect(router_provider).to receive(:create_t1_router)
           .with('cluster-id', 'router-name').and_return(t1_router)
-        expect(nsxt_provider).to receive(:enable_route_advertisement)
+        expect(router_provider).to receive(:enable_route_advertisement)
           .with('t1-router-id')
-        expect(nsxt_provider).to receive(:attach_t1_to_t0)
+        expect(router_provider).to receive(:attach_t1_to_t0)
           .with('t0-router-id', 't1-router-id')
         expect(switch_provider).to receive(:create_logical_switch)
           .with('zone-id', 'switch-name').and_return(logical_switch)
-        expect(nsxt_provider).to receive(:attach_switch_to_t1)
-          .with('switch-id', 't1-router-id', instance_of(NSXT::IPSubnet))
+
+        expect(switch_provider).to receive(:create_logical_port)
+           .with('switch-id').and_return(logical_port)
+        expect(router_provider).to receive(:attach_switch_to_t1)
+          .with('logical-port-id', 't1-router-id', instance_of(NSXT::IPSubnet))
         expect(Network::ManagedNetwork).to receive(:new)
           .with(logical_switch).and_return(network_result)
         expect(network.create).to eq(network_result)
@@ -169,20 +174,23 @@ module VSphereCloud
                                           id: 't1-router-id',
                                           display_name: 't1-router-id' ) }
         it 'creates T1 router and attaches it to T0, creates logical switch and attaches it to T1' do
-          expect(nsxt_provider).to receive(:get_edge_cluster_id)
+          expect(router_provider).to receive(:get_edge_cluster_id)
              .with('t0-router-id').and_return('cluster-id')
           expect(switch_provider).not_to receive(:get_switches_by_name)
              .with(nil)
-          expect(nsxt_provider).to receive(:create_t1_router)
+          expect(router_provider).to receive(:create_t1_router)
              .with('cluster-id', nil).and_return(t1_router)
-          expect(nsxt_provider).to receive(:enable_route_advertisement)
+          expect(router_provider).to receive(:enable_route_advertisement)
              .with('t1-router-id')
-          expect(nsxt_provider).to receive(:attach_t1_to_t0)
+          expect(router_provider).to receive(:attach_t1_to_t0)
              .with('t0-router-id', 't1-router-id')
           expect(switch_provider).to receive(:create_logical_switch)
              .with('zone-id', nil).and_return(logical_switch)
-          expect(nsxt_provider).to receive(:attach_switch_to_t1)
-             .with('switch-id', 't1-router-id', instance_of(NSXT::IPSubnet))
+
+          expect(switch_provider).to receive(:create_logical_port)
+            .with('switch-id').and_return(logical_port)
+          expect(router_provider).to receive(:attach_switch_to_t1)
+            .with('logical-port-id', 't1-router-id', instance_of(NSXT::IPSubnet))
 
           expect(Network::ManagedNetwork).to receive(:new)
               .with(logical_switch).and_return(network_result)
@@ -198,15 +206,15 @@ module VSphereCloud
 
         context 'when failed to enable_route_advertisement' do
           it 'deletes created router' do
-            expect(nsxt_provider).to receive(:get_edge_cluster_id)
+            expect(router_provider).to receive(:get_edge_cluster_id)
                .with('t0-router-id').and_return('cluster-id')
             expect(switch_provider).to receive(:get_switches_by_name)
                .with('switch-name').and_return(existing_logical_switches)
-            expect(nsxt_provider).to receive(:create_t1_router)
+            expect(router_provider).to receive(:create_t1_router)
                .with('cluster-id','router-name').and_return(t1_router)
-            expect(nsxt_provider).to receive(:enable_route_advertisement)
+            expect(router_provider).to receive(:enable_route_advertisement)
                .with('t1-router-id').and_raise('Some nsxt error')
-            expect(nsxt_provider).to receive(:delete_t1_router)
+            expect(router_provider).to receive(:delete_t1_router)
                .with('t1-router-id')
             expect { network.create }
                 .to raise_error(/Failed to create network/)
@@ -214,17 +222,17 @@ module VSphereCloud
         end
         context 'when failed to attach_t1_to_t0' do
           it 'deletes created router' do
-            expect(nsxt_provider).to receive(:get_edge_cluster_id)
+            expect(router_provider).to receive(:get_edge_cluster_id)
                .with('t0-router-id').and_return('cluster-id')
             expect(switch_provider).to receive(:get_switches_by_name)
                .with('switch-name').and_return(existing_logical_switches)
-            expect(nsxt_provider).to receive(:create_t1_router)
+            expect(router_provider).to receive(:create_t1_router)
                .with('cluster-id','router-name').and_return(t1_router)
-            expect(nsxt_provider).to receive(:enable_route_advertisement)
+            expect(router_provider).to receive(:enable_route_advertisement)
                .with('t1-router-id')
-            expect(nsxt_provider).to receive(:attach_t1_to_t0)
+            expect(router_provider).to receive(:attach_t1_to_t0)
                .with('t0-router-id', 't1-router-id').and_raise('Some nsxt error')
-            expect(nsxt_provider).to receive(:delete_t1_router)
+            expect(router_provider).to receive(:delete_t1_router)
                .with('t1-router-id')
             expect { network.create }
                 .to raise_error(/Failed to create network/)
@@ -232,22 +240,22 @@ module VSphereCloud
         end
         context 'when failed to attach_switch_to_t1' do
           it 'deletes created router and switch' do
-            expect(nsxt_provider).to receive(:get_edge_cluster_id)
+            expect(router_provider).to receive(:get_edge_cluster_id)
                .with('t0-router-id').and_return('cluster-id')
             expect(switch_provider).to receive(:get_switches_by_name)
                .with('switch-name').and_return(existing_logical_switches)
-            expect(nsxt_provider).to receive(:create_t1_router)
+            expect(router_provider).to receive(:create_t1_router)
                .with('cluster-id','router-name').and_return(t1_router)
-            expect(nsxt_provider).to receive(:enable_route_advertisement)
+            expect(router_provider).to receive(:enable_route_advertisement)
                .with('t1-router-id')
-            expect(nsxt_provider).to receive(:attach_t1_to_t0)
+            expect(router_provider).to receive(:attach_t1_to_t0)
                .with('t0-router-id', 't1-router-id')
             expect(switch_provider).to receive(:create_logical_switch)
                .with('zone-id', 'switch-name').and_return(logical_switch)
-            expect(nsxt_provider).to receive(:attach_switch_to_t1)
-               .and_raise('Some nsxt error')
+            expect(switch_provider).to receive(:create_logical_port)
+               .with('switch-id').and_raise('Some nsxt error')
 
-            expect(nsxt_provider).to receive(:delete_t1_router)
+            expect(router_provider).to receive(:delete_t1_router)
                .with('t1-router-id')
             expect(switch_provider).to receive(:delete_logical_switch)
                .with('switch-id')
@@ -263,7 +271,7 @@ module VSphereCloud
         it 'throws error' do
           expect(switch_provider).to receive(:get_switches_by_name)
             .with('switch-name').and_return(existing_logical_switches)
-          expect(nsxt_provider).to receive(:get_edge_cluster_id)
+          expect(router_provider).to receive(:get_edge_cluster_id)
             .with('t0-router-id').and_return('cluster-id')
           expect { network.create }
               .to raise_error(/Failed to create network/)
@@ -276,31 +284,31 @@ module VSphereCloud
 
       context 'when switch id is provided' do
         it 'deletes switch and attached router' do
-          expect(nsxt_provider).to receive(:get_attached_router_ids)
+          expect(router_provider).to receive(:get_attached_router_ids)
              .with('switch-id').and_return(['t1-router-id'])
-          expect(nsxt_provider).to receive(:delete_t1_router)
+          expect(router_provider).to receive(:delete_t1_router)
              .with('t1-router-id')
           expect(switch_provider).to receive(:get_attached_switch_ports)
              .with('switch-id').and_return(switch_ports)
-          expect(nsxt_provider).to receive(:get_attached_switches_ids)
+          expect(router_provider).to receive(:get_attached_switches_ids)
              .with('t1-router-id').and_return([])
           expect(switch_provider).to receive(:delete_logical_switch)
              .with('switch-id')
-          Network.destroy(nsxt_provider, switch_provider, 'switch-id')
+          Network.destroy(nsxt_provider, switch_provider, router_provider, 'switch-id')
         end
       end
 
       context 'when multiple switches attached to router' do
         it 'raises an error' do
-          expect(nsxt_provider).to receive(:get_attached_router_ids)
+          expect(router_provider).to receive(:get_attached_router_ids)
              .with('switch-id').and_return(['t1-router-id'])
-          expect(nsxt_provider).to receive(:get_attached_switches_ids)
+          expect(router_provider).to receive(:get_attached_switches_ids)
              .with('t1-router-id').and_return(['switch2-id'])
           expect(switch_provider).to receive(:get_attached_switch_ports)
              .with('switch-id').and_return(switch_ports)
           expect(switch_provider).to receive(:delete_logical_switch)
              .with('switch-id')
-          expect {  Network.destroy(nsxt_provider, switch_provider, 'switch-id') }
+          expect {  Network.destroy(nsxt_provider, switch_provider, router_provider,'switch-id') }
               .to raise_error('Can not delete router t1-router-id. It has extra ports that are not created by BOSH.')
         end
       end
@@ -308,21 +316,21 @@ module VSphereCloud
       context 'when not 1 router attached to switch' do
         context 'when no routers attached' do
           it 'raises an error' do
-            expect(nsxt_provider).to receive(:get_attached_router_ids)
+            expect(router_provider).to receive(:get_attached_router_ids)
                                          .with('switch-id').and_return([])
             expect(switch_provider).not_to receive(:get_attached_switch_ports)
             expect {
-              Network.destroy(nsxt_provider, switch_provider, 'switch-id')
+              Network.destroy(nsxt_provider, switch_provider, router_provider,'switch-id')
             }.to raise_error('Expected switch switch-id to have one router attached. Found 0')
           end
         end
         context 'when more than one router attached' do
           it 'raises an error' do
-            expect(nsxt_provider).to receive(:get_attached_router_ids)
+            expect(router_provider).to receive(:get_attached_router_ids)
                                          .with('switch-id').and_return(['router-id','router-id2'])
             expect(switch_provider).not_to receive(:get_attached_switch_ports)
             expect {
-              Network.destroy(nsxt_provider, switch_provider, 'switch-id')
+              Network.destroy(nsxt_provider, switch_provider, router_provider,'switch-id')
             }.to raise_error('Expected switch switch-id to have one router attached. Found 2')
           end
         end
@@ -332,12 +340,12 @@ module VSphereCloud
         context 'if 0 ports attached 'do
           let(:switch_ports) { [] }
           it 'raises an error' do
-            expect(nsxt_provider).to receive(:get_attached_router_ids)
+            expect(router_provider).to receive(:get_attached_router_ids)
                .with('switch-id').and_return(['t1-router-id'])
             expect(switch_provider).to receive(:get_attached_switch_ports)
                .with('switch-id').and_return(switch_ports)
             expect{
-              Network.destroy(nsxt_provider, switch_provider, 'switch-id')
+              Network.destroy(nsxt_provider, switch_provider, router_provider,'switch-id')
             }.to raise_error('Expected switch switch-id to have only one port. Got 0')
           end
         end
@@ -345,12 +353,12 @@ module VSphereCloud
         context 'if more than 1 attached' do
           let(:switch_ports) { [instance_double(NSXT::LogicalPort), instance_double(NSXT::LogicalPort)] }
           it 'raises an error' do
-            expect(nsxt_provider).to receive(:get_attached_router_ids)
+            expect(router_provider).to receive(:get_attached_router_ids)
               .with('switch-id').and_return(['t1-router-id'])
             expect(switch_provider).to receive(:get_attached_switch_ports)
               .with('switch-id').and_return(switch_ports)
             expect{
-              Network.destroy(nsxt_provider, switch_provider, 'switch-id')
+              Network.destroy(nsxt_provider, switch_provider, router_provider,'switch-id')
             }.to raise_error('Expected switch switch-id to have only one port. Got 2')
           end
         end
@@ -358,7 +366,7 @@ module VSphereCloud
 
       context 'when switch id is nil' do
         it 'raises an error' do
-          expect{  Network.destroy(nsxt_provider, switch_provider, nil) }
+          expect{  Network.destroy(nsxt_provider, switch_provider, router_provider, nil) }
               .to raise_error('switch id must be provided for deleting a network')
         end
       end
