@@ -378,6 +378,10 @@ module VSphereCloud
           sorted_datastores = available_datastores.sort do |x, y|
             y[1].free_space <=> x[1].free_space
           end
+          puts 'Summary of simulated placements'
+          sorted_datastores.each do |ds|
+            print "#{ds[0]}: free_space => #{ds[1].free_space}, disk_counts => #{disk_counts_hash[ds[0]]}\n"
+          end
         end
       end
     end

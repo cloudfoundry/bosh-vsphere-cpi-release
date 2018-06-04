@@ -8,7 +8,7 @@ module VSphereCloud
     end
 
     def update(available_datastores={})
-      @available_datastores = available_datastores || {}
+      @available_datastores = available_datastores
     end
 
     # Placement Algorithm:
@@ -40,7 +40,6 @@ module VSphereCloud
       datastores.keep_if do |_, props|
         props[:mob].summary.maintenance_mode == "normal"
       end
-
       raise Bosh::Clouds::CloudError, "Datastores matching criteria are in maintenance mode or not accessible. No valid placement found" if placement[:datastores].empty?
 
       # At this step we only have datastores that are not in maintenance mode
