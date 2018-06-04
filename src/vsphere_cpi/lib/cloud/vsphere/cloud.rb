@@ -680,13 +680,14 @@ module VSphereCloud
 
     def create_network(network_definition)
       raise 'NSXT must be enabled in CPI to use create_network' if !@config.nsxt_enabled?
-      network = Network.build(@nsxt_provider, @switch_provider, @router_provider, network_definition, logger)
-      network.create
+      network = Network.build(@switch_provider, @router_provider)
+      network.create(network_definition)
     end
 
     def delete_network(switch_id)
       raise 'NSXT must be enabled in CPI to use delete_network' if !@config.nsxt_enabled?
-      Network.destroy(@nsxt_provider, @switch_provider,  @router_provider, switch_id)
+      network = Network.build(@switch_provider, @router_provider)
+      network.destroy(switch_id)
     end
 
     private
