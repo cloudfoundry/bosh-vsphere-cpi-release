@@ -14,7 +14,7 @@ module VSphereCloud
 
     # @return [String] debug Selection Pipeline information.
     def inspect
-      "<Selection Pipeline is composed of these filters #{filter_list} and these scorers #{scorer_list}>"
+      "#<SelectionPipeline @filter_list #{filter_list} @scorer_list #{scorer_list}>"
     end
 
     def accept?(placement)
@@ -24,8 +24,8 @@ module VSphereCloud
     end
 
     def score(placement)
-      scorer_list.each do |scorer|
-        placement.score = scorer.call(placement, @object)
+      placement.score = scorer_list.reduce do |score, scorer|
+        score += scorer.call(placement, @object)
       end
     end
 
@@ -36,6 +36,7 @@ module VSphereCloud
         end
         scorer_list << Proc.new
       else
+        raise ArgumentError, "0 arguments passed, expected at least 1 arg or a block if no args providedp" if args.empty?
         scorer_list.concat(args)
       end
       self
@@ -48,15 +49,15 @@ module VSphereCloud
         end
         filter_list << Proc.new
       else
+        raise ArgumentError, "0 arguments passed, expected atleast 1 arg or a block if no args provided" if args.empty?
         filter_list.concat(args)
       end
       self
     end
 
-    # Need to be figured out.
     def each(&block)
       # make this return an enumerator if a block is not given
-      return enum_for(:each) unless block_given?
+      return enum_for(:each).lazy unless block_given?
 
       @gather.call.select do |placement|
         accept?(placement)
@@ -76,10 +77,5 @@ module VSphereCloud
     end
   end
 
-  class DiskPlacementSelectionPipeline < SelectionPipeline
-    def initialize(object, *args)
-      super
-      with_filter Filter_Maintenance_Mode_DS, Filter_Free_Space_DS, Filter_Target_Pattern_DS, Filter_Inaccessible_DS
-    end
-  end
+
 end
