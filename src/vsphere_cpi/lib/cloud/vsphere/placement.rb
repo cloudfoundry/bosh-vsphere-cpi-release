@@ -2,20 +2,17 @@ module VSphereCloud
   class Placement
     include Comparable
 
-    attr_reader :resource, :score
+    attr_reader :resource
+    attr_accessor :score
 
-    METHOD_NOT_IMPLEMENTED = "method is not overridden/implemented in sub class"
-
-    def eql?(other)
+    def ==(other)
       other.resource == resource && other.score == score
     end
 
+    alias eql? ==
+
     def hash
       [resource].hash
-    end
-
-    def inspect
-      raise NotImplementedError, "#{METHOD_NOT_IMPLEMENTED}"
     end
 
     def initialize(resource)
@@ -24,43 +21,28 @@ module VSphereCloud
     end
 
     def <=>(other)
-      raise TypeError, "no implicit conversion of #{other.class} to #{resource.class}" unless other.instance_of?(self.class)
+      raise ArgumentError, "Comparison of  #{resource.class} with #{other.class} failed" unless other.instance_of?(self.class)
       score <=> other.score
     end
   end
 
 
   class StoragePlacement < Placement
+    extend Forwardable
+
     def initialize(resource)
-      unless resource.is_a?(VSphereCloud::Resources::Datastore) || resource.is_a?(VSphereCloud::Resources::StoragePod) then
+      unless resource.is_a?(VSphereCloud::Resources::Datastore) || resource.is_a?(VSphereCloud::Resources::StoragePod)
         raise TypeError, "no implicit conversion of #{resource.class} to either VSphereCloud::Resources::Datastore or VSphereCloud::Resources::StoragePod"
       end
       super
     end
 
-    # @return [Integer] free space present with the resource
-    def free_space
-      resource.free_space
-    end
-
-    # @return [Boolean] accessibility of the resource
-    def accessible?
-      resource.accessible?
-    end
-
-    # @return [Boolean] whether resource is in normal maintenance mode state
-    def maintenance_mode
-      resource.maintenance_mode
-    end
-
-    # @return [String] name of the resource
-    def name
-      resource.name
-    end
+    def_delegators :@resource,
+      :free_space, :accessible?, :name, :maintenance_mode
 
     # @return [String] debug StoragePlacement information.
     def inspect
-      "<Placement has resource : #{resource.inspect} and score #{score}>"
+      "#<StoragePlacement @resource : #{resource.inspect} score #{score}>"
     end
   end
 end

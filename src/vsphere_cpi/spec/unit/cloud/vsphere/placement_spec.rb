@@ -14,15 +14,11 @@ describe VSphereCloud::Placement do
   end
 
   describe '#resource' do
-    it('returns the resource') { expect(subject.resource).to eq(resource) }
+    it('returns the resource') { expect(subject.resource).to be(resource) }
   end
 
   describe '#score' do
     it('returns the score') { expect(subject.score).to eq(0) }
-  end
-
-  describe '#inspect' do
-    it ('raises an error') {expect{subject.inspect}.to raise_error NotImplementedError}
   end
 
   describe '#eql' do
