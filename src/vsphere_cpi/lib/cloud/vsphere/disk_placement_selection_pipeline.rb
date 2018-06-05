@@ -1,5 +1,5 @@
 module VSphereCloud
-  FilterMaintenanceModeDS = -> (storage_placement, criteria_object) do
+  FilterMaintenanceModeDS = -> (storage_placement, _) do
     storage_placement.maintenance_mode == "normal"
   end
 
@@ -12,12 +12,12 @@ module VSphereCloud
       storage_placement.name =~ Regexp.new(criteria_object.target_datastore_pattern)
   end
 
-  FilterInaccessibleDS = -> (storage_placement, criteria_object) do
+  FilterInaccessibleDS = -> (storage_placement, _) do
       storage_placement.accessible?
   end
 
-  ScoreWeightedRandomFreeSpaceDS = -> (storage_placement, criteria_object) do
-    storage_placement.score = Random.rand * storage_placement.free_space
+  ScoreWeightedRandomFreeSpaceDS = -> (storage_placement, _) do
+    Random.rand * storage_placement.free_space
   end
 
   class DiskPlacementSelectionPipeline < SelectionPipeline

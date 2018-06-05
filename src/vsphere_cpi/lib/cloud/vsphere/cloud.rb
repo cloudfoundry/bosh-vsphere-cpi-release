@@ -526,7 +526,8 @@ module VSphereCloud
         # Create a new disk selection pipeline with a gathering block.
         # Specific filters are pre-defined in the constructor itself
         # Criteria Object for filter passed in the constructor is a hash of size and pattern.
-        pipeline = DiskPlacementSelectionPipeline.new(StoragePlacementCriteria.new(size_in_mb, target_datastore_pattern)) do
+        storage_placement_criteria = StoragePlacementCriteria.new(size_in_mb, target_datastore_pattern)
+        pipeline = DiskPlacementSelectionPipeline.new(storage_placement_criteria) do
           if vm_cid
             vm = vm_provider.find(vm_cid)
             accessible_datastores = vm.accessible_datastores
@@ -560,8 +561,8 @@ module VSphereCloud
           next if disk.nil?
           logger.info("Created disk: #{disk.inspect}")
           raw_director_disk_cid = disk_pool.storage_list.any? ? DirectorDiskCID.encode(disk.cid, target_datastore_pattern: target_datastore_pattern) : disk.cid
-          # Return disk cid if we create a valid disk
-          return raw_director_disk_cid unless disk.nil?
+          # Return disk cid for the created disk.
+          return raw_director_disk_cid
         end
         raise "Unable to create disk on any storage entity provided. Possible errors can be not enough free space, datastore in maintenance mode or datastores are not accessible by any host"
       end
