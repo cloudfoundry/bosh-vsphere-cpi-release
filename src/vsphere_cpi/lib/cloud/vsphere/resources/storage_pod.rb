@@ -15,11 +15,10 @@ module VSphereCloud
         mob.summary.free_space.to_i / BYTES_IN_MB
       end
 
-      def maintenance_mode
-        mob.child_entity.each do |ds|
-          return 'normal' if ds.summary.maintenance_mode == 'normal'
+      def maintenance_mode?
+        mob.child_entity.all? do |ds|
+          ds.summary.maintenance_mode != 'normal'
         end
-        return 'in_maintenance'
       end
 
       def accessible?

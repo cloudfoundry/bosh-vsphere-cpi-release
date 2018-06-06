@@ -37,8 +37,8 @@ module VSphereCloud
       #       This could happen when waiting for user input or for long-running vmotions to complete.
       #   inMaintenance	Successfully entered maintenance mode.
       #   normal	Default state.
-      datastores.keep_if do |_, props|
-        props[:mob].summary.maintenance_mode == "normal"
+      datastores.reject! do |_, props|
+        props[:mob].summary.maintenance_mode?
       end
       raise Bosh::Clouds::CloudError, "Datastores matching criteria are in maintenance mode or not accessible. No valid placement found" if placement[:datastores].empty?
 
