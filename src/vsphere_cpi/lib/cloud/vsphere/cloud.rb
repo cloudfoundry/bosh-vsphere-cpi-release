@@ -483,11 +483,20 @@ module VSphereCloud
         disk_is_in_target_datastore = disk_config.existing_datastore_name =~ Regexp.new(disk_config.target_datastore_pattern)
 
         unless disk_is_accessible && disk_is_in_target_datastore
-          datastore_picker = DatastorePicker.new
-          datastore_picker.update(accessible_datastores)
-          datastore_name = datastore_picker.pick_datastore_for_single_disk(disk_config)
-
-          destination_datastore = @datacenter.find_datastore(datastore_name)
+          # Create a new disk selection pipeline with a gathering block.
+          # Specific filters are pre-defined in the constructor itself
+          # Criteria Object for filter passed in the constructor is a hash of size and pattern.
+          storage_placement_criteria = StoragePlacementCriteria.new(disk_config.size,
+            disk_config.target_datastore_pattern, disk_config.existing_datastore_name)
+          pipeline = DiskPlacementSelectionPipeline.new(storage_placement_criteria) do
+            accessible_datastores.values.map do |ds|
+              StoragePlacement.new(ds)
+            end
+          end
+          storage_placement_enum = pipeline.each
+          storage_placement = storage_placement_enum.first
+          raise "Unable to attach disk to the VM. There is no datastore matching pattern or required space available for disk to move" if storage_placement.nil?
+          destination_datastore = @datacenter.find_datastore(storage_placement.name)
           disk_to_attach = @datacenter.move_disk_to_datastore(disk_to_attach, destination_datastore)
         end
 
@@ -516,7 +525,6 @@ module VSphereCloud
     def create_disk(size_in_mb, cloud_properties, vm_cid = nil)
       with_thread_name("create_disk(#{size_in_mb}, _)") do
         logger.info("Creating disk with size: #{size_in_mb}")
-
         # Create a  disk pool to hold possible datastyores
         disk_pool = DiskPool.new(@datacenter,  cloud_properties['datastores'])
 

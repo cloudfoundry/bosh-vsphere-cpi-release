@@ -1,6 +1,7 @@
 module VSphereCloud
   class SelectionPipeline
     include Enumerable
+    include Logger
 
     # @return [Object] the object to select placements for
     attr_reader :object
@@ -24,8 +25,8 @@ module VSphereCloud
     end
 
     def score(placement)
-      placement.score = scorer_list.reduce do |score, scorer|
-        score += scorer.call(placement, @object)
+      scorer_list.reduce(0) do |score, scorer|
+        score + scorer.call(placement, @object)
       end
     end
 
@@ -36,7 +37,7 @@ module VSphereCloud
         end
         scorer_list << Proc.new
       else
-        raise ArgumentError, "0 arguments passed, expected at least 1 arg or a block if no args providedp" if args.empty?
+        raise ArgumentError, "0 arguments passed, expected at least 1 arg or a block if no args provided" if args.empty?
         scorer_list.concat(args)
       end
       self
@@ -55,15 +56,14 @@ module VSphereCloud
       self
     end
 
-    def each(&block)
-      # make this return an enumerator if a block is not given
-      return enum_for(:each).lazy unless block_given?
+    def each
+      return enum_for(:each) unless block_given?
 
       @gather.call.select do |placement|
         accept?(placement)
-      end.each do |placement|
+      end.sort_by do |placement|
         score(placement)
-      end.sort.each(&block)
+      end
     end
 
     private
@@ -76,6 +76,4 @@ module VSphereCloud
       @scorer_list ||= []
     end
   end
-
-
 end

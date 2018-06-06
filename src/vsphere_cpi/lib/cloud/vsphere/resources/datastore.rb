@@ -59,8 +59,8 @@ module VSphereCloud
         end
       end
 
-      def maintenance_mode
-        mob.summary.maintenance_mode
+      def maintenance_mode?
+        mob.summary.maintenance_mode != 'normal'
       end
 
       def accessible?

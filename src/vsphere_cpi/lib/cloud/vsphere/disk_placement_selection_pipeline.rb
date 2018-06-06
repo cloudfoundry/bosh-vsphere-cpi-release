@@ -1,6 +1,6 @@
 module VSphereCloud
   FilterMaintenanceModeDS = -> (storage_placement, _) do
-    storage_placement.maintenance_mode == "normal"
+    !storage_placement.maintenance_mode?
   end
 
   FilterFreeSpaceDS = -> (storage_placement, criteria_object) do
@@ -9,11 +9,11 @@ module VSphereCloud
   end
 
   FilterTargetPatternDS = -> (storage_placement, criteria_object) do
-      storage_placement.name =~ Regexp.new(criteria_object.target_datastore_pattern)
+    storage_placement.name =~ Regexp.new(criteria_object.target_datastore_pattern)
   end
 
   FilterInaccessibleDS = -> (storage_placement, _) do
-      storage_placement.accessible?
+    storage_placement.accessible?
   end
 
   ScoreWeightedRandomFreeSpaceDS = -> (storage_placement, _) do
@@ -29,10 +29,11 @@ module VSphereCloud
   end
 
   class StoragePlacementCriteria
-    attr_reader :size_in_mb, :target_datastore_pattern
+    attr_reader :size_in_mb, :target_datastore_pattern, :existing_ds_pattern
 
-    def initialize(size_in_mb, target_ds_pattern)
+    def initialize(size_in_mb, target_ds_pattern, existing_ds_pattern=nil)
       @size_in_mb = size_in_mb
+      @existing_ds_pattern = existing_ds_pattern
       @target_datastore_pattern = target_ds_pattern
     end
   end
