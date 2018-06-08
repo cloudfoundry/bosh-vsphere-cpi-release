@@ -92,7 +92,7 @@ module VSphereCloud
       def accessible_from?(cluster)
         @mob.host.any? do |host_mount|
           next if host_mount.key.runtime.in_maintenance_mode
-          cluster.mob.host.include?(host_mount.key)
+          cluster.host.include?(host_mount.key)
         end
       end
 

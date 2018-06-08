@@ -266,7 +266,8 @@ module VSphereCloud
             accessible_datastores: {
               'smaller-ds'=> smaller_ds,
             },
-            mob: cluster1_mob
+            mob: cluster1_mob,
+            host: [host_system],
           )
         end
         let(:cluster_2) do
@@ -276,7 +277,8 @@ module VSphereCloud
             accessible_datastores: {
               'larger-ds' => larger_ds,
             },
-            mob: cluster2_mob
+            mob: cluster2_mob,
+            host: [host_system]
           )
         end
         let(:disk_configurations) do

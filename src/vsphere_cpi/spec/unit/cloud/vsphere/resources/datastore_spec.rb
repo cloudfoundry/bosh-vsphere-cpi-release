@@ -73,7 +73,7 @@ describe VSphereCloud::Resources::Datastore do
   describe '#accessible_from?' do
 
     context 'when a cluster with some hosts is defined' do
-      let (:cluster) { instance_double(VSphereCloud::Resources::Cluster) }
+      let (:cluster) { instance_double(VSphereCloud::Resources::Cluster, host: [host_mob]) }
       let (:host_mob) { instance_double(VimSdk::Vim::HostSystem) }
       let (:host_mount) { instance_double(VimSdk::Vim::Datastore::HostMount, key: host_mob) }
 
@@ -92,7 +92,7 @@ describe VSphereCloud::Resources::Datastore do
 
       context 'when at least one of the hosts is not in maintenance mode' do
         before do
-          expect(cluster).to receive_message_chain(:mob, :host, :include?).with(host_mob).and_return(is_included)
+          expect(cluster).to receive_message_chain(:host, :include?).with(host_mob).and_return(is_included)
         end
         let(:maintenance_mode) { false }
 

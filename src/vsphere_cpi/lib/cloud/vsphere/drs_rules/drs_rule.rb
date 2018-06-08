@@ -5,7 +5,7 @@ module VSphereCloud
     include Logger
 
     CUSTOM_ATTRIBUTE_NAME = 'drs_rule'
-    DRS_LOCK_SUFFIX_VMGROUP = '_vm_group'
+    DRS_LOCK_HOST_VM_GROUP = 'host_vm_group'
     DEFAULT_RULE_NAME = 'vcpi-drs-rule'
 
     def initialize(rule_name, client, datacenter_cluster)
@@ -28,6 +28,22 @@ module VSphereCloud
           update_rule(rule.key)
         else
           add_rule
+        end
+      end
+    end
+
+    # Adds VM to given VM Group & creates VM/HOST Affinity rule
+    # @param [Vim::VirtualMachine] vm
+    # @param [String] vm_group_name
+    # @param [String] host_group_name
+    def add_vm_host_affinity_rule(vm_group_name, host_group_name)
+      DrsLock.new(@vm_attribute_manager, DRS_LOCK_HOST_VM_GROUP).with_drs_lock do
+        rule = find_rule
+        # Do not create the rule if it already exists
+        unless rule
+          # No error is raised if given host group does not exist,
+          # it still creates the rule
+          create_vm_host_affinity_rule(vm_group_name, host_group_name)
         end
       end
     end
@@ -57,6 +73,26 @@ module VSphereCloud
     def update_rule(rule_key)
       logger.debug("Updating DRS rule: #{@rule_name}")
       add_anti_affinity_rule(VimSdk::Vim::Option::ArrayUpdateSpec::Operation::EDIT, rule_key)
+    end
+
+    def create_vm_host_affinity_rule(vm_group_name, host_group_name)
+      vm_host_rule_info = VimSdk::Vim::Cluster::VmHostRuleInfo.new
+      vm_host_rule_info.enabled = true
+      # This is a HARD AFFINITY rule.
+      vm_host_rule_info.mandatory = true
+      vm_host_rule_info.name = @rule_name
+      vm_host_rule_info.vm_group_name = vm_group_name
+      vm_host_rule_info.affine_host_group_name = host_group_name
+
+      cluster_rule_spec = VimSdk::Vim::Cluster::RuleSpec.new
+      cluster_rule_spec.info = vm_host_rule_info
+      cluster_rule_spec.operation = VimSdk::Vim::Option::ArrayUpdateSpec::Operation::ADD
+
+      config_spec = VimSdk::Vim::Cluster::ConfigSpecEx.new
+      config_spec.rules_spec = [cluster_rule_spec]
+
+      logger.debug("Creating VM/Host Affinity Rule: #{@rule_name}")
+      reconfigure_cluster(config_spec)
     end
 
     def add_anti_affinity_rule(operation, rule_key = nil)
@@ -96,3 +132,4 @@ module VSphereCloud
     end
   end
 end
+

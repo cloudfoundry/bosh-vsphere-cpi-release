@@ -114,6 +114,37 @@ module VSphereCloud
           raise "Unable to parse vmx options: 'vmx_options' is not a Hash"
         end
 
+        host = nil
+        # Before cloning we need to make sure the host is correctly picked up
+        # from cluster's host group if provided.
+        unless cluster.host_group.nil?
+          # placement_spec = VimSdk::Vim::Cluster::PlacementSpec.new
+          # placement_spec.config_spec = config_spec
+          # placement_spec.datastores = [datastore.mob]
+          # placement_spec.hosts = cluster.host_group_mob.host
+          # placement_result = cluster.mob.place_vm(placement_spec)
+          # raise "No suitable host found by DRS in host group to create VM" if placement_result.recommendations&.empty?
+          # begin
+          #   host = placement_result.recommendations.first.action.first.target_host
+          # # if for some reason, above fails select host manually.
+          # rescue => e
+          #   logger.warning("Received #{e} while asking DRS for recommendation")
+          #   host = cluster.host_group_mob.host.find do |host|
+          #     host.runtime.connection_state == 'connected' &&
+          #       !host.runtime.in_maintenance_mode
+          #   end
+          # end
+          # @TA:TODO : Stop-Gap measure until DRS team solves bug for placeVM below.
+          # Selecting a random host out of all host groups to get initial placement correct
+          # Filtering it for healthy host.
+          host = cluster.host_group_mob.host.find do |host|
+            host.runtime.connection_state == 'connected' &&
+              !host.runtime.in_maintenance_mode
+          end
+          raise "Failed to find a healthy host in #{cluster.host_group} to create the VM." if host.nil?
+        end
+
+
         # Clone VM
         logger.info("Cloning vm: #{replicated_stemcell_vm} to #{vm_config.name}")
         created_vm_mob = @client.wait_for_task do
@@ -122,6 +153,7 @@ module VSphereCloud
             @datacenter.vm_folder.mob,
             cluster.resource_pool.mob,
             datastore: datastore.mob,
+            host: host,
             linked: true,
             snapshot: snapshot.current_snapshot,
             config: config_spec,
@@ -139,19 +171,27 @@ module VSphereCloud
           env = @cpi.generate_agent_env(vm_config.name, created_vm.mob, vm_config.agent_id, network_env, disk_env)
           env['env'] = vm_config.agent_env
 
-        location = {
-          datacenter: @datacenter.name,
-          datastore: datastore,
-          vm: vm_config.name,
-        }
+          location = {
+            datacenter: @datacenter.name,
+            datastore: datastore,
+            vm: vm_config.name,
+          }
 
           @agent_env.set_env(created_vm.mob, location, env)
 
           # DRS Rules
           create_drs_rules(vm_config, created_vm.mob, cluster)
 
-          # Add vm to VMGroup
-          add_vm_to_vm_group(vm_config, created_vm.mob, cluster)
+          # Add vm to VM Group present in vm_type
+          add_vm_to_vm_group(vm_config.vm_type.vm_group, created_vm_mob, cluster)
+
+          if !cluster.host_group.nil?
+            # Add vm to VMGroup listed in the cluster description
+            add_vm_to_vm_group(cluster.vm_group, created_vm.mob, cluster)
+            # Create VM/Host affinity rule
+            create_vm_host_affinity_rule(created_vm.mob, cluster)
+          end
+
 
           begin
             # Upgrade to latest virtual hardware version
@@ -208,13 +248,24 @@ module VSphereCloud
       drs_rule.add_vm(vm_mob)
     end
 
-    def add_vm_to_vm_group(vm_config, vm_mob, cluster)
-      return if vm_config.vm_type.vm_group.nil?
-      vm_group = VSphereCloud::VmGroup.new(
+    def add_vm_to_vm_group(vm_group, vm_mob, cluster)
+      return if vm_group.nil?
+      vm_group_creator = VSphereCloud::VmGroup.new(
         @client,
         cluster.mob
       )
-      vm_group.add_vm_to_vm_group(vm_mob, vm_config.vm_type.vm_group)
+      vm_group_creator.add_vm_to_vm_group(vm_mob, vm_group)
+    end
+
+    def create_vm_host_affinity_rule(vm_mob, cluster)
+      return if cluster.host_group.nil?
+      vm_host_affinity_rule_name = cluster.vm_host_affinity_rule_name
+      drs_rule = VSphereCloud::DrsRule.new(
+        vm_host_affinity_rule_name,
+        @client,
+        cluster.mob
+      )
+      drs_rule.add_vm_host_affinity_rule(cluster.vm_group, cluster.host_group)
     end
   end
 end
