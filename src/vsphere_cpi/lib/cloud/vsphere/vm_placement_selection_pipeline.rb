@@ -43,7 +43,7 @@ module VSphereCloud
     end
 
     def inspect_before
-      "VM Placement Cluster : #{cluster.name} hosts: #{hosts} datastores: #{datastores}"
+      "VM Placement Cluster: #{cluster.name} hosts: #{hosts} datastores: #{datastores}"
     end
 
     def inspect

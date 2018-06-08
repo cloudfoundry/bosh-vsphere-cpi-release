@@ -21,6 +21,7 @@ module VSphereCloud::Resources
         'VSphereCloud::ClusterConfig',
         name: 'fake-cluster-name',
         resource_pool: 'fake-resource-pool',
+        host_group: nil,
       )
     end
 
@@ -230,6 +231,118 @@ module VSphereCloud::Resources
           end
         end
       end
+
+      context 'when we are using host groups in cluster' do
+        before do
+          allow(cluster_config).to receive(:resource_pool).and_return(nil)
+          allow(subject).to receive_message_chain(:host_group_mob,
+            :host).and_return([host1, host2])
+          allow(subject).to receive_messages(host_group: 'fake-host-group')
+          allow(host1).to receive_message_chain(:hardware,
+            :memory_size).and_return(10 * 1024 * 1024)
+          allow(host2).to receive_message_chain(:hardware,
+            :memory_size).and_return(10 * 1024 * 1024)
+          allow(host1).to receive_message_chain(:summary, :quick_stats,
+            :overall_memory_usage).and_return(1)
+          allow(host2).to receive_message_chain(:summary, :quick_stats,
+            :overall_memory_usage).and_return(1)
+          allow(host1).to receive_message_chain(:runtime,
+            :connection_state).and_return('connected')
+          allow(host2).to receive_message_chain(:runtime,
+            :in_maintenance_mode).and_return(false)
+          allow(host2).to receive_message_chain(:runtime,
+            :connection_state).and_return('connected')
+          allow(host1).to receive_message_chain(:runtime,
+            :in_maintenance_mode).and_return(false)
+        end
+
+        let(:host1) { instance_double('VimSdk::Vim::HostSystem') }
+        let(:host2) { instance_double('VimSdk::Vim::HostSystem') }
+
+        it 'returns sum of raw available memory on two hosts in Megabytes' do
+          expect(cluster.free_memory).to eq(18)
+        end
+
+        context 'when host hardware summary is not available' do
+          before do
+            expect(host1).to receive_messages(hardware: nil)
+            expect(host2).to receive_messages(hardware: nil)
+          end
+
+          it 'returns 0' do
+            expect(cluster.free_memory).to eq(0)
+          end
+        end
+
+        context 'when all hosts are in maintenace mode or not connected' do
+          before do
+            allow(host1).to receive_message_chain(:runtime,
+              :connection_state).and_return('not connected')
+            allow(host2).to receive_message_chain(:runtime,
+              :in_maintenance_mode).and_return(true)
+          end
+
+          it 'returns 0' do
+            expect(cluster.free_memory).to eq(0)
+          end
+        end
+
+        # context 'when an ESXi host is not powered on' do
+        #   let(:hosts_properties) do
+        #     {}.merge(
+        #       generate_host_property(mob: instance_double('VimSdk::Vim::ClusterComputeResource'), name: 'fake-powered-off', maintenance_mode: false, memory_size: 5 * 1024 * 1024, power_state: 'poweredOff', connection_state: 'connected')
+        #     ).merge(
+        #       active_hosts_properties
+        #     )
+        #   end
+        #
+        #   it 'includes the free memory of only powered on hosts' do
+        #     expect(cluster.free_memory).to eq(85)
+        #   end
+        # end
+        #
+        # context 'when an ESXi host is disconnected' do
+        #   let(:hosts_properties) do
+        #     {}.merge(
+        #       generate_host_property(mob: instance_double('VimSdk::Vim::ClusterComputeResource'), name: 'fake-host-disc', maintenance_mode: false, memory_size: 5 * 1024 * 1024, power_state: 'poweredOn', connection_state: 'disconnected')
+        #     ).merge(
+        #       active_hosts_properties
+        #     )
+        #   end
+        #
+        #   it 'includes the free memory of only connected hosts' do
+        #     expect(cluster.free_memory).to eq(85)
+        #   end
+        # end
+        #
+        # context 'when an ESXi host is in maintenance mode' do
+        #   let(:hosts_properties) do
+        #     {}.merge(
+        #       generate_host_property(mob: instance_double('VimSdk::Vim::ClusterComputeResource'), name: 'fake-host-maint', maintenance_mode: true, memory_size: 5 * 1024 * 1024, power_state: 'poweredOn', connection_state: 'connected')
+        #     ).merge(
+        #       active_hosts_properties
+        #     )
+        #   end
+        #
+        #   it 'includes the free memory of only hosts not in maintenance mode' do
+        #     expect(cluster.free_memory).to eq(85)
+        #   end
+        # end
+        #
+        # context 'when there are no active cluster hosts' do
+        #   let(:hosts_properties) do
+        #     {}.merge(
+        #       generate_host_property(mob: instance_double('VimSdk::Vim::ClusterComputeResource'), name: 'fake-host-inactive', maintenance_mode: false, memory_size: 5 * 1024 * 1024, power_state: 'poweredOff', connection_state: 'disconnected')
+        #     )
+        #   end
+        #   before do
+        #     allow(compute_summary).to receive(:effective_memory).and_return(0)
+        #   end
+        #   it 'defaults free memory to zero' do
+        #     expect(cluster.free_memory).to eq(0)
+        #   end
+        # end
+      end
     end
 
     describe '#free_memory' do
@@ -262,6 +375,111 @@ module VSphereCloud::Resources
       end
     end
 
+    describe 'host groups and vm groups are defined in AZ' do
+      describe '#vm_group' do
+        let(:cluster_config) do
+          instance_double(
+            'VSphereCloud::ClusterConfig',
+            name: 'fake-cluster-name',
+            resource_pool: 'fake-resource-pool',
+            host_group: 'vcpi-hg1',
+          )
+        end
+        it 'returns host_group name suffixed with _vm_group' do
+          expect(cluster.vm_group).to eq(cluster.host_group+VSphereCloud::Resources::Cluster::CLUSTER_VM_GROUP_SUFFIX)
+        end
+      end
+      context 'when host group name is longer than 100 characters' do
+        let(:cluster_config) do
+          instance_double(
+            'VSphereCloud::ClusterConfig',
+            name: 'fake-cluster-name',
+            host_group: 'vcpi-hg1'*20,
+          )
+        end
+        it 'returns a random name' do
+          expect(cluster.vm_group).to_not eq(cluster.host_group+VSphereCloud::Resources::Cluster::CLUSTER_VM_GROUP_SUFFIX)
+        end
+      end
+      describe '#host_group' do
+        context 'when host group is not defined in config' do
+          it 'returns nil' do
+            expect(cluster.host_group).to be(nil)
+          end
+        end
+        context 'when host group is defined in config' do
+          let(:cluster_config) do
+            instance_double(
+              'VSphereCloud::ClusterConfig',
+              name: 'fake-cluster-name',
+              host_group: 'fake-host-group',
+            )
+          end
+          it 'returns name of the defined host Group)' do
+            expect(cluster.host_group).to eq('fake-host-group')
+          end
+        end
+      end
+      describe '#vm_host_affinity_rule_name' do
+        context 'when host group is not defined(nil)' do
+          it 'returns nil' do
+            expect(cluster.vm_host_affinity_rule_name).to be(nil)
+          end
+        end
+        context 'when host group is defined' do
+          let(:cluster_config) do
+            instance_double(
+              'VSphereCloud::ClusterConfig',
+              name: 'fake-cluster-name',
+              host_group: 'fake-host-group',
+            )
+          end
+          it 'returns default rule name' do
+            expect(cluster.vm_host_affinity_rule_name).to eq(cluster.vm_group + VSphereCloud::Resources::Cluster::CLUSTER_VM_HOST_RULE_SUFFIX)
+          end
+        end
+      end
+      describe '#host_group_mob' do
+        context 'when host group is not defined' do
+          it 'returns nil' do
+            expect(cluster.host_group_mob).to be(nil)
+          end
+        end
+        context 'when host group is defined' do
+          let(:host_group_mob) do
+            instance_double('VimSdk::Vim::Cluster::HostGroup', name: 'fake-host-group', is_a?: VimSdk::Vim::Cluster::HostGroup)
+          end
+          let(:cluster_config) do
+            instance_double(
+              'VSphereCloud::ClusterConfig',
+              name: 'fake-cluster-name',
+              host_group: 'fake-host-group',
+            )
+          end
+          it 'returns mob of defined host group' do
+            allow(cluster).to receive_message_chain(:mob, :configuration_ex, :group).and_return([host_group_mob])
+            expect(cluster.host_group_mob).to be(host_group_mob)
+          end
+        end
+        context 'when host group is defined with a wrong name' do
+          let(:host_group_mob) do
+            instance_double('VimSdk::Vim::Cluster::HostGroup', name: 'another-fake-host-group', is_a?: VimSdk::Vim::Cluster::HostGroup)
+          end
+          let(:cluster_config) do
+            instance_double(
+              'VSphereCloud::ClusterConfig',
+              name: 'fake-cluster-name',
+              host_group: 'fake-host-group',
+            )
+          end
+          it 'returns mob of defined host group' do
+            allow(cluster).to receive_message_chain(:mob, :configuration_ex, :group).and_return([host_group_mob])
+            expect{cluster.host_group_mob}.to raise_error(/Failed to find the HostGroup/)
+          end
+        end
+      end
+    end
+
     describe '#mob' do
       it 'returns the cluster mob' do
         expect(cluster.mob).to eq(cluster_mob)
@@ -281,9 +499,32 @@ module VSphereCloud::Resources
       end
     end
 
-    describe '#inspect' do
-      it 'returns the printable form' do
-        expect(cluster.inspect).to eq("<Cluster: #{cluster_mob} / fake-cluster-name>")
+    describe '#host' do
+      context 'when a host group is not defined' do
+        let(:hosts) { instance_double('VimSdk::Vim::HostSystem') }
+        it 'returns all hosts in the cluster' do
+          allow(cluster_mob).to receive(:host).and_return([hosts])
+          expect(cluster.host).to eq([hosts])
+        end
+      end
+      context 'when host group is defined and exists' do
+        let(:host_group_hosts) { instance_double('VimSdk::Vim::HostSystem') }
+        let(:host_group_mob) do
+          instance_double('VimSdk::Vim::Cluster::HostGroup',
+            host: [host_group_hosts])
+        end
+        let(:cluster_config) do
+          instance_double(
+            'VSphereCloud::ClusterConfig',
+            name: 'fake-cluster-name',
+            host_group: 'fake-host-group',
+          )
+        end
+        it 'returns the hosts defined under the host group' do
+          allow(cluster).to receive(:host_group_mob).and_return(host_group_mob)
+          allow(host_group_mob).to receive(:host).and_return([host_group_hosts])
+          expect(cluster.host).to eq([host_group_hosts])
+        end
       end
     end
 

@@ -662,6 +662,7 @@ module VSphereCloud
         relocation_spec.disk_move_type = Vim::Vm::RelocateSpec::DiskMoveOptions::CREATE_NEW_CHILD_DISK_BACKING
       end
       relocation_spec.pool = resource_pool
+      relocation_spec.host = options[:host] unless options[:host].nil?
 
       clone_spec = Vim::Vm::CloneSpec.new
       clone_spec.config = options[:config] if options[:config]

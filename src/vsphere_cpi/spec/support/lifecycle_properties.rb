@@ -87,7 +87,7 @@ module LifecycleProperties
         'clusters' => [
           {
             @default_cluster => {
-              'resource_pool' => @default_resource_pool
+              'resource_pool' => @default_resource_pool,
             }
           }
         ]

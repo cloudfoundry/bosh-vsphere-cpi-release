@@ -8,8 +8,8 @@ module VSphereCloud
       @config = config_hash
     end
 
-    def resource_pool
-      @config['resource_pool']
-    end
+    def host_group; @config['host_group']; end
+
+    def resource_pool; @config['resource_pool']; end
   end
 end

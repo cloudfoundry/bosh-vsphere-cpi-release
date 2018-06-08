@@ -467,6 +467,25 @@ module LifecycleHelpers
     all_datastore_names.select { |name| name =~ Regexp.new(pattern) }
   end
 
+  def turn_maintenance_on_for_hosts(cpi, host_mobs)
+    host_mobs.each do |host_mob|
+      cpi.client.wait_for_task do
+        host_mob.enter_maintenance_mode(0, true, nil)
+      end
+    end
+  end
+
+  def turn_maintenance_off_for_hosts(cpi, host_mobs)
+    host_mobs.each do |host_mob|
+      begin
+        cpi.client.wait_for_task do
+          host_mob.exit_maintenance_mode(0)
+        end
+      rescue VSphereCloud::VCenterClient::TaskException => e
+      end
+    end
+  end
+
   def turn_maintenance_on_for_half_hosts(cpi, cluster_name)
     cluster = cpi.client.cloud_searcher.get_managed_object(VimSdk::Vim::ClusterComputeResource, name: cluster_name)
     half_host_mob_array = cluster.host[0, cluster.host.length/2]
@@ -498,6 +517,66 @@ module LifecycleHelpers
         host_mob.enter_maintenance_mode(0, true, nil)
       end
     end
+  end
+
+  def update_host_group(cpi, cluster_name, host_group_name, operation)
+    cluster = cpi.client.cloud_searcher.get_managed_object(VimSdk::Vim::ClusterComputeResource, name: cluster_name)
+    existing_host_group = cluster.configuration_ex.group.find { |group| group.name == host_group_name && group.is_a?(VimSdk::Vim::Cluster::HostGroup)}
+    host_group = VimSdk::Vim::Cluster::HostGroup.new
+    host_group.host = cluster.host
+    host_group.name = host_group_name
+
+    group_spec = VimSdk::Vim::Cluster::GroupSpec.new
+    group_spec.info = host_group
+    group_spec.operation = operation == 'add' && existing_host_group.nil? ? operation : 'edit' #edit the host list for existing host_group
+    group_spec.remove_key = host_group_name if operation == 'remove' && !existing_host_group.nil?
+
+    config_spec = VimSdk::Vim::Cluster::ConfigSpecEx.new
+    config_spec.group_spec = [group_spec]
+    reconfigure_cluster(cpi, cluster, config_spec)
+  end
+
+  def create_vm_host_rule(cpi, cluster_name, rule_name, vm_group_name, host_group_name, vm)
+    cluster = cpi.client.cloud_searcher.get_managed_object(VimSdk::Vim::ClusterComputeResource, name: cluster_name)
+
+    vm_group = cluster.configuration_ex.group.find { |group| group.name == vm_group_name && group.is_a?(VimSdk::Vim::Cluster::VmGroup)}
+    vm_group_spec = VimSdk::Vim::Cluster::VmGroup.new
+    vm_group_spec.vm = vm_group ? vm_group.vm.concat([vm]) : [vm]
+    vm_group_spec.name = vm_group_name
+
+    group_spec = VimSdk::Vim::Cluster::GroupSpec.new
+    group_spec.info = vm_group_spec
+    group_spec.operation = vm_group ? 'edit' : 'add'
+
+    vm_host_rule_info = VimSdk::Vim::Cluster::VmHostRuleInfo.new
+    vm_host_rule_info.enabled = true
+    vm_host_rule_info.name = rule_name
+    vm_host_rule_info.vm_group_name = vm_group_name
+    vm_host_rule_info.affine_host_group_name = host_group_name
+
+    cluster_rule_spec = VimSdk::Vim::Cluster::RuleSpec.new
+    cluster_rule_spec.info = vm_host_rule_info
+    cluster_rule_spec.operation = 'add'
+
+    config_spec = VimSdk::Vim::Cluster::ConfigSpecEx.new
+    config_spec.rules_spec = [cluster_rule_spec]
+    config_spec.group_spec = [group_spec]
+
+    reconfigure_cluster(cpi, cluster, config_spec)
+  end
+
+  # Does not work raises an error, need to debug more
+  def delete_vm_host_rule(cpi, cluster_name, rule_name)
+    cluster = cpi.client.cloud_searcher.get_managed_object(VimSdk::Vim::ClusterComputeResource, name: cluster_name)
+
+    cluster_rule_spec = VimSdk::Vim::Cluster::RuleSpec.new
+    cluster_rule_spec.operation = 'remove'
+    cluster_rule_spec.remove_key = rule_name
+
+    config_spec = VimSdk::Vim::Cluster::ConfigSpecEx.new
+    config_spec.rules_spec = [cluster_rule_spec]
+
+    reconfigure_cluster(cpi, cluster, config_spec)
   end
 
   private
@@ -543,4 +622,11 @@ module LifecycleHelpers
       cluster.reconfigure_ex(config_spec, true)
     end
   end
+
+  def get_count_vm_host_affinity_rules(cluster_mob)
+    cluster_mob.configuration_ex.rule.select do |rule_info|
+      rule_info.is_a?(VimSdk::Vim::Cluster::VmHostRuleInfo)
+    end.count
+  end
+
 end
