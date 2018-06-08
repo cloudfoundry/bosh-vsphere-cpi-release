@@ -39,5 +39,17 @@ module VSphereCloud
     def num_gpus
       gpu['number_of_gpus'] if gpu
     end
+
+    def vm_group
+      gpu['vm_group'] if gpu
+    end
+
+    def host_group
+      gpu['host_group'] if gpu
+    end
+
+    def vm_host_affinity_rule_name
+      gpu['vm_host_affinity_rule_name'] if gpu
+    end
   end
 end

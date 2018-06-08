@@ -151,4 +151,85 @@ describe VSphereCloud::DrsRule, fake_logger: true do
       end
     end
   end
+
+  describe '#add_vm_host_affinity_rule' do
+    let(:vm) { instance_double('VimSdk::Vim::VirtualMachine', name: 'fake-vm') }
+    let(:fake_vm_1) { instance_double('VimSdk::Vim::VirtualMachine', name: 'fake-vm-1') }
+    let(:vm_group_name) {'fake-vm-group'}
+    let(:host_group_name) {'fake-host-group'}
+    let(:configuration_ex) { double(:configuration_ex, rule: rules, group: vm_groups) }
+    let(:vm_groups) { [ VimSdk::Vim::Cluster::VmGroup.new(name: vm_group_name, vm: [fake_vm_1]) ] }
+    let(:rules) { [ double(:rule, name: 'fake-rule-name', key: rule_key) ] }
+    let(:rule_key) { 33 }
+
+    before do
+      allow(datacenter_cluster).to receive(:configuration_ex).and_return(configuration_ex)
+      allow(datacenter_cluster).to receive(:reconfigure_ex).and_return(task)
+    end
+
+    context 'when rule exists' do
+      context 'when vm_group exists' do
+        it 'adds vm to the existing vm_group with DRS lock' do
+          with_lock do
+            expect(datacenter_cluster).to receive(:reconfigure_ex) do |config|
+              group_spec = config.group_spec.first
+              expect(group_spec.operation).to eq('edit')
+              group_info = group_spec.info
+              expect(group_info).to be_an_instance_of(VimSdk::Vim::Cluster::VmGroup)
+              expect(group_info.vm).to eq([fake_vm_1, vm])
+              expect(group_info.name).to eq(vm_group_name)
+
+            end.ordered.and_return(task)
+          end
+          drs_rule.add_vm_host_affinity_rule(vm, vm_group_name, host_group_name)
+        end
+      end
+      context 'when vm_group does not exists' do
+        let(:vm_groups) { []}
+        it 'creates vm_group and adds vm to it with DRS lock' do
+          with_lock do
+            expect(datacenter_cluster).to receive(:reconfigure_ex) do |config|
+              group_spec = config.group_spec.first
+              expect(group_spec.operation).to eq('add')
+              group_info = group_spec.info
+              expect(group_info).to be_an_instance_of(VimSdk::Vim::Cluster::VmGroup)
+              expect(group_info.vm).to eq([vm])
+              expect(group_info.name).to eq(vm_group_name)
+
+            end.ordered.and_return(task)
+          end
+          drs_rule.add_vm_host_affinity_rule(vm, vm_group_name, host_group_name)
+        end
+      end
+    end
+    context 'when rule does not exist' do
+      let(:rules) { [] }
+      it 'adds vm to the vm_group and creates DRS rule with DRS lock' do
+        with_lock do
+            expect(datacenter_cluster).to receive(:reconfigure_ex) do |config|
+              group_spec = config.group_spec.first
+              expect(group_spec.operation).to eq('edit')
+              group_info = group_spec.info
+              expect(group_info).to be_an_instance_of(VimSdk::Vim::Cluster::VmGroup)
+              expect(group_info.vm).to eq([fake_vm_1, vm])
+              expect(group_info.name).to eq(vm_group_name)
+            end.ordered.and_return(task)
+
+            expect(datacenter_cluster).to receive(:reconfigure_ex) do |config|
+              rule_spec = config.rules_spec.first
+              expect(rule_spec.operation).to eq('add')
+              rule_info = rule_spec.info
+              expect(rule_info).to be_an_instance_of(VimSdk::Vim::Cluster::VmHostRuleInfo)
+              expect(rule_info.name).to eq('fake-rule-name')
+              expect(rule_info.vm_group_name).to eq(vm_group_name)
+              expect(rule_info.affine_host_group_name).to eq(host_group_name)
+              expect(rule_info.enabled).to eq(true)
+              expect(rule_info.key).to eq(nil)
+
+            end.ordered.and_return(task)
+          drs_rule.add_vm_host_affinity_rule(vm, vm_group_name, host_group_name)
+        end
+      end
+    end
+  end
 end
