@@ -18,27 +18,26 @@ describe VSphereCloud::NSXTSwitchProvider, fake_logger: true do
     context 'when transport zone id is provided' do
       it 'creates switch' do
         expect(NSXT::LogicalSwitch).to receive(:new)
-                                           .with({ :admin_state => 'UP',
-                                                   :transport_zone_id => 'zone_id',
-                                                   :replication_mode => 'MTEP',
-                                                   :display_name => 'Switch name'})
-                                           .and_return(logical_switch)
+         .with({ admin_state: 'UP',
+                 transport_zone_id: 'zone_id',
+                 replication_mode: 'MTEP',
+                 display_name: 'Switch name'})
+         .and_return(logical_switch)
         expect(switch_api).to receive(:create_logical_switch)
-                                  .with(logical_switch)
-        switch_provider.create_logical_switch('zone_id', 'Switch name')
+         .with(logical_switch)
+        switch_provider.create_logical_switch('zone_id', {name: 'Switch name'})
       end
     end
 
     context 'when switch name is empty' do
       it 'Does not fail' do
         expect(NSXT::LogicalSwitch).to receive(:new)
-                                           .with({ :admin_state => 'UP',
-                                                   :transport_zone_id => 'zone_id',
-                                                   :replication_mode => 'MTEP',
-                                                   :display_name => nil})
-                                           .and_return(logical_switch)
+         .with({ admin_state: 'UP',
+                 transport_zone_id: 'zone_id',
+                 replication_mode: 'MTEP'})
+         .and_return(logical_switch)
         expect(switch_api).to receive(:create_logical_switch)
-                                  .with(logical_switch)
+         .with(logical_switch)
         switch_provider.create_logical_switch('zone_id')
       end
     end
@@ -47,7 +46,7 @@ describe VSphereCloud::NSXTSwitchProvider, fake_logger: true do
   describe '#delete_logical_switch' do
     it 'deletes logical switch with force and cascade' do
       expect(switch_api).to receive(:delete_logical_switch)
-                                .with('switch-id', :cascade => true, :detach => true)
+                                .with('switch-id', cascade: true, detach: true)
       switch_provider.delete_logical_switch('switch-id')
     end
   end
@@ -56,11 +55,11 @@ describe VSphereCloud::NSXTSwitchProvider, fake_logger: true do
     context 'when switch id is provided' do
       let(:switch_port) { instance_double(NSXT::LogicalPort) }
       let(:switch_ports) { instance_double(NSXT::LogicalPortListResult,
-                                           :results => [switch_port]) }
+                                           results: [switch_port]) }
 
       it 'returns switch ports' do
         expect(switch_api).to receive(:list_logical_ports)
-                                  .with(:logical_switch_id => 'switch-id').and_return(switch_ports)
+            .with(logical_switch_id: 'switch-id').and_return(switch_ports)
         result = switch_provider.get_attached_switch_ports('switch-id')
         expect(result.length).to eq(1)
       end
@@ -69,12 +68,12 @@ describe VSphereCloud::NSXTSwitchProvider, fake_logger: true do
 
   describe '#get_switches_by_name' do
     let(:results) { [
-        instance_double(NSXT::LogicalSwitch, :id => '1', :display_name => 'switch'),
-        instance_double(NSXT::LogicalSwitch, :id => '2', :display_name => 'switch2'),
-        instance_double(NSXT::LogicalSwitch, :id => '3', :display_name => 'switch'),
+        instance_double(NSXT::LogicalSwitch, id: '1', display_name: 'switch'),
+        instance_double(NSXT::LogicalSwitch, id: '2', display_name: 'switch2'),
+        instance_double(NSXT::LogicalSwitch, id: '3', display_name: 'switch'),
     ]}
     let(:logical_switches) {
-      instance_double(NSXT::LogicalSwitchListResult, :results => results)
+      instance_double(NSXT::LogicalSwitchListResult, results: results)
     }
 
     it 'returns switches with given name' do
