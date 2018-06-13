@@ -8,11 +8,18 @@ module VSphereCloud
       @client = client
     end
 
-    def create_logical_switch(transport_zone_id, name = nil)
-      switch = NSXT::LogicalSwitch.new(admin_state: 'UP',
-                                       transport_zone_id: transport_zone_id,
-                                       replication_mode: 'MTEP',
-                                       display_name: name)
+    def create_logical_switch(transport_zone_id, opts = {})
+      switch_opts = { admin_state: 'UP',
+                      transport_zone_id: transport_zone_id,
+                      replication_mode: 'MTEP'
+                    }
+      if opts[:name]
+        switch_opts[:display_name] = opts[:name]
+      end
+      if opts[:tags]
+        switch_opts[:tags] = opts[:tags]
+      end
+      switch = NSXT::LogicalSwitch.new(switch_opts)
       switch_api.create_logical_switch(switch)
     end
 
@@ -22,6 +29,10 @@ module VSphereCloud
 
     def get_attached_switch_ports(switch_id)
       switch_api.list_logical_ports(logical_switch_id: switch_id).results
+    end
+
+    def get_switch_by_id(switch_id)
+      switch_api.get_logical_switch(switch_id)
     end
 
     def get_switches_by_name(switch_name)
