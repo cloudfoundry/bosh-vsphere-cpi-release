@@ -11,6 +11,7 @@ describe 'network management', :network_management => true  do
     @t0_router_id = fetch_property('BOSH_VSPHERE_T0_ROUTER_ID')
     @transport_zone_id = fetch_property('BOSH_VSPHERE_TRANSPORT_ZONE_ID')
 
+    @ip_block_id = fetch_property('BOSH_VSPHERE_IP_BLOCK_ID')
     @cloud = VSphereCloud::Cloud.new(cpi_options({
         nsxt: {
             host: @nsxt_host,
@@ -36,7 +37,6 @@ describe 'network management', :network_management => true  do
 
   let(:random_switch_name) { "test-switch-" + [*('A'..'Z')].sample(8).join }
   let(:random_router_name) { "test-router-" + [*('A'..'Z')].sample(8).join }
-
 
   let(:network_definition) {
     {
@@ -70,27 +70,67 @@ describe 'network management', :network_management => true  do
       end
     end
 
-    it 'creates T0<-T1<-Switch infrastructure' do
-      result = @cloud.create_network(network_definition)
-      expect(result).not_to be_nil
-      result = result.as_hash
+    context 'when range is provided' do
+      it 'creates T0<-T1<-Switch infrastructure' do
+        result = @cloud.create_network(network_definition)
+        expect(result).not_to be_nil
+        result = result.as_hash
 
-      #get created switch by name. make sure it's only one
-      switch_name = result[:cloud_properties][:name]
-      switches = logical_switches(switch_name)
-      expect(switches.length).to eq(1)
-      switch = switches.first
-      @switch_id = switch.id
-      expect(@switch_id).not_to be_nil
+        #get created switch by name. make sure it's only one
+        switch_name = result[:cloud_properties][:name]
+        switches = logical_switches(switch_name)
+        expect(switches.length).to eq(1)
+        switch = switches.first
+        @switch_id = switch.id
+        expect(@switch_id).not_to be_nil
 
-      switch_ports = router_api.list_logical_router_ports({logical_switch_id: result[:network_cid]})
-      expect(switch_ports.results.length).to eq(1)
-      expect(switch_ports.results.first.id).not_to be_nil
+        switch_ports = router_api.list_logical_router_ports({logical_switch_id: result[:network_cid]})
+        expect(switch_ports.results.length).to eq(1)
+        expect(switch_ports.results.first.id).not_to be_nil
 
-      #get created router by id
-      t1_router = get_t1_router(switch_ports.results.first.logical_router_id)
-      expect(t1_router).not_to be_nil
-      @t1_router_id = t1_router.id
+        #get created router by id
+        t1_router = get_t1_router(switch_ports.results.first.logical_router_id)
+        expect(t1_router).not_to be_nil
+        @t1_router_id = t1_router.id
+      end
+    end
+
+    context 'when netmask_bits are provided' do
+      let(:network_definition) {
+        {
+          'netmask_bits' => '24',
+          'cloud_properties' => {
+            't0_router_id' => @t0_router_id,
+            'transport_zone_id' => @transport_zone_id,
+            'ip_block_id' => @ip_block_id,
+
+            't1_name' => random_router_name,
+            'switch_name' => random_switch_name
+          }
+        }
+      }
+
+      it 'creates infrastructure and allocates subnet' do
+        result = @cloud.create_network(network_definition)
+        expect(result).not_to be_nil
+        result = result.as_hash
+
+        #get created switch by name. make sure it's only one
+        switch_name = result[:cloud_properties][:name]
+        switches = logical_switches(switch_name)
+        expect(switches.length).to eq(1)
+        switch = switches.first
+        @switch_id = switch.id
+        expect(@switch_id).not_to be_nil
+
+        switch_ports = router_api.list_logical_router_ports({logical_switch_id: result[:network_cid]})
+        expect(switch_ports.results.length).to eq(1)
+        expect(switch_ports.results.first.id).not_to be_nil
+
+        t1_router = get_t1_router(switch_ports.results.first.logical_router_id)
+        expect(t1_router).not_to be_nil
+        @t1_router_id = t1_router.id
+      end
     end
 
     context 'when failed to create a switch' do

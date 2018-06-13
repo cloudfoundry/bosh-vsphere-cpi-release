@@ -94,6 +94,8 @@ module VSphereCloud
         @switch_provider = NSXTSwitchProvider.new(nsxt_client)
 
         @router_provider = NSXTRouterProvider.new(nsxt_client)
+
+        @ip_block_provider = NSXTIpBlockProvider.new(nsxt_client)
       end
 
       # We get disconnected if the connection is inactive for a long period.
@@ -666,13 +668,13 @@ module VSphereCloud
 
     def create_network(network_definition)
       raise 'NSXT must be enabled in CPI to use create_network' if !@config.nsxt_enabled?
-      network = Network.build(@switch_provider, @router_provider)
+      network = Network.build(@switch_provider, @router_provider, @ip_block_provider)
       network.create(network_definition)
     end
 
     def delete_network(switch_id)
       raise 'NSXT must be enabled in CPI to use delete_network' if !@config.nsxt_enabled?
-      network = Network.build(@switch_provider, @router_provider)
+      network = Network.build(@switch_provider, @router_provider, @ip_block_provider)
       network.destroy(switch_id)
     end
 
