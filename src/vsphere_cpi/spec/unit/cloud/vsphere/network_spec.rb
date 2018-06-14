@@ -262,7 +262,7 @@ module VSphereCloud
           expect(ip_block_provider).to receive(:allocate_cidr_range)
             .with('block-id', 256).and_return(allocated_subnet)
           expect(NSXT::Tag).to receive(:new)
-            .with({scope: 'subnet_id', tag: 'subnet-id'}).and_return(tag)
+            .with({scope: 'bosh_cpi_subnet_id', tag: 'subnet-id'}).and_return(tag)
           expect(switch_provider).to receive(:create_logical_switch)
             .with('zone-id', {tags: [tag], name: nil}).and_return(logical_switch)
 
@@ -521,8 +521,8 @@ module VSphereCloud
         end
       end
 
-      context 'when switch has subnet_id tag' do
-        let(:tag) { instance_double(NSXT::Tag, scope: 'subnet_id', tag: 'subnet-id') }
+      context 'when switch has bosh_cpi_subnet_id tag' do
+        let(:tag) { instance_double(NSXT::Tag, scope: 'bosh_cpi_subnet_id', tag: 'subnet-id') }
         let(:logical_switch) { instance_double(NSXT::LogicalSwitch, tags: [tag]) }
 
         it 'releases subnet with id' do

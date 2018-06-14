@@ -3,6 +3,7 @@ require 'netaddr'
 module VSphereCloud
   class Network
     include Logger
+    TAG_SCOPE_NAME = 'bosh_cpi_subnet_id'
 
     def self.build(switch_provider, router_provider, ip_block_provider)
       new(switch_provider, router_provider, ip_block_provider)
@@ -31,7 +32,7 @@ module VSphereCloud
 
         switch_ops = {name: cloud_properties['switch_name']}
         if @block_subnet_id
-          switch_ops[:tags] = [ NSXT::Tag.new({scope: 'subnet_id', tag: @block_subnet_id}) ]
+          switch_ops[:tags] = [ NSXT::Tag.new({scope: TAG_SCOPE_NAME, tag: @block_subnet_id}) ]
         end
         logger.info("Creating logical switch in zone #{cloud_properties['transport_zone_id']}")
         switch = @switch_provider.create_logical_switch(cloud_properties['transport_zone_id'], switch_ops)
@@ -114,7 +115,7 @@ module VSphereCloud
     def release_subnets(tags)
       return if tags.nil?
       tags.each do |tag|
-        if tag.scope == 'subnet_id'
+        if tag.scope == TAG_SCOPE_NAME
           @ip_block_provider.release_subnet(tag.tag)
         end
       end
