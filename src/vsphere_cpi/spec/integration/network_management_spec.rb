@@ -11,7 +11,6 @@ describe 'network management', :network_management => true  do
     @t0_router_id = fetch_property('BOSH_VSPHERE_T0_ROUTER_ID')
     @transport_zone_id = fetch_property('BOSH_VSPHERE_TRANSPORT_ZONE_ID')
 
-    @ip_block_id = fetch_property('BOSH_VSPHERE_IP_BLOCK_ID')
     @cloud = VSphereCloud::Cloud.new(cpi_options({
         nsxt: {
             host: @nsxt_host,
@@ -34,6 +33,7 @@ describe 'network management', :network_management => true  do
   let(:client) { NSXT::ApiClient.new(configuration) }
   let(:switch_api) { NSXT::LogicalSwitchingApi.new(client) }
   let(:router_api) { NSXT::LogicalRoutingAndServicesApi.new(client) }
+  let(:pool_api) { NSXT::PoolManagementApi.new(client) }
 
   let(:random_switch_name) { "test-switch-" + [*('A'..'Z')].sample(8).join }
   let(:random_router_name) { "test-router-" + [*('A'..'Z')].sample(8).join }
@@ -53,6 +53,9 @@ describe 'network management', :network_management => true  do
   }
 
   context 'when create_network command is issued' do
+    before do
+      create_ip_block
+    end
     after do
       if @t1_router_id
         t0_ports = router_api.list_logical_router_ports(logical_router_id: @t0_router_id,
@@ -68,6 +71,7 @@ describe 'network management', :network_management => true  do
       if @switch_id
         switch_api.delete_logical_switch(@switch_id, cascade: true, detach: true)
       end
+      delete_ip_block
     end
 
     context 'when range is provided' do
@@ -102,7 +106,7 @@ describe 'network management', :network_management => true  do
           'cloud_properties' => {
             't0_router_id' => @t0_router_id,
             'transport_zone_id' => @transport_zone_id,
-            'ip_block_id' => @ip_block_id,
+            'ip_block_id' => @ip_block.id,
 
             't1_name' => random_router_name,
             'switch_name' => random_switch_name
@@ -307,5 +311,17 @@ describe 'network management', :network_management => true  do
     found = logical_switches(switch_name)
     fail("Found switch #{switch_name} was created by test and not cleaned up by CPI.") if found.any?
   end
-end
 
+  def create_ip_block
+    ip_block = NSXT::IpBlock.new({cidr: '192.168.168.0/20'})
+    @ip_block = pool_api.create_ip_block(ip_block)
+  end
+
+  def delete_ip_block
+    subnets = pool_api.list_ip_block_subnets({block_id: @ip_block.id}).results
+    subnets.each do |subnet|
+      pool_api.delete_ip_block_subnet(subnet.id)
+    end
+    pool_api.delete_ip_block(@ip_block.id)
+  end
+end
