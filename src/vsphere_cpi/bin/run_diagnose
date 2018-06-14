@@ -1,0 +1,16 @@
+#!/bin/bash
+
+set -e
+
+BOSH_PACKAGES_DIR=${BOSH_PACKAGES_DIR:-/var/vcap/packages}
+BOSH_JOBS_DIR=${BOSH_JOBS_DIR:-/var/vcap/jobs}
+source ${BOSH_PACKAGES_DIR}/ruby-2.4-r4/bosh/compile.env
+
+export PATH=$BOSH_PACKAGES_DIR/ruby-2.4-r4/bin:$BOSH_PACKAGES_DIR/iso9660wrap/bin:$PATH
+export HOME=~
+
+export BUNDLE_GEMFILE=$BOSH_PACKAGES_DIR/vsphere_cpi/Gemfile
+bundle_cmd="${BOSH_PACKAGES_DIR}/ruby-2.4-r4/bin/bundle"
+
+exec $bundle_cmd exec ./vsphere_cpi_diagnose.rb \
+  $BOSH_JOBS_DIR/vsphere_cpi/config/cpi.json "$@"
