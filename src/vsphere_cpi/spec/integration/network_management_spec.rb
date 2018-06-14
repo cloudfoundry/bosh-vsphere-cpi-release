@@ -79,17 +79,17 @@ describe 'network management', :network_management => true  do
       it 'creates T0<-T1<-Switch infrastructure' do
         result = @cloud.create_network(network_definition)
         expect(result).not_to be_nil
-        result = result.as_hash
+        result = result.as_array
 
         #get created switch by name. make sure it's only one
-        switch_name = result[:cloud_properties][:name]
+        switch_name = result[2][:name]
         switches = logical_switches(switch_name)
         expect(switches.length).to eq(1)
         switch = switches.first
         @switch_id = switch.id
         expect(@switch_id).not_to be_nil
 
-        switch_ports = router_api.list_logical_router_ports(logical_switch_id: result[:network_cid])
+        switch_ports = router_api.list_logical_router_ports(logical_switch_id: result[0])
         expect(switch_ports.results.length).to eq(1)
         expect(switch_ports.results.first.id).not_to be_nil
 
@@ -118,17 +118,17 @@ describe 'network management', :network_management => true  do
       it 'creates infrastructure and allocates subnet' do
         result = @cloud.create_network(network_definition)
         expect(result).not_to be_nil
-        result = result.as_hash
+        result = result.as_array
 
         #get created switch by name. make sure it's only one
-        switch_name = result[:cloud_properties][:name]
+        switch_name = result[2][:name]
         switches = logical_switches(switch_name)
         expect(switches.length).to eq(1)
         switch = switches.first
         @switch_id = switch.id
         expect(@switch_id).not_to be_nil
 
-        switch_ports = router_api.list_logical_router_ports(logical_switch_id: result[:network_cid])
+        switch_ports = router_api.list_logical_router_ports(logical_switch_id: result[0])
         expect(switch_ports.results.length).to eq(1)
         expect(switch_ports.results.first.id).not_to be_nil
 
@@ -204,10 +204,11 @@ describe 'network management', :network_management => true  do
     it 'deletes switch and attached router' do
       result = @cloud.create_network(network_definition)
       expect(result).not_to be_nil
-      result = result.as_hash
-      router_id = get_attached_router_id(result[:network_cid])
+      result = result.as_array
+      network_cid = result[0]
+      router_id = get_attached_router_id(network_cid)
 
-      @cloud.delete_network(result[:network_cid])
+      @cloud.delete_network(network_cid)
 
       switches = logical_switches(random_switch_name)
       expect(switches.length).to eq(0)
@@ -233,8 +234,8 @@ describe 'network management', :network_management => true  do
       it 'raises an error' do
         result = @cloud.create_network(network_definition)
         expect(result).not_to be_nil
-        result = result.as_hash
-        @switch_id = result[:network_cid]
+        result = result.as_array
+        @switch_id = result[0]
 
         @t1_router_id = get_attached_router_id(@switch_id)
 

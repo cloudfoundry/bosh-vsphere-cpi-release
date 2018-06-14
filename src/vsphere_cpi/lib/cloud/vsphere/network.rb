@@ -46,7 +46,7 @@ module VSphereCloud
         @ip_block_provider.release_subnet(@block_subnet.id) unless @block_subnet.nil?
         raise "Failed to create network. Has router been created: #{!t1_router_id.nil?}. Has switch been created: #{!switch_id.nil?}. Exception: #{e.message}"
       end
-      ManagedNetwork.new(switch)
+      ManagedNetwork.new(switch, @block_subnet, @gateway)
     end
 
     def destroy(switch_id)
@@ -104,7 +104,7 @@ module VSphereCloud
         block_subnet_cidr = NetAddr::CIDR.create(@block_subnet.cidr).to_i
         @gateway = NetAddr::CIDR.create(block_subnet_cidr + 1).ip
         NSXT::IPSubnet.new(ip_addresses: [@gateway],
-                           prefix_length: @network_bits)
+                            prefix_length: @network_bits)
       end
     end
 
@@ -122,21 +122,27 @@ module VSphereCloud
     end
 
     class ManagedNetwork
-      def initialize(switch)
+      def initialize(switch, subnet, gateway)
         @switch = switch
+        unless subnet.nil?
+          @range = subnet.cidr
+          @gateway = gateway
+        end
       end
 
-      def as_hash
-        {
-            network_cid: @switch.id,
-            cloud_properties: {
-                name: @switch.display_name
-            }
-        }
+      def created_network
+        return {} if @range.nil?
+        {range: @range,
+         gateway: @gateway,
+         reserved: []}
+      end
+
+      def as_array
+        [ @switch.id, created_network, {name: @switch.display_name} ]
       end
 
       def to_json(opts)
-        as_hash.to_json
+        as_array.to_json
       end
     end
 
