@@ -135,8 +135,12 @@ module VSphereCloud
         }
       end
 
+      def as_array
+        [@switch.id, {}, {cloud_properties: {name: @switch.display_name}} ]
+      end
+
       def to_json(opts)
-        as_hash.to_json
+        as_array.to_json
       end
     end
 
