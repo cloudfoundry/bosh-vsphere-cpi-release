@@ -23,6 +23,7 @@ module VSphereCloud
         edge_cluster_id = @router_provider.get_edge_cluster_id(cloud_properties['t0_router_id'])
         fail_if_switch_exists(cloud_properties['switch_name'])
 
+        logger.info("Creating T1 router in cluster #{edge_cluster_id}")
         t1_router = @router_provider.create_t1_router(edge_cluster_id, cloud_properties['t1_name'])
         t1_router_id = t1_router.id
         @router_provider.enable_route_advertisement(t1_router_id)
@@ -32,6 +33,7 @@ module VSphereCloud
         if @block_subnet_id
           switch_ops[:tags] = [ NSXT::Tag.new({scope: 'subnet_id', tag: @block_subnet_id}) ]
         end
+        logger.info("Creating logical switch in zone #{cloud_properties['transport_zone_id']}")
         switch = @switch_provider.create_logical_switch(cloud_properties['transport_zone_id'], switch_ops)
         switch_id = switch.id
         attach_switch_to_t1(switch_id, t1_router_id, ip_subnet)
@@ -46,6 +48,7 @@ module VSphereCloud
     end
 
     def destroy(switch_id)
+      logger.info("Deleting network(switch) with id #{switch_id}")
       raise 'switch id must be provided for deleting a network' if switch_id.nil?
       t1_router_ids = @router_provider.get_attached_router_ids(switch_id)
       raise "Expected switch #{switch_id} to have one router attached. Found #{t1_router_ids.length}" if t1_router_ids.length != 1
@@ -93,9 +96,10 @@ module VSphereCloud
         NSXT::IPSubnet.new({ip_addresses: [@gateway.ip],
                             prefix_length: @range.netmask[1..-1].to_i})
       else
-        #TODO: logging
+        logger.debug("Trying to allocate subnet in ip block #{@ip_block_id}")
         block_subnet = @ip_block_provider.allocate_cidr_range(@ip_block_id, block_size)
         @block_subnet_id = block_subnet.id
+        logger.info("Allocated subnet #{block_subnet.cidr} in block #{@ip_block_id}")
         block_subnet_cidr = NetAddr::CIDR.create(block_subnet.cidr).to_i
         gateway_ip = NetAddr::CIDR.create(block_subnet_cidr + 1)
         NSXT::IPSubnet.new({ip_addresses: [gateway_ip.ip],
