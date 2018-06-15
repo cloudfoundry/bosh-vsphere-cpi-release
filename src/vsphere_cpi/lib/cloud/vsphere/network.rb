@@ -31,8 +31,8 @@ module VSphereCloud
         @router_provider.attach_t1_to_t0(cloud_properties['t0_router_id'], t1_router_id)
 
         switch_ops = {name: cloud_properties['switch_name']}
-        if @block_subnet_id
-          switch_ops[:tags] = [ NSXT::Tag.new({scope: TAG_SCOPE_NAME, tag: @block_subnet_id}) ]
+        if @block_subnet
+          switch_ops[:tags] = [ NSXT::Tag.new({scope: TAG_SCOPE_NAME, tag: @block_subnet.id}) ]
         end
         logger.info("Creating logical switch in zone #{cloud_properties['transport_zone_id']}")
         switch = @switch_provider.create_logical_switch(cloud_properties['transport_zone_id'], switch_ops)
@@ -42,10 +42,10 @@ module VSphereCloud
         logger.error('Failed to create network. Trying to clean up')
         @router_provider.delete_t1_router(t1_router_id) unless t1_router_id.nil?
         @switch_provider.delete_logical_switch(switch_id) unless switch_id.nil?
-        @ip_block_provider.release_subnet(@block_subnet_id) unless @block_subnet_id.nil?
+        @ip_block_provider.release_subnet(@block_subnet.id) unless @block_subnet.nil?
         raise "Failed to create network. Has router been created: #{!t1_router_id.nil?}. Has switch been created: #{!switch_id.nil?}. Exception: #{e.message}"
       end
-      ManagedNetwork.new(switch)
+      ManagedNetwork.new(switch, @block_subnet, @gateway)
     end
 
     def destroy(switch_id)
@@ -98,12 +98,11 @@ module VSphereCloud
                             prefix_length: @range.netmask[1..-1].to_i})
       else
         logger.debug("Trying to allocate subnet in ip block #{@ip_block_id}")
-        block_subnet = @ip_block_provider.allocate_cidr_range(@ip_block_id, block_size)
-        @block_subnet_id = block_subnet.id
-        logger.info("Allocated subnet #{block_subnet.cidr} in block #{@ip_block_id}")
-        block_subnet_cidr = NetAddr::CIDR.create(block_subnet.cidr).to_i
-        gateway_ip = NetAddr::CIDR.create(block_subnet_cidr + 1)
-        NSXT::IPSubnet.new({ip_addresses: [gateway_ip.ip],
+        @block_subnet = @ip_block_provider.allocate_cidr_range(@ip_block_id, block_size)
+        logger.info("Allocated subnet #{@block_subnet.cidr} in block #{@ip_block_id}")
+        block_subnet_cidr = NetAddr::CIDR.create(@block_subnet.cidr).to_i
+        @gateway = NetAddr::CIDR.create(block_subnet_cidr + 1).ip
+        NSXT::IPSubnet.new({ip_addresses: [@gateway],
                             prefix_length: @network_bits})
       end
     end
@@ -122,21 +121,23 @@ module VSphereCloud
     end
 
     class ManagedNetwork
-      def initialize(switch)
+      def initialize(switch, subnet, gateway)
         @switch = switch
+        unless subnet.nil?
+          @range = subnet.cidr
+          @gateway = gateway
+        end
       end
 
-      def as_hash
-        {
-            network_cid: @switch.id,
-            cloud_properties: {
-                name: @switch.display_name
-            }
-        }
+      def created_network
+        return {} if @range.nil?
+        {range: @range,
+         gateway: @gateway,
+         reserved: []}
       end
 
       def as_array
-        [@switch.id, {}, {cloud_properties: {name: @switch.display_name}} ]
+        [ @switch.id, created_network, {cloud_properties: {name: @switch.display_name}} ]
       end
 
       def to_json(opts)

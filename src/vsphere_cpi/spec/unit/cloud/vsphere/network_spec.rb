@@ -207,6 +207,8 @@ module VSphereCloud
       let(:network_result) { instance_double(Network::ManagedNetwork) }
       let(:existing_logical_switches) { [] }
       let(:logical_port) { instance_double(NSXT::LogicalPort, id: 'logical-port-id') }
+      let(:netaddr_gateway) { instance_double(NetAddr::CIDRv4, size: 1, ip: '192.168.111.1') }
+      let(:netaddr_range) { instance_double(NetAddr::CIDRv4, netmask: '/24') }
 
       it 'creates T1 router and attaches it to T0, creates logical switch and attaches it to T1' do
         expect(router_provider).to receive(:get_edge_cluster_id)
@@ -226,8 +228,12 @@ module VSphereCloud
            .with('switch-id').and_return(logical_port)
         expect(router_provider).to receive(:attach_switch_to_t1)
           .with('logical-port-id', 't1-router-id', instance_of(NSXT::IPSubnet))
+        expect(NetAddr::CIDR).to receive(:create)
+         .with('192.168.111.0/24').and_return(netaddr_range)
+        expect(NetAddr::CIDR).to receive(:create)
+          .with(gateway).and_return(netaddr_gateway)
         expect(Network::ManagedNetwork).to receive(:new)
-          .with(logical_switch).and_return(network_result)
+          .with(logical_switch, nil, netaddr_gateway).and_return(network_result)
         expect(network.create(network_definition)).to eq(network_result)
       end
 
@@ -248,6 +254,8 @@ module VSphereCloud
                                                                      cidr: '192.168.1.0/24')}
         let(:tag) { instance_double(NSXT::Tag) }
         let(:ip_subnet) {instance_double(NSXT::IPSubnet)}
+        let(:block_subnet_cidr) { '3232235776' }
+        let(:gateway) { instance_double(NetAddr::CIDRv4, ip: '192.168.1.1') }
 
         it 'gets subnet from ip block' do
           expect(router_provider).to receive(:get_edge_cluster_id)
@@ -261,6 +269,7 @@ module VSphereCloud
 
           expect(ip_block_provider).to receive(:allocate_cidr_range)
             .with('block-id', 256).and_return(allocated_subnet)
+
           expect(NSXT::Tag).to receive(:new)
             .with({scope: 'bosh_cpi_subnet_id', tag: 'subnet-id'}).and_return(tag)
           expect(switch_provider).to receive(:create_logical_switch)
@@ -273,8 +282,13 @@ module VSphereCloud
                    prefix_length: 24}).and_return(ip_subnet)
           expect(router_provider).to receive(:attach_switch_to_t1)
             .with('logical-port-id', 't1-router-id', ip_subnet)
+          expect(NetAddr::CIDR).to receive(:create)
+            .with('192.168.1.0/24').and_return(block_subnet_cidr)
+          expect(NetAddr::CIDR).to receive(:create)
+            .with(3232235777).and_return(gateway)
+
           expect(Network::ManagedNetwork).to receive(:new)
-            .with(logical_switch).and_return(network_result)
+            .with(logical_switch, allocated_subnet, '192.168.1.1').and_return(network_result)
           expect(network.create(network_definition)).to eq(network_result)
         end
       end
@@ -293,6 +307,9 @@ module VSphereCloud
         let(:t1_router) { instance_double(NSXT::LogicalRouter,
                                           id: 't1-router-id',
                                           display_name: 't1-router-id' ) }
+        let(:netaddr_gateway) { instance_double(NetAddr::CIDRv4, size: 1, ip: '192.168.111.1') }
+        let(:netaddr_range) { instance_double(NetAddr::CIDRv4, netmask: '/24') }
+
         it 'creates T1 router and attaches it to T0, creates logical switch and attaches it to T1' do
           expect(router_provider).to receive(:get_edge_cluster_id)
              .with('t0-router-id').and_return('cluster-id')
@@ -312,8 +329,12 @@ module VSphereCloud
           expect(router_provider).to receive(:attach_switch_to_t1)
             .with('logical-port-id', 't1-router-id', instance_of(NSXT::IPSubnet))
 
+          expect(NetAddr::CIDR).to receive(:create)
+            .with('192.168.111.0/24').and_return(netaddr_range)
+          expect(NetAddr::CIDR).to receive(:create)
+            .with('192.168.111.1').and_return(netaddr_gateway)
           expect(Network::ManagedNetwork).to receive(:new)
-              .with(logical_switch).and_return(network_result)
+            .with(logical_switch, nil, netaddr_gateway).and_return(network_result)
 
           expect(network.create(network_definition)).to eq(network_result)
         end
@@ -550,10 +571,23 @@ module VSphereCloud
       let(:logical_switch) { instance_double(NSXT::LogicalSwitch,
                                              :id => 'switch-id',
                                              :display_name => 'switch-name') }
+      let(:gateway) { '192.168.1.1' }
 
-      it 'deserializes to correct JSON' do
-        result = Network::ManagedNetwork.new(logical_switch)
-        expect(JSON.dump(result)).to eq("[\"switch-id\",{},{\"cloud_properties\":{\"name\":\"switch-name\"}}]")
+      context 'when block subnet is provided' do
+        let(:block_subnet) { instance_double(NSXT::IpBlockSubnet, cidr: '192.168.1.0/24') }
+
+        it 'deserializes to correct JSON with subnet' do
+          result = Network::ManagedNetwork.new(logical_switch, block_subnet, gateway)
+          expect(JSON.dump(result)).to eq("[\"switch-id\",{\"range\":\"192.168.1.0/24\",\"gateway\":\"192.168.1.1\",\"reserved\":[]},{\"cloud_properties\":{\"name\":\"switch-name\"}}]")
+        end
+      end
+
+      context 'when block subnet is not provided' do
+        let(:block_subnet) { nil }
+        it 'deserializes to correct JSON without subnet' do
+          result = Network::ManagedNetwork.new(logical_switch, block_subnet, gateway)
+          expect(JSON.dump(result)).to eq("[\"switch-id\",{},{\"cloud_properties\":{\"name\":\"switch-name\"}}]")
+        end
       end
     end
   end
