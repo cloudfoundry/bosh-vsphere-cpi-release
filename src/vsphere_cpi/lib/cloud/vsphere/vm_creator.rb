@@ -145,7 +145,7 @@ module VSphereCloud
         e.vm_cid = vm_config.name if e.instance_of?(Cloud::NetworkException)
         logger.info("#{e} - #{e.backtrace.join("\n")}")
         begin
-          created_vm.delete if created_vm
+          @cpi.delete_vm(created_vm.cid) if created_vm
         rescue => ex
           logger.info("Failed to delete vm '#{vm_config.name}' with message:  #{ex.inspect}")
         end
