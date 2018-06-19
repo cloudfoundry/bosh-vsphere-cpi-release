@@ -488,8 +488,10 @@ module VSphereCloud
         context 'when no routers attached' do
           it 'raises an error' do
             expect(router_provider).to receive(:get_attached_router_ids)
-                                         .with('switch-id').and_return([])
+                .with('switch-id').and_return([])
             expect(switch_provider).not_to receive(:get_attached_switch_ports)
+            expect(switch_provider).to receive(:get_switch_by_id)
+                .with('switch-id')
             expect {
               network.destroy('switch-id')
             }.to raise_error('Expected switch switch-id to have one router attached. Found 0')
@@ -498,8 +500,10 @@ module VSphereCloud
         context 'when more than one router attached' do
           it 'raises an error' do
             expect(router_provider).to receive(:get_attached_router_ids)
-                                         .with('switch-id').and_return(['router-id','router-id2'])
+               .with('switch-id').and_return(['router-id','router-id2'])
             expect(switch_provider).not_to receive(:get_attached_switch_ports)
+            expect(switch_provider).to receive(:get_switch_by_id)
+               .with('switch-id').and_return(logical_switch)
             expect {
               network.destroy('switch-id')
             }.to raise_error('Expected switch switch-id to have one router attached. Found 2')
@@ -515,6 +519,8 @@ module VSphereCloud
                .with('switch-id').and_return(['t1-router-id'])
             expect(switch_provider).to receive(:get_attached_switch_ports)
                .with('switch-id').and_return(switch_ports)
+            expect(switch_provider).to receive(:get_switch_by_id)
+               .with('switch-id').and_return(logical_switch)
             expect{
               network.destroy('switch-id')
             }.to raise_error('Expected switch switch-id to have only one port. Got 0')
@@ -528,6 +534,8 @@ module VSphereCloud
               .with('switch-id').and_return(['t1-router-id'])
             expect(switch_provider).to receive(:get_attached_switch_ports)
               .with('switch-id').and_return(switch_ports)
+            expect(switch_provider).to receive(:get_switch_by_id)
+             .with('switch-id').and_return(logical_switch)
             expect{
               network.destroy('switch-id')
             }.to raise_error('Expected switch switch-id to have only one port. Got 2')
