@@ -313,4 +313,39 @@ describe VSphereCloud::NSXTRouterProvider, fake_logger: true do
       end
     end
   end
+
+  describe '#detach_t1_from_t0' do
+    context 'when t1 attached to t0' do
+      let(:router_port_id) { instance_double(NSXT::ResourceReference,
+                                  target_type: 'LogicalRouterLinkPortOnTIER0',
+                                  target_id: 't0-router-port-id') }
+      let(:t1_router_port) { instance_double(NSXT::LogicalRouterLinkPortOnTIER1, resource_type: 'LogicalRouterLinkPortOnTIER1',
+                                               linked_logical_router_port_id: router_port_id) }
+      let(:t1_router_ports) { instance_double(NSXT::LogicalRouterPortListResult,
+                                              :results => [ t1_router_port ]) }
+      it 'detaches it' do
+        expect(router_api).to receive(:list_logical_router_ports)
+          .with({logical_router_id: 't1-router-id'}).and_return(t1_router_ports)
+        expect(router_api).to receive(:delete_logical_router_port)
+          .with('t0-router-port-id', force: true)
+        router_provider.detach_t1_from_t0('t1-router-id')
+      end
+    end
+
+    context 'when T1 is not attached to T0' do
+      let(:switch_port_id) { instance_double(NSXT::ResourceReference) }
+      let(:t1_router_port) { instance_double(NSXT::LogicalRouterDownLinkPort, resource_type: 'LogicalRouterDownLinkPort',
+                                             linked_logical_switch_port_id: switch_port_id) }
+      let(:t1_router_ports) { instance_double(NSXT::LogicalRouterPortListResult,
+                                              :results => [ t1_router_port ]) }
+
+      it 'does nothing' do
+        expect(router_api).to receive(:list_logical_router_ports)
+          .with({logical_router_id: 't1-router-id'}).and_return(t1_router_ports)
+        expect(router_api).not_to receive(:delete_logical_router_port)
+          .with('t0-router-port-id', force: true)
+        router_provider.detach_t1_from_t0('t1-router-id')
+      end
+    end
+  end
 end

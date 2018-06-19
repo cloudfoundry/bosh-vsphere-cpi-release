@@ -68,6 +68,10 @@ module VSphereCloud
       t1_router_id = t1_router_ids.first
       attached_switches = @router_provider.get_attached_switches_ids(t1_router_id)
       raise "Can not delete router #{t1_router_id}. It has extra ports that are not created by BOSH." if attached_switches.length != 0
+
+      logger.debug("Detach T1 router #{t1_router_id} from T0")
+      @router_provider.detach_t1_from_t0(t1_router_id)
+
       logger.debug("Deleteing router with id #{t1_router_id}")
       @router_provider.delete_t1_router(t1_router_id)
     end

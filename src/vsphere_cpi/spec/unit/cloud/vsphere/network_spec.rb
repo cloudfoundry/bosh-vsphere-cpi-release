@@ -461,6 +461,8 @@ module VSphereCloud
              .with('t1-router-id').and_return([])
           expect(switch_provider).to receive(:get_switch_by_id)
              .with('switch-id').and_return(logical_switch)
+          expect(router_provider).to receive(:detach_t1_from_t0)
+              .with('t1-router-id')
           expect(switch_provider).to receive(:delete_logical_switch)
              .with('switch-id')
           network.destroy('switch-id')
@@ -557,6 +559,8 @@ module VSphereCloud
         it 'releases subnet with id' do
           expect(router_provider).to receive(:get_attached_router_ids)
            .with('switch-id').and_return(['t1-router-id'])
+          expect(router_provider).to receive(:detach_t1_from_t0)
+           .with('t1-router-id')
           expect(router_provider).to receive(:delete_t1_router)
            .with('t1-router-id')
           expect(switch_provider).to receive(:get_attached_switch_ports)
