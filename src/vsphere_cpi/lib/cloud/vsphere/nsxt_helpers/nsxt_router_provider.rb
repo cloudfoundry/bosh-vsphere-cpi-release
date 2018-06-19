@@ -85,6 +85,20 @@ module VSphereCloud
         raise "Failed to create logical port for router #{t1_router_id} and switch #{switch_port_id}. Exception: #{e.inspect}"
       end
     end
+
+    def detach_t1_from_t0(t1_router_id)
+      t1_router_ports = router_api.list_logical_router_ports(logical_router_id: t1_router_id).results
+      t1_router_ports.each do |t1_port|
+        if t1_port.resource_type == 'LogicalRouterLinkPortOnTIER1'
+          t0_router_port = t1_port.linked_logical_router_port_id
+          if t0_router_port.target_type == 'LogicalRouterLinkPortOnTIER0'
+            logger.debug("Deleting T0 port #{t0_router_port.target_id}")
+            router_api.delete_logical_router_port(t0_router_port.target_id, force: true)
+          end
+        end
+      end
+    end
+
     private
 
     def router_api
