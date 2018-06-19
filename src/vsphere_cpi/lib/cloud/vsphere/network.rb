@@ -21,13 +21,16 @@ module VSphereCloud
       begin
         cloud_properties = network_definition['cloud_properties']
         ip_subnet = identify_subnet_range
+        logger.debug("Getting edge cluster id of router #{cloud_properties['t0_router_id']}")
         edge_cluster_id = @router_provider.get_edge_cluster_id(cloud_properties['t0_router_id'])
         fail_if_switch_exists(cloud_properties['switch_name'])
 
         logger.info("Creating T1 router in cluster #{edge_cluster_id}")
         t1_router = @router_provider.create_t1_router(edge_cluster_id, cloud_properties['t1_name'])
         t1_router_id = t1_router.id
+        logger.debug("Enable route advertisement for router #{t1_router_id}")
         @router_provider.enable_route_advertisement(t1_router_id)
+        logger.debug("Attaching T1(#{t1_router_id}) to T0(#{cloud_properties['t0_router_id']})")
         @router_provider.attach_t1_to_t0(cloud_properties['t0_router_id'], t1_router_id)
 
         switch_ops = {name: cloud_properties['switch_name']}
@@ -37,6 +40,7 @@ module VSphereCloud
         logger.info("Creating logical switch in zone #{cloud_properties['transport_zone_id']}")
         switch = @switch_provider.create_logical_switch(cloud_properties['transport_zone_id'], switch_ops)
         switch_id = switch.id
+        logger.debug("Attaching switch(#{switch_id}) to T1(#{t1_router_id})")
         attach_switch_to_t1(switch_id, t1_router_id, ip_subnet)
       rescue => e
         logger.error('Failed to create network. Trying to clean up')
@@ -49,19 +53,22 @@ module VSphereCloud
     end
 
     def destroy(switch_id)
-      logger.info("Deleting network(switch) with id #{switch_id}")
+      logger.info("Destroying network infrastructure with switch id #{switch_id}")
       raise 'switch id must be provided for deleting a network' if switch_id.nil?
+      #check is switch exists first
+      switch = @switch_provider.get_switch_by_id(switch_id)
       t1_router_ids = @router_provider.get_attached_router_ids(switch_id)
       raise "Expected switch #{switch_id} to have one router attached. Found #{t1_router_ids.length}" if t1_router_ids.length != 1
       switch_ports = @switch_provider.get_attached_switch_ports(switch_id)
       raise "Expected switch #{switch_id} to have only one port. Got #{switch_ports.length}" if switch_ports.length != 1
 
-      switch = @switch_provider.get_switch_by_id(switch_id)
       release_subnets(switch.tags)
+      logger.debug("Deleting logical switch with id #{switch_id}")
       @switch_provider.delete_logical_switch(switch_id)
       t1_router_id = t1_router_ids.first
       attached_switches = @router_provider.get_attached_switches_ids(t1_router_id)
       raise "Can not delete router #{t1_router_id}. It has extra ports that are not created by BOSH." if attached_switches.length != 0
+      logger.debug("Deleteing router with id #{t1_router_id}")
       @router_provider.delete_t1_router(t1_router_id)
     end
 
@@ -115,6 +122,7 @@ module VSphereCloud
       return if tags.nil?
       tags.each do |tag|
         if tag.scope == TAG_SCOPE_NAME
+          logger.debug("Releasing subnet with id #{tag.tag}")
           @ip_block_provider.release_subnet(tag.tag)
         end
       end
