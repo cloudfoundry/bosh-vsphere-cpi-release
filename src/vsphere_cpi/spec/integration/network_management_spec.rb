@@ -225,6 +225,7 @@ describe 'network management', :network_management => true  do
         if @extra_switch_id
           switch_api.delete_logical_switch(@extra_switch_id, cascade: true, detach: true)
         end
+        clean_t0_router_ports
         if @t1_router_id
           router_api.delete_logical_router(@t1_router_id, force: true)
         end
@@ -324,5 +325,16 @@ describe 'network management', :network_management => true  do
       pool_api.delete_ip_block_subnet(subnet.id)
     end
     pool_api.delete_ip_block(@ip_block.id)
+  end
+
+  def clean_t0_router_ports
+    t0_ports = router_api.list_logical_router_ports(logical_router_id: @t0_router_id,
+                                                    resource_type: 'LogicalRouterLinkPortOnTIER0')
+    t1_ports = router_api.list_logical_router_ports(logical_router_id: @t1_router_id)
+    t1_ports_ids = t1_ports.results.map(&:id)
+    t0_port_to_t1 = t0_ports.results.find do |t0_port|
+      t1_ports_ids.include? t0_port.linked_logical_router_port_id
+    end
+    router_api.delete_logical_router_port(t0_port_to_t1.id, force: true)
   end
 end
