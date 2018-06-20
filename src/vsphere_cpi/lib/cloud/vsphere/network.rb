@@ -171,7 +171,7 @@ module VSphereCloud
     end
 
     def nil_or_empty(val)
-      val.nil? || val.empty?
+      val.nil? || (val.is_a?(String) && val.empty?)
     end
   end
 end

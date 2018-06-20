@@ -239,7 +239,7 @@ module VSphereCloud
 
       context 'when netmask_bits are provided' do
         let(:network_definition) { {
-            'netmask_bits' => '24',
+            'netmask_bits' => 24,
             'cloud_properties' => cloud_props }
         }
 
