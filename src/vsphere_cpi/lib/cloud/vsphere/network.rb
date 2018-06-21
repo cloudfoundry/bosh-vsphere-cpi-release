@@ -4,6 +4,7 @@ module VSphereCloud
   class Network
     include Logger
     TAG_SCOPE_NAME = 'bosh_cpi_subnet_id'
+    DEFAULT_NETMASK_BITS = 24
 
     def self.build(switch_provider, router_provider, ip_block_provider)
       new(switch_provider, router_provider, ip_block_provider)
@@ -21,15 +22,12 @@ module VSphereCloud
       begin
         cloud_properties = network_definition['cloud_properties']
         ip_subnet = identify_subnet_range
-        logger.debug("Getting edge cluster id of router #{cloud_properties['t0_router_id']}")
-        edge_cluster_id = @router_provider.get_edge_cluster_id(cloud_properties['t0_router_id'])
+        edge_cluster_id = get_edge_cluster_id cloud_properties['t0_router_id']
         fail_if_switch_exists(cloud_properties['switch_name'])
 
-        logger.info("Creating T1 router in cluster #{edge_cluster_id}")
-        t1_router = @router_provider.create_t1_router(edge_cluster_id, cloud_properties['t1_name'])
-        t1_router_id = t1_router.id
-        logger.debug("Enable route advertisement for router #{t1_router_id}")
-        @router_provider.enable_route_advertisement(t1_router_id)
+        t1_router_id = create_t1_router(edge_cluster_id, cloud_properties['t1_name'])
+        enable_route_advertisement(t1_router_id)
+
         logger.debug("Attaching T1(#{t1_router_id}) to T0(#{cloud_properties['t0_router_id']})")
         @router_provider.attach_t1_to_t0(cloud_properties['t0_router_id'], t1_router_id)
 
@@ -37,6 +35,7 @@ module VSphereCloud
         if @block_subnet
           switch_ops[:tags] = [ NSXT::Tag.new({scope: TAG_SCOPE_NAME, tag: @block_subnet.id}) ]
         end
+
         logger.info("Creating logical switch in zone #{cloud_properties['transport_zone_id']}")
         switch = @switch_provider.create_logical_switch(cloud_properties['transport_zone_id'], switch_ops)
         switch_id = switch.id
@@ -84,15 +83,15 @@ module VSphereCloud
       raise 't0_router_id cloud property can not be empty' if nil_or_empty(cloud_properties['t0_router_id'])
       raise 'transport_zone_id cloud property can not be empty' if nil_or_empty(cloud_properties['transport_zone_id'])
 
-      if nil_or_empty(network_definition['range']) && nil_or_empty(network_definition['netmask_bits'])
-        raise 'Incorrect network definition. Proper CIDR block range or netmask bits must be given'
-      end
-
       if nil_or_empty(network_definition['range'])
         @ip_block_id = network_definition['cloud_properties']['ip_block_id']
         raise 'ip_block_id does not exist in cloud_properties' if nil_or_empty(@ip_block_id)
         raise 'Incorrect network definition. Gateway must not be provided when using netmask bits' unless nil_or_empty(network_definition['gateway'])
-        @network_bits = Integer(network_definition['netmask_bits']) rescue false
+        if nil_or_empty(network_definition['netmask_bits'])
+          @network_bits = DEFAULT_NETMASK_BITS
+        else
+          @network_bits = Integer(network_definition['netmask_bits']) rescue false
+        end
         raise 'Incorrect network definition. Proper CIDR block range or netmask bits must be given' if !@network_bits
         raise 'Incorrect network definition. Proper CIDR block range or netmask bits must be given' if @network_bits < 1 || @network_bits > 32
       else
@@ -116,6 +115,21 @@ module VSphereCloud
         NSXT::IPSubnet.new({ip_addresses: [@gateway],
                             prefix_length: @network_bits})
       end
+    end
+
+    def get_edge_cluster_id(t0_router_id)
+      logger.debug("Getting edge cluster id of router #{t0_router_id}")
+      @router_provider.get_edge_cluster_id(t0_router_id)
+    end
+
+    def create_t1_router(edge_cluster_id, t1_name)
+      logger.info("Creating T1 router in cluster #{edge_cluster_id}")
+      @router_provider.create_t1_router(edge_cluster_id, t1_name).id
+    end
+
+    def enable_route_advertisement(t1_router_id)
+      logger.debug("Enable route advertisement for router #{t1_router_id}")
+      @router_provider.enable_route_advertisement(t1_router_id)
     end
 
     def block_size
@@ -156,8 +170,6 @@ module VSphereCloud
         as_array.to_json
       end
     end
-
-    private
 
     def attach_switch_to_t1(switch_id, t1_router_id, subnet)
       logical_port = @switch_provider.create_logical_port(switch_id)

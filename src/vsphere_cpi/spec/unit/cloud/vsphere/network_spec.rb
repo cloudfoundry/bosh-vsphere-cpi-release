@@ -78,22 +78,6 @@ module VSphereCloud
         end
 
         context 'when netmask_bits is not provided' do
-          context 'when range is empty' do
-            let(:range) { '' }
-            it 'raises an error' do
-              expect{ validate }.to raise_error('Incorrect network definition. Proper CIDR block range or netmask bits must be given')
-            end
-          end
-
-          context 'when range is not provided' do
-            let(:network_definition) { {
-                'gateway' => '192.168.111.1',
-                'cloud_properties' => cloud_props }
-            }
-            it 'raises an error' do
-              expect{ validate }.to raise_error('Incorrect network definition. Proper CIDR block range or netmask bits must be given')
-            end
-          end
 
           context 'when incorrect range is provided' do
             let(:range) { '192.168.111.111/33' }
@@ -139,23 +123,6 @@ module VSphereCloud
               'netmask_bits' => netmask_bits,
               'cloud_properties' => cloud_props }
           }
-
-          context 'when netmask_bits is empty' do
-            let(:netmask_bits) { '' }
-            it 'raises an error' do
-              expect{ validate }.to raise_error(/Incorrect network definition. Proper CIDR block range or netmask bits must be given/)
-            end
-          end
-
-          context 'when netmask_bits is not provided' do
-            let(:network_definition) { {
-                'gateway' => '192.168.111.1',
-                'cloud_properties' => cloud_props }
-            }
-            it 'raises an error' do
-              expect{ validate }.to raise_error(/Incorrect network definition. Proper CIDR block range or netmask bits must be given/)
-            end
-          end
 
           context 'when netmask_bits is not a number' do
             let(:netmask_bits) { '255.255.255.0' }
@@ -237,59 +204,99 @@ module VSphereCloud
         expect(network.create(network_definition)).to eq(network_result)
       end
 
-      context 'when netmask_bits are provided' do
+      context 'when range is not provided' do
         let(:network_definition) { {
             'netmask_bits' => 24,
             'cloud_properties' => cloud_props }
         }
-
         let(:cloud_props) { {
             't0_router_id' => t0_router_id,
             'transport_zone_id' => transport_zone_id,
             'ip_block_id' => 'block-id'
-          }
         }
-
+        }
         let(:allocated_subnet) { instance_double(NSXT::IpBlockSubnet, id: 'subnet-id',
-                                                                     cidr: '192.168.1.0/24')}
+                                                 cidr: '192.168.1.0/24')}
         let(:tag) { instance_double(NSXT::Tag) }
         let(:ip_subnet) {instance_double(NSXT::IPSubnet)}
         let(:block_subnet_cidr) { '3232235776' }
         let(:gateway) { instance_double(NetAddr::CIDRv4, ip: '192.168.1.1') }
 
-        it 'gets subnet from ip block' do
-          expect(router_provider).to receive(:get_edge_cluster_id)
-            .with('t0-router-id').and_return('cluster-id')
-          expect(router_provider).to receive(:create_t1_router)
-            .with('cluster-id', nil).and_return(t1_router)
-          expect(router_provider).to receive(:enable_route_advertisement)
-            .with('t1-router-id')
-          expect(router_provider).to receive(:attach_t1_to_t0)
-            .with('t0-router-id', 't1-router-id')
+        context 'when netmask_bits are provided' do
+          it 'gets subnet from ip block' do
+            expect(router_provider).to receive(:get_edge_cluster_id)
+              .with('t0-router-id').and_return('cluster-id')
+            expect(router_provider).to receive(:create_t1_router)
+              .with('cluster-id', nil).and_return(t1_router)
+            expect(router_provider).to receive(:enable_route_advertisement)
+              .with('t1-router-id')
+            expect(router_provider).to receive(:attach_t1_to_t0)
+              .with('t0-router-id', 't1-router-id')
 
-          expect(ip_block_provider).to receive(:allocate_cidr_range)
-            .with('block-id', 256).and_return(allocated_subnet)
+            expect(ip_block_provider).to receive(:allocate_cidr_range)
+              .with('block-id', 256).and_return(allocated_subnet)
 
-          expect(NSXT::Tag).to receive(:new)
-            .with({scope: 'bosh_cpi_subnet_id', tag: 'subnet-id'}).and_return(tag)
-          expect(switch_provider).to receive(:create_logical_switch)
-            .with('zone-id', {tags: [tag], name: nil}).and_return(logical_switch)
+            expect(NSXT::Tag).to receive(:new)
+              .with({scope: 'bosh_cpi_subnet_id', tag: 'subnet-id'}).and_return(tag)
+            expect(switch_provider).to receive(:create_logical_switch)
+              .with('zone-id', {tags: [tag], name: nil}).and_return(logical_switch)
 
-          expect(switch_provider).to receive(:create_logical_port)
-            .with('switch-id').and_return(logical_port)
-          expect( NSXT::IPSubnet).to receive(:new)
-            .with({ip_addresses: ['192.168.1.1'],
-                   prefix_length: 24}).and_return(ip_subnet)
-          expect(router_provider).to receive(:attach_switch_to_t1)
-            .with('logical-port-id', 't1-router-id', ip_subnet)
-          expect(NetAddr::CIDR).to receive(:create)
-            .with('192.168.1.0/24').and_return(block_subnet_cidr)
-          expect(NetAddr::CIDR).to receive(:create)
-            .with(3232235777).and_return(gateway)
+            expect(switch_provider).to receive(:create_logical_port)
+              .with('switch-id').and_return(logical_port)
+            expect( NSXT::IPSubnet).to receive(:new)
+              .with({ip_addresses: ['192.168.1.1'],
+                     prefix_length: 24}).and_return(ip_subnet)
+            expect(router_provider).to receive(:attach_switch_to_t1)
+              .with('logical-port-id', 't1-router-id', ip_subnet)
+            expect(NetAddr::CIDR).to receive(:create)
+              .with('192.168.1.0/24').and_return(block_subnet_cidr)
+            expect(NetAddr::CIDR).to receive(:create)
+              .with(3232235777).and_return(gateway)
 
-          expect(Network::ManagedNetwork).to receive(:new)
-            .with(logical_switch, allocated_subnet, '192.168.1.1').and_return(network_result)
-          expect(network.create(network_definition)).to eq(network_result)
+            expect(Network::ManagedNetwork).to receive(:new)
+              .with(logical_switch, allocated_subnet, '192.168.1.1').and_return(network_result)
+            expect(network.create(network_definition)).to eq(network_result)
+          end
+        end
+
+        context 'when netmask_bits are not provided' do
+          let(:network_definition) { {
+              'cloud_properties' => cloud_props } }
+
+          it 'defaults value to DEFAULT_NETMASK_BITS' do
+            expect(router_provider).to receive(:get_edge_cluster_id)
+               .with('t0-router-id').and_return('cluster-id')
+            expect(router_provider).to receive(:create_t1_router)
+               .with('cluster-id', nil).and_return(t1_router)
+            expect(router_provider).to receive(:enable_route_advertisement)
+               .with('t1-router-id')
+            expect(router_provider).to receive(:attach_t1_to_t0)
+                .with('t0-router-id', 't1-router-id')
+            expect(ip_block_provider).to receive(:allocate_cidr_range)
+                .with('block-id', 256).and_return(allocated_subnet)
+
+            expect(NSXT::Tag).to receive(:new)
+                 .with({scope: 'bosh_cpi_subnet_id', tag: 'subnet-id'}).and_return(tag)
+            expect(switch_provider).to receive(:create_logical_switch)
+                 .with('zone-id', {tags: [tag], name: nil}).and_return(logical_switch)
+
+            expect(switch_provider).to receive(:create_logical_port)
+                 .with('switch-id').and_return(logical_port)
+            expect( NSXT::IPSubnet).to receive(:new)
+                 .with({ip_addresses: ['192.168.1.1'],
+                        prefix_length: 24}).and_return(ip_subnet)
+            expect(router_provider).to receive(:attach_switch_to_t1)
+                 .with('logical-port-id', 't1-router-id', ip_subnet)
+            expect(NetAddr::CIDR).to receive(:create)
+                 .with('192.168.1.0/24').and_return(block_subnet_cidr)
+            expect(NetAddr::CIDR).to receive(:create)
+                 .with(3232235777).and_return(gateway)
+
+            expect(Network::ManagedNetwork).to receive(:new)
+                 .with(logical_switch, allocated_subnet, '192.168.1.1')
+                 .and_return(network_result)
+            expect(network.create(network_definition)).to eq(network_result)
+          end
         end
       end
 
