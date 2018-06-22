@@ -48,7 +48,7 @@ context 'when regex matching datastores in a datastore cluster (datastore-*)' do
 
         expect {
           cpi.create_disk(2048, {}, nil)
-        }.to raise_error(/Datastores matching criteria are in maintenance mode. No valid placement found/)
+        }.to raise_error(/No valid placement found for disks/)
       end
     end
   end

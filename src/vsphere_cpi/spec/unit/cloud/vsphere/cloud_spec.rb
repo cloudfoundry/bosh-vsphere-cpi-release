@@ -1505,12 +1505,13 @@ module VSphereCloud
       before do
         allow(ds_mob).to receive_message_chain('summary.maintenance_mode').and_return("normal")
       end
+      let(:accessible) { true }
       let(:host_runtime_info) { instance_double(VimSdk::Vim::Host::RuntimeInfo, in_maintenance_mode: false) }
       let(:host_system) {instance_double(VimSdk::Vim::HostSystem, runtime: host_runtime_info)}
       let(:datastore_host_mount) { [instance_double('VimSdk::Vim::Datastore::HostMount', key: host_system)]}
       let(:ds_mob) { instance_double('VimSdk::Vim::Datastore', host: datastore_host_mount) }
-      let(:small_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 2048, mob: ds_mob, accessible?: true) }
-      let(:large_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 4096, mob: ds_mob, accessible?: true) }
+      let(:small_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 2048, mob: ds_mob, accessible?: accessible) }
+      let(:large_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 4096, mob: ds_mob, accessible?: accessible) }
       let(:accessible_datastores) do
         {
           'small-ds' => small_ds,
@@ -1637,6 +1638,15 @@ module VSphereCloud
           disk_cid = vsphere_cloud.create_disk(1024, cloud_properties)
 
           expect(disk_cid).to eq("fake-disk-cid.#{expected_pattern}")
+        end
+      end
+
+      context 'when datastores are not accessible from any host' do
+        let(:accessible) { false }
+        it 'raises an error' do
+          expect {
+            vsphere_cloud.create_disk(1024, {})
+          }.to raise_error(/Datastores matching criteria are in maintenance mode or not accessible/)
         end
       end
     end

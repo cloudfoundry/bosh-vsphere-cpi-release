@@ -20,7 +20,7 @@ sshpass -p 'vcpi' ssh -o StrictHostKeyChecking=no -M -S "$sockpath" -4 -D 5000 -
 
 # Ensure tmpdir and control socket are cleaned up on exit
 master_exit() {
-  ssh -S "$sockpath" -O exit "$jumpbox_remote" &> /dev/null
+  ssh -S "$sockpath" -O exit "$jumpbox_remote" &> /dev/null || true
   rm -rf "$tmpdir"
 }
 trap master_exit EXIT
