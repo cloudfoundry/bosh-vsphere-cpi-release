@@ -163,7 +163,7 @@ module VSphereCloud
       end
 
       def as_array
-        [ @switch.id, created_network, {cloud_properties: {name: @switch.display_name}} ]
+        [ @switch.id, created_network, {name: @switch.display_name} ]
       end
 
       def to_json(opts)

@@ -81,7 +81,7 @@ describe 'network management', :network_management => true  do
         result = result.as_array
 
         #get created switch by name. make sure it's only one
-        switch_name = result[2][:cloud_properties][:name]
+        switch_name = result[2][:name]
         switches = logical_switches(switch_name)
         expect(switches.length).to eq(1)
         switch = switches.first
@@ -120,7 +120,7 @@ describe 'network management', :network_management => true  do
         result = result.as_array
 
         #get created switch by name. make sure it's only one
-        switch_name = result[2][:cloud_properties][:name]
+        switch_name = result[2][:name]
         switches = logical_switches(switch_name)
         expect(switches.length).to eq(1)
         switch = switches.first

@@ -597,7 +597,7 @@ module VSphereCloud
 
         it 'deserializes to correct JSON with subnet' do
           result = Network::ManagedNetwork.new(logical_switch, block_subnet, gateway)
-          expect(JSON.dump(result)).to eq("[\"switch-id\",{\"range\":\"192.168.1.0/24\",\"gateway\":\"192.168.1.1\",\"reserved\":[]},{\"cloud_properties\":{\"name\":\"switch-name\"}}]")
+          expect(JSON.dump(result)).to eq("[\"switch-id\",{\"range\":\"192.168.1.0/24\",\"gateway\":\"192.168.1.1\",\"reserved\":[]},{\"name\":\"switch-name\"}]")
         end
       end
 
@@ -605,7 +605,7 @@ module VSphereCloud
         let(:block_subnet) { nil }
         it 'deserializes to correct JSON without subnet' do
           result = Network::ManagedNetwork.new(logical_switch, block_subnet, gateway)
-          expect(JSON.dump(result)).to eq("[\"switch-id\",{},{\"cloud_properties\":{\"name\":\"switch-name\"}}]")
+          expect(JSON.dump(result)).to eq("[\"switch-id\",{},{\"name\":\"switch-name\"}]")
         end
       end
     end
