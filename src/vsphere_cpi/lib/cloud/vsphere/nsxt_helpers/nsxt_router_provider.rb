@@ -58,8 +58,7 @@ module VSphereCloud
 
       begin
         t0_reference = NSXT::ResourceReference.new(target_id: t0_router_port.id,
-                                                   target_type: 'LogicalRouterLinkPortOnTIER0',
-                                                   is_valid: true )
+                                                   target_type: 'LogicalRouterLinkPortOnTIER0')
         t1_router_port = NSXT::LogicalRouterLinkPortOnTIER1.new(linked_logical_router_port_id: t0_reference,
                                                                 logical_router_id: t1_router_id,
                                                                 resource_type: 'LogicalRouterLinkPortOnTIER1')
@@ -73,8 +72,7 @@ module VSphereCloud
     def attach_switch_to_t1(switch_port_id, t1_router_id, subnet)
       begin
         switch_port_ref = NSXT::ResourceReference.new(target_id: switch_port_id,
-                                                      target_type: 'LogicalPort',
-                                                      is_valid: true )
+                                                      target_type: 'LogicalPort')
         t1_router_port = NSXT::LogicalRouterDownLinkPort.new(logical_router_id: t1_router_id,
                                                              linked_logical_switch_port_id: switch_port_ref,
                                                              resource_type: 'LogicalRouterDownLinkPort',

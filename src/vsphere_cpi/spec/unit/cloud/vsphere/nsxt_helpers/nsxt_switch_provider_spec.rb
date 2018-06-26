@@ -18,36 +18,36 @@ describe VSphereCloud::NSXTSwitchProvider, fake_logger: true do
     context 'when switch name is provided' do
       it 'creates switch with given name' do
         expect(NSXT::LogicalSwitch).to receive(:new)
-         .with({ admin_state: 'UP',
-                 transport_zone_id: 'zone_id',
-                 replication_mode: 'MTEP',
-                 display_name: 'Switch name'})
+         .with( admin_state: 'UP',
+                transport_zone_id: 'zone_id',
+                replication_mode: 'MTEP',
+                display_name: 'Switch name')
          .and_return(logical_switch)
         expect(switch_api).to receive(:create_logical_switch)
          .with(logical_switch)
-        switch_provider.create_logical_switch('zone_id', {name: 'Switch name'})
+        switch_provider.create_logical_switch('zone_id', name: 'Switch name')
       end
     end
 
     context 'when switch name and tags are empty' do
       it 'creates a switch' do
         expect(NSXT::LogicalSwitch).to receive(:new)
-         .with({ admin_state: 'UP',
-                 transport_zone_id: 'zone_id',
-                 replication_mode: 'MTEP'})
+         .with(admin_state: 'UP',
+               transport_zone_id: 'zone_id',
+               replication_mode: 'MTEP')
          .and_return(logical_switch)
         expect(switch_api).to receive(:create_logical_switch)
          .with(logical_switch)
-        switch_provider.create_logical_switch('zone_id', {name: nil, tags: nil})
+        switch_provider.create_logical_switch('zone_id')
       end
     end
 
     context 'when no optional params are provided' do
       it 'creates a switch' do
         expect(NSXT::LogicalSwitch).to receive(:new)
-         .with({ admin_state: 'UP',
-                 transport_zone_id: 'zone_id',
-                 replication_mode: 'MTEP'})
+         .with(admin_state: 'UP',
+               transport_zone_id: 'zone_id',
+               replication_mode: 'MTEP')
          .and_return(logical_switch)
         expect(switch_api).to receive(:create_logical_switch)
           .with(logical_switch)
@@ -60,15 +60,14 @@ describe VSphereCloud::NSXTSwitchProvider, fake_logger: true do
 
       it 'creates switch with tags' do
         expect(NSXT::LogicalSwitch).to receive(:new)
-         .with({ admin_state: 'UP',
-                 transport_zone_id: 'zone_id',
-                 replication_mode: 'MTEP',
-                 tags: [tag] })
+         .with(admin_state: 'UP',
+               transport_zone_id: 'zone_id',
+               replication_mode: 'MTEP',
+               tags: [tag])
          .and_return(logical_switch)
         expect(switch_api).to receive(:create_logical_switch)
           .with(logical_switch)
-        switch_provider.create_logical_switch('zone_id',
-                                              {tags: [ tag ]})
+        switch_provider.create_logical_switch('zone_id', tags: [ tag ])
       end
     end
   end
@@ -123,8 +122,8 @@ describe VSphereCloud::NSXTSwitchProvider, fake_logger: true do
     context 'when switch id is valid' do
       it 'creates logical port' do
         expect(NSXT::LogicalPort).to receive(:new)
-          .with({admin_state: 'UP',
-                 logical_switch_id: 'switch-id'})
+          .with(admin_state: 'UP',
+                logical_switch_id: 'switch-id')
           .and_return(logical_port_obj)
 
         expect(switch_api).to receive(:create_logical_port)
@@ -154,7 +153,7 @@ describe VSphereCloud::NSXTSwitchProvider, fake_logger: true do
         expect(switch_api).to receive(:get_logical_switch)
           .with('switch-id').and_return(switch)
         expect(switch_provider.get_switch_by_id('switch-id'))
-            .to eq(switch)
+          .to eq(switch)
       end
     end
   end

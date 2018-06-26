@@ -2,7 +2,7 @@ require 'spec_helper'
 
 module VSphereCloud
   describe Network, fake_logger: true do
-    subject(:network) { Network.build(switch_provider, router_provider, ip_block_provider) }
+    subject(:network) { Network.new(switch_provider, router_provider, ip_block_provider) }
     let(:nsxt_provider) { instance_double(VSphereCloud::NSXTProvider) }
     let(:switch_provider) { instance_double(VSphereCloud::NSXTSwitchProvider) }
     let(:router_provider) { instance_double(VSphereCloud::NSXTRouterProvider) }
@@ -189,7 +189,7 @@ module VSphereCloud
         expect(router_provider).to receive(:attach_t1_to_t0)
           .with('t0-router-id', 't1-router-id')
         expect(switch_provider).to receive(:create_logical_switch)
-          .with('zone-id', {name: 'switch-name'}).and_return(logical_switch)
+          .with('zone-id', name: 'switch-name', tags: nil).and_return(logical_switch)
 
         expect(switch_provider).to receive(:create_logical_port)
            .with('switch-id').and_return(logical_port)
@@ -329,7 +329,7 @@ module VSphereCloud
           expect(router_provider).to receive(:attach_t1_to_t0)
              .with('t0-router-id', 't1-router-id')
           expect(switch_provider).to receive(:create_logical_switch)
-             .with('zone-id', {name: nil}).and_return(logical_switch)
+             .with('zone-id', name: nil, tags: nil).and_return(logical_switch)
 
           expect(switch_provider).to receive(:create_logical_port)
             .with('switch-id').and_return(logical_port)
@@ -396,7 +396,7 @@ module VSphereCloud
             expect(router_provider).to receive(:attach_t1_to_t0)
                .with('t0-router-id', 't1-router-id')
             expect(switch_provider).to receive(:create_logical_switch)
-               .with('zone-id', {name: 'switch-name'}).and_return(logical_switch)
+               .with('zone-id', name: 'switch-name', tags: nil).and_return(logical_switch)
             expect(switch_provider).to receive(:create_logical_port)
                .with('switch-id').and_raise('Some nsxt error')
 
