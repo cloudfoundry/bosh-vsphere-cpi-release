@@ -78,7 +78,7 @@ describe 'network management', :network_management => true  do
       it 'creates T0<-T1<-Switch infrastructure' do
         result = @cloud.create_network(network_definition)
         expect(result).not_to be_nil
-        result = result.as_array
+        result = result.to_a
 
         #get created switch by name. make sure it's only one
         switch_name = result[2][:name]
@@ -117,7 +117,7 @@ describe 'network management', :network_management => true  do
       it 'creates infrastructure and allocates subnet' do
         result = @cloud.create_network(network_definition)
         expect(result).not_to be_nil
-        result = result.as_array
+        result = result.to_a
 
         #get created switch by name. make sure it's only one
         switch_name = result[2][:name]
@@ -203,7 +203,7 @@ describe 'network management', :network_management => true  do
     it 'deletes switch and attached router' do
       result = @cloud.create_network(network_definition)
       expect(result).not_to be_nil
-      result = result.as_array
+      result = result.to_a
       network_cid = result[0]
       router_id = get_attached_router_id(network_cid)
 
@@ -234,7 +234,7 @@ describe 'network management', :network_management => true  do
       it 'raises an error' do
         result = @cloud.create_network(network_definition)
         expect(result).not_to be_nil
-        result = result.as_array
+        result = result.to_a
         @switch_id = result[0]
 
         @t1_router_id = get_attached_router_id(@switch_id)
@@ -252,7 +252,7 @@ describe 'network management', :network_management => true  do
 
   def logical_switches(switch_name)
     switch_api.list_logical_switches.results.find_all do |switch|
-      switch if switch.display_name == switch_name
+      switch.display_name == switch_name
     end
   end
 

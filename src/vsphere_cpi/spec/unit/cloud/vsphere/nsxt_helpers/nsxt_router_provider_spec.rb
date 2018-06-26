@@ -21,9 +21,9 @@ describe VSphereCloud::NSXTRouterProvider, fake_logger: true do
     context 'when all params are correct' do
       it 'creates t1 logical router with given name' do
         expect(router_api).to receive(:create_logical_router)
-          .with( { edge_cluster_id: 'edge-cluster',
-                   router_type: 'TIER1',
-                   display_name: 'router-name' } )
+          .with(edge_cluster_id: 'edge-cluster',
+                router_type: 'TIER1',
+                display_name: 'router-name')
           .and_return(t1_router)
         result = router_provider.create_t1_router('edge-cluster', 'router-name')
         expect(result).not_to be_nil
@@ -37,9 +37,9 @@ describe VSphereCloud::NSXTRouterProvider, fake_logger: true do
       let(:random_name) { 'very random' }
       it 'randomly generates name' do
         expect(router_api).to receive(:create_logical_router)
-                                  .with( { edge_cluster_id: 'edge-cluster',
-                                           router_type: 'TIER1',
-                                           display_name: nil } )
+                                  .with(edge_cluster_id: 'edge-cluster',
+                                        router_type: 'TIER1',
+                                        display_name: nil)
                                   .and_return(t1_router)
         result = router_provider.create_t1_router('edge-cluster', router_name)
         expect(result).not_to be_nil
@@ -61,7 +61,7 @@ describe VSphereCloud::NSXTRouterProvider, fake_logger: true do
   describe '#delete_t1_router' do
     it 'deletes router with force' do
       expect(router_api).to receive(:delete_logical_router)
-                                .with('t1-router-id', :force => true)
+                                .with('t1-router-id', force: true)
       router_provider.delete_t1_router('t1-router-id')
     end
   end
@@ -70,7 +70,7 @@ describe VSphereCloud::NSXTRouterProvider, fake_logger: true do
     context 'when t0 router exists' do
       context 'when it has edge_cluster_id' do
         let(:t0_router) { instance_double(NSXT::LogicalRouter,
-                                          :edge_cluster_id => 'edge-cluster-id') }
+                                          edge_cluster_id: 'edge-cluster-id') }
         it 'returns edge_cluster_id' do
           expect(router_api).to receive(:read_logical_router)
                                     .with('t0-router-id').and_return(t0_router)
@@ -104,8 +104,8 @@ describe VSphereCloud::NSXTRouterProvider, fake_logger: true do
     let(:advertisement_config) { instance_double(NSXT::AdvertisementConfig) }
     before do
       allow(NSXT::AdvertisementConfig).to receive(:new)
-        .with({:advertise_nsx_connected_routes => true,
-               :enabled => true})
+        .with(advertise_nsx_connected_routes: true,
+              enabled: true)
         .and_return(advertisement_config)
     end
 
@@ -136,7 +136,8 @@ describe VSphereCloud::NSXTRouterProvider, fake_logger: true do
     context 'when one router attached' do
       it 'returns array with one router id' do
         expect(router_api).to receive(:list_logical_router_ports)
-                                  .with(:logical_switch_id => 'switch-id').and_return(router_ports)
+            .with(logical_switch_id: 'switch-id')
+            .and_return(router_ports)
         expect(router_provider.get_attached_router_ids('switch-id'))
             .to eq(['router-id'])
       end
@@ -144,13 +145,14 @@ describe VSphereCloud::NSXTRouterProvider, fake_logger: true do
 
     context 'when multiple routers attached ' do
       let(:router_port2) { instance_double(NSXT::LogicalRouterPort,
-                                           :logical_router_id => 'router-id2') }
+                                           logical_router_id: 'router-id2')}
 
       let(:router_ports) { instance_double(NSXT::LogicalRouterPortListResult,
-                                           :results => [ router_port, router_port2 ]) }
+                                           results: [router_port, router_port2])}
       it 'returns all router ids' do
         expect(router_api).to receive(:list_logical_router_ports)
-                                  .with(:logical_switch_id => 'switch-id').and_return(router_ports)
+                                  .with(logical_switch_id: 'switch-id')
+                                  .and_return(router_ports)
         expect(router_provider.get_attached_router_ids('switch-id'))
             .to eq(['router-id','router-id2'])
       end
@@ -158,10 +160,11 @@ describe VSphereCloud::NSXTRouterProvider, fake_logger: true do
 
     context 'when no routers attached' do
       let(:router_ports) { instance_double(NSXT::LogicalRouterPortListResult,
-                                           :results => [ ]) }
+                                           results: [ ]) }
       it 'returns empty array' do
         expect(router_api).to receive(:list_logical_router_ports)
-                                  .with(:logical_switch_id => 'switch-id').and_return(router_ports)
+                                  .with(logical_switch_id: 'switch-id')
+                                  .and_return(router_ports)
         expect(router_provider.get_attached_router_ids('switch-id'))
             .to eq([])
       end
@@ -170,26 +173,25 @@ describe VSphereCloud::NSXTRouterProvider, fake_logger: true do
 
   describe '#get_attached_switches_ids' do
     let(:switch_port_ref) { instance_double(NSXT::ResourceReference,
-                                            :is_valid => true,
-                                            :target_id => 'switch-id'
+                                            is_valid: true,
+                                            target_id: 'switch-id'
     ) }
     let(:invalid_switch_port_ref) { instance_double(NSXT::ResourceReference,
-                                                    :is_valid => false
+                                                    is_valid: false
     ) }
 
     let(:router_port) { instance_double(NSXT::LogicalRouterDownLinkPort,
-                                        :linked_logical_switch_port_id =>
-                                            switch_port_ref) }
+                                        linked_logical_switch_port_id: switch_port_ref) }
     let(:invalid_port) {  instance_double(NSXT::LogicalRouterDownLinkPort,
-                                          :linked_logical_switch_port_id =>
-                                              invalid_switch_port_ref) }
+                                          linked_logical_switch_port_id: invalid_switch_port_ref) }
     let(:router_ports) { instance_double(NSXT::LogicalRouterPortListResult,
-                                         :results => [ router_port, invalid_port ]) }
+                                         results: [ router_port, invalid_port ]) }
 
     context 'when router id is provided' do
       it 'returns attached switches ids with valid ports' do
         expect(router_api).to receive(:list_logical_router_ports)
-                                  .with(:logical_router_id => 't1-router-id',:resource_type => 'LogicalRouterDownLinkPort')
+                                  .with(logical_router_id: 't1-router-id',
+                                        resource_type: 'LogicalRouterDownLinkPort')
                                   .and_return(router_ports)
         expect(router_provider.get_attached_switches_ids('t1-router-id'))
             .to eq(['switch-id'])
@@ -199,8 +201,7 @@ describe VSphereCloud::NSXTRouterProvider, fake_logger: true do
 
   describe '#attach_t1_to_t0' do
     let(:t0_router_port) {
-      instance_double(NSXT::LogicalRouterLinkPortOnTIER0,
-                      :id => 't0_port_id').as_null_object
+      instance_double(NSXT::LogicalRouterLinkPortOnTIER0, id: 't0_port_id').as_null_object
     }
 
     context 'when T0 router exists' do
@@ -210,21 +211,20 @@ describe VSphereCloud::NSXTRouterProvider, fake_logger: true do
       context 'when T1 router exists' do
         it 'creates T1 logical router port and attaches it to T0' do
           expect(NSXT::LogicalRouterLinkPortOnTIER0).to receive(:new)
-                                                            .with({:logical_router_id => 't0_router_id',
-                                                                   :resource_type => 'LogicalRouterLinkPortOnTIER0'})
+                                                            .with({logical_router_id: 't0_router_id',
+                                                                   resource_type: 'LogicalRouterLinkPortOnTIER0'})
                                                             .and_return(t0_router_port)
           expect(router_api).to receive(:create_logical_router_port)
                                     .with(t0_router_port).and_return(t0_router_port)
 
           expect(NSXT::ResourceReference).to receive(:new)
-                                                 .with({ :target_id => 't0_port_id',
-                                                         :target_type => 'LogicalRouterLinkPortOnTIER0',
-                                                         :is_valid => true })
+                                                 .with(target_id: 't0_port_id',
+                                                       target_type: 'LogicalRouterLinkPortOnTIER0')
                                                  .and_return(t0_reference)
           expect(NSXT::LogicalRouterLinkPortOnTIER1).to receive(:new)
-                                                            .with({:logical_router_id => 't1_router_id',
-                                                                   :linked_logical_router_port_id => t0_reference,
-                                                                   :resource_type => 'LogicalRouterLinkPortOnTIER1'})
+                                                            .with(logical_router_id: 't1_router_id',
+                                                                  linked_logical_router_port_id: t0_reference,
+                                                                  resource_type: 'LogicalRouterLinkPortOnTIER1')
                                                             .and_return(t1_router_port)
           expect(router_api).to receive(:create_logical_router_port)
                                     .with(t1_router_port)
@@ -235,14 +235,15 @@ describe VSphereCloud::NSXTRouterProvider, fake_logger: true do
       context 'when failing to create T1 port' do
         it 'throws error with T0 router port id and T1 router id' do
           expect(NSXT::LogicalRouterLinkPortOnTIER0).to receive(:new)
-                                                            .with({:logical_router_id => 't0_router_id',
-                                                                   :resource_type => 'LogicalRouterLinkPortOnTIER0'})
+                                                            .with(logical_router_id: 't0_router_id',
+                                                                  resource_type: 'LogicalRouterLinkPortOnTIER0')
                                                             .and_return(t0_router_port)
           expect(router_api).to receive(:create_logical_router_port)
-                                    .with(t0_router_port).and_return(t0_router_port)
+                                .with(t0_router_port).and_return(t0_router_port)
 
           expect(NSXT::LogicalRouterLinkPortOnTIER1).to receive(:new)
-                                                            .with(any_args).and_return(t1_router_port)
+                                                        .with(any_args)
+                                                        .and_return(t1_router_port)
 
           expect(router_api).to receive(:create_logical_router_port)
                                     .with(t1_router_port).and_raise('CPI error without router id')
@@ -259,8 +260,8 @@ describe VSphereCloud::NSXTRouterProvider, fake_logger: true do
     context 'when failing to create T0 router port' do
       it 'raises an error with T0 id' do
         expect(NSXT::LogicalRouterLinkPortOnTIER0).to receive(:new)
-                                                          .with({:logical_router_id => 't0_router_id',
-                                                                 :resource_type => 'LogicalRouterLinkPortOnTIER0'})
+                                                          .with(logical_router_id: 't0_router_id',
+                                                                resource_type: 'LogicalRouterLinkPortOnTIER0')
                                                           .and_return(t0_router_port)
         expect(router_api).to receive(:create_logical_router_port)
                                   .with(t0_router_port).and_raise('CPI error without router id')
@@ -278,21 +279,19 @@ describe VSphereCloud::NSXTRouterProvider, fake_logger: true do
     let(:subnet) { instance_double(NSXT::IPSubnet) }
 
     context 'when input is correct' do
-      let(:logical_port) { instance_double(NSXT::LogicalPort, :id => 'logical-port-id') }
+      let(:logical_port) { instance_double(NSXT::LogicalPort, id: 'logical-port-id') }
       let(:switch_port_ref) { instance_double(NSXT::ResourceReference) }
 
       it 'attaches switch to router ' do
         expect(NSXT::ResourceReference).to receive(:new)
-         .with({:target_id => 'logical-port-id',
-                :target_type => 'LogicalPort',
-                :is_valid => true})
+         .with(target_id: 'logical-port-id',
+                target_type: 'LogicalPort')
          .and_return(switch_port_ref)
         expect(NSXT::LogicalRouterDownLinkPort).to receive(:new)
-         .with({ :logical_router_id => 't1-router-id',
-                 :linked_logical_switch_port_id => switch_port_ref,
-                 :resource_type => 'LogicalRouterDownLinkPort',
-                 :subnets => [subnet]
-               }).and_return(logical_port)
+         .with(logical_router_id: 't1-router-id',
+               linked_logical_switch_port_id: switch_port_ref,
+               resource_type: 'LogicalRouterDownLinkPort',
+               subnets: [subnet]).and_return(logical_port)
         expect(router_api).to receive(:create_logical_router_port)
           .with(logical_port)
 
@@ -319,13 +318,14 @@ describe VSphereCloud::NSXTRouterProvider, fake_logger: true do
       let(:router_port_id) { instance_double(NSXT::ResourceReference,
                                   target_type: 'LogicalRouterLinkPortOnTIER0',
                                   target_id: 't0-router-port-id') }
-      let(:t1_router_port) { instance_double(NSXT::LogicalRouterLinkPortOnTIER1, resource_type: 'LogicalRouterLinkPortOnTIER1',
-                                               linked_logical_router_port_id: router_port_id) }
+      let(:t1_router_port) { instance_double(NSXT::LogicalRouterLinkPortOnTIER1,
+                                             resource_type: 'LogicalRouterLinkPortOnTIER1',
+                                             linked_logical_router_port_id: router_port_id) }
       let(:t1_router_ports) { instance_double(NSXT::LogicalRouterPortListResult,
-                                              :results => [ t1_router_port ]) }
+                                              results: [ t1_router_port ]) }
       it 'detaches it' do
         expect(router_api).to receive(:list_logical_router_ports)
-          .with({logical_router_id: 't1-router-id'}).and_return(t1_router_ports)
+          .with(logical_router_id: 't1-router-id').and_return(t1_router_ports)
         expect(router_api).to receive(:delete_logical_router_port)
           .with('t0-router-port-id', force: true)
         router_provider.detach_t1_from_t0('t1-router-id')
@@ -337,11 +337,11 @@ describe VSphereCloud::NSXTRouterProvider, fake_logger: true do
       let(:t1_router_port) { instance_double(NSXT::LogicalRouterDownLinkPort, resource_type: 'LogicalRouterDownLinkPort',
                                              linked_logical_switch_port_id: switch_port_id) }
       let(:t1_router_ports) { instance_double(NSXT::LogicalRouterPortListResult,
-                                              :results => [ t1_router_port ]) }
+                                              results: [ t1_router_port ]) }
 
       it 'does nothing' do
         expect(router_api).to receive(:list_logical_router_ports)
-          .with({logical_router_id: 't1-router-id'}).and_return(t1_router_ports)
+          .with(logical_router_id: 't1-router-id').and_return(t1_router_ports)
         expect(router_api).not_to receive(:delete_logical_router_port)
           .with('t0-router-port-id', force: true)
         router_provider.detach_t1_from_t0('t1-router-id')

@@ -214,7 +214,7 @@ module NSXT
         end
       else # model
         #If value has resource_type - use it to deserialize
-        unless value[:resource_type ].nil?
+        unless value[:resource_type].nil?
           type = value[:resource_type].to_sym
         end
         temp_model = NSXT.const_get(type).new

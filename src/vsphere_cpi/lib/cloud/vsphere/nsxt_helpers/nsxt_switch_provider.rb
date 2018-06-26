@@ -6,16 +6,13 @@ module VSphereCloud
       @client = client
     end
 
-    def create_logical_switch(transport_zone_id, opts = {})
+    def create_logical_switch(transport_zone_id, name: nil, tags: nil)
       switch_opts = {admin_state: 'UP',
-              transport_zone_id: transport_zone_id,
-              replication_mode: 'MTEP'}
-      if opts[:name]
-        switch_opts[:display_name] = opts[:name]
-      end
-      if opts[:tags]
-        switch_opts[:tags] = opts[:tags]
-      end
+                     transport_zone_id: transport_zone_id,
+                     replication_mode: 'MTEP'}
+      switch_opts[:display_name] = name unless name.nil?
+      switch_opts[:tags] = tags unless tags.nil?
+
       switch = NSXT::LogicalSwitch.new(switch_opts)
       switch_api.create_logical_switch(switch)
     end
@@ -40,8 +37,8 @@ module VSphereCloud
 
     def create_logical_port(switch_id)
       begin
-        logical_port = NSXT::LogicalPort.new({admin_state: 'UP',
-                                              logical_switch_id: switch_id})
+        logical_port = NSXT::LogicalPort.new(admin_state: 'UP',
+                                             logical_switch_id: switch_id)
         return switch_api.create_logical_port(logical_port)
       rescue => e
         logger.error("Failed to create logical port for switch #{switch_id}. Exception: #{e.inspect}")

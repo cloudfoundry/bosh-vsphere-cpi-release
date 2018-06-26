@@ -31,13 +31,14 @@ module VSphereCloud
         logger.debug("Attaching T1(#{t1_router_id}) to T0(#{cloud_properties['t0_router_id']})")
         @router_provider.attach_t1_to_t0(cloud_properties['t0_router_id'], t1_router_id)
 
-        switch_ops = {name: cloud_properties['switch_name']}
         if @block_subnet
-          switch_ops[:tags] = [ NSXT::Tag.new({scope: TAG_SCOPE_NAME, tag: @block_subnet.id}) ]
+          tags = [ NSXT::Tag.new(scope: TAG_SCOPE_NAME, tag: @block_subnet.id) ]
         end
 
         logger.info("Creating logical switch in zone #{cloud_properties['transport_zone_id']}")
-        switch = @switch_provider.create_logical_switch(cloud_properties['transport_zone_id'], switch_ops)
+        switch = @switch_provider.create_logical_switch(cloud_properties['transport_zone_id'],
+                                                        name: cloud_properties['switch_name'],
+                                                        tags: tags)
         switch_id = switch.id
         logger.debug("Attaching switch(#{switch_id}) to T1(#{t1_router_id})")
         attach_switch_to_t1(switch_id, t1_router_id, ip_subnet)
@@ -104,16 +105,15 @@ module VSphereCloud
 
     def identify_subnet_range
       if @range && @gateway
-        NSXT::IPSubnet.new({ip_addresses: [@gateway.ip],
-                            prefix_length: @range.netmask[1..-1].to_i})
+        NSXT::IPSubnet.new(ip_addresses: [@gateway.ip],
+                            prefix_length: @range.netmask[1..-1].to_i)
       else
         logger.debug("Trying to allocate subnet in ip block #{@ip_block_id}")
         @block_subnet = @ip_block_provider.allocate_cidr_range(@ip_block_id, block_size)
         logger.info("Allocated subnet #{@block_subnet.cidr} in block #{@ip_block_id}")
         block_subnet_cidr = NetAddr::CIDR.create(@block_subnet.cidr).to_i
         @gateway = NetAddr::CIDR.create(block_subnet_cidr + 1).ip
-        NSXT::IPSubnet.new({ip_addresses: [@gateway],
-                            prefix_length: @network_bits})
+        NSXT::IPSubnet.new(ip_addresses: [@gateway], prefix_length: @network_bits)
       end
     end
 
@@ -162,12 +162,12 @@ module VSphereCloud
          reserved: []}
       end
 
-      def as_array
+      def to_a
         [ @switch.id, created_network, {name: @switch.display_name} ]
       end
 
       def to_json(opts)
-        as_array.to_json
+        to_a.to_json
       end
     end
 

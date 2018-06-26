@@ -1761,7 +1761,6 @@ module VSphereCloud
           .with(any_args).and_return(router_provider)
         allow(VSphereCloud::NSXTIpBlockProvider).to receive(:new)
            .with(any_args).and_return(ip_block_provider)
-        allow(logger).to receive(:error)
       end
 
       context 'when nsxt disabled' do
