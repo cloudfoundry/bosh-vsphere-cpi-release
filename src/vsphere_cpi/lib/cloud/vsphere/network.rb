@@ -6,10 +6,6 @@ module VSphereCloud
     TAG_SCOPE_NAME = 'bosh_cpi_subnet_id'
     DEFAULT_NETMASK_BITS = 24
 
-    def self.build(switch_provider, router_provider, ip_block_provider)
-      new(switch_provider, router_provider, ip_block_provider)
-    end
-
     def initialize(switch_provider, router_provider, ip_block_provider)
       @switch_provider = switch_provider
       @router_provider = router_provider

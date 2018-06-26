@@ -2,7 +2,7 @@ require 'spec_helper'
 
 module VSphereCloud
   describe Network, fake_logger: true do
-    subject(:network) { Network.build(switch_provider, router_provider, ip_block_provider) }
+    subject(:network) { Network.new(switch_provider, router_provider, ip_block_provider) }
     let(:nsxt_provider) { instance_double(VSphereCloud::NSXTProvider) }
     let(:switch_provider) { instance_double(VSphereCloud::NSXTSwitchProvider) }
     let(:router_provider) { instance_double(VSphereCloud::NSXTRouterProvider) }

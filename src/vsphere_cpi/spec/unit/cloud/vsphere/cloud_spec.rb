@@ -1775,7 +1775,7 @@ module VSphereCloud
 
       context 'when nsxt enabled' do
         it 'creates a network' do
-          expect(VSphereCloud::Network).to receive(:build)
+          expect(VSphereCloud::Network).to receive(:new)
             .with(switch_provider, router_provider, ip_block_provider).and_return(network)
           expect(network).to receive(:create)
             .with(network_definition).and_return(network_result)
@@ -1823,7 +1823,7 @@ module VSphereCloud
         end
 
         it 'deletes a network' do
-          expect(VSphereCloud::Network).to receive(:build)
+          expect(VSphereCloud::Network).to receive(:new)
             .with(switch_provider, router_provider, ip_block_provider).and_return(network)
           expect(network).to receive(:destroy)
             .with('switch-id')
