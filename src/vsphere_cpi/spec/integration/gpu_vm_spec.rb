@@ -18,7 +18,6 @@ describe 'cloud_properties related to creation of GPU attached VMs' do
     @cluster_name = fetch_and_verify_cluster('BOSH_VSPHERE_CPI_CLUSTER')
     @second_cluster_name = fetch_and_verify_cluster('BOSH_VSPHERE_CPI_SECOND_CLUSTER')
     @gpu_host_datastore_one = fetch_property('BOSH_VSPHERE_CPI_SHARED_DATASTORE')
-    @gpu_host_datastore_two = 'vcpi-ds'
     @host_1 = '10.114.22.249'
     @host_2 = '10.114.22.29'
     @host_3 = '10.114.22.33'
@@ -59,7 +58,7 @@ describe 'cloud_properties related to creation of GPU attached VMs' do
           'clusters' => [
             {
               @cluster_name => {},
-            },
+            }
           ]
         }
       ]
@@ -79,7 +78,7 @@ describe 'cloud_properties related to creation of GPU attached VMs' do
             'clusters' => [
               {
                 @cluster_name => {}
-              }
+              },
             ]
           }
         ]
@@ -88,7 +87,7 @@ describe 'cloud_properties related to creation of GPU attached VMs' do
     context 'when ephemeral datastore is accessible from GPU host' do
       let(:vm_type_single_cluster_acc_ds) do
         vm_type_single_cluster.merge(
-          'datastores' => [@gpu_host_datastore_one, @gpu_host_datastore_two]
+          'datastores' => [@gpu_host_datastore_one]
         )
       end
 
@@ -119,6 +118,72 @@ describe 'cloud_properties related to creation of GPU attached VMs' do
           end
         end
       end
+
+
+
+      context 'when vm_type has two clusters specifies 1 GPU and we create 6 vms in parallel' do
+        let(:vm_type_single_cluster_acc_ds_1_gpu) do
+          vm_type_single_cluster_acc_ds.merge(
+            'gpu' => { 'number_of_gpus' => 1}
+          ).merge(
+            'datacenters' => [
+              {
+                'name' => @datacenter_name,
+                'clusters' => [
+                  {
+                    @cluster_name => {}
+                  },
+                  {
+                    @second_cluster_name => {}
+                  }
+                ]
+              }
+            ]
+          )
+        end
+        it 'creates vms in cluster defined in `vm_type_single_cluster_acc_ds_1_gpu` with 1 GPU each' do
+          begin
+
+            thread_list = []
+            vm_list = []
+
+            6.times do
+              vm = nil
+              t = Thread.new {
+                cpi = VSphereCloud::Cloud.new(cpi_options)
+                vm = cpi.create_vm(
+                  'agent-007',
+                  @stemcell_id,
+                  vm_type_single_cluster_acc_ds_1_gpu,
+                  get_network_spec,
+                  [],
+                  {}
+                )
+                vm_list << vm
+              }
+              thread_list << t
+            end
+
+            thread_list.each {|t| t.join()}
+
+            require 'pry-byebug'
+            binding.pry
+            vm_list.each do |vm_id|
+              vm = cpi.vm_provider.find(vm_id)
+              expect(vm).to_not be_nil
+              expect(vm.cluster).to eq(@cluster_name).or eq(@second_cluster_name)
+              expect(vm.mob.runtime.host.name).to eq(@host_1).or eq(@host_2)
+              expect(vm.mob.config.hardware.device).to have_number_of_GPU_eql_to(1)
+            end
+          ensure
+            cpi = VSphereCloud::Cloud.new(cpi_options)
+            vm_list.each do |vm_id|
+              delete_vm(cpi, vm_id)
+            end
+          end
+        end
+      end
+
 
       context 'when vm_type specifies 1 GPU' do
         let(:vm_type_single_cluster_acc_ds_1_gpu) do
@@ -585,7 +650,7 @@ describe 'cloud_properties related to creation of GPU attached VMs' do
             'gpu' => { 'number_of_gpus' => 1}
           )
         end
-        it 'creates vm in the cluster on host with 2 gpus' do
+        xit 'creates vm in the cluster on host with 2 gpus' do
           begin
             vm_id = cpi.create_vm(
               'agent-007',

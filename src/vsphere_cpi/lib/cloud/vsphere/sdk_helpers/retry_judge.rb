@@ -45,10 +45,13 @@ module VSphereCloud
           # called to upgrade a vm
           method_name: 'UpgradeVM_Task',
           fault_class: VimSdk::Vim::Fault::AlreadyUpgraded,
+        },
+        {
+          error_class: VSphereCloud::VCenterClient::GenericVmConfigPciInUse,
         }
       ]
 
-      def retryable?(entity, method_name, fault)
+      def retryable?(entity, method_name, fault, err=nil)
         NON_RETRYABLE_CRITERIA.none? do |criterion|
           criterion.all? do |key, value|
             case key
@@ -58,6 +61,8 @@ module VSphereCloud
               value == method_name
             when :fault_class
               value == fault.class
+            when :error_class
+              err != nil && value == err.class
             end
           end
         end

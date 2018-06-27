@@ -26,7 +26,7 @@ module VSphereCloud
         if err
           logger.warn(fault_message(task, err))
           err = task_exception_for_vim_fault(err)
-          unless task.retryable?
+          unless task.retryable?(err)
             raise err
           end
         end
@@ -84,8 +84,9 @@ module VSphereCloud
         VimSdk::Vim::Fault::FileNotFound => VCenterClient::FileNotFoundException,
         VimSdk::Vim::Fault::DuplicateName => VCenterClient::DuplicateName,
         VimSdk::Vim::Fault::AlreadyUpgraded => VCenterClient::AlreadyUpgraded,
+        VimSdk::Vim::Fault::GenericVmConfigFault => VCenterClient::GenericVmConfigFaultBuilder,
       }
-      exceptions_by_fault.fetch(fault.class, VCenterClient::TaskException).new(fault.msg)
+      VCenterClient::ExceptionBuilder.BuildException(exceptions_by_fault.fetch(fault.class, VCenterClient::TaskException), fault)
     end
 
     def fault_message(task, fault)

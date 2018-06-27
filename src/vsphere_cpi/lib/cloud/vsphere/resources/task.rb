@@ -31,11 +31,11 @@ module VSphereCloud
         @cached_task_info = get_properties
       end
 
-      def retryable?
+      def retryable?(err=nil)
         entity = task_info['info.entity']
         method_name = task_info['info.name']
         fault = task_info['info.error']
-        @retry_judge.retryable?(entity, method_name, fault)
+        @retry_judge.retryable?(entity, method_name, fault, err)
       end
 
       private

@@ -4,11 +4,31 @@ module VSphereCloud
   class VCenterClient
     include VimSdk
     include Logger
-
-    class TaskException < StandardError; end
+    class ExceptionBuilder
+      def self.BuildException(type, fault)
+        return type.new(fault) unless type == VCenterClient::GenericVmConfigFaultBuilder
+        VCenterClient::GenericVmConfigFaultBuilder.BuildGenericVmConfigFault(fault)
+      end
+    end
+    class TaskException < StandardError
+      def initialize(fault)
+        super(fault.msg)
+      end
+    end
+    class GenericVmConfigFaultBuilder
+      def self.BuildGenericVmConfigFault (fault)
+        if fault.fault_message&.size > 0 &&
+          fault.fault_message.any? { |obj| obj.key == "msg.pciPassthru.createAdapterFailedDeviceInUse" }
+          return GenericVmConfigPciInUse.new(fault)
+        end
+        GenericVmConfig.new(fault)
+      end
+    end
     class FileNotFoundException < TaskException; end
     class DuplicateName < TaskException; end
     class AlreadyUpgraded < TaskException; end
+    class GenericVmConfig < TaskException; end
+    class GenericVmConfigPciInUse < TaskException; end
     class AlreadyLoggedInException < StandardError; end
     class NotLoggedInException < StandardError; end
 

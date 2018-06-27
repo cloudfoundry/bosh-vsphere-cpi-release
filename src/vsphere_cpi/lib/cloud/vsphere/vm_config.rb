@@ -137,6 +137,8 @@ module VSphereCloud
     private
 
     def validate_drs_rules
+      # Invalidate previous cluster placements
+      @cluster_placements = nil
       cluster_name = cluster.name
       cluster_config = resource_pool_clusters_spec.find {|cluster_spec| cluster_spec.keys.first == cluster_name}
       return if cluster_config.nil?

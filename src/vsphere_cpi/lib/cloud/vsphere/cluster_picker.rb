@@ -88,8 +88,9 @@ module VSphereCloud
         placements[cluster.name][:host_array] = []
         cluster_host_array = placements[cluster.name][:host_array]
         cluster.active_hosts.each do |_, host_resource|
-          logger.info("GPU Filter : Host #{host_resource.name} in Cluster #{cluster.name} has #{host_resource.available_gpus.size} available GPUs, as below\n\t#{host_resource.available_gpus}")
-          cluster_host_array << host_resource if host_resource.available_gpus.size >= gpu_config['number_of_gpus']
+          host_available_gpu = host_resource.available_gpus
+          logger.info("GPU Filter : Host #{host_resource.name} in Cluster #{cluster.name} has #{host_available_gpu.size} available GPUs, as below\n\t#{host_available_gpu}")
+          cluster_host_array << host_resource if host_available_gpu.size >= gpu_config['number_of_gpus']
         end
 
         logger.info("GPU Filter: Removing hosts with insufficient memory")
@@ -104,9 +105,6 @@ module VSphereCloud
           logger.info("GPU Filter: Removing placement with #{cluster.name} cluster for not having any host for GPU required") and
           next if cluster_host_array.empty?
 
-        # sort the host with least number of GPUs to fill
-        cluster_host_array.sort! {|h1, h2| h1.available_gpus.size <=> h2.available_gpus.size}
-
         logger.info("GPU Filter : Final Host resources for #{cluster.name} are #{pretty_print_host_resource(cluster_host_array)}")
       end
       raise Bosh::Clouds::CloudError,
@@ -117,7 +115,7 @@ module VSphereCloud
     def pretty_print_host_resource(cluster_host_array)
       host_info = ""
       cluster_host_array.each do |host|
-        host_info += "\n-->\tHost #{host.name} with \n\t\t#{host.available_gpus}\n"
+        host_info += "\n-->\tHost #{host.name}\n\n"
       end
       host_info
     end

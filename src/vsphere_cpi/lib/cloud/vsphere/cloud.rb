@@ -275,8 +275,6 @@ module VSphereCloud
             cluster_provider: @cluster_provider
           )
 
-          vm_config.validate
-
           vm_creator = VmCreator.new(
             client: @client,
             cloud_searcher: @cloud_searcher,
@@ -364,9 +362,10 @@ module VSphereCloud
 
     def delete_vm(vm_cid)
       with_thread_name("delete_vm(#{vm_cid})") do
-        logger.info("Deleting vm: #{vm_cid}")
+        logger.info("Deleting vm: #{vm_cid} ")
 
         vm = vm_provider.find(vm_cid)
+        logger.info("Deleting vm with mob: #{vm.mob} ")
         vm_ip = vm.mob.guest&.ip_address
         vm.power_off
 

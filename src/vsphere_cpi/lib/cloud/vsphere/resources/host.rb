@@ -3,6 +3,7 @@ require 'cloud/vsphere/resources'
 module VSphereCloud
   module Resources
     class Host
+      include Logger
       include VimSdk
       include ObjectStringifier
       stringify_with :name, :mob
@@ -40,10 +41,6 @@ module VSphereCloud
       # @!attribute runtime
       #   @return [<Vim::Host::RuntimeInfo>] Runtime info for this host.
       attr_accessor :runtime
-
-      # @!attribute available_gpu
-      # @return [Array<Vim::Host::GraphicsInfo>] List of available gpus
-      attr_accessor :available_gpu
 
       # Creates a Host resource from the prefetched vSphere properties.
       #
@@ -86,8 +83,7 @@ module VSphereCloud
       end
 
       def available_gpus
-        return @available_gpu if @available_gpu
-        @available_gpu ||= graphics_info.reject do |gpu|
+        graphics_info.reject do |gpu|
           # Reject all gpu where it is not passthrough
           gpu.graphics_type != 'direct'
         end.select do |gpu|
@@ -96,10 +92,19 @@ module VSphereCloud
         end.reject do |gpu|
           # Since gpu.vm is optional. Reject all gpu which have been assigned to any vm on that host
           mob.vm.any? do |vm|
-            vm.config.hardware.device.any? do |device|
-              backing = device.backing
-              backing && backing.is_a?(VimSdk::Vim::Vm::Device::VirtualPCIPassthrough::DeviceBackingInfo) &&
-                backing.id == gpu.pci_id
+            begin
+              vm.config.hardware.device.any? do |device|
+                backing = device.backing
+                backing && backing.is_a?(VimSdk::Vim::Vm::Device::VirtualPCIPassthrough::DeviceBackingInfo) &&
+                  backing.id == gpu.pci_id
+              end
+            # This rescue is for VMs which are being created or being deleted by other CPI processes.
+            # VM in process of creation or deletion might throw up an error while we try to query its state and properties.
+            # Can we rescue more specific error here.
+            rescue StandardError => error
+              logger.warn("Method Host::available_gpus : Going through vms. Error raised #{error} for this vm #{vm}")
+              logger.info("#{error} - #{error.backtrace.join("\n")}")
+              false
             end
           end
         end.inject([]) do |acc, gpu|

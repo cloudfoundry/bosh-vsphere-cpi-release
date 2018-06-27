@@ -67,7 +67,7 @@ module VSphereCloud
       end
 
       def clusters
-        logger.debug("All clusters provided: #{@clusters}")
+        logger.debug("Global Options : All clusters provided: #{@clusters}")
         @clusters.keys.map do |cluster_name|
           find_cluster(cluster_name)
         end
