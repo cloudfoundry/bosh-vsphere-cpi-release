@@ -4,7 +4,6 @@ module VSphereCloud
   class Network
     include Logger
     TAG_SCOPE_NAME = 'bosh_cpi_subnet_id'
-    DEFAULT_NETMASK_BITS = 24
 
     def initialize(switch_provider, router_provider, ip_block_provider)
       @switch_provider = switch_provider
@@ -14,30 +13,28 @@ module VSphereCloud
 
     #creates T1 router and virtual switch attached to it
     def create(network_definition)
-      validate(network_definition)
       begin
-        cloud_properties = network_definition['cloud_properties']
-        ip_subnet = identify_subnet_range
-        edge_cluster_id = get_edge_cluster_id cloud_properties['t0_router_id']
-        fail_if_switch_exists(cloud_properties['switch_name'])
+        range_prefix, gateway = identify_subnet_range_prefix_and_gateway(network_definition)
+        edge_cluster_id = get_edge_cluster_id(network_definition.t0_router_id)
+        fail_if_switch_exists(network_definition.switch_name) unless network_definition.switch_name.nil?
 
-        t1_router_id = create_t1_router(edge_cluster_id, cloud_properties['t1_name'])
+        t1_router_id = create_t1_router(edge_cluster_id, network_definition.t1_name)
         enable_route_advertisement(t1_router_id)
 
-        logger.debug("Attaching T1(#{t1_router_id}) to T0(#{cloud_properties['t0_router_id']})")
-        @router_provider.attach_t1_to_t0(cloud_properties['t0_router_id'], t1_router_id)
+        logger.debug("Attaching T1(#{t1_router_id}) to T0(#{network_definition.t0_router_id})")
+        @router_provider.attach_t1_to_t0(network_definition.t0_router_id, t1_router_id)
 
         if @block_subnet
           tags = [ NSXT::Tag.new(scope: TAG_SCOPE_NAME, tag: @block_subnet.id) ]
         end
 
-        logger.info("Creating logical switch in zone #{cloud_properties['transport_zone_id']}")
-        switch = @switch_provider.create_logical_switch(cloud_properties['transport_zone_id'],
-                                                        name: cloud_properties['switch_name'],
+        logger.info("Creating logical switch in zone #{network_definition.transport_zone_id}")
+        switch = @switch_provider.create_logical_switch(network_definition.transport_zone_id,
+                                                        name: network_definition.switch_name,
                                                         tags: tags)
         switch_id = switch.id
         logger.debug("Attaching switch(#{switch_id}) to T1(#{t1_router_id})")
-        attach_switch_to_t1(switch_id, t1_router_id, ip_subnet)
+        attach_switch_to_t1(switch_id, t1_router_id, gateway, range_prefix)
       rescue => e
         logger.error('Failed to create network. Trying to clean up')
         @router_provider.delete_t1_router(t1_router_id) unless t1_router_id.nil?
@@ -45,7 +42,12 @@ module VSphereCloud
         @ip_block_provider.release_subnet(@block_subnet.id) unless @block_subnet.nil?
         raise "Failed to create network. Has router been created: #{!t1_router_id.nil?}. Has switch been created: #{!switch_id.nil?}. Exception: #{e.message}"
       end
-      ManagedNetwork.new(switch, @block_subnet, @gateway)
+
+      if @block_subnet
+        ManagedNetwork.new(switch, @block_subnet.cidr, gateway)
+      else
+        ManagedNetwork.new(switch)
+      end
     end
 
     def destroy(switch_id)
@@ -74,42 +76,15 @@ module VSphereCloud
 
     private
 
-    def validate(network_definition)
-      cloud_properties = network_definition['cloud_properties']
-      raise 'cloud_properties must be provided' if nil_or_empty(cloud_properties)
-      raise 't0_router_id cloud property can not be empty' if nil_or_empty(cloud_properties['t0_router_id'])
-      raise 'transport_zone_id cloud property can not be empty' if nil_or_empty(cloud_properties['transport_zone_id'])
-
-      if nil_or_empty(network_definition['range'])
-        @ip_block_id = network_definition['cloud_properties']['ip_block_id']
-        raise 'ip_block_id does not exist in cloud_properties' if nil_or_empty(@ip_block_id)
-        raise 'Incorrect network definition. Gateway must not be provided when using netmask bits' unless nil_or_empty(network_definition['gateway'])
-        if nil_or_empty(network_definition['netmask_bits'])
-          @network_bits = DEFAULT_NETMASK_BITS
-        else
-          @network_bits = Integer(network_definition['netmask_bits']) rescue false
-        end
-        raise 'Incorrect network definition. Proper CIDR block range or netmask bits must be given' if !@network_bits
-        raise 'Incorrect network definition. Proper CIDR block range or netmask bits must be given' if @network_bits < 1 || @network_bits > 32
+    def identify_subnet_range_prefix_and_gateway(network_definition)
+      if network_definition.has_range?
+        [network_definition.range_prefix, network_definition.gateway]
       else
-        raise 'Incorrect network definition. Proper gateway must be given' if nil_or_empty(network_definition['gateway'])
-        @range = NetAddr::CIDR.create(network_definition['range'])
-        @gateway = NetAddr::CIDR.create(network_definition['gateway'])
-        raise 'Incorrect network definition. Proper gateway must be given' if @gateway.size > 1
-      end
-    end
-
-    def identify_subnet_range
-      if @range && @gateway
-        NSXT::IPSubnet.new(ip_addresses: [@gateway.ip],
-                            prefix_length: @range.netmask[1..-1].to_i)
-      else
-        logger.debug("Trying to allocate subnet in ip block #{@ip_block_id}")
-        @block_subnet = @ip_block_provider.allocate_cidr_range(@ip_block_id, block_size)
-        logger.info("Allocated subnet #{@block_subnet.cidr} in block #{@ip_block_id}")
+        logger.debug("Trying to allocate subnet in ip block #{network_definition.ip_block_id}")
+        @block_subnet = @ip_block_provider.allocate_cidr_range(network_definition.ip_block_id, block_size(network_definition.netmask_bits))
+        logger.info("Allocated subnet #{@block_subnet.cidr} in block #{network_definition.ip_block_id}")
         block_subnet_cidr = NetAddr::CIDR.create(@block_subnet.cidr).to_i
-        @gateway = NetAddr::CIDR.create(block_subnet_cidr + 1).ip
-        NSXT::IPSubnet.new(ip_addresses: [@gateway], prefix_length: @network_bits)
+        [network_definition.netmask_bits, NetAddr::CIDR.create(block_subnet_cidr + 1).ip]
       end
     end
 
@@ -128,8 +103,8 @@ module VSphereCloud
       @router_provider.enable_route_advertisement(t1_router_id)
     end
 
-    def block_size
-      2 ** (32 - @network_bits)
+    def block_size(netmask_bits)
+      2 ** (32 - netmask_bits)
     end
 
     def release_subnets(tags)
@@ -143,12 +118,11 @@ module VSphereCloud
     end
 
     class ManagedNetwork
-      def initialize(switch, subnet, gateway)
+
+      def initialize(switch, range = nil, gateway = nil)
         @switch = switch
-        unless subnet.nil?
-          @range = subnet.cidr
-          @gateway = gateway
-        end
+        @range = range
+        @gateway = gateway
       end
 
       def created_network
@@ -167,19 +141,14 @@ module VSphereCloud
       end
     end
 
-    def attach_switch_to_t1(switch_id, t1_router_id, subnet)
+    def attach_switch_to_t1(switch_id, t1_router_id, ip_address, prefix_length)
       logical_port = @switch_provider.create_logical_port(switch_id)
-      @router_provider.attach_switch_to_t1(logical_port.id, t1_router_id, subnet)
+      @router_provider.attach_switch_to_t1(logical_port.id, t1_router_id, ip_address, prefix_length)
     end
 
     def fail_if_switch_exists(switch_name)
-      return if nil_or_empty(switch_name)
       switches = @switch_provider.get_switches_by_name(switch_name)
       raise "Switch #{switch_name} already exists. Please use different name." if switches.length > 0
-    end
-
-    def nil_or_empty(val)
-      val.nil? || (val.is_a?(String) && val.empty?)
     end
   end
 end

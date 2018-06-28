@@ -1774,11 +1774,14 @@ module VSphereCloud
       end
 
       context 'when nsxt enabled' do
+        let(:network_model) { instance_double(VSphereCloud::NetworkDefinition) }
         it 'creates a network' do
+          expect(VSphereCloud::NetworkDefinition).to receive(:new)
+            .with(network_definition).and_return(network_model)
           expect(VSphereCloud::Network).to receive(:new)
             .with(switch_provider, router_provider, ip_block_provider).and_return(network)
           expect(network).to receive(:create)
-            .with(network_definition).and_return(network_result)
+            .with(network_model).and_return(network_result)
           expect(vsphere_cloud.create_network(network_definition)).to eq(network_result)
         end
       end

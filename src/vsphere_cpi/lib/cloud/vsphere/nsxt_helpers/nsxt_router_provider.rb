@@ -8,8 +8,8 @@ module VSphereCloud
 
     def create_t1_router(edge_cluster_id, name = nil)
       router_api.create_logical_router(edge_cluster_id: edge_cluster_id,
-                                       router_type: 'TIER1',
-                                       display_name: name)
+                                        router_type: 'TIER1',
+                                        display_name: name)
     end
 
     def delete_t1_router(t1_router_id)
@@ -67,8 +67,9 @@ module VSphereCloud
       end
     end
 
-    def attach_switch_to_t1(switch_port_id, t1_router_id, subnet)
+    def attach_switch_to_t1(switch_port_id, t1_router_id, ip_address, prefix_length)
       begin
+        subnet = NSXT::IPSubnet.new(ip_addresses: [ ip_address ],prefix_length: prefix_length)
         switch_port_ref = NSXT::ResourceReference.new(target_id: switch_port_id,
                                                       target_type: 'LogicalPort')
         t1_router_port = NSXT::LogicalRouterDownLinkPort.new(logical_router_id: t1_router_id,
