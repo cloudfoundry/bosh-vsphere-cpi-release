@@ -277,6 +277,8 @@ describe VSphereCloud::NSXTRouterProvider, fake_logger: true do
 
   describe '#attach_switch_to_t1' do
     let(:subnet) { instance_double(NSXT::IPSubnet) }
+    let(:ip_address) { '192.168.1.1' }
+    let(:prefix_length) { 24 }
 
     context 'when input is correct' do
       let(:logical_port) { instance_double(NSXT::LogicalPort, id: 'logical-port-id') }
@@ -287,6 +289,9 @@ describe VSphereCloud::NSXTRouterProvider, fake_logger: true do
          .with(target_id: 'logical-port-id',
                 target_type: 'LogicalPort')
          .and_return(switch_port_ref)
+        expect(NSXT::IPSubnet).to receive(:new)
+          .with(ip_addresses: [ip_address], prefix_length: prefix_length)
+          .and_return(subnet)
         expect(NSXT::LogicalRouterDownLinkPort).to receive(:new)
          .with(logical_router_id: 't1-router-id',
                linked_logical_switch_port_id: switch_port_ref,
@@ -295,16 +300,19 @@ describe VSphereCloud::NSXTRouterProvider, fake_logger: true do
         expect(router_api).to receive(:create_logical_router_port)
           .with(logical_port)
 
-        router_provider.attach_switch_to_t1('logical-port-id', 't1-router-id', subnet)
+        router_provider.attach_switch_to_t1('logical-port-id', 't1-router-id', ip_address, prefix_length)
       end
     end
 
     context 'when api call fails' do
       it 'raises an error with switch port id and router ids' do
+        expect(NSXT::IPSubnet).to receive(:new)
+          .with(ip_addresses: [ip_address], prefix_length: prefix_length)
+          .and_return(subnet)
         expect(router_api).to receive(:create_logical_router_port)
           .with(any_args).and_raise('Some IAAS exception')
         expect {
-          router_provider.attach_switch_to_t1('logical-port-id', 't1-router-id', subnet)
+          router_provider.attach_switch_to_t1('logical-port-id', 't1-router-id', ip_address, prefix_length)
         }.to raise_error{ |error|
           expect(error.to_s).to match(/logical-port-id/)
           expect(error.to_s).to match(/t1-router-id/)
