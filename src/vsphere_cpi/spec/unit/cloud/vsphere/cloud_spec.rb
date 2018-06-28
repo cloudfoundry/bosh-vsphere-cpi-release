@@ -1746,7 +1746,7 @@ module VSphereCloud
       let(:router_provider) { instance_double(VSphereCloud::NSXTRouterProvider) }
       let(:ip_block_provider) { instance_double(VSphereCloud::NSXTIpBlockProvider) }
       let(:nsxt_enabled) { true }
-      let(:network_result) { instance_double(Network::ManagedNetwork) }
+      let(:network_result) { instance_double(VSphereCloud::ManagedNetwork) }
       let(:network) { instance_double(VSphereCloud::Network) }
       let(:nsxt_client) { instance_double(NSXT::ApiClient) }
 

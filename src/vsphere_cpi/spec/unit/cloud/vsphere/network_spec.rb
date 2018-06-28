@@ -34,7 +34,7 @@ module VSphereCloud
       let(:t1_router) { instance_double(NSXT::LogicalRouter,
                                         id: 't1-router-id',
                                         display_name: 'router-name' ) }
-      let(:network_result) { instance_double(Network::ManagedNetwork) }
+      let(:network_result) { instance_double(VSphereCloud::ManagedNetwork) }
       let(:existing_logical_switches) { [] }
       let(:logical_port) { instance_double(NSXT::LogicalPort, id: 'logical-port-id') }
       let(:netaddr_gateway) { instance_double(NetAddr::CIDRv4, size: 1, ip: '192.168.111.1') }
@@ -62,7 +62,7 @@ module VSphereCloud
           expect(router_provider).to receive(:attach_switch_to_t1)
             .with('logical-port-id', 't1-router-id', '192.168.111.1', 24)
 
-          expect(Network::ManagedNetwork).to receive(:new)
+          expect(VSphereCloud::ManagedNetwork).to receive(:new)
             .with(logical_switch).and_return(network_result)
           expect(network.create(network_definition)).to eq(network_result)
         end
@@ -117,7 +117,7 @@ module VSphereCloud
           expect(NetAddr::CIDR).to receive(:create)
             .with(3232235777).and_return(gateway)
 
-          expect(Network::ManagedNetwork).to receive(:new)
+          expect(VSphereCloud::ManagedNetwork).to receive(:new)
             .with(logical_switch, '192.168.1.0/24', '192.168.1.1').and_return(network_result)
           expect(network.create(network_definition)).to eq(network_result)
         end
@@ -369,25 +369,6 @@ module VSphereCloud
           expect(ip_block_provider).to receive(:release_subnet)
             .with('subnet-id')
           network.destroy('switch-id')
-        end
-      end
-    end
-
-    describe 'ManagedNetwork' do
-      let(:logical_switch) { instance_double(NSXT::LogicalSwitch,
-                                             :id => 'switch-id',
-                                             :display_name => 'switch-name') }
-      context 'when range and gateway are provided' do
-        it 'deserializes to correct JSON with subnet' do
-          result = Network::ManagedNetwork.new(logical_switch, '192.168.1.0/24', '192.168.1.1')
-          expect(JSON.dump(result)).to eq("[\"switch-id\",{\"range\":\"192.168.1.0/24\",\"gateway\":\"192.168.1.1\",\"reserved\":[]},{\"name\":\"switch-name\"}]")
-        end
-      end
-
-      context 'when only switch is provided' do
-        it 'deserializes to correct JSON without subnet' do
-          result = Network::ManagedNetwork.new(logical_switch)
-          expect(JSON.dump(result)).to eq("[\"switch-id\",{},{\"name\":\"switch-name\"}]")
         end
       end
     end
