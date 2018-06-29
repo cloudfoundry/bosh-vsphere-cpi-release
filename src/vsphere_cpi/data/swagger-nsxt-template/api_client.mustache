@@ -90,7 +90,9 @@ module {{moduleName}}
       form_params = opts[:form_params] || {}
 
       {{#hasAuthMethods}}
-      update_params_for_auth! header_params, query_params, opts[:auth_names]
+      unless using_cert_authentication
+        update_params_for_auth! header_params, query_params, opts[:auth_names]
+      end
       {{/hasAuthMethods}}
 
       # set ssl_verifyhosts option based on @config.verify_ssl_host (true/false)
@@ -381,6 +383,10 @@ module {{moduleName}}
       else
         fail "unknown collection format: #{collection_format.inspect}"
       end
+    end
+
+    def using_cert_authentication
+      !@config.cert_file.nil? && !@config.key_file.nil?
     end
   end
 end
