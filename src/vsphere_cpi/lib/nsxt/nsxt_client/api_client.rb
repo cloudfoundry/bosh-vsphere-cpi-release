@@ -97,7 +97,9 @@ module NSXT
       query_params = opts[:query_params] || {}
       form_params = opts[:form_params] || {}
 
-      update_params_for_auth! header_params, query_params, opts[:auth_names]
+      unless using_cert_authentication
+        update_params_for_auth! header_params, query_params, opts[:auth_names]
+      end
 
       # set ssl_verifyhosts option based on @config.verify_ssl_host (true/false)
       _verify_ssl_host = @config.verify_ssl_host ? 2 : 0
@@ -387,6 +389,10 @@ module NSXT
       else
         fail "unknown collection format: #{collection_format.inspect}"
       end
+    end
+
+    def using_cert_authentication
+      !@config.cert_file.nil? && !@config.key_file.nil?
     end
   end
 end
