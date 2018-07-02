@@ -18,9 +18,10 @@ module VSphereCloud
         soap_log: 'fake-log-file',
         vcenter_enable_auto_anti_affinity_drs_rules: false,
         vcenter_http_logging: true,
-        nsxt_enabled?: false
+        nsxt_enabled?: nsxt_enabled
       ).as_null_object
     end
+    let(:nsxt_enabled) { false }
     let(:default_disk_type) { 'preallocated' }
     let(:logger) { instance_double('Bosh::Cpi::Logger', info: nil, debug: nil) }
     let(:vcenter_client) { instance_double('VSphereCloud::VCenterClient', login: nil, service_content: service_content) }
@@ -1619,6 +1620,44 @@ module VSphereCloud
     describe '#info' do
       it 'returns correct info' do
         expect(vsphere_cloud.info).to eq({'stemcell_formats' => ['vsphere-ovf', 'vsphere-ova']})
+      end
+    end
+
+    describe 'create_subnet' do
+      let(:cloud_properties) { {'edge_cluster_id' => 'cluster_id',
+                                't0_router_id' => 't0-router-id',
+                                't1_name' => 'router_name',
+                                'transport_zone_id' => 'zone-id',
+                                'switch_name' => 'switch-name',
+                                'ip_address' => '192.168.111.111',
+                                'prefix_length' => 24} }
+      let(:nsxt_provider) { instance_double(VSphereCloud::NSXTProvider) }
+      let(:nsxt_config) { VSphereCloud::NSXTConfig.new('fake-host', 'fake-username', 'fake-password') }
+      let(:nsxt_enabled) { true }
+      let(:logical_switch) { instance_double(NSXT::LogicalSwitch, :id => 'switch-id') }
+      let(:t1_router) { instance_double(NSXT::LogicalRouter,
+                          id: 't1-router-id',
+                          display_name: 'router_name' ) }
+      let(:subnet) { instance_double(NSXT::IPSubnet) }
+      before do
+        allow(VSphereCloud::NSXTProvider).to receive(:new)
+          .with(any_args).and_return(nsxt_provider)
+      end
+
+      context 'when T0 router exists' do
+        it 'creates T1 router and attaches it to T0, creates logical switch and attaches it to T1' do
+          expect(nsxt_provider).to receive(:create_t1_router)
+            .with('cluster_id', 'router_name').and_return(t1_router)
+          expect(nsxt_provider).to receive(:attach_t1_to_t0)
+            .with('t0-router-id', 't1-router-id')
+          expect(nsxt_provider).to receive(:create_logical_switch)
+            .with('zone-id', 'switch-name').and_return(logical_switch)
+          expect(vsphere_cloud).to receive(:create_subnet_obj)
+            .with( '192.168.111.111', 24 ).and_return(subnet)
+          expect(nsxt_provider).to receive(:attach_switch_to_t1)
+            .with('switch-id', 't1-router-id', subnet)
+          vsphere_cloud.create_subnet(cloud_properties)
+        end
       end
     end
   end

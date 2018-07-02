@@ -469,4 +469,291 @@ describe VSphereCloud::NSXTProvider do
       expect(nsxt_provider.send(:logical_ports, vm)).to eq([logical_port_1])
     end
   end
+
+  describe '#create_t1_router' do
+    let(:router_name) { 'bosh_t1_ngo28f' }
+    let(:t1_router) { instance_double(NSXT::LogicalRouter,
+                                            id: 't1-router-id',
+                                      display_name: router_name ) }
+    let(:router_api) { instance_double(NSXT::LogicalRoutingAndServicesApi) }
+
+    before do
+      allow(nsxt_provider).to receive(:router_api).and_return(router_api)
+    end
+    context 'when all params are correct' do
+      it 'creates t1 logical router with given name' do
+        expect(router_api).to receive(:create_logical_router)
+          .with( { :edge_cluster_id => 'c9c4d0b1-47f7-4975-bdfa-ba7bdfecea28',
+                   :router_type => 'TIER1',
+                   :display_name => 'bosh_t1_ngo28f' } )
+          .and_return(t1_router)
+        result = nsxt_provider.create_t1_router('c9c4d0b1-47f7-4975-bdfa-ba7bdfecea28', router_name)
+        expect(result).not_to be_nil
+        expect(result.id).not_to be_nil
+        expect(result.display_name).to eq('bosh_t1_ngo28f')
+      end
+    end
+
+    context 'when display_name is empty' do
+      let(:router_name) { nil }
+      let(:random_name) { 'very random' }
+      before do
+        allow(SecureRandom).to receive(:base64).with(8).and_return(random_name)
+      end
+      it 'randomly generates name' do
+        expect(router_api).to receive(:create_logical_router)
+          .with( { :edge_cluster_id => 'c9c4d0b1-47f7-4975-bdfa-ba7bdfecea28',
+                   :router_type => 'TIER1',
+                   :display_name => random_name } )
+          .and_return(t1_router)
+        result = nsxt_provider.create_t1_router('c9c4d0b1-47f7-4975-bdfa-ba7bdfecea28', router_name)
+        expect(result).not_to be_nil
+      end
+    end
+
+    context 'when edge_cluster_id is nil' do
+      it 'throws an error' do
+        expect { nsxt_provider.create_t1_router(nil) }.to raise_error(/edge_cluster_id param can not be nil/)
+      end
+    end
+
+    context 'when api call is failing' do
+      it 'propogates an error' do
+        expect(router_api).to receive(:create_logical_router)
+          .with(any_args)
+          .and_raise('NSXT API error')
+        expect {
+          nsxt_provider.create_t1_router('c9c4d0b1-47f7-4975-bdfa-ba7bdfecea28')
+        }.to raise_error('NSXT API error')
+      end
+    end
+  end
+
+  describe '#attach_t1_to_t0' do
+    let(:router_api) { instance_double(NSXT::LogicalRoutingAndServicesApi) }
+    let(:t0_router_port) {
+      instance_double(NSXT::LogicalRouterLinkPortOnTIER0,
+                      :id => 't0_port_id').as_null_object
+    }
+    before do
+      allow(nsxt_provider).to receive(:router_api).and_return(router_api)
+    end
+
+    context 'when T0 router exists' do
+      let(:t1_router_port) { instance_double(NSXT::LogicalRouterLinkPortOnTIER1) }
+      let(:t0_reference) { instance_double(NSXT::ResourceReference) }
+
+      context 'when T1 router exists' do
+        it 'creates T1 logical router port and attaches it to T0' do
+          expect(NSXT::LogicalRouterLinkPortOnTIER0).to receive(:new)
+            .with({:logical_router_id => 't0_router_id',
+                   :resource_type => 'LogicalRouterLinkPortOnTIER0'})
+            .and_return(t0_router_port)
+          expect(router_api).to receive(:create_logical_router_port)
+            .with(t0_router_port).and_return(t0_router_port)
+
+          expect(NSXT::ResourceReference).to receive(:new)
+            .with({ :target_id => 't0_port_id',
+                    :target_type => 'LogicalRouterLinkPortOnTIER0',
+                    :is_valid => true })
+            .and_return(t0_reference)
+          expect(NSXT::LogicalRouterLinkPortOnTIER1).to receive(:new)
+            .with({:logical_router_id => 't1_router_id',
+                   :linked_logical_router_port_id => t0_reference,
+                   :resource_type => 'LogicalRouterLinkPortOnTIER1'})
+            .and_return(t1_router_port)
+          expect(router_api).to receive(:create_logical_router_port)
+            .with(t1_router_port)
+          nsxt_provider.attach_t1_to_t0('t0_router_id', 't1_router_id')
+        end
+      end
+
+      context 'when failing to create T1 port' do
+        it 'throws error with T0 router port id and T1 router id' do
+          expect(NSXT::LogicalRouterLinkPortOnTIER0).to receive(:new)
+            .with({:logical_router_id => 't0_router_id',
+                   :resource_type => 'LogicalRouterLinkPortOnTIER0'})
+            .and_return(t0_router_port)
+          expect(router_api).to receive(:create_logical_router_port)
+            .with(t0_router_port).and_return(t0_router_port)
+
+          expect(NSXT::LogicalRouterLinkPortOnTIER1).to receive(:new)
+            .with(any_args).and_return(t1_router_port)
+
+          expect(router_api).to receive(:create_logical_router_port)
+            .with(t1_router_port).and_raise('CPI error without router id')
+          expect {
+            nsxt_provider.attach_t1_to_t0('t0_router_id', 't1_router_id')
+          }.to raise_error { |error|
+            expect(error.to_s).to match /t0_port_id/
+            expect(error.to_s).to match /t1_router_id/
+          }
+        end
+      end
+    end
+
+    context 'when failing to create T0 router port' do
+      it 'raises an error with T0 id' do
+        expect(NSXT::LogicalRouterLinkPortOnTIER0).to receive(:new)
+          .with({:logical_router_id => 't0_router_id',
+                 :resource_type => 'LogicalRouterLinkPortOnTIER0'})
+          .and_return(t0_router_port)
+        expect(router_api).to receive(:create_logical_router_port)
+          .with(t0_router_port).and_raise('CPI error without router id')
+
+        expect {
+          nsxt_provider.attach_t1_to_t0('t0_router_id', 't1_router_id')
+        }.to raise_error { |error|
+          expect(error.to_s).to match /t0_router_id/
+        }
+      end
+    end
+
+    context 'when T0 id is nil' do
+      it 'raises an error' do
+        expect {
+          nsxt_provider.attach_t1_to_t0(nil, 't1_router_id')
+        }.to raise_error /T0 router id can not be nil/
+      end
+    end
+    context 'when T1 id is nil' do
+      it 'raises an error' do
+        expect {
+          nsxt_provider.attach_t1_to_t0('t0_router_id', nil)
+        }.to raise_error /T1 router id can not be nil/
+      end
+    end
+  end
+
+  describe '#create_logical_switch' do
+    let(:switch_api) { instance_double(NSXT::LogicalSwitchingApi) }
+    let(:logical_switch) { instance_double(NSXT::LogicalSwitch) }
+    before do
+      allow(nsxt_provider).to receive(:switch_api).and_return(switch_api)
+    end
+    context 'when transport zone id is provided' do
+      it 'creates switch' do
+        expect(NSXT::LogicalSwitch).to receive(:new)
+          .with({ :admin_state => 'UP',
+                  :transport_zone_id => 'zone_id',
+                  :replication_mode => 'MTEP',
+                  :display_name => 'Switch name'})
+          .and_return(logical_switch)
+        expect(switch_api).to receive(:create_logical_switch)
+          .with(logical_switch)
+        nsxt_provider.create_logical_switch('zone_id', 'Switch name')
+      end
+    end
+    context 'when transport zone id is nil' do
+      it 'raises an error' do
+        expect { nsxt_provider.create_logical_switch(nil, 'name') }
+            .to raise_error(/Transport zone id can not be nil/)
+      end
+    end
+    context 'when switch name is empty' do
+      it 'Does not fail' do
+        expect(NSXT::LogicalSwitch).to receive(:new)
+           .with({ :admin_state => 'UP',
+                   :transport_zone_id => 'zone_id',
+                   :replication_mode => 'MTEP',
+                   :display_name => nil})
+           .and_return(logical_switch)
+        expect(switch_api).to receive(:create_logical_switch)
+            .with(logical_switch)
+        nsxt_provider.create_logical_switch('zone_id')
+      end
+    end
+  end
+
+  describe '#attach_switch_to_t1' do
+    let(:router_api) { instance_double(NSXT::LogicalRoutingAndServicesApi) }
+    let(:switch_api) { instance_double(NSXT::LogicalSwitchingApi)}
+    before do
+      allow(nsxt_provider).to receive(:router_api).and_return(router_api)
+      allow(nsxt_provider).to receive(:switch_api).and_return(switch_api)
+    end
+    let(:subnet) { instance_double(NSXT::IPSubnet) }
+    let(:logical_port) { instance_double(NSXT::LogicalPort, :id => 'logical-port-id') }
+
+    context 'when T1 router exists' do
+      let(:switch_port_ref) { instance_double(NSXT::ResourceReference) }
+
+      it 'creates logical switch port attached to router' do
+        expect(NSXT::LogicalPort).to receive(:new)
+          .with({ :admin_state => 'UP',
+                  :logical_switch_id => 'switch-id' }).and_return(logical_port)
+        expect(switch_api).to receive(:create_logical_port)
+          .with(logical_port).and_return(logical_port)
+
+        expect(NSXT::ResourceReference).to receive(:new)
+          .with({:target_id => 'logical-port-id',
+                 :target_type => 'LogicalPort',
+                 :is_valid => true})
+           .and_return(switch_port_ref)
+        expect(NSXT::LogicalRouterDownLinkPort).to receive(:new)
+          .with({ :logical_router_id => 't1-router-id',
+                  :linked_logical_switch_port_id => switch_port_ref,
+                  :resource_type => 'LogicalRouterDownLinkPort',
+                  :subnets => [subnet]
+                }).and_return(logical_port)
+        expect(router_api).to receive(:create_logical_router_port)
+          .with(logical_port)
+
+        nsxt_provider.attach_switch_to_t1('switch-id', 't1-router-id', subnet)
+      end
+    end
+
+    context 'when fails to create logical port' do
+      it 'raises an error with switch id' do
+        expect(switch_api).to receive(:create_logical_port)
+          .with(any_args).and_raise('Some IAAS exception')
+        expect {
+          nsxt_provider.attach_switch_to_t1('switch-id', 't1-router-id', subnet)
+        }.to raise_error{ |error|
+          expect(error.to_s).to match(/switch-id/)
+        }
+      end
+    end
+
+    context 'when fails to create logical router port' do
+      it 'raises an error with switch and router ids' do
+        expect(switch_api).to receive(:create_logical_port)
+          .with(any_args).and_return(logical_port)
+
+        expect(router_api).to receive(:create_logical_router_port)
+          .with(any_args).and_raise('Some IAAS exception')
+
+        expect {
+          nsxt_provider.attach_switch_to_t1('switch-id', 't1-router-id', subnet)
+        }.to raise_error{ |error|
+          expect(error.to_s).to match(/switch-id/)
+          expect(error.to_s).to match(/t1-router-id/)
+        }
+      end
+    end
+
+    context 'when switch id is empty' do
+      it 'raises an error' do
+        expect {
+          nsxt_provider.attach_switch_to_t1(nil, 't1-router-id', subnet)
+        }.to raise_error(/Switch id can not be nil/)
+      end
+    end
+
+    context 'when t1 router id is empty' do
+      it 'raises an error' do
+        expect {
+          nsxt_provider.attach_switch_to_t1('switch-id', nil, subnet)
+        }.to raise_error(/Router id can not be nil/)
+      end
+    end
+
+    context 'when subnet is null' do
+      it 'raises an error' do
+        expect {
+          nsxt_provider.attach_switch_to_t1('switch-id', 't1-router-id', nil)
+        }.to raise_error(/Subnet can not be nil/)
+      end
+    end
+  end
 end
