@@ -57,6 +57,9 @@ properties:
       -----BEGIN CERTIFICATE-----
       MII...
       -----END CERTIFICATE-----
+  vcenter.nsxt.skip_ssl_verify:
+    description: Skip ssl verification for nsxt
+    default: false
   vcenter.nsxt.default_vif_type:
     description: "Default vif_type for logical port attachment. Supported types: PARENT."
   vcenter.http_logging:
