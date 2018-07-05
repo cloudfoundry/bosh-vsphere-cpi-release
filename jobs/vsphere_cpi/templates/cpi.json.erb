@@ -71,9 +71,17 @@
     vcenter = params['cloud']['properties']['vcenters'].first
     vcenter['nsxt'] = {
       'host' => p('vcenter.nsxt.host'),
-      'username' => p('vcenter.nsxt.username'),
-      'password' => p('vcenter.nsxt.password'),
+      'username' => p('vcenter.nsxt.username', nil),
+      'password' => p('vcenter.nsxt.password', nil)
     }
+
+    if_p('vcenter.nsxt.auth_certificate') do
+      vcenter['nsxt']['certificate'] = '/var/vcap/jobs/vsphere_cpi/config/nsxt_auth_certificate.crt'
+    end
+    if_p('vcenter.nsxt.auth_private_key') do
+      vcenter['nsxt']['private_key'] = '/var/vcap/jobs/vsphere_cpi/config/nsxt_auth_private_key.key'
+    end
+
     if_p('vcenter.nsxt.default_vif_type') do
       vcenter['nsxt']['default_vif_type'] = p('vcenter.nsxt.default_vif_type')
     end
