@@ -70,10 +70,14 @@
   if_p('vcenter.nsxt.host') do
     vcenter = params['cloud']['properties']['vcenters'].first
     vcenter['nsxt'] = {
-      'host' => p('vcenter.nsxt.host'),
-      'username' => p('vcenter.nsxt.username', nil),
-      'password' => p('vcenter.nsxt.password', nil)
+      'host' => p('vcenter.nsxt.host')
     }
+    if_p('vcenter.nsxt.username') do
+     vcenter['nsxt']['username'] = p('vcenter.nsxt.username')
+    end
+    if_p('vcenter.nsxt.password') do
+     vcenter['nsxt']['password'] = p('vcenter.nsxt.password')
+    end
 
     if_p('vcenter.nsxt.auth_certificate') do
       vcenter['nsxt']['certificate'] = '/var/vcap/jobs/vsphere_cpi/config/nsxt_auth_certificate.crt'
