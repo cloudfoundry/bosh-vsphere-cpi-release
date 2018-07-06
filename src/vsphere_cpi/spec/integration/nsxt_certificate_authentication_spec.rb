@@ -7,8 +7,8 @@ describe 'NSXT certificate authentication' do
 
   before(:all) do
     @nsxt_host = fetch_property('BOSH_VSPHERE_CPI_NSXT_HOST')
-    @cert_file = File.join(File.dirname(__FILE__), 'assets', 'test.crt')
-    @private_key_file = File.join(File.dirname(__FILE__), 'assets', 'test.key')
+    cert_file = File.join(File.dirname(__FILE__), 'assets', 'test.crt')
+    private_key_file = File.join(File.dirname(__FILE__), 'assets', 'test.key')
     configuration = NSXT::Configuration.new
     configuration.host = @nsxt_host
     configuration.username = fetch_property('BOSH_VSPHERE_CPI_NSXT_USERNAME')
@@ -18,18 +18,20 @@ describe 'NSXT certificate authentication' do
     configuration.verify_ssl_host = false
     client = NSXT::ApiClient.new(configuration)
     @nsx_component_api = NSXT::NsxComponentAdministrationApi.new(client)
-    @cert_id = submit_cert_to_nsxt
+    @cert_id = submit_cert_to_nsxt(cert_file)
   end
 
   after(:all) do
-    delete_test_certificate unless @cert_id.nil?
+    delete_test_certificate(@cert_id) unless @cert_id.nil?
   end
 
+  let(:private_key_file) { File.join(File.dirname(__FILE__), 'assets', 'test.key') }
+  let(:cert_file) { File.join(File.dirname(__FILE__), 'assets', 'test.crt') }
   let(:configuration) {
     configuration = NSXT::Configuration.new
     configuration.host = @nsxt_host
-    configuration.key_file  = @private_key_file
-    configuration.cert_file = @cert_file
+    configuration.key_file  = private_key_file
+    configuration.cert_file = cert_file
     configuration.client_side_validation = false
     configuration.verify_ssl = false
     configuration.verify_ssl_host = false
@@ -54,6 +56,18 @@ describe 'NSXT certificate authentication' do
   end
 
   context 'if certificate is not attach to principal' do
+    let(:private_key_file) { File.join(File.dirname(__FILE__), 'assets', 'test2.key') }
+    let(:cert_file) { File.join(File.dirname(__FILE__), 'assets', 'test2.crt') }
+
+    before do
+      @cert2_id = submit_cert_to_nsxt(cert_file)
+    end
+
+    after do
+      delete_test_certificate(@cert2_id) unless @cert2_id.nil?
+    end
+
+
     it 'returns auth exception' do
       expect {
         nsx_component_api.get_certificates
@@ -61,15 +75,15 @@ describe 'NSXT certificate authentication' do
     end
   end
 
-  def submit_cert_to_nsxt
-    certificate = File.open(@cert_file).readlines.join
+  def submit_cert_to_nsxt(cert_file)
+    certificate = File.open(cert_file).readlines.join
     trust_object = NSXT::TrustObjectData.new(pem_encoded: certificate)
     certs = @nsx_component_api.add_certificate_import(trust_object)
     certs.results[0].id
   end
 
-  def delete_test_certificate
-    @nsx_component_api.delete_certificate(@cert_id)
+  def delete_test_certificate(cert_id)
+    @nsx_component_api.delete_certificate(cert_id)
   end
 
   def attach_cert_to_principal
