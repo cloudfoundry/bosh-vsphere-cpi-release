@@ -30,7 +30,7 @@ These privileges must be granted on the root vCenter Server entity.
 
 #### vCenter Datacenter Privileges
 
-These privileges must be granted on any entities in a Datacenter the CPI will interact with.
+These are the only privileges that must be granted at the datacenter level. 
 
 <table id="vcenter-datacenter-privileges">
   <thead>
@@ -46,11 +46,36 @@ These privileges must be granted on any entities in a Datacenter the CPI will in
     <tr><td></td><td>System.Read</td></tr>
     <tr><td></td><td>System.View</td></tr>
     <tr>
-      <td rowspan="6">Datastore</td>
+      <td rowspan="2">Datastore</td>
+    </tr>
+    <tr><td>Low level file operations</td><td>Datastore.FileManagement</td></tr>
+    <tr>
+      <td rowspan="2">Global</td>
+    </tr>
+    <tr><td>Set custom attribute</td><td>Global.SetCustomField</td></tr>
+    <tr>
+      <td rowspan="2">Network</td>
+    </tr>
+    <tr><td>Assign network</td><td>Network.Assign</td></tr>
+  </tbody>
+</table>
+
+#### vCenter Folder/Datastore Privileges
+
+These privileges must be granted on any entities in a Datacenter the CPI will interact with. You will need to provide following permissions at an individual datastore level and at a folder level (In case you if you have inventory under a folder.)
+
+<table id="vcenter-folder level/datastore level-privileges">
+  <thead>
+    <tr>
+      <th>Object</th><th>Privilege (UI)</th><th>Privilege (API)</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td rowspan="5">Datastore</td>
     </tr>
     <tr><td>Allocate space</td><td>Datastore.AllocateSpace</td></tr>
     <tr><td>Browse datastore</td><td>Datastore.Browse</td></tr>
-    <tr><td>Low level file operations</td><td>Datastore.FileManagement</td></tr>
     <tr><td>Remove file</td><td>Datastore.DeleteFile</td></tr>
     <tr><td>Update virtual machine files</td><td>Datastore.UpdateVirtualMachineFiles</td></tr>
     <tr>
@@ -61,23 +86,11 @@ These privileges must be granted on any entities in a Datacenter the CPI will in
     <tr><td>Move folder</td><td>Folder.Move</td></tr>
     <tr><td>Rename folder</td><td>Folder.Rename</td></tr>
     <tr>
-      <td rowspan="2">Global</td>
-    </tr>
-    <tr><td>Set custom attribute</td><td>Global.SetCustomField</td></tr>
-    <tr>
-      <td rowspan="2">Host</td>
-    </tr>
-    <tr><td>Inventory > Modify cluster</td><td>Host.Inventory.EditCluster</td></tr>
-    <tr>
       <td rowspan="4">Inventory Service</td>
     </tr>
     <tr><td>vSphere Tagging > Create vSphere Tag</td><td>InventoryService.Tagging.CreateTag</td></tr>
     <tr><td>vSphere Tagging > Delete vSphere Tag</td><td>InventoryService.Tagging.DeleteTag</td></tr>
     <tr><td>vSphere Tagging > Edit vSphere Tag</td><td>InventoryService.Tagging.EditTag</td></tr>
-    <tr>
-      <td rowspan="2">Network</td>
-    </tr>
-    <tr><td>Assign network</td><td>Network.Assign</td></tr>
     <tr>
       <td rowspan="4">Resource</td>
     </tr>
