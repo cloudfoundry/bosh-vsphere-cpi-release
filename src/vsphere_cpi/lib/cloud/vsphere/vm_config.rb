@@ -1,9 +1,8 @@
 module VSphereCloud
   class VmConfig
 
-    def initialize(manifest_params:, cluster_picker: nil, cluster_provider: nil)
+    def initialize(manifest_params:, cluster_provider: nil)
       @manifest_params = manifest_params
-      @cluster_picker = cluster_picker
       @cluster_provider = cluster_provider
     end
 
@@ -15,32 +14,28 @@ module VSphereCloud
       @vm_cid ||= "vm-#{SecureRandom.uuid}"
     end
 
-    def cluster
+    def cluster_placements
       if has_custom_cluster_properties?
         clusters = find_clusters(resource_pool_clusters_spec)
-        placement = cluster_placement(clusters: clusters)
-        clusters.find {|cluster| cluster.name == placement.keys.first}
       else
         validate_clusters
-        global_clusters.find do |cluster|
-          cluster.name == cluster_placement(clusters: global_clusters).keys.first
-        end
+        clusters = global_clusters
       end
+      cluster_placement_internal(clusters: clusters)
     end
 
-    def drs_rule
+    def drs_rule(cluster)
       cluster_name = cluster.name
       cluster_spec = resource_pool_clusters_spec.find { |cluster_spec| cluster_spec.keys.first == cluster_name }
       return nil if cluster_spec.nil? || cluster_spec[cluster_name].nil?
       cluster_spec[cluster_name].fetch('drs_rules', []).first
     end
 
-    def ephemeral_datastore_name
-      return nil if cluster.nil?
-      return @datastore_name if @datastore_name
+    def ephemeral_datastore_name(cluster_placement)
+      return nil if cluster_placement.nil?
 
       ephemeral_disk = disk_configurations.find { |disk| disk.ephemeral? }
-      cluster_placement(clusters: [cluster])[cluster.name][ephemeral_disk]
+      cluster_placement.cluster_ds_map[:datastores_disk_map][ephemeral_disk]
     end
 
     def ephemeral_disk_size
@@ -90,9 +85,6 @@ module VSphereCloud
       params.delete_if { |k, v| v.nil? }
     end
 
-    def validate
-      validate_drs_rules
-    end
 
     def bosh_group
       if !agent_env['bosh'].nil? then
@@ -111,26 +103,26 @@ module VSphereCloud
       @manifest_params[:vm_type]
     end
 
-    private
-
-    def validate_drs_rules
+    def validate_drs_rules(cluster)
       cluster_name = cluster.name
       cluster_config = resource_pool_clusters_spec.find {|cluster_spec| cluster_spec.keys.first == cluster_name}
       return if cluster_config.nil?
-  
+
       drs_rules = cluster_config[cluster_name]['drs_rules']
       return if drs_rules.nil?
-  
+
       if drs_rules.size > 1
         raise 'vSphere CPI supports only one DRS rule per resource pool'
       end
-  
+
       rule_config = drs_rules.first
-  
+
       if rule_config['type'] != 'separate_vms'
         raise "vSphere CPI only supports DRS rule of 'separate_vms' type, not '#{rule_config['type']}'"
       end
     end
+
+    private
 
     def has_custom_cluster_properties?
       # custom properties include drs_rules and vcenter resource_pools
@@ -173,14 +165,22 @@ module VSphereCloud
       end
     end
 
-    def cluster_placement(clusters:)
+    def cluster_placement_internal(clusters:)
+
+
       return @cluster_placement if @cluster_placement
 
-      @cluster_picker.update(clusters)
-      @cluster_placement = @cluster_picker.best_cluster_placement(
-        req_memory: vm_type.ram,
-        disk_configurations: disk_configurations,
-      )
+      vm_placement_criteria = VmPlacementCriteria.new(disk_config: disk_configurations, req_memory: vm_type.ram)
+      vm_selection_placement_pipeline = VmPlacementSelectionPipeline.new(vm_placement_criteria) do
+        clusters.map do |cluster|
+          accessible_ds_resources =  cluster.accessible_datastores.select do |_, ds_resource|
+            ds_resource.accessible_from?(cluster)
+          end.values
+          vm_placement_resource = VmPlacementResource.new(cluster: cluster, datastores: accessible_ds_resources, hosts: nil)
+          VmPlacement.new(vm_placement_resource)
+        end
+      end
+      @cluster_placement = vm_selection_placement_pipeline.each
     end
   end
 end

@@ -32,15 +32,6 @@ module VSphereCloud
       end
     end
 
-    def choose_persistent_storage(size_in_mb, target_datastore_pattern, available_datastores)
-      disk_config = DiskConfig.new(size: size_in_mb, target_datastore_pattern: target_datastore_pattern)
-
-      datastore_picker = DatastorePicker.new
-      datastore_picker.update(available_datastores)
-      datastore_name = datastore_picker.pick_datastore_for_single_disk(disk_config)
-      datastore_name
-    end
-
     # choose storage from set of datastore and sdrs enabled datastore clusters
     # using weight based algorithm on free space to choose the storage
     # if datastore clusters are provided and none of them have sdrs enabled log an error
