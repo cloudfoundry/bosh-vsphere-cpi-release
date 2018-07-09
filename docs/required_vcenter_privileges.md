@@ -40,19 +40,9 @@ These are the only privileges that must be granted at the datacenter level.
   </thead>
   <tbody>
     <tr>
-      <td rowspan="4">Role</td>
-    </tr>
-    <tr><td>Users inherit the Read-Only role from the vCenter root level</td><td>System.Anonymous</td></tr>
-    <tr><td></td><td>System.Read</td></tr>
-    <tr><td></td><td>System.View</td></tr>
-    <tr>
       <td rowspan="2">Datastore</td>
     </tr>
     <tr><td>Low level file operations</td><td>Datastore.FileManagement</td></tr>
-    <tr>
-      <td rowspan="2">Global</td>
-    </tr>
-    <tr><td>Set custom attribute</td><td>Global.SetCustomField</td></tr>
     <tr>
       <td rowspan="2">Network</td>
     </tr>
@@ -62,7 +52,7 @@ These are the only privileges that must be granted at the datacenter level.
 
 #### vCenter Folder/Datastore Privileges
 
-These privileges must be granted on any entities in a Datacenter the CPI will interact with. You will need to provide following permissions at an individual datastore level and at a folder level (In case you if you have inventory under a folder.)
+These privileges must be granted on any entities in a Datacenter the CPI will interact with. You will need to provide the following permissions at an individual datastore level and at the folder level (In case if you have your inventory under a folder.)
 
 <table id="vcenter-folder level/datastore level-privileges">
   <thead>
