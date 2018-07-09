@@ -56,14 +56,14 @@ module VSphereCloud
       self
     end
 
-    def each
+    def each(&block)
       return enum_for(:each) unless block_given?
 
       @gather.call.select do |placement|
         accept?(placement)
       end.sort_by do |placement|
         score(placement)
-      end
+      end.each(&block)
     end
 
     private

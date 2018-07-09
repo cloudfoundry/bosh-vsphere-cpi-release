@@ -167,51 +167,55 @@ module VSphereCloud
             ],
           }
           vm_config = VmConfig.new(
-            manifest_params: manifest_params,
-            cluster_picker: ClusterPicker.new,
-          )
-          datastore_name = vm_config.ephemeral_datastore_name
-          cluster = vm_config.cluster
-          datastore = @datacenter.find_datastore(datastore_name)
-
-          logger.info("Deploying to: #{cluster.mob} / #{datastore.mob}")
-
-          import_spec_result = import_ovf(name, ovf_file, cluster.resource_pool.mob, datastore.mob)
-
-          system_disk = import_spec_result.import_spec.config_spec.device_change.find do |change|
-            change.device.kind_of?(Vim::Vm::Device::VirtualDisk)
-          end.device
-          system_disk.backing.thin_provisioned = @config.vcenter_default_disk_type == 'thin'
-
-          lease_obtainer = LeaseObtainer.new(@cloud_searcher)
-          nfc_lease = lease_obtainer.obtain(
-            cluster.resource_pool,
-            import_spec_result.import_spec,
-            @datacenter.template_folder,
+            manifest_params: manifest_params
           )
 
-          logger.info('Uploading')
-          vm = upload_ovf(ovf_file, nfc_lease, import_spec_result.file_item)
-          result = name
+          vm_config.cluster_placements.each do |cluster_placement|
+            cluster = cluster_placement.cluster
+            datastore_name = vm_config.ephemeral_datastore_name(cluster_placement)
+            datastore = @datacenter.find_datastore(datastore_name)
 
-          logger.info('Removing NICs')
-          devices = @cloud_searcher.get_property(vm, Vim::VirtualMachine, 'config.hardware.device', ensure_all: true)
-          config = Vim::Vm::ConfigSpec.new
-          config.device_change = []
+            logger.info("Deploying to: #{cluster.mob} / #{datastore.mob}")
 
-          nics = devices.select { |device| device.kind_of?(Vim::Vm::Device::VirtualEthernetCard) }
-          nics.each do |nic|
-            nic_config = Resources::VM.create_delete_device_spec(nic)
-            config.device_change << nic_config
-          end
-          client.reconfig_vm(vm, config)
+            import_spec_result = import_ovf(name, ovf_file, cluster.resource_pool.mob, datastore.mob)
 
-          logger.info('Taking initial snapshot')
+            system_disk = import_spec_result.import_spec.config_spec.device_change.find do |change|
+              change.device.kind_of?(Vim::Vm::Device::VirtualDisk)
+            end.device
+            system_disk.backing.thin_provisioned = @config.vcenter_default_disk_type == 'thin'
 
-          # Despite the naming, this has nothing to do with the Cloud notion of a disk snapshot
-          # (which comes from AWS). This is a vm snapshot.
-          client.wait_for_task do
-            vm.create_snapshot('initial', nil, false, false)
+            lease_obtainer = LeaseObtainer.new(@cloud_searcher)
+            nfc_lease = lease_obtainer.obtain(
+              cluster.resource_pool,
+              import_spec_result.import_spec,
+              @datacenter.template_folder,
+            )
+
+            logger.info('Uploading')
+            vm = upload_ovf(ovf_file, nfc_lease, import_spec_result.file_item)
+            next if vm.nil?
+            result = name
+
+            logger.info('Removing NICs')
+            devices = @cloud_searcher.get_property(vm, Vim::VirtualMachine, 'config.hardware.device', ensure_all: true)
+            config = Vim::Vm::ConfigSpec.new
+            config.device_change = []
+
+            nics = devices.select { |device| device.kind_of?(Vim::Vm::Device::VirtualEthernetCard) }
+            nics.each do |nic|
+              nic_config = Resources::VM.create_delete_device_spec(nic)
+              config.device_change << nic_config
+            end
+            client.reconfig_vm(vm, config)
+
+            logger.info('Taking initial snapshot')
+
+            # Despite the naming, this has nothing to do with the Cloud notion of a disk snapshot
+            # (which comes from AWS). This is a vm snapshot.
+            client.wait_for_task do
+              vm.create_snapshot('initial', nil, false, false)
+            end
+            break
           end
         end
         telemetry_thread.join #Join back the thread created to enable telemetry
@@ -281,11 +285,8 @@ module VSphereCloud
 
           vm_config = VmConfig.new(
             manifest_params: manifest_params,
-            cluster_picker: ClusterPicker.new,
             cluster_provider: @cluster_provider
           )
-
-          vm_config.validate
 
           vm_creator = VmCreator.new(
             client: @client,

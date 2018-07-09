@@ -45,8 +45,6 @@ require 'cloud/vsphere/disk_pool'
 require 'cloud/vsphere/storage_list'
 require 'cloud/vsphere/vm_type'
 require 'cloud/vsphere/vm_config'
-require 'cloud/vsphere/datastore_picker'
-require 'cloud/vsphere/cluster_picker'
 require 'cloud/vsphere/storage_picker'
 require 'cloud/vsphere/director_disk_cid'
 require 'cloud/vsphere/nsx'
@@ -68,6 +66,7 @@ require 'cloud/vsphere/nsxt_helpers/nsxt_ip_block_provider'
 require 'cloud/vsphere/placement'
 require 'cloud/vsphere/selection_pipeline'
 require 'cloud/vsphere/disk_placement_selection_pipeline'
+require 'cloud/vsphere/vm_placement_selection_pipeline.rb'
 
 
 
