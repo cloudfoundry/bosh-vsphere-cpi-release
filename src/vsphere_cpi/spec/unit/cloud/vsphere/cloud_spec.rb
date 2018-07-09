@@ -19,9 +19,12 @@ module VSphereCloud
         vcenter_enable_auto_anti_affinity_drs_rules: false,
         upgrade_hw_version: true,
         vcenter_http_logging: true,
-        nsxt_enabled?: false
+        nsxt_enabled?: nsxt_enabled,
+        nsxt: nsxt
       ).as_null_object
     end
+    let(:nsxt_enabled) { false }
+    let(:nsxt) { instance_double(VSphereCloud::NSXTConfig, default_vif_type: 'vif_type')}
     let(:default_disk_type) { 'preallocated' }
     let(:vcenter_client) { instance_double('VSphereCloud::VCenterClient', login: nil, service_content: service_content) }
     let(:http_basic_auth_client) { instance_double('VSphereCloud::NsxHttpClient') }
@@ -1725,6 +1728,110 @@ module VSphereCloud
     describe '#info' do
       it 'returns correct info' do
         expect(vsphere_cloud.info).to eq({'stemcell_formats' => ['vsphere-ovf', 'vsphere-ova']})
+      end
+    end
+
+    describe '#create_network' do
+      let(:network_definition) { {
+                                 'range' => '192.168.111.0/24',
+                                 'gateway' => '192.168.111.1',
+                                 'cloud_properties' => {
+                                     't0_router_id' => 't0-router-id',
+                                     't1_name' => 'router-name',
+                                     'transport_zone_id' => 'zone-id',
+                                     'switch_name' => 'switch-name',
+                                 } } }
+      let(:nsxt_provider) { instance_double(VSphereCloud::NSXTProvider) }
+      let(:switch_provider) { instance_double(VSphereCloud::NSXTSwitchProvider) }
+      let(:router_provider) { instance_double(VSphereCloud::NSXTRouterProvider) }
+      let(:ip_block_provider) { instance_double(VSphereCloud::NSXTIpBlockProvider) }
+      let(:nsxt_enabled) { true }
+      let(:network_result) { instance_double(VSphereCloud::ManagedNetwork) }
+      let(:network) { instance_double(VSphereCloud::Network) }
+      let(:nsxt_client) { instance_double(NSXT::ApiClient) }
+
+      before do
+        allow(VSphereCloud::NSXTApiClientBuilder).to receive(:build_api_client)
+          .with(any_args).and_return(nsxt_client)
+        allow(VSphereCloud::NSXTProvider).to receive(:new)
+          .with(any_args).and_return(nsxt_provider)
+        allow(VSphereCloud::NSXTSwitchProvider).to receive(:new)
+          .with(any_args).and_return(switch_provider)
+        allow(VSphereCloud::NSXTRouterProvider).to receive(:new)
+          .with(any_args).and_return(router_provider)
+        allow(VSphereCloud::NSXTIpBlockProvider).to receive(:new)
+           .with(any_args).and_return(ip_block_provider)
+      end
+
+      context 'when nsxt disabled' do
+        let(:nsxt_enabled) { false }
+
+        it 'raises an error' do
+          expect{
+            vsphere_cloud.create_network(network_definition)
+          }.to raise_error('NSXT must be enabled in CPI to use create_network')
+        end
+      end
+
+      context 'when nsxt enabled' do
+        let(:network_model) { instance_double(VSphereCloud::NetworkDefinition) }
+        it 'creates a network' do
+          expect(VSphereCloud::NetworkDefinition).to receive(:new)
+            .with(network_definition).and_return(network_model)
+          expect(VSphereCloud::Network).to receive(:new)
+            .with(switch_provider, router_provider, ip_block_provider).and_return(network)
+          expect(network).to receive(:create)
+            .with(network_model).and_return(network_result)
+          expect(vsphere_cloud.create_network(network_definition)).to eq(network_result)
+        end
+      end
+    end
+
+    describe '#delete_network' do
+      let(:nsxt_provider) { instance_double(VSphereCloud::NSXTProvider) }
+      let(:nsxt_client) { instance_double(NSXT::ApiClient) }
+      let(:switch_provider) { instance_double(VSphereCloud::NSXTSwitchProvider) }
+      let(:router_provider) { instance_double(VSphereCloud::NSXTRouterProvider) }
+      let(:ip_block_provider) { instance_double(VSphereCloud::NSXTIpBlockProvider) }
+      let(:network) { instance_double(VSphereCloud::Network) }
+
+      before do
+        allow(VSphereCloud::NSXTApiClientBuilder).to receive(:build_api_client)
+         .with(any_args).and_return(nsxt_client)
+        allow(VSphereCloud::NSXTProvider).to receive(:new)
+         .with(any_args).and_return(nsxt_provider)
+        allow(VSphereCloud::NSXTIpBlockProvider).to receive(:new)
+          .with(any_args).and_return(ip_block_provider)
+      end
+
+      context 'when nsxt disabled' do
+        let(:nsxt_enabled) { false }
+
+        it 'raises an error' do
+          expect{
+            vsphere_cloud.delete_network('switch-id')
+          }.to raise_error('NSXT must be enabled in CPI to use delete_network')
+        end
+      end
+
+      context 'when nsxt enabled' do
+        let(:nsxt_enabled) { true }
+        let(:switch_provider) { instance_double(VSphereCloud::NSXTSwitchProvider) }
+
+        before do
+          allow(NSXTSwitchProvider).to receive(:new)
+            .and_return(switch_provider)
+          allow(VSphereCloud::NSXTRouterProvider).to receive(:new)
+            .with(any_args).and_return(router_provider)
+        end
+
+        it 'deletes a network' do
+          expect(VSphereCloud::Network).to receive(:new)
+            .with(switch_provider, router_provider, ip_block_provider).and_return(network)
+          expect(network).to receive(:destroy)
+            .with('switch-id')
+          vsphere_cloud.delete_network('switch-id')
+        end
       end
     end
   end

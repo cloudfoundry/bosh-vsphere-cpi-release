@@ -88,24 +88,11 @@ module VSphereCloud
   class NSXTProvider
     include Logger
 
-    def initialize(config)
-      configuration = NSXT::Configuration.new
-      configuration.host = config.host
-      configuration.username = config.username
-      configuration.password = config.password
-      configuration.logger = logger
-      configuration.client_side_validation = false
-      if ENV['BOSH_NSXT_CA_CERT_FILE']
-        configuration.ssl_ca_cert = ENV['BOSH_NSXT_CA_CERT_FILE']
-      end
-      if ENV['NSXT_SKIP_SSL_VERIFY']
-        configuration.verify_ssl = false
-        configuration.verify_ssl_host = false
-      end
-      @client = NSXT::ApiClient.new(configuration)
+    def initialize(client, default_vif_type)
+      @client = client
       @max_tries = MAX_TRIES
       @sleep_time = DEFAULT_SLEEP_TIME
-      @default_vif_type = config.default_vif_type
+      @default_vif_type = default_vif_type
     end
 
     private def grouping_obj_svc
@@ -119,6 +106,7 @@ module VSphereCloud
     private def fabric_svc
       @fabric_svc ||= NSXT::FabricApi.new(@client)
     end
+
 
     private def services_svc
       @services_svc ||= NSXT::ServicesApi.new(@client)
@@ -288,7 +276,7 @@ module VSphereCloud
         end
       end
     end
-
+    
     private
 
     MAX_TRIES = 20
@@ -366,5 +354,6 @@ module VSphereCloud
 
       nics
     end
+
   end
 end
