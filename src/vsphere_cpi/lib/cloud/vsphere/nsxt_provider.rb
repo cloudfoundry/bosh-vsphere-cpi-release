@@ -93,6 +93,8 @@ module VSphereCloud
       configuration.host = config.host
       configuration.username = config.username
       configuration.password = config.password
+      configuration.key_file  = config.private_key
+      configuration.cert_file = config.certificate
       configuration.logger = logger
       configuration.client_side_validation = false
       if ENV['BOSH_NSXT_CA_CERT_FILE']

@@ -1,15 +1,22 @@
 module VSphereCloud
-  class NSXTConfig < Struct.new(:host, :username, :password, :default_vif_type)
+  class NSXTConfig < Struct.new(:host, :username, :password, :certificate, :private_key, :default_vif_type)
     def self.validate_schema(config)
       return true if config.nil?
 
       Membrane::SchemaParser.parse do
-        {
-          'host' => String,
-          'username' => String,
-          'password' => String,
-          optional('default_vif_type') => enum('PARENT', 'CHILD'),
-        }
+        common_rules = {
+            'host' => String,
+            optional('default_vif_type') => enum('PARENT', 'CHILD')}
+        if config['username'].nil?
+          #using cert authentication
+          common_rules.merge! ({
+              'certificate' => String,
+              'private_key' => String})
+        else
+          common_rules.merge!({'username' => String,
+                               'password' => String})
+        end
+        common_rules
       end.validate(config)
     end
   end
@@ -178,6 +185,8 @@ module VSphereCloud
         vcenter['nsxt']['host'],
         vcenter['nsxt']['username'],
         vcenter['nsxt']['password'],
+        vcenter['nsxt']['certificate'],
+        vcenter['nsxt']['private_key'],
         vcenter['nsxt']['default_vif_type']
       )
     end

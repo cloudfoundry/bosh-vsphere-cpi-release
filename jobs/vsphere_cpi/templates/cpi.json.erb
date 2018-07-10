@@ -70,10 +70,22 @@
   if_p('vcenter.nsxt.host') do
     vcenter = params['cloud']['properties']['vcenters'].first
     vcenter['nsxt'] = {
-      'host' => p('vcenter.nsxt.host'),
-      'username' => p('vcenter.nsxt.username'),
-      'password' => p('vcenter.nsxt.password'),
+      'host' => p('vcenter.nsxt.host')
     }
+    if_p('vcenter.nsxt.username') do
+     vcenter['nsxt']['username'] = p('vcenter.nsxt.username')
+    end
+    if_p('vcenter.nsxt.password') do
+     vcenter['nsxt']['password'] = p('vcenter.nsxt.password')
+    end
+
+    if_p('vcenter.nsxt.auth_certificate') do
+      vcenter['nsxt']['certificate'] = '/var/vcap/jobs/vsphere_cpi/config/nsxt_auth_certificate.crt'
+    end
+    if_p('vcenter.nsxt.auth_private_key') do
+      vcenter['nsxt']['private_key'] = '/var/vcap/jobs/vsphere_cpi/config/nsxt_auth_private_key.key'
+    end
+
     if_p('vcenter.nsxt.default_vif_type') do
       vcenter['nsxt']['default_vif_type'] = p('vcenter.nsxt.default_vif_type')
     end

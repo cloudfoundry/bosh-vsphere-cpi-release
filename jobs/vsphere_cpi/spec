@@ -6,6 +6,8 @@ templates:
   cpi.json.erb: config/cpi.json
   nsx_cacert.pem.erb: config/nsx_cacert.pem
   nsxt_cacert.pem.erb: config/nsxt_cacert.pem
+  nsxt_auth_certificate.crt.erb: config/nsxt_auth_certificate.crt
+  nsxt_auth_private_key.key.erb: config/nsxt_auth_private_key.key
 
 packages:
 - iso9660wrap
@@ -54,6 +56,10 @@ properties:
     description: Username to connect to NSX-T manager
   vcenter.nsxt.password:
     description: Password to connect to NSX-T manager
+  vcenter.nsxt.auth_certificate:
+    description: Certificate used for certificate authentication. Certificate base authentication takes precedence over username/password if both specified
+  vcenter.nsxt.auth_private_key:
+    description: Private key file used for certificate authentication.
   vcenter.nsxt.ca_cert:
     description: All required custom CA certificates to connect to NSX-T manager
     example:

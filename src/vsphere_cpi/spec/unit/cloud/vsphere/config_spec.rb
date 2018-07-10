@@ -178,6 +178,25 @@ module VSphereCloud
             'host' => 'fake-host',
             'username' => 'fake-username',
             'password' => 'fake-password',
+            'certificate' => nil,
+            'private_key' => nil
+          }
+        end
+
+        it 'returns value from config' do
+          expect do
+            config.validate
+          end.to_not raise_error
+        end
+      end
+      context 'when a valid nsxt with cert auth is passed in config' do
+        before do
+          config_hash.merge! 'nsxt' => {
+              'host' => 'fake-host',
+              'username' => nil,
+              'password' => nil,
+              'certificate' => 'cert-path',
+              'private_key' => 'key-path'
           }
         end
 
@@ -194,6 +213,24 @@ module VSphereCloud
             'host' => 'fake-host',
             'username' => 'fake-username',
             'password' => nil,
+          }
+        end
+
+        it 'raises a schema validation error' do
+          expect do
+            config.validate
+          end.to raise_error(Membrane::SchemaValidationError)
+        end
+      end
+
+      context 'when an invalid nsxt with cert auth is passed in config' do
+        before do
+          config_hash.merge! 'nsxt' => {
+              'host' => 'fake-host',
+              'username' => nil,
+              'password' => nil,
+              'private_key' => 'path',
+              'certificate' => nil
           }
         end
 
