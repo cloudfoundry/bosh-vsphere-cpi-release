@@ -28,7 +28,7 @@ jobs:
         - lifecycle-6.5
         - lifecycle-6.5-NSXV
         - lifecycle-6.5-NSXT21
-        - lifecycle-6.7
+        - lifecycle-6.7-NSXT22
       - get: version-semver
         trigger: false
         params: { bump: patch }
@@ -128,6 +128,7 @@ jobs:
     plan:
     - aggregate:
       - get: bosh-cpi-src
+        trigger: ((trigger_delivery_job))
         passed:
         - lifecycle-5.5
         - lifecycle-6.0
@@ -231,12 +232,12 @@ resources:
       branch:       master
       pool:         v6.0
       private_key:  {{vcpi-pool_deployment_key}}
-  - name: pool-6.7
+  - name: pool-6.7-NSXT22
     type: pool
     source:
       uri:          git@github.com:ktchen14/vcpi-pool.git
       branch:       master
-      pool:         v6.7
+      pool:         v6.7-nsxt22
       private_key:  {{vcpi-pool_deployment_key}}
   - name: bosh-cpi-artifacts
     type: s3
@@ -329,9 +330,9 @@ groups:
   - lock-6.5
   - lifecycle-6.5
   - unlock-6.5
-  - lock-6.7
-  - lifecycle-6.7
-  - unlock-6.7
+  - lock-6.7-NSXT22
+  - lifecycle-6.7-NSXT22
+  - unlock-6.7-NSXT22
   - lifecycle-6.0
   - lock-6.0
   - unlock-6.0
@@ -356,7 +357,7 @@ groups:
   - lifecycle-6.5
   - lifecycle-6.0
   - lifecycle-5.5
-  - lifecycle-6.7
+  - lifecycle-6.7-NSXT22
   - lifecycle-6.5-NSXV
   - lifecycle-6.5-NSXT21
   - lifecycle-6.0-NSXV
@@ -401,9 +402,9 @@ groups:
   - lock-5.5
   - unlock-5.5
 
-- name: v6.7
+- name: v6.7-NSXT22
   jobs:
   - unit-test
-  - lifecycle-6.7
-  - lock-6.7
-  - unlock-6.7
+  - lifecycle-6.7-NSXT22
+  - lock-6.7-NSXT22
+  - unlock-6.7-NSXT22

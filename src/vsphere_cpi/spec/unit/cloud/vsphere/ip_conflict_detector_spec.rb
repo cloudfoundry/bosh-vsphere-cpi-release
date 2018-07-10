@@ -1,21 +1,20 @@
 require 'spec_helper'
 
 module VSphereCloud
-  describe IPConflictDetector do
+  describe IPConflictDetector, fake_logger: true do
     let(:networks) do
       {
         'network_1' => ['169.254.1.1'],
         'network_2' => ['169.254.2.1', '169.254.3.1']
       }
     end
-    let(:logger) { double('logger', debug: nil, info: nil) }
     let(:client) { instance_double(VSphereCloud::VCenterClient) }
 
     context 'when no existing VMs on a desired network report having the desired IP' do
       it 'does not detect a conflict with deployed VMs' do
         allow(client).to receive(:find_vm_by_ip).and_return(nil)
 
-        conflict_detector = IPConflictDetector.new(logger, client)
+        conflict_detector = IPConflictDetector.new(client)
         expect {
           conflict_detector.ensure_no_conflicts(networks)
         }.to_not raise_error
@@ -57,7 +56,7 @@ module VSphereCloud
           allow(client).to receive(:find_vm_by_ip).with('169.254.2.1').and_return(deployed_vm)
           allow(client).to receive(:find_vm_by_ip).with('169.254.3.1').and_return(deployed_vm)
 
-          conflict_detector = IPConflictDetector.new(logger, client)
+          conflict_detector = IPConflictDetector.new(client)
           expect {
             conflict_detector.ensure_no_conflicts(networks)
           }.to raise_error do |error|
@@ -92,7 +91,7 @@ module VSphereCloud
           allow(client).to receive(:find_vm_by_ip).with('169.254.1.1').and_return(deployed_vm)
           allow(client).to receive(:find_vm_by_ip).with('169.254.2.1').and_return(deployed_vm)
           allow(client).to receive(:find_vm_by_ip).with('169.254.3.1').and_return(deployed_vm)
-          conflict_detector = IPConflictDetector.new(logger, client)
+          conflict_detector = IPConflictDetector.new(client)
           expect {
             conflict_detector.ensure_no_conflicts(networks)
           }.to_not raise_error

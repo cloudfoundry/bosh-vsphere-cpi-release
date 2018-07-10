@@ -1,18 +1,16 @@
 require 'spec_helper'
 require 'timecop'
 
-describe VSphereCloud::TaskRunner do
+describe VSphereCloud::TaskRunner, fake_logger: true do
   subject(:task_runner) do
     VSphereCloud::TaskRunner.new(
       cloud_searcher: cloud_searcher,
-      logger: logger,
       retry_judge: retry_judge,
       retryer: retryer,
     )
   end
   let(:cloud_searcher) { instance_double(VSphereCloud::CloudSearcher) }
   let(:retry_judge) { instance_double(VSphereCloud::SdkHelpers::RetryJudge) }
-  let(:logger) { instance_double(Logger, info: nil, debug: nil) }
   let(:task_mob) { instance_double(VimSdk::Vim::Task) }
   let(:entity) { 'VirtualMachine' }
   let(:task_name) { 'PowerOnVM_Task' }
@@ -22,9 +20,6 @@ describe VSphereCloud::TaskRunner do
     before do
       allow(retryer).to receive(:sleep)
       allow(task_runner).to receive(:sleep)
-      allow(logger).to receive(:warn)
-      allow(logger).to receive(:info)
-      allow(logger).to receive(:debug)
     end
 
     it 'waits as a task moves from queued to running to success' do
@@ -38,6 +33,7 @@ describe VSphereCloud::TaskRunner do
         result: 'fake-result',
       )
 
+      expect(logger).to receive(:debug).with(/Starting task '#{task_name}'/)
       expect(logger).to receive(:debug).with(/Finished task '#{task_name}' after .* seconds/)
 
       expect(task_runner.run{ task_mob }).to eq('fake-result')
@@ -59,6 +55,7 @@ describe VSphereCloud::TaskRunner do
 
       expect(logger).to receive(:debug).with("Waited on task '#{task_name}' for 30 minutes...")
       expect(logger).to receive(:debug).with("Waited on task '#{task_name}' for 60 minutes...")
+      expect(logger).to receive(:debug).with(/Starting task '#{task_name}'/)
       expect(logger).to receive(:debug).with(/Finished task '#{task_name}' after .* seconds/)
 
       Timecop.freeze
@@ -185,7 +182,7 @@ describe VSphereCloud::TaskRunner do
     def define_fake_task(states:, task_mob:, progress: 0, result: nil, error: nil, retryable: true)
       task = instance_double(VSphereCloud::Resources::Task, retryable?: retryable, name: task_name)
 
-      allow(VSphereCloud::Resources::Task).to receive(:new).with(cloud_searcher, task_mob, retry_judge, logger)
+      allow(VSphereCloud::Resources::Task).to receive(:new).with(cloud_searcher, task_mob, retry_judge)
         .and_return(task)
 
       state_index = 0

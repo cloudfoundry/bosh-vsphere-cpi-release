@@ -20,8 +20,9 @@ module VSphereCloud
     #
     def best_disk_placement(disks)
       datastores = {}
+      # Create a possible placement hash
       placement = { datastores: datastores, migration_size: 0, balance_score: 0 }
-
+      # Gather all available datastores in the possible placement hash
       @available_datastores.each do |name, props|
         datastores[name] = {
           free_space: props.free_space,
@@ -32,40 +33,45 @@ module VSphereCloud
 
       # Reject all the datastores that are in maintenance mode.
       # Possible states are
-      #   enteringMaintenance	Started entering maintenance mode, but not finished. This could happen when waiting for user input or for long-running vmotions to complete.
+      #   enteringMaintenance	Started entering maintenance mode, but not finished.
+      #       This could happen when waiting for user input or for long-running vmotions to complete.
       #   inMaintenance	Successfully entered maintenance mode.
       #   normal	Default state.
-      datastores.keep_if do |name, props|
+      datastores.keep_if do |_, props|
         props[:mob].summary.maintenance_mode == "normal"
       end
+      raise Bosh::Clouds::CloudError, "Datastores matching criteria are in maintenance mode or not accessible. No valid placement found" if placement[:datastores].empty?
 
+      # At this step we only have datastores that are not in maintenance mode
+      # and are accessible from at least 1 active host.
       disks.each do |disk|
         existing_ds_name = disk.existing_datastore_name
 
+        # Only persistent disks will have existing_ds_name
         if existing_ds_name =~ Regexp.new(disk.target_datastore_pattern) && datastores.keys.include?(existing_ds_name)
           datastores[existing_ds_name][:disks].push(disk)
           next
         end
 
-        migration_size_accounted_for = false
-
+        placement_found = false
         weighted_datastores = weighted_random_sort(datastores)
         weighted_datastores.each do |ds|
           additional_required_space = disk.size + @headroom
 
           ds_name = ds[0]
           ds_props = ds[1]
+
           next if additional_required_space > ds_props[:free_space]
           next unless ds_name =~ Regexp.new(disk.target_datastore_pattern)
 
           datastores[ds_name][:disks].push(disk)
           datastores[ds_name][:free_space] -= additional_required_space
-          if existing_ds_name && !migration_size_accounted_for
-            placement[:migration_size] += additional_required_space
-            migration_size_accounted_for = true
-          end
-        end
+          placement[:migration_size] += additional_required_space if existing_ds_name
 
+          placement_found = true
+          break
+        end
+        raise Bosh::Clouds::CloudError, pretty_print_placement_error([disk]) unless placement_found
       end
 
       placement = filter_all_placement_without_disks(placement)
@@ -85,27 +91,9 @@ module VSphereCloud
       placement
     end
 
-    def persistent_placements_with_active_hosts(placements)
-      @available_datastores.each do |dsname, ds|
-        placements[:datastores].delete(dsname) unless ds.accessible?
-      end
-      placements
-    end
-
     def pick_datastore_for_single_disk(disk)
       placement = best_disk_placement([disk])
-      # Filter out placements where the datastore has no active hosts
-      # (host under maintenance) or if there are any active host,
-      # they belong to a different cluster
-      # than specified in placement_options' respective key
-      placement = persistent_placements_with_active_hosts(placement)
-
-      if placement[:datastores].empty?
-        raise Bosh::Clouds::CloudError,
-              "No valid placement found due to no active host (non-maintenance) present for chosen datastore pattern\n\n"
-      end
-
-      # we should always find a matching datastore for the disk because best_disk_placement raises an error if no placement was found
+      # we should always find a matching datastore for the disk because best_disk_placement raises an error if no placement was found.
       placement[:datastores].keys.first
     end
 

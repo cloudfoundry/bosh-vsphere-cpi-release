@@ -6,7 +6,6 @@ module VSphereCloud
       def initialize(options)
         @datacenter_name = options.fetch(:datacenter_name)
         @client = options.fetch(:client)
-        @logger = options.fetch(:logger)
       end
 
       def find(name, config)
@@ -22,7 +21,6 @@ module VSphereCloud
         Cluster.new(
           config,
           cluster_properties,
-          @logger,
           @client
         )
       end

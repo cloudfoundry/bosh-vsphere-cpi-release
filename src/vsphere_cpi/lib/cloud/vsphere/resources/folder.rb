@@ -1,11 +1,14 @@
+require 'cloud/vsphere/logger'
+
 module VSphereCloud
   module Resources
     class Folder
+      include Logger
+
       attr_reader :mob, :path, :path_components
 
-      def initialize(path, logger, client, datacenter_name)
+      def initialize(path, client, datacenter_name)
         @path = path
-        @logger = logger
         @client = client
         @datacenter_name = datacenter_name
         @path_components = path.split('/')
@@ -28,12 +31,12 @@ module VSphereCloud
           parent_folder = find_or_create_folder(path_components[0..-2])
 
           begin
-            @logger.debug("Creating folder #{last_component}")
+            logger.debug("Creating folder #{last_component}")
             folder = parent_folder.create_folder(last_component)
           rescue VimSdk::SoapError => e
             raise e unless VimSdk::Vim::Fault::DuplicateName === e.fault
 
-            @logger.debug("Folder already exists #{last_component}")
+            logger.debug("Folder already exists #{last_component}")
             folder = find_folder(path_components)
           end
         end

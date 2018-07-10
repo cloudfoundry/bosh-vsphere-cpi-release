@@ -1,6 +1,9 @@
+require 'cloud/vsphere/logger'
+
 module VSphereCloud
   class VCenterClient
     include VimSdk
+    include Logger
 
     class TaskException < StandardError; end
     class FileNotFoundException < TaskException; end
@@ -11,8 +14,8 @@ module VSphereCloud
 
     attr_reader :cloud_searcher, :service_content, :service_instance, :soap_stub
 
-    def initialize(vcenter_api_uri:, http_client:, logger:)
-      @soap_stub = SoapStub.new(vcenter_api_uri, http_client, logger).create
+    def initialize(vcenter_api_uri:, http_client:)
+      @soap_stub = SoapStub.new(vcenter_api_uri, http_client).create
 
       @service_instance = Vim::ServiceInstance.new('ServiceInstance', @soap_stub)
 
@@ -24,14 +27,10 @@ module VSphereCloud
 
       @metrics_cache  = {}
       @lock = Mutex.new
-      @logger = logger
 
-      @cloud_searcher = CloudSearcher.new(service_content, @logger)
+      @cloud_searcher = CloudSearcher.new(service_content)
 
-      @task_runner = TaskRunner.new({
-        cloud_searcher: @cloud_searcher,
-        logger: @logger,
-      })
+      @task_runner = TaskRunner.new(cloud_searcher: @cloud_searcher)
     end
 
     def login(username, password, locale)
@@ -44,7 +43,7 @@ module VSphereCloud
       @session = nil
       @service_content.session_manager.logout
     rescue VimSdk::SoapError => e
-      @logger.info "Failed to logout: #{e.message}"
+      logger.info "Failed to logout: #{e.message}"
     end
 
     def wait_for_task(&task_block)
@@ -77,7 +76,7 @@ module VSphereCloud
     end
 
     def upgrade_vm_virtual_hardware(vm)
-      @logger.info("Upgrading virtual hardware on VM")
+      logger.info("Upgrading virtual hardware on VM")
       wait_for_task do
         vm.upgrade_virtual_hardware
       end
@@ -143,7 +142,7 @@ module VSphereCloud
 
     def move_disk(source_datacenter_mob, source_path, dest_datacenter_mob, dest_path)
       create_parent_folder(dest_datacenter_mob, dest_path)
-      @logger.info("Moving disk: #{source_path} to #{dest_path}")
+      logger.info("Moving disk: #{source_path} to #{dest_path}")
       wait_for_task do
         service_content.virtual_disk_manager.move_virtual_disk(
           source_path,
@@ -154,7 +153,7 @@ module VSphereCloud
           nil
         )
       end
-      @logger.info('Moved disk')
+      logger.info('Moved disk')
     end
 
     def create_datastore_folder(folder_path, datacenter)
@@ -323,7 +322,7 @@ module VSphereCloud
       search_spec.query = [query]
 
       datastore_path = "[#{datastore.name}] #{disk_folder}"
-      @logger.debug("Trying to find disk in : #{datastore_path}")
+      logger.debug("Trying to find disk in : #{datastore_path}")
       result = wait_for_task do
         datastore.mob.browser.search(datastore_path, search_spec)
       end
@@ -345,7 +344,7 @@ module VSphereCloud
       search_spec.match_pattern = [match[3]]
 
       datastore_path = "[#{match[1]}] #{match[2]}"
-      @logger.debug("Trying to find disk in : #{datastore_path}")
+      logger.debug("Trying to find disk in : #{datastore_path}")
       result = wait_for_task do
         vm_mob.environment_browser.datastore_browser.search(datastore_path, search_spec)
       end
@@ -362,7 +361,7 @@ module VSphereCloud
       disk_device_key = vm_disk.key
 
       if vm.get_vapp_property_by_key(disk_device_key) != nil
-        @logger.debug("Disk property already exists '#{disk.cid}' on vm '#{vm.cid}'")
+        logger.debug("Disk property already exists '#{disk.cid}' on vm '#{vm.cid}'")
         return
       end
 
@@ -391,7 +390,7 @@ module VSphereCloud
 
     def delete_persistent_disk_property_from_vm(vm, disk_device_key)
       if vm.get_vapp_property_by_key(disk_device_key).nil?
-        @logger.debug("Disk property[#{disk_device_key}] does not exist on vm '#{vm.cid}'")
+        logger.debug("Disk property[#{disk_device_key}] does not exist on vm '#{vm.cid}'")
         return
       end
 
@@ -418,9 +417,9 @@ module VSphereCloud
         field = @fields_manager.add_field_definition(name, mob.class, nil, nil)
       rescue SoapError => e
         if e.fault.kind_of?(Vim::Fault::NoPermission)
-          @logger.warn("Can't create custom field definition due to lack of permission: #{e.message}")
+          logger.warn("Can't create custom field definition due to lack of permission: #{e.message}")
         elsif e.fault.kind_of?(Vim::Fault::DuplicateName)
-          @logger.warn("Custom field definition already exists: #{e.message}")
+          logger.warn("Custom field definition already exists: #{e.message}")
           custom_fields = @fields_manager.field
           field = custom_fields.find do |field|
             field.name == name && field.managed_object_type == mob.class
@@ -435,7 +434,7 @@ module VSphereCloud
         @fields_manager.set_field(mob, field.key, value)
         rescue SoapError => e
           if e.fault.kind_of?(Vim::Fault::NoPermission)
-            @logger.warn("Can't set custom fields due to lack of permission: #{e.message}")
+            logger.warn("Can't set custom fields due to lack of permission: #{e.message}")
           end
         end
       end

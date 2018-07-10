@@ -1,16 +1,18 @@
+require 'cloud/vsphere/logger'
+
 module VSphereCloud
   class AgentEnv
     include VimSdk
+    include Logger
 
-    def initialize(client:, file_provider:, cloud_searcher:, logger:)
+    def initialize(client:, file_provider:, cloud_searcher:)
       @client = client
       @file_provider = file_provider
       @cloud_searcher = cloud_searcher
-      @logger = logger
     end
 
     def get_current_env(vm, datacenter_name)
-      @logger.info("Getting current agent env from vm '#{vm.name}' in datacenter '#{datacenter_name}'")
+      logger.info("Getting current agent env from vm '#{vm.name}' in datacenter '#{datacenter_name}'")
       cdrom = @client.get_cdrom_device(vm)
       env_iso_folder = env_iso_folder(cdrom)
       return unless env_iso_folder
@@ -28,7 +30,7 @@ module VSphereCloud
     end
 
     def set_env(vm, location, env)
-      @logger.info("Updating current agent env from vm '#{vm.name}' in datacenter '#{location[:datacenter]}'")
+      logger.info("Updating current agent env from vm '#{vm.name}' in datacenter '#{location[:datacenter]}'")
       env_json = JSON.dump(env)
 
       disconnect_cdrom(vm)
@@ -48,7 +50,7 @@ module VSphereCloud
     end
 
     def clean_env(vm)
-      @logger.info("Cleaning current agent env from vm '#{vm.name}'")
+      logger.info("Cleaning current agent env from vm '#{vm.name}'")
       cdrom = @client.get_cdrom_device(vm)
       env_iso_folder = env_iso_folder(cdrom)
       return unless env_iso_folder

@@ -37,21 +37,22 @@ module VSphereCloud
 
         context 'when at least few hosts are not in maintenance mode' do
           let(:host_runtime_info) { instance_double(VimSdk::Vim::Host::RuntimeInfo, in_maintenance_mode: false) }
-          it 'returns the first placement option' do
-            disks = [
+          let(:disks) {
+            [
               instance_double(VSphereCloud::DiskConfig,
-                size: 256,
-                target_datastore_pattern: 'target-ds',
-                existing_datastore_name: nil
+                              size: 256,
+                              target_datastore_pattern: 'target-ds',
+                              existing_datastore_name: nil
               ),
               instance_double(VSphereCloud::DiskConfig,
-                size: 256,
-                ephemeral?: true,
-                target_datastore_pattern: 'target-ds',
-                existing_datastore_name: nil
+                              size: 256,
+                              ephemeral?: true,
+                              target_datastore_pattern: 'target-ds',
+                              existing_datastore_name: nil
               ),
             ]
-
+          }
+          it 'returns the first placement option' do
             picker = ClusterPicker.new(0, 0)
             picker.update(available_clusters)
 
@@ -63,11 +64,22 @@ module VSphereCloud
               }
             })
           end
+          context 'when all datastores are not accessible' do
+            it 'raises an error' do
+              expect(target_ds).to receive(:accessible_from?).with(cluster_1).and_return(false)
+              picker = ClusterPicker.new(0, 0)
+              picker.update(available_clusters)
+
+              expect {
+                picker.best_cluster_placement(req_memory: 1024, disk_configurations: disks)
+              }.to raise_error(/No valid placement found/)
+            end
+          end
         end
 
         context 'when all hosts are in maintenance mode' do
           let(:host_runtime_info) { instance_double(VimSdk::Vim::Host::RuntimeInfo, in_maintenance_mode: true) }
-          it 'returns the no active host exception' do
+          it 'raises the error' do
             disks = [
                 instance_double(VSphereCloud::DiskConfig,
                                 size: 256,
@@ -85,9 +97,9 @@ module VSphereCloud
             picker = ClusterPicker.new(0, 0)
             picker.update(available_clusters)
 
-            expect do
+            expect {
               picker.best_cluster_placement(req_memory: 1024, disk_configurations: disks)
-            end.to raise_error(/No valid placement found due to no active host/)
+            }.to raise_error(/No valid placement found/)
           end
         end
 
@@ -97,7 +109,7 @@ module VSphereCloud
           let(:active_host_system) {instance_double(VimSdk::Vim::HostSystem, runtime: active_host_runtime_info)}
           let(:datastore_host_mount) { [instance_double('VimSdk::Vim::Datastore::HostMount', key: active_host_system),
                                         instance_double('VimSdk::Vim::Datastore::HostMount', key: host_system)]}
-          it 'returns the no active host exception' do
+          it 'raises the error' do
             disks = [
                 instance_double(VSphereCloud::DiskConfig,
                                 size: 256,
@@ -115,11 +127,9 @@ module VSphereCloud
             picker = ClusterPicker.new(0, 0)
             picker.update(available_clusters)
 
-            expect do
-              picker.best_cluster_placement(req_memory: 1024, disk_configurations: disks).to
-                raise_error(/No valid placement found due to no active host /)
-            end
-
+            expect {
+              picker.best_cluster_placement(req_memory: 1024, disk_configurations: disks)
+            }.to raise_error(/No valid placement found for disks/)
           end
         end
 
@@ -128,6 +138,7 @@ module VSphereCloud
       context 'when no cluster fits' do
         before do
           allow(not_matching_ds.mob).to receive_message_chain('summary.maintenance_mode').and_return("normal")
+          allow(not_matching_ds).to receive(:accessible_from?).with(any_args).and_return(true)
         end
         let(:available_clusters) { [cluster_1] }
         let(:cluster_1) do

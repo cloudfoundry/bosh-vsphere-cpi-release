@@ -1,17 +1,20 @@
+require 'cloud/vsphere/logger'
+
 module VSphereCloud
   module Resources
     class VM
       include VimSdk
       include ObjectStringifier
+      include Logger
+
       stringify_with :cid
 
       attr_reader :mob, :cid
 
-      def initialize(cid, mob, client, logger)
+      def initialize(cid, mob, client)
         @client = client
         @mob = mob
         @cid = cid
-        @logger = logger
       end
 
       def inspect
@@ -119,17 +122,17 @@ module VSphereCloud
       def shutdown
         check_for_nonpersistent_disk_modes
 
-        @logger.debug('Waiting for the VM to shutdown')
+        logger.debug('Waiting for the VM to shutdown')
         begin
           begin
             @mob.shutdown_guest
           rescue => e
-            @logger.debug("Ignoring possible race condition when a VM has powered off by the time we ask it to shutdown: #{e.inspect}")
+            logger.debug("Ignoring possible race condition when a VM has powered off by the time we ask it to shutdown: #{e.inspect}")
           end
 
           wait_until_off(60)
         rescue VSphereCloud::Cloud::TimeoutException
-          @logger.debug('The guest did not shutdown in time, requesting it to power off')
+          logger.debug('The guest did not shutdown in time, requesting it to power off')
           @client.power_off_vm(@mob)
         end
       end
@@ -140,7 +143,7 @@ module VSphereCloud
         question = properties['runtime.question']
         if question
           choices = question.choice
-          @logger.info("VM is blocked on a question: #{question.text}, " +
+          logger.info("VM is blocked on a question: #{question.text}, " +
               "providing default answer: #{choices.choice_info[choices.default_index].label}")
           @client.answer_vm(@mob, question.id, choices.choice_info[choices.default_index].key)
         end
@@ -151,7 +154,7 @@ module VSphereCloud
         if power_state != Vim::VirtualMachine::PowerState::POWERED_OFF
           @client.power_off_vm(@mob)
         else
-          @logger.info("VM '#{@cid}' is already powered off, skipping power off task.")
+          logger.info("VM '#{@cid}' is already powered off, skipping power off task.")
         end
       end
 
@@ -215,8 +218,8 @@ module VSphereCloud
         # get full path without a datastore
         file_path = disk.backing.file_name[/([^\]]*)\.vmdk/, 1].strip
         original_file_path = found_property.value[/([^\]]*)\.vmdk/, 1].strip
-        @logger.debug("Current file path is #{file_path}")
-        @logger.debug("Original file path is #{original_file_path}")
+        logger.debug("Current file path is #{file_path}")
+        logger.debug("Original file path is #{original_file_path}")
 
         file_path != original_file_path
       end
@@ -224,7 +227,7 @@ module VSphereCloud
       def get_old_disk_filepath(disk_key)
         property = get_vapp_property_by_key(disk_key)
         if property.nil? || !verify_persistent_disk_property?(property)
-          @logger.debug("Can't find persistent disk property for disk #{disk_key}")
+          logger.debug("Can't find persistent disk property for disk #{disk_key}")
           return nil
         end
 
@@ -246,14 +249,14 @@ module VSphereCloud
         vm_config.device_change << disk_config_spec
         fix_device_unit_numbers(vm_config.device_change)
 
-        @logger.info('Attaching disk')
+        logger.info('Attaching disk')
         @client.reconfig_vm(@mob, vm_config)
-        @logger.info('Finished attaching disk')
+        logger.info('Finished attaching disk')
 
         reload
-        @logger.debug("Adding persistent disk property to vm '#{@cid}'")
+        logger.debug("Adding persistent disk property to vm '#{@cid}'")
         @client.add_persistent_disk_property_to_vm(self, disk)
-        @logger.debug('Finished adding persistent disk property to vm')
+        logger.debug('Finished adding persistent disk property to vm')
         return disk_config_spec
       end
 
@@ -262,39 +265,39 @@ module VSphereCloud
         check_for_nonpersistent_disk_modes
 
         disks_to_move = []
-        @logger.info("Found #{virtual_disks.size} persistent disk(s)")
+        logger.info("Found #{virtual_disks.size} persistent disk(s)")
         config = Vim::Vm::ConfigSpec.new
         config.device_change = []
 
         virtual_disks.each do |virtual_disk|
-          @logger.info("Detaching: #{virtual_disk.backing.file_name}")
+          logger.info("Detaching: #{virtual_disk.backing.file_name}")
           config.device_change << Resources::VM.create_delete_device_spec(virtual_disk)
 
           disk_property = get_vapp_property_by_key(virtual_disk.key)
           unless disk_property.nil?
             if has_persistent_disk_property_mismatch?(virtual_disk) && !@client.disk_path_exists?(@mob, disk_property.value)
-              @logger.info('Persistent disk was moved: moving disk to expected location')
+              logger.info('Persistent disk was moved: moving disk to expected location')
               disks_to_move << virtual_disk
             end
           end
         end
 
         @client.reconfig_vm(@mob, config)
-        @logger.info("Detached #{virtual_disks.size} persistent disk(s)")
+        logger.info("Detached #{virtual_disks.size} persistent disk(s)")
 
         move_disks_to_old_path(disks_to_move)
 
-        @logger.info('Finished detaching disk(s)')
+        logger.info('Finished detaching disk(s)')
 
         virtual_disks.each do |disk|
-          @logger.debug("Deleting persistent disk property #{disk.key} from vm '#{@cid}'")
+          logger.debug("Deleting persistent disk property #{disk.key} from vm '#{@cid}'")
           @client.delete_persistent_disk_property_from_vm(self, disk.key)
         end
-        @logger.debug('Finished deleting persistent disk properties from vm')
+        logger.debug('Finished deleting persistent disk properties from vm')
       end
 
       def move_disks_to_old_path(disks_to_move)
-        @logger.info("Renaming #{disks_to_move.size} persistent disk(s)")
+        logger.info("Renaming #{disks_to_move.size} persistent disk(s)")
         disks_to_move.each do |disk|
           current_datastore = disk.backing.file_name.match(/^\[([^\]]+)\]/)[1]
           original_disk_path = get_old_disk_filepath(disk.key)

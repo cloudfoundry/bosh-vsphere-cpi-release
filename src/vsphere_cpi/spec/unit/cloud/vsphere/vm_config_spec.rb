@@ -20,6 +20,34 @@ module VSphereCloud
     let(:cluster_picker) { ClusterPicker.new(0, 0) }
     let(:cluster_provider) { nil }
 
+    describe '#upgrade_hw_version?' do
+      let(:input) { { vm_type: vm_type } }
+      context 'when upgrade hardware version is nil (not specified) in both vm_type and global config' do
+        let(:cloud_properties) {{}}
+        it 'should return nil' do
+          expect(vm_config.upgrade_hw_version?(vm_type.upgrade_hw_version, nil)).to be(nil)
+        end
+      end
+      context 'when upgrade hardware version is nil (not specified) in vm_type and false in global config' do
+        let(:cloud_properties) {{}}
+        it 'should return false' do
+          expect(vm_config.upgrade_hw_version?(vm_type.upgrade_hw_version, false)).to be(false)
+        end
+      end
+      context 'when upgrade hardware version is false  in vm_type and true in global config' do
+        let(:cloud_properties) {{'upgrade_hw_version' => false,}}
+        it 'should return false' do
+          expect(vm_config.upgrade_hw_version?(vm_type.upgrade_hw_version, true)).to be(false)
+        end
+      end
+      context 'when upgrade hardware version is true  in vm_type and false in global config' do
+        let(:cloud_properties) {{'upgrade_hw_version' => true,}}
+        it 'should return true' do
+          expect(vm_config.upgrade_hw_version?(vm_type.upgrade_hw_version, false)).to be(true)
+        end
+      end
+    end
+
     describe '#name' do
       let(:input) { {} }
       it 'returns a valid VM name' do

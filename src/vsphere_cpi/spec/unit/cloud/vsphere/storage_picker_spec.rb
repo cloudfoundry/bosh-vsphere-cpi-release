@@ -1,9 +1,7 @@
 require 'spec_helper'
 
 module VSphereCloud
-  describe StoragePicker do
-    let(:fake_logger) { instance_double('Logger', info: nil, debug: nil) }
-
+  describe StoragePicker, fake_logger: true do
     let(:global_ephemeral_pattern) { 'global-ephemeral-ds' }
     let(:global_persistent_pattern) { 'global-persistent-ds' }
     let(:datacenter) { double('Datacenter', ephemeral_pattern: global_ephemeral_pattern, persistent_pattern: global_persistent_pattern) }
@@ -29,7 +27,7 @@ module VSphereCloud
     describe '.choose_persistent_pattern' do
       let(:disk_pool) { DiskPool.new(datacenter, []) }
 
-      subject {  described_class.choose_persistent_pattern(disk_pool, fake_logger) }
+      subject {  described_class.choose_persistent_pattern(disk_pool) }
 
       before do
         allow(disk_pool).to receive(:datastore_clusters).and_return(datastore_clusters)
@@ -75,7 +73,7 @@ module VSphereCloud
     describe '.choose_ephemeral_pattern' do
       let(:vm_type) { VmType.new(datacenter, {}) }
 
-      subject {  described_class.choose_ephemeral_pattern(vm_type, fake_logger) }
+      subject {  described_class.choose_ephemeral_pattern(vm_type) }
 
       before do
         allow(vm_type).to receive(:datastore_clusters).and_return(datastore_clusters)
@@ -135,13 +133,13 @@ module VSphereCloud
             it 'considers all sdrs enabled datastore cluster' do
               expected_storage_options = [datastore1, sdrs_enabled_datastore_cluster1, sdrs_enabled_datastore_cluster2]
               expect(described_class).to receive(:choose_best_from).with(expected_storage_options)
-              described_class.choose_ephemeral_storage(target_datastore_name, accessible_datastores, vm_type, fake_logger)
+              described_class.choose_ephemeral_storage(target_datastore_name, accessible_datastores, vm_type)
             end
 
             it 'should not include nil datastore for unmatched target_datastore_pattern from accessibe_datastores' do
               expected_storage_options = [sdrs_enabled_datastore_cluster1, sdrs_enabled_datastore_cluster2]
               expect(described_class).to receive(:choose_best_from).with(expected_storage_options)
-              described_class.choose_ephemeral_storage(target_datastore_name, {}, vm_type, fake_logger)
+              described_class.choose_ephemeral_storage(target_datastore_name, {}, vm_type)
             end
           end
         end
@@ -150,7 +148,7 @@ module VSphereCloud
           let(:datastore_clusters) { [sdrs_disabled_datastore_cluster] }
           it 'should not consider any datastore cluster' do
             expect(described_class).to receive(:choose_best_from).with([datastore1])
-            described_class.choose_ephemeral_storage(target_datastore_name, accessible_datastores, vm_type, fake_logger)
+            described_class.choose_ephemeral_storage(target_datastore_name, accessible_datastores, vm_type)
           end
         end
       end

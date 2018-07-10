@@ -23,6 +23,8 @@ module VimSdk
         case key
           when :optional
             @result_type_optional = value
+          when :secret
+            #Not sure what should be set here but added this option so that error is not raised
           else
             raise "Unknown flag: #{key}"
         end

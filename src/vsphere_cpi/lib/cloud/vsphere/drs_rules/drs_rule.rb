@@ -1,24 +1,26 @@
+require 'cloud/vsphere/logger'
+
 module VSphereCloud
   class DrsRule
+    include Logger
+
     CUSTOM_ATTRIBUTE_NAME = 'drs_rule'
 
-    def initialize(rule_name, client, cloud_searcher, datacenter_cluster, logger)
+    def initialize(rule_name, client, cloud_searcher, datacenter_cluster)
       @rule_name = rule_name
       @client = client
       @cloud_searcher = cloud_searcher
       @datacenter_cluster = datacenter_cluster
-      @logger = logger
 
       @vm_attribute_manager = VMAttributeManager.new(
-        client.service_content.custom_fields_manager,
-        @logger
+        client.service_content.custom_fields_manager
       )
     end
 
     def add_vm(vm)
       tag_vm(vm)
 
-      DrsLock.new(@vm_attribute_manager, @logger).with_drs_lock do
+      DrsLock.new(@vm_attribute_manager).with_drs_lock do
         rule = find_rule
         if rule
           update_rule(rule.key)
@@ -33,11 +35,11 @@ module VSphereCloud
     def tag_vm(vm)
       custom_attribute = @vm_attribute_manager.find_by_name(CUSTOM_ATTRIBUTE_NAME)
       unless custom_attribute
-        @logger.debug('Creating DRS rule attribute')
+        logger.debug('Creating DRS rule attribute')
         @vm_attribute_manager.create(CUSTOM_ATTRIBUTE_NAME)
       end
 
-      @logger.debug("Updating DRS rule attribute value: #{@rule_name}, vm: #{vm.name}")
+      logger.debug("Updating DRS rule attribute value: #{@rule_name}, vm: #{vm.name}")
       vm.set_custom_value(CUSTOM_ATTRIBUTE_NAME, @rule_name)
     end
 
@@ -46,12 +48,12 @@ module VSphereCloud
     end
 
     def add_rule
-      @logger.debug("Adding DRS rule: #{@rule_name}")
+      logger.debug("Adding DRS rule: #{@rule_name}")
       reconfigure_cluster('add')
     end
 
     def update_rule(rule_key)
-      @logger.debug("Updating DRS rule: #{@rule_name}")
+      logger.debug("Updating DRS rule: #{@rule_name}")
       reconfigure_cluster('edit', rule_key)
     end
 
@@ -65,7 +67,7 @@ module VSphereCloud
       rule_info.name = @rule_name
       rule_info.vm = tagged_vms
       vm_names = rule_info.vm.map { |v| v.name }
-      @logger.debug("Setting DRS rule: #{@rule_name}, vms: #{vm_names.join(', ')}")
+      logger.debug("Setting DRS rule: #{@rule_name}, vms: #{vm_names.join(', ')}")
       rule_info.key = rule_key if rule_key
 
       rule_spec.info = rule_info

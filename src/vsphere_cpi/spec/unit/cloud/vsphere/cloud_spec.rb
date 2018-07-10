@@ -2,7 +2,7 @@ require 'spec_helper'
 require 'ostruct'
 
 module VSphereCloud
-  describe Cloud do
+  describe Cloud, fake_logger: true do
     subject(:vsphere_cloud) { Cloud.new(config) }
 
     let(:config) { { 'vcenters' => [fake: 'config'] } }
@@ -17,13 +17,13 @@ module VSphereCloud
         vcenter_default_disk_type: default_disk_type,
         soap_log: 'fake-log-file',
         vcenter_enable_auto_anti_affinity_drs_rules: false,
+        upgrade_hw_version: true,
         vcenter_http_logging: true,
         nsxt_enabled?: nsxt_enabled
       ).as_null_object
     end
     let(:nsxt_enabled) { false }
     let(:default_disk_type) { 'preallocated' }
-    let(:logger) { instance_double('Bosh::Cpi::Logger', info: nil, debug: nil) }
     let(:vcenter_client) { instance_double('VSphereCloud::VCenterClient', login: nil, service_content: service_content) }
     let(:http_basic_auth_client) { instance_double('VSphereCloud::NsxHttpClient') }
     let(:http_client) { instance_double('VSphereCloud::CpiHttpClient') }
@@ -54,8 +54,7 @@ module VSphereCloud
         allow(VCenterClient).to receive(:new)
                                   .with(
                                     vcenter_api_uri: vcenter_api_uri,
-                                    http_client: http_client,
-                                    logger: logger,
+                                    http_client: http_client
                                   )
                                   .and_return(vcenter_client)
       end
@@ -83,10 +82,15 @@ module VSphereCloud
                                   .with(
                                     vcenter_api_uri: vcenter_api_uri,
                                     http_client: http_client,
-                                    logger: anything,
                                   )
                                   .and_return(vcenter_client)
-
+        allow(VCenterClient).to receive(:new)
+                                  .with(
+                                    vcenter_api_uri: vcenter_api_uri,
+                                    http_client: http_client,
+                                    logger: an_instance_of(::Logger)
+                                  )
+                                  .and_return(vcenter_client)
         allow(vcenter_client).to receive(:logout)
       end
 
@@ -411,7 +415,7 @@ module VSphereCloud
       let(:encoded_disk_cid) { 'fake-disk-cid' }
       let(:director_disk_cid) { VSphereCloud::DirectorDiskCID.new(encoded_disk_cid) }
       let(:nsxt_provider) { instance_double(VSphereCloud::NSXTProvider) }
-      let(:stemcell) { VSphereCloud::Stemcell.new('fake-stemcell-cid', logger) }
+      let(:stemcell) { VSphereCloud::Stemcell.new('fake-stemcell-cid') }
       let(:disk_pool) { VSphereCloud::DiskPool.new(datacenter,vm_type['datastores']) }
 
       before do
@@ -431,9 +435,9 @@ module VSphereCloud
         allow(datacenter).to receive(:find_disk).with(director_disk_cid).and_return(fake_disk)
         allow(VSphereCloud::DirectorDiskCID).to receive(:new).with(encoded_disk_cid).and_return(director_disk_cid)
 
-        allow(IPConflictDetector).to receive(:new).with(logger, vcenter_client).and_return(ip_conflict_detector)
+        allow(IPConflictDetector).to receive(:new).with(vcenter_client).and_return(ip_conflict_detector)
         allow(ClusterPicker).to receive(:new).and_return(cluster_picker)
-        allow(IPConflictDetector).to receive(:new).with(logger, vcenter_client).and_return(ip_conflict_detector)
+        allow(IPConflictDetector).to receive(:new).with(vcenter_client).and_return(ip_conflict_detector)
         allow(DiskConfig).to receive(:new)
           .with(
             cid: fake_disk.cid,
@@ -475,14 +479,14 @@ module VSphereCloud
           .with(
             client: vcenter_client,
             cloud_searcher: cloud_searcher,
-            logger: logger,
             cpi: vsphere_cloud,
             datacenter: datacenter,
             agent_env: agent_env,
             ip_conflict_detector: ip_conflict_detector,
             default_disk_type: default_disk_type,
             enable_auto_anti_affinity_drs_rules: false,
-            stemcell: stemcell
+            stemcell: stemcell,
+            upgrade_hw_version: true
           ).and_return(vm_creator)
         expect(vm_creator).to receive(:create).with(vm_config).and_return(fake_vm)
 
@@ -522,13 +526,13 @@ module VSphereCloud
           .with(
             client: vcenter_client,
             cloud_searcher: cloud_searcher,
-            logger: logger,
             cpi: vsphere_cloud,
             datacenter: datacenter,
             agent_env: agent_env,
             ip_conflict_detector: ip_conflict_detector,
             default_disk_type: default_disk_type,
             enable_auto_anti_affinity_drs_rules: false,
+            upgrade_hw_version: true,
             stemcell: stemcell
         )
           .and_return(vm_creator)
@@ -689,13 +693,13 @@ module VSphereCloud
                                  .with(
                                    client: vcenter_client,
                                    cloud_searcher: cloud_searcher,
-                                   logger: logger,
                                    cpi: vsphere_cloud,
                                    datacenter: datacenter,
                                    agent_env: agent_env,
                                    ip_conflict_detector: ip_conflict_detector,
                                    default_disk_type: 'thin',
                                    enable_auto_anti_affinity_drs_rules: false,
+                                   upgrade_hw_version: true,
                                    stemcell: stemcell
                                  )
                                  .and_return(vm_creator)
@@ -806,7 +810,7 @@ module VSphereCloud
             'ram' => 1024,
             'disk' => 4096,
             'nsxt' => {
-              'nsgroups' => %w(fake-nsgroup-1 fake-nsgroup-2),
+              'ns_groups' => %w(fake-nsgroup-1 fake-nsgroup-2),
               'vif_type' => 'PARENT',
             }
           }
@@ -820,7 +824,7 @@ module VSphereCloud
         end
 
         it "adds the VM's logical port to NSGroups" do
-          expect(nsxt_provider).to receive(:add_vm_to_nsgroups).with(fake_vm, vm_type['nsxt'])
+          expect(nsxt_provider).to receive(:add_vm_to_nsgroups).with(fake_vm, vm_type['nsxt']['ns_groups'])
           allow(nsxt_provider).to receive(:set_vif_type)
 
           vsphere_cloud.create_vm(
@@ -831,6 +835,84 @@ module VSphereCloud
             [],
             {}
           )
+        end
+
+        context 'and load balancer(lb) is set' do
+          let(:server_pool) { NSXT::LbPool.new(:id => 'id-1', :display_name => 'test-static-serverpool-1')}
+          let(:server_pools) { [server_pool]}
+          let(:vm_type) do
+            {
+              'cpu' => 1,
+              'ram' => 1024,
+              'disk' => 4096,
+              'nsxt' => {
+                'ns_groups' => %w(fake-nsgroup-1 fake-nsgroup-2),
+                'lb' => {
+                  'server_pools' => [
+                    {
+                      'name' => 'test-serverpool-1',
+                      'port' => 80
+                    }
+                  ]
+                }
+              }
+            }
+          end
+
+          it 'adds vm to server pool' do
+            allow(nsxt_provider).to receive(:add_vm_to_nsgroups)
+            allow(nsxt_provider).to receive(:set_vif_type)
+
+            expect(nsxt_provider).to receive(:add_vm_to_server_pools).with(fake_vm, server_pools)
+            expect(nsxt_provider).to receive(:retrieve_server_pools).with(vm_type['nsxt']['lb']['server_pools']).and_return([server_pools,nil])
+            vsphere_cloud.create_vm(
+              'fake-agent-id',
+              'fake-stemcell-cid',
+              vm_type,
+              'fake-networks-hash',
+              [],
+              {}
+            )
+          end
+
+          it "adds vm to dynamic server pool's nsgroups" do
+            allow(server_pool).to receive_message_chain(:member_group,:grouping_object, :target_display_name).and_return('test-nsgroup1')
+            expect(nsxt_provider).to receive(:retrieve_server_pools).with(vm_type['nsxt']['lb']['server_pools']).and_return([nil,server_pools])
+            expected_nsgroups =  vm_type['nsxt']['ns_groups'] + ['test-nsgroup1']
+            expect(nsxt_provider).to receive(:add_vm_to_nsgroups).with(fake_vm, expected_nsgroups)
+            allow(nsxt_provider).to receive(:set_vif_type)
+
+            vsphere_cloud.create_vm(
+              'fake-agent-id',
+              'fake-stemcell-cid',
+              vm_type,
+              'fake-networks-hash',
+              [],
+              {}
+            )
+          end
+          context 'and an error occurs when adding VM to server pools' do
+            let(:nsxt_error) { NSXT::ApiCallError.new }
+            before do
+              expect(nsxt_provider).to receive(:add_vm_to_server_pools).and_raise(nsxt_error)
+              expect(nsxt_provider).to receive(:retrieve_server_pools).with(vm_type['nsxt']['lb']['server_pools']).and_return([server_pools,nil])
+            end
+
+            it 'deletes created VM and raises error' do
+              expect(vsphere_cloud).to receive(:delete_vm).with(fake_vm.cid)
+
+              expect do
+                vsphere_cloud.create_vm(
+                  'fake-agent-id',
+                  'fake-stemcell-cid',
+                  vm_type,
+                  'fake-networks-hash',
+                  [],
+                  {}
+                )
+              end.to raise_error(nsxt_error)
+            end
+          end
         end
 
         it "sets the vif_type of the VM's VIF attachment" do
@@ -853,9 +935,8 @@ module VSphereCloud
             expect(nsxt_provider).to receive(:add_vm_to_nsgroups).with(any_args).and_raise(nsxt_error)
           end
 
-          it 'delete created VM and raises error' do
+          it 'deletes created VM and raises error' do
             expect(vsphere_cloud).to receive(:delete_vm).with(fake_vm.cid)
-
             expect do
               vsphere_cloud.create_vm(
                 'fake-agent-id',
@@ -1189,9 +1270,11 @@ module VSphereCloud
     end
 
     describe '#delete_vm' do
+      let(:ip_address) {'192.168.111.5'}
       before do
         allow(vm).to receive(:persistent_disks).and_return([])
         allow(vm).to receive(:cdrom).and_return(nil)
+        allow(vm_mob).to receive_message_chain(:guest, :ip_address).and_return(ip_address)
       end
 
       it 'deletes vm' do
@@ -1231,7 +1314,7 @@ module VSphereCloud
       context 'when NSX-T is enabled' do
         let(:nsxt_provider) { instance_double(VSphereCloud::NSXTProvider) }
         let(:nsxt_config) { VSphereCloud::NSXTConfig.new('fake-host', 'fake-username', 'fake-password') }
-        let(:vm) { instance_double(VSphereCloud::Resources::VM, cid: ' vm-id') }
+        # let(:vm) { instance_double(VSphereCloud::Resources::VM, cid: ' vm-id') }
 
         before do
           allow(cloud_config).to receive(:nsxt_enabled?).and_return(true)
@@ -1239,22 +1322,35 @@ module VSphereCloud
           expect(VSphereCloud::NSXTProvider).to receive(:new).with(any_args).and_return(nsxt_provider)
         end
 
-        it "removes the VM's logical port from NSGroups" do
+        it "removes the VM's logical port from NSGroups and vm's ip from server-pool" do
           expect(vm).to receive(:power_off)
           expect(vm).to receive(:delete)
           expect(nsxt_provider).to receive(:remove_vm_from_nsgroups).with(vm)
+          expect(nsxt_provider).to receive(:remove_vm_from_server_pools).with(ip_address)
 
           vsphere_cloud.delete_vm('vm-id')
         end
 
-        context 'and NSXTProvider fails to remove member' do
+        context 'and NSXTProvider fails to remove member from nsgroups' do
           it 'deletes the VM' do
             expect(vm).to receive(:power_off)
             expect(vm).to receive(:delete)
             expect(nsxt_provider).to receive(:remove_vm_from_nsgroups).with(vm).and_raise(
               VIFNotFound.new('vm-id', 'fake-external-id')
             )
+            expect(nsxt_provider).to receive(:remove_vm_from_server_pools).with(ip_address)
 
+            vsphere_cloud.delete_vm('vm-id')
+          end
+        end
+        context 'and NSXTProvider fails to remove vm from server pool' do
+          it 'deletes the VM' do
+            expect(vm).to receive(:power_off)
+            expect(vm).to receive(:delete)
+            expect(nsxt_provider).to receive(:remove_vm_from_nsgroups).with(vm)
+            expect(nsxt_provider).to receive(:remove_vm_from_server_pools).with(ip_address).and_raise(
+              NSXT::ApiCallError.new('NSX=T API error')
+            )
             vsphere_cloud.delete_vm('vm-id')
           end
         end
@@ -1407,12 +1503,13 @@ module VSphereCloud
       before do
         allow(ds_mob).to receive_message_chain('summary.maintenance_mode').and_return("normal")
       end
+      let(:accessible) { true }
       let(:host_runtime_info) { instance_double(VimSdk::Vim::Host::RuntimeInfo, in_maintenance_mode: false) }
       let(:host_system) {instance_double(VimSdk::Vim::HostSystem, runtime: host_runtime_info)}
       let(:datastore_host_mount) { [instance_double('VimSdk::Vim::Datastore::HostMount', key: host_system)]}
       let(:ds_mob) { instance_double('VimSdk::Vim::Datastore', host: datastore_host_mount) }
-      let(:small_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 2048, mob: ds_mob, accessible?: true) }
-      let(:large_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 4096, mob: ds_mob, accessible?: true) }
+      let(:small_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 2048, mob: ds_mob, accessible?: accessible) }
+      let(:large_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 4096, mob: ds_mob, accessible?: accessible) }
       let(:accessible_datastores) do
         {
           'small-ds' => small_ds,
@@ -1539,6 +1636,15 @@ module VSphereCloud
           disk_cid = vsphere_cloud.create_disk(1024, cloud_properties)
 
           expect(disk_cid).to eq("fake-disk-cid.#{expected_pattern}")
+        end
+      end
+
+      context 'when datastores are not accessible from any host' do
+        let(:accessible) { false }
+        it 'raises an error' do
+          expect {
+            vsphere_cloud.create_disk(1024, {})
+          }.to raise_error(/Datastores matching criteria are in maintenance mode or not accessible/)
         end
       end
     end

@@ -1,6 +1,6 @@
 require 'integration/spec_helper'
 
-describe 'Give a cluster with DRS On ' do
+describe 'Give a cluster with DRS On ', host_maintenance: true  do
   before (:all) do
     @datacenter_name = fetch_and_verify_datacenter('BOSH_VSPHERE_CPI_DATACENTER')
     # We actually use a healthy cluster but manipulate it before the test and restore after we are done
@@ -73,7 +73,7 @@ describe 'Give a cluster with DRS On ' do
     end
   end
 
-  context 'when regex matches one or more of datastores that are accessible by all maintenace mode hosts in a cluster (datastore-*) ' do
+  context 'when regex matches one or more of datastores that are accessible by all maintenance mode hosts in a cluster (datastore-*) ' do
     let(:vm_type) do
       {
           'ram' => 512,
@@ -121,7 +121,7 @@ describe 'Give a cluster with DRS On ' do
       begin
         expect do
           cpi.create_disk(2048, {}, nil)
-        end.to raise_error(/No valid placement found due to no active host/)
+        end.to raise_error(/No valid placement found/)
       end
     end
     after do
@@ -129,7 +129,7 @@ describe 'Give a cluster with DRS On ' do
     end
   end
 
-  context 'when regex matches one or more of datastores that are accessible by all maintenace mode hosts in other cluster (datastore-*) ' do
+  context 'when regex matches one or more of datastores that are accessible by all maintenance mode hosts in other cluster (datastore-*) ' do
     let(:vm_type) do
       {
           'ram' => 512,

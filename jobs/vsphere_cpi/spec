@@ -9,7 +9,7 @@ templates:
 
 packages:
 - iso9660wrap
-- ruby-2.4-r3
+- ruby-2.4-r4
 - vsphere_cpi
 
 properties:
@@ -26,6 +26,9 @@ properties:
     description: Datacenters in vCenter to use (value is an array of Hashes representing datacenters and clusters, See director.yml.erb.erb)
   vcenter.enable_auto_anti_affinity_drs_rules:
     description: Creates DRS rule to place VMs on separate hosts.
+    default: false
+  vcenter.upgrade_hw_version:
+    description: Upgrades virtual machines to latest virtual hardware version supported on the ESXi host.
     default: false
   vcenter.connection_options.ca_cert:
     description: All required custom CA certificates

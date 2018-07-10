@@ -27,5 +27,13 @@ module VSphereCloud
     def nsx_lbs
       nsx['lbs'] if nsx
     end
+
+    def nsxt_server_pools
+      nsxt&.dig('lb', 'server_pools')
+    end
+
+    def ns_groups
+      nsxt['ns_groups'] if nsxt
+    end
   end
 end

@@ -1,6 +1,6 @@
 require 'spec_helper'
 
-describe VSphereCloud::Resources::Datacenter do
+describe VSphereCloud::Resources::Datacenter, fake_logger: true do
   subject(:datacenter) do
     described_class.new(
       client: client,
@@ -15,12 +15,9 @@ describe VSphereCloud::Resources::Datacenter do
       disk_path: 'fake-disk-path',
       ephemeral_pattern: ephemeral_pattern,
       persistent_pattern: persistent_pattern,
-      use_sub_folder: datacenter_use_sub_folder,
-      logger: logger,
+      use_sub_folder: datacenter_use_sub_folder
     )
   end
-  let(:log_output) { StringIO.new('') }
-  let(:logger) { Logger.new(log_output) }
   let(:client) { instance_double('VSphereCloud::VCenterClient') }
 
   let(:vm_folder) { instance_double('VSphereCloud::Resources::Folder') }
@@ -92,19 +89,19 @@ describe VSphereCloud::Resources::Datacenter do
     allow(client).to receive(:cloud_searcher).and_return(cloud_searcher)
 
     allow(VSphereCloud::Resources::Folder).to receive(:new).with(
-      'fake-vm-folder', logger, client, datacenter_name
+      'fake-vm-folder', client, datacenter_name
     ).and_return(vm_folder)
 
     allow(VSphereCloud::Resources::Folder).to receive(:new).with(
-      'fake-vm-folder/fake-uuid', logger, client, datacenter_name
+      'fake-vm-folder/fake-uuid', client, datacenter_name
     ).and_return(vm_subfolder)
 
     allow(VSphereCloud::Resources::Folder).to receive(:new).with(
-      'fake-template-folder', logger, client, datacenter_name
+      'fake-template-folder', client, datacenter_name
     ).and_return(template_folder)
 
     allow(VSphereCloud::Resources::Folder).to receive(:new).with(
-      'fake-template-folder/fake-uuid', logger, client, datacenter_name
+      'fake-template-folder/fake-uuid', client, datacenter_name
     ).and_return(template_subfolder)
 
     allow(cloud_searcher).to receive(:get_managed_objects).with(
@@ -422,7 +419,7 @@ describe VSphereCloud::Resources::Datacenter do
 
         before do
           expect(client).to receive(:find_vm_by_disk_cid).with(datacenter_mob, 'disk-cid').and_return(vm_mob)
-          expect(VSphereCloud::Resources::VM).to receive(:new).with('fake-vm-name', vm_mob, client, logger).and_return(vm)
+          expect(VSphereCloud::Resources::VM).to receive(:new).with('fake-vm-name', vm_mob, client).and_return(vm)
         end
 
         # unexpected event has destroyed the disk

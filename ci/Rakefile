@@ -96,6 +96,9 @@ task :pipeline, [:name] => 'pipeline.yml' do |t, args|
     "-v vcpi_branch=#{branch.shellescape}",
     "-v dbc_host=#{DBCHOST.shellescape}",
     "-v dbc_user=#{DBCUSER.shellescape}",
+    # Set the trigger for delivery job based on which branch it is.
+    # Only master branch should trigger delivery jobs.
+    "--yaml-var trigger_delivery_job=#{branch == 'master'}",
     "-v dbc_key=\"$(cat #{dbc_ssh_key.shellescape})\"",
     '-v s3_vsphere_cpi_bucket=bosh-vsphere-cpi-release',
     '-l <(secret show ~/.dot/vcpi-ci.gpg)'
