@@ -25,7 +25,6 @@ module VSphereCloud
         # Validates if the rule specified is of right syntax
         vm_config.validate_drs_rules(cluster)
 
-
         #@TA: TODO Choose host here if needed.
 
         storage = StoragePicker.choose_ephemeral_storage(cluster_placement.disk_placement.name,

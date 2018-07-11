@@ -1,9 +1,9 @@
 module VSphereCloud
   class VmPlacement
-    attr_reader :cluster, :hosts, :datastores, :disk_placement,
+    attr_reader :cluster, :hosts, :datastores,
       :balance_score_set
 
-    attr_accessor :migration_size
+    attr_accessor :migration_size, :disk_placement
 
     def initialize(cluster:, hosts:, datastores:)
       @cluster = cluster
@@ -67,7 +67,7 @@ module VSphereCloud
       !vm_placement.datastores.empty?
     end
 
-    with_filter(-> (vm_placement, criteria_object) do
+    with_filter -> (vm_placement, criteria_object) do
       criteria_object.disk_config.each do |disk|
         existing_ds_name = disk.existing_datastore_name
 
@@ -94,7 +94,7 @@ module VSphereCloud
           storage_placement.resource.accessible_from?(vm_placement.cluster)
         end
 
-        result = pipeline.each.first
+        result = pipeline.each.first.resource
 
         # TODO: Log something. Return false and reject this cluster for
         # absence of any suitable storage for given disk configurations
@@ -108,7 +108,7 @@ module VSphereCloud
         vm_placement.migration_size += disk.size if disk.existing_datastore_name
       end
       true
-    end)
+    end
 
     with_scorer do |p1, p2|
       p1.migration_size <=> p2.migration_size
@@ -124,6 +124,7 @@ module VSphereCloud
 
     def initialize(*args)
       super(VmPlacementCriteria.new(*args))
+      with_filter do end
     end
   end
 end
