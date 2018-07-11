@@ -163,7 +163,7 @@ module VSphereCloud
 
       vm_selection_placement_pipeline = VmPlacementSelectionPipeline.new(disk_config: disk_configurations, req_memory: vm_type.ram) do
         clusters.map do |cluster|
-          VmPlacementResource.new(cluster: cluster, datastores: cluster.accessible_datastores.values, hosts: nil)
+          VmPlacement.new(cluster: cluster, datastores: cluster.accessible_datastores.values, hosts: nil)
         end
       end
       @cluster_placement = vm_selection_placement_pipeline.each

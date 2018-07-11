@@ -45,7 +45,6 @@ module VSphereCloud
       end
     end
 
-    # @return [String] debug Selection Pipeline information.
     def inspect
       "#<SelectionPipeline @filter_list #{filter_list} @scorer_list #{scorer_list}>"
     end
@@ -66,10 +65,17 @@ module VSphereCloud
       end.each(&Proc.new)
     end
 
-    def score(placement)
-      scorer_list.reduce(0) do |score, scorer|
-        score + scorer.call(placement, @object)
+    def with_filter(*args)
+      if block_given?
+        unless args.empty?
+          raise ArgumentError, "wrong number of arguments (given #{args.length}, expected 0)"
+        end
+        filter_list << Proc.new
+      else
+        raise ArgumentError, "0 arguments passed, expected atleast 1 arg or a block if no args provided" if args.empty?
+        filter_list.concat(args)
       end
+      self
     end
 
     def with_scorer(*args)
@@ -85,19 +91,6 @@ module VSphereCloud
       self
     end
 
-    def with_filter(*args)
-      if block_given?
-        unless args.empty?
-          raise ArgumentError, "wrong number of arguments (given #{args.length}, expected 0)"
-        end
-        filter_list << Proc.new
-      else
-        raise ArgumentError, "0 arguments passed, expected atleast 1 arg or a block if no args provided" if args.empty?
-        filter_list.concat(args)
-      end
-      self
-    end
-
     private
 
     def compare_placements(p1, p2)
@@ -107,6 +100,7 @@ module VSphereCloud
           return result
         end
       end
+      return 0
     end
 
     def gather
