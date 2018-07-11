@@ -88,24 +88,11 @@ module VSphereCloud
   class NSXTProvider
     include Logger
 
-    def initialize(config)
-      configuration = NSXT::Configuration.new
-      configuration.host = config.host
-      configuration.username = config.username
-      configuration.password = config.password
-      configuration.logger = logger
-      configuration.client_side_validation = false
-      if ENV['BOSH_NSXT_CA_CERT_FILE']
-        configuration.ssl_ca_cert = ENV['BOSH_NSXT_CA_CERT_FILE']
-      end
-      if ENV['NSXT_SKIP_SSL_VERIFY']
-        configuration.verify_ssl = false
-        configuration.verify_ssl_host = false
-      end
-      @client = NSXT::ApiClient.new(configuration)
+    def initialize(client, default_vif_type)
+      @client = client
       @max_tries = MAX_TRIES
       @sleep_time = DEFAULT_SLEEP_TIME
-      @default_vif_type = config.default_vif_type
+      @default_vif_type = default_vif_type
     end
 
     private def grouping_obj_svc
@@ -273,7 +260,7 @@ module VSphereCloud
           matching_server_pool.member_group ? dynamic_server_pools << matching_server_pool : static_server_pools << [matching_server_pool, server_pool_port]
         end
       end
-      return static_server_pools, dynamic_server_pools
+      [static_server_pools, dynamic_server_pools]
     end
 
     def remove_vm_from_server_pools(vm_ip)
@@ -288,7 +275,7 @@ module VSphereCloud
         end
       end
     end
-
+    
     private
 
     MAX_TRIES = 20
@@ -321,13 +308,13 @@ module VSphereCloud
         on: [VirtualMachineNotFound, MultipleVirtualMachinesFound, VIFNotFound, LogicalPortNotFound]
       ).retryer do |i|
         logger.info("Searching for LogicalPorts for vm '#{vm.cid}'")
-        virtual_machines = fabric_svc.list_virtual_machines(:display_name => vm.cid).results
+        virtual_machines = fabric_svc.list_virtual_machines(display_name: vm.cid).results
         raise VirtualMachineNotFound.new(vm.cid) if virtual_machines.empty?
         raise MultipleVirtualMachinesFound.new(vm.cid, virtual_machines.length) if virtual_machines.length > 1
         external_id = virtual_machines.first.external_id
 
         logger.info("Searching VIFs with 'owner_vm_id: #{external_id}'")
-        vifs = fabric_svc.list_vifs(:owner_vm_id => external_id).results
+        vifs = fabric_svc.list_vifs(owner_vm_id: external_id).results
         vifs.select! { |vif| !vif.lport_attachment_id.nil? }
         raise VIFNotFound.new(vm.cid, external_id) if vifs.empty?
 
@@ -346,13 +333,13 @@ module VSphereCloud
       ns_grp_exprn_lst = NSXT::NSGroupExpressionList.new
       ns_grp_exprn_lst.members = []
       lports.each do |lport|
-        ns_grp_exprn_lst.members.push({
+        ns_grp_exprn_lst.members.push(
           op: 'EQUALS',
           target_type: lport.resource_type,
           target_property: "id",
           value: lport.id,
           resource_type: "NSGroupSimpleExpression"
-        })
+        )
       end
       ns_grp_exprn_lst
     end
@@ -366,5 +353,6 @@ module VSphereCloud
 
       nics
     end
+
   end
 end

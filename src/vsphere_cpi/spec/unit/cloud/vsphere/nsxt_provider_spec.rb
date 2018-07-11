@@ -83,8 +83,10 @@ describe VSphereCloud::NSXTProvider, fake_logger: true do
     NSXT::ServicesApi.new(client)
   end
 
+  let(:default_vif_type) { 'PARENT' }
+
   subject(:nsxt_provider) do
-    described_class.new(nsxt_config).tap do |provider|
+    described_class.new(client, default_vif_type).tap do |provider|
       provider.instance_variable_set('@client', client)
     end
   end
@@ -96,9 +98,12 @@ describe VSphereCloud::NSXTProvider, fake_logger: true do
       allow(nsxt_provider).to receive(:logical_ports).with(vm).and_return([logical_port_1])
     end
 
-    it 'does nothing when both default_vif_type and vif_type are nil' do
-      # No call to client should be made
-      nsxt_provider.set_vif_type(vm, nil)
+    context ' when both default_vif_type and vif_type are nil' do
+      let(:default_vif_type) { nil }
+      it 'does nothing' do
+        # No call to client should be made
+        nsxt_provider.set_vif_type(vm, nil)
+      end
     end
 
     it "sets all of the VM's VIF attachments to the vif_type in vm_type" do
