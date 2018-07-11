@@ -18,7 +18,7 @@ module VSphereCloud
     # This means the largest datastores have the highest chance of being first, but adds a bit of randomization.
     # After the sort, disks are placed into the first datastore that has enough space for that disk.
     #
-    def best_disk_placement(disks, max_swapfile_size=0)
+    def best_disk_placement(disks, max_swapfile_size: 0)
       datastores = {}
       # Create a possible placement hash
       placement = { datastores: datastores, migration_size: 0, balance_score: 0 }

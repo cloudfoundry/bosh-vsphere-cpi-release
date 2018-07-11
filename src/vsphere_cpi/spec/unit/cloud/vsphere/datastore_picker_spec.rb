@@ -166,7 +166,7 @@ module VSphereCloud
           picker.update(available_datastores)
 
           disks = [disk3]
-          expect(picker.best_disk_placement(disks, max_swapfile_size=256)[:datastores]).to include({
+          expect(picker.best_disk_placement(disks, max_swapfile_size: 256)[:datastores]).to include({
             'ds-2' => {
               free_space: 256,
               disks: [disk3],
@@ -179,7 +179,7 @@ module VSphereCloud
           picker.update(available_datastores)
 
           disks = [disk1, disk2]
-          expect(picker.best_disk_placement(disks, max_swapfile_size=513)[:datastores]).to include({
+          expect(picker.best_disk_placement(disks, max_swapfile_size: 513)[:datastores]).to include({
             'ds-2' => {
               free_space: 256,
               disks: [disk1, disk2],
@@ -193,7 +193,7 @@ module VSphereCloud
 
           disks = [disk3]
           expect{
-            picker.best_disk_placement(disks, max_swapfile_size=513)
+            picker.best_disk_placement(disks, max_swapfile_size: 513)
           }.to raise_error Bosh::Clouds::CloudError, /No valid placement/
         end
 
