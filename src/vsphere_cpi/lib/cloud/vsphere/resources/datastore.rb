@@ -59,6 +59,15 @@ module VSphereCloud
         end
       end
 
+      def ==(other)
+        instance_of?(other.class) && name == other.name
+      end
+      alias eql? ==
+
+      def hash
+        name.hash
+      end
+
       def maintenance_mode?
         mob.summary.maintenance_mode != 'normal'
       end
@@ -74,8 +83,9 @@ module VSphereCloud
       #
       # @param [VSphereCloud::Resource::Cluster]
       #
-      # @return [Boolean] Whether there exists a host that is not in maintenance mode and
-      # is part of the very same cluster that datastore can access
+      # @return [Boolean] Whether there exists a host that is not in
+      # maintenance mode and is part of the very same cluster that datastore
+      # can access
       #
       def accessible_from?(cluster)
         @mob.host.any? do |host_mount|

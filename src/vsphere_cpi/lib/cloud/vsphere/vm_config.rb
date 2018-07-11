@@ -31,13 +31,6 @@ module VSphereCloud
       cluster_spec[cluster_name].fetch('drs_rules', []).first
     end
 
-    def ephemeral_datastore_name(cluster_placement)
-      return nil if cluster_placement.nil?
-
-      ephemeral_disk = disk_configurations.find { |disk| disk.ephemeral? }
-      cluster_placement.cluster_ds_map[:datastores_disk_map][ephemeral_disk]
-    end
-
     def ephemeral_disk_size
       vm_type.disk
     end
@@ -166,18 +159,11 @@ module VSphereCloud
     end
 
     def cluster_placement_internal(clusters:)
-
-
       return @cluster_placement if @cluster_placement
 
-      vm_placement_criteria = VmPlacementCriteria.new(disk_config: disk_configurations, req_memory: vm_type.ram)
-      vm_selection_placement_pipeline = VmPlacementSelectionPipeline.new(vm_placement_criteria) do
+      vm_selection_placement_pipeline = VmPlacementSelectionPipeline.new(disk_config: disk_configurations, req_memory: vm_type.ram) do
         clusters.map do |cluster|
-          accessible_ds_resources =  cluster.accessible_datastores.select do |_, ds_resource|
-            ds_resource.accessible_from?(cluster)
-          end.values
-          vm_placement_resource = VmPlacementResource.new(cluster: cluster, datastores: accessible_ds_resources, hosts: nil)
-          VmPlacement.new(vm_placement_resource)
+          VmPlacementResource.new(cluster: cluster, datastores: cluster.accessible_datastores.values, hosts: nil)
         end
       end
       @cluster_placement = vm_selection_placement_pipeline.each

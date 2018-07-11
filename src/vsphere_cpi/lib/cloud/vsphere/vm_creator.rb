@@ -28,7 +28,7 @@ module VSphereCloud
 
         #@TA: TODO Choose host here if needed.
 
-        storage = StoragePicker.choose_ephemeral_storage(vm_config.ephemeral_datastore_name(cluster_placement),
+        storage = StoragePicker.choose_ephemeral_storage(cluster_placement.disk_placement.name,
           cluster.accessible_datastores, vm_config.vm_type)
 
         datastore, datastore_cluster = storage.is_a?(Resources::StoragePod) ? [nil, storage] : [storage, nil]
