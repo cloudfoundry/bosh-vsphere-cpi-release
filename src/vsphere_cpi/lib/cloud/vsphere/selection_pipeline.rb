@@ -3,14 +3,46 @@ module VSphereCloud
     include Enumerable
     include Logger
 
+    module StableRandom
+      def self.[](object)
+        @memo ||= {}
+        @memo[object] ||= Random.rand
+      end
+    end
+
     # @return [Object] the object to select placements for
     attr_reader :object
+
+    def self.with_filter(*args, &block)
+      filter_list << { args: args, block: block }
+    end
+
+    def self.filter_list
+      @filter_list ||= []
+    end
+
+    def self.with_scorer(*args, &block)
+      scorer_list << { args: args, block: block }
+    end
+
+    def self.scorer_list
+      @scorer_list ||= []
+    end
 
     # @param object [Object] the object to select placements for
     def initialize(object, *args)
       raise ArgumentError, 'No gather block provided' unless block_given?
+
       @object = object
       @gather = Proc.new
+
+      self.class.filter_list.each do |filter|
+        with_filter(*filter[:args], &filter[:block])
+      end
+
+      self.class.scorer_list.each do |scorer|
+        with_scorer(*scorer[:args], &scorer[:block])
+      end
     end
 
     # @return [String] debug Selection Pipeline information.
@@ -22,6 +54,16 @@ module VSphereCloud
       filter_list.all? do |filter|
         filter.call(placement, @object)
       end
+    end
+
+    def each
+      return enum_for(:each) unless block_given?
+
+      gather.select do |placement|
+        accept?(placement)
+      end.sort do |p1, p2|
+        compare_placements(p1, p2)
+      end.each(&Proc.new)
     end
 
     def score(placement)
@@ -56,17 +98,20 @@ module VSphereCloud
       self
     end
 
-    def each(&block)
-      return enum_for(:each) unless block_given?
+    private
 
-      @gather.call.select do |placement|
-        accept?(placement)
-      end.sort_by do |placement|
-        score(placement)
-      end.each(&block)
+    def compare_placements(p1, p2)
+      scorer_list.each do |scorer|
+        result = scorer.call(p1, p2)
+        if result != 0
+          return result
+        end
+      end
     end
 
-    private
+    def gather
+      @gather.call
+    end
 
     def filter_list
       @filter_list ||= []

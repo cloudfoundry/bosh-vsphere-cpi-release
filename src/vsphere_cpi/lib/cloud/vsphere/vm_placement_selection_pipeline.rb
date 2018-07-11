@@ -1,156 +1,129 @@
 module VSphereCloud
-  module VMFilter
-    DEFAULT_DISK_HEADROOM = 1024
+  class VmPlacement
+    attr_reader :cluster, :hosts, :datastores, :disk_placement,
+      :balance_score_set
 
-    FilterFreeMemory = -> (vm_placement, criteria_object) do
+    attr_accessor :migration_size
+
+    def initialize(cluster:, hosts:, datastores:)
+      @cluster = cluster
+      @hosts = hosts
+      @datastores = datastores
+      @balance_score_set = Set.new
+    end
+
+    def ==(other)
+      instance_of?(other.class) && other.cluster.name == cluster.name
+    end
+    alias eql? ==
+
+    def hash
+      cluster.name.hash
+    end
+
+    def balance_score
+      return @balance_score if defined? @balance_score
+
+      free_spaces = balance_score_set.map(&:free_space).sort
+
+      min = free_spaces.first
+      mean = free_spaces.sum / free_spaces.length
+      median = free_spaces[free_spaces.length / 2]
+
+      @balance_score = min + mean + median
+    end
+
+    def free_memory
+      cluster.free_memory
+    end
+  end
+
+  class VmPlacementSelectionPipeline < SelectionPipeline
+    class VmPlacementCriteria
+      DEFAULT_MEMORY_HEADROOM = 128
+
+      attr_reader :disk_config, :req_memory, :mem_headroom
+
+      def required_memory
+        req_memory + mem_headroom
+      end
+
+      def initialize(criteria = {})
+        @disk_config = criteria[:disk_config]
+        @req_memory = criteria[:req_memory]
+        @mem_headroom = criteria[:mem_headroom] || DEFAULT_MEMORY_HEADROOM
+      end
+    end
+    private_constant :VmPlacementCriteria
+
+    with_filter do |vm_placement, criteria_object|
       vm_placement.free_memory > criteria_object.required_memory
     end
 
-    FilterMaintenanceModeDS = -> (vm_placement, _) do
+    with_filter do |vm_placement|
       vm_placement.datastores.reject! do |ds_resource|
         ds_resource.maintenance_mode?
       end
-      return true unless vm_placement.datastores.empty?
-      false
+      !vm_placement.datastores.empty?
     end
 
-    FilterDSForDiskConfig = -> (vm_placement, criteria_object) do
-      cluster_ds_map = { datastores_disk_map: {}, migration_size: 0, balance_score: 0 }
-
+    with_filter(-> (vm_placement, criteria_object) do
       criteria_object.disk_config.each do |disk|
         existing_ds_name = disk.existing_datastore_name
 
         # Only persistent disks will have existing_ds_name
-        if existing_ds_name =~ Regexp.new(disk.target_datastore_pattern) && vm_placement.datastores.any? {|ds| ds.name == existing_ds_name}
-          cluster_ds_map[:datastores_disk_map][disk] = existing_ds_name
-          next
+        if existing_ds_name =~ Regexp.new(disk.target_datastore_pattern)
+          datastore = vm_placement.datastores.find do |ds|
+            ds.name == existing_ds_name
+          end
+          unless datastore.nil?
+            vm_placement.balance_score_set << datastore
+            next
+          end
         end
 
-        placement_found = false
-        weighted_datastores = weighted_random_sort(vm_placement.datastores)
-        weighted_datastores.each do |ds|
-          # TA: Do something about defualt disk headroom
-          additional_required_space = disk.size + DEFAULT_DISK_HEADROOM
+        # There are two possibilities at this point. Either:
+        #   1. The disk is an ephemeral disk
+        #   2. The disk is a persistent disk that must be migrated
 
-
-          next if additional_required_space > ds.free_space
-          next unless ds.name =~ Regexp.new(disk.target_datastore_pattern)
-
-          cluster_ds_map[:datastores_disk_map][disk] = ds.name
-          ds.free_space -= additional_required_space
-          cluster_ds_map[:migration_size] += additional_required_space if existing_ds_name
-          placement_found = true
-          break
+        pipeline = DiskPlacementSelectionPipeline.new(disk.size, disk.target_datastore_pattern) do
+          vm_placement.datastores
+        end.with_filter do |storage_placement|
+          # TODO: both accessible? and accessible_from? will be queried for
+          # each datastore
+          storage_placement.resource.accessible_from?(vm_placement.cluster)
         end
-        unless placement_found
-          # TA: Log something
-          # Return false and reject this cluster for absence of any suitable storage for given
-          # disk configurations
-          return false
-        end
+
+        result = pipeline.each.first
+
+        # TODO: Log something. Return false and reject this cluster for
+        # absence of any suitable storage for given disk configurations
+        return false if result.nil?
+
+        vm_placement.disk_placement = result unless disk.existing_datastore_name
+
+        result.free_space -= disk.size
+
+        vm_placement.balance_score_set << result
+        vm_placement.migration_size += disk.size if disk.existing_datastore_name
       end
-      cluster_ds_map[:balance_score] = get_balance_score(vm_placement.datastores, cluster_ds_map[:datastores_disk_map])
-      vm_placement.cluster_ds_map= cluster_ds_map
       true
+    end)
+
+    with_scorer do |p1, p2|
+      p1.migration_size <=> p2.migration_size
     end
 
-    def get_balance_score(datastores, datastore_disk_map)
-      free_spaces = datastores.keep_if do |ds|
-        datastore_disk_map.values.include?(ds.name)
-      end.map do |ds|
-        ds.free_space
-      end.sort
-
-      min = free_spaces.first
-      mean = free_spaces.inject(0, &:+) / free_spaces.length
-      median = free_spaces[free_spaces.length / 2]
-
-      min + mean + median
+    with_scorer do |p1, p2|
+      p1.balance_score <=> p2.balance_score
     end
 
-    def weighted_random_sort(datastores)
-      random_hash = {}
-      datastores.each do |ds|
-        random_hash[ds.name] = Random.rand * ds.free_space
-      end
-      datastores.sort do |x,y|
-        random_hash[y.name] <=> random_hash[x.name]
-      end
+    with_scorer do |p1, p2|
+      p1.free_memory <=> p2.free_memory
     end
 
-    module_function :weighted_random_sort, :get_balance_score
-  end
-
-  module VMScorer
-    ScoreMemory = -> (vm_placement, _) do
-      vm_placement.free_memory
-    end
-
-    ScoreFreeSpace = -> (vm_placement, _) do
-      vm_placement.balance_score
-    end
-
-    ScoreMigrationSize = -> (vm_placement, _) do
-      vm_placement.migration_size
-    end
-  end
-
-  ####################################################################################################
-  #
-  # What we need to gather is
-  #   1. Cluster
-  #   2. Possible Hosts in a cluster (if needed or let DRS do the work)
-  #   3. Datastore combination that fits the cluster
-  #
-  # What we need to filter is
-  #   1. Cluster with insufficient memory
-  #   2. Cluster with insufficient CPU
-  #   3. If hosts present hosts with insufficient GPU , mem, CPU
-  #   4. DS with insufficient space
-  #   5. DS inaccessible
-  #   6. Filter which selects combination for required disks
-  #
-  # What we need to score
-  #   1. Balance Score
-  #   2. Memory
-  #   3. Migration Size
-  #
-  ####################################################################################################
-
-  #
-  # @TA : TODO : Override each method to change scoring. Make placemnt resource a comparable and implmement sorting in each
-  # @TA :TODO : Can scorer be made in a way to prioritize migration size --> balance score--> memory. Fixed-weight weighted sort maybe?
-  #
-  class VmPlacementSelectionPipeline < SelectionPipeline
-    def initialize(*)
-      super
-      with_filter VMFilter::FilterFreeMemory, VMFilter::FilterMaintenanceModeDS, VMFilter::FilterDSForDiskConfig
-      with_scorer VMScorer::ScoreMemory, VMScorer::ScoreFreeSpace, VMScorer::ScoreMigrationSize
-    end
-
-    def each(&block)
-      return enum_for(:each) unless block_given?
-
-      @gather.call.select do |placement|
-        accept?(placement)
-      end.sort.each(&block)
-    end
-  end
-
-  # @TA : TODO :  Can this be made more generic or improved?
-  class VmPlacementCriteria
-    DEFAULT_MEMORY_HEADROOM = 128
-
-    attr_reader :disk_config, :req_memory, :mem_headroom
-
-    def required_memory
-      req_memory + mem_headroom
-    end
-
-    def initialize(criteria = {})
-      @disk_config = criteria[:disk_config]
-      @req_memory = criteria[:req_memory]
-      @mem_headroom = criteria[:mem_headroom] || DEFAULT_MEMORY_HEADROOM
+    def initialize(*args)
+      super(VmPlacementCriteria.new(*args))
     end
   end
 end
