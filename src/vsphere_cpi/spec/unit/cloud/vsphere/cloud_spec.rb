@@ -475,7 +475,6 @@ module VSphereCloud
             cluster_picker: cluster_picker,
             cluster_provider: cluster_provider
           ).and_return(vm_config)
-        expect(vm_config).to receive(:validate)
 
         expect(VmCreator).to receive(:new)
           .with(
@@ -522,7 +521,6 @@ module VSphereCloud
             cluster_provider: cluster_provider
           )
           .and_return(vm_config)
-        expect(vm_config).to receive(:validate)
 
         expect(VmCreator).to receive(:new)
           .with(
@@ -652,7 +650,6 @@ module VSphereCloud
             expect(options[:manifest_params][:disk_configurations]).to eq([fake_persistent_disk, fake_ephemeral_disk])
             vm_config
           end
-          expect(vm_config).to receive(:validate)
 
           vsphere_cloud.create_vm(
             'fake-agent-id',
@@ -689,7 +686,6 @@ module VSphereCloud
                                  cluster_provider: cluster_provider
                                })
                                .and_return(vm_config)
-          expect(vm_config).to receive(:validate)
 
           expect(VmCreator).to receive(:new)
                                  .with(
@@ -771,7 +767,6 @@ module VSphereCloud
                             .with('fake-nsx-user', 'fake-nsx-password', 'fake-log-file')
                             .and_return(http_basic_auth_client)
           allow(NSX).to receive(:new).and_return(nsx)
-          expect(vm_config).to receive(:validate)
 
           expect(VmCreator).to receive(:new).and_return(vm_creator)
           expect(vm_creator).to receive(:create).with(vm_config).and_return(fake_vm)
@@ -820,7 +815,6 @@ module VSphereCloud
 
         before do
           allow(VmConfig).to receive(:new).and_return(vm_config)
-          expect(vm_config).to receive(:validate)
           expect(VmCreator).to receive(:new).and_return(vm_creator)
           expect(vm_creator).to receive(:create).with(vm_config).and_return(fake_vm)
         end
