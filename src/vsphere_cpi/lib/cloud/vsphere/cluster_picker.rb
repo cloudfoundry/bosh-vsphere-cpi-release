@@ -30,7 +30,7 @@ module VSphereCloud
         datastore_picker.update(accessible_datastores)
 
         begin
-          placement = datastore_picker.best_disk_placement(disk_configurations)
+          placement = datastore_picker.best_disk_placement(disk_configurations, max_swapfile_size=req_memory)
           placement[:memory] = cluster.free_memory
           [cluster.name, placement]
         rescue Bosh::Clouds::CloudError

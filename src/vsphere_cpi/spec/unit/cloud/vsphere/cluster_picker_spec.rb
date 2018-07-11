@@ -17,7 +17,7 @@ module VSphereCloud
         let(:target_ds) do
           fake_datastore(
             'target-ds',
-            512,
+            1536,
             instance_double('VimSdk::Vim::Datastore', host: datastore_host_mount),
           )
         end
@@ -42,7 +42,8 @@ module VSphereCloud
               instance_double(VSphereCloud::DiskConfig,
                               size: 256,
                               target_datastore_pattern: 'target-ds',
-                              existing_datastore_name: nil
+                              existing_datastore_name: nil,
+                              ephemeral?: false,
               ),
               instance_double(VSphereCloud::DiskConfig,
                               size: 256,
@@ -198,7 +199,8 @@ module VSphereCloud
               instance_double(VSphereCloud::DiskConfig,
                 size: 2048,
                 target_datastore_pattern: '.*',
-                existing_datastore_name: nil
+                existing_datastore_name: nil,
+                ephemeral?: false,
               )
             ]
 
@@ -215,7 +217,8 @@ module VSphereCloud
               instance_double(VSphereCloud::DiskConfig,
                 size: 1024 - DatastorePicker::DEFAULT_DISK_HEADROOM + 1,
                 target_datastore_pattern: '.*',
-                existing_datastore_name: nil
+                existing_datastore_name: nil,
+                ephemeral?: false
               )
             ]
 
@@ -234,7 +237,8 @@ module VSphereCloud
               instance_double(VSphereCloud::DiskConfig,
                 size: 0,
                 target_datastore_pattern: 'target-ds',
-                existing_datastore_name: nil
+                existing_datastore_name: nil,
+                ephemeral?: false
               )
             ]
 
@@ -291,6 +295,7 @@ module VSphereCloud
                 size: 256,
                 target_datastore_pattern: '.*',
                 existing_datastore_name: 'current-ds',
+                ephemeral?: false
               )
             ]
 
@@ -347,7 +352,8 @@ module VSphereCloud
               instance_double(VSphereCloud::DiskConfig,
                 size: 256,
                 target_datastore_pattern: '.*',
-                existing_datastore_name: nil
+                existing_datastore_name: nil,
+                ephemeral?: false
               )
             ]
 
@@ -402,7 +408,8 @@ module VSphereCloud
               instance_double(VSphereCloud::DiskConfig,
                 size: 256,
                 target_datastore_pattern: '.*',
-                existing_datastore_name: nil
+                existing_datastore_name: nil,
+                ephemeral?: false
               )
             ]
 
