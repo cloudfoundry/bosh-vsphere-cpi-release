@@ -66,9 +66,17 @@ module VSphereCloud
     end
 
     def each
-      return enum_for(:each) unless block_given?
+      # The supermethod returns enum_for(:each) when no block is given. Because
+      # :each is indiscriminate the result of that call will actually be an
+      # Enumerator that successively yields from *this* method (since even in
+      # the supermethod method(:each) will return *this* method). Thus just call
+      # the supermethod when no block is given.
+      return super unless block_given?
 
-      super.map(&:resource)
+      # When a block is given we can't use any method of Enumerable to satisfy
+      # its logic since they all rely on #each (this #each) resulting in an
+      # infinite loop. Instead we must pass a block with the actual #map logic.
+      super { |placement| yield placement.resource }
     end
 
     def gather
