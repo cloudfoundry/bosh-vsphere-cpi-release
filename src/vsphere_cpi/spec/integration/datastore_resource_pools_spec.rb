@@ -151,7 +151,7 @@ context 'when datastores are configured in vm_types' do
             [],
             {}
           )
-        }.to raise_error Bosh::Clouds::CloudError, /No valid placement found for disks/
+        }.to raise_error Bosh::Clouds::CloudError, /No valid placement /
       ensure
         delete_vm(two_cluster_cpi, vm_id)
       end

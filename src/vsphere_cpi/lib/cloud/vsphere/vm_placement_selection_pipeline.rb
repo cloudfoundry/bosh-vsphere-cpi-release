@@ -24,6 +24,10 @@ module VSphereCloud
     def balance_score
       return @balance_score if defined? @balance_score
 
+      # Only happens if there are no disks to be configured.
+      # TODO Check if this is even possible in real scenarios?
+      return 0 if balance_score_set.empty?
+
       free_spaces = balance_score_set.map(&:free_space).sort
 
       min = free_spaces.first
@@ -94,7 +98,7 @@ module VSphereCloud
           storage_placement.resource.accessible_from?(vm_placement.cluster)
         end
 
-        result = pipeline.each.first.resource
+        result = pipeline.each.first
 
         # TODO: Log something. Return false and reject this cluster for
         # absence of any suitable storage for given disk configurations
@@ -124,7 +128,6 @@ module VSphereCloud
 
     def initialize(*args)
       super(VmPlacementCriteria.new(*args))
-      with_filter do end
     end
   end
 end

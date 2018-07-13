@@ -17,8 +17,8 @@ describe VSphereCloud::Resources::Datastore do
     it('returns the mob') { expect(subject.mob).to eq(mob) }
   end
 
-  describe '#maintenance_mode' do
-    it('returns the maintenance mode of datastore') { expect(subject.maintenance_mode).to eq('normal') }
+  describe '#maintenance_mode?' do
+    it('returns the maintenance mode of datastore') { expect(subject.maintenance_mode?).to eq(false) }
   end
 
   describe '#name' do

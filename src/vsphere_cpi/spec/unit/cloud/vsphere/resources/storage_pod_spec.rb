@@ -83,7 +83,7 @@ describe VSphereCloud::Resources::StoragePod do
 
     context 'when storage pod has two datastores and one of them is in maintenance mode' do
       it 'should return normal' do
-        expect(subject.maintenance_mode).to eq('normal')
+        expect(subject.maintenance_mode?).to eq(false)
       end
     end
 
@@ -92,7 +92,7 @@ describe VSphereCloud::Resources::StoragePod do
         allow(dstwo_mob).to receive_message_chain(:summary, :maintenance_mode).and_return('entering_maintenance')
       end
       it 'should return in_maintenance' do
-        expect(subject.maintenance_mode).to eq('in_maintenance')
+        expect(subject.maintenance_mode?).to eq(true)
       end
     end
   end

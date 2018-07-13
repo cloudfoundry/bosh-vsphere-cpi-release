@@ -136,8 +136,7 @@ context 'when the datastore is chosen for disk creation' do
         mismatch_cpi.create_vm('agent-007', @stemcell_id, vm_type, network_spec)
       }.to raise_error { |error|
         expect(error).to be_a(Bosh::Clouds::CloudError)
-        expect(error.message).to include(@second_cluster_datastore)
-        expect(error.message).to include('No valid placement found for disks')
+        expect(error.message).to include('No valid placement found')
       }
     end
   end
