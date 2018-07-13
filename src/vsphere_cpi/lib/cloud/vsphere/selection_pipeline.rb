@@ -62,7 +62,7 @@ module VSphereCloud
         accept?(placement)
       end.sort do |p1, p2|
         compare_placements(p1, p2)
-      end.each(&Proc.new)
+      end.reverse.each(&Proc.new)
     end
 
     def with_filter(*args)

@@ -383,7 +383,6 @@ module VSphereCloud
       let(:stemcell_vm) { instance_double(Resources::VM) }
       let(:vm_creator) { instance_double(VmCreator) }
       let(:vm_config) { instance_double(VmConfig) }
-      let(:cluster_picker) { instance_double(ClusterPicker) }
       let(:ip_conflict_detector) { instance_double(IPConflictDetector) }
       let(:existing_disk_cids) { ['fake-disk-cid'] }
       let(:fake_disk) do
@@ -444,7 +443,6 @@ module VSphereCloud
         allow(VSphereCloud::DirectorDiskCID).to receive(:new).with(encoded_disk_cid).and_return(director_disk_cid)
 
         allow(IPConflictDetector).to receive(:new).with(vcenter_client).and_return(ip_conflict_detector)
-        allow(ClusterPicker).to receive(:new).and_return(cluster_picker)
         allow(IPConflictDetector).to receive(:new).with(vcenter_client).and_return(ip_conflict_detector)
         allow(DiskConfig).to receive(:new)
           .with(
@@ -478,10 +476,8 @@ module VSphereCloud
         allow(VmConfig).to receive(:new)
           .with(
             manifest_params: expected_manifest_params,
-            cluster_picker: cluster_picker,
             cluster_provider: cluster_provider
           ).and_return(vm_config)
-        expect(vm_config).to receive(:validate)
 
         expect(VmCreator).to receive(:new)
           .with(
@@ -524,11 +520,9 @@ module VSphereCloud
         expect(VmConfig).to receive(:new)
           .with(
             manifest_params: expected_manifest_params,
-            cluster_picker: cluster_picker,
             cluster_provider: cluster_provider
           )
           .and_return(vm_config)
-        expect(vm_config).to receive(:validate)
 
         expect(VmCreator).to receive(:new)
           .with(
@@ -658,7 +652,6 @@ module VSphereCloud
             expect(options[:manifest_params][:disk_configurations]).to eq([fake_persistent_disk, fake_ephemeral_disk])
             vm_config
           end
-          expect(vm_config).to receive(:validate)
 
           vsphere_cloud.create_vm(
             'fake-agent-id',
@@ -691,11 +684,9 @@ module VSphereCloud
           allow(VmConfig).to receive(:new)
                                .with({
                                  manifest_params: expected_manifest_params,
-                                 cluster_picker: cluster_picker,
                                  cluster_provider: cluster_provider
                                })
                                .and_return(vm_config)
-          expect(vm_config).to receive(:validate)
 
           expect(VmCreator).to receive(:new)
                                  .with(
@@ -777,7 +768,6 @@ module VSphereCloud
                             .with('fake-nsx-user', 'fake-nsx-password', 'fake-log-file')
                             .and_return(http_basic_auth_client)
           allow(NSX).to receive(:new).and_return(nsx)
-          expect(vm_config).to receive(:validate)
 
           expect(VmCreator).to receive(:new).and_return(vm_creator)
           expect(vm_creator).to receive(:create).with(vm_config).and_return(fake_vm)
@@ -826,7 +816,6 @@ module VSphereCloud
 
         before do
           allow(VmConfig).to receive(:new).and_return(vm_config)
-          expect(vm_config).to receive(:validate)
           expect(VmCreator).to receive(:new).and_return(vm_creator)
           expect(vm_creator).to receive(:create).with(vm_config).and_return(fake_vm)
         end
@@ -1547,7 +1536,7 @@ module VSphereCloud
 
       it 'creates disk via datacenter' do
         expect(datacenter).to receive(:create_disk)
-          .with(datastore, 1024, default_disk_type)
+          .with(VSphereCloud::Resources::Datastore, 1024, default_disk_type)
           .and_return(disk)
 
         disk_cid = vsphere_cloud.create_disk(1024, {})
@@ -1558,7 +1547,7 @@ module VSphereCloud
         let(:default_disk_type) { 'fake-global-type' }
         it 'creates disk with the specified default type' do
           expect(datacenter).to receive(:create_disk)
-                                  .with(datastore, 1024, 'fake-global-type')
+                                  .with(VSphereCloud::Resources::Datastore, 1024, 'fake-global-type')
                                   .and_return(disk)
 
           disk_cid = vsphere_cloud.create_disk(1024, {})
@@ -1570,7 +1559,7 @@ module VSphereCloud
         let(:default_disk_type) { 'fake-global-type' }
         it 'create disk with the specified disk_pool type' do
           expect(datacenter).to receive(:create_disk)
-                                  .with(datastore, 1024, 'fake-disk-pool-type')
+                                  .with(VSphereCloud::Resources::Datastore, 1024, 'fake-disk-pool-type')
                                   .and_return(disk)
           disk_cid = vsphere_cloud.create_disk(1024, {'type' => 'fake-disk-pool-type'})
           expect(disk_cid).to eq('fake-disk-cid')
@@ -1580,7 +1569,7 @@ module VSphereCloud
       context 'when no global default_disk_type is set and disk_pool type is set' do
         it 'creates disk with the specified disk_pool type' do
           expect(datacenter).to receive(:create_disk)
-            .with(datastore, 1024, 'fake-disk-pool-type')
+            .with(VSphereCloud::Resources::Datastore, 1024, 'fake-disk-pool-type')
             .and_return(disk)
 
           disk_cid = vsphere_cloud.create_disk(1024, {'type' => 'fake-disk-pool-type'})
@@ -1627,10 +1616,10 @@ module VSphereCloud
             .with('large-ds')
             .and_return(large_datastore)
           allow(datacenter).to receive(:create_disk)
-            .with(small_datastore, 1024, default_disk_type)
+            .with(VSphereCloud::Resources::Datastore, 1024, default_disk_type)
             .and_return(disk)
           allow(datacenter).to receive(:create_disk)
-            .with(large_datastore, 1024, default_disk_type)
+            .with(VSphereCloud::Resources::Datastore, 1024, default_disk_type)
             .and_return(disk)
         end
 

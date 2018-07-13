@@ -485,11 +485,9 @@ module VSphereCloud
 
         unless disk_is_accessible && disk_is_in_target_datastore
           # Create a new disk selection pipeline with a gathering block.
-          # Specific filters are pre-defined in the constructor itself
-          # Criteria Object for filter passed in the constructor is a hash of size and pattern.
-          storage_placement_criteria = StoragePlacementCriteria.new(disk_config.size,
-            disk_config.target_datastore_pattern, disk_config.existing_datastore_name)
-          pipeline = DiskPlacementSelectionPipeline.new(storage_placement_criteria) do
+          pipeline = DiskPlacementSelectionPipeline.new(disk_config.size,
+            disk_config.target_datastore_pattern,
+            disk_config.existing_datastore_name) do
             accessible_datastores.values
           end
           storage_placement_enum = pipeline.each
@@ -552,7 +550,7 @@ module VSphereCloud
 
         # For each possible placement try to create a disk
         pipeline.each do |storage_placement|
-          datastore = storage_placement.resource
+          datastore = storage_placement
 
           logger.info("Trying to create persistent disk on datastore: #{datastore.name}")
           disk = @datacenter.create_disk(datastore, size_in_mb, disk_type)

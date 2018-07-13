@@ -56,7 +56,7 @@ context 'when regex matching datastores in a datastore cluster (datastore-*)' do
         [],
         {}
       )
-    end.to raise_error(/No valid placement found for disks/)
+    end.to raise_error(/No valid placement /)
   end
 end
 
@@ -187,7 +187,7 @@ context 'when datastore cluster is also defined in vm_type' do
         [],
         {}
       )
-      end.to raise_error(/No valid placement found for disks/)
+      end.to raise_error(/No valid placement found/)
     end
   end
 end

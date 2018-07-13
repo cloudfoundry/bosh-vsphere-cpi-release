@@ -167,6 +167,9 @@ module VSphereCloud
         end
       end
       @cluster_placement = vm_selection_placement_pipeline.each
+      raise Bosh::Clouds::CloudError,
+        'No valid placement found for VM compute and storage requirement' if @cluster_placement.first == nil
+      @cluster_placement
     end
   end
 end
