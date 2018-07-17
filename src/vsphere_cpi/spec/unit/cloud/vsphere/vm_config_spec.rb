@@ -227,7 +227,6 @@ module VSphereCloud
           expect(cluster_provider).to receive(:find).with('fake-cluster-name', cluster_config).and_return(fake_cluster)
           expect(cluster_provider).to receive(:find).with('fake-cluster-name-2', cluster_config_2).and_return(fake_cluster_2)
           cluster_placement = vm_config.cluster_placements
-          expect(cluster_placement).to be_an_instance_of(Enumerator)
           expect(cluster_placement.take(10).size).to eql(2)
         end
       end
