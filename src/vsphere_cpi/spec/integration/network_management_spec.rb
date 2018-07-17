@@ -176,6 +176,7 @@ describe 'network management', :nsxt_21 => true  do
             }
         }
       }
+
       before do
         @t1_router2 = create_t1_router('t1-test-router-2')
         @test_switch2 = create_switch('test-switch-2')
