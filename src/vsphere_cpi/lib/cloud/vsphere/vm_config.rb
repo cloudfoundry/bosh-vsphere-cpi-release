@@ -1,5 +1,6 @@
 module VSphereCloud
   class VmConfig
+    include Logger
 
     def initialize(manifest_params:, cluster_provider: nil)
       @manifest_params = manifest_params
@@ -162,6 +163,7 @@ module VSphereCloud
       return @cluster_placement if @cluster_placement
 
       vm_selection_placement_pipeline = VmPlacementSelectionPipeline.new(disk_config: disk_configurations, req_memory: vm_type.ram) do
+        logger.info("Gathering vm placement resources for vm placement allocator pipeline")
         clusters.map do |cluster|
           VmPlacement.new(cluster: cluster, datastores: cluster.accessible_datastores.values, hosts: nil)
         end

@@ -193,6 +193,7 @@ module VSphereCloud
 
             logger.info('Uploading')
             vm = upload_ovf(ovf_file, nfc_lease, import_spec_result.file_item)
+            # Under what conditions it can be nil and do we need to retry necessarily after that?
             next if vm.nil?
             result = name
 
@@ -488,6 +489,7 @@ module VSphereCloud
           pipeline = DiskPlacementSelectionPipeline.new(disk_config.size,
             disk_config.target_datastore_pattern,
             disk_config.existing_datastore_name) do
+            logger.info("Gathering storage placement resources for disk allocator pipeline")
             accessible_datastores.values
           end
           storage_placement_enum = pipeline.each
@@ -521,8 +523,9 @@ module VSphereCloud
 
     def create_disk(size_in_mb, cloud_properties, vm_cid = nil)
       with_thread_name("create_disk(#{size_in_mb}, _)") do
+        logger.info("Cloud properties given : #{cloud_properties}")
         logger.info("Creating disk with size: #{size_in_mb}")
-        # Create a disk pool to hold possible datastyores
+        # Create a disk pool to hold possible datastores
         disk_pool = DiskPool.new(@datacenter,  cloud_properties['datastores'])
 
         # Get a persistent disk pattern from disk pools. Storage pod names are handled inside this function.
@@ -534,10 +537,13 @@ module VSphereCloud
         # Specific filters are pre-defined in the constructor itself
         # Criteria Object for filter passed in the constructor is a hash of size and pattern.
         pipeline = DiskPlacementSelectionPipeline.new(size_in_mb, target_datastore_pattern) do
+          logger.info("Gathering storage placement resources for disk allocator pipeline")
           if vm_cid
+            logger.debug("Gathering storage placement accessible from VM CID")
             vm = vm_provider.find(vm_cid)
             accessible_datastores = vm.accessible_datastores
           else
+            logger.debug("Gathering storage placement accessible from datacenter")
             accessible_datastores = @datacenter.accessible_datastores
           end
           # Pick datastores that are accessible from at least 1 active host they are attached to

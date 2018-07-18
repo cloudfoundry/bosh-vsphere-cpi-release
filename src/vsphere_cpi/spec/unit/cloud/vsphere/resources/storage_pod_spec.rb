@@ -20,12 +20,6 @@ describe VSphereCloud::Resources::StoragePod do
     end
   end
 
-  describe '#inspect' do
-    it 'returns the printable form' do
-      expect(storage_pod.inspect). to eq("<StoragePod: #{storage_pod_mob} / cpi-sp1>")
-    end
-  end
-
   describe '#accessible?' do
     let (:dsone_mob) { instance_double('VimSdk::Vim::Datastore', host: [host_mount]) }
     let (:dstwo_mob) { instance_double('VimSdk::Vim::Datastore', host: [host_mount]) }

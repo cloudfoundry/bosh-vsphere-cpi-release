@@ -12,6 +12,11 @@ module VSphereCloud
         @existing_ds_pattern = existing_ds_pattern
         @target_datastore_pattern = target_ds_pattern
       end
+
+      def inspect
+        "Storage Criteria: Space Req: #{size_in_mb} Target Pattern: #{target_datastore_pattern}
+        Existing-DS:#{existing_ds_pattern}"
+      end
     end
     private_constant :StoragePlacementCriteria
 
@@ -34,27 +39,38 @@ module VSphereCloud
       def hash
         resource.hash
       end
+
+      def inspect
+        "Storage #{resource.name} [free space: #{resource.free_space} maintenance_mode: #{resource.maintenance_mode?} accessible: #{resource.accessible?}]"
+      end
+      alias inspect_before inspect
     end
     private_constant :StoragePlacement
 
     # Reject storage placements that are in maintenance mode
     with_filter do |storage_placement|
+      logger.debug("Filter #{storage_placement.name} for maintenance mode")
       !storage_placement.maintenance_mode?
     end
 
     # Select storage placements that have at least as much free space as
     # specified in the criteria object plus the disk headroom
     with_filter do |storage_placement, criteria_object|
+      logger.debug("Filter #{storage_placement.name} for free space")
       storage_placement.free_space > DISK_HEADROOM + criteria_object.size_in_mb
     end
 
     # Select storage placements which match target datastore pattern
     with_filter do |storage_placement, criteria_object|
+      logger.debug("Filter #{storage_placement.name} for target DS pattern #{criteria_object.target_datastore_pattern}")
       storage_placement.name =~ Regexp.new(criteria_object.target_datastore_pattern)
     end
 
     # Select storage placements that are accessible from any host
-    with_filter { |storage_placement| storage_placement.accessible? }
+    with_filter do |storage_placement|
+      logger.debug("Filter #{storage_placement.name} for accessibility")
+      storage_placement.accessible?
+    end
 
     # Score on basis on free space with a bit of randomness
     with_scorer do |p1, p2|
@@ -81,6 +97,10 @@ module VSphereCloud
 
     def gather
       super.map { |resource| StoragePlacement.new(resource) }
+    end
+
+    def inspect
+      "Disk Allocator with #{object.inspect}"
     end
   end
 end
