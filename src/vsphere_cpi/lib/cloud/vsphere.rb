@@ -63,10 +63,9 @@ require 'cloud/vsphere/nsxt_helpers/nsxt_switch_provider'
 require 'cloud/vsphere/nsxt_helpers/nsxt_api_client_builder'
 require 'cloud/vsphere/nsxt_helpers/nsxt_router_provider'
 require 'cloud/vsphere/nsxt_helpers/nsxt_ip_block_provider'
-require 'cloud/vsphere/placement'
 require 'cloud/vsphere/selection_pipeline'
 require 'cloud/vsphere/disk_placement_selection_pipeline'
-require 'cloud/vsphere/vm_placement_selection_pipeline.rb'
+require 'cloud/vsphere/vm_placement_selection_pipeline'
 
 
 

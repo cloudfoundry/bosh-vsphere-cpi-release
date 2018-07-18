@@ -12,7 +12,7 @@ describe VSphereCloud::VmPlacementSelectionPipeline do
 
   def fake_datastore(name, free_space: 4096)
     VSphereCloud::Resources::Datastore.new(
-      name, true, instance_double('VimSdk::Vim::Datastore'), 8192, free_space
+      name, instance_double('VimSdk::Vim::Datastore'), true, 8192, free_space
     ).tap do |resource|
       allow(resource).to receive(:accessible?).and_return(true)
     end
@@ -25,6 +25,7 @@ describe VSphereCloud::VmPlacementSelectionPipeline do
       :accessible_datastores => args.map{|ds| [ds.name, ds]}.to_h )
   end
 
+  # Simulating a mini datacenter with two clusters. Each cluster has two dedicated datastores and one shared datastore.
   let(:criteria) { [disk_config: disk_config, req_memory: 1024] }
   let(:ds_cl1_1) { fake_datastore('fake-ds-cl1-1') }
   let(:ds_cl1_2) { fake_datastore('fake-ds-cl1-2') }

@@ -56,7 +56,7 @@ context 'when regex matching datastores in a datastore cluster (datastore-*)' do
         [],
         {}
       )
-    end.to raise_error(/No valid placement /)
+    end.to raise_error(/No valid placement found/)
   end
 end
 

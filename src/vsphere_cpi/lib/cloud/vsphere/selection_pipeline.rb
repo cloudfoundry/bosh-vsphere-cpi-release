@@ -50,19 +50,24 @@ module VSphereCloud
     end
 
     def accept?(placement)
-      filter_list.all? do |filter|
-        filter.call(placement, @object)
+      result = filter_list.all? do |filter|
+        result = filter.call(placement, @object)
+        logger.info("Rejecting #{placement.inspect}") unless result
+        result
       end
+      logger.info("Selecting (All filter passed) : #{placement.inspect}") if result
+      result
     end
 
     def each
       return enum_for(:each) unless block_given?
 
+      logger.info("Initiating #{inspect}")
+
       gather.select do |placement|
+        logger.info("Applying filters to #{placement.inspect_before}")
         accept?(placement)
-      end.sort do |p1, p2|
-        compare_placements(p1, p2)
-      end.reverse.each(&Proc.new)
+      end.sort(&compare_placements).reverse.each(&Proc.new)
     end
 
     def with_filter(*args)
@@ -93,14 +98,16 @@ module VSphereCloud
 
     private
 
-    def compare_placements(p1, p2)
-      scorer_list.each do |scorer|
-        result = scorer.call(p1, p2)
-        if result != 0
-          return result
+    def compare_placements
+      lambda do |p1, p2|
+        scorer_list.each do |scorer|
+          result = scorer.call(p1, p2)
+          if result != 0
+            return result
+          end
         end
+        return 0
       end
-      return 0
     end
 
     def gather

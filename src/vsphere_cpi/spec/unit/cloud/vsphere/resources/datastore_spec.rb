@@ -112,18 +112,6 @@ describe VSphereCloud::Resources::Datastore do
     end
   end
 
-  describe '#inspect' do
-    it 'returns the printable form' do
-      expect(subject.inspect).to eq("<Datastore: #{mob} / foo_lun>")
-    end
-  end
-
-  describe '#debug_info' do
-    it 'returns the disk space info' do
-      expect(subject.debug_info).to eq('foo_lun (8192MB free of 16384MB capacity)')
-    end
-  end
-
   describe '#to_s' do
     it 'show relevant info' do
       expect(subject.to_s).to eq(%Q[(#{described_class.name} (name="foo_lun", mob="mob_as_string"))])

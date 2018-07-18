@@ -6,6 +6,13 @@ describe VSphereCloud::SelectionPipeline do
   let(:criteria) { :fake_criteria }
   let(:placement) { [:fake_placement] }
 
+  class Integer
+    def inspect
+      ""
+    end
+    alias inspect_before inspect
+  end
+
   describe '#initialize' do
     it 'raises an ArgumentError when no block is given' do
       expect do
@@ -64,8 +71,7 @@ describe VSphereCloud::SelectionPipeline do
 
       it 'adds each argument as a filter' do
         subject.with_filter(:fake_1, :fake_2)
-        list = subject.send(:filter_list)
-        expect(list).to include(:fake_1, :fake_2)
+        expect(subject.send(:filter_list)).to include(:fake_1, :fake_2)
       end
     end
 
@@ -79,8 +85,7 @@ describe VSphereCloud::SelectionPipeline do
       it 'adds the block as a filter' do
         sentinel = proc {}
         subject.with_filter(&sentinel)
-        list = subject.send(:filter_list)
-        expect(list).to include(sentinel)
+        expect(subject.send(:filter_list)).to include(sentinel)
       end
     end
   end
@@ -97,8 +102,7 @@ describe VSphereCloud::SelectionPipeline do
 
       it 'adds each argument as a scorer' do
         subject.with_scorer(:fake_1, :fake_2)
-        list = subject.send(:scorer_list)
-        expect(list).to include(:fake_1, :fake_2)
+        expect(subject.send(:scorer_list)).to include(:fake_1, :fake_2)
       end
     end
 
@@ -112,8 +116,7 @@ describe VSphereCloud::SelectionPipeline do
       it 'adds the block as a scorer' do
         sentinel = proc {}
         subject.with_scorer(&sentinel)
-        list = subject.send(:scorer_list)
-        expect(list).to include(sentinel)
+        expect(subject.send(:scorer_list)).to include(sentinel)
       end
     end
   end

@@ -15,5 +15,9 @@ module VSphereCloud
     def ephemeral?
       @ephemeral
     end
+
+    def inspect
+      "Disk ==> Disk CID:#{cid} Size:#{size} Ephemeral:#{ephemeral?} Target-DS:#{target_datastore_pattern} Existing-DS:#{existing_datastore_name}"
+    end
   end
 end
