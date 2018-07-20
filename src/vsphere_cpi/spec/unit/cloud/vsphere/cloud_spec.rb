@@ -191,6 +191,12 @@ module VSphereCloud
       end
     end
 
+    describe '#resize_disk' do
+      it 'raises not implemented exception when called' do
+        expect { vsphere_cloud.resize_disk('123', 23) }.to raise_error(Bosh::Clouds::NotImplemented)
+      end
+    end
+
     describe '#generate_network_env' do
       let(:device) { instance_double('VimSdk::Vim::Vm::Device::VirtualEthernetCard', backing: backing, mac_address: '00:00:00:00:00:00') }
       let(:devices) { [device] }
