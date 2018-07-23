@@ -1075,7 +1075,7 @@ module VSphereCloud
       let(:vm_location) do
         {
           datacenter: 'fake-datacenter',
-          datastore: 'fake-datastore-name',
+          datastore: datastore_with_disk,
           vm: 'vm-id'
         }
       end
@@ -1104,12 +1104,13 @@ module VSphereCloud
         allow(vm_provider).to receive(:find).with('fake-vm-cid').and_return(vm)
 
         allow(agent_env).to receive(:get_current_env).and_return(agent_env_hash)
-        allow(cdrom).to receive_message_chain(:backing, :datastore, :name) { 'fake-datastore-name' }
+        allow(cdrom).to receive_message_chain(:backing, :datastore, :name) { 'datastore-with-disk' }
         allow(vcenter_client).to receive(:get_cdrom_device).with(vm_mob).and_return(cdrom)
       end
 
       context 'when disk is in a datastore accessible to VM' do
         before do
+          allow(vm).to receive(:accessible_datastores).and_return({'datastore-with-disk'=>datastore_with_disk})
           allow(vm).to receive(:accessible_datastore_names).and_return(['datastore-with-disk'])
         end
 
@@ -1164,8 +1165,18 @@ module VSphereCloud
             folder: 'fake-folder')
         end
 
+        let(:vm_location) do
+          {
+            datacenter: 'fake-datacenter',
+            datastore: datastore_without_disk,
+            vm: 'vm-id'
+          }
+        end
+
         before do
           allow(vm).to receive(:accessible_datastore_names).and_return(['datastore-without-disk'])
+          allow(vm).to receive(:accessible_datastores).and_return({'datastore-without-disk'=>datastore_without_disk})
+          allow(cdrom).to receive_message_chain(:backing, :datastore, :name) { 'datastore-without-disk' }
         end
 
         it 'moves the disk to an accessible datastore and attaches it' do
@@ -1192,6 +1203,11 @@ module VSphereCloud
         before do
           allow(datacenter).to receive(:persistent_pattern).and_return(/datastore\-without\-disk/)
           allow(vm).to receive(:accessible_datastore_names).and_return(['datastore-with-disk', 'datastore-without-disk'])
+          allow(vm).to receive(:accessible_datastores).and_return(
+            {'datastore-with-disk'=>datastore_with_disk,
+             'datastore-without-disk'=>datastore_without_disk,
+            }
+          )
         end
 
         it 'moves the disk to a persistent datastore and attaches it' do
@@ -1241,6 +1257,11 @@ module VSphereCloud
           allow(target_datastore).to receive(:accessible?).and_return(true)
           allow(current_datastore).to receive(:accessible?).and_return(true)
           allow(datacenter).to receive(:accessible_datastores)
+            .and_return(
+              'target-datastore' => target_datastore,
+              'current-datastore' => current_datastore,
+            )
+          allow(vm).to receive(:accessible_datastores)
             .and_return(
               'target-datastore' => target_datastore,
               'current-datastore' => current_datastore,
@@ -1372,10 +1393,11 @@ module VSphereCloud
     describe '#detach_disk' do
       context 'disk is attached' do
         let(:attached_disk) { instance_double(VimSdk::Vim::Vm::Device::VirtualDisk, key: 'disk-key') }
+        let(:fake_datastore) { VSphereCloud::Resources::Datastore.new('fake-datastore-name', nil, true, 4096, 2048) }
         let(:vm_location) do
           {
             datacenter: 'fake-datacenter',
-            datastore: 'fake-datastore-name',
+            datastore: fake_datastore,
             vm: 'vm-id'
           }
         end
@@ -1389,6 +1411,7 @@ module VSphereCloud
           allow(vcenter_client).to receive(:get_cdrom_device).with(vm_mob).and_return(cdrom)
           allow(agent_env).to receive(:get_current_env).with(vm_mob, 'fake-datacenter').and_return(env)
           allow(vm).to receive(:disk_by_cid).with('disk-cid').and_return(attached_disk)
+          allow(vm).to receive(:accessible_datastores).and_return({'fake-datastore-name'=>fake_datastore})
         end
 
         it 'updates VM with new settings' do
