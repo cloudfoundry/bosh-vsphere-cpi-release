@@ -1,16 +1,48 @@
 require 'cloud/vsphere/logger'
 
 module VSphereCloud
+  class FileTransferError < StandardError; end
+
   class FileProvider
     include Logger
 
-    def initialize(http_client:, vcenter_host:, retryer: nil)
+    def initialize(http_client:, vcenter_host:, client:, retryer: nil)
+      @client = client
       @vcenter_host = vcenter_host
       @http_client = http_client
       @retryer = retryer || Retryer.new
     end
 
-    def fetch_file_from_datastore(datacenter_name, datastore_name, path)
+    def fetch_file_from_datastore(datacenter_name, datastore, path)
+      begin
+        logger.info("Trying to fetch file from Datastore through Host System")
+        fetch_file_from_datastore_via_host(datacenter_name, datastore, path)
+      rescue FileTransferError
+        logger.info("Trying to fetch file from Datastore through Datacenter")
+        fetch_file_from_datastore_via_datacenter(datacenter_name, datastore.name, path)
+      end
+    end
+
+    def upload_file_to_datastore(datacenter_name, datastore, path, contents)
+      begin
+        logger.info("Trying to upload file to Datastore through Host System")
+        upload_file_to_datastore_via_host(datacenter_name, datastore, path, contents)
+      rescue FileTransferError
+        logger.info("Trying to fetch file from Datastore through Datacenter")
+        upload_file_to_datastore_via_datacenter(datacenter_name, datastore.name, path, contents)
+      end
+    end
+
+    def upload_file_to_url(url, body, headers)
+      logger.info("Uploading file to #{url}...")
+
+      do_request(request_type: 'POST', url: url, body: body, headers: headers)
+      logger.info('Successfully uploaded file.')
+    end
+
+    private
+
+    def fetch_file_from_datastore_via_datacenter(datacenter_name, datastore_name, path)
       url ="https://#{@vcenter_host}/folder/#{path}?dcPath=#{URI.escape(datacenter_name)}" +
         "&dsName=#{URI.escape(datastore_name)}"
 
@@ -26,7 +58,35 @@ module VSphereCloud
       end
     end
 
-    def upload_file_to_datastore(datacenter_name, datastore_name, path, contents)
+    def fetch_file_from_datastore_via_host(datacenter_name, datastore, path)
+      host = get_healthy_host(datastore)
+      return FileTransferError.new("No healthy host available for transfer") if host.nil?
+
+      url = "https://#{host.name}/folder/#{path}?" +
+        "dsName=#{URI.escape(datastore.name)}"
+
+      service_ticket = get_generic_service_ticket(url: url, method: 'httpGet')
+      logger.info("Fetching file from #{url}...")
+      response = do_request(
+        request_type: 'GET',
+        url: url,
+        allow_not_found: false,
+        headers:
+          {
+            'Cookie' => "vmware_cgi_ticket=#{service_ticket.id}"
+          }
+      )
+
+      if response.nil?
+        logger.info("Could not find file at #{url}.")
+        nil
+      else
+        logger.info('Successfully downloaded file.')
+        response.body
+      end
+    end
+
+    def upload_file_to_datastore_via_datacenter(datacenter_name, datastore_name, path, contents)
       url = "https://#{@vcenter_host}/folder/#{path}?dcPath=#{URI.escape(datacenter_name)}" +
         "&dsName=#{URI.escape(datastore_name)}"
       logger.info("Uploading file to #{url}...")
@@ -36,14 +96,50 @@ module VSphereCloud
       logger.info('Successfully uploaded file.')
     end
 
-    def upload_file_to_url(url, body, headers)
+    def upload_file_to_datastore_via_host(datacenter_name, datastore, path, contents)
+      host = get_healthy_host(datastore)
+      return FileTransferError.new("No healthy host available for transfer") if host.nil?
+
+      url = "https://#{host.name}/folder/#{path}?" +
+        "dsName=#{URI.escape(datastore.name)}"
+
+      service_ticket = get_generic_service_ticket(url: url, method: 'httpPut')
+
       logger.info("Uploading file to #{url}...")
 
-      do_request(request_type: 'POST', url: url, body: body, headers: headers)
+      do_request(
+        request_type: 'PUT',
+        url: url, body: contents,
+        headers:
+          {
+            'Content-Type' => 'application/octet-stream',
+            'Cookie' => "vmware_cgi_ticket=#{service_ticket.id}"
+          }
+      )
       logger.info('Successfully uploaded file.')
     end
 
-    private
+    # Returns first healthy host mob from all host mounts for
+    # this datastore
+    #
+    # @return [VimSdk::HostSystem] ESXi Host Managed Object
+    def get_healthy_host(datastore_mob)
+      datastore_mob.host.detect do |host_mount|
+        host = host_mount.key
+        !host.runtime.in_maintenance_mode && host.runtime.power_state == 'poweredOn' && host.runtime.connection_state = 'connected'
+      end&.key
+    end
+
+
+    def get_generic_service_ticket(url:, method:)
+      session_manager = @client.service_content.session_manager
+      session_spec = VimSdk::Vim::SessionManager::HttpServiceRequestSpec.new
+      session_spec.method = method
+      session_spec.url = url
+
+      logger.info("Acquiring generic service ticket for URL: #{url} and Method: #{method}")
+      session_manager.acquire_generic_service_ticket(session_spec)
+    end
 
     def do_request(request_type:, url:, body: nil, headers: {}, allow_not_found: false)
       base_headers = {}
@@ -78,12 +174,11 @@ module VSphereCloud
         elsif resp.code >= 400
           err = "Could not transfer file '#{url}', received status code '#{resp.code}'"
           logger.warn(err)
-          [nil, err]
+          [nil, FileTransferError.new(err)]
         else
           [resp, nil]
         end
       end
-
       response
     end
   end

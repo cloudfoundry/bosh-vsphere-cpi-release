@@ -8,18 +8,16 @@ module VSphereCloud
       described_class.new(
         client: client,
         file_provider: file_provider,
-        cloud_searcher: cloud_searcher
       )
     end
 
     let(:client) { instance_double('VSphereCloud::VCenterClient') }
     let(:file_provider) { double('VSphereCloud::FileProvider') }
-    let(:cloud_searcher) { double('VSphereCloud::CloudSearcher') }
-
+    let(:fake_datastore) { instance_double('VimSdk::Vim::Datastore', name: 'fake-datastore-1')}
     let(:location) do
       {
         datacenter: 'fake-datacenter-name 1',
-        datastore: 'fake-datastore-name 1',
+        datastore: fake_datastore,
         vm: 'fake-vm-name',
       }
     end
@@ -55,7 +53,7 @@ module VSphereCloud
       it 'gets current agent environment from fetched file' do
         expect(file_provider).to receive(:fetch_file_from_datastore).with(
           'fake-datacenter-name 1',
-          'fake-datastore-name 1',
+          cdrom_datastore,
           'fake-vm-name/env.json',
         ).and_return('{"fake-response-json" : "some-value"}')
 
@@ -65,7 +63,7 @@ module VSphereCloud
       it 'raises if env.json is empty' do
         allow(file_provider).to receive(:fetch_file_from_datastore).with(
           'fake-datacenter-name 1',
-          'fake-datastore-name 1',
+          cdrom_datastore,
           'fake-vm-name/env.json',
         ).and_return(nil)
 
@@ -132,6 +130,14 @@ module VSphereCloud
         )
       end
 
+      let(:location) do
+        {
+          datacenter: 'fake-datacenter-name 1',
+          datastore: vm_datastore,
+          vm: 'fake-vm-name',
+        }
+      end
+
       let(:env) { ['fake-json'] }
       let(:cdrom_connectable_connected) { true }
 
@@ -151,13 +157,12 @@ module VSphereCloud
       end
 
       let(:datacenter) { instance_double('VimSdk::Vim::Datacenter') }
-      let(:vm_datastore) { instance_double('VimSdk::Vim::Datastore') }
+      let(:vm_datastore_mob) { instance_double('VimSdk::Vim::Datastore', name: 'fake-datastore-name 1') }
+      let(:vm_datastore) { instance_double('VSphereCloud::Resources::Datastore', mob: vm_datastore_mob, name: 'fake-datastore-name 1') }
       before do
         allow(cdrom).to receive(:kind_of?).with(VimSdk::Vim::Vm::Device::VirtualCdrom).and_return(true)
         allow(client).to receive(:get_cdrom_device).with(vm).and_return(cdrom)
         allow(client).to receive(:find_parent).with(vm, VimSdk::Vim::Datacenter).and_return(datacenter)
-        allow(cloud_searcher).to receive(:get_managed_object).with(VimSdk::Vim::Datastore, name: 'fake-datastore-name 1').
-          and_return(vm_datastore)
       end
 
       def it_disconnects_cdrom
@@ -178,7 +183,7 @@ module VSphereCloud
       def it_uploads_environment_json(code = 204)
         expect(file_provider).to receive(:upload_file_to_datastore).with(
           'fake-datacenter-name 1',
-          'fake-datastore-name 1',
+          vm_datastore_mob,
           'fake-vm-name/env.json',
           '["fake-json"]'
         ).and_return(double(:response, code: code))
@@ -209,7 +214,7 @@ module VSphereCloud
       def it_uploads_environment_iso
         expect(file_provider).to receive(:upload_file_to_datastore).with(
           'fake-datacenter-name 1',
-          'fake-datastore-name 1',
+          vm_datastore_mob,
           'fake-vm-name/env.iso',
           'iso contents',
         ).and_return(double(:response, code: 204))
@@ -222,7 +227,7 @@ module VSphereCloud
           expect(device_changes.size).to eql(1)
           cdrom_change = device_changes.first
           expect(cdrom_change.device.connectable.connected).to eq(true)
-          expect(cdrom_change.device.backing.datastore).to eq(vm_datastore)
+          expect(cdrom_change.device.backing.datastore).to eq(vm_datastore_mob)
           expect(cdrom_change.device.backing.file_name).to eq('[fake-datastore-name 1] fake-vm-name/env.iso')
         end
       end
@@ -294,7 +299,7 @@ module VSphereCloud
         before {
           expect(file_provider).to receive(:upload_file_to_datastore).with(
               'fake-datacenter-name 1',
-              'fake-datastore-name 1',
+              vm_datastore_mob,
               'fake-vm-name/env.json',
               '["fake-json"]'
             ).and_raise 'Could not upload file'

@@ -139,11 +139,11 @@ module VSphereCloud
           env = @cpi.generate_agent_env(vm_config.name, created_vm.mob, vm_config.agent_id, network_env, disk_env)
           env['env'] = vm_config.agent_env
 
-          location = {
-            datacenter: @datacenter.name,
-            datastore: datastore.name,
-            vm: vm_config.name,
-          }
+        location = {
+          datacenter: @datacenter.name,
+          datastore: datastore,
+          vm: vm_config.name,
+        }
 
           @agent_env.set_env(created_vm.mob, location, env)
 

@@ -5,10 +5,9 @@ module VSphereCloud
     include VimSdk
     include Logger
 
-    def initialize(client:, file_provider:, cloud_searcher:)
+    def initialize(client:, file_provider:)
       @client = client
       @file_provider = file_provider
-      @cloud_searcher = cloud_searcher
     end
 
     def get_current_env(vm, datacenter_name)
@@ -17,13 +16,13 @@ module VSphereCloud
       env_iso_folder = env_iso_folder(cdrom)
       return unless env_iso_folder
 
-      datastore_name = cdrom.backing.datastore.name
-      datastore_pattern = Regexp.escape(datastore_name)
+      datastore = cdrom.backing.datastore
+      datastore_pattern = Regexp.escape(datastore.name)
       result = env_iso_folder.match(/\[#{datastore_pattern}\] (.*)/)
-      raise Bosh::Clouds::CloudError.new("Could not find matching datastore name '#{datastore_name}'") unless result
+      raise Bosh::Clouds::CloudError.new("Could not find matching datastore name '#{datastore.name}'") unless result
       env_path = result[1]
 
-      contents = @file_provider.fetch_file_from_datastore(datacenter_name, datastore_name, "#{env_path}/env.json")
+      contents = @file_provider.fetch_file_from_datastore(datacenter_name, datastore, "#{env_path}/env.json")
       raise Bosh::Clouds::CloudError.new("Unable to load env.json from '#{env_path}/env.json'") unless contents
 
       JSON.load(contents)
@@ -35,13 +34,18 @@ module VSphereCloud
 
       disconnect_cdrom(vm)
       clean_env(vm)
-      @file_provider.upload_file_to_datastore(location[:datacenter], location[:datastore], "#{location[:vm]}/env.json", env_json)
-      @file_provider.upload_file_to_datastore(location[:datacenter], location[:datastore], "#{location[:vm]}/env.iso", generate_env_iso(env_json))
+      @file_provider.upload_file_to_datastore(location[:datacenter],
+                                              location[:datastore].mob,
+                                              "#{location[:vm]}/env.json",
+                                              env_json)
 
-      datastore = @cloud_searcher.get_managed_object(Vim::Datastore, name: location[:datastore])
-      file_name = "[#{location[:datastore]}] #{location[:vm]}/env.iso"
+      @file_provider.upload_file_to_datastore(location[:datacenter],
+                                              location[:datastore].mob,
+                                              "#{location[:vm]}/env.iso",
+                                              generate_env_iso(env_json))
 
-      update_cdrom_env(vm, datastore, file_name)
+      file_name = "[#{location[:datastore].name}] #{location[:vm]}/env.iso"
+      update_cdrom_env(vm, location[:datastore].mob, file_name)
     end
 
     def env_iso_folder(cdrom_device)
