@@ -148,11 +148,11 @@ module VSphereCloud
     end
 
     with_scorer do |p1, p2|
-      p1.balance_score <=> p2.balance_score
+      -(p1.balance_score <=> p2.balance_score)
     end
 
     with_scorer do |p1, p2|
-      p1.free_memory <=> p2.free_memory
+      -(p1.free_memory <=> p2.free_memory)
     end
 
     def initialize(*args)
