@@ -53,11 +53,11 @@ describe VSphereCloud::VmPlacementSelectionPipeline do
       expect(subject.to_a.first.datastores).to contain_exactly(ds_cl1_1)
     end
 
-    it 'sorts the placements in descending order of migration size' do
+    it 'sorts the placements in ascending order of migration size' do
       allow_any_instance_of(VSphereCloud::Resources::Datastore).to receive(:maintenance_mode?).and_return(false)
       allow(placement_1).to receive(:migration_size).and_return (20)
       allow(placement_2).to receive(:migration_size).and_return (10)
-      expect(subject.to_a.first).to eq(placement_1)
+      expect(subject.to_a.first).to eq(placement_2)
     end
 
     it 'sorts the placements in descending order of balance score if migration size is same' do
@@ -77,7 +77,7 @@ describe VSphereCloud::VmPlacementSelectionPipeline do
       expect(subject.to_a.first).to eq(placement_2)
     end
 
-    it 'sorts the placements in descending order of migration size then balance score and then free memory' do
+    it 'sorts the placements in ascending order of migration size then descending order of balance score and then free memory' do
       allow_any_instance_of(VSphereCloud::Resources::Datastore).to receive(:maintenance_mode?).and_return(false)
       placement_4 = placement_3 = placement_5 = placement_1.dup
       allow(placement_1).to receive_messages(:free_memory => 10000, :balance_score => 10 , :migration_size => 10)
@@ -86,7 +86,7 @@ describe VSphereCloud::VmPlacementSelectionPipeline do
       allow(placement_4).to receive_messages(:free_memory => 10000, :balance_score => 7 , :migration_size => 5)
       allow(placement_5).to receive_messages(:free_memory => 40000, :balance_score => 10 , :migration_size => 1)
       pipeline = described_class.new(*criteria) {[placement_1, placement_2, placement_3, placement_4, placement_5]}
-      expect(pipeline.to_a).to eq([placement_2, placement_1, placement_4, placement_3, placement_5])
+      expect(pipeline.to_a).to eq([placement_5, placement_4, placement_3, placement_2, placement_1])
     end
   end
 

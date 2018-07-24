@@ -67,7 +67,7 @@ module VSphereCloud
       gather.select do |placement|
         logger.info("Applying filters to #{placement.inspect_before}")
         accept?(placement)
-      end.sort(&compare_placements).reverse.each(&Proc.new)
+      end.sort(&compare_placements).each(&Proc.new)
     end
 
     def with_filter(*args)

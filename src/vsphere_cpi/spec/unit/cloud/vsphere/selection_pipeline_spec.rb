@@ -136,7 +136,7 @@ describe VSphereCloud::SelectionPipeline do
     it 'yields with placements filtered on its filter list' do
       subject.with_filter { |p1| p1.even? }
       subject.with_filter { |p1| p1 > 2 }
-      answer = placement.select { |n| n.even? && n > 2 }.reverse
+      answer = placement.select { |n| n.even? && n > 2 }
 
       expect do |b|
         subject.each(&b)
@@ -145,7 +145,7 @@ describe VSphereCloud::SelectionPipeline do
 
     it 'yields with placements sorted with its scorer list' do
       subject.with_scorer { |p1, p2| p1 <=> p2 }
-      answer = placement.sort.reverse
+      answer = placement.sort
 
       expect do |b|
         subject.each(&b)
@@ -156,7 +156,7 @@ describe VSphereCloud::SelectionPipeline do
       subject.with_filter { |p1| p1.even? }
       subject.with_filter { |p1| p1 > 2 }
       subject.with_scorer { |p1, p2| p1 <=> p2 }
-      answer = placement.select{ |n| n.even? && n > 2 }.sort.reverse
+      answer = placement.select{ |n| n.even? && n > 2 }.sort
 
       expect do |b|
         subject.each(&b)
