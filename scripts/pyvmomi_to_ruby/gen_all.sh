@@ -13,7 +13,13 @@ fi
 
 echo "Fetching version '${tag}' ...'"
 vmware_pyvmimu_url="https://raw.githubusercontent.com/vmware/pyvmomi"
-files_to_download="{ServerObjects.py,CoreTypes.py,QueryTypes.py}"
+
+# ServerObjects.py was modified manually to remove methods which are not defined.
+# When this is updated in future may need to remove following methods again if DataType is not defined for them:
+# Vim.Host.InternalCapability, Vim.Host.InternalConfigManager, Vmodl.Reflect.DynamicTypeManager
+# Vmodl.Reflect.ManagedMethodExecuter, Vim.InternalServiceInstanceContent
+
+files_to_download="{ServerObjects.py,CoreTypes.py,QueryTypes.py,PbmObjects.py,SmsObjects.py}"
 
 curl --remote-name "${vmware_pyvmimu_url}/${version_tag}/pyVmomi/${files_to_download}"
 

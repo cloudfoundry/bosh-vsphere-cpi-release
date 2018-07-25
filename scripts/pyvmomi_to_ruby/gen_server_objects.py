@@ -7,6 +7,8 @@ module VimSdk
 """)
 
 import ServerObjects
+import PbmObjects
+import SmsObjects
 
 print("""  end
 end

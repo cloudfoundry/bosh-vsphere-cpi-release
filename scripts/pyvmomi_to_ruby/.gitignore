@@ -1,3 +1,6 @@
 CoreTypes.py
 ServerObjects.py
+QueryTypes.py
+PbmObjects.py
+SmsObjects.py
 *.pyc
