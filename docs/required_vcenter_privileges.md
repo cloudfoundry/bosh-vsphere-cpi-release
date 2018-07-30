@@ -88,7 +88,7 @@ These privileges must be granted on any entities in a Datacenter the CPI will in
     <tr><td>Migrate powered off virtual machine</td><td>Resource.ColdMigrate</td></tr>
     <tr><td>Migrate powered on virtual machine</td><td>Resource.HotMigrate</td></tr>
     <tr>
-      <td rowspan="52">Virtual Machine</td>
+      <td rowspan="53">Virtual Machine</td>
     </tr>
     <tr><td>Configuration > Add existing disk</td><td>VirtualMachine.Config.AddExistingDisk</td></tr>
     <tr><td>Configuration > Add new disk</td><td>VirtualMachine.Config.AddNewDisk</td></tr>
@@ -112,6 +112,7 @@ These privileges must be granted on any entities in a Datacenter the CPI will in
     <tr><td>Configuration > Settings</td><td>VirtualMachine.Config.Settings</td></tr>
     <tr><td>Configuration > Swapfile placement</td><td>VirtualMachine.Config.SwapPlacement</td></tr>
     <tr><td>Configuration > Unlock virtual machine</td><td>VirtualMachine.Config.Unlock</td></tr>
+    <tr><td>Configuration > Upgrade virtual machine hardware</td><td>VirtualMachine.Config.UpgradeVirtualHardware</td></tr>
     <tr><td>Interaction > Answer question</td><td>VirtualMachine.Interact.AnswerQuestion</td></tr>
     <tr><td>Interaction > Configure CD media</td><td>VirtualMachine.Interact.SetCDMedia</td></tr>
     <tr><td>Interaction > Device connection</td><td>VirtualMachine.Interact.DeviceConnection</td></tr>
