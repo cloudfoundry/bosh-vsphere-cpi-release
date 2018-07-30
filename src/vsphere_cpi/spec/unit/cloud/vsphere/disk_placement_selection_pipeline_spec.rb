@@ -33,10 +33,22 @@ describe VSphereCloud::DiskPlacementSelectionPipeline do
     expect(subject.to_a).to contain_exactly(ds_1)
   end
 
-  it 'only generates datastores with enough free space' do
-    allow(ds_1).to receive(:free_space).and_return(0)
-    expect(subject.to_a).to contain_exactly(ds_2)
+  context 'when filtering on free space' do
+    context 'when criteria is specified for a persistent disk' do
+      it 'only generates datastores with enough free space' do
+        allow(ds_1).to receive(:free_space).and_return(0)
+        expect(subject.to_a).to contain_exactly(ds_2)
+      end
+    end
+    context 'when criteria is specified for an ephemeral disk' do
+      let(:criteria) { [512, 'fake-.*', nil, true, 512] }
+      it 'only generates datastores with enough free space' do
+        allow(ds_1).to receive(:free_space).and_return(2047)
+        expect(subject.to_a).to contain_exactly(ds_2)
+      end
+    end
   end
+
 
   context 'when both datastore satisfy all criteria' do
     it 'returns both the datastores' do

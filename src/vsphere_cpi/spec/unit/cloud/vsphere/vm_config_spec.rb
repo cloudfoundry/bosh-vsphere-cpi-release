@@ -256,7 +256,7 @@ module VSphereCloud
         let(:smaller_datastore_mob) { instance_double('VimSdk::Vim::Datastore', host: datastore_host_mount) }
         let(:larger_datastore_mob) { instance_double('VimSdk::Vim::Datastore', host: datastore_host_mount) }
         let(:smaller_ds) { fake_datastore( 'smaller-ds', 512, smaller_datastore_mob) }
-        let(:larger_ds) { fake_datastore('larger-ds', 2048, larger_datastore_mob) }
+        let(:larger_ds) { fake_datastore('larger-ds', 4096, larger_datastore_mob) }
         let(:cluster1_mob) { instance_double(VimSdk::Vim::ClusterComputeResource, host: [host_system]) }
         let(:cluster2_mob) { instance_double(VimSdk::Vim::ClusterComputeResource, host: [host_system]) }
         let(:cluster_1) do
