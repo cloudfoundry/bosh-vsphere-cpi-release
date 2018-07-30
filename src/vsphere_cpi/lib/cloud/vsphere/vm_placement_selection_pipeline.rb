@@ -95,7 +95,7 @@ module VSphereCloud
       !vm_placement.datastores.empty?
     end
 
-    with_filter -> (vm_placement, criteria_object) do
+    with_filter ->(vm_placement, criteria_object) do
       logger.debug("Filter #{vm_placement.inspect_before} for combination of DS satisfying disk configurations")
       criteria_object.disk_config.each do |disk|
         logger.debug("Trying to find placement for #{disk.inspect}")
@@ -116,7 +116,7 @@ module VSphereCloud
         # There are two possibilities at this point. Either:
         #   1. The disk is an ephemeral disk
         #   2. The disk is a persistent disk that must be migrated
-        pipeline = DiskPlacementSelectionPipeline.new(disk.size, disk.target_datastore_pattern) do
+        pipeline = DiskPlacementSelectionPipeline.new(disk.size, disk.target_datastore_pattern, nil, disk.ephemeral?, criteria_object.required_memory) do
           vm_placement.datastores
         end.with_filter do |storage_placement|
           # TODO: both accessible? and accessible_from? will be queried for
