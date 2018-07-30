@@ -24,6 +24,7 @@ module VSphereCloud
             size: 256,
             existing_datastore_name: 'ds-1',
             target_datastore_pattern: '.*',
+            ephemeral?: false,
           )
         end
         let(:moved_disk) do
@@ -31,6 +32,7 @@ module VSphereCloud
             size: 512,
             existing_datastore_name: nil,
             target_datastore_pattern: '.*',
+            ephemeral?: false,
           )
         end
         context 'when datastore is in maintenance mode' do
@@ -69,6 +71,7 @@ module VSphereCloud
               size: 999999,
               existing_datastore_name: nil,
               target_datastore_pattern: '.*',
+              ephemeral?: false,
             )
           end
 
@@ -88,6 +91,7 @@ module VSphereCloud
               size: 256,
               existing_datastore_name: nil,
               target_datastore_pattern: 'bad-pattern',
+              ephemeral?: false,
             )
           end
 
@@ -121,14 +125,25 @@ module VSphereCloud
           instance_double(VSphereCloud::DiskConfig,
             size: 256,
             target_datastore_pattern: 'ds-2',
-            existing_datastore_name: nil
+            existing_datastore_name: nil,
+            ephemeral?: false,
           )
         end
         let(:disk2) do
           instance_double(VSphereCloud::DiskConfig,
             size: 512,
             target_datastore_pattern: '.*',
-            existing_datastore_name: nil
+            existing_datastore_name: nil,
+            ephemeral?: false,
+          )
+        end
+
+        let(:disk3) do
+          instance_double(VSphereCloud::DiskConfig,
+            size: 512,
+            target_datastore_pattern: '.*',
+            existing_datastore_name: nil,
+            ephemeral?: true,
           )
         end
 
@@ -147,6 +162,41 @@ module VSphereCloud
           })
         end
 
+        it 'accounts for swapfile size for ephemeral disks' do
+          picker.update(available_datastores)
+
+          disks = [disk3]
+          expect(picker.best_disk_placement(disks, max_swapfile_size: 256)[:datastores]).to include({
+            'ds-2' => {
+              free_space: 256,
+              disks: [disk3],
+              mob: ds_1_mob,
+            },
+          })
+        end
+
+        it 'doesnot account for swapfile size for persistent disks' do
+          picker.update(available_datastores)
+
+          disks = [disk1, disk2]
+          expect(picker.best_disk_placement(disks, max_swapfile_size: 513)[:datastores]).to include({
+            'ds-2' => {
+              free_space: 256,
+              disks: [disk1, disk2],
+              mob: ds_1_mob,
+            },
+          })
+        end
+
+        it 'raises an error when the swapfile cannot be accommodated' do
+          picker.update(available_datastores)
+
+          disks = [disk3]
+          expect{
+            picker.best_disk_placement(disks, max_swapfile_size: 513)
+          }.to raise_error Bosh::Clouds::CloudError, /No valid placement/
+        end
+
         context 'when headroom is not specified' do
           let(:ds_1) { instance_double(VSphereCloud::Resources::Datastore, free_space: 1536, mob: ds_1_mob) }
           let(:ds_2) { instance_double(VSphereCloud::Resources::Datastore, free_space: 2048, mob: ds_1_mob) }
@@ -160,14 +210,16 @@ module VSphereCloud
             instance_double(VSphereCloud::DiskConfig,
               size: 256,
               target_datastore_pattern: 'ds-2',
-              existing_datastore_name: nil
+              existing_datastore_name: nil,
+              ephemeral?: false,
             )
           end
           let(:disk2) do
             instance_double(VSphereCloud::DiskConfig,
               size: 512,
               target_datastore_pattern: '.*',
-              existing_datastore_name: nil
+              existing_datastore_name: nil,
+              ephemeral?: false,
             )
           end
 
@@ -207,14 +259,16 @@ module VSphereCloud
             instance_double(VSphereCloud::DiskConfig,
               size: 256,
               target_datastore_pattern: 'ds-2',
-              existing_datastore_name: nil
+              existing_datastore_name: nil,
+              ephemeral?: false,
             )
           end
           let(:disk2) do
             instance_double(VSphereCloud::DiskConfig,
               size: 512,
               target_datastore_pattern: '.*',
-              existing_datastore_name: nil
+              existing_datastore_name: nil,
+              ephemeral?: false,
             )
           end
 
@@ -235,13 +289,15 @@ module VSphereCloud
               size: 256,
               existing_datastore_name: 'ds-2',
               target_datastore_pattern: '.*',
+              ephemeral?: false,
             )
           end
           let(:disk2) do
             instance_double(VSphereCloud::DiskConfig,
               size: 512,
               target_datastore_pattern: '.*',
-              existing_datastore_name: nil
+              existing_datastore_name: nil,
+              ephemeral?: false,
             )
           end
 
@@ -265,6 +321,7 @@ module VSphereCloud
               size: 256,
               existing_datastore_name: 'non-available-ds',
               target_datastore_pattern: '.*',
+              ephemeral?: false,
             )
           end
 
@@ -303,7 +360,7 @@ module VSphereCloud
               end.to_h
 
               disks = input[:datastore_space].each_with_index.map do |free_space, index|
-                instance_double(VSphereCloud::DiskConfig, size: 0, target_datastore_pattern: "ds-#{index}", existing_datastore_name: nil)
+                instance_double(VSphereCloud::DiskConfig, size: 0, target_datastore_pattern: "ds-#{index}", existing_datastore_name: nil, ephemeral?: false)
               end
 
               picker = DatastorePicker.new(0)
@@ -337,28 +394,32 @@ module VSphereCloud
           instance_double(VSphereCloud::DiskConfig,
             size: 256,
             target_datastore_pattern: '.*',
-            existing_datastore_name: nil
+            existing_datastore_name: nil,
+            ephemeral?: false,
           )
         end
         let(:disk2) do
           instance_double(VSphereCloud::DiskConfig,
             size: 512,
             target_datastore_pattern: '.*',
-            existing_datastore_name: nil
+            existing_datastore_name: nil,
+            ephemeral?: false,
           )
         end
         let(:disk3) do
           instance_double(VSphereCloud::DiskConfig,
             size: 512,
             target_datastore_pattern: '.*',
-            existing_datastore_name: nil
+            existing_datastore_name: nil,
+            ephemeral?: false,
           )
         end
         let(:disk4) do
           instance_double(VSphereCloud::DiskConfig,
             size: 1024,
             target_datastore_pattern: '.*',
-            existing_datastore_name: nil
+            existing_datastore_name: nil,
+            ephemeral?: false,
           )
         end
 
@@ -404,7 +465,8 @@ module VSphereCloud
         instance_double(VSphereCloud::DiskConfig,
           size: 512,
           target_datastore_pattern: '.*',
-          existing_datastore_name: nil
+          existing_datastore_name: nil,
+          ephemeral?: false,
         )
       end
 
@@ -458,7 +520,8 @@ module VSphereCloud
         instance_double(VSphereCloud::DiskConfig,
           size: 128,
           target_datastore_pattern: 'shared-ds',
-          existing_datastore_name: nil
+          existing_datastore_name: nil,
+          ephemeral?: false,
         )
       end
     

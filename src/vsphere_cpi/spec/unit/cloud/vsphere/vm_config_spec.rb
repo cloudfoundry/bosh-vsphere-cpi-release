@@ -272,7 +272,7 @@ module VSphereCloud
         let(:datastore_host_mount) { [instance_double('VimSdk::Vim::Datastore::HostMount', key: host_system)]}
         let(:smaller_datastore_mob) { instance_double('VimSdk::Vim::Datastore', host: datastore_host_mount) }
         let(:larger_datastore_mob) { instance_double('VimSdk::Vim::Datastore', host: datastore_host_mount) }
-        let(:smaller_ds) { fake_datastore( 'smaller-ds', 512, smaller_datastore_mob) }
+        let(:smaller_ds) { fake_datastore( 'smaller-ds', 1024 + 256, smaller_datastore_mob) }
         let(:larger_ds) { fake_datastore('larger-ds', 2048, larger_datastore_mob) }
         let(:cluster1_mob) { instance_double(VimSdk::Vim::ClusterComputeResource, host: [host_system]) }
         let(:cluster2_mob) { instance_double(VimSdk::Vim::ClusterComputeResource, host: [host_system]) }
@@ -368,7 +368,7 @@ module VSphereCloud
         }
       end
       let(:global_clusters) { [cluster_1] }
-      let(:target_ds) { fake_datastore('target-ds', 512, target_ds_mob) }
+      let(:target_ds) { fake_datastore('target-ds', 1024, target_ds_mob) }
       let(:other_ds) { fake_datastore('other-ds', 512, other_ds_mob) }
       let(:cluster_1) do
         instance_double(VSphereCloud::Resources::Cluster,
@@ -394,6 +394,7 @@ module VSphereCloud
             cid: 'disk-1234',
             existing_datastore_name: 'other-ds',
             target_datastore_pattern: '.*',
+            ephemeral?: false,
           ),
         ]
       end
