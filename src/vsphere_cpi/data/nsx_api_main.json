@@ -76752,6 +76752,7 @@
                             "enum": [
                                 "read_only_api_users",
                                 "read_write_api_users",
+                                "undefined",
                                 "superusers"
                             ],
                             "readOnly": false,

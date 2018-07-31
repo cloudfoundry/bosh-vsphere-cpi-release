@@ -286,7 +286,7 @@ module NSXT
       return false if !@display_name.nil? && @display_name.to_s.length > 255
       return false if !@description.nil? && @description.to_s.length > 1024
       return false if @permission_group.nil?
-      permission_group_validator = EnumAttributeValidator.new('String', ["read_only_api_users", "read_write_api_users", "superusers"])
+      permission_group_validator = EnumAttributeValidator.new('String', ["read_only_api_users", "read_write_api_users", "undefined", "superusers"])
       return false unless permission_group_validator.valid?(@permission_group)
       return false if @node_id.nil?
       return false if @node_id.to_s.length > 255
@@ -321,7 +321,7 @@ module NSXT
     # Custom attribute writer method checking allowed values (enum).
     # @param [Object] permission_group Object to be assigned
     def permission_group=(permission_group)
-      validator = EnumAttributeValidator.new('String', ["read_only_api_users", "read_write_api_users", "superusers"])
+      validator = EnumAttributeValidator.new('String', ["read_only_api_users", "read_write_api_users", "undefined", "superusers"])
       unless validator.valid?(permission_group)
         fail ArgumentError, "invalid value for 'permission_group', must be one of #{validator.allowable_values}."
       end
