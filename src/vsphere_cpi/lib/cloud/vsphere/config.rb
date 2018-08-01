@@ -195,6 +195,10 @@ module VSphereCloud
       !vcenter['nsxt'].nil?
     end
 
+    def pbm_api_uri
+      URI.parse("https://#{vcenter_host}/pbm/sdk")
+    end
+
     private
 
     attr_reader :config

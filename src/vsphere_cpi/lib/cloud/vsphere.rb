@@ -67,8 +67,7 @@ require 'cloud/vsphere/nsxt_helpers/nsxt_ip_block_provider'
 require 'cloud/vsphere/selection_pipeline'
 require 'cloud/vsphere/disk_placement_selection_pipeline'
 require 'cloud/vsphere/vm_placement_selection_pipeline'
-
-
+require 'cloud/vsphere/pbm'
 
 module Bosh
   module Clouds

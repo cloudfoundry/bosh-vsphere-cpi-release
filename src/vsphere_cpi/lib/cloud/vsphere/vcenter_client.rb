@@ -12,7 +12,7 @@ module VSphereCloud
     class AlreadyLoggedInException < StandardError; end
     class NotLoggedInException < StandardError; end
 
-    attr_reader :cloud_searcher, :service_content, :service_instance, :soap_stub
+    attr_reader :cloud_searcher, :service_content, :service_instance
 
     def initialize(vcenter_api_uri:, http_client:)
       @soap_stub = SoapStub.new(vcenter_api_uri, http_client).create
@@ -456,6 +456,26 @@ module VSphereCloud
       return mob if child_path.empty?
       child_entity_name = child_path.shift
       find_child_by_name(mob.child_entity.find {|c| c.name == child_entity_name }, child_path)
+    end
+
+    # kmip_servers = @service_content.crypto_manager.list_kmip_servers
+    # provider_id = kmip_servers.first.cluster_id.id #can use this as in crypto_spec
+    # may be pass pbm here but will need to set the cookie
+    def encrypt_vm(vm_mob, pbm_api_uri, encryption_profile_name="VM Encryption Policy")
+      new_key = @service_content.crypto_manager.generate_key.key_id
+
+      pbm_http_client = VSphereCloud::CpiHttpClient.new
+      pbm = VSphereCloud::Pbm.new(pbm_api_uri, pbm_http_client, @soap_stub.vc_cookie)
+      encryption_profile = pbm.get_profile(encryption_profile_name)
+
+      config_spec = VimSdk::Vim::Vm::ConfigSpec.new
+      profile_spec = VimSdk::Vim::Vm::DefinedProfileSpec.new
+      profile_spec.profile_id = encryption_profile.unique_id
+      config_spec.vm_profile = [profile_spec]
+      crypto_spec = VimSdk::Vim::Encryption::CryptoSpecEncrypt.new(crypto_key_id: new_key)
+      config_spec.crypto = crypto_spec
+
+      reconfig_vm(vm_mob, config_spec)
     end
 
     private

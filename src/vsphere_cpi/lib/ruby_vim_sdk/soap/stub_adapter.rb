@@ -5,14 +5,13 @@ module VimSdk
     class StubAdapter
       PC = Vmodl::Query::PropertyCollector
 
-      attr_reader :version
+      attr_reader :version, :vc_cookie
 
-      def initialize(vcenter_api_uri, version, http_client)
-        @vcenter_api_uri = vcenter_api_uri
+      def initialize(api_uri, version, http_client)
+        @api_uri = api_uri
         @version = version
         @version_id = compute_version_id(version)
         @http_client = http_client
-        @cookie = ""
         @property_collector = nil
       end
 
@@ -23,16 +22,20 @@ module VimSdk
                    'Content-Type' => "text/xml; charset=#{XML_ENCODING}"}
 
         request = serialize_request(managed_object, method_info, arguments)
-        response = @http_client.post(@vcenter_api_uri, request, headers)
+        response = @http_client.post(@api_uri, request, headers)
 
         status = response.code
         if status == 200 || status == 500
           object = SoapResponseDeserializer.new(outer_stub).deserialize(response.content, method_info.result_type)
           if outer_stub != self
+            @vc_cookie = response.cookies.first.value if response.cookies && @vc_cookie.nil?
             result = [status, object]
           elsif status == 200
+            @vc_cookie = response.cookies.first.value if response.cookies && @vc_cookie.nil?
             result = object
           elsif object.kind_of?(Vmodl::MethodFault)
+            puts status
+            puts response.inspect
             raise VimSdk::SoapError.new(object.msg, object)
           else
             raise VimSdk::SoapError.new('Unknown SOAP fault', object)

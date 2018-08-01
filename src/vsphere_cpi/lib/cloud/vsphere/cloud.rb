@@ -221,6 +221,8 @@ module VSphereCloud
 
             client.reconfig_vm(vm, config)
 
+            client.encrypt_vm(vm, @config.pbm_api_uri ) #encrypt vm
+
             logger.info('Taking initial snapshot')
 
             # Despite the naming, this has nothing to do with the Cloud notion of a disk snapshot

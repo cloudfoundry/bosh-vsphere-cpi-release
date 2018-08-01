@@ -89,6 +89,10 @@ module VSphereCloud
         @stub_adapter.version
       end
 
+      def vc_cookie
+        @stub_adapter.vc_cookie
+      end
+
       private
 
       def fault_message(method_name, err)
