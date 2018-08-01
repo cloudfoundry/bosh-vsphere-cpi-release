@@ -31,7 +31,7 @@ require "ruby_vim_sdk/managed_type"
 require "ruby_vim_sdk/property"
 require "ruby_vim_sdk/method"
 require "ruby_vim_sdk/types"
-require "ruby_vim_sdk/soap_exception"
+require "ruby_vim_sdk/soap_error"
 
 require "ruby_vim_sdk/vmodl/data_object"
 require "ruby_vim_sdk/vmodl/managed_object"

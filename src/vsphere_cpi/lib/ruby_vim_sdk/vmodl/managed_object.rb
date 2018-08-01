@@ -40,7 +40,7 @@ module VimSdk
             self.instance_eval do
               define_method(method.name) do |*args|
                 unless args.length.between?(method.arguments.length - method.num_optional_args, method.arguments.length)
-                  raise ArgumentError, "wrong number of arguments (#{args.length} for #{method.arguments.length} with optional args #{method.number_of_optional_args_in_end})"
+                  raise ArgumentError, "wrong number of arguments (#{args.length} for #{method.arguments.length} with optional args #{method.num_optional_args})"
                 end
                 self.class.invoke_method(self, method, *args)
               end
