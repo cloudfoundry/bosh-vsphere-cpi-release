@@ -145,7 +145,7 @@ module VSphereCloud
           raise "Corrupt image '#{image}', tar exit status: #{$?.exitstatus}, output: #{output}" if $?.exitstatus != 0
 
           ovf_file = Dir.entries(temp_dir).find { |entry| File.extname(entry) == '.ovf' }
-          raise "Missing OVF for stemcell '#{stemcell}'" if ovf_file.nil?
+          raise "Missing OVF for stemcell '#{image}'" if ovf_file.nil?
           ovf_file = File.join(temp_dir, ovf_file)
 
           name = "sc-#{SecureRandom.uuid}"
