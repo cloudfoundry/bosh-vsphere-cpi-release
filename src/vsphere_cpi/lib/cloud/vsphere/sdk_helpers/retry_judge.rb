@@ -45,6 +45,17 @@ module VSphereCloud
           # called to upgrade a vm
           method_name: 'UpgradeVM_Task',
           fault_class: VimSdk::Vim::Fault::AlreadyUpgraded,
+        },
+        {
+          # called to register an extension
+          method_name: 'RegisterExtension',
+          entity_class: VimSdk::Vim::ExtensionManager,
+
+        },
+        {
+          # called to upgrade a vm
+          method_name: 'UnregisterExtension',
+          entity_class: VimSdk::Vim::ExtensionManager,
         }
       ]
 
