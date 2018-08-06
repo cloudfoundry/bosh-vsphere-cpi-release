@@ -16,7 +16,7 @@ set -e
 # from the managed object representing the nfs0-1 datastore inside
 # *vcpi-dc-nested*. In this case a regular expression matching nfs0-1 will
 # resolve to both managed objects thus causing the aforementioned error.
-unambiguous_ds=isc-cl1-ds-1
+unambiguous_ds=nfs0-1
 
 source environment/metadata
 
