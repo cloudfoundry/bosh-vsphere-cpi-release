@@ -1,0 +1,15 @@
+platform: linux
+image_resource:
+  { type: docker-image, source: { repository: vcpici/vcpi-main } }
+
+inputs:
+  - name: source-ci
+  - name: certification
+  - name: environment
+  - name: bosh-cpi-src
+  - name: director-state
+  - name: bosh-cli
+  - name: stemcell
+
+run:
+  path: source-ci/ci/tasks/run-distribution-test.sh
