@@ -22,9 +22,10 @@ These privileges must be granted on the root vCenter Server entity.
     <tr><td></td><td>System.Read</td></tr>
     <tr><td></td><td>System.View</td></tr>
     <tr>
-      <td rowspan="2">Global</td>
+      <td rowspan="3">Global</td>
     </tr>
     <tr><td>Manage custom attributes</td><td>Global.ManageCustomFields</td></tr>
+    <tr><td>Register Extensions</td><td>Extension.Register</td></tr>
   </tbody>
 </table>
 
