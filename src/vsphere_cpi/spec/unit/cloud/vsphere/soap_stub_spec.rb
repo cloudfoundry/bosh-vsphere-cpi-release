@@ -12,7 +12,7 @@ describe VSphereCloud::SoapStub, fake_logger: true do
       expect(VimSdk::Soap::StubAdapter).to receive(:new)
         .with(
           'https://some-host/sdk/vimService',
-          'vim.version.version9',
+          'vim.version.version12',
           http_client,
         )
         .and_return(base_adapter)
