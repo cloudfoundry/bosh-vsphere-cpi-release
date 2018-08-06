@@ -107,7 +107,7 @@ jobs:
             params:
               username: 'CPI-Doctor'
               text: |
-                The bats test failed. Check it out at: https://pksci.vcna.io/teams/$BUILD_TEAM_NAME/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME
+                The bats test failed. Check it out at: https://ci.vcna.io/teams/$BUILD_TEAM_NAME/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME
         ensure:
           do:
             - task: teardown
@@ -116,7 +116,7 @@ jobs:
         params:
           username: 'CPI-Doctor'
           text: |
-            The bats tests passed. Check it out at: https://pksci.vcna.io/teams/$BUILD_TEAM_NAME/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME
+            The bats tests passed. Check it out at: https://ci.vcna.io/teams/$BUILD_TEAM_NAME/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME
 
   - name: unlock-bats
     plan:

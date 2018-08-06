@@ -129,7 +129,7 @@ jobs:
             params:
               username: 'CPI-Doctor'
               text: |
-                The test-upgrade test failed. Check it out at: https://pksci.vcna.io/teams/$BUILD_TEAM_NAME/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME
+                The test-upgrade test failed. Check it out at: https://ci.vcna.io/teams/$BUILD_TEAM_NAME/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME
         ensure:
           do:
             - <<: *teardown
@@ -196,7 +196,7 @@ jobs:
               params:
                 username: 'CPI-Doctor'
                 text: |
-                  The test-stemcell-ipv4 test failed. Check it out at: https://pksci.vcna.io/teams/$BUILD_TEAM_NAME/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME
+                  The test-stemcell-ipv4 test failed. Check it out at: https://ci.vcna.io/teams/$BUILD_TEAM_NAME/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME
           ensure:
             do:
               - <<: *teardown
@@ -264,7 +264,7 @@ jobs:
             params:
               username: 'CPI-Doctor'
               text: |
-                The test-stemcell-ipv6 test failed. Check it out at: https://pksci.vcna.io/teams/$BUILD_TEAM_NAME/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME
+                The test-stemcell-ipv6 test failed. Check it out at: https://ci.vcna.io/teams/$BUILD_TEAM_NAME/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME
         ensure:
           do:
             - <<: *teardown
@@ -327,7 +327,7 @@ jobs:
             params:
               username: 'CPI-Doctor'
               text: |
-                The bats-centos test failed. Check it out at: https://pksci.vcna.io/teams/$BUILD_TEAM_NAME/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME
+                The bats-centos test failed. Check it out at: https://ci.vcna.io/teams/$BUILD_TEAM_NAME/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME
         ensure:
           do:
             - <<: *teardown
@@ -390,7 +390,7 @@ jobs:
             params:
               username: 'CPI-Doctor'
               text: |
-                The bats-ubuntu test failed. Check it out at: https://pksci.vcna.io/teams/$BUILD_TEAM_NAME/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME
+                The bats-ubuntu test failed. Check it out at: https://ci.vcna.io/teams/$BUILD_TEAM_NAME/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME
         ensure:
           do:
             - <<: *teardown
