@@ -37,14 +37,16 @@ module {{moduleName}}
       if @config.debugging
         @config.logger.debug "HTTP request body param ~BEGIN~\n#{request_body}\n~END~\n"
       end
-      response = authentication
-                     .headers(default_headers)
-                     .send(http_method,
-                           build_request_url(path),
-                           params: opts[:query_params],
-                           body: request_body,
-                           ssl_context: ssl_context)
-
+      request = authentication.headers(default_headers)
+      request_url = build_request_url(path)
+      if has_proxy(request_url)
+        request = request.via(*proxy(request_url))
+      end
+      response = request.send(http_method,
+                              request_url,
+                              params: opts[:query_params],
+                              body: request_body,
+                              ssl_context: ssl_context)
       if @config.debugging
         @config.logger.debug "HTTP response body ~BEGIN~\n#{response.body}\n~END~\n"
       end
@@ -211,5 +213,15 @@ module {{moduleName}}
         HTTP
       end
     end
+
+    def has_proxy(request_url)
+      !URI(request_url).find_proxy.nil?
+    end
+
+    def proxy(request_url)
+      proxy_url = URI(request_url).find_proxy
+      return proxy_url.host, proxy_url.port
+    end
+
   end
 end
