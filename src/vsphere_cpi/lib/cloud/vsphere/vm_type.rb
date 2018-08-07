@@ -12,7 +12,8 @@ module VSphereCloud
       @cloud_properties = cloud_properties
     end
 
-    %w[cpu ram disk cpu_hot_add_enabled memory_hot_add_enabled nsx vmx_options nsxt nested_hardware_virtualization upgrade_hw_version datacenters gpu ].each do |name|
+    %w[cpu ram disk cpu_hot_add_enabled memory_hot_add_enabled nsx vmx_options
+       nsxt nested_hardware_virtualization upgrade_hw_version datacenters gpu vm_group ].each do |name|
       define_method(name) { @cloud_properties[name] }
     end
 
@@ -33,23 +34,19 @@ module VSphereCloud
     end
 
     def ns_groups
-      nsxt['ns_groups'] if nsxt
+      nsxt&.dig('ns_groups')
     end
 
     def num_gpus
-      gpu['number_of_gpus'] if gpu
-    end
-
-    def vm_group
-      gpu['vm_group'] if gpu
+      gpu&.dig('number_of_gpus')
     end
 
     def host_group
-      gpu['host_group'] if gpu
+      gpu&.dig('host_group')
     end
 
     def vm_host_affinity_rule_name
-      gpu['vm_host_affinity_rule_name'] if gpu
+      gpu&.dig('vm_host_affinity_rule_name')
     end
   end
 end

@@ -5,9 +5,9 @@ module VSphereCloud
     let(:datacenter_mob)  { instance_double('VimSdk::Vim::Datacenter') }
     let(:datacenter) { double('Dataceneter', mob: datacenter_mob)}
     let(:datastores) {['ds-1', 'ds-2', 'clusters' => [{ 'sp-1' => {} }]]}
-    let(:gpu_details) { {'number_of_gpus' => 4, 'vm_group' => 'vcpi-vm-group-1',
+    let(:gpu_details) { {'number_of_gpus' => 4,
                          'host_group' => 'vcpi-host-group-1', 'vm_host_affinity_rule_name' => 'vm-host-rule'} }
-    let(:vm_type) { VmType.new(datacenter, {'datastores' => datastores, 'gpu' => gpu_details}) }
+    let(:vm_type) { VmType.new(datacenter, {'datastores' => datastores, 'vm_group' => 'vcpi-vm-group-1', 'gpu' => gpu_details}) }
 
     describe '#datastore_names' do
       context 'with datastores' do

@@ -5,12 +5,12 @@ module VSphereCloud
     include Logger
 
     CUSTOM_ATTRIBUTE_NAME = 'drs_rule'
-    # TODO: remove cloud searcher parameter
-    # No need to pass cloud searcher as client is already present
-    def initialize(rule_name, client, cloud_searcher, datacenter_cluster)
+    DRS_LOCK_SUFFIX_VMGROUP = '_vm_group'
+
+    def initialize(rule_name, client, datacenter_cluster)
       @rule_name = rule_name
       @client = client
-      @cloud_searcher = cloud_searcher
+      @cloud_searcher = CloudSearcher.new(@client.service_content)
       @datacenter_cluster = datacenter_cluster
 
       @vm_attribute_manager = VMAttributeManager.new(
@@ -36,7 +36,7 @@ module VSphereCloud
     # @params [String] vm_group_name
     # @params [String] host_group_name
     def add_vm_host_affinity_rule(vm, vm_group_name, host_group_name)
-      DrsLock.new(@vm_attribute_manager).with_drs_lock do
+      DrsLock.new(@vm_attribute_manager, DRS_LOCK_SUFFIX_VMGROUP ).with_drs_lock do
         add_vm_to_vm_group(vm, vm_group_name)
         rule = find_rule
         # Do not create the rule if it already exists

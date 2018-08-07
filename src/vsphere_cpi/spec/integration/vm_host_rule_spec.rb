@@ -12,6 +12,7 @@ describe 'VM Host Rules' do
     [],
     {}
   )}
+
   context 'when vm_group, host_group is defined' do
     before (:all) do
       @cpi = VSphereCloud::Cloud.new(cpi_options)
@@ -21,6 +22,7 @@ describe 'VM Host Rules' do
     end
     after(:all) do
       update_host_group(@cpi, @cluster_name, @host_group_name, 'remove')
+      # delete_vm_host_rule(@cpi, @cluster_name, rule_name)
     end
     let(:vm_group_name) { "BOSH-CPI-test-vm-group" }  #can make it random, keeping it constant for test setup
 
@@ -29,7 +31,8 @@ describe 'VM Host Rules' do
         'ram' => 512,
         'disk' => 2048,
         'cpu' => 1,
-        'gpu' => {'vm_group' => vm_group_name, 'host_group' => @host_group_name, 'vm_host_affinity_rule_name' => rule_name}
+        'gpu' => {'host_group' => @host_group_name, 'vm_host_affinity_rule_name' => rule_name},
+        'vm_group' => vm_group_name
       }
     end
     context 'when vm_group and vm_host_rule exists' do
@@ -45,34 +48,27 @@ describe 'VM Host Rules' do
         )}
       after do
         delete_vm(@cpi, test_vm)
-        # There should be no need to delete the rule as delete_vm should take care of this in 1 of the following ways
-        # find rules for the vm (cluster.find_rules_for_vm) & corresponding vm_group, delete vm_group if it has only this vm
-        # OR find vm.cluster.groups and collect vm_groups this vm is part of, delete_vm and then refetch cluster.groups
-        # delete the vm_groups(retrieved in previous call) if they are empty
-        #  delete_vm_host_rule(@cpi, @cluster_name, rule_name)
       end
 
       it 'should add vm to the existing vm group and does not create a new rule' do
         cluster = @cpi.client.cloud_searcher.get_managed_object(VimSdk::Vim::ClusterComputeResource, name: @cluster_name)
         rules = cluster.configuration_ex.rule
-        expect(rules).not_to be_empty
         matching_rules = rules.select { |rule| rule.name == rule_name}
+        #check that rule already exists
         expect(matching_rules.count).to eq(1)
         matching_rule = matching_rules.first
         expect(matching_rule.vm_group_name).to eq(vm_group_name)
         expect(matching_rule.affine_host_group_name).to eq(@host_group_name)
-
         simple_vm_lifecycle(@cpi, '', vm_type, get_network_spec) do |vm_id|
           vm = @cpi.vm_provider.find(vm_id)
-          test_vm_resource = @cpi.vm_provider.find(vm_id)
+          test_vm_resource = @cpi.vm_provider.find(test_vm)
           vm_groups = cluster.configuration_ex.group
           vm_group = vm_groups.find {|group| group.name == vm_group_name}
-          expect(vm_group).to_not be_nil
+          rules = cluster.configuration_ex.rule
+          matching_rules = rules.select { |rule| rule.name == rule_name}
+
           expect(vm_group.vm).to include(vm.mob)
           expect(vm_group.vm).to include(test_vm_resource.mob)
-          rules = cluster.configuration_ex.rule
-          expect(rules).not_to be_empty
-          matching_rules = rules.select { |rule| rule.name == rule_name}
           expect(matching_rules.count).to eq(1)
         end
       end
@@ -84,16 +80,43 @@ describe 'VM Host Rules' do
           cluster = @cpi.client.cloud_searcher.get_managed_object(VimSdk::Vim::ClusterComputeResource, name: @cluster_name)
           vm_groups = cluster.configuration_ex.group
           vm_group = vm_groups.find {|group| group.name == vm_group_name}
-          expect(vm_group).to_not be_nil
+          rules = cluster.configuration_ex.rule
+          rule = rules.find { |rule| rule.name == rule_name}
+
           expect(vm_group.vm).to include(vm.mob)
           expect(vm_group.vm.length).to eq(1)
-
-          rules = cluster.configuration_ex.rule
-          expect(rules).not_to be_empty
-          rule = rules.find { |rule| rule.name == rule_name}
           expect(rule.vm_group_name).to eq(vm_group_name)
           expect(rule.affine_host_group_name).to eq(@host_group_name)
         end
+      end
+    end
+
+    context 'when vm is deleted' do
+      it 'should delete the empty vm_group, vm was part of' do
+        cluster = @cpi.client.cloud_searcher.get_managed_object(VimSdk::Vim::ClusterComputeResource, name: @cluster_name)
+        simple_vm_lifecycle(@cpi, '', vm_type, get_network_spec) do |vm_id|
+          vm = @cpi.vm_provider.find(vm_id)
+          vm_groups = cluster.configuration_ex.group
+          vm_group = vm_groups.find {|group| group.name == vm_group_name}
+          expect(vm_group.vm).to include(vm.mob)
+        end
+        vm_groups = cluster.configuration_ex.group
+        vm_group = vm_groups.find {|group| group.name == vm_group_name}
+        expect(vm_group).to be_nil
+      end
+
+      #create another context with test_vm
+      it 'should not delete the vm_group if its not empty' do
+        cluster = @cpi.client.cloud_searcher.get_managed_object(VimSdk::Vim::ClusterComputeResource, name: @cluster_name)
+        simple_vm_lifecycle(@cpi, '', vm_type, get_network_spec) do |vm_id|
+          vm = @cpi.vm_provider.find(vm_id)
+          vm_groups = cluster.configuration_ex.group
+          vm_group = vm_groups.find {|group| group.name == vm_group_name}
+          expect(vm_group.vm).to include(vm.mob)
+        end
+        vm_groups = cluster.configuration_ex.group
+        vm_group = vm_groups.find {|group| group.name == vm_group_name}
+        expect(vm_group.vm).to_not be_empty
       end
     end
   end
@@ -103,5 +126,4 @@ describe 'VM Host Rules' do
   def random_drs_rule_name
     "drs-rule-#{(0...6).map { (97 + rand(26)).chr }.join}"
   end
-
 end

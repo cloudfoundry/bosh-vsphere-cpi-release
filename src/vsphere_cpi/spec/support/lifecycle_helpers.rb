@@ -503,15 +503,15 @@ module LifecycleHelpers
 
   def update_host_group(cpi, cluster_name, host_group_name, operation)
     cluster = cpi.client.cloud_searcher.get_managed_object(VimSdk::Vim::ClusterComputeResource, name: cluster_name)
-    host_group = cluster.configuration_ex.group.find { |group| group.name == host_group_name && group.is_a?(VimSdk::Vim::Cluster::HostGroup)}
+    existing_host_group = cluster.configuration_ex.group.find { |group| group.name == host_group_name && group.is_a?(VimSdk::Vim::Cluster::HostGroup)}
     host_group = VimSdk::Vim::Cluster::HostGroup.new
     host_group.host = cluster.host
     host_group.name = host_group_name
 
     group_spec = VimSdk::Vim::Cluster::GroupSpec.new
     group_spec.info = host_group
-    group_spec.operation = operation
-    group_spec.remove_key = host_group.name if host_group
+    group_spec.operation = operation == 'add' && existing_host_group.nil? ? operation : 'edit' #edit the host list for existing host_group
+    group_spec.remove_key = host_group_name if operation == 'remove' && !existing_host_group.nil?
 
     config_spec = VimSdk::Vim::Cluster::ConfigSpecEx.new
     config_spec.group_spec = [group_spec]
