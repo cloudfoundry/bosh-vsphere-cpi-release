@@ -59,7 +59,7 @@ module VSphereCloud
     def extension_is_registered?(key: DEFAULT_VSPHERE_CPI_EXTENSION_KEY)
       ext_mgr = vc_client.service_content.extension_manager
       cpi_extension = ext_mgr.find_extension(key)
-      logger.debug("Extension already exists")
+      logger.debug("Extension already exists") unless cpi_extension.nil?
       return !cpi_extension.nil?
     end
 
