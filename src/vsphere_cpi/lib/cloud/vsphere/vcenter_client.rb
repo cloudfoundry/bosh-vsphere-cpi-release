@@ -458,6 +458,30 @@ module VSphereCloud
       find_child_by_name(mob.child_entity.find {|c| c.name == child_entity_name }, child_path)
     end
 
+    def clean_up_vm_groups(cluster, vm_group_names)
+      return if vm_group_names.empty?
+      empty_vm_groups = cluster.configuration_ex.group.select do |group|
+        group.is_a?(VimSdk::Vim::Cluster::VmGroup) && vm_group_names.include?(group.name) && group.vm.empty?
+      end
+      empty_vm_groups = cluster.configuration_ex.group.select { |group| group.is_a?(VimSdk::Vim::Cluster::VmGroup) }
+      return if empty_vm_groups.empty?
+      group_specs = empty_vm_groups.collect do |vm_group|
+        vm_group_spec = VimSdk::Vim::Cluster::VmGroup.new
+        vm_group_spec.name = vm_group.name
+
+        group_spec = VimSdk::Vim::Cluster::GroupSpec.new
+        group_spec.info = vm_group_spec
+        group_spec.operation =  'remove'
+        group_spec.remove_key = vm_group.name
+        group_spec
+      end
+      config_spec = VimSdk::Vim::Cluster::ConfigSpecEx.new
+      config_spec.group_spec = group_specs
+      wait_for_task do
+        cluster.reconfigure_ex(config_spec, true)
+      end
+    end
+
     private
 
     def find_perf_metric_names(mob, names)

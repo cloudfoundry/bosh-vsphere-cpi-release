@@ -150,6 +150,9 @@ module VSphereCloud
           # DRS Rules
           create_drs_rules(vm_config, created_vm.mob, cluster)
 
+          #create VM/Host affinity rule
+          create_vm_host_affinity_rule(vm_config, created_vm.mob, cluster)
+
           begin
             # Upgrade to latest virtual hardware version
             # We decide to upgrade hardware version on basis of two params
@@ -200,10 +203,21 @@ module VSphereCloud
       drs_rule = VSphereCloud::DrsRule.new(
         drs_rule_name,
         @client,
-        @cloud_searcher,
         cluster.mob
       )
       drs_rule.add_vm(vm_mob)
+    end
+
+    def create_vm_host_affinity_rule(vm_config, vm_mob, cluster)
+      return if vm_config.vm_type.host_group.nil? || vm_config.vm_type.vm_group.nil?
+      default_rule_name = vm_config.vm_type.vm_group + '-' + vm_config.vm_type.host_group
+      vm_host_affinity_rule_name = vm_config.vm_type.vm_host_affinity_rule_name.nil? ? default_rule_name : vm_config.vm_type.vm_host_affinity_rule_name
+      drs_rule = VSphereCloud::DrsRule.new(
+        vm_host_affinity_rule_name,
+        @client,
+        cluster.mob
+      )
+      drs_rule.add_vm_host_affinity_rule(vm_mob, vm_config.vm_type.vm_group, vm_config.vm_type.host_group)
     end
   end
 end
