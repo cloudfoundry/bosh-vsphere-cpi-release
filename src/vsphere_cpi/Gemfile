@@ -10,6 +10,7 @@ gem 'netaddr',     '~> 1.5', '>= 1.5.1'
 gem 'nokogiri',    '~> 1.8.1'
 gem 'oga',         '2.3'
 gem 'typhoeus',    '~> 1.0', '>= 1.0.1'
+gem 'http',        '~> 3.3.0'
 
 group :development, :test do
   gem 'fakefs'

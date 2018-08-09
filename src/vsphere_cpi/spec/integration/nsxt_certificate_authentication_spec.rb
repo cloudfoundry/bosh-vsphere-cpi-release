@@ -9,7 +9,6 @@ describe 'NSXT certificate authentication', :nsxt_21 => true do
     configuration.host = @nsxt_host
     configuration.username = fetch_property('BOSH_VSPHERE_CPI_NSXT_USERNAME')
     configuration.password = fetch_property('BOSH_VSPHERE_CPI_NSXT_PASSWORD')
-    configuration.client_side_validation = false
     configuration.verify_ssl = false
     configuration.verify_ssl_host = false
     client = NSXT::ApiClient.new(configuration)
@@ -94,7 +93,7 @@ describe 'NSXT certificate authentication', :nsxt_21 => true do
         #NSXT needs some time to make cert available for cert auth
         sleep(30)
         nsx_component_api.get_certificates
-      }.to raise_error(/SSL connect error/)
+      }.to raise_error(/sslv3 alert certificate unknown/)
     end
   end
 
