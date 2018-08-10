@@ -150,6 +150,9 @@ module VSphereCloud
           # DRS Rules
           create_drs_rules(vm_config, created_vm.mob, cluster)
 
+          # Add vm to VMGroup
+          add_vm_to_vm_group(vm_config, created_vm.mob, cluster)
+
           begin
             # Upgrade to latest virtual hardware version
             # We decide to upgrade hardware version on basis of two params
@@ -200,10 +203,22 @@ module VSphereCloud
       drs_rule = VSphereCloud::DrsRule.new(
         drs_rule_name,
         @client,
-        @cloud_searcher,
         cluster.mob
       )
       drs_rule.add_vm(vm_mob)
+    end
+
+    # using DrsRule here as this will eventually be used to create vm/host group rule
+    # for initial release we are only adding support for vm_group
+    def add_vm_to_vm_group(vm_config, vm_mob, cluster)
+      return if vm_config.vm_type.vm_group.nil?
+      drs_rule_name = DrsRule::DEFAULT_RULE_NAME #Passing it on purpose as this would be temporary
+      drs_rule = VSphereCloud::DrsRule.new(
+        drs_rule_name,
+        @client,
+        cluster.mob
+      )
+      drs_rule.add_vm_to_vm_group(vm_mob, vm_config.vm_type.vm_group)
     end
   end
 end

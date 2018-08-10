@@ -1267,10 +1267,14 @@ module VSphereCloud
 
     describe '#delete_vm' do
       let(:ip_address) {'192.168.111.5'}
+      let(:configuration_ex) { double(:configuration_ex, group: group) }
+      let(:fake_cluster) { instance_double('VimSdk::Vim::ClusterComputeResource', configuration_ex: configuration_ex) }
+      let(:group) { [] }
       before do
         allow(vm).to receive(:persistent_disks).and_return([])
         allow(vm).to receive(:cdrom).and_return(nil)
         allow(vm_mob).to receive_message_chain(:guest, :ip_address).and_return(ip_address)
+        allow(vm_mob).to receive_message_chain(:runtime, :host, :parent).and_return(fake_cluster)
       end
 
       it 'deletes vm' do
@@ -1349,6 +1353,17 @@ module VSphereCloud
             )
             vsphere_cloud.delete_vm('vm-id')
           end
+        end
+      end
+
+      context 'when vm belongs to vm groups' do
+        let(:vm_group){ VimSdk::Vim::Cluster::VmGroup.new(name: 'vm-group', vm: [vm_mob])}
+        let(:group) { [vm_group] }
+        it 'deletes vm groups' do
+          expect(vm).to receive(:power_off)
+          expect(vm).to receive(:delete)
+          expect(cluster_provider).to receive(:delete_vm_groups).with(fake_cluster, [vm_group.name])
+          vsphere_cloud.delete_vm('vm-id')
         end
       end
     end

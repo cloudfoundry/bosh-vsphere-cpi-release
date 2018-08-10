@@ -5,11 +5,13 @@ module VSphereCloud
     include Logger
 
     CUSTOM_ATTRIBUTE_NAME = 'drs_rule'
+    DRS_LOCK_SUFFIX_VMGROUP = '_vm_group'
+    DEFAULT_RULE_NAME = 'vcpi-drs-rule'
 
-    def initialize(rule_name, client, cloud_searcher, datacenter_cluster)
+    def initialize(rule_name, client, datacenter_cluster)
       @rule_name = rule_name
       @client = client
-      @cloud_searcher = cloud_searcher
+      @cloud_searcher = CloudSearcher.new(@client.service_content)
       @datacenter_cluster = datacenter_cluster
 
       @vm_attribute_manager = VMAttributeManager.new(
@@ -27,6 +29,15 @@ module VSphereCloud
         else
           add_rule
         end
+      end
+    end
+
+    # Adds VM to given VM Group
+    # @param [Vim::VirtualMachine] vm
+    # @params [String] vm_group_name
+    def add_vm_to_vm_group(vm, vm_group_name)
+      DrsLock.new(@vm_attribute_manager, DRS_LOCK_SUFFIX_VMGROUP ).with_drs_lock do
+        update_vm_group(vm, vm_group_name)
       end
     end
 
@@ -49,15 +60,38 @@ module VSphereCloud
 
     def add_rule
       logger.debug("Adding DRS rule: #{@rule_name}")
-      reconfigure_cluster('add')
+      add_anti_affinity_rule('add')
     end
 
     def update_rule(rule_key)
       logger.debug("Updating DRS rule: #{@rule_name}")
-      reconfigure_cluster('edit', rule_key)
+      add_anti_affinity_rule('edit', rule_key)
     end
 
-    def reconfigure_cluster(operation, rule_key = nil)
+    def find_vm_group(vm_group_name)
+      @datacenter_cluster.configuration_ex.group.find { |group| group.name == vm_group_name && group.is_a?(VimSdk::Vim::Cluster::VmGroup)}
+    end
+
+    # If vm group already exists, you cannot define operation as add,
+    # also you need to pass all existing vms when you edit
+    def update_vm_group(vm, vm_group_name)
+      vm_group = find_vm_group(vm_group_name)
+      vm_group_spec = VimSdk::Vim::Cluster::VmGroup.new
+      vm_group_spec.vm = vm_group ? vm_group.vm.concat([vm]) : [vm]
+      vm_group_spec.name = vm_group_name
+
+      group_spec = VimSdk::Vim::Cluster::GroupSpec.new
+      group_spec.info = vm_group_spec
+      group_spec.operation = vm_group ? 'edit' : 'add'
+
+      config_spec = VimSdk::Vim::Cluster::ConfigSpecEx.new
+      config_spec.group_spec = [group_spec]
+
+      logger.debug("Adding VM to VM group: #{vm_group_name}")
+      reconfigure_cluster(config_spec)
+    end
+
+    def add_anti_affinity_rule(operation, rule_key = nil)
       config_spec = VimSdk::Vim::Cluster::ConfigSpecEx.new
       rule_spec = VimSdk::Vim::Cluster::RuleSpec.new
       rule_spec.operation = operation
@@ -73,6 +107,10 @@ module VSphereCloud
       rule_spec.info = rule_info
 
       config_spec.rules_spec = [rule_spec]
+      reconfigure_cluster(config_spec)
+    end
+
+    def reconfigure_cluster(config_spec)
       @client.wait_for_task do
         @datacenter_cluster.reconfigure_ex(config_spec, true)
       end

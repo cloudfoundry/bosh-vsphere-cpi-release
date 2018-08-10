@@ -501,6 +501,19 @@ module LifecycleHelpers
     end
   end
 
+  # Does not work raises an error, need to debug more
+  def delete_vm_host_rule(cpi, cluster_name, rule_name)
+    cluster = cpi.client.cloud_searcher.get_managed_object(VimSdk::Vim::ClusterComputeResource, name: cluster_name)
+
+    cluster_rule_spec = VimSdk::Vim::Cluster::RuleSpec.new
+    cluster_rule_spec.operation = 'remove'
+    cluster_rule_spec.remove_key = rule_name
+
+    config_spec = VimSdk::Vim::Cluster::ConfigSpecEx.new
+    config_spec.rules_spec = [cluster_rule_spec]
+
+    reconfigure_cluster(cpi, cluster, config_spec)
+  end
 
   private
 
@@ -538,5 +551,11 @@ module LifecycleHelpers
 
   def project_root
     File.join(File.dirname(__FILE__), '../../../..')
+  end
+
+  def reconfigure_cluster(cpi, cluster, config_spec)
+    cpi.client.wait_for_task do
+      cluster.reconfigure_ex(config_spec, true)
+    end
   end
 end

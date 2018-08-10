@@ -391,6 +391,16 @@ module VSphereCloud
 
         vm = vm_provider.find(vm_cid)
         vm_ip = vm.mob.guest&.ip_address
+
+        # find vm_groups vm is part of before deleting it
+        cluster = vm.mob.runtime.host&.parent #host can be nil if vm is not running
+        if cluster
+          groups = cluster.configuration_ex.group
+          vm_groups = groups.select do |group|
+            group.is_a?(VimSdk::Vim::Cluster::VmGroup) && group.vm.include?(vm.mob)
+          end
+          vm_group_names = vm_groups.map(&:name)
+        end
         vm.power_off
 
         persistent_disks = vm.persistent_disks
@@ -416,6 +426,9 @@ module VSphereCloud
 
         vm.delete
         logger.info("Deleted vm: #{vm_cid}")
+
+        # Delete vm_groups if they are empty
+        @cluster_provider.delete_vm_groups(cluster, vm_group_names) unless vm_group_names.nil? || vm_group_names.empty?
       end
     end
 

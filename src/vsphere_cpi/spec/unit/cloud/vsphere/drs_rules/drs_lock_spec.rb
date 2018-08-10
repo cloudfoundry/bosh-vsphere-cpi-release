@@ -2,7 +2,8 @@ require 'spec_helper'
 require 'timecop'
 
 describe VSphereCloud::DrsLock, fake_logger: true do
-  subject(:drs_lock) { described_class.new(vm_attribute_manager) }
+  subject(:drs_lock) { described_class.new(vm_attribute_manager, drs_lock_suffix) }
+  let(:drs_lock_suffix) {''}
   let(:vm_attribute_manager) { instance_double('VSphereCloud::VMAttributeManager') }
 
   context 'when drs lock exists' do
@@ -47,6 +48,16 @@ describe VSphereCloud::DrsLock, fake_logger: true do
       expect(vm_attribute_manager).to receive(:delete).with('drs_lock')
 
       drs_lock.with_drs_lock {}
+    end
+
+    context 'and drs_lock_suffix is present' do
+      let(:drs_lock_suffix) { '_suffix' }
+      it 'creates DRS lock with the suffix' do
+        expect(vm_attribute_manager).to receive(:create).with('drs_lock_suffix')
+        expect(vm_attribute_manager).to receive(:delete).with('drs_lock_suffix')
+
+        drs_lock.with_drs_lock {}
+      end
     end
 
     context 'when block fails' do

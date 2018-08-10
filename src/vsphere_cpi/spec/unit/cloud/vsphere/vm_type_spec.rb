@@ -5,7 +5,7 @@ module VSphereCloud
     let(:datacenter_mob)  { instance_double('VimSdk::Vim::Datacenter') }
     let(:datacenter) { double('Dataceneter', mob: datacenter_mob)}
     let(:datastores) {['ds-1', 'ds-2', 'clusters' => [{ 'sp-1' => {} }]]}
-    let(:vm_type) { VmType.new(datacenter, {'datastores' => datastores}) }
+    let(:vm_type) { VmType.new(datacenter, {'datastores' => datastores, 'vm_group' => 'vcpi-vm-group-1'}) }
 
     describe '#datastore_names' do
       context 'with datastores' do
@@ -25,6 +25,12 @@ module VSphereCloud
           datastore_clusters = [datastore_cluster]
           expect(vm_type.datastore_clusters).to eq(datastore_clusters)
         end
+      end
+    end
+
+    describe '#vm_group' do
+      it 'returns vm_group name' do
+        expect(vm_type.vm_group).to eq('vcpi-vm-group-1')
       end
     end
   end
