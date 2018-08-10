@@ -15,11 +15,12 @@ RSpec.configure do |rspec_config|
 
     suite_cpi = @lifecycle_cpi
 
-    stemcell_id = ENV.fetch('BOSH_VSPHERE_STEMCELL_ID', '')
+    bosh_vsphere_stemcell_id = ENV.fetch('BOSH_VSPHERE_STEMCELL_ID', '')
 
-    unless stemcell_id.empty?
-      stemcell_vm = suite_cpi.stemcell_vm(stemcell_id)
-      fail "Could not find VM for stemcell '#{stemcell_id}'" if stemcell_vm.nil?
+    unless bosh_vsphere_stemcell_id.empty?
+      stemcell_vm = suite_cpi.stemcell_vm(bosh_vsphere_stemcell_id)
+      fail "Could not find VM for stemcell '#{bosh_vsphere_stemcell_id}'" if stemcell_vm.nil?
+      stemcell_id = bosh_vsphere_stemcell_id
     else
       Dir.mktmpdir do |temp_dir|
         stemcell_image = stemcell_image(@stemcell_path, temp_dir)

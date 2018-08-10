@@ -3,6 +3,7 @@ module VSphereCloud
     class ClusterProvider
       attr_reader :client, :datacenter_name
 
+      # Todo Add tests for this class
       def initialize(options)
         @datacenter_name = options.fetch(:datacenter_name)
         @client = options.fetch(:client)
@@ -23,6 +24,35 @@ module VSphereCloud
           cluster_properties,
           @client
         )
+      end
+
+      # Delete VM Groups if they are empty
+      # @param [Vim::ClusterComputeResource] cluster
+      # @param [String[]] vm_group_names - List of VM Groups
+      def delete_vm_groups(cluster, vm_group_names)
+        return if vm_group_names.empty?
+        vm_attribute_manager = VMAttributeManager.new(@client.service_content.custom_fields_manager)
+        DrsLock.new(vm_attribute_manager, DrsRule::DRS_LOCK_SUFFIX_VMGROUP ).with_drs_lock do
+          empty_vm_groups = cluster.configuration_ex.group.select do |group|
+            group.is_a?(VimSdk::Vim::Cluster::VmGroup) && vm_group_names.include?(group.name) && group.vm.empty?
+          end
+          return if empty_vm_groups.empty?
+          group_specs = empty_vm_groups.collect do |vm_group|
+            vm_group_spec = VimSdk::Vim::Cluster::VmGroup.new
+            vm_group_spec.name = vm_group.name
+
+            group_spec = VimSdk::Vim::Cluster::GroupSpec.new
+            group_spec.info = vm_group_spec
+            group_spec.operation =  'remove'
+            group_spec.remove_key = vm_group.name
+            group_spec
+          end
+          config_spec = VimSdk::Vim::Cluster::ConfigSpecEx.new
+          config_spec.group_spec = group_specs
+          @client.wait_for_task do
+            cluster.reconfigure_ex(config_spec, true)
+          end
+        end
       end
 
       private
