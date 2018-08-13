@@ -111,7 +111,7 @@ describe VSphereCloud::DrsRule, fake_logger: true do
         with_lock do
           expect(datacenter_cluster).to receive(:reconfigure_ex) do |config|
             rule_spec = config.rules_spec.first
-            expect(rule_spec.operation).to eq('edit')
+            expect(rule_spec.operation).to eq(VimSdk::Vim::Option::ArrayUpdateSpec::Operation::EDIT)
             rule_info = rule_spec.info
             expect(rule_info).to be_an_instance_of(VimSdk::Vim::Cluster::AntiAffinityRuleSpec)
             expect(rule_info.vm).to eq([existing_vm_1, existing_vm_2, vm])
@@ -135,7 +135,7 @@ describe VSphereCloud::DrsRule, fake_logger: true do
         with_lock do
           expect(datacenter_cluster).to receive(:reconfigure_ex) do |config|
             rule_spec = config.rules_spec.first
-            expect(rule_spec.operation).to eq('add')
+            expect(rule_spec.operation).to eq(VimSdk::Vim::Option::ArrayUpdateSpec::Operation::ADD)
             rule_info = rule_spec.info
             expect(rule_info).to be_an_instance_of(VimSdk::Vim::Cluster::AntiAffinityRuleSpec)
             expect(rule_info.vm).to eq([existing_vm_1, vm])
@@ -168,7 +168,7 @@ describe VSphereCloud::DrsRule, fake_logger: true do
         with_lock do
           expect(datacenter_cluster).to receive(:reconfigure_ex) do |config|
             group_spec = config.group_spec.first
-            expect(group_spec.operation).to eq('edit')
+            expect(group_spec.operation).to eq(VimSdk::Vim::Option::ArrayUpdateSpec::Operation::EDIT)
             group_info = group_spec.info
             expect(group_info).to be_an_instance_of(VimSdk::Vim::Cluster::VmGroup)
             expect(group_info.vm).to eq([vm_1, vm_2])
@@ -185,7 +185,7 @@ describe VSphereCloud::DrsRule, fake_logger: true do
         with_lock do
           expect(datacenter_cluster).to receive(:reconfigure_ex) do |config|
             group_spec = config.group_spec.first
-            expect(group_spec.operation).to eq('add')
+            expect(group_spec.operation).to eq(VimSdk::Vim::Option::ArrayUpdateSpec::Operation::ADD)
             group_info = group_spec.info
             expect(group_info).to be_an_instance_of(VimSdk::Vim::Cluster::VmGroup)
             expect(group_info.vm).to eq([vm_1])

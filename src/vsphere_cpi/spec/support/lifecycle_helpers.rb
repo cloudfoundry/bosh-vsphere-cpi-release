@@ -490,7 +490,6 @@ module LifecycleHelpers
     end
   end
 
-
   def turn_maintenance_on_for_all_hosts(cpi, cluster_name)
     cluster = cpi.client.cloud_searcher.get_managed_object(VimSdk::Vim::ClusterComputeResource, name: cluster_name)
     host_mob_array = cluster.host
@@ -499,20 +498,6 @@ module LifecycleHelpers
         host_mob.enter_maintenance_mode(0, true, nil)
       end
     end
-  end
-
-  # Does not work raises an error, need to debug more
-  def delete_vm_host_rule(cpi, cluster_name, rule_name)
-    cluster = cpi.client.cloud_searcher.get_managed_object(VimSdk::Vim::ClusterComputeResource, name: cluster_name)
-
-    cluster_rule_spec = VimSdk::Vim::Cluster::RuleSpec.new
-    cluster_rule_spec.operation = 'remove'
-    cluster_rule_spec.remove_key = rule_name
-
-    config_spec = VimSdk::Vim::Cluster::ConfigSpecEx.new
-    config_spec.rules_spec = [cluster_rule_spec]
-
-    reconfigure_cluster(cpi, cluster, config_spec)
   end
 
   private
