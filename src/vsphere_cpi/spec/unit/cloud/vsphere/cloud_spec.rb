@@ -1267,7 +1267,7 @@ module VSphereCloud
 
     describe '#delete_vm' do
       let(:ip_address) {'192.168.111.5'}
-      let(:configuration_ex) { double(:configuration_ex, group: group) }
+      let(:configuration_ex) { instance_double('VimSdk::Vim::Cluster::ConfigInfoEx', group: group) }
       let(:fake_cluster) { instance_double('VimSdk::Vim::ClusterComputeResource', configuration_ex: configuration_ex) }
       let(:group) { [] }
       before do

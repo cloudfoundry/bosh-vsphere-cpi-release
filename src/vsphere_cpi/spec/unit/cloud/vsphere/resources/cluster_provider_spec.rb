@@ -67,7 +67,7 @@ module VSphereCloud::Resources
           with_lock do
             expect(datacenter_cluster).to receive(:reconfigure_ex) do |config|
               group_spec = config.group_spec.first
-              expect(group_spec.operation).to eq('remove')
+              expect(group_spec.operation).to eq(VimSdk::Vim::Option::ArrayUpdateSpec::Operation::REMOVE)
               group_info = group_spec.info
               expect(group_info).to be_an_instance_of(VimSdk::Vim::Cluster::VmGroup)
               expect(group_info.name).to eq(vm_group_name)

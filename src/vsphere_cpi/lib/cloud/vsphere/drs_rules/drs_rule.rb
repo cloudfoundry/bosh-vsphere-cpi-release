@@ -60,12 +60,12 @@ module VSphereCloud
 
     def add_rule
       logger.debug("Adding DRS rule: #{@rule_name}")
-      add_anti_affinity_rule('add')
+      add_anti_affinity_rule(VimSdk::Vim::Option::ArrayUpdateSpec::Operation::ADD)
     end
 
     def update_rule(rule_key)
       logger.debug("Updating DRS rule: #{@rule_name}")
-      add_anti_affinity_rule('edit', rule_key)
+      add_anti_affinity_rule(VimSdk::Vim::Option::ArrayUpdateSpec::Operation::EDIT, rule_key)
     end
 
     def find_vm_group(vm_group_name)
@@ -82,7 +82,7 @@ module VSphereCloud
 
       group_spec = VimSdk::Vim::Cluster::GroupSpec.new
       group_spec.info = vm_group_spec
-      group_spec.operation = vm_group ? 'edit' : 'add'
+      group_spec.operation = vm_group ? VimSdk::Vim::Option::ArrayUpdateSpec::Operation::EDIT : VimSdk::Vim::Option::ArrayUpdateSpec::Operation::ADD
 
       config_spec = VimSdk::Vim::Cluster::ConfigSpecEx.new
       config_spec.group_spec = [group_spec]

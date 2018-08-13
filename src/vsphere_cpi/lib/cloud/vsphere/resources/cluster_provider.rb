@@ -3,12 +3,12 @@ module VSphereCloud
     class ClusterProvider
       attr_reader :client, :datacenter_name
 
-      # Todo Add tests for this class
       def initialize(options)
         @datacenter_name = options.fetch(:datacenter_name)
         @client = options.fetch(:client)
       end
 
+      # TODO: Add tests for this
       def find(name, config)
         cluster_mob = cluster_mobs[name]
         raise "Can't find cluster '#{name}'" if cluster_mob.nil?
@@ -43,7 +43,7 @@ module VSphereCloud
 
             group_spec = VimSdk::Vim::Cluster::GroupSpec.new
             group_spec.info = vm_group_spec
-            group_spec.operation =  'remove'
+            group_spec.operation =  VimSdk::Vim::Option::ArrayUpdateSpec::Operation::REMOVE
             group_spec.remove_key = vm_group.name
             group_spec
           end
