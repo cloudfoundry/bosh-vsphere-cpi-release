@@ -427,8 +427,11 @@ module VSphereCloud
         vm.delete
         logger.info("Deleted vm: #{vm_cid}")
 
-        # Delete vm_groups if they are empty
-        @cluster_provider.delete_vm_groups(cluster, vm_group_names) unless vm_group_names.nil? || vm_group_names.empty?
+        # Delete vm_groups
+        unless vm_group_names.nil? || vm_group_names.empty?
+          vm_group = VSphereCloud::VmGroup.new(client, cluster)
+          vm_group.delete_vm_groups(vm_group_names)
+        end
       end
     end
 

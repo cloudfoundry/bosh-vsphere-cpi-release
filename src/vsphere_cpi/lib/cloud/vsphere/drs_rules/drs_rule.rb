@@ -32,15 +32,6 @@ module VSphereCloud
       end
     end
 
-    # Adds VM to given VM Group
-    # @param [Vim::VirtualMachine] vm
-    # @params [String] vm_group_name
-    def add_vm_to_vm_group(vm, vm_group_name)
-      DrsLock.new(@vm_attribute_manager, DRS_LOCK_SUFFIX_VMGROUP ).with_drs_lock do
-        update_vm_group(vm, vm_group_name)
-      end
-    end
-
     private
 
     def tag_vm(vm)
@@ -66,29 +57,6 @@ module VSphereCloud
     def update_rule(rule_key)
       logger.debug("Updating DRS rule: #{@rule_name}")
       add_anti_affinity_rule(VimSdk::Vim::Option::ArrayUpdateSpec::Operation::EDIT, rule_key)
-    end
-
-    def find_vm_group(vm_group_name)
-      @datacenter_cluster.configuration_ex.group.find { |group| group.name == vm_group_name && group.is_a?(VimSdk::Vim::Cluster::VmGroup)}
-    end
-
-    # If vm group already exists, you cannot define operation as add,
-    # also you need to pass all existing vms when you edit
-    def update_vm_group(vm, vm_group_name)
-      vm_group = find_vm_group(vm_group_name)
-      vm_group_spec = VimSdk::Vim::Cluster::VmGroup.new
-      vm_group_spec.vm = vm_group ? vm_group.vm.concat([vm]) : [vm]
-      vm_group_spec.name = vm_group_name
-
-      group_spec = VimSdk::Vim::Cluster::GroupSpec.new
-      group_spec.info = vm_group_spec
-      group_spec.operation = vm_group ? VimSdk::Vim::Option::ArrayUpdateSpec::Operation::EDIT : VimSdk::Vim::Option::ArrayUpdateSpec::Operation::ADD
-
-      config_spec = VimSdk::Vim::Cluster::ConfigSpecEx.new
-      config_spec.group_spec = [group_spec]
-
-      logger.debug("Adding VM to VM group: #{vm_group_name}")
-      reconfigure_cluster(config_spec)
     end
 
     def add_anti_affinity_rule(operation, rule_key = nil)

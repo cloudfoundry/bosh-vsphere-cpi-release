@@ -2,8 +2,7 @@ require 'spec_helper'
 require 'timecop'
 
 describe VSphereCloud::DrsLock, fake_logger: true do
-  subject(:drs_lock) { described_class.new(vm_attribute_manager, drs_lock_suffix) }
-  let(:drs_lock_suffix) {''}
+  subject(:drs_lock) { described_class.new(vm_attribute_manager) }
   let(:vm_attribute_manager) { instance_double('VSphereCloud::VMAttributeManager') }
 
   context 'when drs lock exists' do
@@ -50,16 +49,6 @@ describe VSphereCloud::DrsLock, fake_logger: true do
       drs_lock.with_drs_lock {}
     end
 
-    context 'and drs_lock_suffix is present' do
-      let(:drs_lock_suffix) { '_suffix' }
-      it 'creates DRS lock with the suffix' do
-        expect(vm_attribute_manager).to receive(:create).with('drs_lock_suffix')
-        expect(vm_attribute_manager).to receive(:delete).with('drs_lock_suffix')
-
-        drs_lock.with_drs_lock {}
-      end
-    end
-
     context 'when block fails' do
       it 'deletes the lock' do
         expect(vm_attribute_manager).to receive(:create).with('drs_lock')
@@ -72,5 +61,13 @@ describe VSphereCloud::DrsLock, fake_logger: true do
         end.to raise_error 'Failed block'
       end
     end
+  end
+
+  it 'creates drs lock with given name' do
+    expect(vm_attribute_manager).to receive(:create).with('custom_drs_lock')
+    expect(vm_attribute_manager).to receive(:delete).with('custom_drs_lock')
+
+    custom_drs_lock = described_class.new(vm_attribute_manager, 'custom_drs_lock')
+    custom_drs_lock.with_drs_lock {}
   end
 end
