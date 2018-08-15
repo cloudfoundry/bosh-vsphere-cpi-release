@@ -21,7 +21,8 @@ Bosh::Clouds::Config.configure(OpenStruct.new(
 
 soap_log = StringIO.new
 
-cpi_lambda = lambda do |context|
+#cpi_lambda now requires 2 arguments context, cpi_api_version
+cpi_lambda = lambda do |context, _|
   unless cpi_config.has_key?('cloud') && cpi_config['cloud'].has_key?('properties')
     raise "Could not find cloud properties in the configuration"
   end
