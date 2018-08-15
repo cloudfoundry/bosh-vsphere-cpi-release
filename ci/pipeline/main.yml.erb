@@ -22,12 +22,12 @@ jobs:
       - get: bosh-cpi-src
         trigger: true
         passed:
-        - lifecycle-5.5
         - lifecycle-6.0
         - lifecycle-6.0-NSXV
         - lifecycle-6.5
         - lifecycle-6.5-NSXV
         - lifecycle-6.5-NSXT21
+        - lifecycle-6.5-NSXT22
         - lifecycle-6.7-NSXT22
       - get: version-semver
         trigger: false
@@ -130,12 +130,12 @@ jobs:
       - get: bosh-cpi-src
         trigger: ((trigger_delivery_job))
         passed:
-        - lifecycle-5.5
         - lifecycle-6.0
         - lifecycle-6.0-NSXV
         - lifecycle-6.5
         - lifecycle-6.5-NSXV
         - lifecycle-6.5-NSXT21
+        - lifecycle-6.5-NSXT22
         - bats
     - put: tracker-output
       params: { repos: [bosh-cpi-src] }
@@ -204,6 +204,13 @@ resources:
       branch:       master
       pool:         v6.5-nsxt21
       private_key:  {{vcpi-pool_deployment_key}}
+  - name: pool-6.5-NSXT22
+    type: pool
+    source:
+      uri:          git@github.com:ktchen14/vcpi-pool.git
+      branch:       master
+      pool:         v6.5-nsxt22
+      private_key:  {{vcpi-pool_deployment_key}}
   - name: pool-6.0-NSXV
     type: pool
     source:
@@ -217,13 +224,6 @@ resources:
       uri:          git@github.com:ktchen14/vcpi-pool.git
       branch:       master
       pool:         v6.5
-      private_key:  {{vcpi-pool_deployment_key}}
-  - name: pool-5.5
-    type: pool
-    source:
-      uri:          git@github.com:ktchen14/vcpi-pool.git
-      branch:       master
-      pool:         v5.5
       private_key:  {{vcpi-pool_deployment_key}}
   - name: pool-6.0
     type: pool
@@ -344,22 +344,21 @@ groups:
   - lock-6.5-NSXT21
   - lifecycle-6.5-NSXT21
   - unlock-6.5-NSXT21
+  - lock-6.5-NSXT22
+  - lifecycle-6.5-NSXT22
+  - unlock-6.5-NSXT22
   - lifecycle-6.0-NSXV
   - lock-6.0-NSXV
   - unlock-6.0-NSXV
-  - lifecycle-5.5
-  - lock-5.5
-  - unlock-5.5
-
 
 - name: Delivery
   jobs:
   - lifecycle-6.5
   - lifecycle-6.0
-  - lifecycle-5.5
   - lifecycle-6.7-NSXT22
   - lifecycle-6.5-NSXV
   - lifecycle-6.5-NSXT21
+  - lifecycle-6.5-NSXT22
   - lifecycle-6.0-NSXV
   - bats
   - delivery
@@ -384,6 +383,9 @@ groups:
   - lock-6.5-NSXT21
   - lifecycle-6.5-NSXT21
   - unlock-6.5-NSXT21
+  - lock-6.5-NSXT22
+  - lifecycle-6.5-NSXT22
+  - unlock-6.5-NSXT22
 
 - name: v6.0
   jobs:
@@ -394,13 +396,6 @@ groups:
   - lifecycle-6.0-NSXV
   - lock-6.0-NSXV
   - unlock-6.0-NSXV
-
-- name: v5.5
-  jobs:
-  - unit-test
-  - lifecycle-5.5
-  - lock-5.5
-  - unlock-5.5
 
 - name: v6.7-NSXT22
   jobs:
