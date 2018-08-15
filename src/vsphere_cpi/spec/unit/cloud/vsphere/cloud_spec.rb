@@ -1327,7 +1327,6 @@ module VSphereCloud
           expect(vm).to receive(:delete)
           expect(nsxt_provider).to receive(:remove_vm_from_nsgroups).with(vm)
           expect(nsxt_provider).to receive(:remove_vm_from_server_pools).with(ip_address)
-
           vsphere_cloud.delete_vm('vm-id')
         end
 
@@ -1357,12 +1356,14 @@ module VSphereCloud
       end
 
       context 'when vm belongs to vm groups' do
-        let(:vm_group){ VimSdk::Vim::Cluster::VmGroup.new(name: 'vm-group', vm: [vm_mob])}
-        let(:group) { [vm_group] }
+        let(:cluster_vm_group){ VimSdk::Vim::Cluster::VmGroup.new(name: 'vm-group', vm: [vm_mob]) }
+        let(:group) { [cluster_vm_group] }
+        let(:vm_group) { instance_double('VSphereCloud::VmGroup')}
         it 'deletes vm groups' do
           expect(vm).to receive(:power_off)
           expect(vm).to receive(:delete)
-          expect(cluster_provider).to receive(:delete_vm_groups).with(fake_cluster, [vm_group.name])
+          expect(vm_group).to receive(:delete_vm_groups).with([cluster_vm_group.name])
+          expect(VSphereCloud::VmGroup).to receive(:new).and_return(vm_group)
           vsphere_cloud.delete_vm('vm-id')
         end
       end
