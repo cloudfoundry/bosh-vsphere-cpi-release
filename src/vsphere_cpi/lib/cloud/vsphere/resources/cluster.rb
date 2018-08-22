@@ -91,21 +91,6 @@ module VSphereCloud
         return compute_resource_summary.effective_memory
       end
 
-      # Filters out the hosts that are in maintenance mode.
-      #
-      # @param [Hash] host_properties host properties that already fetched
-      #   inMaintenanceMode from vSphere.
-      # @return [Array<Vim::HostSystem>] list of hosts that are active
-      def select_active_host_mobs(host_properties)
-        host_properties.values.
-          select { |p|
-            p['runtime.inMaintenanceMode'] != 'true' &&
-              p['runtime.connectionState'] == 'connected' &&
-              p['runtime.powerState'] == 'poweredOn'
-          }.
-          collect { |p| p[:obj] }
-      end
-
       # Fetches the resource pool utilization from vSphere.
       #
       # We can only rely on the vSphere data if the resource pool is healthy.
