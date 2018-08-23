@@ -69,7 +69,7 @@ module VSphereCloud
       begin
         case method
           when 'GET'
-            resp = @backing_client.get(url, additional_headers)
+            resp = @backing_client.get(url, nil, additional_headers)
           when 'PUT'
             resp = @backing_client.put(url, content, additional_headers)
           when 'POST'
