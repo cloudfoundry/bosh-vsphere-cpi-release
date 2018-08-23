@@ -447,7 +447,7 @@ module VSphereCloud
         director_disk_cid = DirectorDiskCID.new(raw_director_disk_cid)
         vm = vm_provider.find(vm_cid)
 
-        disk_to_attach = @datacenter.find_disk(director_disk_cid)
+        disk_to_attach = @datacenter.find_disk(director_disk_cid, vm)
 
         disk_config = VSphereCloud::DiskConfig.new(
           cid: disk_to_attach.cid,

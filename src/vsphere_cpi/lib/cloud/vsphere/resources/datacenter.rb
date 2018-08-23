@@ -102,7 +102,7 @@ module VSphereCloud
         @client.create_disk(mob, datastore, disk_cid, @disk_path, size_in_mb, disk_type)
       end
 
-      def find_disk(director_disk_cid)
+      def find_disk(director_disk_cid, vm_resource=nil)
         disk_cid = director_disk_cid.value
         datastore_pattern = director_disk_cid.target_datastore_pattern
         hint_datastores = {}
@@ -132,6 +132,20 @@ module VSphereCloud
         logger.debug("Disk #{disk_cid} not found in filtered persistent datastores, trying other datastores: #{other_datastores}")
         disk = find_disk_cid_in_datastores(disk_cid, other_datastores)
         return disk unless disk.nil?
+
+        # Disk is not present on any datastore accessible from cluster in global
+        # configuration.
+        # This means disk is present on a datastore that VM can access. This is
+        # because in create_disk there are only two options for a datastore
+        #  1. Either a DS accessible from cluster listed in global config
+        #  2. Or DS that vm can access (vm refers to vm_cid passed)
+        unless vm_resource.nil?
+          # @TODO: Filter already looked up datastores from above.
+          vm_datastores = vm_resource.accessible_datastores#.reject! {|name, ds_res| }
+          logger.debug("Disk #{disk_cid} not found in datastores accessible from global config cluster, searching VM accessible datastores: #{vm_datastores}")
+          disk = find_disk_cid_in_datastores(disk_cid, vm_datastores)
+          return disk unless disk.nil?
+        end
 
         logger.debug("Disk #{disk_cid} not found in all datastores, searching VM attachments")
         vm_mob = @client.find_vm_by_disk_cid(mob, disk_cid)
