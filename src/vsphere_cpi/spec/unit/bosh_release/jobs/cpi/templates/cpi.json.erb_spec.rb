@@ -19,7 +19,7 @@ describe 'cpi.json.erb' do
     {
       'properties' => {
         'vcenter' => {
-          'address' => 'vcenter-address',
+          'host' => 'vcenter-address',
           'user' => 'vcenter-user',
           'password' => 'vcenter-password',
           'enable_auto_anti_affinity_drs_rules' => true,
@@ -114,6 +114,29 @@ describe 'cpi.json.erb' do
       expect(subject['cloud']['properties']['vcenters'].first['nsx']['address']).to eq('my-nsx-manager')
       expect(subject['cloud']['properties']['vcenters'].first['nsx']['user']).to eq('my-nsx-user')
       expect(subject['cloud']['properties']['vcenters'].first['nsx']['password']).to eq('fake')
+    end
+  end
+
+  context 'when vcenter address is also set' do
+    before(:each) {
+      manifest['properties']['vcenter'].merge!({
+        'address' => 'vcenter-new-address'
+      })
+    }
+    it 'uses the host key to set the vcenter host value' do
+      expect(subject['cloud']['properties']['vcenters'].first['host']).to eq('vcenter-address')
+    end
+  end
+
+  context 'when vcenter address is set and vcenter host is not set' do
+    before(:each) {
+      manifest['properties']['vcenter'].merge!({
+        'address' => 'vcenter-new-address',
+        'host' => nil
+      })
+    }
+    it 'uses the address key to set vcenter host value' do
+      expect(subject['cloud']['properties']['vcenters'].first['host']).to eq('vcenter-new-address')
     end
   end
 

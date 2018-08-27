@@ -1,4 +1,14 @@
 <%=
+  vcenter_host = nil
+
+  if_p('vcenter.host') do
+    vcenter_host = p('vcenter.host')
+  end
+
+  # Use vcenter.address if vcenter.host is not set
+  if_p('vcenter.address') do
+    vcenter_host = p('vcenter.address') if vcenter_host.nil?
+  end
 
   params = {
     "cloud" => {
@@ -6,7 +16,7 @@
       "properties" => {
         "vcenters" => [
           {
-            "host" => p('vcenter.address'),
+            "host" => vcenter_host,
             "user" => p('vcenter.user'),
             "password" => p('vcenter.password'),
             "datacenters" => [],
