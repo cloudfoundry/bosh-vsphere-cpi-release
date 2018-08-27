@@ -387,9 +387,11 @@ module VSphereCloud
 
     def delete_vm(vm_cid)
       with_thread_name("delete_vm(#{vm_cid})") do
-        logger.info("Deleting vm: #{vm_cid}")
 
+        logger.info("Deleting vm: #{vm_cid}")
         vm = vm_provider.find(vm_cid)
+        logger.info("Deleting vm with mob: #{vm.mob} ")
+
         vm_ip = vm.mob.guest&.ip_address
 
         # find vm_groups vm is part of before deleting it
@@ -657,6 +659,7 @@ module VSphereCloud
     def clone_vm(vm, name, folder, resource_pool, options={})
       relocation_spec = Vim::Vm::RelocateSpec.new
       relocation_spec.datastore = options[:datastore] if options[:datastore]
+      relocation_spec.host = options[:host].mob unless options[:host].nil?
       if options[:linked]
         relocation_spec.disk_move_type = Vim::Vm::RelocateSpec::DiskMoveOptions::CREATE_NEW_CHILD_DISK_BACKING
       end
