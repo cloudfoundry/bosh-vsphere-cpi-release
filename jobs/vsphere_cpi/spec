@@ -15,8 +15,10 @@ packages:
 - vsphere_cpi
 
 properties:
-  vcenter.address:
+  vcenter.host:
     description: Address of vCenter server used by vsphere cpi
+  vcenter.address:
+    description: Address of vCenter server used by vsphere cpi if not set by `vcenter.host`
   vcenter.default_disk_type:
     description: backing for ephemeral and persistent disks unless overridden by `disk_pools.cloud_properties.type`; can be `thin` or `preallocated`
     default: preallocated
