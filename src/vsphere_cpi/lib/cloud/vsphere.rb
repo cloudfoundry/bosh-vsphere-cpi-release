@@ -70,7 +70,6 @@ require 'cloud/vsphere/disk_placement_selection_pipeline'
 require 'cloud/vsphere/vm_placement_selection_pipeline'
 
 
-
 module Bosh
   module Clouds
     class VSphere

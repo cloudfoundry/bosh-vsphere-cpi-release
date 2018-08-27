@@ -101,7 +101,6 @@ module VSphereCloud
       vm_type.gpu
     end
 
-    end
     def validate_drs_rules(cluster)
       cluster_name = cluster.name
       cluster_config = resource_pool_clusters_spec.find {|cluster_spec| cluster_spec.keys.first == cluster_name}
@@ -121,13 +120,19 @@ module VSphereCloud
       end
     end
 
+    def gpu_enabled?
+      !(gpu_conf.nil? ||
+          gpu_conf['number_of_gpus'].nil? ||
+          gpu_conf['number_of_gpus'] == 0)
+    end
+
     private
 
     def has_custom_cluster_properties?
       # custom properties include drs_rules and vcenter resource_pools
       !resource_pool_clusters_spec.empty?
     end
-    
+
     def find_clusters(clusters_spec)
       clusters = []
       clusters_spec.each do |cluster_spec|
@@ -164,9 +169,9 @@ module VSphereCloud
       end
     end
 
+
     def cluster_placement_internal(clusters:)
       return @cluster_placement if @cluster_placement
-
 
 
       vm_selection_placement_pipeline = VmPlacementSelectionPipeline.new(disk_config: disk_configurations, req_memory: vm_type.ram, num_gpu: vm_type.num_gpus) do
@@ -177,8 +182,13 @@ module VSphereCloud
       end
       @cluster_placement = vm_selection_placement_pipeline.each.to_a
       raise Bosh::Clouds::CloudError,
-        'No valid placement found for VM compute and storage requirement' if @cluster_placement.first.nil?
+        'No valid placement found for VM compute, storage, and hosts requirement' if @cluster_placement.first.nil?
       @cluster_placement
     end
   end
+
+  def invalidate_placement
+    @cluster_placements = nil
+  end
 end
+

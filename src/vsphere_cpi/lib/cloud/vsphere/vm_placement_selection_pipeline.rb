@@ -1,9 +1,9 @@
 module VSphereCloud
   class VmPlacement
-    attr_reader :cluster, :hosts, :datastores,
+    attr_reader :cluster, :datastores,
       :balance_score_set
 
-    attr_accessor :migration_size, :disk_placement
+    attr_accessor :migration_size, :disk_placement, :hosts
 
     def initialize(cluster:, hosts:, datastores:)
       @cluster = cluster
@@ -65,7 +65,7 @@ module VSphereCloud
     class VmPlacementCriteria
       DEFAULT_MEMORY_HEADROOM = 128
 
-      attr_reader :disk_config, :req_memory, :mem_headroom
+      attr_reader :disk_config, :req_memory, :mem_headroom, :num_gpu
 
       def required_memory
         req_memory + mem_headroom
@@ -75,13 +75,43 @@ module VSphereCloud
         @disk_config = criteria[:disk_config]
         @req_memory = criteria[:req_memory]
         @mem_headroom = criteria[:mem_headroom] || DEFAULT_MEMORY_HEADROOM
+        @num_gpu = criteria[:num_gpu] unless criteria[:num_gpu].nil? || criteria[:num_gpu] <= 0
       end
 
       def inspect
-        "VM Placement Criteria: Disk Config: #{disk_config}  Req Memory: #{req_memory}  Mem Headroom: #{mem_headroom}"
+        "VM Placement Criteria: Disk Config: #{disk_config}  Req Memory: #{req_memory}  Mem Headroom: #{mem_headroom} Num GPUs: #{num_gpu}"
       end
     end
     private_constant :VmPlacementCriteria
+
+    # Filtering for GPUs
+    #with_filter do |vm_placement, criteria_object|
+     # logger.debug("Filter #{vm_placement.cluster_inspect} for number of GPUs required: #{criteria_object.num_gpu}")
+
+      # using cluster picker logic g ddo through and inspect the clusters and filter down to hosts and find the appropriate
+      # vms and hosts with contain the minimum gpu requirements and choose the appropriate cluster based on that
+
+      #pay more attention to the placements with gpu attached hosts method in cluster_picker which is the first filter
+      # as the rest of the filters are dealt with later on which include the disk migrations, free space, and free mem
+
+      #first start off by filtering the cluster
+      #then filter for hosts based on if they have these gpus
+      #if these hosts dont then we know we can remove this cluster and not look at it further
+      #then determine if we have enough memory and based on this keep this cluster or not
+
+      #a vm placement is a cluster itself so these would be synonymous
+      #to filter with placemtns with gpu attached hosts
+
+      #into the function we have being passed in placements options(narrowed down) then the amount of clusters, gpu_config, and req_mem which
+      # further reduces placement options
+
+    #  vm_placement
+
+    #  vm_placement. >= criteria_object.num_gpu
+
+      #vm_placement.each
+   # end
+
 
     with_filter do |vm_placement, criteria_object|
       logger.debug("Filter #{vm_placement.cluster_inspect} for free memory required: #{criteria_object.required_memory}")
@@ -141,6 +171,32 @@ module VSphereCloud
         vm_placement.balance_score_set << result
         vm_placement.migration_size += disk.size if disk.existing_datastore_name
       end
+      true
+    end
+
+    # Gather & Filter hosts with enough available GPUs
+    with_filter ->(vm_placement, criteria_object) do
+      #require 'pry-byebug'
+      #binding.pry
+
+      return true if criteria_object.num_gpu.nil?
+
+      logger.debug("Gathering hosts #{vm_placement.inspect_before}")
+      vm_placement.hosts = vm_placement.cluster.active_hosts.values
+
+      logger.debug("Filter cluster name for the host_inspect #{vm_placement.cluster_inspect} for number of GPUs required: #{criteria_object.num_gpu}")
+      vm_placement.hosts.reject! do |host|
+        host.available_gpus.size < criteria_object.num_gpu
+      end
+
+      logger.debug("Filter #{vm_placement.cluster_inspect} for memory required: #{criteria_object.required_memory}")
+      vm_placement.hosts.reject! do |host|
+        host.raw_available_memory < criteria_object.required_memory
+      end
+
+      # return false if no host satisfies criteria
+      return false if vm_placement.hosts.empty?
+
       true
     end
 
