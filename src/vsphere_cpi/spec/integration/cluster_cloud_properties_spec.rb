@@ -227,7 +227,7 @@ describe 'cloud_properties related to clusters' do
 
     let(:disk_pool) { { 'datastores' => [@disjoint_datastore] } }
 
-    it 'should place disk into datastore that belongs to the cluster defined in cloud config' do
+    it 'should be able to create and attach disk to vm' do
       begin
         vm_id = cpi.create_vm(
             'agent-007',
@@ -243,10 +243,10 @@ describe 'cloud_properties related to clusters' do
         expect(cpi.has_vm?(vm_id)).to be(true)
 
         disk_id = cpi.create_disk(2048, disk_pool, vm_id)
-        expect(disk_id).to_not be_nil
-        expect(disjoint_cluster_cpi.has_disk?(disk_id)).to be(true)
-        disk = disjoint_cluster_cpi.datacenter.find_disk(VSphereCloud::DirectorDiskCID.new(disk_id))
-        expect(disk.datastore.name).to eq(@disjoint_datastore)
+        verify_disk_is_in_datastores(disjoint_cluster_cpi, disk_id, [@disjoint_datastore])
+
+        cpi.attach_disk(vm_id,disk_id)
+        verify_disk_is_in_datastores(disjoint_cluster_cpi, disk_id, [@disjoint_datastore])
       ensure
         delete_vm(cpi, vm_id)
         delete_disk(disjoint_cluster_cpi, disk_id)

@@ -356,6 +356,7 @@ describe VSphereCloud::Resources::Datacenter, fake_logger: true do
     let(:persistent_datastore) { instance_double(VSphereCloud::Resources::Datastore, name: 'persistent-ds') }
     let(:other_datastore_1) { instance_double(VSphereCloud::Resources::Datastore, name: 'other_datastore_1') }
     let(:other_datastore_2) { instance_double(VSphereCloud::Resources::Datastore, name: 'other_datastore_2') }
+    let(:datastore_with_disk) { instance_double(VSphereCloud::Resources::Datastore, name: 'datastore-with-disk') }
     let(:encoded_disk_cid) { 'disk-cid' }
     let(:director_disk_cid) {
       VSphereCloud::DirectorDiskCID.new(encoded_disk_cid)
@@ -403,6 +404,20 @@ describe VSphereCloud::Resources::Datacenter, fake_logger: true do
         allow(client).to receive(:find_disk).with('disk-cid', other_datastore_2, 'fake-disk-path').and_return(nil)
 
         expect(datacenter.find_disk(director_disk_cid)).to eq(disk)
+      end
+    end
+
+    context 'when disk exists in datastore accessible to vm' do
+      let(:vm) { instance_double('VSphereCloud::Resources::VM', mob: vm_mob, reload: nil, cid: 'vm-id') }
+      let(:vm_mob) { instance_double('VimSdk::Vim::VirtualMachine') }
+
+      it 'returns disk' do
+        expect(client).to receive(:find_disk).with('disk-cid', persistent_datastore, 'fake-disk-path').and_return(nil)
+        expect(client).to receive(:find_disk).with('disk-cid', other_datastore_1, 'fake-disk-path').and_return(nil)
+        allow(client).to receive(:find_disk).with('disk-cid', other_datastore_2, 'fake-disk-path').and_return(nil)
+        allow(client).to receive(:find_disk).with('disk-cid', datastore_with_disk, 'fake-disk-path').and_return(disk)
+        allow(vm).to receive(:accessible_datastores).and_return('datastore-with-disk' => datastore_with_disk)
+        expect(datacenter.find_disk(director_disk_cid, vm)).to eq(disk)
       end
     end
 

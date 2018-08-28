@@ -446,7 +446,6 @@ module VSphereCloud
       with_thread_name("attach_disk(#{vm_cid}, #{raw_director_disk_cid})") do
         director_disk_cid = DirectorDiskCID.new(raw_director_disk_cid)
         vm = vm_provider.find(vm_cid)
-
         disk_to_attach = @datacenter.find_disk(director_disk_cid, vm)
 
         disk_config = VSphereCloud::DiskConfig.new(
@@ -456,17 +455,8 @@ module VSphereCloud
           target_datastore_pattern: director_disk_cid.target_datastore_pattern || @datacenter.persistent_pattern
         )
 
-        accessible_datastores = @datacenter.accessible_datastores
-        reachable_datastores = vm.accessible_datastore_names
-
-        # Filter out datastores that are reachable from the VM
-        # and those which are accessible from at least one active host
-        # Note: Since vm is active , it must be on a host that is active too, therefore, the second select might be redundant.
-        accessible_datastores = accessible_datastores.select do |name|
-          reachable_datastores.include?(name)
-        end.select do |_, ds_resource|
-          ds_resource.accessible?
-        end
+        logger.debug("Gathering storage placement accessible from VM")
+        accessible_datastores = vm.accessible_datastores
 
         disk_is_accessible = accessible_datastores.include?(disk_config.existing_datastore_name)
 
