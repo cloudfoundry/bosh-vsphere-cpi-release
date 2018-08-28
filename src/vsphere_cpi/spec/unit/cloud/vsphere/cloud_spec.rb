@@ -1083,23 +1083,7 @@ module VSphereCloud
 
 
       before do
-        allow(datastore_with_disk).to receive(:accessible?).and_return(true)
-        allow(datastore_without_disk).to receive(:accessible?).and_return(true)
-        allow(inaccessible_datastore).to receive(:accessible?).and_return(true)
         allow(datacenter).to receive(:persistent_pattern).and_return(/datastore\-.*/)
-        allow(datacenter).to receive(:accessible_datastores)
-          .and_return(
-            'datastore-with-disk' => datastore_with_disk,
-            'datastore-without-disk' => datastore_without_disk,
-            'inaccessible-datastore' => inaccessible_datastore
-          )
-        allow(datacenter).to receive(:accessible_datastores)
-          .and_return(
-            'datastore-with-disk' => datastore_with_disk,
-            'datastore-without-disk'=> datastore_without_disk,
-          )
-        allow(datacenter).to receive(:find_datastore).with('datastore-with-disk').and_return(datastore_with_disk)
-        allow(datacenter).to receive(:find_datastore).with('datastore-without-disk').and_return(datastore_without_disk)
 
         allow(vm_provider).to receive(:find).with('fake-vm-cid').and_return(vm)
 
@@ -1110,12 +1094,11 @@ module VSphereCloud
 
       context 'when disk is in a datastore accessible to VM' do
         before do
-          allow(vm).to receive(:accessible_datastores).and_return({'datastore-with-disk'=>datastore_with_disk})
-          allow(vm).to receive(:accessible_datastore_names).and_return(['datastore-with-disk'])
+          allow(vm).to receive(:accessible_datastores).and_return('datastore-with-disk' => datastore_with_disk)
         end
 
         it 'attaches the existing persistent disk' do
-          expect(datacenter).to receive(:find_disk).with(director_disk_cid).and_return(disk)
+          expect(datacenter).to receive(:find_disk).with(director_disk_cid, vm).and_return(disk)
           expect(VSphereCloud::DirectorDiskCID).to receive(:new).with('disk-cid').and_return(director_disk_cid)
 
           expect(vm).to receive(:attach_disk) do |disk|
@@ -1127,7 +1110,6 @@ module VSphereCloud
             expect(env_location).to eq(vm_location)
             expect(env['disks']['persistent']['disk-cid']).to eq('some-unit-number')
           end
-
           vsphere_cloud.attach_disk('fake-vm-cid', 'disk-cid')
         end
 
@@ -1139,7 +1121,7 @@ module VSphereCloud
           disk_cid_with_metadata = "disk-cid.#{encoded_metadata}"
 
           director_disk_cid = VSphereCloud::DirectorDiskCID.new(disk_cid_with_metadata)
-          expect(datacenter).to receive(:find_disk).with(director_disk_cid).and_return(disk)
+          expect(datacenter).to receive(:find_disk).with(director_disk_cid, vm).and_return(disk)
           expect(VSphereCloud::DirectorDiskCID).to receive(:new).with(disk_cid_with_metadata).and_return(director_disk_cid)
 
           expect(vm).to receive(:attach_disk) do |disk|
@@ -1174,13 +1156,13 @@ module VSphereCloud
         end
 
         before do
-          allow(vm).to receive(:accessible_datastore_names).and_return(['datastore-without-disk'])
-          allow(vm).to receive(:accessible_datastores).and_return({'datastore-without-disk'=>datastore_without_disk})
+          allow(vm).to receive(:accessible_datastores).and_return('datastore-without-disk' => datastore_without_disk)
+          allow(datacenter).to receive(:find_datastore).with('datastore-without-disk').and_return(datastore_without_disk)
           allow(cdrom).to receive_message_chain(:backing, :datastore, :name) { 'datastore-without-disk' }
         end
 
         it 'moves the disk to an accessible datastore and attaches it' do
-          expect(datacenter).to receive(:find_disk).with(director_disk_cid).and_return(disk)
+          expect(datacenter).to receive(:find_disk).with(director_disk_cid, vm).and_return(disk)
           expect(VSphereCloud::DirectorDiskCID).to receive(:new).with('disk-cid').and_return(director_disk_cid)
           expect(datacenter).to receive(:move_disk_to_datastore).with(disk, datastore_without_disk)
             .and_return(moved_disk)
@@ -1202,16 +1184,16 @@ module VSphereCloud
 
         before do
           allow(datacenter).to receive(:persistent_pattern).and_return(/datastore\-without\-disk/)
-          allow(vm).to receive(:accessible_datastore_names).and_return(['datastore-with-disk', 'datastore-without-disk'])
-          allow(vm).to receive(:accessible_datastores).and_return(
-            {'datastore-with-disk'=>datastore_with_disk,
-             'datastore-without-disk'=>datastore_without_disk,
-            }
-          )
+          allow(datacenter).to receive(:find_datastore).with('datastore-without-disk').and_return(datastore_without_disk)
+          allow(vm).to receive(:accessible_datastores)
+            .and_return(
+             'datastore-with-disk' => datastore_with_disk,
+             'datastore-without-disk'=> datastore_without_disk,
+            )
         end
 
         it 'moves the disk to a persistent datastore and attaches it' do
-          expect(datacenter).to receive(:find_disk).with(director_disk_cid).and_return(disk)
+          expect(datacenter).to receive(:find_disk).with(director_disk_cid, vm).and_return(disk)
           expect(VSphereCloud::DirectorDiskCID).to receive(:new).with('disk-cid').and_return(director_disk_cid)
 
           expect(datacenter).to receive(:move_disk_to_datastore).with(disk, datastore_without_disk)
@@ -1254,20 +1236,12 @@ module VSphereCloud
         let(:director_disk_cid) { VSphereCloud::DirectorDiskCID.new(encoded_disk_cid) }
 
         before do
-          allow(target_datastore).to receive(:accessible?).and_return(true)
-          allow(current_datastore).to receive(:accessible?).and_return(true)
-          allow(datacenter).to receive(:accessible_datastores)
-            .and_return(
-              'target-datastore' => target_datastore,
-              'current-datastore' => current_datastore,
-            )
           allow(vm).to receive(:accessible_datastores)
             .and_return(
-              'target-datastore' => target_datastore,
-              'current-datastore' => current_datastore,
+             'target-datastore' => target_datastore,
+             'current-datastore' => current_datastore,
             )
-          allow(vm).to receive(:accessible_datastore_names).and_return(['target-datastore', 'current-datastore'])
-          expect(datacenter).to receive(:find_disk).with(director_disk_cid).and_return(disk)
+          expect(datacenter).to receive(:find_disk).with(director_disk_cid, vm).and_return(disk)
           expect(VSphereCloud::DirectorDiskCID).to receive(:new).with(encoded_disk_cid).and_return(director_disk_cid)
         end
 
