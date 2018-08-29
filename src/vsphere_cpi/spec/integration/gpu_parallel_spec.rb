@@ -260,7 +260,7 @@ describe 'cloud_properties related to creation of GPU attached VMs' do
         end
 
         context 'when cpi creates vms with 1 and 4 gpus in succession' do
-          it 'creates all two vms, first vm on host with 2 gpus and second on host with 4 gpus' do
+          xit 'creates all two vms, first vm on host with 2 gpus and second on host with 4 gpus' do
             begin
               vm_id_1 = cpi.create_vm(
                   'agent-007',

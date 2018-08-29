@@ -371,6 +371,8 @@ describe 'cloud_properties related to creation of GPU attached VMs' do
       )
     end
 
+
+    #wont pass all the time since the 2gpu option can be placed on both hosts
     context 'when ephemeral datastore is accessible from GPU host' do
       let(:vm_type_single_cluster_acc_ds) do
         vm_type_single_cluster.merge(
@@ -384,7 +386,7 @@ describe 'cloud_properties related to creation of GPU attached VMs' do
               'gpu' => { 'number_of_gpus' => 1}
           )
         end
-        it 'creates vm in the cluster on host with 2 gpus' do
+        xit 'creates vm in the cluster on host with 2 gpus' do
           begin
             vm_id = cpi.create_vm(
                 'agent-007',
@@ -413,19 +415,20 @@ describe 'cloud_properties related to creation of GPU attached VMs' do
               'gpu' => { 'number_of_gpus' => 4}
           )
         end
-        let(:vm_type_single_cluster_acc_ds_1_gpu) do
+        let(:vm_type_single_cluster_acc_ds_2_gpu) do
           vm_type_single_cluster_acc_ds.merge(
-              'gpu' => { 'number_of_gpus' => 1}
+              'gpu' => { 'number_of_gpus' => 2}
           )
         end
 
+        #wont pass all the time since the 2gpu option can be placed on both hosts
         context 'when cpi creates vms with 1 and 4 gpus in succession' do
-          it 'creates all two vms, first vm on host with 2 gpus and second on host with 4 gpus' do
+          xit 'creates all two vms, first vm on host with 2 gpus and second on host with 4 gpus' do
             begin
               vm_id_1 = cpi.create_vm(
                   'agent-007',
                   @stemcell_id,
-                  vm_type_single_cluster_acc_ds_1_gpu,
+                  vm_type_single_cluster_acc_ds_2_gpu,
                   get_network_spec,
                   [],
                   {}
@@ -436,7 +439,7 @@ describe 'cloud_properties related to creation of GPU attached VMs' do
               expect(vm).to_not be_nil
               expect(vm.cluster).to eq(@second_cluster_name)
               expect(vm.mob.runtime.host.name).to eq(@host_2)
-              expect(vm.mob.config.hardware.device).to have_number_of_GPU_eql_to(1)
+              expect(vm.mob.config.hardware.device).to have_number_of_GPU_eql_to(2)
 
               vm_id_2 = cpi.create_vm(
                   'agent-007',
@@ -459,6 +462,48 @@ describe 'cloud_properties related to creation of GPU attached VMs' do
             end
           end
         end
+
+        context 'when cpi creates vms with 4 and 2 gpus in succession' do
+          it 'creates all two vms, first vm on host with 4 gpus and second on host with 2 gpus' do
+            begin
+              vm_id_1 = cpi.create_vm(
+                  'agent-007',
+                  @stemcell_id,
+                  vm_type_single_cluster_acc_ds_4_gpu,
+                  get_network_spec,
+                  [],
+                  {}
+              )
+              expect(vm_id_1).to_not be_nil
+
+              vm = cpi.vm_provider.find(vm_id_1)
+              expect(vm).to_not be_nil
+              expect(vm.cluster).to eq(@second_cluster_name)
+              expect(vm.mob.runtime.host.name).to eq(@host_1)
+              expect(vm.mob.config.hardware.device).to have_number_of_GPU_eql_to(4)
+
+              vm_id_2 = cpi.create_vm(
+                  'agent-007',
+                  @stemcell_id,
+                  vm_type_single_cluster_acc_ds_2_gpu,
+                  get_network_spec,
+                  [],
+                  {}
+              )
+              expect(vm_id_2).to_not be_nil
+
+              vm = cpi.vm_provider.find(vm_id_2)
+              expect(vm).to_not be_nil
+              expect(vm.cluster).to eq(@second_cluster_name)
+              expect(vm.mob.runtime.host.name).to eq(@host_2)
+              expect(vm.mob.config.hardware.device).to have_number_of_GPU_eql_to(2)
+            ensure
+              delete_vm(cpi, vm_id_1)
+              delete_vm(cpi, vm_id_2)
+            end
+          end
+        end
+
       end
     end
   end
