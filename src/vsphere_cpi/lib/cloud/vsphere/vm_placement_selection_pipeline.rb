@@ -84,35 +84,6 @@ module VSphereCloud
     end
     private_constant :VmPlacementCriteria
 
-    # Filtering for GPUs
-    #with_filter do |vm_placement, criteria_object|
-     # logger.debug("Filter #{vm_placement.cluster_inspect} for number of GPUs required: #{criteria_object.num_gpu}")
-
-      # using cluster picker logic g ddo through and inspect the clusters and filter down to hosts and find the appropriate
-      # vms and hosts with contain the minimum gpu requirements and choose the appropriate cluster based on that
-
-      #pay more attention to the placements with gpu attached hosts method in cluster_picker which is the first filter
-      # as the rest of the filters are dealt with later on which include the disk migrations, free space, and free mem
-
-      #first start off by filtering the cluster
-      #then filter for hosts based on if they have these gpus
-      #if these hosts dont then we know we can remove this cluster and not look at it further
-      #then determine if we have enough memory and based on this keep this cluster or not
-
-      #a vm placement is a cluster itself so these would be synonymous
-      #to filter with placemtns with gpu attached hosts
-
-      #into the function we have being passed in placements options(narrowed down) then the amount of clusters, gpu_config, and req_mem which
-      # further reduces placement options
-
-    #  vm_placement
-
-    #  vm_placement. >= criteria_object.num_gpu
-
-      #vm_placement.each
-   # end
-
-
     with_filter do |vm_placement, criteria_object|
       logger.debug("Filter #{vm_placement.cluster_inspect} for free memory required: #{criteria_object.required_memory}")
       vm_placement.free_memory > criteria_object.required_memory
@@ -177,25 +148,21 @@ module VSphereCloud
     # Gather & Filter hosts with enough available GPUs
     with_filter ->(vm_placement, criteria_object) do
 
+      # Checking if we are able to place gpus onto a host
       return true if criteria_object.num_gpu.nil?
-
       logger.debug("Gathering hosts #{vm_placement.inspect_before}")
-      vm_placement.hosts = vm_placement.cluster.active_hosts.values
+      return false unless vm_placement.cluster.active_hosts.any?
 
-      logger.debug("Filter cluster name for host_inspect #{vm_placement.cluster_inspect} for number of GPUs required: #{criteria_object.num_gpu}")
-      vm_placement.hosts.reject! do |host|
-        host.available_gpus.size < criteria_object.num_gpu
+      # Filtering hosts in the host pipeline
+      pipeline = HostPlacementSelectionPipeline.new(criteria_object.num_gpu, criteria_object.required_memory) do
+        vm_placement.cluster.active_hosts.values
       end
+      vm_placement.hosts = pipeline.to_a
+      #logger.debug("Failed to find placement for #{vm_placement}"
 
-      logger.debug("Filter #{vm_placement.cluster_inspect} for memory required: #{criteria_object.required_memory}")
-      vm_placement.hosts.reject! do |host|
-        host.raw_available_memory < criteria_object.required_memory
-      end
-
-      # return false if no host satisfies criteria
       return false if vm_placement.hosts.empty?
-
       true
+
     end
 
     with_scorer do |p1, p2|
