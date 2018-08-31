@@ -130,12 +130,12 @@ describe 'cloud_properties related to creation of GPU attached VMs' do
               expect(vm.mob.runtime.host.name).to eq(@host_1).or eq(@host_2)
               expect(vm.mob.config.hardware.device).to have_number_of_GPU_eql_to(1)
             end
-          ensure
-            cpi = VSphereCloud::Cloud.new(cpi_options)
-            vm_list.each do |vm_id|
-              delete_vm(cpi, vm_id)
-            end
-          end
+          # ensure
+          #   cpi = VSphereCloud::Cloud.new(cpi_options)
+          #   vm_list.each do |vm_id|
+          #     delete_vm(cpi, vm_id)
+          #   end
+          # end
         end
       end
 
