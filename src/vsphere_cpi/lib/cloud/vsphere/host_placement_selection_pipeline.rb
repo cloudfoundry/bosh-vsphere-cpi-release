@@ -40,7 +40,7 @@ module VSphereCloud
       end
 
       def inspect
-        "Host #{resource.name} [Available GPUs: #{resource.available_gpus}  Available Mem: #{resource.raw_available_memory}]"
+        "Host #{resource.name} [Available GPUs: #{resource.available_gpus.size}  Available Mem: #{resource.raw_available_memory}]"
       end
       alias inspect_before inspect
     end
@@ -60,7 +60,7 @@ module VSphereCloud
 
     # Score on basis on available_gpus with a bit of randomness
     with_scorer do |p1, p2|
-      StableRandom[p1] * p1.available_gpus <=> StableRandom[p2] * p2.available_gpus
+      StableRandom[p1] * p1.available_gpus.size <=> StableRandom[p2] * p2.available_gpus.size
     end
 
     def initialize(*args)
