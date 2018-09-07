@@ -10,6 +10,8 @@ module VSphereCloud
       DISK_HEADROOM = 1024
 
       def self.build_from_client(client, datastore_mob, options={})
+        # datastore_mob can be an empty array or nil. Return empty array immediately
+        return [] if datastore_mob.nil? || datastore_mob.empty?
         ds_properties_map = client.cloud_searcher.get_properties(datastore_mob, Vim::Datastore, Datastore::PROPERTIES, options)
         ds_properties_map.values.map do |ds_properties|
           Datastore.new(
