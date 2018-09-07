@@ -94,6 +94,21 @@ module VSphereCloud::Resources
         expect(accessible_datastores['ephemeral_1'].name).to eq('ephemeral_1')
         expect(accessible_datastores['ephemeral_2'].name).to eq('ephemeral_2')
       end
+
+      context 'when cluster has access to zero datastores' do
+        let(:properties) do
+          {
+            :obj => cluster_mob,
+            'host' => cluster_hosts,
+            'datastore' => [],
+            'resourcePool' => fake_resource_pool_mob,
+          }
+        end
+        it 'returns the empty list of datastores' do
+          accessible_ds =  cluster.accessible_datastores
+          expect(accessible_ds).to be_empty
+        end
+      end
     end
 
     describe 'cluster utilization' do
