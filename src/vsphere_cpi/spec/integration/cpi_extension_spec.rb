@@ -3,6 +3,11 @@ require 'integration/spec_helper'
 require 'cloud/vsphere/cpi_extension'
 
 describe '#add cpi extension' do
+  before(:all) do
+    @cluster_name = fetch_and_verify_cluster('BOSH_VSPHERE_CPI_SECOND_CLUSTER')
+    @datastore_pattern = fetch_and_verify_datastore('BOSH_VSPHERE_CPI_SECOND_CLUSTER_DATASTORE', @cluster_name)
+  end
+
   subject(:cpi) do
     VSphereCloud::Cloud.new(cpi_options('default_disk_type' => 'thin'))
   end
@@ -27,8 +32,6 @@ describe '#add cpi extension' do
     }
   end
 
-
-
   context 'when it creates a stemcell on vsphere' do
     it 'adds an extension to vcenter and attaches stemcell to that extension' do
       begin
@@ -41,22 +44,37 @@ describe '#add cpi extension' do
     end
   end
 
-  context 'when it creates a vm on vsphere' do
-    after do
-      cpi.delete_vm(@vm_cid) if @vm_cid
+  context 'when it replicates a stemcell on vsphere' do
+    let(:second_cluster_cpi) do
+      options = cpi_options(
+        datacenters: [{
+          clusters: [@cluster_name],
+          datastore_pattern: @datastore_pattern,
+          persistent_datastore_pattern: @datastore_pattern
+        }],
+      )
+      VSphereCloud::Cloud.new(options)
     end
 
-    it 'adds vm to the default cpi extension' do
-      @vm_cid = cpi.create_vm(
-        'agent-007',
-        @stemcell_id,
-        vm_type,
-        network_spec,
-        [],
-        {'key' => 'value'}
-      )
-      vm = @cpi.client.find_vm_by_name(@cpi.datacenter.mob, @vm_cid)
-      expect(vm.config.managed_by.extension_key).to eql(VSphereCloud::VCPIExtension::DEFAULT_VSPHERE_CPI_EXTENSION_KEY)
+    it 'adds replicated stemcell and vm to extension' do
+      begin
+        @vm_cid = second_cluster_cpi.create_vm(
+          'agent-007',
+          @stemcell_id,
+          vm_type,
+          network_spec,
+          [],
+          {'key' => 'value'}
+        )
+        vm = second_cluster_cpi.client.find_vm_by_name(second_cluster_cpi.datacenter.mob, @vm_cid)
+        expect(vm.config.managed_by.extension_key).to eql(VSphereCloud::VCPIExtension::DEFAULT_VSPHERE_CPI_EXTENSION_KEY)
+        stemcell_replicas = second_cluster_cpi.client.find_all_stemcell_replicas(second_cluster_cpi.datacenter.mob, @stemcell_id)
+        stemcell_replicas.each do |stemcell_mob|
+          expect(stemcell_mob.config.managed_by.extension_key).to eql(VSphereCloud::VCPIExtension::DEFAULT_VSPHERE_CPI_EXTENSION_KEY)
+        end
+      ensure
+        delete_vm(second_cluster_cpi, @vm_cid)
+      end
     end
   end
 

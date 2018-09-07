@@ -67,6 +67,16 @@ module VSphereCloud
         )
         clone_spec.template = false
 
+        # add extension managed by info to clone spec only if extension exists
+        if client.service_content.extension_manager.find_extension(
+          VCPIExtension::DEFAULT_VSPHERE_CPI_EXTENSION_KEY) then
+          managed_by_info = VimSdk::Vim::Ext::ManagedByInfo.new
+          managed_by_info.extension_key = VCPIExtension::DEFAULT_VSPHERE_CPI_EXTENSION_KEY
+          managed_by_info.type =  VCPIExtension::DEFAULT_VSPHERE_MANAGED_BY_INFO_RESOURCE
+          clone_spec.config = VimSdk::Vim::Vm::ConfigSpec.new
+          clone_spec.config.managed_by = managed_by_info
+        end
+
         replica_vm = client.wait_for_task do
           vm.clone(datacenter.template_folder.mob, replica_name, clone_spec)
         end

@@ -70,6 +70,7 @@ describe VSphereCloud::Stemcell, fake_logger: true do
         resource_pool = double(:resource_pool, mob: 'fake_resource_pool_mob')
         allow(cluster).to receive(:resource_pool).and_return(resource_pool)
         allow(stemcell_vm).to receive(:clone).with(any_args).and_return(fake_task)
+        allow(client).to receive_message_chain(:service_content, :extension_manager, :find_extension).with(anything).and_return(true)
         allow(client).to receive(:wait_for_task) do |*args, &block|
           expect(block.call).to eq(fake_task)
           replicated_stemcell
@@ -106,6 +107,7 @@ describe VSphereCloud::Stemcell, fake_logger: true do
 
       it 'replicates the stemcell and disables sdrs for replicated stemcell' do
         expect(subject).to receive(:find_replica_in).with(datacenter.mob, client, recommended_datastore.name).and_return(nil)
+        allow(client).to receive_message_chain(:service_content, :extension_manager, :find_extension).with(anything).and_return(true)
         allow(stemcell_vm).to receive(:clone).with(anything, @name_of_replicated_stemcell, an_instance_of(VimSdk::Vim::Vm::CloneSpec)).and_return(fake_task)
         allow(client).to receive(:wait_for_task) do |*args, &block|
           expect(block.call).to eq(fake_task)
