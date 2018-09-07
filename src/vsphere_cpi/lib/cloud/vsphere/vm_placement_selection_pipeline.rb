@@ -10,6 +10,7 @@ module VSphereCloud
       @hosts = hosts
       @datastores = datastores
       @balance_score_set = Set.new
+      @migration_size = 0
     end
 
     def ==(other)
