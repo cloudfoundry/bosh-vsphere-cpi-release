@@ -176,15 +176,13 @@ module VSphereCloud
 
     # Gather & Filter hosts with enough available GPUs
     with_filter ->(vm_placement, criteria_object) do
-      #require 'pry-byebug'
-      #binding.pry
 
       return true if criteria_object.num_gpu.nil?
 
       logger.debug("Gathering hosts #{vm_placement.inspect_before}")
       vm_placement.hosts = vm_placement.cluster.active_hosts.values
 
-      logger.debug("Filter cluster name for the host_inspect #{vm_placement.cluster_inspect} for number of GPUs required: #{criteria_object.num_gpu}")
+      logger.debug("Filter cluster name for host_inspect #{vm_placement.cluster_inspect} for number of GPUs required: #{criteria_object.num_gpu}")
       vm_placement.hosts.reject! do |host|
         host.available_gpus.size < criteria_object.num_gpu
       end
