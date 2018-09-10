@@ -494,7 +494,7 @@ module VSphereCloud
           target_datastore_pattern: director_disk_cid.target_datastore_pattern || @datacenter.persistent_pattern
         )
 
-        logger.debug("Gathering storage placement accessible from VM")
+        logger.debug("Gathering storage placement accessible from VM: #{vm_cid}")
         accessible_datastores = vm.accessible_datastores
 
         disk_is_accessible = accessible_datastores.include?(disk_config.existing_datastore_name)
@@ -556,7 +556,7 @@ module VSphereCloud
         pipeline = DiskPlacementSelectionPipeline.new(size_in_mb, target_datastore_pattern) do
           logger.info("Gathering storage placement resources for disk allocator pipeline")
           if vm_cid
-            logger.debug("Gathering storage placement accessible from VM CID")
+            logger.debug("Gathering storage placement accessible from VM CID: #{vm_cid}")
             vm = vm_provider.find(vm_cid)
             accessible_datastores = vm.accessible_datastores
           else
