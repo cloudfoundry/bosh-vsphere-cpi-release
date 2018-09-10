@@ -1114,7 +1114,7 @@ module VSphereCloud
 
       context 'when disk is in a datastore accessible to VM' do
         before do
-          allow(vm).to receive(:accessible_datastore_names).and_return(['datastore-with-disk'])
+          allow(vm).to receive(:accessible_datastores).and_return('datastore-with-disk' => datastore_with_disk)
         end
 
         it 'attaches the existing persistent disk' do
@@ -1168,7 +1168,7 @@ module VSphereCloud
         end
 
         before do
-          allow(vm).to receive(:accessible_datastore_names).and_return(['datastore-without-disk'])
+          allow(vm).to receive(:accessible_datastores).and_return('datastore-without-disk' => datastore_without_disk)
         end
 
         it 'moves the disk to an accessible datastore and attaches it' do
@@ -1194,7 +1194,11 @@ module VSphereCloud
 
         before do
           allow(datacenter).to receive(:persistent_pattern).and_return(/datastore\-without\-disk/)
-          allow(vm).to receive(:accessible_datastore_names).and_return(['datastore-with-disk', 'datastore-without-disk'])
+          allow(vm).to receive(:accessible_datastores)
+                         .and_return(
+                           'datastore-with-disk' => datastore_with_disk,
+                           'datastore-without-disk'=> datastore_without_disk,
+                         )
         end
 
         it 'moves the disk to a persistent datastore and attaches it' do
