@@ -11,6 +11,7 @@ RSpec::Matchers.define :have_number_of_GPU_eql_to do |num_gpu|
   end
 end
 
+#INCLUDES TESTS for parallel vm calls and tests for gpu on hosts in different clusters
 
 #have a before before a context
 #for second context one host in one cluster then the other one in other cluster
@@ -74,35 +75,6 @@ describe 'cloud_properties related to creation of GPU attached VMs' do
         )
       end
 
-      context 'when vm_type specifies 0 GPUs' do
-        let(:vm_type_single_cluster_acc_ds_0_gpu) do
-          vm_type_single_cluster_acc_ds.merge(
-              'gpu' => { 'number_of_gpus' => 0}
-          )
-        end
-        it 'creates vm in cluster defined in `vm_type_single_cluster_acc_ds_0_gpu` with 0 gpus' do
-          begin
-            vm_id = cpi.create_vm(
-                'agent-007',
-                @stemcell_id,
-                vm_type_single_cluster_acc_ds_0_gpu,
-                get_network_spec,
-                [],
-                {}
-            )
-            expect(vm_id).to_not be_nil
-
-            vm = cpi.vm_provider.find(vm_id)
-            expect(vm).to_not be_nil
-            expect(vm.cluster).to eq(@second_cluster_name)
-            expect(vm.mob.config.hardware.device).to have_number_of_GPU_eql_to(0)
-          ensure
-            delete_vm(cpi, vm_id)
-          end
-        end
-      end
-
-
       # parallel vm calls
       context 'when vm_type has two clusters specifies 1 GPU and we create 6 vms in parallel' do
         let(:vm_type_single_cluster_acc_ds_1_gpu) do
@@ -124,7 +96,7 @@ describe 'cloud_properties related to creation of GPU attached VMs' do
               ]
           )
         end
-        xit 'creates vms in cluster defined in `vm_type_single_cluster_acc_ds_1_gpu` with 1 GPU each' do
+        it 'creates vms in cluster defined in `vm_type_single_cluster_acc_ds_1_gpu` with 1 GPU each' do
           begin
 
             thread_list = []
@@ -149,8 +121,8 @@ describe 'cloud_properties related to creation of GPU attached VMs' do
 
             thread_list.each {|t| t.join()}
 
-            require 'pry-byebug'
-            binding.pry
+            #require 'pry-byebug'
+            #binding.pry
             vm_list.each do |vm_id|
               vm = cpi.vm_provider.find(vm_id)
               expect(vm).to_not be_nil
@@ -163,65 +135,6 @@ describe 'cloud_properties related to creation of GPU attached VMs' do
             vm_list.each do |vm_id|
               delete_vm(cpi, vm_id)
             end
-          end
-        end
-      end
-
-
-      context 'when vm_type specifies 1 GPU' do
-        let(:vm_type_single_cluster_acc_ds_1_gpu) do
-          vm_type_single_cluster_acc_ds.merge(
-              'gpu' => { 'number_of_gpus' => 1}
-          )
-        end
-        it 'creates vm in cluster defined in `vm_type_single_cluster_acc_ds_1_gpu` with 1 GPU' do
-          begin
-            vm_id = cpi.create_vm(
-                'agent-007',
-                @stemcell_id,
-                vm_type_single_cluster_acc_ds_1_gpu,
-                get_network_spec,
-                [],
-                {}
-            )
-            expect(vm_id).to_not be_nil
-
-            vm = cpi.vm_provider.find(vm_id)
-            expect(vm).to_not be_nil
-            expect(vm.cluster).to eq(@second_cluster_name)
-            expect(vm.mob.runtime.host.name).to eq(@host_1).or eq(@host_2)
-            expect(vm.mob.config.hardware.device).to have_number_of_GPU_eql_to(1)
-          ensure
-            delete_vm(cpi, vm_id)
-          end
-        end
-      end
-
-      context 'when vm_type specifies 4 GPU' do
-        let(:vm_type_single_cluster_acc_ds_4_gpu) do
-          vm_type_single_cluster_acc_ds.merge(
-              'gpu' => { 'number_of_gpus' => 4}
-          )
-        end
-        it 'creates vm in cluster defined in `vm_type_single_cluster_acc_ds_4_gpu` with 4 GPUs' do
-          begin
-            vm_id = cpi.create_vm(
-                'agent-007',
-                @stemcell_id,
-                vm_type_single_cluster_acc_ds_4_gpu,
-                get_network_spec,
-                [],
-                {}
-            )
-            expect(vm_id).to_not be_nil
-
-            vm = cpi.vm_provider.find(vm_id)
-            expect(vm).to_not be_nil
-            expect(vm.cluster).to eq(@second_cluster_name)
-            expect(vm.mob.runtime.host.name).to eq(@host_1)
-            expect(vm.mob.config.hardware.device).to have_number_of_GPU_eql_to(4)
-          ensure
-            delete_vm(cpi, vm_id)
           end
         end
       end
@@ -294,50 +207,6 @@ describe 'cloud_properties related to creation of GPU attached VMs' do
           end
         end
       end
-
-      context 'when vm_type specifies GPUs more than available on any host' do
-        let(:vm_type_single_cluster_acc_ds_5_gpu) do
-          vm_type_single_cluster_acc_ds.merge(
-              'gpu' => { 'number_of_gpus' => 5}
-          )
-        end
-        it 'fails to creates vm in cluster defined in `vm_type_single_cluster_acc_ds_5_gpu`' do
-          begin
-            expect {
-              cpi.create_vm(
-                  'agent-007',
-                  @stemcell_id,
-                  vm_type_single_cluster_acc_ds_5_gpu,
-                  get_network_spec,
-                  [],
-                  {}
-              )
-            }.to raise_error(/No valid placement found for VM compute, storage, and hosts requirement/)
-          end
-        end
-      end
-    end
-
-    context 'when ephemeral datastore is not accessible from GPU host' do
-      let(:vm_type_single_cluster_non_acc_ds) do
-        vm_type_single_cluster.merge(
-            'gpu' => { 'number_of_gpus' => 5}
-        )
-      end
-      it 'fails to creates vm in cluster defined in `vm_type_single_cluster_non_acc_ds`' do
-        begin
-          expect {
-            cpi.create_vm(
-                'agent-007',
-                @stemcell_id,
-                vm_type_single_cluster_non_acc_ds,
-                get_network_spec,
-                [],
-                {}
-            )
-          }.to raise_error(/.*/)
-        end
-      end
     end
   end
 
@@ -376,35 +245,6 @@ describe 'cloud_properties related to creation of GPU attached VMs' do
         vm_type_single_cluster.merge(
             'datastores' => [@gpu_host_datastore_one]
         )
-      end
-
-      context 'when vm_type specifies 1 GPU' do
-        let(:vm_type_single_cluster_acc_ds_1_gpu) do
-          vm_type_single_cluster_acc_ds.merge(
-              'gpu' => { 'number_of_gpus' => 1}
-          )
-        end
-        it 'creates vm in the cluster on host with 2 gpus' do
-          begin
-            vm_id = cpi.create_vm(
-                'agent-007',
-                @stemcell_id,
-                vm_type_single_cluster_acc_ds_1_gpu,
-                get_network_spec,
-                [],
-                {}
-            )
-            expect(vm_id).to_not be_nil
-
-            vm = cpi.vm_provider.find(vm_id)
-            expect(vm).to_not be_nil
-            expect(vm.cluster).to eq(@second_cluster_name)
-            expect(vm.mob.runtime.host.name).to eq(@host_2)
-            expect(vm.mob.config.hardware.device).to have_number_of_GPU_eql_to(1)
-          ensure
-            delete_vm(cpi, vm_id)
-          end
-        end
       end
 
       context 'when we create multiple vms with GPU' do
