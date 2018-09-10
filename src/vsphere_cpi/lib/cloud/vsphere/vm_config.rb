@@ -126,6 +126,11 @@ module VSphereCloud
           gpu_conf['number_of_gpus'] == 0)
     end
 
+    # Invalidate previous cluster placements
+    def invalidate_placements
+      @cluster_placement = nil
+    end
+
     private
 
     def has_custom_cluster_properties?
@@ -169,7 +174,6 @@ module VSphereCloud
       end
     end
 
-
     def cluster_placement_internal(clusters:)
       return @cluster_placement if @cluster_placement
 
@@ -185,10 +189,6 @@ module VSphereCloud
         'No valid placement found for VM compute, storage, and hosts requirement' if @cluster_placement.first.nil?
       @cluster_placement
     end
-  end
-
-  def invalidate_placement
-    @cluster_placements = nil
   end
 end
 
