@@ -197,7 +197,7 @@ describe 'cloud_properties related to creation of GPU attached VMs' do
                     vm_type_single_cluster_acc_ds_4_gpu,
                     get_network_spec,
                     [],
-                    {}
+                    {},
                 )
               }.to raise_error(/No valid placement found for VM compute, storage, and hosts requirement/)
             ensure
@@ -307,3 +307,4 @@ describe 'cloud_properties related to creation of GPU attached VMs' do
 
 end
 
+end
