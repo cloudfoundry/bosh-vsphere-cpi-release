@@ -84,6 +84,7 @@ module VSphereCloud
         VimSdk::Vim::Fault::FileNotFound => VCenterClient::FileNotFoundException,
         VimSdk::Vim::Fault::DuplicateName => VCenterClient::DuplicateName,
         VimSdk::Vim::Fault::AlreadyUpgraded => VCenterClient::AlreadyUpgraded,
+        VimSdk::Vim::Fault::GenericVmConfigFault => VCenterClient::GenericVmConfigPciInUse,
       }
       exceptions_by_fault.fetch(fault.class, VCenterClient::TaskException).new(fault.msg)
     end

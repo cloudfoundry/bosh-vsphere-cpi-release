@@ -1,4 +1,5 @@
 require 'spec_helper'
+require 'cloud/vsphere/resources/cluster'
 
 module VSphereCloud::Resources
   describe Cluster, fake_logger: true do
