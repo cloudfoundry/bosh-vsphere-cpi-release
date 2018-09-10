@@ -27,9 +27,10 @@ module VSphereCloud::Resources
     let(:properties) do
       {
         :obj => cluster_mob,
-        'host' => cluster_hosts,
+        #'host' => cluster_hosts,
         'datastore' => 'fake-datastore-name',
         'resourcePool' => fake_resource_pool_mob,
+        'host' => 'fake-host-name'
       }
     end
     let(:cluster_mob) { instance_double('VimSdk::Vim::ClusterComputeResource') }
@@ -47,7 +48,7 @@ module VSphereCloud::Resources
     let(:ephemeral_store_2_properties) { {'name' => 'ephemeral_2', 'summary.accessible' => true, 'summary.freeSpace' => 25000 * BYTES_IN_MB} }
     let(:persistent_store_properties) { {'name' => 'persistent_1', 'summary.accessible' => true, 'summary.freeSpace' => 10000 * BYTES_IN_MB, 'summary.capacity' => 20000 * BYTES_IN_MB} }
     let(:persistent_store_2_properties) { {'name' => 'persistent_2',  'summary.accessible' => true, 'summary.freeSpace' => 20000 * BYTES_IN_MB, 'summary.capacity' => 40000 * BYTES_IN_MB} }
-    let(:inaccessible_persistent_store_properties) { {'name' => 'persistent_inaccess', 'summary.accessible' => false} }
+    let(:inaccessible_persistent_store_properties) { {'name' => 'persistent_inaccessible', 'summary.accessible' => false} }
 
     let(:other_store_properties) { { 'name' => 'other' } }
 
@@ -62,27 +63,89 @@ module VSphereCloud::Resources
       }
     end
 
+    # Testing active hosts
+    let(:runtime_active) do
+      instance_double('VimSdk::Vim::Host::RuntimeInfo',
+                      in_maintenance_mode: false,
+                      connection_state: 'connected',
+                      power_state: 'poweredOn')
+    end
+
+    let(:active_host_1_properties) { {'name' => 'active_host_1', 'runtime' => runtime_active, 'hardware.pciDevice' => 'hardware', 'config.graphicsInfo' => 'graphics'} }
+    let(:active_host_2_properties) { {'name' => 'active_host_2', 'runtime' => runtime_active, 'hardware.pciDevice' => 'hardware2', 'config.graphicsInfo' => 'graphics2'} }
+
+
+    # Testing inactive hosts
+    let(:runtime_maintenance_mode) do
+      instance_double('VimSdk::Vim::Host::RuntimeInfo',
+                      in_maintenance_mode: true,
+                      connection_state: 'connected',
+                      power_state: 'poweredOn')
+    end
+    let(:runtime_disconnected) do
+      instance_double('VimSdk::Vim::Host::RuntimeInfo',
+                      in_maintenance_mode: false,
+                      connection_state: 'disconnected',
+                      power_state: 'poweredOn')
+    end
+    let(:runtime_powered_off) do
+      instance_double('VimSdk::Vim::Host::RuntimeInfo',
+                      in_maintenance_mode: false,
+                      connection_state: 'connected',
+                      power_state: 'poweredOff')
+    end
+
+    let(:inactive_host_1_properties) { {'name' => 'inactive_host_1', 'runtime' => runtime_maintenance_mode, 'hardware.pciDevice' => 'hardware1', 'config.graphicsInfo' => 'graphics1'} }
+    let(:inactive_host_2_properties) { {'name' => 'inactive_host_2', 'runtime' => runtime_disconnected, 'hardware.pciDevice' => 'hardware2', 'config.graphicsInfo' => 'graphics2'} }
+    let(:inactive_host_3_properties) { {'name' => 'inactive_host_3', 'runtime' => runtime_powered_off, 'hardware.pciDevice' => 'hardware3', 'config.graphicsInfo' => 'graphics3'} }
+
+    let(:fake_host_properties) do
+      {
+          instance_double('VimSdk::Vim::HostSystem') => active_host_1_properties,
+          instance_double('VimSdk::Vim::HostSystem') => active_host_2_properties,
+          instance_double('VimSdk::Vim::HostSystem') => inactive_host_1_properties,
+          instance_double('VimSdk::Vim::HostSystem') => inactive_host_2_properties,
+          instance_double('VimSdk::Vim::HostSystem') => inactive_host_3_properties,
+      }
+    end
+
+
     let(:fake_runtime_info) do
       instance_double(
-        'VimSdk::Vim::ResourcePool::RuntimeInfo',
-        overall_status: 'red',
-      )
+          'VimSdk::Vim::ResourcePool::RuntimeInfo',
+          overall_status: 'red',
+          )
     end
 
     before do
       allow(ResourcePool).to receive(:new).with(
-        client, cluster_config, fake_resource_pool_mob
+          client, cluster_config, fake_resource_pool_mob
       ).and_return(fake_resource_pool)
 
       allow(cloud_searcher).to receive(:get_properties).with(
-        'fake-datastore-name', VimSdk::Vim::Datastore, Datastore::PROPERTIES, {}
+          'fake-datastore-name', VimSdk::Vim::Datastore, Datastore::PROPERTIES, {}
       ).and_return(fake_datastore_properties)
 
       allow(cloud_searcher).to receive(:get_properties).with(
-        fake_resource_pool_mob, VimSdk::Vim::ResourcePool, "summary"
+          'fake-host-name', VimSdk::Vim::HostSystem, Host::PROPERTIES, {}
+      ).and_return(fake_host_properties)
+
+      allow(cloud_searcher).to receive(:get_properties).with(
+          fake_resource_pool_mob, VimSdk::Vim::ResourcePool, "summary"
       ).and_return({
-        'summary' => instance_double('VimSdk::Vim::ResourcePool::Summary', runtime: fake_runtime_info)
-      })
+                       'summary' => instance_double('VimSdk::Vim::ResourcePool::Summary', runtime: fake_runtime_info)
+                   })
+    end
+
+    describe '#active_hosts' do
+      context 'when hosts are active within a cluster' do
+        it 'returns the hosts which are active within the cluster' do
+          active_hosts = cluster.active_hosts
+          expect(active_hosts.keys).to match_array(%w(active_host_1 active_host_2))
+          expect(active_hosts['active_host_1'].name).to eq('active_host_1')
+          expect(active_hosts['active_host_2'].name).to eq('active_host_2')
+        end
+      end
     end
 
     describe '#accessible_datastores' do
