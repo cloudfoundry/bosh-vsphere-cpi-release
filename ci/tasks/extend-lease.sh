@@ -31,8 +31,15 @@ fi
 
 echo Extending lease on Nimbus testbed "$VCPI_NIMBUS_LAUNCH_NAME" ... 1>&2
 
+VCPI_NIMBUS_LOCATION="sc"
+
+if [[ $VCPI_NIMBUS_LAUNCH_NAME = *"v6.0"* ]]; then
+  VCPI_NIMBUS_LOCATION="wdc"
+fi
+echo Location of testbed is in "$VCPI_NIMBUS_LOCATION" datacenter 1>&2
+
 ssh -i dbc_ssh_key -o StrictHostKeyChecking=no $remote \
   USER="$VCPI_NIMBUS_LAUNCH_USER" \
   /mts/git/bin/nimbus-ctl \
-  --testbed --lease 1 extend-lease \
+  --testbed --lease 1 --nimbusLocation "$VCPI_NIMBUS_LOCATION" extend-lease \
   "$VCPI_NIMBUS_LAUNCH_NAME"
