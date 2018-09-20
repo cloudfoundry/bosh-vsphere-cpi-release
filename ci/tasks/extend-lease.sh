@@ -36,6 +36,11 @@ VCPI_NIMBUS_LOCATION="sc"
 if [[ $VCPI_NIMBUS_LAUNCH_NAME = *"v6.0"* ]]; then
   VCPI_NIMBUS_LOCATION="wdc"
 fi
+
+if [[ $VCPI_NIMBUS_LAUNCH_NAME = *"nsxv"* ]]; then
+  VCPI_NIMBUS_LOCATION="sc"
+fi
+
 echo Location of testbed is in "$VCPI_NIMBUS_LOCATION" datacenter 1>&2
 
 ssh -i dbc_ssh_key -o StrictHostKeyChecking=no $remote \
