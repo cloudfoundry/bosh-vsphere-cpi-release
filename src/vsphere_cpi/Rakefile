@@ -35,6 +35,7 @@ task :swagger do
   ].join(' ')
 
   #Patch models that have wrong _deserialize method
+  #TODO: Patch both LogicalRouterPortListResult and LogicalPortAttachment in 1 call
   sh [
      "swagger-codegen generate",
      "-i ./data/nsx_api.json",
@@ -42,6 +43,16 @@ task :swagger do
      "-o ./lib/nsxt",
      "-c ./data/config.json -t ./data/swagger-nsxt-template-deserialization",
      "-Dmodels=LogicalRouterPortListResult"
+   ].join(' ')
+
+  #Patch LogicalPortAttachment which also has wrong _deserialize method
+  sh [
+     "swagger-codegen generate",
+     "-i ./data/nsx_api.json",
+     "-l ruby",
+     "-o ./lib/nsxt",
+     "-c ./data/config.json -t ./data/swagger-nsxt-template-deserialization",
+     "-Dmodels=LogicalPortAttachment"
    ].join(' ')
 
   rm_rf (["./lib/nsxt/.swagger-codegen-ignore",
