@@ -37,7 +37,6 @@ See [vSphere API Docs](http://pubs.vmware.com/vsphere-60/topic/com.vmware.wssdk.
 
 An environment running one of the following supported releases:
 
-  * [vSphere 5.5](https://docs.vmware.com/en/VMware-vSphere/5.5/rn/vsphere-esx-vcenter-server-55-release-notes.html) (actively tested)
   * [vSphere 6.0](https://docs.vmware.com/en/VMware-vSphere/6.0/rn/vsphere-esxi-vcenter-server-60-release-notes.html) (actively tested)
   * [vSphere 6.5](https://docs.vmware.com/en/VMware-vSphere/6.5/rn/vsphere-esxi-vcenter-server-65-release-notes.html) (actively tested)
   * [vSphere 6.7](https://docs.vmware.com/en/VMware-vSphere/6.7/rn/vsphere-esxi-vcenter-server-67-release-notes.html) (actively tested)
