@@ -98,6 +98,7 @@ describe 'CPI', nsx_transformers: true do
           verify_ports(vm_id) do |lport|
             expect(lport).not_to be_nil
             expect(lport.attachment.context.resource_type).to eq('VifAttachmentContext')
+            expect(lport.attachment.context.vif_type).to eq('PARENT')
           end
         end
       end
