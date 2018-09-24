@@ -29,6 +29,16 @@ task :swagger do
     "-c ./data/config.json -t ./data/swagger-nsxt-template"
   ].join(' ')
 
+  #Patch models that have wrong _deserialize method
+  sh [
+       "swagger-codegen generate",
+       "-i ./data/nsx_api.json",
+       "-l ruby",
+       "-o ./lib/nsxt",
+       "-c ./data/config.json -t ./data/swagger-nsxt-template-deserialization",
+       "-Dmodels=LogicalPortAttachment"
+     ].join(' ')
+
   rm_rf (["./lib/nsxt/.swagger-codegen-ignore",
     "./lib/nsxt/.swagger-codegen",
     "./lib/nsxt/README.md",
