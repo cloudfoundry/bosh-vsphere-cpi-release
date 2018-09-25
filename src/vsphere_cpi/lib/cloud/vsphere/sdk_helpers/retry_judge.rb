@@ -56,7 +56,11 @@ module VSphereCloud
           # called to upgrade a vm
           method_name: 'UnregisterExtension',
           entity_class: VimSdk::Vim::ExtensionManager,
-        }
+        },
+        {
+            method_name: 'AcquireGenericServiceTicket',
+            fault_class: VimSdk::Vim::Fault::NoPermission,
+        },
       ]
 
       def retryable?(entity, method_name, fault)

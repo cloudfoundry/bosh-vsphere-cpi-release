@@ -61,7 +61,32 @@ module VSphereCloud
         ).to eq(response_body)
       end
 
-      it 'fails to get file via raises file transfer error' do
+      context 'when vsphere fails to issue generic service ticket' do
+        before do
+          allow(file_provider).to receive(:get_generic_service_ticket).with(anything).and_raise("BOOM : Any Error")
+        end
+        it 'fails to get file via host and retries to get through datacenter and succeeds' do
+          response_body = double('response_body')
+          response = double('response', code: 200, body: response_body)
+
+          expect(http_client).to_not receive(:get).with(
+              'https://host/folder/fake-path?'\
+          'dsName=fake-datastore-name%201',
+              {'Cookie' => "vmware_cgi_ticket=ticket"}
+          )
+          expect(http_client).to receive(:get).with(
+              'https://fake-vcenter-host/folder/fake-path?'\
+          'dcPath=fake-datacenter-name%201&dsName=fake-datastore-name%201', {}
+          ).and_return(response)
+
+          expect(
+              file_provider.fetch_file_from_datastore(datacenter_name, datastore, path)
+          ).to eq(response_body)
+        end
+      end
+
+
+      it 'fails to get file and raises file transfer error' do
         response_body = double('response_body')
 
         expect(http_client).to receive(:get).with(
@@ -165,6 +190,36 @@ module VSphereCloud
 
         file_provider.upload_file_to_datastore(datacenter_name, datastore, path, upload_contents)
       end
+
+      context 'when vsphere fails to issue generic service ticket' do
+        before do
+          allow(file_provider).to receive(:get_generic_service_ticket).with(anything).and_raise("BOOM : Any Error")
+        end
+        it 'fails to upload file via host and retries to upload through datacenter and succeeds' do
+          response_body = double('response_body')
+          response = double('response', code: 200, body: response_body)
+
+          expect(http_client).to_not receive(:put).with(
+              'https://host/folder/fake-path?'\
+          'dsName=fake-datastore-name%201',
+              upload_contents,
+              { 'Content-Type' => 'application/octet-stream', 'Content-Length' => upload_contents.bytesize,
+                'Cookie' => "vmware_cgi_ticket=ticket",
+              }
+          )
+          expect(http_client).to receive(:put).with(
+              'https://fake-vcenter-host/folder/fake-path?'\
+          'dcPath=fake-datacenter-name%201&dsName=fake-datastore-name%201',
+              upload_contents,
+              { 'Content-Type' => 'application/octet-stream',
+                'Content-Length' => upload_contents.bytesize,
+              }
+          ).and_return(response)
+
+          file_provider.upload_file_to_datastore(datacenter_name, datastore, path, upload_contents)
+        end
+      end
+
 
       context 'when vSphere cannot handle the request' do
         it 'retries then raises an error' do
