@@ -28,7 +28,7 @@ module VSphereCloud
         logger.info("Trying to upload file to Datastore through Host System")
         upload_file_to_datastore_via_host(datacenter_name, datastore, path, contents)
       rescue FileTransferError
-        logger.info("Trying to fetch file from Datastore through Datacenter")
+        logger.info("Trying to upload file from Datastore through Datacenter")
         upload_file_to_datastore_via_datacenter(datacenter_name, datastore.name, path, contents)
       end
     end
@@ -65,7 +65,15 @@ module VSphereCloud
       url = "https://#{host.name}/folder/#{path}?" +
         "dsName=#{URI.escape(datastore.name)}"
 
-      service_ticket = get_generic_service_ticket(url: url, method: 'httpGet')
+      begin
+        service_ticket = get_generic_service_ticket(url: url, method: 'httpGet')
+      # Specifically, we want to rescue permission faults but our fallback to Datacenter is guaranteed so rescuing
+      # every Standard Error.
+      rescue => e
+        logger.info("Failed to acquire service ticket because #{e.inspect}")
+        raise FileTransferError.new("Permission to acquire generic service ticket absent")
+      end
+
       logger.info("Fetching file from #{url}...")
       response = do_request(
         request_type: 'GET',
@@ -103,7 +111,14 @@ module VSphereCloud
       url = "https://#{host.name}/folder/#{path}?" +
         "dsName=#{URI.escape(datastore.name)}"
 
-      service_ticket = get_generic_service_ticket(url: url, method: 'httpPut')
+      begin
+        service_ticket = get_generic_service_ticket(url: url, method: 'httpPut')
+      # Specifically, we want to rescue permission faults but our fallback to Datacenter is guaranteed so rescuing
+      # every Standard Error.
+      rescue => e
+        logger.info("Failed to acquire service ticket because #{e.inspect}")
+        raise FileTransferError.new("Permission to acquire generic service ticket absent")
+      end
 
       logger.info("Uploading file to #{url}...")
 
