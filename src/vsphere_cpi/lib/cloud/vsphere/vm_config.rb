@@ -97,6 +97,10 @@ module VSphereCloud
       @manifest_params[:vm_type]
     end
 
+    def gpu_conf
+      vm_type.gpu
+    end
+
     def validate_drs_rules(cluster)
       cluster_name = cluster.name
       cluster_config = resource_pool_clusters_spec.find {|cluster_spec| cluster_spec.keys.first == cluster_name}
@@ -116,13 +120,24 @@ module VSphereCloud
       end
     end
 
+    def gpu_enabled?
+      !(gpu_conf.nil? ||
+          gpu_conf['number_of_gpus'].nil? ||
+          gpu_conf['number_of_gpus'] == 0)
+    end
+
+    # Invalidate previous cluster placements
+    def invalidate_placements
+      @cluster_placement = nil
+    end
+
     private
 
     def has_custom_cluster_properties?
       # custom properties include drs_rules and vcenter resource_pools
       !resource_pool_clusters_spec.empty?
     end
-    
+
     def find_clusters(clusters_spec)
       clusters = []
       clusters_spec.each do |cluster_spec|
@@ -162,7 +177,8 @@ module VSphereCloud
     def cluster_placement_internal(clusters:)
       return @cluster_placement if @cluster_placement
 
-      vm_selection_placement_pipeline = VmPlacementSelectionPipeline.new(disk_config: disk_configurations, req_memory: vm_type.ram) do
+
+      vm_selection_placement_pipeline = VmPlacementSelectionPipeline.new(disk_config: disk_configurations, req_memory: vm_type.ram, num_gpu: vm_type.num_gpus) do
         logger.info("Gathering vm placement resources for vm placement allocator pipeline")
         clusters.map do |cluster|
           VmPlacement.new(cluster: cluster, datastores: cluster.accessible_datastores.values, hosts: nil)
@@ -170,8 +186,9 @@ module VSphereCloud
       end
       @cluster_placement = vm_selection_placement_pipeline.each.to_a
       raise Bosh::Clouds::CloudError,
-        'No valid placement found for VM compute and storage requirement' if @cluster_placement.first.nil?
+        'No valid placement found for VM compute, storage, and hosts requirement' if @cluster_placement.first.nil?
       @cluster_placement
     end
   end
 end
+

@@ -32,6 +32,7 @@ require 'cloud/vsphere/resources/resource_pool'
 require 'cloud/vsphere/resources/storage_pod'
 require 'cloud/vsphere/resources/util'
 require 'cloud/vsphere/resources/task'
+require 'cloud/vsphere/resources/host'
 require 'cloud/vsphere/drs_rules/drs_lock'
 require 'cloud/vsphere/drs_rules/drs_rule'
 require 'cloud/vsphere/drs_rules/vm_attribute_manager'
@@ -67,7 +68,7 @@ require 'cloud/vsphere/nsxt_helpers/nsxt_ip_block_provider'
 require 'cloud/vsphere/selection_pipeline'
 require 'cloud/vsphere/disk_placement_selection_pipeline'
 require 'cloud/vsphere/vm_placement_selection_pipeline'
-
+require 'cloud/vsphere/host_placement_selection_pipeline'
 
 
 module Bosh

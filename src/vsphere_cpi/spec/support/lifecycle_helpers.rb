@@ -543,4 +543,13 @@ module LifecycleHelpers
       cluster.reconfigure_ex(config_spec, true)
     end
   end
+
+  # This functionality allows for mobility of hosts between clusters, moves from cluster1 to cluster2
+  #TODO:move hosts thorugh API make sure to put the host in maintenance mode and move then exit it
+  def move_host(host, cluster)
+    # check which cluster host is in and save that (might not need it)
+    # set host to maintenance mode
+    # move host over to desired cluster
+    # exit this cluster
+  end
 end

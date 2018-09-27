@@ -72,6 +72,19 @@ module VSphereCloud
         end
       end
 
+      def active_hosts
+        return @hosts if @hosts
+        @hosts ||= Host.build_from_client(
+            @client,
+            properties['host']
+        ).select do |host|
+          host.active?
+        end.inject({}) do |acc, host|
+          acc[host.name] = host
+          acc
+        end
+      end
+
       private
 
       attr_reader :config, :client, :properties

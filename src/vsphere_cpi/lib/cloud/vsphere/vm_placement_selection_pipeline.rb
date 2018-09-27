@@ -1,9 +1,9 @@
 module VSphereCloud
   class VmPlacement
-    attr_reader :cluster, :hosts, :datastores,
+    attr_reader :cluster, :datastores,
       :balance_score_set
 
-    attr_accessor :migration_size, :disk_placement
+    attr_accessor :migration_size, :disk_placement, :hosts
 
     def initialize(cluster:, hosts:, datastores:)
       @cluster = cluster
@@ -65,7 +65,7 @@ module VSphereCloud
     class VmPlacementCriteria
       DEFAULT_MEMORY_HEADROOM = 128
 
-      attr_reader :disk_config, :req_memory, :mem_headroom
+      attr_reader :disk_config, :req_memory, :mem_headroom, :num_gpu
 
       def required_memory
         req_memory + mem_headroom
@@ -75,10 +75,11 @@ module VSphereCloud
         @disk_config = criteria[:disk_config]
         @req_memory = criteria[:req_memory]
         @mem_headroom = criteria[:mem_headroom] || DEFAULT_MEMORY_HEADROOM
+        @num_gpu = criteria[:num_gpu] unless criteria[:num_gpu].nil? || criteria[:num_gpu] <= 0
       end
 
       def inspect
-        "VM Placement Criteria: Disk Config: #{disk_config}  Req Memory: #{req_memory}  Mem Headroom: #{mem_headroom}"
+        "VM Placement Criteria: Disk Config: #{disk_config}  Req Memory: #{req_memory}  Mem Headroom: #{mem_headroom} Num GPUs: #{num_gpu}"
       end
     end
     private_constant :VmPlacementCriteria
@@ -142,6 +143,26 @@ module VSphereCloud
         vm_placement.migration_size += disk.size if disk.existing_datastore_name
       end
       true
+    end
+
+    # Gather & Filter hosts with enough available GPUs
+    with_filter ->(vm_placement, criteria_object) do
+
+      # Checking if we are able to place gpus onto a host
+      return true if criteria_object.num_gpu.nil?
+      logger.debug("Gathering hosts #{vm_placement.inspect_before}")
+      return false unless vm_placement.cluster.active_hosts.any?
+
+      # Filtering hosts in the host pipeline
+      pipeline = HostPlacementSelectionPipeline.new(criteria_object.num_gpu, criteria_object.required_memory) do
+        vm_placement.cluster.active_hosts.values
+      end
+      vm_placement.hosts = pipeline.to_a
+      #logger.debug("Failed to find placement for #{vm_placement}"
+
+      return false if vm_placement.hosts.empty?
+      true
+
     end
 
     with_scorer do |p1, p2|
