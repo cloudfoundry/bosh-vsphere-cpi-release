@@ -68,7 +68,7 @@ jobs:
         - get: source-ci
       - do:
         - put: environment
-          resource: pool-6.5
+          resource: pool-6.5-NSXT21
           params: {acquire: true}
         - task: extend-lease-6.5
           file: source-ci/ci/tasks/extend-lease.yml
@@ -77,14 +77,14 @@ jobs:
             DBCHOST: {{dbc_host}}
             DBC_SSH_KEY: {{dbc_key}}
           on_failure:
-            put: pool-6.5
+            put: pool-6.5-NSXT21
             params : {release: environment}
 
   - name: test-upgrade
     plan:
       - aggregate:
         - get: source-ci
-        - {get: environment,     trigger: true,  passed: [lock-test-upgrade], resource: pool-6.5 }
+        - {get: environment,     trigger: true,  passed: [lock-test-upgrade], resource: pool-6.5-NSXT21 }
         - {get: bosh-release,     trigger: false, passed: [lock-test-upgrade]}
         - {get: cpi-release,      trigger: false, passed: [lock-test-upgrade]}
         - {get: stemcell,         trigger: false, passed: [lock-test-upgrade], resource: ubuntu-stemcell}
@@ -123,7 +123,7 @@ jobs:
             new-director-state: director-state
         on_failure:
           aggregate:
-          - put: pool-6.5
+          - put: pool-6.5-NSXT21
             params : {remove: environment}
           - put: notify
             params:
@@ -136,9 +136,9 @@ jobs:
 
   - name: unlock-test-upgrade
     plan:
-      - {trigger: true, passed: [test-upgrade], get: pool-6.5}
-      - put: pool-6.5
-        params : {release: pool-6.5}
+      - {trigger: true, passed: [test-upgrade], get: pool-6.5-NSXT21}
+      - put: pool-6.5-NSXT21
+        params : {release: pool-6.5-NSXT21}
 
   - name: lock-test-stemcell-ipv4
     plan:
@@ -151,7 +151,7 @@ jobs:
         - get: source-ci
       - do:
         - put: environment
-          resource: pool-6.5
+          resource: pool-6.5-NSXT21
           params: {acquire: true}
         - task: extend-lease-6.5
           file: source-ci/ci/tasks/extend-lease.yml
@@ -160,7 +160,7 @@ jobs:
             DBCHOST: {{dbc_host}}
             DBC_SSH_KEY: {{dbc_key}}
           on_failure:
-            put: pool-6.5
+            put: pool-6.5-NSXT21
             params : {release: environment}
 
   - name: test-stemcell-ipv4
@@ -172,7 +172,7 @@ jobs:
         - {get: cpi-release,     trigger: false, passed: [lock-test-stemcell-ipv4]}
         - {get: stemcell,        trigger: false, passed: [lock-test-stemcell-ipv4], resource: ubuntu-stemcell}
         - {get: certification,   trigger: false}
-        - {get: environment,     trigger: true,  passed: [lock-test-stemcell-ipv4], resource: pool-6.5 }
+        - {get: environment,     trigger: true,  passed: [lock-test-stemcell-ipv4], resource: pool-6.5-NSXT21 }
         - {get: bosh-cli,        trigger: false}
         - {get: bats,            trigger: false}
         - {get: bosh-deployment, trigger: false}
@@ -190,7 +190,7 @@ jobs:
           - <<: *test-stemcell-ipv4
           on_failure:
             aggregate:
-            - put: pool-6.5
+            - put: pool-6.5-NSXT21
               params : {remove: environment}
             - put: notify
               params:
@@ -203,9 +203,9 @@ jobs:
 
   - name: unlock-test-stemcell-ipv4
     plan:
-      - {trigger: true, passed: [test-stemcell-ipv4], get: pool-6.5}
-      - put: pool-6.5
-        params : {release: pool-6.5}
+      - {trigger: true, passed: [test-stemcell-ipv4], get: pool-6.5-NSXT21}
+      - put: pool-6.5-NSXT21
+        params : {release: pool-6.5-NSXT21}
 
   - name: lock-test-stemcell-ipv6
     plan:
@@ -218,7 +218,7 @@ jobs:
         - get: source-ci
       - do:
         - put: environment
-          resource: pool-6.5
+          resource: pool-6.5-NSXT21
           params: {acquire: true}
         - task: extend-lease-6.5
           file: source-ci/ci/tasks/extend-lease.yml
@@ -227,7 +227,7 @@ jobs:
             DBCHOST: {{dbc_host}}
             DBC_SSH_KEY: {{dbc_key}}
           on_failure:
-            put: pool-6.5
+            put: pool-6.5-NSXT21
             params : {release: environment}
         attempts: 4
 
@@ -238,7 +238,7 @@ jobs:
         - {get: bosh-release,    trigger: false, passed: [lock-test-stemcell-ipv6]}
         - {get: cpi-release,     trigger: false, passed: [lock-test-stemcell-ipv6]}
         - {get: stemcell,        trigger: false, passed: [lock-test-stemcell-ipv6], resource: ubuntu-stemcell}
-        - {get: environment,     trigger: true,  passed: [lock-test-stemcell-ipv6], resource: pool-6.5 }
+        - {get: environment,     trigger: true,  passed: [lock-test-stemcell-ipv6], resource: pool-6.5-NSXT21 }
         - {get: certification,   trigger: false}
         - {get: bosh-cli,        trigger: false}
         - {get: bats,            trigger: false}
@@ -258,7 +258,7 @@ jobs:
         - <<: *test-stemcell-ipv6
         on_failure:
           aggregate:
-          - put: pool-6.5
+          - put: pool-6.5-NSXT21
             params : {remove: environment}
           - put: notify
             params:
@@ -271,9 +271,9 @@ jobs:
 
   - name: unlock-test-stemcell-ipv6
     plan:
-      - {trigger: true, passed: [test-stemcell-ipv6], get: pool-6.5}
-      - put: pool-6.5
-        params : {release: pool-6.5}
+      - {trigger: true, passed: [test-stemcell-ipv6], get: pool-6.5-NSXT21}
+      - put: pool-6.5-NSXT21
+        params : {release: pool-6.5-NSXT21}
 
   - name: lock-bats-centos
     plan:
@@ -286,7 +286,7 @@ jobs:
         - get: source-ci
       - do:
         - put: environment
-          resource: pool-6.5
+          resource: pool-6.5-NSXT21
           params: {acquire: true}
         - task: extend-lease-6.5
           file: source-ci/ci/tasks/extend-lease.yml
@@ -295,7 +295,7 @@ jobs:
             DBCHOST: {{dbc_host}}
             DBC_SSH_KEY: {{dbc_key}}
           on_failure:
-            put: pool-6.5
+            put: pool-6.5-NSXT21
             params : {release: environment}
         attempts: 4
 
@@ -304,7 +304,7 @@ jobs:
     plan:
       - aggregate:
         - get: source-ci
-        - {get: environment,     trigger: true,  passed: [lock-bats-centos], resource: pool-6.5 }
+        - {get: environment,     trigger: true,  passed: [lock-bats-centos], resource: pool-6.5-NSXT21 }
         - {get: certification,   trigger: false}
         - {get: bosh-cli,        trigger: false}
         - {get: bosh-release,    trigger: false, passed: [lock-bats-centos]}
@@ -321,7 +321,7 @@ jobs:
             STEMCELL_NAME: bosh-vsphere-esxi-centos-7-go_agent
         on_failure:
           aggregate:
-          - put: pool-6.5
+          - put: pool-6.5-NSXT21
             params : {remove: environment}
           - put: notify
             params:
@@ -334,9 +334,9 @@ jobs:
 
   - name: unlock-bats-centos
     plan:
-      - {trigger: true, passed: [bats-centos], get: pool-6.5}
-      - put: pool-6.5
-        params : {release: pool-6.5}
+      - {trigger: true, passed: [bats-centos], get: pool-6.5-NSXT21}
+      - put: pool-6.5-NSXT21
+        params : {release: pool-6.5-NSXT21}
 
   - name: lock-bats-ubuntu
     plan:
@@ -349,7 +349,7 @@ jobs:
         - get: source-ci
       - do:
         - put: environment
-          resource: pool-6.5
+          resource: pool-6.5-NSXT21
           params: {acquire: true}
         - task: extend-lease-6.5
           file: source-ci/ci/tasks/extend-lease.yml
@@ -358,7 +358,7 @@ jobs:
             DBCHOST: {{dbc_host}}
             DBC_SSH_KEY: {{dbc_key}}
           on_failure:
-            put: pool-6.5
+            put: pool-6.5-NSXT21
             params : {release: environment}
         attempts: 4
 
@@ -367,7 +367,7 @@ jobs:
     plan:
       - aggregate:
         - get: source-ci
-        - {get: environment,     trigger: true,  passed: [lock-bats-ubuntu], resource: pool-6.5 }
+        - {get: environment,     trigger: true,  passed: [lock-bats-ubuntu], resource: pool-6.5-NSXT21 }
         - {get: certification,   trigger: false}
         - {get: bosh-cli,        trigger: false}
         - {get: bosh-release,    trigger: false, passed: [lock-bats-ubuntu]}
@@ -384,7 +384,7 @@ jobs:
             STEMCELL_NAME: bosh-vsphere-esxi-ubuntu-trusty-go_agent
         on_failure:
           aggregate:
-          - put: pool-6.5
+          - put: pool-6.5-NSXT21
             params : {remove: environment}
           - put: notify
             params:
@@ -397,9 +397,9 @@ jobs:
 
   - name: unlock-bats-ubuntu
     plan:
-      - {trigger: true, passed: [bats-ubuntu], get: pool-6.5}
-      - put: pool-6.5
-        params : {release: pool-6.5}
+      - {trigger: true, passed: [bats-ubuntu], get: pool-6.5-NSXT21}
+      - put: pool-6.5-NSXT21
+        params : {release: pool-6.5-NSXT21}
 
   - name: certify-centos
     plan:
@@ -496,12 +496,12 @@ resources:
       regexp:       bosh-cli-([0-9.]+)-linux-amd64
       bucket:       bosh-cli-artifacts
       region_name:  us-east-1
-  - name: pool-6.5
+  - name: pool-6.5-NSXT21
     type: pool
     source:
       uri:          git@github.com:ktchen14/vcpi-pool.git
       branch:       master
-      pool:         v6.5
+      pool:         v6.5-nsxt21
       private_key:  {{vcpi-pool_deployment_key}}
   - name: source-ci
     type: git
