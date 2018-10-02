@@ -82,8 +82,8 @@ describe 'CPI', nsx_transformers: true do
     end
   end
 
-  describe 'on create_vm', nsxt_21: true do
-    context 'when global default_vif_type is set' do
+  describe 'on create_vm' do
+    context 'when global default_vif_type is set', nsxt_21: true do
       let(:cpi) do
         VSphereCloud::Cloud.new(cpi_options(nsxt: {
           host: @nsxt_host,
@@ -125,7 +125,7 @@ describe 'CPI', nsx_transformers: true do
       end
     end
 
-    context 'when global default_vif_type is not set' do
+    context 'when global default_vif_type is not set', nsxt_21: true do
       it 'should not set vif_type for logical ports' do
         simple_vm_lifecycle(cpi, '', vm_type, network_spec) do |vm_id|
           verify_ports(vm_id) do |lport|
