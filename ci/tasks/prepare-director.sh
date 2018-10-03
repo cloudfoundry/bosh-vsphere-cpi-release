@@ -41,7 +41,7 @@ bosh int \
   -v internal_cidr=192.168.111.0/24 \
   -v internal_gw=192.168.111.1 \
   -v internal_ip=192.168.111.152 \
-  -v reserved_range=192.168.111.2-192.168.111.152 \
+  -v reserved_range=192.168.111.2-192.168.111.154 \
   -v network_name="$BOSH_VSPHERE_VLAN" \
   -v vcenter_dc="$BOSH_VSPHERE_CPI_DATACENTER" \
   -v vcenter_ds="$unambiguous_ds" \
