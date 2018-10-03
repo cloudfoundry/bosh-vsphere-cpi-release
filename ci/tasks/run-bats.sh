@@ -13,17 +13,17 @@ mkdir -p bats-config
 
 bosh int source-ci/ci/shared/bats-spec.yml \
   -v "stemcell_name=${STEMCELL_NAME}" \
-  -v network1-staticIP-2=192.168.111.154 \
-  -v network1-staticIP-1=192.168.111.153 \
+  -v network1-staticIP-2=192.168.111.156 \
+  -v network1-staticIP-1=192.168.111.155 \
   -v network1-vCenterCIDR=192.168.111.0/24 \
-  -v network1-staticRange=[192.168.111.153-192.168.111.163] \
-  -v network1-reservedRange="['192.168.111.0-192.168.111.152' , '192.168.111.164-192.168.111.174']" \
+  -v network1-staticRange=[192.168.111.155-192.168.111.163] \
+  -v network1-reservedRange="['192.168.111.0-192.168.111.154' , '192.168.111.164-192.168.111.174']" \
   -v network1-vCenterGateway=192.168.111.1 \
   -v network1-vCenterVLAN="VM Network" \
   -v network2-staticIP-1=192.168.111.164 \
   -v network2-vCenterCIDR=192.168.111.0/24 \
   -v network2-staticRange=[192.168.111.164-192.168.111.174] \
-  -v network2-reservedRange="['192.168.111.0-192.168.111.152' , '192.168.111.153-192.168.111.163']" \
+  -v network2-reservedRange="['192.168.111.0-192.168.111.163']" \
   -v network2-vCenterGateway=192.168.111.1 \
   -v network2-vCenterVLAN="VM Network" > bats-config/bats-config.yml
 
