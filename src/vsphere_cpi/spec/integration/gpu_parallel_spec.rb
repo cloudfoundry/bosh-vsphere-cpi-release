@@ -125,7 +125,6 @@ describe 'cloud_properties related to creation of GPU attached VMs' do
             #binding.pry
             vm_list.each do |vm_id|
               vm = cpi.vm_provider.find(vm_id)
-              expect(vm).to_not be_nil
               expect(vm.cluster).to eq(@second_cluster_name)
               expect(vm.mob.runtime.host.name).to eq(@host_1).or eq(@host_2)
               expect(vm.mob.config.hardware.device).to have_number_of_GPU_eql_to(1)
@@ -169,7 +168,6 @@ describe 'cloud_properties related to creation of GPU attached VMs' do
               expect(vm_id_1).to_not be_nil
 
               vm = cpi.vm_provider.find(vm_id_1)
-              expect(vm).to_not be_nil
               expect(vm.cluster).to eq(@second_cluster_name)
               expect(vm.mob.runtime.host.name).to eq(@host_1).or eq(@host_2)
               expect(vm.mob.config.hardware.device).to have_number_of_GPU_eql_to(1)
@@ -185,7 +183,6 @@ describe 'cloud_properties related to creation of GPU attached VMs' do
               expect(vm_id_2).to_not be_nil
 
               vm = cpi.vm_provider.find(vm_id_2)
-              expect(vm).to_not be_nil
               expect(vm.cluster).to eq(@second_cluster_name)
               expect(vm.mob.runtime.host.name).to eq(@host_1).or eq(@host_2)
               expect(vm.mob.config.hardware.device).to have_number_of_GPU_eql_to(2)
@@ -273,7 +270,6 @@ describe 'cloud_properties related to creation of GPU attached VMs' do
               expect(vm_id_1).to_not be_nil
 
               vm = cpi.vm_provider.find(vm_id_1)
-              expect(vm).to_not be_nil
               expect(vm.cluster).to eq(@second_cluster_name)
               expect(vm.mob.runtime.host.name).to eq(@host_2)
               expect(vm.mob.config.hardware.device).to have_number_of_GPU_eql_to(1)
@@ -289,7 +285,6 @@ describe 'cloud_properties related to creation of GPU attached VMs' do
               expect(vm_id_2).to_not be_nil
 
               vm = cpi.vm_provider.find(vm_id_2)
-              expect(vm).to_not be_nil
               expect(vm.cluster).to eq(@second_cluster_name)
               expect(vm.mob.runtime.host.name).to eq(@host_1)
               expect(vm.mob.config.hardware.device).to have_number_of_GPU_eql_to(4)

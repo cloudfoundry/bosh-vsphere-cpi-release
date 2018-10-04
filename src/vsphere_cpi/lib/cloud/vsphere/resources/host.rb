@@ -43,9 +43,6 @@ module VSphereCloud
       attr_accessor :runtime
 
       # Creates a Host resource from the prefetched vSphere properties.
-      #
-      # @param [Hash] properties prefetched vSphere properties to build the
-      #   model.
       def initialize(name, mob, pci_devices, graphics_info, runtime)
         @name = name
         @mob = mob
@@ -101,9 +98,9 @@ module VSphereCloud
             # This rescue is for VMs which are being created or being deleted by other CPI processes.
             # VM in process of creation or deletion might throw up an error while we try to query its state and properties.
             # Can we rescue more specific error here.
-            rescue StandardError => error
-              logger.warn("Method Host::available_gpus : Going through vms. Error raised #{error} for this vm #{vm}")
-              logger.info("#{error} - #{error.backtrace.join("\n")}")
+            rescue => error
+              logger.warn("Error raised in Host#available_gpus:  #{error} for this vm #{vm.config.name}")
+              logger.debug("#{error} - #{error.backtrace.join("\n")}")
               false
             end
           end

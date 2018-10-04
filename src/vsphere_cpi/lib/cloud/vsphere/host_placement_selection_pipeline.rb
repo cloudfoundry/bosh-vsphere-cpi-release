@@ -13,7 +13,7 @@ module VSphereCloud
       end
 
       def inspect
-        "Host Criteria: GPU Req: #{num_gpu} Memory Required: #{req_mem}"
+        "Host Criteria: # of GPU required: #{num_gpu}, Memory required: #{req_mem}"
       end
 
     end
@@ -40,7 +40,7 @@ module VSphereCloud
       end
 
       def inspect
-        "Host #{resource.name} [Available GPUs: #{resource.available_gpus.size}  Available Mem: #{resource.raw_available_memory}]"
+        "Host #{resource.name} [Available GPUs: #{resource.available_gpus.size}, Available Memory: #{resource.raw_available_memory}]"
       end
       alias inspect_before inspect
     end
@@ -48,13 +48,13 @@ module VSphereCloud
 
     # Select host placements which meet the GPU requirement
     with_filter do |host_placement, criteria_object|
-      logger.debug("Filter #{host_placement.inspect_before} for GPUs required: #{criteria_object.num_gpu}")
+      logger.debug("Filter #{host_placement.inspect_before} for # of GPUs required: #{criteria_object.num_gpu}")
       host_placement.available_gpus.size >= criteria_object.num_gpu
     end
 
     # Select host placements that have at least the amount of memory specified
     with_filter do |host_placement, criteria_object|
-      logger.debug("Filter #{host_placement.inspect_before} for memory required: #{criteria_object.req_mem})")
+      logger.debug("Filter #{host_placement.inspect_before} for required memory: #{criteria_object.req_mem})")
       host_placement.raw_available_memory >= criteria_object.req_mem
     end
 
