@@ -20,6 +20,15 @@ unambiguous_ds=nfs0-1
 
 source environment/metadata
 
+# Hack for old CPI versions which do not support restricted permissions users
+current_cpi_version=$(cat cpi-release/version)
+new_user_cpi_version=51
+
+if [ $current_cpi_version -lt $new_user_cpi_version ]; then
+  export BOSH_VSPHERE_CPI_USER='administrator@vsphere.local'
+  echo "Setting vSphere user to administrator for old CPI version (<45)" 1>&2
+fi
+
 # Bosh is give internal ip of 192.168.111.152
 # This is because on Nimbus
 # The IP range 192.168.111.151 ~ 192.168.111.254 has been reserved for static IP.

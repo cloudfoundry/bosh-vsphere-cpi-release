@@ -24,6 +24,15 @@ cpi_dir=$(realpath cpi-release/)
 output_dir=$(realpath director-state/)
 cp ${input_dir}/* ${output_dir}
 
+# Hack for old CPI versions which do not support restricted permissions users
+current_cpi_version=$(cat ${cpi_dir}/version)
+new_user_cpi_version=51
+
+if [ $current_cpi_version -lt $new_user_cpi_version ]; then
+  export BOSH_VSPHERE_CPI_USER='administrator@vsphere.local'
+  echo "Setting vSphere user to administrator for old CPI version (<45)" 1>&2
+fi
+
 # deployment manifest references releases and stemcells relative to itself...make it true
 # these resources are also used in the teardown step
 mkdir -p ${output_dir}/{stemcell,bosh-release,cpi-release}
