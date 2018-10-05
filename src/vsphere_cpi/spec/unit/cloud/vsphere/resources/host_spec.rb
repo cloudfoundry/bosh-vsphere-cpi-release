@@ -18,7 +18,7 @@ def create_fake_pci_device
   fake_device = VimSdk::Vim::Host::PciDevice.new
   fake_device.bus = 0b1010
   fake_device.class_id = 1024
-  fake_device.device_id	= 4096 + SecureRandom.random_number(100)
+  fake_device.device_id = 4096 + SecureRandom.random_number(100)
   fake_device.device_name = (0...8).map { (65 + rand(26)).chr }.join
   fake_device.id = (0...5).map { (97 + rand(26)).chr }.join
   fake_device
@@ -47,12 +47,12 @@ end
 
 describe VSphereCloud::Resources::Host do
   subject do
-    described_class.new('foo_host', mob, [1,2,3], [1,2,3], runtime)
+    described_class.new('foo_host', mob, [1, 2, 3], [1, 2, 3], runtime)
   end
 
   let(:runtime) do
     instance_double('VimSdk::Vim::Host::RuntimeInfo', :in_maintenance_mode => host_maintenance_mode,
-      :connection_state => host_connection_state, :power_state => host_power_state)
+                    :connection_state => host_connection_state, :power_state => host_power_state)
   end
 
   let(:host_power_state) do
@@ -81,13 +81,13 @@ describe VSphereCloud::Resources::Host do
 
   describe '#pci_devices' do
     it 'returns the list of pci devices' do
-      expect(subject.pci_devices).to eq([1,2,3])
+      expect(subject.pci_devices).to eq([1, 2, 3])
     end
   end
 
   describe '#graphics_info' do
     it 'returns the list of graphics devices' do
-      expect(subject.graphics_info).to eq([1,2,3])
+      expect(subject.graphics_info).to eq([1, 2, 3])
     end
   end
 
@@ -104,8 +104,8 @@ describe VSphereCloud::Resources::Host do
   end
 
   describe '#eql' do
-    let(:other_1) { described_class.new('foo_host_2', mob, [1,2,3], [1,2,3], runtime)}
-    let(:other_2) { described_class.new('foo_host', mob, [1,2,3], [1,2,3], runtime)}
+    let(:other_1) { described_class.new('foo_host_2', mob, [1, 2, 3], [1, 2, 3], runtime) }
+    let(:other_2) { described_class.new('foo_host', mob, [1, 2, 3], [1, 2, 3], runtime) }
     it 'returns equality of oher objects' do
       expect(subject.eql?(other_1)).to be(false)
       expect(subject.eql?(other_2)).to be(true)
@@ -277,9 +277,9 @@ describe VSphereCloud::Resources::Host do
     context 'when graphics device are a mix of shared and direct and there is only one graphics device with empty vm list' do
       let(:vm_1) { instance_double('VimSdk::Vim::VirtualMachine') }
       let(:vm_2) { instance_double('VimSdk::Vim::VirtualMachine') }
-      let(:device_1) {instance_double('VimSdk::Vim::Vm::Device::VirtualDevice', :backing => backing_1) }
-      let(:device_2) {instance_double('VimSdk::Vim::Vm::Device::VirtualDevice', :backing => backing_2) }
-      let(:device_3) {instance_double('VimSdk::Vim::Vm::Device::VirtualDevice', :backing => backing_3) }
+      let(:device_1) { instance_double('VimSdk::Vim::Vm::Device::VirtualDevice', :backing => backing_1) }
+      let(:device_2) { instance_double('VimSdk::Vim::Vm::Device::VirtualDevice', :backing => backing_2) }
+      let(:device_3) { instance_double('VimSdk::Vim::Vm::Device::VirtualDevice', :backing => backing_3) }
       let(:vm_list) do
         [vm_1, vm_2]
       end
@@ -318,9 +318,9 @@ describe VSphereCloud::Resources::Host do
         end
       end
       context 'when host has vms that has no vm with gpu device' do
-        let(:device_1) {instance_double('VimSdk::Vim::Vm::Device::VirtualDevice', :backing => backing_3) }
-        let(:device_2) {instance_double('VimSdk::Vim::Vm::Device::VirtualDevice', :backing => backing_3) }
-        let(:device_3) {instance_double('VimSdk::Vim::Vm::Device::VirtualDevice', :backing => backing_3) }
+        let(:device_1) { instance_double('VimSdk::Vim::Vm::Device::VirtualDevice', :backing => backing_3) }
+        let(:device_2) { instance_double('VimSdk::Vim::Vm::Device::VirtualDevice', :backing => backing_3) }
+        let(:device_3) { instance_double('VimSdk::Vim::Vm::Device::VirtualDevice', :backing => backing_3) }
         let(:backing_3) do
           backing_3 = VimSdk::Vim::Vm::Device::VirtualPCIPassthrough::PipeBackingInfo.new
           backing_3.pipe_name = '1021'

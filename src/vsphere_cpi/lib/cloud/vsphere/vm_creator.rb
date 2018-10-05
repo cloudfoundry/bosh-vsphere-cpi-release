@@ -22,7 +22,6 @@ module VSphereCloud
       created_vm = nil
       tries = 0
 
-      #TODO break and invalidate prev cluster placements and loop again (Retry loop)
       loop do
         vm_config.invalidate_placements
         vm_config.cluster_placements.each do |cluster_placement|
@@ -34,7 +33,7 @@ module VSphereCloud
           #@TA: TODO Choose host here if needed.
 
           storage = StoragePicker.choose_ephemeral_storage(cluster_placement.disk_placement.name,
-            cluster.accessible_datastores, vm_config.vm_type)
+                                                           cluster.accessible_datastores, vm_config.vm_type)
 
           datastore, datastore_cluster = storage.is_a?(Resources::StoragePod) ? [nil, storage] : [storage, nil]
 
@@ -87,7 +86,7 @@ module VSphereCloud
             VCPIExtension::DEFAULT_VSPHERE_CPI_EXTENSION_KEY) then
             managed_by_info = VimSdk::Vim::Ext::ManagedByInfo.new
             managed_by_info.extension_key = VCPIExtension::DEFAULT_VSPHERE_CPI_EXTENSION_KEY
-            managed_by_info.type =  VCPIExtension::DEFAULT_VSPHERE_MANAGED_BY_INFO_RESOURCE
+            managed_by_info.type = VCPIExtension::DEFAULT_VSPHERE_MANAGED_BY_INFO_RESOURCE
             config_spec.managed_by = managed_by_info
           end
 
@@ -140,15 +139,15 @@ module VSphereCloud
           logger.info("Cloning vm: #{replicated_stemcell_vm} to #{vm_config.name}")
           created_vm_mob = @client.wait_for_task do
             @cpi.clone_vm(replicated_stemcell_vm.mob,
-              vm_config.name,
-              @datacenter.vm_folder.mob,
-              cluster.resource_pool.mob,
-              datastore: datastore.mob,
-              host: host_resource,
-              linked: true,
-              snapshot: snapshot.current_snapshot,
-              config: config_spec,
-              datastore_cluster: datastore_cluster
+                          vm_config.name,
+                          @datacenter.vm_folder.mob,
+                          cluster.resource_pool.mob,
+                          datastore: datastore.mob,
+                          host: host_resource,
+                          linked: true,
+                          snapshot: snapshot.current_snapshot,
+                          config: config_spec,
+                          datastore_cluster: datastore_cluster
             )
           end
           next if created_vm_mob.nil?
@@ -162,30 +161,30 @@ module VSphereCloud
             env = @cpi.generate_agent_env(vm_config.name, created_vm.mob, vm_config.agent_id, network_env, disk_env)
             env['env'] = vm_config.agent_env
 
-        location = {
-          datacenter: @datacenter.name,
-          datastore: datastore,
-          vm: vm_config.name,
-        }
+            location = {
+              datacenter: @datacenter.name,
+              datastore: datastore,
+              vm: vm_config.name,
+            }
 
             @agent_env.set_env(created_vm.mob, location, env)
 
             # DRS Rules
             create_drs_rules(vm_config, created_vm.mob, cluster)
 
-          # Add vm to VMGroup
-          add_vm_to_vm_group(vm_config, created_vm.mob, cluster)
+            # Add vm to VMGroup
+            add_vm_to_vm_group(vm_config, created_vm.mob, cluster)
 
-          begin
-            # Upgrade to latest virtual hardware version
-            # We decide to upgrade hardware version on basis of two params
-            # 1. vm_type specification of upgrade hardware flag and
-            # 2. Global upgrade hardware flag @upgrade_hw_version
-            if vm_config.upgrade_hw_version?(vm_config.vm_type.upgrade_hw_version, @upgrade_hw_version)
-              created_vm.upgrade_vm_virtual_hardware
+            begin
+              # Upgrade to latest virtual hardware version
+              # We decide to upgrade hardware version on basis of two params
+              # 1. vm_type specification of upgrade hardware flag and
+              # 2. Global upgrade hardware flag @upgrade_hw_version
+              if vm_config.upgrade_hw_version?(vm_config.vm_type.upgrade_hw_version, @upgrade_hw_version)
+                created_vm.upgrade_vm_virtual_hardware
+              end
+            rescue VSphereCloud::VCenterClient::AlreadyUpgraded
             end
-          rescue VSphereCloud::VCenterClient::AlreadyUpgraded
-          end
 
             # Power on VM
             logger.info("Powering on VM: #{created_vm}")
@@ -215,7 +214,7 @@ module VSphereCloud
     def add_gpu_device(config_spec, replicated_stemcell_vm, cluster, host_resource, num_gpus)
 
       qct = cluster.mob.environment_browser.query_config_target(host_resource.mob)
-      sysid_map = qct.pci_passthrough.map { |x| [x.pci_device.id, x.system_id]}.to_h
+      sysid_map = qct.pci_passthrough.map { |x| [x.pci_device.id, x.system_id] }.to_h
 
       host_resource.available_gpus.each do |gpu_dev|
         device_config_spec = VimSdk::Vim::Vm::Device::VirtualDeviceSpec.new

@@ -42,6 +42,7 @@ module VSphereCloud
       def inspect
         "Host #{resource.name} [Available GPUs: #{resource.available_gpus.size}, Available Memory: #{resource.raw_available_memory}]"
       end
+
       alias inspect_before inspect
     end
     private_constant :HostPlacement

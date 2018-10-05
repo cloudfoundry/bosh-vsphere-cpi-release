@@ -59,8 +59,8 @@ module VSphereCloud
       # @return[Boolean] whether host is active or not.
       def active?
         runtime.in_maintenance_mode != true &&
-        runtime.connection_state == 'connected' &&
-        runtime.power_state == 'poweredOn'
+          runtime.connection_state == 'connected' &&
+          runtime.power_state == 'poweredOn'
       end
 
       def eql?(other)
@@ -90,14 +90,14 @@ module VSphereCloud
           # Since gpu.vm is optional. Reject all gpu which have been assigned to any vm on that host
           mob.vm.any? do |vm|
             begin
-              vm.config.hardware.device.any? do |device|
+              vm.config.hardware&.device.any? do |device|
                 backing = device.backing
                 backing && backing.is_a?(VimSdk::Vim::Vm::Device::VirtualPCIPassthrough::DeviceBackingInfo) &&
                   backing.id == gpu.pci_id
               end
-            # This rescue is for VMs which are being created or being deleted by other CPI processes.
-            # VM in process of creation or deletion might throw up an error while we try to query its state and properties.
-            # Can we rescue more specific error here.
+                # This rescue is for VMs which are being created or being deleted by other CPI processes.
+                # VM in process of creation or deletion might throw up an error while we try to query its state and properties.
+                # Can we rescue more specific error here.
             rescue => error
               logger.warn("Error raised in Host#available_gpus:  #{error} for this vm #{vm.config.name}")
               logger.debug("#{error} - #{error.backtrace.join("\n")}")
@@ -105,7 +105,7 @@ module VSphereCloud
             end
           end
         end.inject([]) do |acc, gpu|
-          device = pci_devices.detect {|dev| dev.id == gpu.pci_id}
+          device = pci_devices.detect { |dev| dev.id == gpu.pci_id }
           acc << device
           acc
         end

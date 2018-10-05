@@ -103,7 +103,7 @@ module VSphereCloud
 
     def validate_drs_rules(cluster)
       cluster_name = cluster.name
-      cluster_config = resource_pool_clusters_spec.find {|cluster_spec| cluster_spec.keys.first == cluster_name}
+      cluster_config = resource_pool_clusters_spec.find { |cluster_spec| cluster_spec.keys.first == cluster_name }
       return if cluster_config.nil?
 
       drs_rules = cluster_config[cluster_name]['drs_rules']
@@ -122,8 +122,8 @@ module VSphereCloud
 
     def gpu_enabled?
       !(gpu_conf.nil? ||
-          gpu_conf['number_of_gpus'].nil? ||
-          gpu_conf['number_of_gpus'] == 0)
+        gpu_conf['number_of_gpus'].nil? ||
+        gpu_conf['number_of_gpus'] == 0)
     end
 
     # Invalidate previous cluster placements
@@ -186,7 +186,7 @@ module VSphereCloud
       end
       @cluster_placement = vm_selection_placement_pipeline.each.to_a
       raise Bosh::Clouds::CloudError,
-        'No valid placement found for VM compute, storage, and hosts requirement' if @cluster_placement.first.nil?
+            'No valid placement found for VM compute, storage, and hosts requirement' if @cluster_placement.first.nil?
       @cluster_placement
     end
   end
