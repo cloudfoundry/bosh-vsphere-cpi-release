@@ -15,15 +15,15 @@ end
 # mount BOSH_VSPHERE_CPI_SHARED_DATASTORE on host1
 # mount BOSH_VSPHERE_CPI_SECOND_CLUSTER_DATASTORE on host2
 # host 2 should have more GPUs than host 1
-describe 'cloud_properties related to creation of GPU,' do
+describe 'cloud_properties related to creation of GPU,', gpu: true do
   before (:all) do
     @datacenter_name = fetch_and_verify_datacenter('BOSH_VSPHERE_CPI_DATACENTER')
-    @cluster_name = fetch_and_verify_cluster('BOSH_VSPHERE_CPI_SECOND_CLUSTER')
-    @second_cluster_name = fetch_and_verify_cluster('BOSH_VSPHERE_CPI_CLUSTER')
+    @cluster_name = fetch_and_verify_cluster('BOSH_VSPHERE_CPI_CLUSTER')
+    @second_cluster_name = fetch_and_verify_cluster('BOSH_VSPHERE_CPI_SECOND_CLUSTER')
     @gpu_host_datastore_one = fetch_property('BOSH_VSPHERE_CPI_SHARED_DATASTORE')
     @gpu_host_datastore_two = fetch_property('BOSH_VSPHERE_CPI_SECOND_CLUSTER_DATASTORE')
     @host_1 = '10.114.22.249' #2 GRID K1 GPUs
-    # @host_1 = '10.114.22.29' #2 GRID K1 GPUs
+    @host_2 = '10.114.22.29' #2 GRID K1 GPUs
     # @host_2 = '10.114.22.33' #2 GRID K2 GPUs
   end
 
@@ -227,7 +227,7 @@ describe 'cloud_properties related to creation of GPU,' do
       context 'when vm_type specifies 1 GPU' do
         let(:number_of_gpus) { 1 }
 
-        xit 'creates vm on host with least no of available GPUs' do
+        xit 'creates vm on 1 of the hosts' do
           begin
             vm_id = cpi.create_vm(
               'agent-007',
@@ -242,7 +242,7 @@ describe 'cloud_properties related to creation of GPU,' do
             vm = cpi.vm_provider.find(vm_id)
             expect(vm).to_not be_nil
             expect(vm.cluster).to eq(@cluster_name)
-            expect(vm.mob.runtime.host.name).to eq(@host_1)
+            expect(vm.mob.runtime.host.name).to eq(@host_1).or eq(@host_2)
             expect(vm.mob.config.hardware.device).to have_number_of_GPU_eql_to(1)
           ensure
             delete_vm(cpi, vm_id)
@@ -275,9 +275,8 @@ describe 'cloud_properties related to creation of GPU,' do
       context 'when multiple vms are created in succession' do
         let(:number_of_gpus) { 2 }
 
-        #wont pass all the time since the 2gpu option can be placed on both hosts
         context 'with 2 GPUs in succession' do
-          xit 'creates both vms, first vm on host with 2 GPUs and second on host with 4 GPUs' do
+          xit 'creates both vms' do
             begin
               vm_id_1 = cpi.create_vm(
                 'agent-007',
@@ -292,13 +291,13 @@ describe 'cloud_properties related to creation of GPU,' do
               vm = cpi.vm_provider.find(vm_id_1)
               expect(vm).to_not be_nil
               expect(vm.cluster).to eq(@cluster_name)
-              expect(vm.mob.runtime.host.name).to eq(@host_1)
+              expect(vm.mob.runtime.host.name).to eq(@host_1).or eq(@host_2)
               expect(vm.mob.config.hardware.device).to have_number_of_GPU_eql_to(2)
 
               vm_id_2 = cpi.create_vm(
                 'agent-007',
                 @stemcell_id,
-                vm_type_single_cluster_acc_ds_4_gpu,
+                vm_type_single_cluster,
                 get_network_spec,
                 [],
                 {}
@@ -308,7 +307,7 @@ describe 'cloud_properties related to creation of GPU,' do
               vm = cpi.vm_provider.find(vm_id_2)
               expect(vm).to_not be_nil
               expect(vm.cluster).to eq(@cluster_name)
-              expect(vm.mob.runtime.host.name).to eq(@host_2)
+              expect(vm.mob.runtime.host.name).to eq(@host_1).or eq(@host_2)
               expect(vm.mob.config.hardware.device).to have_number_of_GPU_eql_to(2)
             ensure
               delete_vm(cpi, vm_id_1)
@@ -321,7 +320,7 @@ describe 'cloud_properties related to creation of GPU,' do
   end
 
   # parallel vm calls
-  context 'with 2 clusters, when 6 vms are created in parallel with 1 GPU' do
+  context 'with 2 clusters, when 4 vms are created in parallel with 1 GPU' do
     let(:vm_type_multiple_clusters) do
       vm_type.merge(
         'gpu' => { 'number_of_gpus' => 1 },
@@ -340,13 +339,13 @@ describe 'cloud_properties related to creation of GPU,' do
         ]
       )
     end
-    xit 'creates 6 vms with 1 GPU each' do
+    xit 'creates 4 vms with 1 GPU each' do
       begin
 
         thread_list = []
         vm_list = []
 
-        6.times do
+        4.times do
           vm = nil
           t = Thread.new {
             cpi = VSphereCloud::Cloud.new(cpi_options)
