@@ -25,6 +25,7 @@ shared:
         -o certification/shared/assets/ops/remove-hm.yml
         -o bosh-deployment/misc/ipv6/bosh.yml
         -o certification/vsphere/assets/ipv6-director.yml
+        -o source-ci/ci/shared/ops/blobstore_server_tls_ipv6.yml
         -o bosh-deployment/misc/second-network.yml
         -o bosh-deployment/vsphere/second-network.yml
   - &deploy-director
