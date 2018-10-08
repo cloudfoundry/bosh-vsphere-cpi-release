@@ -39,6 +39,7 @@
     "Logical Routing And Services"
   ],
   "summary": "Delete a Logical Router Port",
+  "x-vmw-nsx-module": "LogicalRouterPorts",
   "consumes": [
     "application/json"
   ],
