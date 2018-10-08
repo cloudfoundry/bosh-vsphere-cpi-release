@@ -1179,57 +1179,6 @@ module NSXT
       return data, status_code, headers
     end
 
-    # Delete a Logical Router Port
-    # Deletes the specified logical router port. You must delete logical router ports before you can delete the associated logical router. To Delete Tier0 router link port you must have to delete attached tier1 router link port, otherwise pass 'force=true' as query param to force delete the Tier0 router link port.  
-    # @param [Hash] opts the optional parameters
-    # @option opts [BOOLEAN] :force Force delete the resource even if it is being used somewhere  (default to false)
-    # @return [nil]
-    def delete_logical_router_ports(opts = {})
-      delete_logical_router_ports_with_http_info(opts)
-      return nil
-    end
-
-    # Delete a Logical Router Port
-    # Deletes the specified logical router port. You must delete logical router ports before you can delete the associated logical router. To Delete Tier0 router link port you must have to delete attached tier1 router link port, otherwise pass &#39;force&#x3D;true&#39; as query param to force delete the Tier0 router link port.  
-    # @param [Hash] opts the optional parameters
-    # @option opts [BOOLEAN] :force Force delete the resource even if it is being used somewhere 
-    # @return [Array<(nil, Fixnum, Hash)>] nil, response status code and response headers
-    def delete_logical_router_ports_with_http_info(opts = {})
-      if @api_client.config.debugging
-        @api_client.config.logger.debug "Calling API: LogicalRoutingAndServicesApi.delete_logical_router_ports ..."
-      end
-      # resource path
-      local_var_path = "/logical-router-ports"
-
-      # query parameters
-      query_params = {}
-      query_params[:'force'] = opts[:'force'] if !opts[:'force'].nil?
-
-      # header parameters
-      header_params = {}
-      # HTTP header 'Accept' (if needed)
-      header_params['Accept'] = @api_client.select_header_accept(['application/json'])
-      # HTTP header 'Content-Type'
-      header_params['Content-Type'] = @api_client.select_header_content_type(['application/json'])
-
-      # form parameters
-      form_params = {}
-
-      # http body (model)
-      post_body = nil
-      auth_names = ['BasicAuth']
-      data, status_code, headers = @api_client.call_api(:DELETE, local_var_path,
-        :header_params => header_params,
-        :query_params => query_params,
-        :form_params => form_params,
-        :body => post_body,
-        :auth_names => auth_names)
-      if @api_client.config.debugging
-        @api_client.config.logger.debug "API called: LogicalRoutingAndServicesApi#delete_logical_router_ports\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
-      end
-      return data, status_code, headers
-    end
-
     # Delete a specific NAT rule from a logical router
     # Delete a specific NAT rule from a logical router 
     # @param logical_router_id 
