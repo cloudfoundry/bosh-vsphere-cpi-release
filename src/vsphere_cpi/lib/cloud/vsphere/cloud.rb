@@ -180,11 +180,13 @@ module VSphereCloud
             logger.info("Deploying to: #{cluster.mob} / #{datastore.mob}")
 
             import_spec_result = import_ovf(name, ovf_file, cluster.resource_pool.mob, datastore.mob)
-
+            vm_encrypt_profile_spec = client.vm_encrypt_profile_spec(@config.pbm_api_uri) #encrypt vm
             system_disk = import_spec_result.import_spec.config_spec.device_change.find do |change|
               change.device.kind_of?(Vim::Vm::Device::VirtualDisk)
-            end.device
-            system_disk.backing.thin_provisioned = @config.vcenter_default_disk_type == 'thin'
+            end
+            import_spec_result.import_spec.config_spec.vm_profile = [vm_encrypt_profile_spec] #if encryption is set
+            system_disk.profile = [vm_encrypt_profile_spec] #if encryption is set
+            system_disk.device.backing.thin_provisioned = @config.vcenter_default_disk_type == 'thin'
 
             lease_obtainer = LeaseObtainer.new(@cloud_searcher)
             nfc_lease = lease_obtainer.obtain(
@@ -220,8 +222,6 @@ module VSphereCloud
             end
 
             client.reconfig_vm(vm, config)
-
-            client.encrypt_vm(vm, @config.pbm_api_uri ) #encrypt vm
 
             logger.info('Taking initial snapshot')
 
