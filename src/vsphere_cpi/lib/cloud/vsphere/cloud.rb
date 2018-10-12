@@ -185,6 +185,8 @@ module VSphereCloud
               change.device.kind_of?(Vim::Vm::Device::VirtualDisk)
             end
             import_spec_result.import_spec.config_spec.vm_profile = [vm_encrypt_profile_spec] #if encryption is set
+            import_spec_result.import_spec.config_spec.crypto = client.vm_encrypt_crypto_spec
+            logger.info("Cryto spec: #{import_spec_result.import_spec.config_spec}")
             system_disk.profile = [vm_encrypt_profile_spec] #if encryption is set
             system_disk.device.backing.thin_provisioned = @config.vcenter_default_disk_type == 'thin'
 

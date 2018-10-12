@@ -294,6 +294,9 @@ module VSphereCloud
       disk_spec.disk_type = disk_type
       disk_spec.capacity_kb = disk_size_in_mb * 1024
       disk_spec.adapter_type = 'lsiLogic'
+      pbm_api_uri =  URI.parse("https://vc.vcpi-nimbus.local/pbm/sdk")
+      disk_spec.profile = [vm_encrypt_profile_spec(pbm_api_uri)] #encrypt vm
+      disk_spec.crypto = vm_encrypt_crypto_spec
 
       wait_for_task do
         service_content.virtual_disk_manager.create_virtual_disk(
@@ -476,6 +479,11 @@ module VSphereCloud
       # config_spec.crypto = crypto_spec
       #
       # reconfig_vm(vm_mob, config_spec)
+    end
+
+    def vm_encrypt_crypto_spec
+      new_key = @service_content.crypto_manager.generate_key.key_id
+      VimSdk::Vim::Encryption::CryptoSpecEncrypt.new(crypto_key_id: new_key)
     end
 
     private
