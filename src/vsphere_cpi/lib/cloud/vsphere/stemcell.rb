@@ -80,6 +80,13 @@ module VSphereCloud
         replica_vm = client.wait_for_task do
           vm.clone(datacenter.template_folder.mob, replica_name, clone_spec)
         end
+        disable_sdrs(srm, datastore_cluster.mob, replica_vm) if datastore_cluster
+
+        logger.info("Creating initial snapshot for linked clones on #{replica_vm}")
+        client.wait_for_task do
+          replica_vm.create_snapshot('initial', nil, false, false)
+        end
+        logger.info("Created initial snapshot for linked clones on #{replica_vm}")
       rescue VSphereCloud::VCenterClient::DuplicateName
         logger.info("Stemcell is already being replicated, waiting for #{replica_name} to be ready")
         path_array = [datacenter.name, 'vm', datacenter.template_folder.path_components, replica_name]
@@ -90,17 +97,7 @@ module VSphereCloud
         # then an exception is thrown.
         client.cloud_searcher.get_properties(replica_vm, VimSdk::Vim::VirtualMachine, ['snapshot'], ensure_all: true)
         logger.info("Stemcell #{replica_name} has been replicated.")
-      else
-        logger.info("Replicated #{id} to #{replica_name}")
       end
-
-      disable_sdrs(srm, datastore_cluster.mob, replica_vm) if datastore_cluster
-
-      logger.info("Creating initial snapshot for linked clones on #{replica_vm}")
-      client.wait_for_task do
-        replica_vm.create_snapshot('initial', nil, false, false)
-      end
-      logger.info("Created initial snapshot for linked clones on #{replica_vm}")
       replica_vm
     end
 

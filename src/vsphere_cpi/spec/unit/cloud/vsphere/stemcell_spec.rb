@@ -6,6 +6,7 @@ describe VSphereCloud::Stemcell, fake_logger: true do
   let(:stemcell_id) { 'fake_stemcell_id' }
 
   let(:cloud_searcher) { instance_double('VSphereCloud::CloudSearcher') }
+  let(:task_runner) { double(VSphereCloud::TaskRunner) }
   let(:client) { instance_double('VSphereCloud::VCenterClient', cloud_searcher: cloud_searcher) }
 
   describe '#replicate' do
@@ -63,21 +64,34 @@ describe VSphereCloud::Stemcell, fake_logger: true do
       let(:replicated_stemcell) { double('fake_replicated_stemcell') }
       let(:fake_task) {'fake_task'}
 
-      it 'replicates the stemcell' do
+      before do
         expect(subject).to receive(:find_replica_in).with(datacenter.mob, client).and_return(stemcell_vm)
         expect(subject).to receive(:find_replica_in).with(datacenter.mob, client, target_datastore.name).and_return(nil)
-
         resource_pool = double(:resource_pool, mob: 'fake_resource_pool_mob')
         allow(cluster).to receive(:resource_pool).and_return(resource_pool)
-        allow(stemcell_vm).to receive(:clone).with(any_args).and_return(fake_task)
         allow(client).to receive_message_chain(:service_content, :extension_manager, :find_extension).with(anything).and_return(true)
-        allow(client).to receive(:wait_for_task) do |*args, &block|
+        allow(stemcell_vm).to receive(:clone).with(any_args).and_return(fake_task)
+      end
+
+      it 'replicates the stemcell' do
+        allow(client).to receive(:wait_for_task) do |_, &block|
           expect(block.call).to eq(fake_task)
           replicated_stemcell
         end
         allow(replicated_stemcell).to receive(:create_snapshot).with(any_args).and_return(fake_task)
-
         expect(subject.replicate(datacenter, cluster, target_datastore)).to eql(replicated_stemcell)
+      end
+
+      context 'and stemcell is being replicated by another process' do
+        it 'does not create another snapshot of the stemcell' do
+          expect(client).to receive(:wait_for_task) do |_, &block|
+            expect(block.call).to eq(fake_task)
+          end.and_raise(VSphereCloud::VCenterClient::DuplicateName.new)
+          allow(client).to receive(:find_by_inventory_path).and_return(replicated_stemcell)
+          allow(client).to receive_message_chain(:cloud_searcher,:get_properties)
+          expect(replicated_stemcell).to_not receive(:create_snapshot)
+          expect(subject.replicate(datacenter, cluster, target_datastore)).to eql(replicated_stemcell)
+        end
       end
     end
 
@@ -109,7 +123,7 @@ describe VSphereCloud::Stemcell, fake_logger: true do
         expect(subject).to receive(:find_replica_in).with(datacenter.mob, client, recommended_datastore.name).and_return(nil)
         allow(client).to receive_message_chain(:service_content, :extension_manager, :find_extension).with(anything).and_return(true)
         allow(stemcell_vm).to receive(:clone).with(anything, @name_of_replicated_stemcell, an_instance_of(VimSdk::Vim::Vm::CloneSpec)).and_return(fake_task)
-        allow(client).to receive(:wait_for_task) do |*args, &block|
+        allow(client).to receive(:wait_for_task) do |_, &block|
           expect(block.call).to eq(fake_task)
           replicated_stemcell
         end
