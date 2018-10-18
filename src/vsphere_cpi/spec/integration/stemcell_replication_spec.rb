@@ -125,7 +125,13 @@ context 'Replicating stemcells across datastores', external_cpi: false, fake_log
     end
 
     context 'when another thread is in the process of creating the replicated stemcell' do
-      it 'waits for other thread to finish creating stemcell vm and returns it new', replicate_stemcell_two_threads: true do
+      before do
+        #reconfigure vm and limit snapshot options to 1
+        config_spec = VimSdk::Vim::Vm::ConfigSpec.new
+        config_spec.extra_config = [VimSdk::Vim::Option::OptionValue.new(key: 'snapshot.maxSnapshots' , value: 1)]
+        @cpi.client.reconfig_vm(@original_stemcell_vm, config_spec)
+      end
+      it 'does not create initial snapshot for each thread and returns the replicated stemcell', replicate_stemcell_two_threads: true do
         destination_datastore = @cpi.datacenter.accessible_datastores[@second_datastore]
 
         t1_replicated_stemcell_vm = nil
