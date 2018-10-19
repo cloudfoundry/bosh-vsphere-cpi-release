@@ -68,10 +68,6 @@ module VSphereCloud
         ephemeral_disk_config = ephemeral_disk.create_disk_attachment_spec(
           disk_controller_id: replicated_stemcell_vm.system_disk.controller_key,
         )
-        pbm_api_uri =  URI.parse("https://vc.vcpi-nimbus.local/pbm/sdk")
-        vm_encrypt_profile_spec = @client.vm_encrypt_profile_spec(pbm_api_uri) #encrypt vm
-        ephemeral_disk_config.profile = vm_encrypt_profile_spec
-        config_spec.device_change << ephemeral_disk_config
 
         # add extension managed by info to config spec only if extension exists
         if @client.service_content.extension_manager.find_extension(

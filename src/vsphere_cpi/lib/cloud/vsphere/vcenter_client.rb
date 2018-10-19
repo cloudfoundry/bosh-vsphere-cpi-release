@@ -294,9 +294,6 @@ module VSphereCloud
       disk_spec.disk_type = disk_type
       disk_spec.capacity_kb = disk_size_in_mb * 1024
       disk_spec.adapter_type = 'lsiLogic'
-      pbm_api_uri =  URI.parse("https://vc.vcpi-nimbus.local/pbm/sdk")
-      disk_spec.profile = [vm_encrypt_profile_spec(pbm_api_uri)] #encrypt vm
-      disk_spec.crypto = vm_encrypt_crypto_spec
 
       wait_for_task do
         service_content.virtual_disk_manager.create_virtual_disk(
@@ -464,21 +461,15 @@ module VSphereCloud
     # kmip_servers = @service_content.crypto_manager.list_kmip_servers
     # provider_id = kmip_servers.first.cluster_id.id #can use this as in crypto_spec
     # may be pass pbm here but will need to set the cookie
-    def vm_encrypt_profile_spec(pbm_api_uri, encryption_profile_name="VM Encryption Policy")
-      # new_key = @service_content.crypto_manager.generate_key.key_id
+    def vm_profile_spec(pbm_api_uri, profile_name="Gold Policy")
 
       pbm_http_client = VSphereCloud::CpiHttpClient.new
       pbm = VSphereCloud::Pbm.new(pbm_api_uri, pbm_http_client, @soap_stub.vc_cookie)
-      encryption_profile = pbm.get_profile(encryption_profile_name)
+      profile = pbm.get_profile(profile_name)
 
       profile_spec = VimSdk::Vim::Vm::DefinedProfileSpec.new
-      profile_spec.profile_id = encryption_profile.unique_id
+      profile_spec.profile_id = profile.unique_id
       profile_spec
-      # config_spec.vm_profile = [profile_spec]
-      # crypto_spec = VimSdk::Vim::Encryption::CryptoSpecEncrypt.new(crypto_key_id: new_key)
-      # config_spec.crypto = crypto_spec
-      #
-      # reconfig_vm(vm_mob, config_spec)
     end
 
     def vm_encrypt_crypto_spec

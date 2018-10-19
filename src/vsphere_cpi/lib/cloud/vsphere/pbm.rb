@@ -17,7 +17,7 @@ module VSphereCloud
     end
 
     # TODO based on requirement update this
-    def get_profile(profile_name='VM Encryption Policy')
+    def get_profile(profile_name='Gold Policy')
       profile_mgr = @service_content.profile_manager
       resource_type = VimSdk::Pbm::Profile::ResourceType.new
       resource_type.resource_type = 'STORAGE'
