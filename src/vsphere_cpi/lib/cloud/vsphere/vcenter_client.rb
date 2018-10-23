@@ -461,7 +461,7 @@ module VSphereCloud
     # kmip_servers = @service_content.crypto_manager.list_kmip_servers
     # provider_id = kmip_servers.first.cluster_id.id #can use this as in crypto_spec
     # may be pass pbm here but will need to set the cookie
-    def vm_profile_spec(pbm_api_uri, profile_name="Gold Policy")
+    def vm_profile_spec(pbm_api_uri, profile_name="VM Encryption Policy")
 
       pbm_http_client = VSphereCloud::CpiHttpClient.new
       pbm = VSphereCloud::Pbm.new(pbm_api_uri, pbm_http_client, @soap_stub.vc_cookie)
@@ -470,11 +470,6 @@ module VSphereCloud
       profile_spec = VimSdk::Vim::Vm::DefinedProfileSpec.new
       profile_spec.profile_id = profile.unique_id
       profile_spec
-    end
-
-    def vm_encrypt_crypto_spec
-      new_key = @service_content.crypto_manager.generate_key.key_id
-      VimSdk::Vim::Encryption::CryptoSpecEncrypt.new(crypto_key_id: new_key)
     end
 
     private

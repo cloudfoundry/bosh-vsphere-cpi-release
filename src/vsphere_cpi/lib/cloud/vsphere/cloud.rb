@@ -183,6 +183,11 @@ module VSphereCloud
             system_disk = import_spec_result.import_spec.config_spec.device_change.find do |change|
               change.device.kind_of?(Vim::Vm::Device::VirtualDisk)
             end
+            #encrypt the stemcell VM home and system disk
+            vm_encrypt_profile_spec = client.vm_profile_spec(@config.pbm_api_uri, 'VM Encryption Policy') #encrypt vm
+            import_spec_result.import_spec.config_spec.vm_profile = [vm_encrypt_profile_spec] #if encryption is set
+            system_disk.profile = [vm_encrypt_profile_spec] #if encryption is set
+
             system_disk.device.backing.thin_provisioned = @config.vcenter_default_disk_type == 'thin'
 
             lease_obtainer = LeaseObtainer.new(@cloud_searcher)
@@ -316,16 +321,6 @@ module VSphereCloud
           logger.error("Error in creating vm: #{e}, Backtrace - #{e.backtrace.join("\n")}")
           raise e
         end
-
-        #reconfig VM and apply new storage policy to VM, system disk and ephemeral disk
-        disks = created_vm.mob.config.hardware.device.select {|d| d.is_a?(Vim::Vm::Device::VirtualDisk)}
-        vmconfig = Vim::Vm::ConfigSpec.new
-        device_specs = disks.map {|disk| Resources::VM.create_edit_device_spec(disk)}
-        vm_encrypt_profile_spec = client.vm_profile_spec(@config.pbm_api_uri)
-        device_specs.each {|d| d.profile = [vm_encrypt_profile_spec]}
-        vmconfig.device_change = device_specs
-        vmconfig.vm_profile = vm_encrypt_profile_spec
-        @client.reconfig_vm(created_vm.mob,vmconfig)
 
         begin
           if @config.nsxt_enabled?
@@ -524,17 +519,22 @@ module VSphereCloud
           destination_datastore = @datacenter.find_datastore(storage_placement.name)
           disk_to_attach = @datacenter.move_disk_to_datastore(disk_to_attach, destination_datastore)
         end
-
         disk_spec = vm.attach_disk(disk_to_attach)
-        #reconfig VM and apply new storage policy to this disk
-        disks = vm.mob.config.hardware.device.select {|d| d.is_a?(Vim::Vm::Device::VirtualDisk) && d.unit_number == disk_spec.device.unit_number}
-        vmconfig = Vim::Vm::ConfigSpec.new
-        device_specs = disks.map {|disk| Resources::VM.create_edit_device_spec(disk)}
-        vm_encrypt_profile_spec = client.vm_profile_spec(@config.pbm_api_uri)
-        device_specs.each {|d| d.profile = [vm_encrypt_profile_spec]}
-        vmconfig.device_change = device_specs
-        @client.reconfig_vm(vm.mob,vmconfig)
-
+        # reconfig VM and apply new storage policy to this disk
+        if vm.mob.config.key_id #for encryption policy
+          vm.power_off # For encryption VM needs to be powered off
+          disks = vm.mob.config.hardware.device.select {|d| d.is_a?(Vim::Vm::Device::VirtualDisk) && d.unit_number == disk_spec.device.unit_number}
+          vmconfig = Vim::Vm::ConfigSpec.new
+          device_specs = disks.map {|disk| Resources::VM.create_edit_device_spec(disk)}
+          vm_encrypt_profile_spec = client.vm_profile_spec(@config.pbm_api_uri, 'VM Encryption Policy')
+          device_specs.each do |d|
+            d.profile = [vm_encrypt_profile_spec]
+            d.backing = VimSdk::Vim::Vm::Device::VirtualDeviceSpec::BackingSpec.new
+          end
+          vmconfig.device_change = device_specs
+          @client.reconfig_vm(vm.mob,vmconfig)
+          vm.power_on
+        end
         # Overwrite cid with the director cid
         # Since director sends messages with "director cid" to agent, the agent needs that ID in its env, not the clean_cid
         add_disk_to_agent_env(vm, director_disk_cid, disk_spec.device.unit_number)

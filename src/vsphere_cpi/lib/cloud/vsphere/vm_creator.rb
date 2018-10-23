@@ -69,6 +69,8 @@ module VSphereCloud
           disk_controller_id: replicated_stemcell_vm.system_disk.controller_key,
         )
 
+        config_spec.device_change << ephemeral_disk_config
+
         # add extension managed by info to config spec only if extension exists
         if @client.service_content.extension_manager.find_extension(
           VCPIExtension::DEFAULT_VSPHERE_CPI_EXTENSION_KEY) then
@@ -151,6 +153,22 @@ module VSphereCloud
 
           # Add vm to VMGroup
           add_vm_to_vm_group(vm_config, created_vm.mob, cluster)
+
+          # reconfig VM and apply new storage policy to VM, system disk and ephemeral disk. VM, system disk get default policy as stemcell.
+          # Need to apply encryption policy to powered off VM, cannot apply it when VM is powered on
+          # you can encrypt ephemeral disk during clone as well
+
+          pbm_api_uri =  URI.parse("https://vc.vcpi-nimbus.local/pbm/sdk")
+          disks = created_vm.mob.config.hardware.device.select {|d| d.is_a?(VimSdk::Vim::Vm::Device::VirtualDisk)}
+          vmconfig = VimSdk::Vim::Vm::ConfigSpec.new
+          device_specs = disks.map {|disk| Resources::VM.create_edit_device_spec(disk)}
+          vm_encrypt_profile_spec = @client.vm_profile_spec(pbm_api_uri)
+          device_specs.each do |d|
+            d.profile = [vm_encrypt_profile_spec]
+          end
+          vmconfig.device_change = device_specs
+          vmconfig.vm_profile = vm_encrypt_profile_spec
+          @client.reconfig_vm(created_vm.mob,vmconfig)
 
           begin
             # Upgrade to latest virtual hardware version
