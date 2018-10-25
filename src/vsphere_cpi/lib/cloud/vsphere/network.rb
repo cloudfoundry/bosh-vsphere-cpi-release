@@ -2,6 +2,10 @@ require 'cloud/vsphere/logger'
 require 'netaddr'
 
 module VSphereCloud
+  class NetworkDeletionError < StandardError
+  end
+
+
   class Network
     include Logger
     TAG_SCOPE_NAME = 'bosh_cpi_subnet_id'
@@ -54,19 +58,22 @@ module VSphereCloud
     def destroy(switch_id)
       logger.info("Destroying network infrastructure with switch id #{switch_id}")
       raise 'switch id must be provided for deleting a network' if switch_id.nil?
-      #check is switch exists first
+      # check if switch exists first
       switch = @switch_provider.get_switch_by_id(switch_id)
       t1_router_ids = @router_provider.get_attached_router_ids(switch_id)
-      raise "Expected switch #{switch_id} to have one router attached. Found #{t1_router_ids.length}" if t1_router_ids.length != 1
-      switch_ports = @switch_provider.get_attached_switch_ports(switch_id)
-      raise "Expected switch #{switch_id} to have only one port. Got #{switch_ports.length}" if switch_ports.length != 1
+      raise NetworkDeletionError, "Expected switch #{switch_id} to have one router attached. Found #{t1_router_ids.length}" if t1_router_ids.length != 1
+      switch_ports = @switch_provider.get_attached_switch_ports(switch_id).select do |logical_port|
+        @switch_provider.get_logical_port_status(logical_port.id) == "UP"
+      end
+
+      raise NetworkDeletionError, "Expected switch #{switch_id} to have only one operational port but found #{switch_ports.length}" if switch_ports.length != 1
 
       release_subnets(switch.tags)
       logger.debug("Deleting logical switch with id #{switch_id}")
       @switch_provider.delete_logical_switch(switch_id)
       t1_router_id = t1_router_ids.first
       attached_switches = @router_provider.get_attached_switches_ids(t1_router_id)
-      raise "Can not delete router #{t1_router_id}. It has extra ports that are not created by BOSH." if attached_switches.length != 0
+      raise NetworkDeletionError, "Can not delete router #{t1_router_id}. It has extra ports that are not created by BOSH." if attached_switches.length != 0
 
       logger.debug("Detach T1 router #{t1_router_id} from T0")
       @router_provider.detach_t1_from_t0(t1_router_id)

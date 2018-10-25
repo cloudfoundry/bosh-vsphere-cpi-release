@@ -241,7 +241,8 @@ module VSphereCloud
 
     describe '#destroy' do
       let(:logical_switch) { instance_double(NSXT::LogicalSwitch, tags: nil) }
-      let(:switch_ports) { [instance_double(NSXT::LogicalPort)] }
+      let(:logical_port) { instance_double(NSXT::LogicalPort, id: 12345) }
+      let(:switch_ports) { [logical_port] }
 
       context 'when switch id is provided' do
         it 'deletes switch and attached router' do
@@ -255,6 +256,8 @@ module VSphereCloud
              .with('t1-router-id').and_return([])
           expect(switch_provider).to receive(:get_switch_by_id)
              .with('switch-id').and_return(logical_switch)
+          expect(switch_provider).to receive(:get_logical_port_status)
+             .and_return("UP")
           expect(router_provider).to receive(:detach_t1_from_t0)
               .with('t1-router-id')
           expect(switch_provider).to receive(:delete_logical_switch)
@@ -273,6 +276,10 @@ module VSphereCloud
              .with('switch-id').and_return(switch_ports)
           expect(switch_provider).to receive(:get_switch_by_id)
              .with('switch-id').and_return(logical_switch)
+          expect(logical_port).to receive(:id)
+             .and_return("12345")
+          expect(switch_provider).to receive(:get_logical_port_status)
+             .and_return("UP")
           expect(switch_provider).to receive(:delete_logical_switch)
              .with('switch-id')
           expect { network.destroy('switch-id') }
@@ -300,6 +307,7 @@ module VSphereCloud
             expect(switch_provider).not_to receive(:get_attached_switch_ports)
             expect(switch_provider).to receive(:get_switch_by_id)
                .with('switch-id').and_return(logical_switch)
+
             expect {
               network.destroy('switch-id')
             }.to raise_error('Expected switch switch-id to have one router attached. Found 2')
@@ -319,12 +327,12 @@ module VSphereCloud
                .with('switch-id').and_return(logical_switch)
             expect{
               network.destroy('switch-id')
-            }.to raise_error('Expected switch switch-id to have only one port. Got 0')
+            }.to raise_error(NetworkDeletionError)
           end
         end
 
         context 'if more than 1 attached' do
-          let(:switch_ports) { [instance_double(NSXT::LogicalPort), instance_double(NSXT::LogicalPort)] }
+          let(:switch_ports) { [logical_port, logical_port] }
           it 'raises an error' do
             expect(router_provider).to receive(:get_attached_router_ids)
               .with('switch-id').and_return(['t1-router-id'])
@@ -332,9 +340,12 @@ module VSphereCloud
               .with('switch-id').and_return(switch_ports)
             expect(switch_provider).to receive(:get_switch_by_id)
              .with('switch-id').and_return(logical_switch)
+
+            expect(switch_provider).to receive(:get_logical_port_status)
+             .twice.and_return("UP")
             expect{
               network.destroy('switch-id')
-            }.to raise_error('Expected switch switch-id to have only one port. Got 2')
+            }.to raise_error(NetworkDeletionError)
           end
         end
       end
@@ -351,6 +362,10 @@ module VSphereCloud
         let(:logical_switch) { instance_double(NSXT::LogicalSwitch, tags: [tag]) }
 
         it 'releases subnet with id' do
+          expect(logical_port).to receive(:id)
+             .and_return("12345")
+          expect(switch_provider).to receive(:get_logical_port_status)
+             .and_return("UP")
           expect(router_provider).to receive(:get_attached_router_ids)
            .with('switch-id').and_return(['t1-router-id'])
           expect(router_provider).to receive(:detach_t1_from_t0)

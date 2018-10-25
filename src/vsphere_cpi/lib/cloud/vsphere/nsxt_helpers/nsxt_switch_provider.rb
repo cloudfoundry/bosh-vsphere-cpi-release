@@ -27,6 +27,10 @@ module VSphereCloud
       switch_api.list_logical_ports(logical_switch_id: switch_id).results
     end
 
+    def get_logical_port_status(port_id)
+      switch_api.get_logical_port_operational_status(port_id).status
+    end
+
     def get_switch_by_id(switch_id)
       switch_api.get_logical_switch(switch_id)
     end
