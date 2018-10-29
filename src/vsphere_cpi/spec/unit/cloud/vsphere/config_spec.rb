@@ -266,6 +266,12 @@ module VSphereCloud
       end
     end
 
+    describe '#pbm_api_uri' do
+      it 'returns PBM API endpoint as URI' do
+        expect(config.pbm_api_uri).to eq(URI.parse("https://#{host}/pbm/sdk"))
+      end
+    end
+
     describe '#vcenter_user' do
       it 'returns value from config' do
         expect(config.vcenter_user).to eq(user)

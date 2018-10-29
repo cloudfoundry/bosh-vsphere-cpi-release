@@ -88,6 +88,8 @@ module VSphereCloud
 
       VMAttributeManager.init(@client.service_content.custom_fields_manager)
 
+      @pbm = VSphereCloud::Pbm.new(@config.pbm_api_uri, @http_client, @client.soap_stub.vc_cookie)
+
       if @config.nsxt_enabled?
         nsxt_client = NSXTApiClientBuilder::build_api_client(@config.nsxt, logger)
 
@@ -302,6 +304,8 @@ module VSphereCloud
             cluster_provider: @cluster_provider
           )
 
+          #TODO refactor this so that manifest related params are moved to manifest_params hash
+          # eg. upgrade_hw_version, default_disk_type, anti_affinity_drs_rules
           vm_creator = VmCreator.new(
             client: @client,
             cloud_searcher: @cloud_searcher,

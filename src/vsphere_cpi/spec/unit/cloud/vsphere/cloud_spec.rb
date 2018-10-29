@@ -27,7 +27,8 @@ module VSphereCloud
     let(:nsxt_enabled) { false }
     let(:nsxt) { instance_double(VSphereCloud::NSXTConfig, default_vif_type: 'vif_type')}
     let(:default_disk_type) { 'preallocated' }
-    let(:vcenter_client) { instance_double('VSphereCloud::VCenterClient', login: nil, service_content: service_content) }
+    let(:soap_stub) { instance_double(VSphereCloud::SdkHelpers::RetryableStubAdapter, vc_cookie: 'somerandomcookie') }
+    let(:vcenter_client) { instance_double('VSphereCloud::VCenterClient', login: nil, service_content: service_content, soap_stub: soap_stub ) }
     let(:http_basic_auth_client) { instance_double('VSphereCloud::NsxHttpClient') }
     let(:http_client) { instance_double('VSphereCloud::CpiHttpClient') }
     let(:service_content) do
@@ -48,6 +49,9 @@ module VSphereCloud
 
     let(:cloud_searcher) { instance_double('VSphereCloud::CloudSearcher') }
     before { allow(CloudSearcher).to receive(:new).and_return(cloud_searcher) }
+
+    let(:pbm) { instance_double('VSphereCloud::Pbm') }
+    before { allow(Pbm).to receive(:new).and_return(pbm) }
 
     before do |example|
       allow(Config).to receive(:build).with(config).and_return(cloud_config)
