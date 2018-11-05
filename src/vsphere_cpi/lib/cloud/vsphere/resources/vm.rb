@@ -307,6 +307,12 @@ module VSphereCloud
           @client.move_disk(datacenter_mob, disk.backing.file_name, datacenter_mob, dest_path)
         end
       end
+      
+      def self.create_profile_spec(policy)
+        profile_spec = VimSdk::Vim::Vm::DefinedProfileSpec.new
+        profile_spec.profile_id = policy.profile_id.unique_id
+        profile_spec
+      end
 
       def self.create_delete_device_spec(device, options = {})
         device_config_spec = Vim::Vm::Device::VirtualDeviceSpec.new

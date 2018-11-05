@@ -88,7 +88,7 @@ module VSphereCloud
 
       VMAttributeManager.init(@client.service_content.custom_fields_manager)
 
-      @pbm = VSphereCloud::Pbm.new(@config.pbm_api_uri, @http_client, @client.soap_stub.vc_cookie)
+      @pbm = VSphereCloud::Pbm.new(pbm_api_uri: @config.pbm_api_uri, http_client: @http_client, vc_cookie: @client.soap_stub.vc_cookie)
 
       if @config.nsxt_enabled?
         nsxt_client = NSXTApiClientBuilder::build_api_client(@config.nsxt, logger)
@@ -180,6 +180,7 @@ module VSphereCloud
             cluster = cluster_placement.cluster
             datastore_name = cluster_placement.disk_placement.name
             datastore = @datacenter.find_datastore(datastore_name)
+            encryption_policy = @pbm.find_policy(@config.vm_encryption_policy_name) if @config.vm_encryption_policy_name
 
             logger.info("Deploying to: #{cluster.mob} / #{datastore.mob}")
 
@@ -187,8 +188,16 @@ module VSphereCloud
 
             system_disk = import_spec_result.import_spec.config_spec.device_change.find do |change|
               change.device.kind_of?(Vim::Vm::Device::VirtualDisk)
-            end.device
-            system_disk.backing.thin_provisioned = @config.vcenter_default_disk_type == 'thin'
+            end
+            system_disk.device.backing.thin_provisioned = @config.vcenter_default_disk_type == 'thin'
+
+            # if encryption policy is set, apply encryption policy to Stemcell VM and system_disk
+            if encryption_policy
+              logger.info("Using encryption policy: #{@config.vm_encryption_policy_name}")
+              profile_spec = Resources::VM.create_profile_spec(encryption_policy)
+              import_spec_result.import_spec.config_spec.vm_profile = [profile_spec]
+              system_disk.profile = [profile_spec]
+            end
 
             lease_obtainer = LeaseObtainer.new(@cloud_searcher)
             nfc_lease = lease_obtainer.obtain(
@@ -316,7 +325,9 @@ module VSphereCloud
             default_disk_type: @config.vcenter_default_disk_type,
             enable_auto_anti_affinity_drs_rules: @config.vcenter_enable_auto_anti_affinity_drs_rules,
             stemcell: Stemcell.new(stemcell_cid),
-            upgrade_hw_version: @config.upgrade_hw_version
+            upgrade_hw_version: @config.upgrade_hw_version,
+            pbm: @pbm,
+            vm_encryption_policy_name: @config.vm_encryption_policy_name
           )
           created_vm = vm_creator.create(vm_config)
         rescue => e

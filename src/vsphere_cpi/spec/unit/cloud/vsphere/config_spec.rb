@@ -35,6 +35,7 @@ module VSphereCloud
     let(:nsx_url) { 'fake-nsx-url' }
     let(:nsx_user) { 'fake-nsx-user' }
     let(:nsx_password) { 'fake-nsx-password' }
+    let(:vm_encryption_policy_name)  { 'VM Encryption Policy' }
     before do
       allow(VimSdk::Vim::ServiceInstance).to receive(:new).
         and_return(double(:service_instance, content: service_content))
@@ -48,6 +49,7 @@ module VSphereCloud
           'user' => user,
           'password' => password,
           'default_disk_type' => default_disk_type,
+          'vm_encryption_policy_name' => vm_encryption_policy_name,
           'datacenters' => datacenters,
           'nsx' => {
             'address' => nsx_url,
@@ -189,6 +191,7 @@ module VSphereCloud
           end.to_not raise_error
         end
       end
+
       context 'when a valid nsxt with cert auth is passed in config' do
         before do
           config_hash.merge! 'nsxt' => {
@@ -463,6 +466,12 @@ module VSphereCloud
     describe '#nsx_password' do
       it 'returns value from config' do
         expect(config.nsx_password).to eq(nsx_password)
+      end
+    end
+
+    describe '#vm_encryption_policy_name' do
+      it 'returns value from config' do
+        expect(config.vm_encryption_policy_name).to eq(vm_encryption_policy_name)
       end
     end
 

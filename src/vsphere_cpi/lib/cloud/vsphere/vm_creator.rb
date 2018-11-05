@@ -5,7 +5,7 @@ module VSphereCloud
   class VmCreator
     include Logger
 
-    def initialize(client:, cloud_searcher:, cpi:, datacenter:, agent_env:, ip_conflict_detector:, default_disk_type:, enable_auto_anti_affinity_drs_rules:, stemcell:, upgrade_hw_version:)
+    def initialize(client:, cloud_searcher:, cpi:, datacenter:, agent_env:, ip_conflict_detector:, default_disk_type:, enable_auto_anti_affinity_drs_rules:, stemcell:, upgrade_hw_version:, pbm:, vm_encryption_policy_name:)
       @client = client
       @cloud_searcher = cloud_searcher
       @cpi = cpi
@@ -16,6 +16,8 @@ module VSphereCloud
       @enable_auto_anti_affinity_drs_rules = enable_auto_anti_affinity_drs_rules
       @stemcell = stemcell
       @upgrade_hw_version = upgrade_hw_version
+      @pbm = pbm
+      @vm_encryption_policy_name = vm_encryption_policy_name
     end
 
     def create(vm_config)
@@ -68,6 +70,12 @@ module VSphereCloud
         ephemeral_disk_config = ephemeral_disk.create_disk_attachment_spec(
           disk_controller_id: replicated_stemcell_vm.system_disk.controller_key,
         )
+        # Encrypt ephemeral disk of the VM
+        if @vm_encryption_policy_name
+          policy = @pbm.find_policy(@vm_encryption_policy_name)
+          ephemeral_disk_config.profile = Resources::VM.create_profile_spec(policy)
+        end
+
         config_spec.device_change << ephemeral_disk_config
 
         # add extension managed by info to config spec only if extension exists

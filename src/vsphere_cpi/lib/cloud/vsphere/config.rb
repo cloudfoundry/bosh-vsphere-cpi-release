@@ -199,6 +199,10 @@ module VSphereCloud
       URI.parse("https://#{vcenter_host}/pbm/sdk")
     end
 
+    def vm_encryption_policy_name
+      vcenter['vm_encryption_policy_name']
+    end
+
     private
 
     attr_reader :config
@@ -229,6 +233,7 @@ module VSphereCloud
             optional('http_logging') => bool,
             optional('enable_auto_anti_affinity_drs_rules') => bool,
             optional('upgrade_hw_version') => bool,
+            optional('vm_encryption_policy_name') => String,
             optional('nsxt') => dict(String, String),
             'datacenters' => [{
               'name' => String,
@@ -239,7 +244,7 @@ module VSphereCloud
               'datastore_pattern' => String,
               'persistent_datastore_pattern' => String,
               optional('allow_mixed_datastores') => bool,
-              'clusters' => [enum(String, dict(String, {optional('resource_pool') => String})
+              'clusters' => [enum(String, dict(String, {optional('resource_pool') => String}),
               )]
             }]
           }]

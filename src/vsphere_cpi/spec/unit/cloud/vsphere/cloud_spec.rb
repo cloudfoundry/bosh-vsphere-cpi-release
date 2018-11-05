@@ -20,7 +20,8 @@ module VSphereCloud
         upgrade_hw_version: true,
         vcenter_http_logging: true,
         nsxt_enabled?: nsxt_enabled,
-        nsxt: nsxt
+        nsxt: nsxt,
+        vm_encryption_policy_name: nil
       ).as_null_object
     end
     let(:custom_fields_manager) { instance_double('VimSdk::Vim::CustomFieldsManager') }
@@ -495,7 +496,9 @@ module VSphereCloud
             default_disk_type: default_disk_type,
             enable_auto_anti_affinity_drs_rules: false,
             stemcell: stemcell,
-            upgrade_hw_version: true
+            upgrade_hw_version: true,
+            pbm: pbm,
+            vm_encryption_policy_name: nil
           ).and_return(vm_creator)
         expect(vm_creator).to receive(:create).with(vm_config).and_return(fake_vm)
 
@@ -540,7 +543,9 @@ module VSphereCloud
             default_disk_type: default_disk_type,
             enable_auto_anti_affinity_drs_rules: false,
             upgrade_hw_version: true,
-            stemcell: stemcell
+            stemcell: stemcell,
+            pbm: pbm,
+            vm_encryption_policy_name: nil
         )
           .and_return(vm_creator)
         expect(vm_creator).to receive(:create)
@@ -704,7 +709,9 @@ module VSphereCloud
                                    default_disk_type: 'thin',
                                    enable_auto_anti_affinity_drs_rules: false,
                                    upgrade_hw_version: true,
-                                   stemcell: stemcell
+                                   stemcell: stemcell,
+                                   pbm: pbm,
+                                   vm_encryption_policy_name: nil
                                  )
                                  .and_return(vm_creator)
           expect(vm_creator).to receive(:create)

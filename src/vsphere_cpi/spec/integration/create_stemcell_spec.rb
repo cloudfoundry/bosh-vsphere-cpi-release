@@ -6,13 +6,15 @@ describe '#create_stemcell', fake_logger: true do
     VSphereCloud::Cloud.new(cpi_options('default_disk_type' => 'thin'))
   end
 
-  it 'creates a stemcell with preallocated system disk' do
-    stemcell = VSphereCloud::Resources::VM.new(
-      @stemcell_id,
-      @cpi.client.find_vm_by_name(@cpi.datacenter.mob, @stemcell_id),
-      @cpi.client
-    )
-    expect(stemcell.system_disk.backing.thin_provisioned).to be(false)
+  context 'when "default_disk_type" is not set' do
+    it 'creates a stemcell with preallocated system disk' do
+      stemcell = VSphereCloud::Resources::VM.new(
+        @stemcell_id,
+        @cpi.client.find_vm_by_name(@cpi.datacenter.mob, @stemcell_id),
+        @cpi.client
+      )
+      expect(stemcell.system_disk.backing.thin_provisioned).to be(false)
+    end
   end
 
   context 'when "default_disk_type" is set to "thin" provisioning' do
