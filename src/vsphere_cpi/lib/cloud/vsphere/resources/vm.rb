@@ -307,7 +307,23 @@ module VSphereCloud
           @client.move_disk(datacenter_mob, disk.backing.file_name, datacenter_mob, dest_path)
         end
       end
-      
+
+      # Apply new storage policy to VM, system disk and ephemeral disk.
+      # VM, system disk get default policy as stemcell
+
+      def apply_storage_policy(policy)
+        profile_spec = Resources::VM.create_profile_spec(policy)
+        disks = [system_disk, ephemeral_disk]
+        device_specs = disks.map {|disk| Resources::VM.create_edit_device_spec(disk)}
+        device_specs.each do |d|
+          d.profile = [profile_spec]
+        end
+        vmconfig = VimSdk::Vim::Vm::ConfigSpec.new
+        vmconfig.device_change = device_specs
+        vmconfig.vm_profile = profile_spec
+        @client.reconfig_vm(@mob, vmconfig)
+      end
+
       def self.create_profile_spec(policy)
         profile_spec = VimSdk::Vim::Vm::DefinedProfileSpec.new
         profile_spec.profile_id = policy.profile_id.unique_id

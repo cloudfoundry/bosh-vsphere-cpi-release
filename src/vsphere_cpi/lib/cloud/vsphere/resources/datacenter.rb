@@ -178,6 +178,10 @@ module VSphereCloud
         Resources::PersistentDisk.new(cid: disk.cid, size_in_mb: disk.size_in_mb, datastore: destination_datastore, folder: @disk_path)
       end
 
+      def fetch_datastores
+        mob.datastore_folder.child_entity.select {|ce| ce.class == VimSdk::Vim::Datastore}
+      end
+
       private
 
       def find_disk_cid_in_datastores(disk_cid, datastores)
@@ -192,6 +196,7 @@ module VSphereCloud
             begin
               disk = @client.find_disk(disk_cid, datastore, @disk_path)
               unless disk.nil?
+
                 logger.debug("disk #{disk_cid} found in: #{datastore}")
                 raise FindSuccessfulException.new(disk)
               end

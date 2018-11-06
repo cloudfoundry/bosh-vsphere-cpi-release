@@ -93,6 +93,10 @@ module VSphereCloud
       if fault.fault_cause
         msg += " and cause '#{fault.fault_cause}'"
       end
+      if fault.fault_message
+        fault_messages = fault.fault_message.map(&:message).join(",")
+        msg += " and fault message '#{fault_messages}'"
+      end
       msg << '.'
       msg
     end

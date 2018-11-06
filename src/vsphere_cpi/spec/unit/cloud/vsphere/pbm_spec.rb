@@ -36,7 +36,7 @@ module VSphereCloud
       end
 
       it 'should raise an error if policy is not found' do
-        expect{ pbm.find_policy('Non-existent-policy') }.to raise_error('Policy Not found')
+        expect{ pbm.find_policy('Non-existent-policy') }.to raise_error('Storage Policy: Non-existent-policy not found')
       end
     end
   end

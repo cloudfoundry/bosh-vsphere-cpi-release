@@ -19,7 +19,7 @@ module VSphereCloud
     end
 
     attr_accessor :client
-    attr_reader :config, :datacenter, :heartbeat_thread
+    attr_reader :config, :datacenter, :heartbeat_thread, :pbm
 
     def enable_telemetry
       http_client = VSphereCloud::CpiHttpClient.new
@@ -863,7 +863,7 @@ module VSphereCloud
         )
       end
       #ephemeral disk configuration
-      ephemeral_pattern = StoragePicker.choose_ephemeral_pattern(vm_type)
+      ephemeral_pattern = StoragePicker.choose_ephemeral_pattern(vm_type, @pbm)
       ephemeral_disk_config = VSphereCloud::DiskConfig.new(
         size: vm_type.disk,
         ephemeral: true,

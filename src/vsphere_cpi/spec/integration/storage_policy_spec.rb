@@ -5,8 +5,39 @@ context 'StoragePolicies' do
     VSphereCloud::Cloud.new(cpi_options(optional_args))
   end
 
+  let(:storage_policy_name) { 'Gold Storage Policy' }
+  context 'when storage_policy is set in vm_type' do
+    before(:all) do
+      @cluster_name = fetch_and_verify_cluster('BOSH_VSPHERE_CPI_CLUSTER')
+      @datastore = fetch_and_verify_datastore('BOSH_VSPHERE_CPI_SECOND_DATASTORE', @cluster_name)
+    end
+
+    let(:optional_args) { {} }
+    let(:vm_type) do
+      {
+        'ram' => 512,
+        'disk' => 2048,
+        'cpu' => 1,
+        'storage_policy' => {
+          'name' => storage_policy_name
+        }
+      }
+    end
+    it 'applies storage policy to VM, disks and places them into compatible datastore' do
+      simple_vm_lifecycle(cpi, '', vm_type, get_network_spec) do |vm_id|
+        vm = cpi.vm_provider.find(vm_id)
+        ephemeral_disk = vm.ephemeral_disk
+        ephemeral_datastore = ephemeral_disk.backing.datastore
+        expect(ephemeral_datastore.name).to eq(@datastore)
+        check_compliance(cpi, storage_policy_name, vm)
+      end
+    end
+    xit 'raises an error if there are no compatible datastores for given storage policy'
+  end
+
   context 'when "vm_encryption_policy_name" is set' do
-    let(:optional_args) { { 'vm_encryption_policy_name' => 'VM Encryption Policy' } }
+    let(:encryption_policy_name) { 'VM Encryption Policy' }
+    let(:optional_args) { { 'vm_encryption_policy_name' => encryption_policy_name } }
     let(:vm_type) do
       {
         'ram' => 512,
@@ -28,9 +59,7 @@ context 'StoragePolicies' do
 
         vm_lifecycle(cpi, [], vm_type, get_network_spec, stemcell_id) do |vm_id|
           vm = cpi.vm_provider.find(vm_id)
-          expect(vm.mob.config.key_id).to be_a(VimSdk::Vim::Encryption::CryptoKeyId)
-          expect(vm.system_disk.backing.key_id).to be_a(VimSdk::Vim::Encryption::CryptoKeyId)
-          expect(vm.ephemeral_disk.backing.key_id).to be_a(VimSdk::Vim::Encryption::CryptoKeyId)
+          check_compliance(cpi, encryption_policy_name, vm)
         end
       ensure
         cpi.delete_stemcell(stemcell_id)
@@ -43,9 +72,12 @@ context 'StoragePolicies' do
           'ram' => 512,
           'disk' => 2048,
           'cpu' => 1,
+          'storage_policy' => {
+            'name' => storage_policy_name
+          }
         }
       end
-      xit 'raises an error if non-encryption policy is set in vm_type' do
+      it 'raises an error if non-encryption policy is set in vm_type' do
         begin
           stemcell_id = upload_stemcell(cpi)
           stemcell = VSphereCloud::Resources::VM.new(
@@ -65,7 +97,7 @@ context 'StoragePolicies' do
               [],
               { 'key' => 'value' }
             )
-          end.to raise_error('Cannot apply this policy')
+          end.to raise_error(VSphereCloud::VCenterClient::TaskException, /Invalid operation for device '0'/)
         ensure
           cpi.delete_stemcell(stemcell_id)
         end
@@ -76,7 +108,7 @@ context 'StoragePolicies' do
       let(:optional_args) { { 'vm_encryption_policy_name' => 'Invalid Policy' } }
 
       it 'raises an error if the encryption policy does not exists' do
-        expect{ upload_stemcell(cpi) }.to raise_error("Policy Not found")
+        expect{ upload_stemcell(cpi) }.to raise_error("Storage Policy: Invalid Policy not found")
       end
     end
   end

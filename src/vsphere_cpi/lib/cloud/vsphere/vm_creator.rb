@@ -201,6 +201,9 @@ module VSphereCloud
           end
 
 
+          # Apply storage policy
+          apply_storage_policy(vm_config, created_vm)
+
           begin
             # Upgrade to latest virtual hardware version
             # We decide to upgrade hardware version on basis of two params
@@ -297,6 +300,12 @@ module VSphereCloud
         cluster.mob
       )
       drs_rule.add_vm_host_affinity_rule(cluster.vm_group, cluster.host_group)
+    end
+
+    def apply_storage_policy(vm_config, vm)
+      return if vm_config.vm_type.storage_policy_name.nil?
+      policy = @pbm.find_policy(vm_config.vm_type.storage_policy_name)
+      vm.apply_storage_policy(policy)
     end
   end
 end

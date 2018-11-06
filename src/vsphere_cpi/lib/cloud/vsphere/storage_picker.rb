@@ -57,20 +57,27 @@ module VSphereCloud
     # if no datastores/datastore_clusters are specified, use global ephemeral pattern
 
     # @param [VmType] vm_type
-    def choose_ephemeral_pattern(vm_type)
-      datastore_names = vm_type.datastore_names
-      unless vm_type.datastore_clusters.empty?
-        sdrs_enabled_datastore_clusters = vm_type.datastore_clusters.select(&:drs_enabled?)
-        datastores = sdrs_enabled_datastore_clusters.map { |datastore_cluster| datastore_cluster.datastores }.flatten
-        datastore_names.concat(datastores.map(&:name))
-      end
-      datastore_names = datastore_names.compact
-      if datastore_names.empty? && vm_type.datastore_clusters.empty?
-        logger.info("Using global ephemeral disk datastore pattern: #{vm_type.datacenter.ephemeral_pattern}")
-        vm_type.datacenter.ephemeral_pattern
-      else
-        logger.info("Using datastore list: #{datastore_names.join(', ')}")
+    def choose_ephemeral_pattern(vm_type, pbm)
+      if vm_type.storage_policy_name
+        compatible_datastores = pbm.find_compatible_datastores(vm_type.storage_policy_name, vm_type.datacenter)
+        datastore_names = compatible_datastores.map{|d| d.info.name }
+        logger.info("Using compatible datastore for given policy: #{datastore_names.join(', ')}")
         "^(#{datastore_names.map { |name| Regexp.escape(name) }.join('|')})$"
+      else
+        datastore_names = vm_type.datastore_names
+        unless vm_type.datastore_clusters.empty?
+          sdrs_enabled_datastore_clusters = vm_type.datastore_clusters.select(&:drs_enabled?)
+          datastores = sdrs_enabled_datastore_clusters.map { |datastore_cluster| datastore_cluster.datastores }.flatten
+          datastore_names.concat(datastores.map(&:name))
+        end
+        datastore_names = datastore_names.compact
+        if datastore_names.empty? && vm_type.datastore_clusters.empty?
+          logger.info("Using global ephemeral disk datastore pattern: #{vm_type.datacenter.ephemeral_pattern}")
+          vm_type.datacenter.ephemeral_pattern
+        else
+          logger.info("Using datastore list: #{datastore_names.join(', ')}")
+          "^(#{datastore_names.map { |name| Regexp.escape(name) }.join('|')})$"
+        end
       end
     end
   end
