@@ -63,6 +63,12 @@ module VSphereCloud
     end
     private_constant :StoragePlacement
 
+    # Select storage placements which match target datastore pattern
+    with_filter do |storage_placement, criteria_object|
+      logger.debug("Filter #{storage_placement.name} for target DS pattern #{criteria_object.target_datastore_pattern}")
+      storage_placement.name =~ Regexp.new(criteria_object.target_datastore_pattern)
+    end
+
     # Reject storage placements that are in maintenance mode
     with_filter do |storage_placement|
       logger.debug("Filter #{storage_placement.name} for maintenance mode")
@@ -74,18 +80,6 @@ module VSphereCloud
     with_filter do |storage_placement, criteria_object|
       logger.debug("Filter #{storage_placement.name} for free space")
       storage_placement.free_space > criteria_object.required_space
-    end
-
-    # Select storage placements which match target datastore pattern
-    with_filter do |storage_placement, criteria_object|
-      logger.debug("Filter #{storage_placement.name} for target DS pattern #{criteria_object.target_datastore_pattern}")
-      storage_placement.name =~ Regexp.new(criteria_object.target_datastore_pattern)
-    end
-
-    # Select storage placements that are accessible from any host
-    with_filter do |storage_placement|
-      logger.debug("Filter #{storage_placement.name} for accessibility")
-      storage_placement.accessible?
     end
 
     # Score on basis on free space with a bit of randomness

@@ -75,6 +75,7 @@ module VSphereCloud
         unless args.empty?
           raise ArgumentError, "wrong number of arguments (given #{args.length}, expected 0)"
         end
+
         filter_list << Proc.new
       else
         raise ArgumentError, "0 arguments passed, expected atleast 1 arg or a block if no args provided" if args.empty?
