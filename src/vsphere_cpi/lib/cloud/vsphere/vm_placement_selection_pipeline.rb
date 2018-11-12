@@ -84,22 +84,23 @@ module VSphereCloud
     private_constant :VmPlacementCriteria
 
     with_filter do |vm_placement, criteria_object|
-      logger.debug("Filter #{vm_placement.cluster_inspect} for free memory required: #{criteria_object.required_memory}")
+      #logger.debug("Filter #{vm_placement.cluster_inspect} for free memory required: #{criteria_object.required_memory}")
       vm_placement.free_memory > criteria_object.required_memory
     end
 
-    with_filter do |vm_placement|
-      logger.debug("Filter #{vm_placement.datastore_inspect} for maintenance mode datastores")
-      vm_placement.datastores.reject! do |ds_resource|
-        ds_resource.maintenance_mode?
-      end
-      !vm_placement.datastores.empty?
-    end
+    # Do we need this , since it is already happening inside disk allocator pipeline below.
+    # with_filter do |vm_placement|
+    #   logger.debug("Filter #{vm_placement.datastore_inspect} for maintenance mode datastores")
+    #   vm_placement.datastores.reject! do |ds_resource|
+    #     ds_resource.maintenance_mode?
+    #   end
+    #   !vm_placement.datastores.empty?
+    # end
 
     with_filter ->(vm_placement, criteria_object) do
-      logger.debug("Filter #{vm_placement.inspect_before} for combination of DS satisfying disk configurations")
+      #logger.debug("Filter #{vm_placement.inspect_before} for combination of DS satisfying disk configurations")
       criteria_object.disk_config.each do |disk|
-        logger.debug("Trying to find placement for #{disk.inspect}")
+        #logger.debug("Trying to find placement for #{disk.inspect}")
         existing_ds_name = disk.existing_datastore_name
 
         # Only persistent disks will have existing_ds_name
@@ -108,7 +109,7 @@ module VSphereCloud
             ds.name == existing_ds_name
           end
           unless datastore.nil?
-            logger.debug("Found existing #{datastore.inspect} for #{disk.inspect}")
+            #logger.debug("Found existing #{datastore.inspect} for #{disk.inspect}")
             vm_placement.balance_score_set << datastore
             next
           end
@@ -122,7 +123,7 @@ module VSphereCloud
         end.with_filter do |storage_placement|
           # TODO: both accessible? and accessible_from? will be queried for
           # each datastore
-          logger.debug("Filter #{storage_placement.inspect} for accessibility from #{vm_placement.cluster.inspect}")
+          # logger.debug("Filter #{storage_placement.inspect} for accessibility from #{vm_placement.cluster.inspect}")
           storage_placement.resource.accessible_from?(vm_placement.cluster)
         end
 

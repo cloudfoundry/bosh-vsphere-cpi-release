@@ -65,20 +65,20 @@ module VSphereCloud
 
     # Select storage placements which match target datastore pattern
     with_filter do |storage_placement, criteria_object|
-      logger.debug("Filter #{storage_placement.name} for target DS pattern #{criteria_object.target_datastore_pattern}")
+      #logger.debug("Filter #{storage_placement.name} for target DS pattern #{criteria_object.target_datastore_pattern}")
       storage_placement.name =~ Regexp.new(criteria_object.target_datastore_pattern)
     end
 
     # Reject storage placements that are in maintenance mode
     with_filter do |storage_placement|
-      logger.debug("Filter #{storage_placement.name} for maintenance mode")
+      # logger.debug("Filter #{storage_placement.name} for maintenance mode")
       !storage_placement.maintenance_mode?
     end
 
     # Select storage placements that have at least as much free space as
     # specified in the criteria object plus the disk headroom
     with_filter do |storage_placement, criteria_object|
-      logger.debug("Filter #{storage_placement.name} for free space")
+      #logger.debug("Filter #{storage_placement.name} for free space")
       storage_placement.free_space > criteria_object.required_space
     end
 
