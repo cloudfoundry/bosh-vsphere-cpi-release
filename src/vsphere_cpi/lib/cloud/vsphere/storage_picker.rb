@@ -53,15 +53,16 @@ module VSphereCloud
       choose_best_from(storage_options)
     end
 
-    # Ephemeral Pattern is constructed from given datastores and collection of all datastores for sdrs enabled datastore clusters
-    # if no datastores/datastore_clusters are specified, use global ephemeral pattern
+    # Ephemeral Pattern is constructed using following algorithm
+    # if policy is specified used compatible datastores fot that policy otherwise
+    # use given datastores and collection of all datastores for sdrs enabled datastore clusters
+    # and if no datastores/datastore_clusters are specified, use global ephemeral pattern
 
     # @param [VmType] vm_type
-    def choose_ephemeral_pattern(vm_type, pbm)
+    def choose_ephemeral_pattern(vm_type)
       if vm_type.storage_policy_name
-        compatible_datastores = pbm.find_compatible_datastores(vm_type.storage_policy_name, vm_type.datacenter)
-        datastore_names = compatible_datastores.map{|d| d.info.name }
-        logger.info("Using compatible datastore for given policy: #{datastore_names.join(', ')}")
+        datastore_names = vm_type.storage_policy_datastores.map{|d| d.name }
+        logger.info("Using compatible datastores for given Storage policy: #{datastore_names.join(', ')}")
         "^(#{datastore_names.map { |name| Regexp.escape(name) }.join('|')})$"
       else
         datastore_names = vm_type.datastore_names

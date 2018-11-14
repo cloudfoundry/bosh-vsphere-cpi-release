@@ -4,6 +4,10 @@ module VSphereCloud
     include Logger
     attr_reader :service_content
 
+    # Connect to Pbm Server and initialize PbmServiceContent
+    # @param [String] pbm_api_uri
+    # @param [CpiHttpClient] http_client
+    # @param [String] vc_cookie
     def initialize(pbm_api_uri:, http_client:, vc_cookie:)
       pbm_soap_stub = VimSdk::Soap::PbmStubAdapter.new(
         pbm_api_uri,
@@ -16,6 +20,8 @@ module VSphereCloud
       @service_content = pbm_instance.retrieve_content
     end
 
+    # Find given Storage policy, raise an error if policy does not exist
+    # @param [String] policy_name
     def find_policy(policy_name)
       profile_mgr = @service_content.profile_manager
       profile_category = VimSdk::Pbm::Profile::CapabilityBasedProfile::ProfileCategoryEnum::REQUIREMENT
@@ -28,6 +34,10 @@ module VSphereCloud
       profile
     end
 
+    # Find compatible datastores for given Storage policy
+    # Raises an error if no compatible datastores are found
+    # @param [String] policy_name
+    # @param [Resources::Datacenter] datacenter
     def find_compatible_datastores(policy_name, datacenter)
       policy = find_policy(policy_name)
       placement_solver = @service_content.placement_solver

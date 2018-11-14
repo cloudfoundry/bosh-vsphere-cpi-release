@@ -7,9 +7,11 @@ module VSphereCloud
 
     # @param [Resources::Datacenter] datacenter
     # @param [Hash] cloud_properties
-    def initialize(datacenter, cloud_properties)
+    # @param [Pbm] pbm
+    def initialize(datacenter, cloud_properties, pbm)
       @datacenter = datacenter
       @cloud_properties = cloud_properties
+      @pbm = pbm
     end
 
     %w[cpu ram disk cpu_hot_add_enabled memory_hot_add_enabled nsx vmx_options
@@ -39,6 +41,11 @@ module VSphereCloud
 
     def storage_policy_name
       storage_policy&.dig('name')
+    end
+
+    # Datastores compatible with given storage policy
+    def storage_policy_datastores
+      storage_policy_name ? @pbm.find_compatible_datastores(storage_policy_name, @datacenter) : []
     end
   end
 end

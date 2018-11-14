@@ -2,19 +2,20 @@ require 'spec_helper'
 
 module VSphereCloud
   describe VmType do
-    let(:datacenter_mob)  { instance_double('VimSdk::Vim::Datacenter') }
-    let(:datacenter) { double('Dataceneter', mob: datacenter_mob)}
-    let(:datastores) {['ds-1', 'ds-2', 'clusters' => [{ 'sp-1' => {} }]]}
+    let(:datacenter_mob) { instance_double('VimSdk::Vim::Datacenter') }
+    let(:datacenter) { double('Dataceneter', mob: datacenter_mob) }
+    let(:datastores) { ['ds-1', 'ds-2', 'clusters' => [{ 'sp-1' => {} }]] }
     let(:cloud_properties) {
       {
         'datastores' => datastores,
         'vm_group' => 'vcpi-vm-group-1',
-        'storage_policy' => {
-          'name' => 'Gold Policy'
-        }
+        'storage_policy' => storage_policy
       }
     }
-    let(:vm_type) { VmType.new(datacenter, cloud_properties) }
+    let(:storage_policy) { {  } }
+    let(:pbm) { instance_double(Pbm) }
+
+    let(:vm_type) { VmType.new(datacenter, cloud_properties, pbm) }
 
     describe '#datastore_names' do
       context 'with datastores' do
@@ -44,8 +45,24 @@ module VSphereCloud
     end
 
     describe '#storage_policy_name' do
+      let(:storage_policy) { { 'name' => 'Gold Policy' } }
       it 'returns storage_policy name' do
         expect(vm_type.storage_policy_name).to eq('Gold Policy')
+      end
+    end
+
+    describe '#storage_policy_datastores' do
+      context 'when storage policy is not defined' do
+        it 'returns empty array' do
+          expect(vm_type.storage_policy_datastores).to be_empty
+        end
+      end
+      context 'when storage policy name is defined' do
+        let(:storage_policy) { { 'name' => 'Gold Policy' } }
+        it 'returns list of compatible datastores when storage_policy_name is defined' do
+          expect(pbm).to receive(:find_compatible_datastores).with('Gold Policy', datacenter).and_return(['expected-datastore'])
+          expect(vm_type.storage_policy_datastores).to eq(['expected-datastore'])
+        end
       end
     end
   end

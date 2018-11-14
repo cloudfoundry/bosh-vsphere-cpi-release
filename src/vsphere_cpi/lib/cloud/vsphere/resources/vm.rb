@@ -309,7 +309,6 @@ module VSphereCloud
       end
 
       # Apply new storage policy to VM, system disk and ephemeral disk.
-      # VM, system disk get default policy as stemcell
 
       def apply_storage_policy(policy)
         profile_spec = Resources::VM.create_profile_spec(policy)

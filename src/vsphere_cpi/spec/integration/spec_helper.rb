@@ -16,7 +16,6 @@ RSpec.configure do |rspec_config|
     suite_cpi = @lifecycle_cpi
 
     bosh_vsphere_stemcell_id = ENV.fetch('BOSH_VSPHERE_STEMCELL_ID', '')
-    puts "BOSH_VSPHERE_STEMCELL_ID", bosh_vsphere_stemcell_id
     unless bosh_vsphere_stemcell_id.empty?
       stemcell_vm = suite_cpi.stemcell_vm(bosh_vsphere_stemcell_id)
       fail "Could not find VM for stemcell '#{bosh_vsphere_stemcell_id}'" if stemcell_vm.nil?

@@ -71,13 +71,26 @@ module VSphereCloud
     end
 
     describe '.choose_ephemeral_pattern' do
-      let(:vm_type) { VmType.new(datacenter, {}) }
+      let(:pbm) { instance_double(Pbm) }
+      let(:vm_type) { VmType.new(datacenter, {}, pbm) }
 
       subject {  described_class.choose_ephemeral_pattern(vm_type) }
 
       before do
         allow(vm_type).to receive(:datastore_clusters).and_return(datastore_clusters)
         allow(vm_type).to receive(:datastore_names).and_return(datastore_names)
+      end
+
+      context 'with storage_policy_datastores' do
+        let(:datastore_clusters) { [] }
+        let(:datastore_names) { [] }
+        let(:compatible_datastores) { [ double('Datastore', name: 'ds-5'), double('Datastore', name: 'ds-6') ]}
+
+        it 'includes all the compatible datastores' do
+          expect(vm_type).to receive(:storage_policy_name).and_return('Gold Policy')
+          expect(vm_type).to receive(:storage_policy_datastores).and_return(compatible_datastores)
+          expect(subject).to eq('^(ds\-5|ds\-6)$')
+        end
       end
 
       context 'with datastore clusters' do
@@ -120,7 +133,8 @@ module VSphereCloud
       let(:target_datastore_name) { 'ds-1' }
       let(:accessible_datastores) { { target_datastore_name => datastore1} }
       let(:datastore1) {double('Datastore', name: 'sp-1-ds-1')}
-      let(:vm_type) { VmType.new(datacenter, {}) }
+      let(:pbm) { instance_double(Pbm) }
+      let(:vm_type) { VmType.new(datacenter, {}, pbm) }
 
       context 'with datastore clusters' do
         before do

@@ -32,7 +32,22 @@ context 'StoragePolicies' do
         check_compliance(cpi, storage_policy_name, vm)
       end
     end
-    xit 'raises an error if there are no compatible datastores for given storage policy'
+    context 'and no compatible datastores exist for storage policy' do
+      let(:storage_policy_name) { 'Silver Storage Policy' }
+      it 'raises an error' do
+        expect {
+          simple_vm_lifecycle(cpi, '', vm_type, get_network_spec)
+        }.to raise_error(RuntimeError, 'No compatible Datastore for Storage Policy: Silver Storage Policy' )
+      end
+    end
+    context 'and it is an encryption policy' do
+      let(:storage_policy_name) { 'VM Encryption Policy' }
+      it 'raises an error' do
+        expect {
+          simple_vm_lifecycle(cpi, '', vm_type, get_network_spec)
+        }.to raise_error(VSphereCloud::VCenterClient::TaskException, 'The operation is not supported on the object.' )
+      end
+    end
   end
 
   context 'when "vm_encryption_policy_name" is set' do
@@ -66,7 +81,7 @@ context 'StoragePolicies' do
       end
     end
 
-    context 'when storage policy is set in vm_type' do
+    context 'and storage policy is set in vm_type' do
       let(:vm_type) do
         {
           'ram' => 512,

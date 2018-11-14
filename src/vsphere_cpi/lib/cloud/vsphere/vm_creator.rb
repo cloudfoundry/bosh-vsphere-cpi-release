@@ -70,7 +70,8 @@ module VSphereCloud
         ephemeral_disk_config = ephemeral_disk.create_disk_attachment_spec(
           disk_controller_id: replicated_stemcell_vm.system_disk.controller_key,
         )
-        # Encrypt ephemeral disk of the VM
+
+        # Encrypt ephemeral disk of the VM if encryption_policy is defined
         if @vm_encryption_policy_name
           policy = @pbm.find_policy(@vm_encryption_policy_name)
           ephemeral_disk_config.profile = Resources::VM.create_profile_spec(policy)

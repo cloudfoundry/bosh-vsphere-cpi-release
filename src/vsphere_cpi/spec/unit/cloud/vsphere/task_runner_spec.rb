@@ -80,7 +80,7 @@ describe VSphereCloud::TaskRunner, fake_logger: true do
             VimSdk::Vim::TaskInfo::State::ERROR,
           ],
           progress: 0,
-          error: instance_double(VimSdk::Vmodl::Fault::SystemError, msg: 'fake-error', fault_cause: 'fake-cause'),
+          error: instance_double(VimSdk::Vmodl::Fault::SystemError, msg: 'fake-error', fault_cause: 'fake-cause', fault_message: nil),
           retryable: true,
         )
         define_fake_task(
@@ -119,7 +119,7 @@ describe VSphereCloud::TaskRunner, fake_logger: true do
               VimSdk::Vim::TaskInfo::State::ERROR,
             ],
             progress: 0,
-            error: instance_double(VimSdk::Vmodl::Fault::SystemError, msg: "fake-error-#{i}", fault_cause: ''),
+            error: instance_double(VimSdk::Vmodl::Fault::SystemError, msg: "fake-error-#{i}", fault_cause: '', fault_message: nil),
             retryable: true,
           )
           mobs << mob
@@ -140,8 +140,8 @@ describe VSphereCloud::TaskRunner, fake_logger: true do
 
     context 'when the task fails and the error is not retryable' do
       let(:failing_task_mob) { instance_double(VimSdk::Vim::Task) }
-
-      it 'retries the task until it succeeds' do
+      let(:fault_message) { instance_double(VimSdk::Vmodl::LocalizableMessage, message: 'Something went wrong') }
+      it 'raises the error after 1st attempt' do
         define_fake_task(
           task_mob: failing_task_mob,
           states: [
@@ -149,9 +149,11 @@ describe VSphereCloud::TaskRunner, fake_logger: true do
             VimSdk::Vim::TaskInfo::State::ERROR,
           ],
           progress: 0,
-          error: instance_double(VimSdk::Vmodl::Fault::SystemError, msg: 'fake-error', fault_cause: ''),
+          error: instance_double(VimSdk::Vmodl::Fault::SystemError, msg: 'fake-error', fault_cause: '', fault_message: [fault_message]),
           retryable: false,
         )
+
+        expect(logger).to receive(:warn).with(/Something went wrong/)
 
         expect {
           task_runner.run { failing_task_mob }
