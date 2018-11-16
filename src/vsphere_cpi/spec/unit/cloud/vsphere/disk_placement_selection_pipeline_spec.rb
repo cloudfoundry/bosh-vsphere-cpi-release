@@ -3,11 +3,11 @@ require 'cloud/vsphere/disk_placement_selection_pipeline'
 require 'cloud/vsphere/resources/datastore'
 
 describe VSphereCloud::DiskPlacementSelectionPipeline do
-  subject { described_class.new(*criteria) { [ds_1, ds_2] } }
+  subject { described_class.new(*criteria) { [ds_1, ds_2, ds_3] } }
 
   def fake_datastore(name, free_space: 4096)
     VSphereCloud::Resources::Datastore.new(
-      name, true, instance_double('VimSdk::Vim::Datastore'), 8192, free_space
+      name, instance_double('VimSdk::Vim::Datastore'), true, 8192, free_space
     ).tap do |resource|
       allow(resource).to receive(:maintenance_mode?).and_return(false)
       allow(resource).to receive(:accessible?).and_return(true)
@@ -17,15 +17,20 @@ describe VSphereCloud::DiskPlacementSelectionPipeline do
   let(:criteria) { [512, 'fake-.*'] }
   let(:ds_1) { fake_datastore('fake-1') }
   let(:ds_2) { fake_datastore('fake-2') }
+  let(:ds_3) { VSphereCloud::Resources::Datastore.new('not-a-match', instance_double('VimSdk::Vim::Datastore'), true, 8192, 2056)  }
+
+  before do(:all)
+    allow(ds_3).to receive(:maintenance_mode?).and_return(false)
+  end
 
   it "only generates datastores that aren't in maintenance mode" do
     allow(ds_2).to receive(:maintenance_mode?).and_return(true)
     expect(subject.to_a).to contain_exactly(ds_1)
   end
 
-  it 'only generates accessible datastores' do
+  it 'should not check datastores for accessibility' do
     allow(ds_2).to receive(:accessible?).and_return(false)
-    expect(subject.to_a).to contain_exactly(ds_1)
+    expect(subject.to_a).to match_array([ds_1, ds_2])
   end
 
   it 'only generates datastores matching the target pattern' do

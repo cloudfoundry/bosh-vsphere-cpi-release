@@ -25,7 +25,7 @@ module VSphereCloud
 
       def inspect
         "Storage Criteria: Space Req: #{size_in_mb} Target Pattern: #{target_datastore_pattern}
-        Existing-DS:#{existing_ds_pattern}"
+        Existing-DS Pattern:#{existing_ds_pattern}"
       end
 
       private
@@ -57,35 +57,26 @@ module VSphereCloud
       end
 
       def inspect
-        "Storage #{resource.name} [free space: #{resource.free_space} maintenance_mode: #{resource.maintenance_mode?} accessible: #{resource.accessible?}]"
+        "Storage #{resource.name} [free space: #{resource.free_space} maintenance_mode: #{resource.maintenance_mode?}]"
       end
       alias inspect_before inspect
     end
     private_constant :StoragePlacement
 
+    # Select storage placements which match target datastore pattern
+    with_filter do |storage_placement, criteria_object|
+      storage_placement.name =~ Regexp.new(criteria_object.target_datastore_pattern)
+    end
+
     # Reject storage placements that are in maintenance mode
     with_filter do |storage_placement|
-      logger.debug("Filter #{storage_placement.name} for maintenance mode")
       !storage_placement.maintenance_mode?
     end
 
     # Select storage placements that have at least as much free space as
     # specified in the criteria object plus the disk headroom
     with_filter do |storage_placement, criteria_object|
-      logger.debug("Filter #{storage_placement.name} for free space")
       storage_placement.free_space > criteria_object.required_space
-    end
-
-    # Select storage placements which match target datastore pattern
-    with_filter do |storage_placement, criteria_object|
-      logger.debug("Filter #{storage_placement.name} for target DS pattern #{criteria_object.target_datastore_pattern}")
-      storage_placement.name =~ Regexp.new(criteria_object.target_datastore_pattern)
-    end
-
-    # Select storage placements that are accessible from any host
-    with_filter do |storage_placement|
-      logger.debug("Filter #{storage_placement.name} for accessibility")
-      storage_placement.accessible?
     end
 
     # Score on basis on free space with a bit of randomness

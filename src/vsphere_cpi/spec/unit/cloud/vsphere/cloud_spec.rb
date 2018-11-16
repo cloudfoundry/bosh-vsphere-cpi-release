@@ -1069,7 +1069,7 @@ module VSphereCloud
       let(:ds_mob) { instance_double('VimSdk::Vim::Datastore', host: datastore_host_mount) }
       let(:datastore_with_disk) { Resources::Datastore.new('datastore-with-disk', ds_mob, true, 4096, 2048) }
       let(:datastore_without_disk) { Resources::Datastore.new('datastore-without-disk', ds_mob, true, 4096, 4096) }
-      let(:inaccessible_datastore) { Resources::Datastore.new('inaccessible-datastore', ds_mob, true, 4096, 4096) }
+      let(:inaccessible_datastore) { Resources::Datastore.new('datastore-inaccessible', ds_mob, true, 4096, 4096) }
       let(:disk) { Resources::PersistentDisk.new(cid: 'disk-cid', size_in_mb: 1024, datastore: datastore_with_disk, folder: 'fake-folder') }
       let(:director_disk_cid) { VSphereCloud::DirectorDiskCID.new('disk-cid') }
       let(:vm_location) do
@@ -1156,9 +1156,11 @@ module VSphereCloud
         end
 
         before do
-          allow(vm).to receive(:accessible_datastores).and_return('datastore-without-disk' => datastore_without_disk)
+          datastores = { 'datastore-without-disk' => datastore_without_disk, 'inaccessible_datastore' => inaccessible_datastore }
+          allow(vm).to receive(:accessible_datastores).and_return(datastores)
           allow(datacenter).to receive(:find_datastore).with('datastore-without-disk').and_return(datastore_without_disk)
           allow(cdrom).to receive_message_chain(:backing, :datastore, :name) { 'datastore-without-disk' }
+          expect(inaccessible_datastore).to receive(:accessible?).and_return(false)
         end
 
         it 'moves the disk to an accessible datastore and attaches it' do
