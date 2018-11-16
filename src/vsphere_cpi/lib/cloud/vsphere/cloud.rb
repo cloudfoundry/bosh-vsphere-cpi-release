@@ -565,16 +565,11 @@ module VSphereCloud
           else
             logger.debug("Gathering storage placement accessible from datacenter")
             accessible_datastores = @datacenter.accessible_datastores
-          end.with_filter do |storage_placement|
-            logger.debug("Filter #{storage_placement.name} for accessibility")
-            storage_placement.accessible?
-          end
-          # Pick datastores that are accessible from at least 1 active host they are attached to
-          # @TODO : WHY? if we have a filter already
-          accessible_datastores.select! do |_, ds_resource|
-            ds_resource.accessible?
           end
           accessible_datastores.values
+        end.with_filter do |storage_placement|
+          logger.debug("Filter #{storage_placement.name} for accessibility")
+          storage_placement.accessible?
         end
 
         # For each possible placement try to create a disk
