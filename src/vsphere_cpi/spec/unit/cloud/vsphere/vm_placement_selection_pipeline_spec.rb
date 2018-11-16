@@ -46,13 +46,6 @@ describe VSphereCloud::VmPlacementSelectionPipeline do
       expect(subject.to_a).to contain_exactly(placement_2)
     end
 
-    it 'only generates placements with atleast one of the datastores not in maintenance mode' do
-      allow_any_instance_of(VSphereCloud::Resources::Datastore).to receive(:maintenance_mode?).and_return(true)
-      allow(ds_cl1_1).to receive(:maintenance_mode?).and_return(false)
-      expect(subject.to_a).to contain_exactly(placement_1)
-      expect(subject.to_a.first.datastores).to contain_exactly(ds_cl1_1)
-    end
-
     it 'sorts the placements in ascending order of migration size' do
       allow_any_instance_of(VSphereCloud::Resources::Datastore).to receive(:maintenance_mode?).and_return(false)
       allow(placement_1).to receive(:migration_size).and_return (20)

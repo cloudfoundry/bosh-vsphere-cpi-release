@@ -52,10 +52,8 @@ module VSphereCloud
     def accept?(placement)
       result = filter_list.all? do |filter|
         result = filter.call(placement, @object)
-        logger.info("Rejecting #{placement.inspect}") unless result
         result
       end
-      logger.info("Selecting (All filter passed) : #{placement.inspect}") if result
       result
     end
 
@@ -65,7 +63,6 @@ module VSphereCloud
       logger.info("Initiating #{inspect}")
 
       gather.select do |placement|
-        logger.info("Applying filters to #{placement.inspect_before}")
         accept?(placement)
       end.sort(&compare_placements).each(&Proc.new)
     end

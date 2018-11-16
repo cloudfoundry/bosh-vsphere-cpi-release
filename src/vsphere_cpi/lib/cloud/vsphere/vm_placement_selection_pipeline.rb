@@ -47,9 +47,8 @@ module VSphereCloud
     end
 
     def inspect
-      "VM Placement Cluster: #{cluster.name}  hosts: #{hosts}  datastores:
-      #{datastores} datastore for ephemeral disk: #{disk_placement}
-      balance score #{@balance_score} balance score set: #{balance_score_set.inspect}"
+      "VM Placement Cluster: #{cluster.name} for ephemeral disk: #{disk_placement},
+      balance score #{balance_score}, balance score set: #{balance_score_set.inspect}"
     end
 
     def cluster_inspect
@@ -88,14 +87,6 @@ module VSphereCloud
       vm_placement.free_memory > criteria_object.required_memory
     end
 
-    with_filter do |vm_placement|
-      logger.debug("Filter #{vm_placement.datastore_inspect} for maintenance mode datastores")
-      vm_placement.datastores.reject! do |ds_resource|
-        ds_resource.maintenance_mode?
-      end
-      !vm_placement.datastores.empty?
-    end
-
     with_filter ->(vm_placement, criteria_object) do
       logger.debug("Filter #{vm_placement.inspect_before} for combination of DS satisfying disk configurations")
       criteria_object.disk_config.each do |disk|
@@ -108,7 +99,6 @@ module VSphereCloud
             ds.name == existing_ds_name
           end
           unless datastore.nil?
-            logger.debug("Found existing #{datastore.inspect} for #{disk.inspect}")
             vm_placement.balance_score_set << datastore
             next
           end
@@ -122,15 +112,12 @@ module VSphereCloud
         end.with_filter do |storage_placement|
           # TODO: both accessible? and accessible_from? will be queried for
           # each datastore
-          logger.debug("Filter #{storage_placement.inspect} for accessibility from #{vm_placement.cluster.inspect}")
           storage_placement.resource.accessible_from?(vm_placement.cluster)
         end
 
         result = pipeline.each.first
 
         logger.debug("Failed to find placement for #{disk.inspect}") if result.nil?
-        # TODO: Log something. Return false and reject this cluster for
-        # absence of any suitable storage for given disk configurations
         return false if result.nil?
 
         logger.debug("Found #{result.inspect} for #{disk.inspect}")
