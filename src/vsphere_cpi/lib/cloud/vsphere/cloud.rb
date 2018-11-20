@@ -504,13 +504,14 @@ module VSphereCloud
           accessible_datastores = @datacenter.accessible_datastores
         end
 
-        # Pick datastores that are accessible from at least 1 active host they are attached to
-        accessible_datastores.select! do |_, ds_resource|
-          ds_resource.accessible?
-        end
-
         disk_pool = DiskPool.new(@datacenter, cloud_properties['datastores'])
         target_datastore_pattern = StoragePicker.choose_persistent_pattern(disk_pool)
+
+        # Pick datastores that are accessible from at least 1 active host they are attached to
+        accessible_datastores.select! do |_, ds_resource|
+          ds_resource.name =~ Regexp.new(target_datastore_pattern) && ds_resource.accessible?
+        end
+
         datastore_name = StoragePicker.choose_persistent_storage(size_in_mb, target_datastore_pattern, accessible_datastores)
 
         if vm_cid

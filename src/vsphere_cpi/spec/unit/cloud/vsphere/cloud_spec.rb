@@ -1512,8 +1512,8 @@ module VSphereCloud
       let(:host_system) {instance_double(VimSdk::Vim::HostSystem, runtime: host_runtime_info)}
       let(:datastore_host_mount) { [instance_double('VimSdk::Vim::Datastore::HostMount', key: host_system)]}
       let(:ds_mob) { instance_double('VimSdk::Vim::Datastore', host: datastore_host_mount) }
-      let(:small_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 2048, mob: ds_mob, accessible?: accessible) }
-      let(:large_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 4096, mob: ds_mob, accessible?: accessible) }
+      let(:small_ds) { instance_double(VSphereCloud::Resources::Datastore, name: 'small-ds', free_space: 2048, mob: ds_mob, accessible?: accessible) }
+      let(:large_ds) { instance_double(VSphereCloud::Resources::Datastore, name: 'large-ds') }
       let(:accessible_datastores) do
         {
           'small-ds' => small_ds,
@@ -1540,7 +1540,8 @@ module VSphereCloud
           .and_return(datastore)
       end
 
-      it 'creates disk via datacenter' do
+      it 'creates disk via datacenter and only uses datastores matching persistent pattern' do
+        expect(large_ds).to_not receive(:accessible?)
         expect(datacenter).to receive(:create_disk)
           .with(datastore, 1024, default_disk_type)
           .and_return(disk)
@@ -1612,6 +1613,7 @@ module VSphereCloud
         let(:small_datastore) { double(:datastore, name: 'small-ds') }
         let(:large_datastore) { double(:datastore, name: 'large-ds') }
         let(:cloud_properties) { { 'datastores' => ['small-ds', 'large-ds'] } }
+        let(:large_ds) { instance_double(VSphereCloud::Resources::Datastore, name: 'large-ds', free_space: 2048, mob: ds_mob, accessible?: accessible) }
 
         before(:each) do
           allow(datacenter).to receive(:find_datastore)

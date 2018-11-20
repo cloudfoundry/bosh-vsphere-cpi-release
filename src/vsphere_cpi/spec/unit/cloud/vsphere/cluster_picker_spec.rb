@@ -9,6 +9,61 @@ module VSphereCloud
     end
 
     describe '#best_cluster_placement' do
+      context 'when cluster has access to datastores not matching disk pattern' do
+        before do
+          allow(target_ds.mob).to receive_message_chain('summary.maintenance_mode').and_return("normal")
+        end
+        let(:available_clusters) { [cluster_1] }
+        let(:target_ds) do
+          fake_datastore(
+            'target-ds',
+            512,
+            instance_double('VimSdk::Vim::Datastore', host: datastore_host_mount),
+          )
+        end
+        let(:not_matching_ds) do
+          fake_datastore(
+            'not-matching-target-ds',
+            512,
+            instance_double('VimSdk::Vim::Datastore', host: datastore_host_mount),
+          )
+        end
+        let(:cluster_1) do
+          instance_double(VSphereCloud::Resources::Cluster,
+                          name: 'cluster-1',
+                          free_memory: 2048,
+                          accessible_datastores: {
+                            'target-ds' => target_ds,
+                            'not-matching-ds' => not_matching_ds
+                          },
+                          mob: cluster1_mob
+          )
+        end
+        let(:host_runtime_info) { instance_double(VimSdk::Vim::Host::RuntimeInfo, in_maintenance_mode: false) }
+        let(:host_system) {instance_double(VimSdk::Vim::HostSystem, runtime: host_runtime_info)}
+        let(:datastore_host_mount) { [instance_double('VimSdk::Vim::Datastore::HostMount', key: host_system)]}
+        let(:cluster1_mob) { instance_double(VimSdk::Vim::ClusterComputeResource, host: [host_system]) }
+
+        it 'filters non-matching datastore before processing available datastores' do
+          disks = [
+            instance_double(VSphereCloud::DiskConfig,
+                            size: 0,
+                            target_datastore_pattern: 'target-ds',
+                            existing_datastore_name: nil
+            )
+          ]
+
+          picker = ClusterPicker.new(0, 0)
+          picker.update(available_clusters)
+          expect(not_matching_ds).to_not receive(:accessible_from?).with(cluster_1)
+          placement_option = picker.best_cluster_placement(req_memory: 1024, disk_configurations: disks)
+          expect(placement_option).to eq({
+                                           'cluster-1' => {
+                                             disks[0] => 'target-ds',
+                                           }
+                                         })
+        end
+      end
       context 'when one cluster fits' do
         before do
           allow(target_ds.mob).to receive_message_chain('summary.maintenance_mode').and_return("normal")

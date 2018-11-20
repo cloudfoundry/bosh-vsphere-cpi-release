@@ -18,13 +18,18 @@ module VSphereCloud
         raise Bosh::Clouds::CloudError,
         "No valid placement found for requested memory: #{req_memory}\n\n#{pretty_print_cluster_memory}"
       end
-
+      target_datastore_patterns = disk_configurations.map(&:target_datastore_pattern)
+      union_regexp = Regexp.new("^(#{target_datastore_patterns.map { |target_pattern|
+        Regexp.new(target_pattern)
+      }.join('|')})$")
       placement_options = clusters.map do |cluster|
         datastore_picker = DatastorePicker.new(@disk_headroom)
 
         # cluster.accessible_datastores gives list of all datastores.
         # Select only those datastores that can be accessed by active hosts in the cluster
         accessible_datastores = cluster.accessible_datastores.select do |_, ds_resource|
+          ds_resource.name =~ union_regexp
+        end.select do |_, ds_resource|
           ds_resource.accessible_from?(cluster)
         end
         datastore_picker.update(accessible_datastores)
