@@ -19,9 +19,7 @@ module VSphereCloud
         "No valid placement found for requested memory: #{req_memory}\n\n#{pretty_print_cluster_memory}"
       end
       target_datastore_patterns = disk_configurations.map(&:target_datastore_pattern)
-      union_regexp = Regexp.new("^(#{target_datastore_patterns.map { |target_pattern|
-        Regexp.new(target_pattern)
-      }.join('|')})$")
+      union_regexp = Regexp.union(target_datastore_patterns.map { |target_pattern| Regexp.new(target_pattern) })
       placement_options = clusters.map do |cluster|
         datastore_picker = DatastorePicker.new(@disk_headroom)
 

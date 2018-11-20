@@ -23,7 +23,7 @@ module VSphereCloud
         end
         let(:not_matching_ds) do
           fake_datastore(
-            'not-matching-target-ds',
+            'not-matching-ds',
             512,
             instance_double('VimSdk::Vim::Datastore', host: datastore_host_mount),
           )
