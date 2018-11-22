@@ -1,0 +1,30 @@
+name: bosh-vsphere-cpi
+version: 51.0.3
+commit_hash: 55bba96e
+uncommitted_changes: false
+jobs:
+- name: vsphere_cpi
+  version: e0d9a784159030b0f3165f87b3087a66cc57eb41
+  fingerprint: e0d9a784159030b0f3165f87b3087a66cc57eb41
+  sha1: 34dd81f4f8dc27e197a6b9fdddfdbc0b34f884af
+packages:
+- name: iso9660wrap
+  version: d9b2e4f6aca111182365d07c0a7ebf92b5c7507f
+  fingerprint: d9b2e4f6aca111182365d07c0a7ebf92b5c7507f
+  sha1: 448b9f372f3efa1ddfd8428dea4ca368e19fe73c
+  dependencies: []
+- name: ruby-2.4-r4
+  version: 0cdc60ed7fdb326e605479e9275346200af30a25
+  fingerprint: 0cdc60ed7fdb326e605479e9275346200af30a25
+  sha1: 3f1809b9d7e326d8a701de516fb51ea4245913c6
+  dependencies: []
+- name: vsphere_cpi
+  version: 09fc9eabc381d90c3d383c95b07b5067e4c18b8b
+  fingerprint: 09fc9eabc381d90c3d383c95b07b5067e4c18b8b
+  sha1: c02e68e04623d3aa677533e76eef9604df0b80dc
+  dependencies:
+  - ruby-2.4-r4
+license:
+  version: a1bb90f042781e6ec397504f9aa7511dd2993e65
+  fingerprint: a1bb90f042781e6ec397504f9aa7511dd2993e65
+  sha1: 078245bc3f8c353a9afdcd9fc4a5157e0028ceab
