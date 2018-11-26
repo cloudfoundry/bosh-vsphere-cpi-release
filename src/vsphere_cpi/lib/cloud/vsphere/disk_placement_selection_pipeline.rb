@@ -81,7 +81,7 @@ module VSphereCloud
 
     # Score on basis on free space with a bit of randomness
     with_scorer do |p1, p2|
-      StableRandom[p1] * p1.free_space <=> StableRandom[p2] * p2.free_space
+      -(StableRandom[p1] * p1.free_space <=> StableRandom[p2] * p2.free_space)
     end
 
     def initialize(*args)

@@ -54,11 +54,21 @@ describe VSphereCloud::DiskPlacementSelectionPipeline do
     end
   end
 
-
   context 'when both datastore satisfy all criteria' do
-    it 'returns both the datastores' do
-      filtered_placements = subject.map {|x| x}
-      expect(filtered_placements).to match_array([ds_1, ds_2])
+    context 'when the randomization is set to zero' do
+      # Mocking out stable random to a constant 1 to ensure algorithm scores
+      # datastores in descending order of free space.
+      module VSphereCloud::SelectionPipeline::StableRandom
+        def self.[](object)
+          1
+        end
+      end
+      let(:ds_1) { fake_datastore('fake-1', free_space: 4096) }
+      let(:ds_2) { fake_datastore('fake-2', free_space: 8192) }
+      it 'returns the array of datastores sorted in reverse order of available free space' do
+        filtered_placements = subject.map {|x| x}
+        expect(filtered_placements).to eq([ds_2, ds_1])
+      end
     end
   end
 end
