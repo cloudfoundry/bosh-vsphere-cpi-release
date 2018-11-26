@@ -34,6 +34,8 @@ properties:
   vcenter.upgrade_hw_version:
     description: Upgrades virtual machines to latest virtual hardware version supported on the ESXi host.
     default: false
+  vcenter.vm_encryption_policy_name:
+    description: Name of Encryption Policy which will be applied to VM and ephemeral disk.
   vcenter.connection_options.ca_cert:
     description: All required custom CA certificates
     example:

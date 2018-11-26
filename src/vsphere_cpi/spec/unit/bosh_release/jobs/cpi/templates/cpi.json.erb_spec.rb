@@ -24,6 +24,7 @@ describe 'cpi.json.erb' do
           'password' => 'vcenter-password',
           'enable_auto_anti_affinity_drs_rules' => true,
           'upgrade_hw_version' => true,
+          'vm_encryption_policy_name' => 'VM Encryption Policy',
           'http_logging' => true,
           'datacenters' => [
             {
@@ -95,6 +96,7 @@ describe 'cpi.json.erb' do
               'enable_auto_anti_affinity_drs_rules' => true,
               'upgrade_hw_version' => true,
               'http_logging' => true,
+              'vm_encryption_policy_name' => 'VM Encryption Policy'
             }
           ],
         }
