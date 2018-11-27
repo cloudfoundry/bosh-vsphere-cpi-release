@@ -230,7 +230,7 @@ module VSphereCloud
     private
 
     def pin_vm(vm_resource, cluster_resource)
-      DrsLock.new(VMAttributeManager.new(@client.service_content.custom_fields_manager), 'PIN_VM_LOCK').with_drs_lock do
+      DrsLock.new('PIN_VM_LOCK').with_drs_lock do
         drs_vm_spec_exists = !cluster_resource.mob.configuration_ex.drs_vm_config.empty?
 
         drs_vm_spec = VimSdk::Vim::Cluster::DrsVmConfigSpec.new

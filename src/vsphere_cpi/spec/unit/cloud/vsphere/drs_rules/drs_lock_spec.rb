@@ -2,8 +2,8 @@ require 'spec_helper'
 require 'timecop'
 
 describe VSphereCloud::DrsLock, fake_logger: true do
-  subject(:drs_lock) { described_class.new(vm_attribute_manager) }
-  let(:vm_attribute_manager) { instance_double('VSphereCloud::VMAttributeManager') }
+  subject(:drs_lock) { described_class.new }
+  let(:vm_attribute_manager) { VSphereCloud::VMAttributeManager }
 
   context 'when drs lock exists' do
     context 'when lock is released within timeout' do
@@ -67,7 +67,7 @@ describe VSphereCloud::DrsLock, fake_logger: true do
     expect(vm_attribute_manager).to receive(:create).with('custom_drs_lock')
     expect(vm_attribute_manager).to receive(:delete).with('custom_drs_lock')
 
-    custom_drs_lock = described_class.new(vm_attribute_manager, 'custom_drs_lock')
+    custom_drs_lock = described_class.new('custom_drs_lock')
     custom_drs_lock.with_drs_lock {}
   end
 end

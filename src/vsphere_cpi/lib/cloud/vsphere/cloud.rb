@@ -86,6 +86,8 @@ module VSphereCloud
         file_provider: @file_provider,
       )
 
+      VMAttributeManager.init(@client.service_content.custom_fields_manager)
+
       if @config.nsxt_enabled?
         nsxt_client = NSXTApiClientBuilder::build_api_client(@config.nsxt, logger)
 

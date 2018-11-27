@@ -13,16 +13,12 @@ module VSphereCloud
       @client = client
       @cloud_searcher = CloudSearcher.new(@client.service_content)
       @datacenter_cluster = datacenter_cluster
-
-      @vm_attribute_manager = VMAttributeManager.new(
-        client.service_content.custom_fields_manager
-      )
     end
 
     def add_vm(vm)
       tag_vm(vm)
 
-      DrsLock.new(@vm_attribute_manager).with_drs_lock do
+      DrsLock.new.with_drs_lock do
         rule = find_rule
         if rule
           update_rule(rule.key)
@@ -51,10 +47,10 @@ module VSphereCloud
     private
 
     def tag_vm(vm)
-      custom_attribute = @vm_attribute_manager.find_by_name(CUSTOM_ATTRIBUTE_NAME)
+      custom_attribute = VMAttributeManager.find_by_name(CUSTOM_ATTRIBUTE_NAME)
       unless custom_attribute
         logger.debug('Creating DRS rule attribute')
-        @vm_attribute_manager.create(CUSTOM_ATTRIBUTE_NAME)
+        VMAttributeManager.create(CUSTOM_ATTRIBUTE_NAME)
       end
 
       logger.debug("Updating DRS rule attribute value: #{@rule_name}, vm: #{vm.name}")
@@ -121,7 +117,7 @@ module VSphereCloud
     end
 
     def tagged_vms
-      custom_attribute = @vm_attribute_manager.find_by_name(CUSTOM_ATTRIBUTE_NAME)
+      custom_attribute = VMAttributeManager.find_by_name(CUSTOM_ATTRIBUTE_NAME)
       return [] unless custom_attribute
 
       @cloud_searcher.get_managed_objects_with_attribute(
