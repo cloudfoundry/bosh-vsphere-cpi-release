@@ -1,10 +1,12 @@
 require 'cloud/vsphere/logger'
 
 module VSphereCloud
-  class VMAttributeManager
+  module VMAttributeManager
     include Logger
 
-    def initialize(custom_fields_manager)
+    module_function
+
+    def init(custom_fields_manager)
       @custom_fields_manager = custom_fields_manager
     end
 
@@ -17,8 +19,6 @@ module VSphereCloud
       @custom_fields_manager.add_field_definition(
         name,
         VimSdk::Vim::VirtualMachine,
-        policy,
-        policy
       )
     end
 
@@ -26,18 +26,6 @@ module VSphereCloud
       logger.debug("Deleting DRS rule attribute: #{name}")
       custom_field = find_by_name(name)
       @custom_fields_manager.remove_field_definition(custom_field.key) if custom_field
-    end
-
-    private
-
-    def policy
-      policy = VimSdk::Vim::PrivilegePolicyDef.new
-      policy.create_privilege = 'InventoryService.Tagging.CreateTag'
-      policy.delete_privilege = 'InventoryService.Tagging.DeleteTag'
-      policy.read_privilege = 'System.Read'
-      policy.update_privilege = 'InventoryService.Tagging.EditTag'
-
-      policy
     end
   end
 end

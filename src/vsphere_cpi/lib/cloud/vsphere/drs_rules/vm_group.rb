@@ -8,16 +8,13 @@ module VSphereCloud
     def initialize(client, cluster)
       @client = client
       @cluster = cluster
-      @vm_attribute_manager = VMAttributeManager.new(
-        client.service_content.custom_fields_manager
-      )
     end
 
     # Adds VM to given VM Group
     # @param [Vim::VirtualMachine] vm
     # @params [String] vm_group_name
     def add_vm_to_vm_group(vm, vm_group_name)
-      DrsLock.new(@vm_attribute_manager, DRS_LOCK_VMGROUP).with_drs_lock do
+      DrsLock.new(DRS_LOCK_VMGROUP).with_drs_lock do
         vm_group = find_vm_group(vm_group_name)
         logger.debug("VmGroup: #{vm_group_name} already exists") unless vm_group.nil?
 
@@ -42,8 +39,7 @@ module VSphereCloud
     # @param [String[]] vm_group_names - List of VM Groups
     def delete_vm_groups(vm_group_names)
       return if vm_group_names.empty?
-      vm_attribute_manager = VMAttributeManager.new(@client.service_content.custom_fields_manager)
-      DrsLock.new(vm_attribute_manager, DRS_LOCK_VMGROUP).with_drs_lock do
+      DrsLock.new(DRS_LOCK_VMGROUP ).with_drs_lock do
         empty_vm_groups = @cluster.configuration_ex.group.select do |group|
           group.is_a?(VimSdk::Vim::Cluster::VmGroup) && vm_group_names.include?(group.name) && group.vm.empty?
         end

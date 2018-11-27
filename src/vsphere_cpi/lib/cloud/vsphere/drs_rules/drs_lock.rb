@@ -10,8 +10,7 @@ module VSphereCloud
     class LockError < RuntimeError; end
     class TimeoutError < RuntimeError; end
 
-    def initialize(vm_attribute_manager, drs_lock_name=DRS_LOCK_NAME)
-      @vm_attribute_manager = vm_attribute_manager
+    def initialize(drs_lock_name=DRS_LOCK_NAME)
       @drs_lock_name = drs_lock_name
     end
 
@@ -33,7 +32,7 @@ module VSphereCloud
       # vm_attribute_manager.create will raise DuplicateName exception if that field already exists
       # Retrying until the call succeeds ensures that only one CPI process is modifying a DRS Group at a time
       retry_with_timeout do
-        @vm_attribute_manager.create(@drs_lock_name)
+        VMAttributeManager.create(@drs_lock_name)
       end
     rescue TimeoutError
       logger.debug("Failed to acquire drs lock: #{@drs_lock_name}")
@@ -41,7 +40,7 @@ module VSphereCloud
     end
 
     def release_lock
-      @vm_attribute_manager.delete(@drs_lock_name)
+      VMAttributeManager.delete(@drs_lock_name)
     end
 
     def retry_with_timeout

@@ -1,9 +1,10 @@
 require 'spec_helper'
 
 describe VSphereCloud::VMAttributeManager, fake_logger: true do
-  subject(:vm_attribute_manager) { described_class.new(custom_fields_manager) }
+  subject(:vm_attribute_manager) { VSphereCloud::VMAttributeManager }
   let(:custom_fields_manager) { instance_double('VimSdk::Vim::CustomFieldsManager') }
   before do
+    vm_attribute_manager.init(custom_fields_manager)
     allow(custom_fields_manager).to receive(:field).and_return(
       [
         field_matching_field,
@@ -25,13 +26,6 @@ describe VSphereCloud::VMAttributeManager, fake_logger: true do
       expect(custom_fields_manager).to receive(:add_field_definition) do |name, type, field_definition_policy, field_policy|
         expect(name).to eq('fake-field-name')
         expect(type).to be(VimSdk::Vim::VirtualMachine)
-
-        [field_definition_policy, field_policy].each do |policy|
-          expect(policy.create_privilege).to eq('InventoryService.Tagging.CreateTag')
-          expect(policy.delete_privilege).to eq('InventoryService.Tagging.DeleteTag')
-          expect(policy.read_privilege).to eq('System.Read')
-          expect(policy.update_privilege).to eq('InventoryService.Tagging.EditTag')
-        end
       end
 
       vm_attribute_manager.create('fake-field-name')

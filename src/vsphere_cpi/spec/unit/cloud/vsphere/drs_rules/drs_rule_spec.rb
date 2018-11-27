@@ -42,9 +42,8 @@ describe VSphereCloud::DrsRule, fake_logger: true do
   let(:lock_key) { 42 }
   let(:attribute_key) { 106 }
 
-  let(:vm_attribute_manager) { instance_double('VSphereCloud::VMAttributeManager') }
+  let(:vm_attribute_manager) { VSphereCloud::VMAttributeManager }
   before do
-    allow(VSphereCloud::VMAttributeManager).to receive(:new).and_return(vm_attribute_manager)
     allow(vm_attribute_manager).to receive(:find_by_name).and_return(custom_attribute)
   end
   let(:custom_attribute) { double(:custom_attribute, key: attribute_key) }

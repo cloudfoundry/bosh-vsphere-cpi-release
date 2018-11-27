@@ -4,7 +4,7 @@ require 'ostruct'
 module VSphereCloud
   describe Cloud, fake_logger: true do
     subject(:vsphere_cloud) { Cloud.new(config) }
-
+    let(:custom_fields_manager) { instance_double('VimSdk::Vim::CustomFieldsManager') }
     let(:config) { { 'vcenters' => [fake: 'config'] } }
     let(:cloud_config) do
       instance_double(
@@ -23,6 +23,7 @@ module VSphereCloud
         nsxt: nsxt
       ).as_null_object
     end
+    let(:custom_fields_manager) { instance_double('VimSdk::Vim::CustomFieldsManager') }
     let(:nsxt_enabled) { false }
     let(:nsxt) { instance_double(VSphereCloud::NSXTConfig, default_vif_type: 'vif_type')}
     let(:default_disk_type) { 'preallocated' }
@@ -33,6 +34,7 @@ module VSphereCloud
       instance_double('VimSdk::Vim::ServiceInstanceContent',
         virtual_disk_manager: virtual_disk_manager,
         setting: option_manager,
+        custom_fields_manager: custom_fields_manager
       )
     end
     let(:virtual_disk_manager) { instance_double('VimSdk::Vim::VirtualDiskManager') }
@@ -60,7 +62,6 @@ module VSphereCloud
                                   )
                                   .and_return(vcenter_client)
       end
-
       allow_any_instance_of(Cloud).to receive(:at_exit)
     end
 
