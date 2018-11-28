@@ -13,7 +13,7 @@ describe VSphereCloud::VMProvider, fake_logger: true do
 
     context 'when vm can not be found in any datacenter' do
       before do
-        allow(client).to receive(:find_vm_by_name).with('datacenter-mob', 'fake-vm-cid').and_return(nil)
+        allow(client).to receive(:find_vm_by_uuid).with('datacenter-mob', 'fake-vm-cid').and_return(nil)
       end
 
       it 'raises VMNotFound error' do
@@ -26,7 +26,7 @@ describe VSphereCloud::VMProvider, fake_logger: true do
     context 'when vm is found in one of datacenter' do
       let(:vm_mob) { double(:vm) }
       before do
-        allow(client).to receive(:find_vm_by_name).with('datacenter-mob', 'fake-vm-cid').and_return(vm_mob)
+        allow(client).to receive(:find_vm_by_uuid).with('datacenter-mob', 'fake-vm-cid').and_return(vm_mob)
       end
 
       it 'returns vm' do

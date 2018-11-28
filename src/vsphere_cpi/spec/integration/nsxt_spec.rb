@@ -183,9 +183,10 @@ describe 'CPI', nsx_transformers: true do
         context "but none of VM's networks are NSX-T Opaque Network (nsx.LogicalSwitch)" do
           it 'does NOT add VM to NSGroups' do
             simple_vm_lifecycle(cpi, @vlan, vm_type) do |vm_id|
+              vm = cpi.vm_provider.find(vm_id)
               retryer do
                 fabric_svc = NSXT::FabricApi.new(nsxt)
-                nsxt_vms = fabric_svc.list_virtual_machines(:display_name => vm_id).results
+                nsxt_vms = fabric_svc.list_virtual_machines(:display_name => vm.name).results
                 raise VSphereCloud::VirtualMachineNotFound.new(vm_id) if nsxt_vms.empty?
                 raise VSphereCloud::MultipleVirtualMachinesFound.new(vm_id, nsxt_vms.length) if nsxt_vms.length > 1
 
@@ -410,11 +411,13 @@ describe 'CPI', nsx_transformers: true do
   private
 
   def verify_ports(vm_id, expected_vif_number = 2)
+    vm = cpi.vm_provider.find(vm_id)
+    vm_name = vm.name
     retryer do
       fabric_svc = NSXT::FabricApi.new(nsxt)
-      nsxt_vms = fabric_svc.list_virtual_machines(:display_name => vm_id).results
-      raise VSphereCloud::VirtualMachineNotFound.new(vm_id) if nsxt_vms.empty?
-      raise VSphereCloud::MultipleVirtualMachinesFound.new(vm_id, nsxt_vms.length) if nsxt_vms.length > 1
+      nsxt_vms = fabric_svc.list_virtual_machines(:display_name => vm_name).results
+      raise VSphereCloud::VirtualMachineNotFound.new(vm_name) if nsxt_vms.empty?
+      raise VSphereCloud::MultipleVirtualMachinesFound.new(vm_name, nsxt_vms.length) if nsxt_vms.length > 1
 
       expect(nsxt_vms.length).to eq(1)
       expect(nsxt_vms.first.external_id).not_to be_nil

@@ -50,6 +50,10 @@ module VSphereCloud
         @mob.__mo_id__
       end
 
+      def name
+        @mob.name
+      end
+
       def datacenter_mob
         @client.find_parent(@mob, Vim::Datacenter)
       end

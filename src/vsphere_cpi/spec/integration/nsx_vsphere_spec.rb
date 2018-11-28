@@ -83,22 +83,25 @@ describe 'NSX for vsphere integration', nsx_vsphere: true do
 
     it 'creates the Security Group' do
       vm_lifecycle(cpi, [], vm_type, network_spec, @stemcell_id) do |vm_id|
+        vm = cpi.vm_provider.find(vm_id)
         vm_ids = cpi.nsx.get_vms_in_security_group(security_group)
-        expect(vm_ids).to eq([vm_id])
+        expect(vm_ids).to eq([vm.name])
       end
     end
 
     it 'adds a second VM to the Security Group' do
       begin
         vm_id1 = create_vm_with_vm_type(cpi, vm_type, @stemcell_id)
+        vm1 = cpi.vm_provider.find(vm_id1)
         vm_ids = cpi.nsx.get_vms_in_security_group(security_group)
         expect(vm_ids).to contain_exactly(vm_id1)
 
         # avoid IP collision
         network_spec['static']['ip'] = "169.254.0.#{rand(4..254)}"
         vm_id2 = create_vm_with_vm_type(cpi, vm_type, @stemcell_id)
+        vm2 = cpi.vm_provider.find(vm_id2)
         vm_ids = cpi.nsx.get_vms_in_security_group(security_group)
-        expect(vm_ids).to contain_exactly(vm_id1, vm_id2)
+        expect(vm_ids).to contain_exactly(vm1.name, vm2.name)
       ensure
         delete_vm(cpi, vm_id1)
         delete_vm(cpi, vm_id2)
@@ -119,8 +122,9 @@ describe 'NSX for vsphere integration', nsx_vsphere: true do
 
       it 'creates a Security Group for each BOSH group' do
         vm_lifecycle(cpi, [], vm_type, network_spec, @stemcell_id, environment) do |vm_id|
+          vm = cpi.vm_provider.find(vm_id)
           vm_ids = cpi.nsx.get_vms_in_security_group(security_group)
-          expect(vm_ids).to eq([vm_id])
+          expect(vm_ids).to eq([vm.name])
         end
       end
 
@@ -147,8 +151,9 @@ describe 'NSX for vsphere integration', nsx_vsphere: true do
 
         it 'adds the VM to the Security Group' do
           vm_lifecycle(cpi, [], vm_type, network_spec, @stemcell_id, environment) do |vm_id|
+            vm = cpi.vm_provider.find(vm_id)
             vm_ids = cpi.nsx.get_vms_in_security_group(security_group)
-            expect(vm_ids).to eq([vm_id])
+            expect(vm_ids).to eq([vm.name])
           end
         end
       end
@@ -206,8 +211,9 @@ describe 'NSX for vsphere integration', nsx_vsphere: true do
 
     it 'creates a Security Group for the NSX load balancer and pool' do
       vm_lifecycle(cpi, [], vm_type, network_spec, @stemcell_id) do |vm_id|
+        vm = cpi.vm_provider.find(vm_id)
         vm_ids = cpi.nsx.get_vms_in_security_group(security_group)
-        expect(vm_ids).to include(vm_id)
+        expect(vm_ids).to include(vm.name)
 
         members = cpi.nsx.get_pool_members(@nsx_lb_name, @nsx_pool_name)
         expect(members).to contain_exactly(

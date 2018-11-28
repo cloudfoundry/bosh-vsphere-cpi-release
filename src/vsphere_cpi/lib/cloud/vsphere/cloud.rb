@@ -137,6 +137,7 @@ module VSphereCloud
       false
     end
 
+    # returns stemcell name
     def create_stemcell(image, _)
       with_thread_name("create_stemcell(#{image}, _)") do
         # Add cpi telemetry advanced config to vc in a separate thread
@@ -267,6 +268,7 @@ module VSphereCloud
       end
     end
 
+    # returns vm.instance_uuid
     def create_vm(agent_id, stemcell_cid, vm_type, networks_spec, existing_disk_cids = [], environment = nil)
       with_thread_name("create_vm(#{agent_id}, ...)") do
         verify_props('VM', [ 'cpu', 'ram', 'disk' ], vm_type)
@@ -484,6 +486,8 @@ module VSphereCloud
         metadata.each do |name, value|
           client.set_custom_field(vm.mob, name, value)
         end
+        new_name = "#{metadata['deployment']}-#{metadata['instance_group']}-#{metadata['index']}"
+        client.rename_vm(vm.mob, new_name)
         @nsxt_provider.update_vm_metadata_on_logical_ports(vm, metadata) if @config.nsxt_enabled?
       end
     end
@@ -703,7 +707,7 @@ module VSphereCloud
       end
       mobs = subfolders.map { |folder| folder.child_entity }.flatten
       mobs.map do |mob|
-        VSphereCloud::Resources::VM.new(mob.name, mob, @client)
+        VSphereCloud::Resources::VM.new(mob.config.instance_uuid, mob, @client)
       end
     end
 
@@ -811,13 +815,13 @@ module VSphereCloud
     def add_disk_to_agent_env(vm, director_disk_cid, device_unit_number)
       env = @agent_env.get_current_env(vm.mob, @datacenter.name)
       env['disks']['persistent'][director_disk_cid.raw] = device_unit_number.to_s
-      location = { datacenter: @datacenter.name, datastore: get_vm_env_datastore(vm), vm: vm.cid }
+      location = { datacenter: @datacenter.name, datastore: get_vm_env_datastore(vm), vm: vm.name }
       @agent_env.set_env(vm.mob, location, env)
     end
 
     def delete_disk_from_agent_env(vm, director_disk_cid)
       env = @agent_env.get_current_env(vm.mob, @datacenter.name)
-      location = { datacenter: @datacenter.name, datastore: get_vm_env_datastore(vm), vm: vm.cid }
+      location = { datacenter: @datacenter.name, datastore: get_vm_env_datastore(vm), vm: vm.name }
 
       if env['disks']['persistent'][director_disk_cid.raw]
         env['disks']['persistent'].delete(director_disk_cid.raw)

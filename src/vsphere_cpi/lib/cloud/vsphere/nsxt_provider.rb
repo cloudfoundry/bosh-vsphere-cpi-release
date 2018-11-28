@@ -308,7 +308,7 @@ module VSphereCloud
         on: [VirtualMachineNotFound, MultipleVirtualMachinesFound, VIFNotFound, LogicalPortNotFound]
       ).retryer do |i|
         logger.info("Searching for LogicalPorts for vm '#{vm.cid}'")
-        virtual_machines = fabric_svc.list_virtual_machines(display_name: vm.cid).results
+        virtual_machines = fabric_svc.list_virtual_machines(display_name: vm.name).results
         raise VirtualMachineNotFound.new(vm.cid) if virtual_machines.empty?
         raise MultipleVirtualMachinesFound.new(vm.cid, virtual_machines.length) if virtual_machines.length > 1
         external_id = virtual_machines.first.external_id

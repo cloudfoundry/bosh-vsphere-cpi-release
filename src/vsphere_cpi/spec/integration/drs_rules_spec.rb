@@ -107,8 +107,8 @@ describe 'DRS rules', drs: true do
             drs_rule = drs_rules.find { |rule| rule.name == "some-group" }
             expect(drs_rule).to_not be_nil
             expect(drs_rule.vm.length).to eq(2)
-            drs_vm_names = drs_rule.vm.map { |vm_mob| vm_mob.name }
-            expect(drs_vm_names).to include(first_vm_id, second_vm_id)
+            drs_vm_ids = drs_rule.vm.map { |vm_mob| vm_mob.config.instance_uuid }
+            expect(drs_vm_ids).to include(first_vm_id, second_vm_id)
 
           ensure
             delete_vm(one_cluster_cpi, first_vm_id)
@@ -164,8 +164,8 @@ describe 'DRS rules', drs: true do
             drs_rule = drs_rules.find { |rule| rule.name == drs_rule_name }
             expect(drs_rule).to_not be_nil
             expect(drs_rule.vm.length).to eq(2)
-            drs_vm_names = drs_rule.vm.map { |vm_mob| vm_mob.name }
-            expect(drs_vm_names).to include(first_vm_id, second_vm_id)
+            drs_vm_ids = drs_rule.vm.map { |vm_mob| vm_mob.config.instance_uuid }
+            expect(drs_vm_ids).to include(first_vm_id, second_vm_id)
 
           ensure
             delete_vm(one_cluster_cpi, first_vm_id)
@@ -280,8 +280,8 @@ describe 'DRS rules', drs: true do
             drs_rule = drs_rules.find { |rule| rule.name == drs_rule_name}
             expect(drs_rule).to_not be_nil
             expect(drs_rule.vm.length).to eq(number_of_hosts)
-            drs_vm_names = drs_rule.vm.map { |vm_mob| vm_mob.name }
-            expect(vms - drs_vm_names).to be_empty
+            drs_vm_ids = drs_rule.vm.map { |vm_mob| vm_mob.config.instance_uuid }
+            expect(vms - drs_vm_ids).to be_empty
 
             expect do
               failed_vm = one_cluster_cpi.create_vm(

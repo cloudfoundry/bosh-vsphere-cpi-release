@@ -65,6 +65,12 @@ module VSphereCloud
       end
     end
 
+    def rename_vm(vm, new_name)
+      wait_for_task do
+        vm.rename(new_name)
+      end
+    end
+
     def delete_vm(vm)
       wait_for_task do
         vm.destroy
@@ -183,6 +189,10 @@ module VSphereCloud
       @cloud_searcher.find_resource_by_property_path(datacenter_mob, 'VirtualMachine', 'name') do |name|
         name == vm_name
       end
+    end
+
+    def find_vm_by_uuid(datacenter_mob, vm_id)
+      @service_content.search_index.find_by_uuid(datacenter_mob, vm_id, true, true)
     end
 
     def find_vm_by_disk_cid(datacenter_mob, disk_cid)
