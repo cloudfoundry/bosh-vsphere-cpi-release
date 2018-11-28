@@ -154,7 +154,7 @@ module VSphereCloud
         logger.debug("Disk #{disk_cid} not found in all datastores, searching VM attachments")
         vm_mob = @client.find_vm_by_disk_cid(mob, disk_cid)
         unless vm_mob.nil?
-          vm = Resources::VM.new(vm_mob.name, vm_mob, @client)
+          vm = Resources::VM.new(vm_mob.config.instance_uuid, vm_mob, @client)
           disk_path = vm.disk_path_by_cid(disk_cid)
           unless disk_path.nil?
             datastore_name, disk_folder, disk_file = /\[(.+)\] (.+)\/(.+)\.vmdk/.match(disk_path)[1..3]

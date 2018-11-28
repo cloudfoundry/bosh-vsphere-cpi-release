@@ -353,13 +353,13 @@ module VSphereCloud
     describe '#find_vm_by_name' do
       before do
         allow(cloud_searcher).to receive(:find_resource_by_property_path)
-          .with('fake-datacenter-mob', 'VirtualMachine', 'name') do |&block|
-            result = nil
-            if block.call('foo')
-              result = 'foo_vm'
-            end
-            result
+                                   .with('fake-datacenter-mob', 'VirtualMachine', 'name') do |&block|
+          result = nil
+          if block.call('foo')
+            result = 'foo_vm'
           end
+          result
+        end
       end
       context 'when a VM with the name vm_name exists in the given datacenter' do
         it 'returns the VM' do

@@ -430,11 +430,12 @@ describe VSphereCloud::Resources::Datacenter, fake_logger: true do
 
       context 'and VM with disk is found' do
         let(:vm) { instance_double(VSphereCloud::Resources::VM) }
-        let(:vm_mob) { instance_double(VimSdk::Vim::VirtualMachine, name: 'fake-vm-name') }
+        let(:vm_mob) { instance_double(VimSdk::Vim::VirtualMachine, name: 'fake-vm-name', config: vm_config) }
+        let(:vm_config) { instance_double(VimSdk::Vim::Vm::ConfigInfo, instance_uuid: '1234567') }
 
         before do
           expect(client).to receive(:find_vm_by_disk_cid).with(datacenter_mob, 'disk-cid').and_return(vm_mob)
-          expect(VSphereCloud::Resources::VM).to receive(:new).with('fake-vm-name', vm_mob, client).and_return(vm)
+          expect(VSphereCloud::Resources::VM).to receive(:new).with('1234567', vm_mob, client).and_return(vm)
         end
 
         # unexpected event has destroyed the disk

@@ -41,7 +41,7 @@ describe VSphereCloud::NSXTProvider, fake_logger: true do
     )
   end
   let(:nics) { [opaque_non_nsxt, network_backing, opaque_nsxt] }
-  let(:vm) { instance_double(VSphereCloud::Resources::VM, cid: 'fake-vm-id', nics: nics) }
+  let(:vm) { instance_double(VSphereCloud::Resources::VM, cid: '1234567', nics: nics, name: 'fake-vm-id') }
   let(:virtual_machine) do
     NSXT::VirtualMachine.new(external_id: 'fake-external-id')
   end
@@ -364,7 +364,7 @@ describe VSphereCloud::NSXTProvider, fake_logger: true do
         nsxt_provider.instance_variable_set('@sleep_time', 0.0)
         allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:fabric_svc).and_return(fabric_svc)
         allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:logical_switching_svc).and_return(logical_switching_svc)
-        expect(fabric_svc).to receive(:list_virtual_machines).with(display_name: vm.cid)
+        expect(fabric_svc).to receive(:list_virtual_machines).with(display_name: vm.name)
                                 .and_return(NSXT::VirtualMachineListResult.new(:results => []),
                                             NSXT::VirtualMachineListResult.new(:results => [virtual_machine]),
                                             NSXT::VirtualMachineListResult.new(:results => [virtual_machine]),
@@ -395,7 +395,7 @@ describe VSphereCloud::NSXTProvider, fake_logger: true do
       context 'when the virtual machine cannot be found in NSX-T' do
         before do
           allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:fabric_svc).and_return(fabric_svc)
-          expect(fabric_svc).to receive(:list_virtual_machines).with(display_name: vm.cid)
+          expect(fabric_svc).to receive(:list_virtual_machines).with(display_name: vm.name)
                                   .and_return(NSXT::VirtualMachineListResult.new(:results => []))
         end
 
@@ -409,7 +409,7 @@ describe VSphereCloud::NSXTProvider, fake_logger: true do
       context 'when multiple virtual machines are found with same cid' do
         before do
           allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:fabric_svc).and_return(fabric_svc)
-          expect(fabric_svc).to receive(:list_virtual_machines).with(display_name: vm.cid)
+          expect(fabric_svc).to receive(:list_virtual_machines).with(display_name: vm.name)
                                   .and_return(NSXT::VirtualMachineListResult.new(:results => [virtual_machine, virtual_machine]))
         end
 
@@ -424,7 +424,7 @@ describe VSphereCloud::NSXTProvider, fake_logger: true do
         before do
           allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:fabric_svc).and_return(fabric_svc)
           allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:logical_switching_svc).and_return(logical_switching_svc)
-          expect(fabric_svc).to receive(:list_virtual_machines).with(display_name: vm.cid)
+          expect(fabric_svc).to receive(:list_virtual_machines).with(display_name: vm.name)
                                   .and_return(NSXT::VirtualMachineListResult.new(:results => [virtual_machine]))
           expect(fabric_svc).to receive(:list_vifs).with(owner_vm_id: virtual_machine.external_id)
                                   .and_return(NSXT::VirtualNetworkInterfaceListResult.new(:results => [vif_without_lport_attachment]))
@@ -442,7 +442,7 @@ describe VSphereCloud::NSXTProvider, fake_logger: true do
         before do
           allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:fabric_svc).and_return(fabric_svc)
           allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:logical_switching_svc).and_return(logical_switching_svc)
-          expect(fabric_svc).to receive(:list_virtual_machines).with(display_name: vm.cid)
+          expect(fabric_svc).to receive(:list_virtual_machines).with(display_name: vm.name)
                                   .and_return(NSXT::VirtualMachineListResult.new(:results => [virtual_machine]))
           expect(fabric_svc).to receive(:list_vifs).with(owner_vm_id: virtual_machine.external_id)
                                   .and_return(NSXT::VirtualNetworkInterfaceListResult.new(:results => [vif]))
@@ -461,7 +461,7 @@ describe VSphereCloud::NSXTProvider, fake_logger: true do
     it 'returns array of logical ports' do
       allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:fabric_svc).and_return(fabric_svc)
       allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:logical_switching_svc).and_return(logical_switching_svc)
-      expect(fabric_svc).to receive(:list_virtual_machines).with(display_name: vm.cid)
+      expect(fabric_svc).to receive(:list_virtual_machines).with(display_name: vm.name)
                               .and_return(NSXT::VirtualMachineListResult.new(:results => [virtual_machine]))
       expect(fabric_svc).to receive(:list_vifs).with(owner_vm_id: virtual_machine.external_id)
                               .and_return(NSXT::VirtualNetworkInterfaceListResult.new(:results => [vif, vif_without_lport_attachment]))
