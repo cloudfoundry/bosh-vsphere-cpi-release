@@ -209,7 +209,7 @@ module VSphereCloud
           created_vm.power_on
           # Pin this VM to the host by disabling DRS actions for the VM
           # if pin vm is enabled in cloud configuration for the VM.
-          pin_vm(created_vm, cluster) if vm_config.vm_type.pin_vm
+          disable_drs(created_vm, cluster) if vm_config.vm_type.disable_drs
         rescue => e
           e.vm_cid = vm_config.name if e.instance_of?(Cloud::NetworkException)
           logger.info("#{e} - #{e.backtrace.join("\n")}")
@@ -229,8 +229,8 @@ module VSphereCloud
 
     private
 
-    def pin_vm(vm_resource, cluster_resource)
-      DrsLock.new('PIN_VM_LOCK').with_drs_lock do
+    def disable_drs(vm_resource, cluster_resource)
+      DrsLock.new('DISABLE_DRS_LOCK').with_drs_lock do
         drs_vm_spec_exists = !cluster_resource.mob.configuration_ex.drs_vm_config.empty?
 
         drs_vm_spec = VimSdk::Vim::Cluster::DrsVmConfigSpec.new
