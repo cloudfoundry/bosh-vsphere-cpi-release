@@ -33,13 +33,13 @@ module VSphereCloud::Resources
         'resourcePool' => fake_resource_pool_mob,
       }
     end
-    let(:cluster_mob) { instance_double('VimSdk::Vim::ClusterComputeResource') }
+    let(:cluster_mob) { instance_double('VimSdk::Vim::ClusterComputeResource', name: 'cluster1') }
     let(:cluster_hosts) { [instance_double('VimSdk::Vim::HostSystem')] }
     let(:fake_resource_pool_mob) { instance_double('VimSdk::Vim::ResourcePool') }
 
     let(:fake_resource_pool) do
       instance_double('VSphereCloud::Resources::ResourcePool',
-                      mob: fake_resource_pool_mob
+                      mob: fake_resource_pool_mob, name: 'rp1'
       )
     end
     let(:fake_resource_pool_mob) { instance_double('VimSdk::Vim::ResourcePool') }
