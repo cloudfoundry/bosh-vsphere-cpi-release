@@ -45,6 +45,9 @@ describe 'Host Groups in Cluster and VM Host Rules' do
       cpi.client.cloud_searcher.get_managed_object(
         VimSdk::Vim::ClusterComputeResource, name: @second_cluster_name)
     end
+    let(:first_host_vm_group_name) { @first_host_group+VSphereCloud::Resources::Cluster::CLUSTER_VM_GROUP_SUFFIX }
+    let(:second_host_vm_group_name) { @second_host_group+VSphereCloud::Resources::Cluster::CLUSTER_VM_GROUP_SUFFIX }
+    let(:third_host_vm_group_name) { @third_host_group+VSphereCloud::Resources::Cluster::CLUSTER_VM_GROUP_SUFFIX }
     let(:first_host_group_mob) { find_host_group_mob(@first_host_group) }
     let(:second_host_group_mob) { find_host_group_mob(@second_host_group) }
     let(:third_host_group_mob) { find_host_group_mob(@third_host_group, second_cluster_mob) }
@@ -59,6 +62,11 @@ describe 'Host Groups in Cluster and VM Host Rules' do
             vm = cpi.vm_provider.find(vm_id)
             expect(hosts_in_first_host_group).to include(vm.mob.runtime.host.name)
             expect(vm.cluster).to eq(@cluster_name)
+            expect(get_count_vm_host_affinity_rules(cluster_mob)).to eq(1)
+            expect(find_vm_group_mob(@first_host_group).vm).to include(vm.mob)
+            vm_host_rule = get_vm_host_affinity_rule(cluster_mob)
+            expect(vm_host_rule.vm_group_name).to eq(first_host_vm_group_name)
+            expect(vm_host_rule.affine_host_group_name).to eq(@first_host_group)
           end
           expect(get_count_vm_host_affinity_rules(cluster_mob)).to eq(0)
         end
@@ -80,6 +88,11 @@ describe 'Host Groups in Cluster and VM Host Rules' do
               expect(vm).to_not be_nil
               expect(hosts_in_first_host_group).to include(vm.mob.runtime.host.name)
               expect(vm.cluster).to eq(@cluster_name)
+              expect(get_count_vm_host_affinity_rules(cluster_mob)).to eq(1)
+              expect(find_vm_group_mob(@first_host_group).vm).to include(vm.mob)
+              vm_host_rule = get_vm_host_affinity_rule(cluster_mob)
+              expect(vm_host_rule.vm_group_name).to eq(first_host_vm_group_name)
+              expect(vm_host_rule.affine_host_group_name).to eq(@first_host_group)
             end
           ensure
             vm_list.each do |vm_id|
@@ -96,6 +109,11 @@ describe 'Host Groups in Cluster and VM Host Rules' do
                 vm = cpi.vm_provider.find(vm_id)
                 expect(hosts_in_first_host_group).to include(vm.mob.runtime.host.name)
                 expect(vm.cluster).to eq(@cluster_name)
+                expect(get_count_vm_host_affinity_rules(cluster_mob)).to eq(1)
+                expect(find_vm_group_mob(@first_host_group).vm).to include(vm.mob)
+                vm_host_rule = get_vm_host_affinity_rule(cluster_mob)
+                expect(vm_host_rule.vm_group_name).to eq(first_host_vm_group_name)
+                expect(vm_host_rule.affine_host_group_name).to eq(@first_host_group)
               end
             end
           end
@@ -161,6 +179,11 @@ describe 'Host Groups in Cluster and VM Host Rules' do
             # We expect VM to be created on first host group
             # because first host group has two hosts and more memory.
             expect(hosts_in_first_host_group).to include(vm.mob.runtime.host.name)
+            expect(get_count_vm_host_affinity_rules(cluster_mob)).to eq(1)
+            expect(find_vm_group_mob(@first_host_group).vm).to include(vm.mob)
+            vm_host_rule = get_vm_host_affinity_rule(cluster_mob)
+            expect(vm_host_rule.vm_group_name).to eq(first_host_vm_group_name)
+            expect(vm_host_rule.affine_host_group_name).to eq(@first_host_group)
           end
           expect(get_count_vm_host_affinity_rules(cluster_mob)).to eq(0)
         end
@@ -194,6 +217,12 @@ describe 'Host Groups in Cluster and VM Host Rules' do
             end
             vm_host = vm.mob.runtime.host.name
             expect(expected_host_group_mob.host.map(&:name)).to include(vm_host)
+            vm_cluster_mob = vm.cluster == @cluster_name ? cluster_mob : second_cluster_mob
+            expect(get_count_vm_host_affinity_rules(vm_cluster_mob)).to eq(1)
+            expect(find_vm_group_mob(expected_host_group_mob.name, vm_cluster_mob).vm).to include(vm.mob)
+            vm_host_rule = get_vm_host_affinity_rule(vm_cluster_mob)
+            expect(vm_host_rule.vm_group_name).to eq(expected_host_group_mob.name+VSphereCloud::Resources::Cluster::CLUSTER_VM_GROUP_SUFFIX)
+            expect(vm_host_rule.affine_host_group_name).to eq(expected_host_group_mob.name)
           end
           expect(get_count_vm_host_affinity_rules(cluster_mob) +
             get_count_vm_host_affinity_rules(second_cluster_mob)).to eq(0)
@@ -221,6 +250,12 @@ describe 'Host Groups in Cluster and VM Host Rules' do
               end
               vm_host = vm.mob.runtime.host.name
               expect(expected_host_group_mob.host.map(&:name)).to include(vm_host)
+              vm_cluster_mob = vm.cluster == @cluster_name ? cluster_mob : second_cluster_mob
+              expect(get_count_vm_host_affinity_rules(vm_cluster_mob)).to eq(1)
+              expect(find_vm_group_mob(expected_host_group_mob.name, vm_cluster_mob).vm).to include(vm.mob)
+              vm_host_rule = get_vm_host_affinity_rule(vm_cluster_mob)
+              expect(vm_host_rule.vm_group_name).to eq(expected_host_group_mob.name+VSphereCloud::Resources::Cluster::CLUSTER_VM_GROUP_SUFFIX)
+              expect(vm_host_rule.affine_host_group_name).to eq(expected_host_group_mob.name)
             end
           ensure
             vm_list.each do |vm_id|
@@ -243,6 +278,12 @@ describe 'Host Groups in Cluster and VM Host Rules' do
                 end
                 vm_host = vm.mob.runtime.host.name
                 expect(expected_host_group_mob.host.map(&:name)).to include(vm_host)
+                vm_cluster_mob = vm.cluster == @cluster_name ? cluster_mob : second_cluster_mob
+                expect(get_count_vm_host_affinity_rules(vm_cluster_mob)).to eq(1)
+                expect(find_vm_group_mob(expected_host_group_mob.name, vm_cluster_mob).vm).to include(vm.mob)
+                vm_host_rule = get_vm_host_affinity_rule(vm_cluster_mob)
+                expect(vm_host_rule.vm_group_name).to eq(expected_host_group_mob.name+VSphereCloud::Resources::Cluster::CLUSTER_VM_GROUP_SUFFIX)
+                expect(vm_host_rule.affine_host_group_name).to eq(expected_host_group_mob.name)
               end
             end
           end
@@ -262,6 +303,11 @@ describe 'Host Groups in Cluster and VM Host Rules' do
               vm_host = vm.mob.runtime.host.name
               expect(third_host_group_mob.host.map(&:name)).to include(vm_host)
               expect(vm.cluster).to eq(@second_cluster_name)
+              expect(get_count_vm_host_affinity_rules(second_cluster_mob)).to eq(1)
+              expect(find_vm_group_mob(@third_host_group, second_cluster_mob).vm).to include(vm.mob)
+              vm_host_rule = get_vm_host_affinity_rule(second_cluster_mob)
+              expect(vm_host_rule.vm_group_name).to eq(third_host_vm_group_name)
+              expect(vm_host_rule.affine_host_group_name).to eq(@third_host_group)
             end
             expect(get_count_vm_host_affinity_rules(cluster_mob) +
               get_count_vm_host_affinity_rules(second_cluster_mob)).to eq(0)
@@ -275,6 +321,12 @@ describe 'Host Groups in Cluster and VM Host Rules' do
                   vm_host = vm.mob.runtime.host.name
                   expect(third_host_group_mob.host.map(&:name)).to include(vm_host)
                   expect(vm.cluster).to eq(@second_cluster_name)
+                  vm_cluster_mob = second_cluster_mob
+                  expect(get_count_vm_host_affinity_rules(vm_cluster_mob)).to eq(1)
+                  expect(find_vm_group_mob(@third_host_group, vm_cluster_mob).vm).to include(vm.mob)
+                  vm_host_rule = get_vm_host_affinity_rule(vm_cluster_mob)
+                  expect(vm_host_rule.vm_group_name).to eq(third_host_vm_group_name)
+                  expect(vm_host_rule.affine_host_group_name).to eq(@third_host_group)
                 end
               end
             end
@@ -340,9 +392,23 @@ describe 'Host Groups in Cluster and VM Host Rules' do
 
   private
 
+  def find_vm_group_mob(host_group_name, clustermob=cluster_mob)
+    clustermob.configuration_ex.group.find do |group|
+      group.name == (host_group_name+VSphereCloud::Resources::Cluster::CLUSTER_VM_GROUP_SUFFIX)
+    end
+  end
+
   def find_host_group_mob(host_group_name, clustermob=cluster_mob)
     clustermob.configuration_ex.group.find do |group|
       group.name == host_group_name && group.is_a?(VimSdk::Vim::Cluster::HostGroup)
     end
+  end
+
+  def get_vm_host_affinity_rule(cluster_mob)
+    # return ing the first as we do not expect more rules to be present while
+    # this test is in progress.
+    cluster_mob.configuration_ex.rule.select do |rule_info|
+      rule_info.is_a?(VimSdk::Vim::Cluster::VmHostRuleInfo)
+    end.first
   end
 end
