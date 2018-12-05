@@ -31,6 +31,8 @@ module VSphereCloud
                           matching: %r{(?:javax.persistence.OptimisticLockException|<errorCode>300<\/errorCode>)}).retryer do |i|
         @logger.debug("Attempting to add VM '#{vm_id}' to Security Group '#{security_group_name}'...")
 
+        # TODO : verify `failIfExists` presence in older releases.
+        #response = @http_client.put("https://#{@nsx_url}/api/2.0/services/securitygroup/#{sg_id}/members/#{vm_id}?failIfExists=false", nil)
         response = @http_client.put("https://#{@nsx_url}/api/2.0/services/securitygroup/#{sg_id}/members/#{vm_id}", nil)
 
         if vm_belongs_to_security_group?(response.body)
@@ -349,7 +351,9 @@ module VSphereCloud
       error_document = Oga.parse_xml(xml_content)
       error_code_element = error_document.xpath('error/errorCode')
 
-      vm_in_security_group = (!error_code_element.empty? && error_code_element.text == '203')
+      # 6.3.x returns error code 203
+      # 6.4.x returns error code 311
+      vm_in_security_group = (!error_code_element.empty? && ['203', '311'].include?(error_code_element.text))
       vm_in_security_group ? true : false
     end
   end

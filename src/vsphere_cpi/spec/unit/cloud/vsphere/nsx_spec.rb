@@ -68,6 +68,19 @@ module VSphereCloud
         end
       end
 
+      context 'when VM is already part of the Security Group in NSXV-6.4.x' do
+        it 'does not update the Security Group' do
+          expect_POST_security_group_conflict
+          expect_GET_security_groups_happy
+          # NSX-V 6.4.X return a different error code fro duplicate vm entry
+          #  6.4.x returns 311
+          #  6.3.x returns 203
+          expect_PUT_security_group_vm_duplicate_with_311
+
+          nsx.add_vm_to_security_group(sg_name, vm_id)
+        end
+      end
+
       context 'when the create Security Group HTTP request fails' do
         it 'returns an error' do
           expect_POST_security_group_sad
@@ -522,6 +535,12 @@ module VSphereCloud
       put_response = double('response', status: 500, body: "<error><details>The object #{vm_id} is already present in the system.</details><errorCode>203</errorCode><moduleName>core-services</moduleName></error>")
       expect(http_client).to receive(:put).with("https://#{nsx_address}/api/2.0/services/securitygroup/#{sg_id}/members/#{vm_id}", nil)
                                .and_return(put_response)
+    end
+
+    def expect_PUT_security_group_vm_duplicate_with_311
+      put_response = double('response', status: 500, body: "<error><details>The object #{vm_id} is already present in the system.</details><errorCode>311</errorCode><moduleName>core-services</moduleName></error>")
+      expect(http_client).to receive(:put).with("https://#{nsx_address}/api/2.0/services/securitygroup/#{sg_id}/members/#{vm_id}", nil)
+        .and_return(put_response)
     end
 
     def expect_PUT_security_group_vm_sad(error = 'fake-nsx-error')
