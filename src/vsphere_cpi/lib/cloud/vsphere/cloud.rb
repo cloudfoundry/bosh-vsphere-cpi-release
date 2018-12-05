@@ -322,23 +322,40 @@ module VSphereCloud
         end
 
         begin
-          vm_type.nsx_security_groups.each do |security_group|
-            nsx.add_vm_to_security_group(security_group, created_vm.mob_id)
-          end unless vm_type.nsx_security_groups.nil?
-
 
           if @config.nsx_enabled?
-            bosh_groups = (environment || {}).fetch('bosh', {}).fetch('groups', [])
-            bosh_groups.each do |security_group|
+            all_nsx_security_groups = Set.new
+
+            # Gather all security groups from three sources into a Set
+            # 1. VM Type
+            # 2. BOSH Groups
+            # 3. NSX Load Balancers
+
+            # VM Type
+            vm_type_security_group = vm_type.nsx_security_groups
+            all_nsx_security_groups.merge(vm_type_security_group) unless vm_type_security_group.nil?
+
+            # BOSH Group
+            bosh_groups_security_groups = (environment || {}).fetch('bosh', {}).fetch('groups', [])
+            all_nsx_security_groups.merge(bosh_groups_security_groups) unless bosh_groups_security_groups.nil?
+
+            # Load Balancer
+            unless vm_type.nsx_lbs.nil?
+              nsx_lbs_security_groups = vm_type.nsx_lbs.map { |m| m['security_group'] }
+              all_nsx_security_groups.merge(nsx_lbs_security_groups.compact)
+            end
+
+            # Add vm to security groups
+            all_nsx_security_groups.each do |security_group|
               nsx.add_vm_to_security_group(security_group, created_vm.mob_id)
+            end
+
+            # Add vm to load balancer
+            unless vm_type.nsx_lbs.nil? || vm_type.nsx_lbs.empty?
+              nsx.add_members_to_lbs(vm_type.nsx_lbs)
             end
           end
 
-          unless vm_type.nsx_lbs.nil?
-            security_groups = vm_type.nsx_lbs.map { |m| m['security_group'] }.uniq
-            security_groups.each { |sg| nsx.add_vm_to_security_group(sg, created_vm.mob_id) }
-            nsx.add_members_to_lbs(vm_type.nsx_lbs)
-          end
         rescue => e
           logger.info("Failed to apply NSX properties to VM '#{created_vm.cid}' with error: #{e}")
           begin

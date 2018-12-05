@@ -177,7 +177,7 @@ describe 'NSX for vsphere integration', nsx_vsphere: true do
         cpi_options
       end
 
-      it 'raises an error' do
+      xit 'raises an error' do
         expect {
           create_vm_with_vm_type(cpi, vm_type, @stemcell_id)
         }.to raise_error(/NSX/)

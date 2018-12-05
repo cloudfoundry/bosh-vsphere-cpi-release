@@ -718,6 +718,9 @@ module VSphereCloud
       end
 
       context 'when the VM should have security tags' do
+        let(:fake_duplicate_sg) {'fake-security-tag'}
+        let(:another_fake_duplicate_sg) {'another-fake-security-tag'}
+        let(:fake_unique_bosh_group) {'fake-unique-bosh-group'}
         let(:cloud_config) do
           instance_double(
             'VSphereCloud::Config',
@@ -760,6 +763,7 @@ module VSphereCloud
               ephemeral: true,
               target_datastore_pattern: 'fake-ephemeral-pattern')
             .and_return(fake_ephemeral_disk)
+          allow(vm_config).to receive(:validate)
         end
 
         it 'should create the security tags and attach them to the VM' do
@@ -784,6 +788,267 @@ module VSphereCloud
             [],
             environment
           )
+        end
+
+        context 'when VM has duplicate security groups specified in vm_type, lbs and BOSH Groups' do
+          let(:vm_type) do
+            {
+              'cpu' => 1,
+              'ram' => 1024,
+              'disk' => 4096,
+              'nsx' => {
+                'security_groups' => [fake_duplicate_sg, another_fake_duplicate_sg, another_fake_duplicate_sg],
+                'lbs' => [
+                  {
+                    'edge_name' => 'fake-edge',
+                    'pool_name' => 'fake-pool',
+                    'security_group' => fake_duplicate_sg,
+                    'port' => 443,
+                    'monitor_port' => 443,
+                  },
+                  {
+                    'edge_name' => 'fake-edge-2',
+                    'pool_name' => 'fake-pool-2',
+                    'security_group' => fake_duplicate_sg,
+                    'port' => 443,
+                    'monitor_port' => 443,
+                  }
+                ]
+              }
+            }
+          end
+          let(:environment) do
+            {
+              'bosh' => {
+                'groups' => [
+                  fake_duplicate_sg,
+                  another_fake_duplicate_sg,
+                  fake_unique_bosh_group,
+                ]
+              }
+            }
+          end
+          it 'should de-duplicate the security tags and attach them to the VM' do
+            allow(VmConfig).to receive(:new).and_return(vm_config)
+            allow(NsxHttpClient).to receive(:new)
+              .with('fake-nsx-user', 'fake-nsx-password', 'fake-log-file')
+              .and_return(http_basic_auth_client)
+            allow(NSX).to receive(:new).and_return(nsx)
+
+            expect(VmCreator).to receive(:new).and_return(vm_creator)
+            expect(vm_creator).to receive(:create).with(vm_config).and_return(fake_vm)
+            expect(cloud_config).to receive(:validate_nsx_options)
+            expect(nsx).to receive(:add_vm_to_security_group).exactly(3).times
+            allow(nsx).to receive(:add_members_to_lbs)
+            vsphere_cloud.create_vm(
+              'fake-agent-id',
+              'fake-stemcell-cid',
+              vm_type,
+              'fake-networks-hash',
+              [],
+              environment
+            )
+          end
+        end
+
+        context 'when VM has duplicate security groups specified in vm_type, and none in lbs or bosh groups' do
+          let(:vm_type) do
+            {
+              'cpu' => 1,
+              'ram' => 1024,
+              'disk' => 4096,
+              'nsx' => {
+                'security_groups' => [fake_duplicate_sg, another_fake_duplicate_sg, another_fake_duplicate_sg],
+                'lbs' => [
+                  {
+                    'edge_name' => 'fake-edge',
+                    'pool_name' => 'fake-pool',
+                    'port' => 443,
+                    'monitor_port' => 443,
+                  },
+                  {
+                    'edge_name' => 'fake-edge-2',
+                    'pool_name' => 'fake-pool-2',
+                    'port' => 443,
+                    'monitor_port' => 443,
+                  }
+                ]
+              }
+            }
+          end
+          let(:environment) do
+            {
+              'bosh' => {
+                'groups' => [
+                ]
+              }
+            }
+          end
+          it 'should de-duplicate the security tags and attach them to the VM' do
+            allow(VmConfig).to receive(:new).and_return(vm_config)
+            allow(NsxHttpClient).to receive(:new)
+              .with('fake-nsx-user', 'fake-nsx-password', 'fake-log-file')
+              .and_return(http_basic_auth_client)
+            allow(NSX).to receive(:new).and_return(nsx)
+
+            expect(VmCreator).to receive(:new).and_return(vm_creator)
+            expect(vm_creator).to receive(:create).with(vm_config).and_return(fake_vm)
+            expect(cloud_config).to receive(:validate_nsx_options)
+            expect(nsx).to receive(:add_vm_to_security_group).exactly(2).times
+            allow(nsx).to receive(:add_members_to_lbs)
+            vsphere_cloud.create_vm(
+              'fake-agent-id',
+              'fake-stemcell-cid',
+              vm_type,
+              'fake-networks-hash',
+              [],
+              environment
+            )
+          end
+        end
+
+        context 'when VM has duplicate security groups specified lbs but none in vm_type or bosh groups' do
+          let(:vm_type) do
+            {
+              'cpu' => 1,
+              'ram' => 1024,
+              'disk' => 4096,
+              'nsx' => {
+                'lbs' => [
+                  {
+                    'edge_name' => 'fake-edge',
+                    'pool_name' => 'fake-pool',
+                    'security_group' => fake_duplicate_sg,
+                    'port' => 443,
+                    'monitor_port' => 443,
+                  },
+                  {
+                    'edge_name' => 'fake-edge-2',
+                    'pool_name' => 'fake-pool-2',
+                    'security_group' => fake_duplicate_sg,
+                    'port' => 443,
+                    'monitor_port' => 443,
+                  }
+                ]
+              }
+            }
+          end
+          let(:environment) do
+            {
+              'bosh' => {
+              }
+            }
+          end
+          it 'should de-duplicate the security tags and attach them to the VM' do
+            allow(VmConfig).to receive(:new).and_return(vm_config)
+            allow(NsxHttpClient).to receive(:new)
+              .with('fake-nsx-user', 'fake-nsx-password', 'fake-log-file')
+              .and_return(http_basic_auth_client)
+            allow(NSX).to receive(:new).and_return(nsx)
+
+            expect(VmCreator).to receive(:new).and_return(vm_creator)
+            expect(vm_creator).to receive(:create).with(vm_config).and_return(fake_vm)
+            expect(cloud_config).to receive(:validate_nsx_options)
+            expect(nsx).to receive(:add_vm_to_security_group).once
+            allow(nsx).to receive(:add_members_to_lbs)
+            vsphere_cloud.create_vm(
+              'fake-agent-id',
+              'fake-stemcell-cid',
+              vm_type,
+              'fake-networks-hash',
+              [],
+              environment
+            )
+          end
+        end
+
+        context 'when VM has duplicate security groups specified in bosh groups env but none in lbs and vm_type' do
+          let(:vm_type) do
+            {
+              'cpu' => 1,
+              'ram' => 1024,
+              'disk' => 4096,
+              'nsx' => {
+                'security_groups' => [],
+                'lbs' => []
+              }
+            }
+          end
+          let(:environment) do
+            {
+              'bosh' => {
+                'groups' => [
+                  fake_duplicate_sg,
+                  fake_duplicate_sg,
+                  another_fake_duplicate_sg,
+                  another_fake_duplicate_sg,
+                  another_fake_duplicate_sg,
+                  fake_unique_bosh_group,
+                  fake_unique_bosh_group,
+                ]
+              }
+            }
+          end
+          it 'should de-duplicate the security tags and attach them to the VM' do
+            allow(VmConfig).to receive(:new).and_return(vm_config)
+            allow(NsxHttpClient).to receive(:new)
+              .with('fake-nsx-user', 'fake-nsx-password', 'fake-log-file')
+              .and_return(http_basic_auth_client)
+            allow(NSX).to receive(:new).and_return(nsx)
+
+            expect(VmCreator).to receive(:new).and_return(vm_creator)
+            expect(vm_creator).to receive(:create).with(vm_config).and_return(fake_vm)
+            expect(cloud_config).to receive(:validate_nsx_options)
+            expect(nsx).to receive(:add_vm_to_security_group).exactly(3).times
+            vsphere_cloud.create_vm(
+              'fake-agent-id',
+              'fake-stemcell-cid',
+              vm_type,
+              'fake-networks-hash',
+              [],
+              environment
+            )
+          end
+        end
+
+        context 'when VM has no security groups specified in bosh groups env , lbs and vm_type' do
+          let(:vm_type) do
+            {
+              'cpu' => 1,
+              'ram' => 1024,
+              'disk' => 4096,
+              'nsx' => {
+                'security_groups' => [],
+                'lbs' => []
+              }
+            }
+          end
+          let(:environment) do
+            {
+              'bosh' => {
+                'groups' => []
+              }
+            }
+          end
+          it 'should not call add_vm_to_security_group VM' do
+            allow(VmConfig).to receive(:new).and_return(vm_config)
+            allow(NsxHttpClient).to receive(:new)
+              .with('fake-nsx-user', 'fake-nsx-password', 'fake-log-file')
+              .and_return(http_basic_auth_client)
+            allow(NSX).to receive(:new).and_return(nsx)
+
+            expect(VmCreator).to receive(:new).and_return(vm_creator)
+            expect(vm_creator).to receive(:create).with(vm_config).and_return(fake_vm)
+            expect(nsx).to_not receive(:add_vm_to_security_group)
+            vsphere_cloud.create_vm(
+              'fake-agent-id',
+              'fake-stemcell-cid',
+              vm_type,
+              'fake-networks-hash',
+              [],
+              environment
+            )
+          end
         end
       end
 
