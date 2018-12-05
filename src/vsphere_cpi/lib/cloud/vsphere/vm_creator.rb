@@ -231,13 +231,12 @@ module VSphereCloud
 
     def disable_drs(vm_resource, cluster_resource)
       DrsLock.new('DISABLE_DRS_LOCK').with_drs_lock do
-        drs_vm_spec_exists = !cluster_resource.mob.configuration_ex.drs_vm_config.empty?
-
         drs_vm_spec = VimSdk::Vim::Cluster::DrsVmConfigSpec.new
         drs_vm_spec.info = VimSdk::Vim::Cluster::DrsVmConfigInfo.new
         drs_vm_spec.info.enabled = false
         drs_vm_spec.info.key = vm_resource.mob
-        drs_vm_spec.operation = drs_vm_spec_exists ? VimSdk::Vim::Option::ArrayUpdateSpec::Operation::EDIT : VimSdk::Vim::Option::ArrayUpdateSpec::Operation::ADD
+
+        drs_vm_spec.operation = VimSdk::Vim::Option::ArrayUpdateSpec::Operation::ADD
 
         config_spec = VimSdk::Vim::Cluster::ConfigSpecEx.new
         config_spec.drs_vm_config_spec = [drs_vm_spec]
