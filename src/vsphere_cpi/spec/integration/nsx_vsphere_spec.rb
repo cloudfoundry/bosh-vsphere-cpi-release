@@ -171,18 +171,6 @@ describe 'NSX for vsphere integration', nsx_vsphere: true do
         }.to raise_error(/Bad Username or Credentials presented/)
       end
     end
-
-    context 'when there\'s no NSX configuration in the Director\'s manifest' do
-      let(:nsx_options) do
-        cpi_options
-      end
-
-      it 'raises an error' do
-        expect {
-          create_vm_with_vm_type(cpi, vm_type, @stemcell_id)
-        }.to raise_error(/NSX/)
-      end
-    end
   end
 
   context 'when vm_extensions has an NSX load balancer and pool' do
