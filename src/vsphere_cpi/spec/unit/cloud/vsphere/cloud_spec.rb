@@ -837,8 +837,10 @@ module VSphereCloud
             expect(VmCreator).to receive(:new).and_return(vm_creator)
             expect(vm_creator).to receive(:create).with(vm_config).and_return(fake_vm)
             expect(cloud_config).to receive(:validate_nsx_options)
-            expect(nsx).to receive(:add_vm_to_security_group).exactly(3).times
             allow(nsx).to receive(:add_members_to_lbs)
+            expect(nsx).to receive(:add_vm_to_security_group).with('fake-security-tag', 'fake-mob-id')
+            expect(nsx).to receive(:add_vm_to_security_group).with('another-fake-security-tag', 'fake-mob-id')
+            expect(nsx).to receive(:add_vm_to_security_group).with('fake-unique-bosh-group', 'fake-mob-id')
             vsphere_cloud.create_vm(
               'fake-agent-id',
               'fake-stemcell-cid',
