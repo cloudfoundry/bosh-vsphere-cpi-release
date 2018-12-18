@@ -36,8 +36,12 @@ describe '#add cpi extension' do
     it 'adds an extension to vcenter and attaches stemcell to that extension' do
       begin
         stemcell_id = upload_stemcell(cpi)
-        stemcell_vm = @cpi.client.find_vm_by_name(@cpi.datacenter.mob, stemcell_id)
-        expect(stemcell_vm.config.managed_by.extension_key).to eql(VSphereCloud::VCPIExtension::DEFAULT_VSPHERE_CPI_EXTENSION_KEY)
+        stemcell_vm = @cpi.client.find_vm_by_name(@cpi.datacenter.mob,
+                                                  stemcell_id)
+        key = stemcell_vm.config.managed_by.extension_key
+        ext = @cpi.client.service_content.extension_manager.find_extension(key)
+        expect(key).to eql(VSphereCloud::VCPIExtension::DEFAULT_VSPHERE_CPI_EXTENSION_KEY)
+        expect(ext.shown_in_solution_manager).to be true
       ensure
         cpi.delete_stemcell(stemcell_id)
       end
