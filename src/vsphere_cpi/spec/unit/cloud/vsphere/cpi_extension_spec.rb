@@ -30,6 +30,7 @@ module VSphereCloud
         expect(extension.key). to eq('Foo')
         expect(extension.version).to eq('Bar')
         expect(extension.description.label).to eq(subject::DEFAULT_VSPHERE_CPI_EXTENSION_LABEL)
+        expect(extension.shown_in_solution_manager).to be true
       end
     end
 

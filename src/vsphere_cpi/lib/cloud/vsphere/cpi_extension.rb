@@ -37,6 +37,7 @@ module VSphereCloud
       cpi_extension.key = key
       cpi_extension.version = version
       cpi_extension.last_heartbeat_time = option[:last_heartbeat] || Time.now.iso8601
+      cpi_extension.shown_in_solution_manager = true
 
       cpi_extension_desc = VimSdk::Vim::Description.new
       cpi_extension_desc.label = label
