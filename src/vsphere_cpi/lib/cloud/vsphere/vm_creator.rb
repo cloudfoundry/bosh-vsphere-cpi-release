@@ -118,28 +118,21 @@ module VSphereCloud
         # Before cloning we need to make sure the host is correctly picked up
         # from cluster's host group if provided.
         unless cluster.host_group.nil?
-          # placement_spec = VimSdk::Vim::Cluster::PlacementSpec.new
-          # placement_spec.config_spec = config_spec
-          # placement_spec.datastores = [datastore.mob]
-          # placement_spec.hosts = cluster.host_group_mob.host
-          # placement_result = cluster.mob.place_vm(placement_spec)
-          # raise "No suitable host found by DRS in host group to create VM" if placement_result.recommendations&.empty?
-          # begin
-          #   host = placement_result.recommendations.first.action.first.target_host
-          # # if for some reason, above fails select host manually.
-          # rescue => e
-          #   logger.warning("Received #{e} while asking DRS for recommendation")
-          #   host = cluster.host_group_mob.host.find do |host|
-          #     host.runtime.connection_state == 'connected' &&
-          #       !host.runtime.in_maintenance_mode
-          #   end
-          # end
-          # @TA:TODO : Stop-Gap measure until DRS team solves bug for placeVM below.
-          # Selecting a random host out of all host groups to get initial placement correct
-          # Filtering it for healthy host.
-          host = cluster.host_group_mob.host.find do |host|
-            host.runtime.connection_state == 'connected' &&
-              !host.runtime.in_maintenance_mode
+          placement_spec = VimSdk::Vim::Cluster::PlacementSpec.new
+          placement_spec.config_spec = config_spec
+          placement_spec.datastores = [datastore.mob]
+          placement_spec.hosts = cluster.host_group_mob.host
+          placement_result = cluster.mob.place_vm(placement_spec)
+          raise "No suitable host found by DRS in host group to create VM" if placement_result.recommendations&.empty?
+          begin
+            host = placement_result.recommendations.first.action.first.target_host
+          # if for some reason, above fails select host manually.
+          rescue => e
+            logger.warning("Received #{e} while asking DRS for recommendation")
+            host = cluster.host_group_mob.host.find do |host|
+              host.runtime.connection_state == 'connected' &&
+                !host.runtime.in_maintenance_mode
+            end
           end
           raise "Failed to find a healthy host in #{cluster.host_group} to create the VM." if host.nil?
         end
