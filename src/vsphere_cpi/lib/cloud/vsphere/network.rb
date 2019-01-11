@@ -66,7 +66,7 @@ module VSphereCloud
         @switch_provider.get_logical_port_status(logical_port.id) == "UP"
       end
 
-      raise NetworkDeletionError, "Expected switch #{switch_id} to have only one operational port but found #{switch_ports.length}" if switch_ports.length != 1
+      raise NetworkDeletionError, "Expected switch #{switch_id} to have at most one operational port but found #{switch_ports.length}" if switch_ports.length > 1
 
       release_subnets(switch.tags)
       logger.debug("Deleting logical switch with id #{switch_id}")
