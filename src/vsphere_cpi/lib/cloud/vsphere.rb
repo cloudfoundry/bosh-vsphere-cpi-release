@@ -71,8 +71,8 @@ require 'cloud/vsphere/vm_placement_selection_pipeline'
 
 
 module Bosh
-  module Clouds
-    class VSphere
+    module Clouds
+      class VSphere
       extend Forwardable
 
       def_delegators :@delegate,

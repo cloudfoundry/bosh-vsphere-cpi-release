@@ -21,6 +21,12 @@ module VSphereCloud
         "<VM: #{@mob} / #{@cid}>"
       end
 
+      def get_custom_field_value(key)
+        mob.custom_value.find do |field|
+          field.key == key
+        end.value
+      end
+
       def cluster
         cluster = cloud_searcher.get_properties(host_properties['parent'], Vim::ClusterComputeResource, 'name', ensure_all: true)
         cluster['name']

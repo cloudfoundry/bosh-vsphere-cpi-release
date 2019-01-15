@@ -5,6 +5,7 @@ require 'cloud'
 require 'cloud/vsphere/cpi_extension'
 
 module VSphereCloud
+  CLONE_VM_FOLDER_SETUP_LOCK = 'CloneVM_Folder_Setup_Lock'.freeze
   class Cloud < Bosh::Cloud
     include VimSdk
     include Logger
@@ -267,13 +268,12 @@ module VSphereCloud
       end
     end
 
-    def get_folder_name(environment)
-      # Name of the deployment/ Name of the instance group.
-      logger.info("#{environment} \n\n\n\n")
+    def get_deployment_name(environment)
       bosh_groups = (environment || {}).fetch('bosh', {}).fetch('groups', [])
       return nil if bosh_groups.empty?
-      [bosh_groups[1], bosh_groups[2]].join('/')
+      bosh_groups[1]
     end
+
 
     def create_vm(agent_id, stemcell_cid, vm_type, networks_spec, existing_disk_cids = [], environment = nil)
       with_thread_name("create_vm(#{agent_id}, ...)") do
@@ -303,7 +303,7 @@ module VSphereCloud
             },
             global_clusters: @datacenter.clusters,
             disk_configurations: disk_configurations(vm_type,  existing_disk_cids),
-            vm_folder: get_folder_name(environment)
+            deployment_name: get_deployment_name(environment)
           }
 
           vm_config = VmConfig.new(
@@ -325,10 +325,6 @@ module VSphereCloud
           )
           created_vm = vm_creator.create(vm_config)
         rescue => e
-          # Delete the folder if empty.
-          # Deleting will involve coordination in vcenter for race b/w CPI proc trying to create and the one trying to delete.
-          # Try drs lock style mutex to serialize CPI threads
-          logger.error("Error in creating vm: #{e}, Backtrace - #{e.backtrace.join("\n")}")
           raise e
         end
 
@@ -438,8 +434,27 @@ module VSphereCloud
           end
         end
 
+        # Get the path components of  VM's inventory folder.
+        # These are stored as a custom field value on the VM at time of creation.
+        path_components = vm.get_custom_field_value(VSphereCloud::VmCreator::FOLDER_PATH_FIELD_KEY)
+
         vm.delete
         logger.info("Deleted vm: #{vm_cid}")
+
+        # Delete the vm's parent folder if it has no vms left.
+        # Since this is happening under a DRS LOCK along with creation of folder, it should never conflict with
+        # a vm that is being created.
+        DrsLock.new(VSphereCloud::CLONE_VM_FOLDER_SETUP_LOCK).with_drs_lock do
+          # Get the mob of this vm folder
+          vm_folder_mob = @client.find_by_inventory_path([@datacenter.name, 'vm', path_components].flatten)
+          # The below should never happen as parent folder must be there.
+          break if  vm_exists(vm_folder_mob) || vm_folder_mob.nil?
+          # Delete the folder if it does not contain any more VMs.
+          wait_for_task do
+            vm_folder_mob.unregister_and_destroy
+          end
+        end
+
 
         # Delete vm_groups
         unless vm_group_names.nil? || vm_group_names.empty?
@@ -447,6 +462,18 @@ module VSphereCloud
           vm_group.delete_vm_groups(vm_group_names)
         end
       end
+    end
+
+    def vm_exists(folder_mob)
+      return false if folder_mob.child_entity.empty? || folder_mob.child_entity.nil?
+      entities = folder_mob.child_entity
+      vm_exists = false
+      entities.each do |entity|
+        return true if entity.class?(VimSdk::Vim::VirtualMachine)
+        vm_exists ||= entity.check_if_vm_exists if entity.class?(VimSdk::Vim::Folder)
+        break if vm_exists
+      end
+      vm_exists
     end
 
     def reboot_vm(vm_cid)

@@ -56,8 +56,8 @@ module VSphereCloud
       @manifest_params[:networks_spec] || {}
     end
 
-    def vm_folder_name
-      @manifest_params[:vm_folder]
+    def deployment_name
+      @manifest_params[:deployment_name]
     end
 
     def vsphere_networks

@@ -3,6 +3,7 @@ require 'cloud/vsphere/cpi_extension'
 
 module VSphereCloud
   class VmCreator
+    FOLDER_PATH_FIELD_KEY = 'folder_location'.freeze
     include Logger
 
     def initialize(client:, cloud_searcher:, cpi:, datacenter:, agent_env:, ip_conflict_detector:, default_disk_type:, enable_auto_anti_affinity_drs_rules:, stemcell:, upgrade_hw_version:)
@@ -148,23 +149,37 @@ module VSphereCloud
 
         # Get the last folder in folder path passed in global config
         base_vm_folder = @datacenter.vm_folder
-        this_vm_folder = vm_config.vm_folder_name.nil? ? base_vm_folder : VSphereCloud::Resources::Folder.new([base_vm_folder.path, vm_config.vm_folder_name].join('/'), @client, @datacenter.name)
 
-        # Clone VM
-        logger.info("Cloning vm: #{replicated_stemcell_vm} to #{vm_config.name}")
-        created_vm_mob = @client.wait_for_task do
-          @cpi.clone_vm(replicated_stemcell_vm.mob,
-            vm_config.name,
-            this_vm_folder.mob,
-            cluster.resource_pool.mob,
-            datastore: datastore.mob,
-            host: host,
-            linked: true,
-            snapshot: snapshot.current_snapshot,
-            config: config_spec,
-            datastore_cluster: datastore_cluster
-          )
+        # @TA : TODO : To Delete deployment name safely.
+        # 1. Take a Lock
+        #   2. Find/Create this_vm_folder Folder
+        #   3. Clone VM
+        #   4. Attach VM with Field Value , name is folder path key and value is path componnets joined by /
+        # 5. If VM is to be deleted after cloning due to power on fails or other scenarios
+        #   6. Take a lock
+        #   7. Remove Custom field def
+
+        DrsLock.new(VSphereCloud::CLONE_VM_FOLDER_SETUP_LOCK).with_drs_lock do
+          this_vm_folder = vm_config.deployment_name.nil? ? base_vm_folder : VSphereCloud::Resources::Folder.new([base_vm_folder.path, vm_config.deployment_name].join('/'), @client, @datacenter.name)
+
+          # Clone VM
+          logger.info("Cloning vm: #{replicated_stemcell_vm} to #{vm_config.name}")
+          created_vm_mob = @client.wait_for_task do
+            @cpi.clone_vm(replicated_stemcell_vm.mob,
+                          vm_config.name,
+                          this_vm_folder.mob,
+                          cluster.resource_pool.mob,
+                          datastore: datastore.mob,
+                          host: host,
+                          linked: true,
+                          snapshot: snapshot.current_snapshot,
+                          config: config_spec,
+                          datastore_cluster: datastore_cluster
+            )
+          end
+          @client.set_custom_field(created_vm_mob, FOLDER_PATH_FIELD_KEY, this_vm_folder.path_components.join('/'))
         end
+
         next if created_vm_mob.nil?
 
         created_vm = Resources::VM.new(vm_config.name, created_vm_mob, @client)
@@ -199,10 +214,6 @@ module VSphereCloud
 
 
           begin
-            # Upgrade to latest virtual hardware version
-            # We decide to upgrade hardware version on basis of two params
-            # 1. vm_type specification of upgrade hardware flag and
-            # 2. Global upgrade hardware flag @upgrade_hw_version
             if vm_config.upgrade_hw_version?(vm_config.vm_type.upgrade_hw_version, @upgrade_hw_version)
               created_vm.upgrade_vm_virtual_hardware
             end
@@ -229,6 +240,9 @@ module VSphereCloud
         break
       end
 
+      # @TA : TODO : Dleete deployment name folder
+      # Take a Folder Lock
+      # Delete `VCPI-Creating-VM` and exit.
       created_vm
     end
 
