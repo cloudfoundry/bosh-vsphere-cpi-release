@@ -56,6 +56,10 @@ module VSphereCloud
       @manifest_params[:networks_spec] || {}
     end
 
+    def vm_folder_name
+      @manifest_params[:vm_folder]
+    end
+
     def vsphere_networks
       networks_map = {}
       networks_spec.each_value do |network_spec|

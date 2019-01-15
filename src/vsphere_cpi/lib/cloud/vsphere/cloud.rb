@@ -267,6 +267,14 @@ module VSphereCloud
       end
     end
 
+    def get_folder_name(environment)
+      # Name of the deployment/ Name of the instance group.
+      logger.info("#{environment} \n\n\n\n")
+      bosh_groups = (environment || {}).fetch('bosh', {}).fetch('groups', [])
+      return nil if bosh_groups.empty?
+      [bosh_groups[1], bosh_groups[2]].join('/')
+    end
+
     def create_vm(agent_id, stemcell_cid, vm_type, networks_spec, existing_disk_cids = [], environment = nil)
       with_thread_name("create_vm(#{agent_id}, ...)") do
         verify_props('VM', [ 'cpu', 'ram', 'disk' ], vm_type)
@@ -295,6 +303,7 @@ module VSphereCloud
             },
             global_clusters: @datacenter.clusters,
             disk_configurations: disk_configurations(vm_type,  existing_disk_cids),
+            vm_folder: get_folder_name(environment)
           }
 
           vm_config = VmConfig.new(
@@ -316,6 +325,9 @@ module VSphereCloud
           )
           created_vm = vm_creator.create(vm_config)
         rescue => e
+          # Delete the folder if empty.
+          # Deleting will involve coordination in vcenter for race b/w CPI proc trying to create and the one trying to delete.
+          # Try drs lock style mutex to serialize CPI threads
           logger.error("Error in creating vm: #{e}, Backtrace - #{e.backtrace.join("\n")}")
           raise e
         end

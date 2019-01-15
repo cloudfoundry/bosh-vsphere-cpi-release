@@ -144,13 +144,18 @@ module VSphereCloud
           raise "Failed to find a healthy host in #{cluster.host_group} to create the VM." if host.nil?
         end
 
+        # Before Cloning ready the folder structure
+
+        # Get the last folder in folder path passed in global config
+        base_vm_folder = @datacenter.vm_folder
+        this_vm_folder = vm_config.vm_folder_name.nil? ? base_vm_folder : VSphereCloud::Resources::Folder.new([base_vm_folder.path, vm_config.vm_folder_name].join('/'), @client, @datacenter.name)
 
         # Clone VM
         logger.info("Cloning vm: #{replicated_stemcell_vm} to #{vm_config.name}")
         created_vm_mob = @client.wait_for_task do
           @cpi.clone_vm(replicated_stemcell_vm.mob,
             vm_config.name,
-            @datacenter.vm_folder.mob,
+            this_vm_folder.mob,
             cluster.resource_pool.mob,
             datastore: datastore.mob,
             host: host,
