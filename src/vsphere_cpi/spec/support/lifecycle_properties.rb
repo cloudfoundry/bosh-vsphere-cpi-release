@@ -82,12 +82,12 @@ module LifecycleProperties
         'template_folder' => fetch_property('BOSH_VSPHERE_CPI_TEMPLATE_FOLDER'),
         'disk_path' => fetch_property('BOSH_VSPHERE_CPI_DISK_PATH'),
         'datastore_pattern' => @default_datastore_pattern,
-        'persistent_datastore_pattern' => @default_datastore_pattern,
+        'persistent_datastore_pattern' => 'nfs0-1',#@default_datastore_pattern'',
         'allow_mixed_datastores' => true,
         'clusters' => [
           {
             @default_cluster => {
-              'resource_pool' => @default_resource_pool,
+              #'resource_pool' => @default_resource_pool,
             }
           }
         ]

@@ -61,22 +61,57 @@ describe 'cloud_properties related to clusters' do
     it 'creates vm in cluster defined in `vm_type`' do
       cpi = VSphereCloud::Cloud.new(options)
       begin
-        vm_id = cpi.create_vm(
+        vm_ids = []
+        vm_ids << cpi.create_vm(
           'agent-007',
           @stemcell_id,
           vm_type,
           network_spec,
           [],
-          {}
+          {'bosh' => {'groups' => %w[director, Zookeeper]}}
         )
-        expect(vm_id).to_not be_nil
 
-        vm = cpi.vm_provider.find(vm_id)
-        expect(vm).to_not be_nil
+        vm_ids << cpi.create_vm(
+            'agent-007',
+            @stemcell_id,
+            vm_type,
+            network_spec,
+            [],
+            {'bosh' => {'groups' => %w[director, PKS]}}
+        )
 
-        expect(vm.cluster).to eq(@cluster_name)
+        vm_ids << cpi.create_vm(
+            'agent-007',
+            @stemcell_id,
+            vm_type,
+            network_spec,
+            [],
+            {'bosh' => {'groups' => %w[director, MySQL]}}
+        )
+
+        vm_ids << cpi.create_vm(
+            'agent-007',
+            @stemcell_id,
+            vm_type,
+            network_spec,
+            [],
+            {'bosh' => {'groups' => %w[director, PAS-23]}}
+        )
+
+        vm_ids.each do |vm_id|
+          expect(vm_id).to_not be_nil
+
+          vm = cpi.vm_provider.find(vm_id)
+          expect(vm).to_not be_nil
+
+          #expect(vm.cluster).to eq(@cluster_name)
+        end
+        require 'pry-byebug'
+        binding.pry
       ensure
-        delete_vm(cpi, vm_id)
+        vm_ids.each do |vm_id|
+          delete_vm(cpi, vm_id)
+        end
       end
     end
   end

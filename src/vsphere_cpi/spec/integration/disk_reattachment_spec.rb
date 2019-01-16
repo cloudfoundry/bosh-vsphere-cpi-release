@@ -49,6 +49,30 @@ describe 're-attaching a persistent disk' do
       expect(disk_id).to_not be_nil
 
       @cpi.attach_disk(vm_id, disk_id)
+
+      require 'pry-byebug'
+      binding.pry
+
+      vm_id = @cpi.create_vm(
+          'agent-007',
+          @stemcell_id,
+          vm_type,
+          get_network_spec,
+          [],
+          {'key' => 'value'}
+      )
+
+      expect(vm_id).to_not be_nil
+      expect(@cpi.has_vm?(vm_id)).to be(true)
+
+      disk_id = @cpi.create_disk(2048, {}, vm_id)
+      expect(disk_id).to_not be_nil
+
+      @cpi.attach_disk(vm_id, disk_id)
+
+      require 'pry-byebug'
+      binding.pry
+
       @cpi.detach_disk(vm_id, disk_id)
       @cpi.attach_disk(vm_id, disk_id)
       @cpi.detach_disk(vm_id, disk_id)
