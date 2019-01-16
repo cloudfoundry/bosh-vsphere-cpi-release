@@ -450,7 +450,7 @@ module VSphereCloud
           # The below should never happen as parent folder must be there.
           break if  vm_exists(vm_folder_mob) || vm_folder_mob.nil?
           # Delete the folder if it does not contain any more VMs.
-          wait_for_task do
+          @client.wait_for_task do
             vm_folder_mob.unregister_and_destroy
           end
         end

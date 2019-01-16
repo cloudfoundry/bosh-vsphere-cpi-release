@@ -21,9 +21,17 @@ module VSphereCloud
         "<VM: #{@mob} / #{@cid}>"
       end
 
-      def get_custom_field_value(key)
+      def get_custom_field_value(key_name)
+        # get the integer key value for the field
+        key_id = @client.service_content.custom_fields_manager.field.map do |field|
+          [field.key, field.name]
+        end&.find do |k, v|
+          v == key_name
+        end[0]
+
+        # get the value of the field
         mob.custom_value.find do |field|
-          field.key == key
+          field.key == key_id
         end.value
       end
 

@@ -159,6 +159,8 @@ module VSphereCloud
         #   6. Take a lock
         #   7. Remove Custom field def
 
+        # Blocks do not retain
+        created_vm_mob = nil
         DrsLock.new(VSphereCloud::CLONE_VM_FOLDER_SETUP_LOCK).with_drs_lock do
           this_vm_folder = vm_config.deployment_name.nil? ? base_vm_folder : VSphereCloud::Resources::Folder.new([base_vm_folder.path, vm_config.deployment_name].join('/'), @client, @datacenter.name)
 
