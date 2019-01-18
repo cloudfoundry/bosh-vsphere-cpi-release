@@ -211,19 +211,6 @@ module VSphereCloud
         properties['runtime.powerState']
       end
 
-      def has_persistent_disk_property_mismatch?(disk)
-        found_property = get_vapp_property_by_key(disk.key)
-        return false if found_property.nil? || !verify_persistent_disk_property?(found_property)
-
-        # get full path without a datastore
-        file_path = disk.backing.file_name[/([^\]]*)\.vmdk/, 1].strip
-        original_file_path = found_property.value[/([^\]]*)\.vmdk/, 1].strip
-        logger.debug("Current file path is #{file_path}")
-        logger.debug("Original file path is #{original_file_path}")
-
-        file_path != original_file_path
-      end
-
       def get_old_disk_filepath(disk_key)
         property = get_vapp_property_by_key(disk_key)
         if property.nil? || !verify_persistent_disk_property?(property)
@@ -260,11 +247,10 @@ module VSphereCloud
         return disk_config_spec
       end
 
-      def detach_disks(virtual_disks)
+      def detach_disks(virtual_disks, restore_path)
         reload
         check_for_nonpersistent_disk_modes
 
-        disks_to_move = []
         logger.info("Found #{virtual_disks.size} persistent disk(s)")
         config = Vim::Vm::ConfigSpec.new
         config.device_change = []
@@ -272,20 +258,26 @@ module VSphereCloud
         virtual_disks.each do |virtual_disk|
           logger.info("Detaching: #{virtual_disk.backing.file_name}")
           config.device_change << Resources::VM.create_delete_device_spec(virtual_disk)
-
-          disk_property = get_vapp_property_by_key(virtual_disk.key)
-          unless disk_property.nil?
-            if has_persistent_disk_property_mismatch?(virtual_disk) && !@client.disk_path_exists?(@mob, disk_property.value)
-              logger.info('Persistent disk was moved: moving disk to expected location')
-              disks_to_move << virtual_disk
-            end
-          end
         end
 
         @client.reconfig_vm(@mob, config)
         logger.info("Detached #{virtual_disks.size} persistent disk(s)")
 
-        move_disks_to_old_path(disks_to_move)
+
+        # The need to restore disk to global config disk path (WHERE IT GOT CREATED on some DS)
+        # after detaching is really crucial as it
+        #   1. restores name/cid which is director disk cid , the one BOSH Director knows.
+        #   2. The VM might get deleted so no point keeping it in VM_CID named folder.
+        #
+        # We currently restore it to the where it is being detached from VM.
+        #   1. The source ds it came from might be over used, so let it stay where it is.
+        #   2. We can say above ^^ beause it might be the reason SDRS moved it.
+        #      If SDRS did not move it, it cannot have different source_ds than current_ds
+        #
+        # Also now all detached disks must move as all persistent disks are always foldered up whjile attaching them.
+        #
+        # Move all disks to restore path.
+        move_disks_to_old_path(virtual_disks, restore_path)
 
         logger.info('Finished detaching disk(s)')
 
@@ -296,15 +288,16 @@ module VSphereCloud
         logger.debug('Finished deleting persistent disk properties from vm')
       end
 
-      def move_disks_to_old_path(disks_to_move)
+      def move_disks_to_old_path(disks_to_move, restore_path)
         logger.info("Renaming #{disks_to_move.size} persistent disk(s)")
         disks_to_move.each do |disk|
           current_datastore = disk.backing.file_name.match(/^\[([^\]]+)\]/)[1]
           original_disk_path = get_old_disk_filepath(disk.key)
-          dest_filename = original_disk_path.match(/^\[[^\]]+\] (.*)/)[1]
-          dest_path = "[#{current_datastore}] #{dest_filename}"
-
+          dest_filename = original_disk_path.match(/^\[[^\]]+\] (.*)/)[1].split('/')[1]
+          dest_path = "[#{current_datastore}] #{restore_path}/#{dest_filename}"
+          logger.info("Moving #{disk.backing.file_name} to #{dest_path}")
           @client.move_disk(datacenter_mob, disk.backing.file_name, datacenter_mob, dest_path)
+          logger.info('Moved disk successfully')
         end
       end
 

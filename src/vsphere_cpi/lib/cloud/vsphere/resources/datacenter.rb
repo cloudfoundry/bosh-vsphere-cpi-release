@@ -170,12 +170,27 @@ module VSphereCloud
         raise Bosh::Clouds::DiskNotFound.new(false), "Could not find disk with id '#{disk_cid}'"
       end
 
-      def move_disk_to_datastore(disk, destination_datastore)
-        destination_path = "[#{destination_datastore.name}] #{@disk_path}/#{disk.cid}.vmdk"
+      # Moves the virtual disk to destination datastore.
+      #
+      # It folders it up in the folder named with vm_cid passed.
+      #
+      # The need for foldering up the disk inside vm named folder arises from the way SDRS moves a VM folder.
+      # If it moves VM to a DS which has persistent disk of VM, SDRS will move VM inside
+      # that disk folder. If two different disks of two different VMs happen to be in the same folder,
+      # when we migrate both the VMs to this datastore, SDRS will move both VMs in same folder and migration blows up
+      # due to file conflict.
+      #
+      # @param disk [VSphereCloud::Resources::PersistentDisk] disk to be moved.
+      # @param destination_datastore [VSphereCloud::Resources::Datastore] Destination datastore for disk to move in
+      # @param vm_cid [String] Name of the VM from which parent disk folder is created on the destination datastore
+      #
+      # @return [VSphereCloud::Resources::PersistentDisk] The new disk object with updated datastore & folder name
+      def move_disk_to_datastore(disk, destination_datastore, vm_cid)
+        destination_path = "[#{destination_datastore.name}] #{vm_cid}/#{disk.cid}.vmdk"
         logger.info("Moving #{disk.path} to #{destination_path}")
         @client.move_disk(mob, disk.path, mob, destination_path)
         logger.info('Moved disk successfully')
-        Resources::PersistentDisk.new(cid: disk.cid, size_in_mb: disk.size_in_mb, datastore: destination_datastore, folder: @disk_path)
+        Resources::PersistentDisk.new(cid: disk.cid, size_in_mb: disk.size_in_mb, datastore: destination_datastore, folder: vm_cid)
       end
 
       private
