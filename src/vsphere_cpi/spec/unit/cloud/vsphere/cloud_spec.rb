@@ -64,9 +64,9 @@ module VSphereCloud
       end
       allow_any_instance_of(Cloud).to receive(:at_exit)
     end
-
+    let(:restore_path) {'fake-disk-restore-path'}
     let(:datacenter) do
-      instance_double('VSphereCloud::Resources::Datacenter', name: 'fake-datacenter', clusters: [])
+      instance_double('VSphereCloud::Resources::Datacenter', name: 'fake-datacenter', clusters: [], disk_path: restore_path)
     end
     before { allow(Resources::Datacenter).to receive(:new).and_return(datacenter) }
     let(:vm_provider) { instance_double('VSphereCloud::VMProvider') }
@@ -1329,6 +1329,8 @@ module VSphereCloud
       before do
         allow(ds_mob).to receive_message_chain('summary.maintenance_mode').and_return("normal")
       end
+
+      let(:target_datastore) { Resources::Datastore.new('datastore-with-disk', ds_mob, true, 4096, 4096) }
       let(:agent_env_hash) { { 'disks' => { 'persistent' => { 'disk-cid' => 'fake-device-number' } } } }
       let(:host_runtime_info) { instance_double(VimSdk::Vim::Host::RuntimeInfo, in_maintenance_mode: false) }
       let(:host_system) {instance_double(VimSdk::Vim::HostSystem, runtime: host_runtime_info)}
@@ -1347,11 +1349,17 @@ module VSphereCloud
         }
       end
       let(:cdrom) { instance_double(VimSdk::Vim::Vm::Device::VirtualCdrom) }
-
+      let(:vm_cid) {'fake-vm-cid'}
+      let(:moved_disk) do
+        Resources::PersistentDisk.new(
+            cid: 'disk-cid',
+            size_in_mb: 1024,
+            datastore: target_datastore,
+            folder: 'fake-vm-cid')
+      end
 
       before do
         allow(datacenter).to receive(:persistent_pattern).and_return(/datastore\-.*/)
-
         allow(vm_provider).to receive(:find).with('fake-vm-cid').and_return(vm)
 
         allow(agent_env).to receive(:get_current_env).and_return(agent_env_hash)
@@ -1367,7 +1375,6 @@ module VSphereCloud
         it 'attaches the existing persistent disk' do
           expect(datacenter).to receive(:find_disk).with(director_disk_cid, vm).and_return(disk)
           expect(VSphereCloud::DirectorDiskCID).to receive(:new).with('disk-cid').and_return(director_disk_cid)
-
           expect(vm).to receive(:attach_disk) do |disk|
             expect(disk.cid).to eq('disk-cid')
             OpenStruct.new(device: OpenStruct.new(unit_number: 'some-unit-number'))
@@ -1377,7 +1384,9 @@ module VSphereCloud
             expect(env_location).to eq(vm_location)
             expect(env['disks']['persistent']['disk-cid']).to eq('some-unit-number')
           end
-          vsphere_cloud.attach_disk('fake-vm-cid', 'disk-cid')
+          expect(datacenter).to receive(:move_disk_to_datastore).with(disk, datastore_with_disk, vm_cid)
+                                    .and_return(moved_disk)
+          vsphere_cloud.attach_disk(vm_cid, 'disk-cid')
         end
 
         it 'attaches the existing persistent disk with encoded metadata' do
@@ -1390,7 +1399,6 @@ module VSphereCloud
           director_disk_cid = VSphereCloud::DirectorDiskCID.new(disk_cid_with_metadata)
           expect(datacenter).to receive(:find_disk).with(director_disk_cid, vm).and_return(disk)
           expect(VSphereCloud::DirectorDiskCID).to receive(:new).with(disk_cid_with_metadata).and_return(director_disk_cid)
-
           expect(vm).to receive(:attach_disk) do |disk|
             expect(disk.cid).to eq('disk-cid')
             OpenStruct.new(device: OpenStruct.new(unit_number: 'some-unit-number'))
@@ -1400,7 +1408,8 @@ module VSphereCloud
             expect(env_location).to eq(vm_location)
             expect(env['disks']['persistent'][disk_cid_with_metadata]).to eq('some-unit-number')
           end
-
+          expect(datacenter).to receive(:move_disk_to_datastore).with(disk, datastore_with_disk, vm_cid)
+                                    .and_return(moved_disk)
           vsphere_cloud.attach_disk('fake-vm-cid', disk_cid_with_metadata)
         end
       end
@@ -1411,7 +1420,7 @@ module VSphereCloud
             cid: 'disk-cid',
             size_in_mb: 1024,
             datastore: datastore_without_disk,
-            folder: 'fake-folder')
+            folder: 'fake-vm-cid')
         end
 
         let(:vm_location) do
@@ -1433,7 +1442,7 @@ module VSphereCloud
         it 'moves the disk to an accessible datastore and attaches it' do
           expect(datacenter).to receive(:find_disk).with(director_disk_cid, vm).and_return(disk)
           expect(VSphereCloud::DirectorDiskCID).to receive(:new).with('disk-cid').and_return(director_disk_cid)
-          expect(datacenter).to receive(:move_disk_to_datastore).with(disk, datastore_without_disk)
+          expect(datacenter).to receive(:move_disk_to_datastore).with(disk, datastore_without_disk, 'fake-vm-cid')
             .and_return(moved_disk)
 
           expect(vm).to receive(:attach_disk).with(moved_disk)
@@ -1449,7 +1458,7 @@ module VSphereCloud
       end
 
       context 'when disk is not in a persistent datastore' do
-        let(:moved_disk) { Resources::PersistentDisk.new(cid: 'disk-cid', size_in_mb: 1024, datastore: datastore_without_disk, folder: 'fake-folder') }
+        let(:moved_disk) { Resources::PersistentDisk.new(cid: 'disk-cid', size_in_mb: 1024, datastore: datastore_without_disk, folder: 'fake-vm-cid') }
 
         before do
           allow(datacenter).to receive(:persistent_pattern).and_return(/datastore\-without\-disk/)
@@ -1465,7 +1474,7 @@ module VSphereCloud
           expect(datacenter).to receive(:find_disk).with(director_disk_cid, vm).and_return(disk)
           expect(VSphereCloud::DirectorDiskCID).to receive(:new).with('disk-cid').and_return(director_disk_cid)
 
-          expect(datacenter).to receive(:move_disk_to_datastore).with(disk, datastore_without_disk)
+          expect(datacenter).to receive(:move_disk_to_datastore).with(disk, datastore_without_disk, 'fake-vm-cid')
             .and_return(moved_disk)
 
           expect(vm).to receive(:attach_disk).with(moved_disk)
@@ -1517,7 +1526,7 @@ module VSphereCloud
         it 'extracts the pattern and uses it for datastore picking' do
           expect(datacenter).to receive(:find_datastore).with('target-datastore').and_return(target_datastore)
 
-          expect(datacenter).to receive(:move_disk_to_datastore).with(disk, target_datastore)
+          expect(datacenter).to receive(:move_disk_to_datastore).with(disk, target_datastore, 'fake-vm-cid')
             .and_return(moved_disk)
 
           allow(vm).to receive(:attach_disk).with(moved_disk)
@@ -1554,7 +1563,7 @@ module VSphereCloud
         }
 
         it 'detaches persistent disks' do
-          expect(vm).to receive(:detach_disks).with([disk])
+          expect(vm).to receive(:detach_disks).with([disk], restore_path)
           expect(vm).to receive(:power_off)
           expect(vm).to receive(:delete)
           vsphere_cloud.delete_vm('vm-id')
@@ -1663,7 +1672,7 @@ module VSphereCloud
               vm_location,
               {'disks' => {'persistent' => {}}}
             )
-          expect(vm).to receive(:detach_disks).with([attached_disk])
+          expect(vm).to receive(:detach_disks).with([attached_disk], restore_path)
           vsphere_cloud.detach_disk('vm-id', 'disk-cid')
         end
 
@@ -1674,7 +1683,7 @@ module VSphereCloud
 
           it 'does not update VM with new setting' do
             expect(agent_env).to_not receive(:set_env)
-            expect(vm).to receive(:detach_disks).with([attached_disk])
+            expect(vm).to receive(:detach_disks).with([attached_disk], restore_path)
             vsphere_cloud.detach_disk('vm-id', 'disk-cid')
           end
         end

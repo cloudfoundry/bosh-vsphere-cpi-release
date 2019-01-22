@@ -10,6 +10,7 @@ describe VSphereCloud::Resources::VM, fake_logger: true do
 
   let(:powered_off_state) { VimSdk::Vim::VirtualMachine::PowerState::POWERED_OFF }
   let(:powered_on_state) { VimSdk::Vim::VirtualMachine::PowerState::POWERED_ON }
+  let(:restore_path) {'vcpi-test-disk-folder'}
 
   before do
     allow(cloud_searcher).to receive(:get_properties).with(
@@ -382,13 +383,13 @@ describe VSphereCloud::Resources::VM, fake_logger: true do
       )
     end
 
-    before {
-      allow(vm).to receive(:has_persistent_disk_property_mismatch?).and_return(false)
+    before do
       allow(vm_mob).to receive_message_chain('config.v_app_config.property').and_return([
         disk0_property,
         disk1_property
       ])
-    }
+      allow(vm).to receive(:get_old_disk_filepath).and_return('[old-datastore] old-disk-path/old-file-name.vmdk')
+    end
 
     it 'detaches the given virtual disks' do
       expect(client).to receive(:reconfig_vm) do |mob, spec|
@@ -398,10 +399,10 @@ describe VSphereCloud::Resources::VM, fake_logger: true do
         expect(spec.device_change[1].device).to eq(disk1)
         expect(spec.device_change[1].operation).to eq(VimSdk::Vim::Vm::Device::VirtualDeviceSpec::Operation::REMOVE)
       end
-      expect(client).to_not receive(:move_disk)
+      expect(client).to receive(:move_disk).twice
       expect(client).to receive(:delete_persistent_disk_property_from_vm).with(vm, 'first-disk-key')
       expect(client).to receive(:delete_persistent_disk_property_from_vm).with(vm, 'second-disk-key')
-      vm.detach_disks([disk0, disk1])
+      vm.detach_disks([disk0, disk1], restore_path)
     end
 
     context 'when a disk has a property mismatch' do
@@ -414,8 +415,7 @@ describe VSphereCloud::Resources::VM, fake_logger: true do
         )
       end
       before do
-        allow(vm).to receive(:has_persistent_disk_property_mismatch?).and_return(true)
-        allow(vm).to receive(:get_old_disk_filepath).and_return('[old-datastore] old-disk-path/old-file-name.vmdk')
+        allow(vm).to receive(:get_old_disk_filepath).and_return("[datastore x] #{restore_path}/old-file-name.vmdk")
         allow(client).to receive(:disk_path_exists?).and_return(false)
       end
       it 'renames the disk to its original name' do
@@ -428,26 +428,10 @@ describe VSphereCloud::Resources::VM, fake_logger: true do
           datacenter,
           '[datastore x] fake-disk-path/fake-file_name.vmdk',
           datacenter,
-          '[datastore x] old-disk-path/old-file-name.vmdk'
+          "[datastore x] #{restore_path}/old-file-name.vmdk"
         )
         expect(client).to receive(:delete_persistent_disk_property_from_vm).with(vm, 'first-disk-key')
-        vm.detach_disks([disk0])
-      end
-
-      context 'when original disk still exists' do
-        before do
-          allow(client).to receive(:disk_path_exists?).and_return(true)
-        end
-        it 'does not try to move the disk to its original name' do
-          expect(client).to receive(:reconfig_vm) do |mob, spec|
-            expect(mob).to equal(vm_mob)
-            expect(spec.device_change.first.device).to eq(disk0)
-            expect(spec.device_change.first.operation).to eq(VimSdk::Vim::Vm::Device::VirtualDeviceSpec::Operation::REMOVE)
-          end
-          expect(client).to_not receive(:move_disk)
-          expect(client).to receive(:delete_persistent_disk_property_from_vm).with(vm, 'first-disk-key')
-          vm.detach_disks([disk0])
-        end
+        vm.detach_disks([disk0], restore_path)
       end
     end
   end
