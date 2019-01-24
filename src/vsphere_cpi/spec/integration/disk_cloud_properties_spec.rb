@@ -79,7 +79,7 @@ describe 'cloud_properties related to disks' do
         expect(backing.disk_mode).to eq(VimSdk::Vim::Vm::Device::VirtualDiskOption::DiskMode::INDEPENDENT_PERSISTENT)
         # default is 'preallocated', thin + lazy-zeroed
         expect(backing.thin_provisioned).to be(false)
-        expect(backing.eagerly_scrub).to be_falsey
+        expect(backing.eagerly_scrub).to be(true)
       end
     ensure
       delete_disk(cpi, disk_id)

@@ -174,8 +174,8 @@ describe 'host-local storage patterns', :host_local => true do
 
           host_local_datastores = matching_datastores(local_disk_cpi.datacenter, @multi_local_ds_pattern)
           other_datastore = host_local_datastores.values.find { |ds| ds.name != ephemeral_ds }
-          disk = local_disk_cpi.datacenter.move_disk_to_datastore(disk, other_datastore)
-          expect(disk.datastore.name).to_not eq(ephemeral_ds)
+          destination_path = "[#{other_datastore.name}] #{local_disk_cpi.datacenter.instance_variable_get(:@disk_path)}/#{disk.cid}.vmdk"
+          local_disk_cpi.client.move_disk(local_disk_cpi.datacenter.mob, disk.path, local_disk_cpi.datacenter.mob, destination_path)
 
           local_disk_cpi.attach_disk(vm_id, disk_id)
           expect(local_disk_cpi.has_disk?(disk_id)).to be(true)
