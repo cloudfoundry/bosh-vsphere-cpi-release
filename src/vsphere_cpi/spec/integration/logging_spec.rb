@@ -25,7 +25,7 @@ context 'debug logging' do
   end
 
   let(:password) do
-    ENV.fetch('BOSH_VSPHERE_CPI_PASSWORD')
+    /\b#{Regexp.escape(ENV.fetch('BOSH_VSPHERE_CPI_PASSWORD'))}\b/
   end
 
   let(:logger) do
@@ -55,7 +55,9 @@ context 'debug logging' do
       expect(log.string).to include('POST')        # ensure HTTP logs are included
       expect(log.string).to include('redacted')    # ensure password is redacted
 
-      if log.string.include?(password)
+      # Some password matching vSphere password might get caught if we use include? method.
+      # Using regex enclosed by word boundary will be able to detect these cases.
+      if log.string.match?(password)
         fail 'Expected CPI log to not contain the contents of $BOSH_VSPHERE_CPI_PASSWORD but it did.'
       end
       expect(log.string).to_not include('my-fake-secret')
@@ -76,7 +78,7 @@ context 'debug logging' do
       expect(log.string).to include("Creating vm") # ensure .debug logs are included
       expect(log.string).to_not include("POST")        # ensure HTTP logs are included
 
-      if log.string.include?(password)
+      if log.string.match?(password)
         fail 'Expected CPI log to not contain the contents of $BOSH_VSPHERE_CPI_PASSWORD but it did.'
       end
       expect(log.string).to_not include('my-fake-secret')
