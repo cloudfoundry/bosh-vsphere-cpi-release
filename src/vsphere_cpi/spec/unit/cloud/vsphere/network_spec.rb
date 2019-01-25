@@ -318,16 +318,22 @@ module VSphereCloud
       context 'when not 1 port attached to switch' do
         context 'if 0 ports attached 'do
           let(:switch_ports) { [] }
-          it 'raises an error' do
+          it 'deletes the switch and attached router' do
             expect(router_provider).to receive(:get_attached_router_ids)
                .with('switch-id').and_return(['t1-router-id'])
             expect(switch_provider).to receive(:get_attached_switch_ports)
                .with('switch-id').and_return(switch_ports)
             expect(switch_provider).to receive(:get_switch_by_id)
                .with('switch-id').and_return(logical_switch)
-            expect{
+            expect(switch_provider).to receive(:delete_logical_switch)
+                .with('switch-id')
+            expect(router_provider).to receive(:get_attached_switches_ids)
+                .with('t1-router-id').and_return([])
+            expect(router_provider).to receive(:detach_t1_from_t0)
+                 .with('t1-router-id')
+            expect(router_provider).to receive(:delete_t1_router)
+                 .with('t1-router-id')
               network.destroy('switch-id')
-            }.to raise_error(NetworkDeletionError)
           end
         end
 
