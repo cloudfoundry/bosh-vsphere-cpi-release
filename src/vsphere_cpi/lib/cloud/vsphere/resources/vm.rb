@@ -293,6 +293,9 @@ module VSphereCloud
         disks_to_move.each do |disk|
           current_datastore = disk.backing.file_name.match(/^\[([^\]]+)\]/)[1]
           original_disk_path = get_old_disk_filepath(disk.key)
+          # Fall back to file path on backing info if vApp properties are missing.
+          # @TODO: Can vApp properties be deleted or disabled? Why?
+          original_disk_path = disk.backing.file_name if original_disk_path.nil?
           dest_filename = original_disk_path.match(/^\[[^\]]+\] (.*)/)[1].split('/')[1]
           dest_path = "[#{current_datastore}] #{restore_path}/#{dest_filename}"
           logger.info("Moving #{disk.backing.file_name} to #{dest_path}")
