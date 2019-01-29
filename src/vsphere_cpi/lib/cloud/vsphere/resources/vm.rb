@@ -18,7 +18,7 @@ module VSphereCloud
       end
 
       def inspect
-        "<VM: #{@mob} / #{@cid}>"
+        "<VM: #{@mob} / #{name}>"
       end
 
       def cluster
@@ -158,7 +158,7 @@ module VSphereCloud
         if power_state != Vim::VirtualMachine::PowerState::POWERED_OFF
           @client.power_off_vm(@mob)
         else
-          logger.info("VM '#{@cid}' is already powered off, skipping power off task.")
+          logger.info("VM '#{name}' is already powered off, skipping power off task.")
         end
       end
 
@@ -258,7 +258,7 @@ module VSphereCloud
         logger.info('Finished attaching disk')
 
         reload
-        logger.debug("Adding persistent disk property to vm '#{@cid}'")
+        logger.debug("Adding persistent disk property to vm '#{name}'")
         @client.add_persistent_disk_property_to_vm(self, disk)
         logger.debug('Finished adding persistent disk property to vm')
         return disk_config_spec
@@ -294,7 +294,7 @@ module VSphereCloud
         logger.info('Finished detaching disk(s)')
 
         virtual_disks.each do |disk|
-          logger.debug("Deleting persistent disk property #{disk.key} from vm '#{@cid}'")
+          logger.debug("Deleting persistent disk property #{disk.key} from vm '#{name}'")
           @client.delete_persistent_disk_property_from_vm(self, disk.key)
         end
         logger.debug('Finished deleting persistent disk properties from vm')
