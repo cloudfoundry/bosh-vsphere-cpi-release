@@ -150,3 +150,6 @@ These privileges must be granted on any entities in a Datacenter the CPI will in
     <tr><td>vApp application configuration</td><td>VApp.ApplicationConfig</td></tr>
   </tbody>
 </table>
+
+###### Note:
+*Some vCenter features (like encryption in VSAN, storage policy) that are enabled in vSphere outside of BOSH & CPI knowledge might require extra privileges to be configured at vCenter Datcenter/Root/Cluster level for CPI to be able to perform its usual operations*
