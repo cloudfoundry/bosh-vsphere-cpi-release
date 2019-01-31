@@ -9,12 +9,13 @@ module VSphereCloud
 
       stringify_with :cid
 
-      attr_reader :mob, :cid
+      attr_reader :mob, :cid, :datacenter
 
-      def initialize(cid, mob, client)
+      def initialize(cid, mob, client, datacenter_res)
         @client = client
         @mob = mob
         @cid = cid
+        @datacenter = datacenter_res
       end
 
       def inspect
@@ -227,18 +228,42 @@ module VSphereCloud
         v_app_config.property.find { |property| property.key == key }
       end
 
+
       def attach_disk(disk_resource_object)
         disk = disk_resource_object
-        disk_config_spec = disk.create_disk_attachment_spec(disk_controller_id: system_disk.controller_key)
+        disk_config_spec = nil
 
-        vm_config = Vim::Vm::ConfigSpec.new
-        vm_config.device_change = []
-        vm_config.device_change << disk_config_spec
-        fix_device_unit_numbers(vm_config.device_change)
+        # Disable the sdrs on VM before attaching disk
+        #  1. This is done to prevent any storage vMotion while
+        # disk is being attached.
+        #  2. with_sdrs_disbaled takes care of enabling SDRS on VM before exiting
+        VSphereCloud::VMSDRSConfigurator.new(@client, mob.datastore, mob).with_sdrs_disabled do
 
-        logger.info('Attaching disk')
-        @client.reconfig_vm(@mob, vm_config)
-        logger.info('Finished attaching disk')
+          # Prepare the spec after disabling SDRS because between creating a spec and attaching
+          # the disk , SDRS can move disk around.
+          # This movement will invalidate information inside disk attachment spec. hence we must
+          # create attachment spec for disk after disabling SDRS.
+          disk_config_spec = disk.create_disk_attachment_spec(disk_controller_id: system_disk.controller_key)
+
+          vm_config = Vim::Vm::ConfigSpec.new
+          vm_config.device_change = []
+          vm_config.device_change << disk_config_spec
+          fix_device_unit_numbers(vm_config.device_change)
+
+
+          # Attach the disk
+          logger.info('Attaching disk')
+          @client.reconfig_vm(@mob, vm_config)
+          logger.info('Finished attaching disk')
+
+          # Move the disk.
+          # Move is done after attaching so that if CPI proc crashes/times out
+          # connecting to VC while moving the disk, the disk is still
+          # discoverable by BOSH in default disk folder.
+          #
+          # This moves the disk in vm's cid named folder on the same datastore.
+          datacenter.move_disk_to_datastore(disk, disk.datastore, cid)
+        end
 
         reload
         logger.debug("Adding persistent disk property to vm '#{@cid}'")
@@ -247,40 +272,58 @@ module VSphereCloud
         return disk_config_spec
       end
 
-      def detach_disks(virtual_disks, restore_path)
+      def detach_disks(virtual_disks)
         reload
         check_for_nonpersistent_disk_modes
 
         logger.info("Found #{virtual_disks.size} persistent disk(s)")
+
         config = Vim::Vm::ConfigSpec.new
         config.device_change = []
 
-        virtual_disks.each do |virtual_disk|
-          logger.info("Detaching: #{virtual_disk.backing.file_name}")
-          config.device_change << Resources::VM.create_delete_device_spec(virtual_disk)
-        end
 
-        @client.reconfig_vm(@mob, config)
+        virtual_disks.each_with_index do |disk, index|
+          # Disable the sdrs on VM before detaching disk
+          #  1. This is done to prevent any storage vMotion while
+          # disk is being detached.
+          #  2. with_sdrs_disbaled takes care of enabling SDRS on VM before exiting
+          VSphereCloud::VMSDRSConfigurator.new(@client, mob.datastore, mob).with_sdrs_disabled do
+
+            # Move the disk.
+            #
+            # Move should be done before detach so that if CPI proc crashes/times out
+            # connecting to VC while moving the disk, the disk is still
+            # discoverable by BOSH through vm attachments.
+
+            # This moves the disk in default disk folder on the same datastore.
+            #
+            # The need to restore disk to global config disk path (WHERE IT GOT CREATED on some DS)
+            # after detaching is really crucial as it
+            #   1. restores name/cid which is director disk cid , the one BOSH Director knows.
+            #   2. It is not possible for BOSH director to find a detached disk outside default disk
+            #      folder.
+            #
+            # We currently restore it to the where it is being detached from VM.
+            #   1. The source ds it came from might be over used, so let it stay where it is.
+            #   2. We can say above ^^ because it might be the reason SDRS moved it.
+            #      If SDRS did not move it, it cannot have different source_ds than current_ds
+            #
+            # Also now all detached disks must move as all persistent disks are always foldered up while attaching them.
+            #
+            # Move all disks to restore path.
+            move_disks_to_old_path([disk], datacenter.disk_path)
+
+            # Prepare the spec for each disk and append.
+            logger.info("Detaching: #{disk.backing.file_name}")
+            config.device_change << Resources::VM.create_delete_device_spec(disk)
+
+            # Reconfig only if this is the last disk to be detached
+            @client.reconfig_vm(@mob, config) if index == (virtual_disks.length - 1)
+          end
+        end
         logger.info("Detached #{virtual_disks.size} persistent disk(s)")
 
-
-        # The need to restore disk to global config disk path (WHERE IT GOT CREATED on some DS)
-        # after detaching is really crucial as it
-        #   1. restores name/cid which is director disk cid , the one BOSH Director knows.
-        #   2. The VM might get deleted so no point keeping it in VM_CID named folder.
-        #
-        # We currently restore it to the where it is being detached from VM.
-        #   1. The source ds it came from might be over used, so let it stay where it is.
-        #   2. We can say above ^^ beause it might be the reason SDRS moved it.
-        #      If SDRS did not move it, it cannot have different source_ds than current_ds
-        #
-        # Also now all detached disks must move as all persistent disks are always foldered up whjile attaching them.
-        #
-        # Move all disks to restore path.
-        move_disks_to_old_path(virtual_disks, restore_path)
-
         logger.info('Finished detaching disk(s)')
-
         virtual_disks.each do |disk|
           logger.debug("Deleting persistent disk property #{disk.key} from vm '#{@cid}'")
           @client.delete_persistent_disk_property_from_vm(self, disk.key)
@@ -289,7 +332,7 @@ module VSphereCloud
       end
 
       def move_disks_to_old_path(disks_to_move, restore_path)
-        logger.info("Renaming #{disks_to_move.size} persistent disk(s)")
+        logger.info("Renaming a persistent disk(s)")
         disks_to_move.each do |disk|
           current_datastore = disk.backing.file_name.match(/^\[([^\]]+)\]/)[1]
           original_disk_path = get_old_disk_filepath(disk.key)

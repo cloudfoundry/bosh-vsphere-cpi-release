@@ -2,17 +2,21 @@ require 'spec_helper'
 require 'timecop'
 
 describe VSphereCloud::Resources::VM, fake_logger: true do
-  subject(:vm) { described_class.new('vm-cid', vm_mob, client) }
-  let(:vm_mob) { instance_double('VimSdk::Vim::VirtualMachine', __mo_id__: 'fake-mob-id') }
+  subject(:vm) { described_class.new('vm-cid', vm_mob, client, datacenter_res) }
+  let(:vm_mob) { instance_double('VimSdk::Vim::VirtualMachine', __mo_id__: 'fake-mob-id', datastore: []) }
   let(:datacenter) { instance_double('VimSdk::Vim::Datacenter')}
+  let(:datacenter_res) { instance_double('VSphereCloud::Resources::Datacenter', disk_path: restore_path)}
   let(:client) { instance_double('VSphereCloud::VCenterClient', cloud_searcher: cloud_searcher) }
   let(:cloud_searcher) { instance_double('VSphereCloud::CloudSearcher') }
 
   let(:powered_off_state) { VimSdk::Vim::VirtualMachine::PowerState::POWERED_OFF }
   let(:powered_on_state) { VimSdk::Vim::VirtualMachine::PowerState::POWERED_ON }
   let(:restore_path) {'vcpi-test-disk-folder'}
+  let(:vm_sdrs_configurator) { instance_double('VSphereCloud::VMSDRSConfigurator') }
 
   before do
+    allow(VSphereCloud::VMSDRSConfigurator).to receive(:new).and_return(vm_sdrs_configurator)
+    allow(vm_sdrs_configurator).to receive(:with_sdrs_disabled).and_yield
     allow(cloud_searcher).to receive(:get_properties).with(
       vm_mob,
       VimSdk::Vim::VirtualMachine,
@@ -334,6 +338,7 @@ describe VSphereCloud::Resources::VM, fake_logger: true do
       allow(vm).to receive(:system_disk).and_return(disk)
       allow(disk).to receive(:controller_key).and_return('fake-controller-key')
       allow(datastore).to receive(:mob).and_return('fake-datastore')
+      expect(datacenter_res).to receive(:move_disk_to_datastore).and_return(nil)
 
       expect(client).to receive(:reconfig_vm) do |reconfig_vm, vm_config|
         expect(reconfig_vm).to eq(vm_mob)
@@ -402,7 +407,7 @@ describe VSphereCloud::Resources::VM, fake_logger: true do
       expect(client).to receive(:move_disk).twice
       expect(client).to receive(:delete_persistent_disk_property_from_vm).with(vm, 'first-disk-key')
       expect(client).to receive(:delete_persistent_disk_property_from_vm).with(vm, 'second-disk-key')
-      vm.detach_disks([disk0, disk1], restore_path)
+      vm.detach_disks([disk0, disk1])
     end
 
     context 'when a disk has a property mismatch' do
@@ -431,7 +436,7 @@ describe VSphereCloud::Resources::VM, fake_logger: true do
           "[datastore x] #{restore_path}/old-file-name.vmdk"
         )
         expect(client).to receive(:delete_persistent_disk_property_from_vm).with(vm, 'first-disk-key')
-        vm.detach_disks([disk0], restore_path)
+        vm.detach_disks([disk0])
       end
     end
   end

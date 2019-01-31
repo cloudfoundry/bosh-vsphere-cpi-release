@@ -51,7 +51,7 @@ module VSphereCloud
         if datastore_cluster
           datastore = Resources::Datastore.build_from_client(@client, replicated_stemcell_properties['datastore']).first
         end
-        replicated_stemcell_vm = Resources::VM.new(vm_config.stemcell_cid, replicated_stemcell_vm_mob, @client)
+        replicated_stemcell_vm = Resources::VM.new(vm_config.stemcell_cid, replicated_stemcell_vm_mob, @client, @datacenter)
         snapshot = replicated_stemcell_properties['snapshot']
 
         # Create device_change config
@@ -162,7 +162,7 @@ module VSphereCloud
         end
         next if created_vm_mob.nil?
 
-        created_vm = Resources::VM.new(vm_config.name, created_vm_mob, @client)
+        created_vm = Resources::VM.new(vm_config.name, created_vm_mob, @client, @datacenter)
 
         # Set agent env settings
         begin

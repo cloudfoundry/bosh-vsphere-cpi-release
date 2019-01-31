@@ -424,7 +424,7 @@ module VSphereCloud
 
         persistent_disks = vm.persistent_disks
         unless persistent_disks.empty?
-          vm.detach_disks(persistent_disks, @datacenter.disk_path)
+          vm.detach_disks(persistent_disks)
         end
 
         # Delete env.iso and VM specific files managed by the director
@@ -520,8 +520,6 @@ module VSphereCloud
 
         disk_is_in_target_datastore = disk_config.existing_datastore_name =~ Regexp.new(disk_config.target_datastore_pattern)
 
-        destination_datastore = accessible_datastores[disk_config.existing_datastore_name]
-
         unless disk_is_accessible && disk_is_in_target_datastore
           # Create a new disk selection pipeline with a gathering block.
           pipeline = DiskPlacementSelectionPipeline.new(disk_config.size,
@@ -537,11 +535,10 @@ module VSphereCloud
           storage_placement = storage_placement_enum.first
           raise "Unable to attach disk to the VM. There is no datastore matching pattern or required space available for disk to move" if storage_placement.nil?
           destination_datastore = @datacenter.find_datastore(storage_placement.name)
+          # The destination datastore might or might not have changed depending on the accessibility from vm with vm_cid.
+          disk_to_attach = @datacenter.move_disk_to_datastore(disk_to_attach, destination_datastore)
         end
 
-        # The destination datastore might or might not have changed depending on the accessibility from vm with vm_cid.
-        # Action of attaching a disk folders it up inside the vm_cid named folder inside bosh disk folder
-        disk_to_attach = @datacenter.move_disk_to_datastore(disk_to_attach, destination_datastore, vm_cid)
 
         disk_spec = vm.attach_disk(disk_to_attach)
         # Overwrite cid with the director cid
@@ -560,7 +557,7 @@ module VSphereCloud
         disk = vm.disk_by_cid(director_disk_cid.value)
         raise Bosh::Clouds::DiskNotAttached.new(true), "Disk '#{director_disk_cid.value}' is not attached to VM '#{vm_cid}'" if disk.nil?
 
-        vm.detach_disks([disk], datacenter.disk_path)
+        vm.detach_disks([disk])
         delete_disk_from_agent_env(vm, director_disk_cid)
       end
     end
@@ -708,7 +705,7 @@ module VSphereCloud
       end
       mobs = subfolders.map { |folder| folder.child_entity }.flatten
       mobs.map do |mob|
-        VSphereCloud::Resources::VM.new(mob.name, mob, @client)
+        VSphereCloud::Resources::VM.new(mob.name, mob, @client, @datacenter)
       end
     end
 

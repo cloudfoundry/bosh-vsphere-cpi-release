@@ -154,7 +154,7 @@ module VSphereCloud
         logger.debug("Disk #{disk_cid} not found in all datastores, searching VM attachments")
         vm_mob = @client.find_vm_by_disk_cid(mob, disk_cid)
         unless vm_mob.nil?
-          vm = Resources::VM.new(vm_mob.name, vm_mob, @client)
+          vm = Resources::VM.new(vm_mob.name, vm_mob, @client, self)
           disk_path = vm.disk_path_by_cid(disk_cid)
           unless disk_path.nil?
             datastore_name, disk_folder, disk_file = /\[(.+)\] (.+)\/(.+)\.vmdk/.match(disk_path)[1..3]
@@ -172,7 +172,7 @@ module VSphereCloud
 
       # Moves the virtual disk to destination datastore.
       #
-      # It folders it up in the folder named with vm_cid passed.
+      # It folders it up in the folder named either with vm_cid or default disk folder.
       #
       # The need for foldering up the disk inside vm named folder arises from the way SDRS moves a VM folder.
       # If it moves VM to a DS which has persistent disk of VM, SDRS will move VM inside
@@ -182,15 +182,16 @@ module VSphereCloud
       #
       # @param disk [VSphereCloud::Resources::PersistentDisk] disk to be moved.
       # @param destination_datastore [VSphereCloud::Resources::Datastore] Destination datastore for disk to move in
-      # @param vm_cid [String] Name of the VM from which parent disk folder is created on the destination datastore
+      # @param vm_cid [String] Name of the VM to which disk is to be attached.
       #
       # @return [VSphereCloud::Resources::PersistentDisk] The new disk object with updated datastore & folder name
-      def move_disk_to_datastore(disk, destination_datastore, vm_cid)
-        destination_path = "[#{destination_datastore.name}] #{vm_cid}/#{disk.cid}.vmdk"
+      def move_disk_to_datastore(disk, destination_datastore, vm_cid=nil)
+        disk_folder = vm_cid.nil? ? disk_path : vm_cid
+        destination_path = "[#{destination_datastore.name}] #{disk_folder}/#{disk.cid}.vmdk"
         logger.info("Moving #{disk.path} to #{destination_path}")
         @client.move_disk(mob, disk.path, mob, destination_path)
         logger.info('Moved disk successfully')
-        Resources::PersistentDisk.new(cid: disk.cid, size_in_mb: disk.size_in_mb, datastore: destination_datastore, folder: vm_cid)
+        Resources::PersistentDisk.new(cid: disk.cid, size_in_mb: disk.size_in_mb, datastore: destination_datastore, folder: disk_folder)
       end
 
       private
