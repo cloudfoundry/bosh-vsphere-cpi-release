@@ -250,11 +250,16 @@ module VSphereCloud
           vm_config.device_change << disk_config_spec
           fix_device_unit_numbers(vm_config.device_change)
 
-
           # Attach the disk
           logger.info('Attaching disk')
           @client.reconfig_vm(@mob, vm_config)
           logger.info('Finished attaching disk')
+
+          # Refresh device information
+          reload
+
+          # Get the vCenter disk oject of the disk we just attached
+          virt_disk = disk_by_cid(disk.cid)
 
           # Move the disk.
           # Move is done after attaching so that if CPI proc crashes/times out
@@ -262,7 +267,25 @@ module VSphereCloud
           # discoverable by BOSH in default disk folder.
           #
           # This moves the disk in vm's cid named folder on the same datastore.
-          datacenter.move_disk_to_datastore(disk, disk.datastore, cid)
+          require 'pry-byebug'
+          binding.pry
+          relocate_ds = disk.datastore
+          relocate_spec  = VimSdk::Vim::Vm::RelocateSpec.new
+          relocate_spec_disk_loc = VimSdk::Vim::Vm::RelocateSpec::DiskLocator.new
+          relocate_spec_disk_loc.disk_id = virt_disk.key
+          relocate_spec_disk_loc.datastore = relocate_ds.mob
+          relocate_spec_disk_loc.disk_backing_info = VimSdk::Vim::Vm::Device::VirtualDisk::FlatVer2BackingInfo.new.tap do |backing_info|
+            backing_info.datastore = relocate_ds.mob
+            backing_info.file_name = "[#{relocate_ds.name}] #{@datacenter.disk_path}/#{cid}/#{disk.cid}.vmdk"
+          end
+          relocate_spec.disk = [relocate_spec_disk_loc]
+          @client.create_parent_folder(@datacenter.mob, relocate_spec_disk_loc.disk_backing_info.file_name)
+
+          @client.wait_for_task do
+            mob.relocate(relocate_spec)
+          end
+          require 'pry-byebug'
+          binding.pry
         end
 
         reload
@@ -289,6 +312,13 @@ module VSphereCloud
           #  2. with_sdrs_disbaled takes care of enabling SDRS on VM before exiting
           VSphereCloud::VMSDRSConfigurator.new(@client, mob.datastore, mob).with_sdrs_disabled do
 
+            # Prepare the spec for each disk and append.
+            logger.info("Detaching: #{disk.backing.file_name}")
+            config.device_change << Resources::VM.create_delete_device_spec(disk)
+
+            # Reconfig only if this is the last disk to be detached
+            @client.reconfig_vm(@mob, config) if index == (virtual_disks.length - 1)
+
             # Move the disk.
             #
             # Move should be done before detach so that if CPI proc crashes/times out
@@ -312,13 +342,6 @@ module VSphereCloud
             #
             # Move all disks to restore path.
             move_disks_to_old_path([disk], datacenter.disk_path)
-
-            # Prepare the spec for each disk and append.
-            logger.info("Detaching: #{disk.backing.file_name}")
-            config.device_change << Resources::VM.create_delete_device_spec(disk)
-
-            # Reconfig only if this is the last disk to be detached
-            @client.reconfig_vm(@mob, config) if index == (virtual_disks.length - 1)
           end
         end
         logger.info("Detached #{virtual_disks.size} persistent disk(s)")
@@ -339,7 +362,7 @@ module VSphereCloud
           # Fall back to file path on backing info if vApp properties are missing.
           # @TODO: Can vApp properties be deleted or disabled? Why?
           original_disk_path = disk.backing.file_name if original_disk_path.nil?
-          dest_filename = original_disk_path.match(/^\[[^\]]+\] (.*)/)[1].split('/')[1]
+          dest_filename = original_disk_path.match(/^\[[^\]]+\] (.*)/)[1].split('/').last
           dest_path = "[#{current_datastore}] #{restore_path}/#{dest_filename}"
           logger.info("Moving #{disk.backing.file_name} to #{dest_path}")
           @client.move_disk(datacenter_mob, disk.backing.file_name, datacenter_mob, dest_path)

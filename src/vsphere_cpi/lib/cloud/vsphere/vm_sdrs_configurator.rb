@@ -24,7 +24,7 @@ module VSphereCloud
     def disable_sdrs_for_ds(ds_mob)
       parent_datstastore = ds_mob.parent
       unless parent_datstastore.is_a?(VimSdk::Vim::StoragePod)
-        logger.info("Datastore #{@datastore.name} is not part of any storage pod. No need to disable SDRS")
+        logger.info("Datastore #{ds_mob.name} is not part of any storage pod. No need to disable SDRS")
         return
       end
       disable_sdrs_for_pod(parent_datstastore)

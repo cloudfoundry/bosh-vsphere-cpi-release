@@ -48,13 +48,27 @@ describe 're-attaching a persistent disk' do
       disk_id = @cpi.create_disk(2048, {}, vm_id)
       expect(disk_id).to_not be_nil
 
+      disk_id_1 = @cpi.create_disk(2048, {}, vm_id)
+      expect(disk_id).to_not be_nil
+
+      disk_id_2 = @cpi.create_disk(2048, {}, vm_id)
+      expect(disk_id).to_not be_nil
+
       @cpi.attach_disk(vm_id, disk_id)
+      require 'pry-byebug'
+      binding.pry
       @cpi.detach_disk(vm_id, disk_id)
       @cpi.attach_disk(vm_id, disk_id)
+      @cpi.attach_disk(vm_id, disk_id_1)
+      @cpi.attach_disk(vm_id, disk_id_2)
       @cpi.detach_disk(vm_id, disk_id)
+      @cpi.detach_disk(vm_id, disk_id_1)
+      @cpi.detach_disk(vm_id, disk_id_2)
     ensure
       delete_vm(@cpi, vm_id)
       delete_disk(@cpi, disk_id)
+      delete_disk(@cpi, disk_id_1)
+      delete_disk(@cpi, disk_id_2)
     end
   end
 

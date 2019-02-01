@@ -324,9 +324,10 @@ module VSphereCloud
       datastore_path = "[#{datastore.name}] #{disk_folder}"
       logger.debug("Trying to find disk in : #{datastore_path}")
       result = wait_for_task do
-        datastore.mob.browser.search(datastore_path, search_spec)
+        datastore.mob.browser.search_sub_folders(datastore_path, search_spec)
       end
-      disk_infos = result.file
+
+      disk_infos = result.first.file
       return nil if disk_infos.empty?
 
       disk_infos.first.capacity_kb / 1024
@@ -458,6 +459,11 @@ module VSphereCloud
       find_child_by_name(mob.child_entity.find {|c| c.name == child_entity_name }, child_path)
     end
 
+    def create_parent_folder(datacenter_mob, disk_path)
+      destination_folder = File.dirname(disk_path)
+      create_datastore_folder(destination_folder, datacenter_mob)
+    end
+
     private
 
     def find_perf_metric_names(mob, names)
@@ -489,11 +495,6 @@ module VSphereCloud
       result = {}
       metrics.each { |metric| result[metric_names[metric.counter_id]] = metric }
       result
-    end
-
-    def create_parent_folder(datacenter_mob, disk_path)
-      destination_folder = File.dirname(disk_path)
-      create_datastore_folder(destination_folder, datacenter_mob)
     end
   end
 end

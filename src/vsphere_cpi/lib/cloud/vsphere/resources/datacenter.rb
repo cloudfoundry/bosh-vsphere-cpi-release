@@ -186,7 +186,7 @@ module VSphereCloud
       #
       # @return [VSphereCloud::Resources::PersistentDisk] The new disk object with updated datastore & folder name
       def move_disk_to_datastore(disk, destination_datastore, vm_cid=nil)
-        disk_folder = vm_cid.nil? ? disk_path : vm_cid
+        disk_folder = vm_cid.nil? ? disk_path : "#{disk_path}/#{vm_cid}"
         destination_path = "[#{destination_datastore.name}] #{disk_folder}/#{disk.cid}.vmdk"
         logger.info("Moving #{disk.path} to #{destination_path}")
         @client.move_disk(mob, disk.path, mob, destination_path)
