@@ -121,4 +121,6 @@ builds:
     version: "49"
   ed00ba82-195f-465a-b3c9-bb8afea93c03:
     version: "20"
+  f9927894-9dae-4379-4ead-853c88f3b483:
+    version: 52.1.0
 format-version: "2"
