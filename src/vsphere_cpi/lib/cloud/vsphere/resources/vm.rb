@@ -7,6 +7,10 @@ module VSphereCloud
       include ObjectStringifier
       include Logger
 
+      # keeping 1 less than hard limit.
+      MAX_VSPHERE_VM_NAME_LENGTH = 79
+      VSPHERE_VM_INSTANCE_UUID_LENGTH = 36
+
       stringify_with :cid
 
       attr_reader :mob, :cid
@@ -50,8 +54,27 @@ module VSphereCloud
         @mob.__mo_id__
       end
 
+      def instance_uuid
+        mob.config.instance_uuid
+      end
+
       def name
         @mob.name
+      end
+
+      def human_readable_name(instance_name, index)
+        # 1. concatenate inst + index + depl
+        # 2. fix length violation if any
+        # 3. Suffix instance UUID
+        # LEFT to @TA: TODO, below
+        # 4. [LATER, OPTIONAL] raise error if length violation (can never happen) but we should test
+        # 5. [LATER] Add logs
+
+        human_readable_name_prefix = instance_name + '_' + index
+        # -1 for 1 more underscore that will come
+        allowed_prefix_len = MAX_VSPHERE_VM_NAME_LENGTH - VSPHERE_VM_INSTANCE_UUID_LENGTH - 1
+        human_readable_name_prefix = human_readable_name_prefix[0..allowed_prefix_len-1] if human_readable_name_prefix.length > allowed_prefix_len
+        human_readable_name_prefix + '_' + instance_uuid # This should never exceed 79 characters.
       end
 
       def datacenter_mob
