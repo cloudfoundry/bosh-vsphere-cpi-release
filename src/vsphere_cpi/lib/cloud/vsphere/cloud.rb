@@ -486,11 +486,15 @@ module VSphereCloud
         metadata.each do |name, value|
           client.set_custom_field(vm.mob, name, value)
         end
-        new_name = "#{metadata['deployment']}-#{metadata['instance_group']}-#{metadata['index']}"
-        client.rename_vm(vm.mob, new_name)
+
+        # Assign a human readable name to the VM
+        new_name = vm.human_readable_name(metadata['instance_group'], metadata['index'])
+        client.rename_vm(vm.mob, new_name) unless new_name.nil? || new_name.empty?
+
         @nsxt_provider.update_vm_metadata_on_logical_ports(vm, metadata) if @config.nsxt_enabled?
       end
     end
+
 
     def set_disk_metadata(disk_id, metadata)
       # not implemented
