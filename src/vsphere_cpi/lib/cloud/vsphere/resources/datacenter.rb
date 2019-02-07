@@ -22,9 +22,10 @@ module VSphereCloud
         @persistent_pattern = attrs.fetch(:persistent_pattern)
         @clusters = attrs.fetch(:clusters)
         @cluster_provider = attrs.fetch(:cluster_provider)
+        @enable_human_readable_names = attrs.fetch(:enable_human_readable_names)
       end
 
-      attr_reader :name, :disk_path, :ephemeral_pattern, :persistent_pattern, :client
+      attr_reader :name, :disk_path, :ephemeral_pattern, :persistent_pattern, :client, :enable_human_readable_names
 
       def mob
         mob = @client.find_by_inventory_path(name)
@@ -154,6 +155,7 @@ module VSphereCloud
         logger.debug("Disk #{disk_cid} not found in all datastores, searching VM attachments")
         vm_mob = @client.find_vm_by_disk_cid(mob, disk_cid)
         unless vm_mob.nil?
+          # vm = Resources::VM.new(vm_mob.name, vm_mob, @client)
           vm = Resources::VM.new(vm_mob.config.instance_uuid, vm_mob, @client)
           disk_path = vm.disk_path_by_cid(disk_cid)
           unless disk_path.nil?

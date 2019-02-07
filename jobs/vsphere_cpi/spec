@@ -34,6 +34,9 @@ properties:
   vcenter.upgrade_hw_version:
     description: Upgrades virtual machines to latest virtual hardware version supported on the ESXi host.
     default: false
+  vcenter.enable_human_readable_names:
+    description: Enables human readable names for BOSH VMs. The name is derived from deployment name and instance group name plus some unique random characters
+    default: true
   vcenter.connection_options.ca_cert:
     description: All required custom CA certificates
     example:

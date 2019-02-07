@@ -66,6 +66,7 @@ describe '#add cpi extension' do
           [],
           {'key' => 'value'}
         )
+        #vm = second_cluster_cpi.client.find_vm_by_name(second_cluster_cpi.datacenter.mob, @vm_cid)
         vm = second_cluster_cpi.client.find_vm_by_uuid(second_cluster_cpi.datacenter.mob, @vm_cid)
         expect(vm.config.managed_by.extension_key).to eql(VSphereCloud::VCPIExtension::DEFAULT_VSPHERE_CPI_EXTENSION_KEY)
         stemcell_replicas = second_cluster_cpi.client.find_all_stemcell_replicas(second_cluster_cpi.datacenter.mob, @stemcell_id)

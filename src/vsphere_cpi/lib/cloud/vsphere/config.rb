@@ -163,6 +163,10 @@ module VSphereCloud
         !!vcenter_datacenter['use_sub_folder']
     end
 
+    def human_readable_name_enabled?
+      vcenter['enable_human_readable_names'] || false
+    end
+
     def nsx_url
       vcenter['nsx']['address']
     end
@@ -225,6 +229,7 @@ module VSphereCloud
             optional('http_logging') => bool,
             optional('enable_auto_anti_affinity_drs_rules') => bool,
             optional('upgrade_hw_version') => bool,
+            optional('enable_human_readable_names') => bool,
             optional('nsxt') => dict(String, String),
             'datacenters' => [{
               'name' => String,

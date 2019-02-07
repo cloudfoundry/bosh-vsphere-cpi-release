@@ -488,9 +488,10 @@ module VSphereCloud
         end
 
         # Assign a human readable name to the VM
-        new_name = vm.human_readable_name(metadata['instance_group'], metadata['index'])
-        client.rename_vm(vm.mob, new_name) unless new_name.nil? || new_name.empty?
-
+        if human_readable_name_enabled?()
+          new_name = vm.human_readable_name(metadata['instance_group'], metadata['index'])
+          client.rename_vm(vm.mob, new_name) unless new_name.nil? || new_name.empty?
+        end
         @nsxt_provider.update_vm_metadata_on_logical_ports(vm, metadata) if @config.nsxt_enabled?
       end
     end

@@ -63,7 +63,7 @@ module VSphereCloud
       end
 
       def human_readable_name(instance_name, index)
-        # 1. concatenate inst + index + depl
+        # 1. concatenate inst + index
         # 2. fix length violation if any
         # 3. Suffix instance UUID
         # LEFT to @TA: TODO, below
