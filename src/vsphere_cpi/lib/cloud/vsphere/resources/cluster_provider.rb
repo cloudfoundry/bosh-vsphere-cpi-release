@@ -9,7 +9,7 @@ module VSphereCloud
       end
 
       # TODO: Add tests for this
-      def find(name, config)
+      def find(name, config, datacenter_name)
         cluster_mob = cluster_mobs[name]
         raise "Can't find cluster '#{name}'" if cluster_mob.nil?
 
@@ -22,7 +22,8 @@ module VSphereCloud
         Cluster.new(
           config,
           cluster_properties,
-          @client
+          @client,
+          datacenter_name,
         )
       end
 
