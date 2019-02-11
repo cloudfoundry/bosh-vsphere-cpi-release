@@ -75,7 +75,7 @@ module VSphereCloud
 
       def find_cluster(cluster_name)
         cluster_config = @clusters[cluster_name]
-        @cluster_provider.find(cluster_name, cluster_config)
+        @cluster_provider.find(cluster_name, cluster_config, self.name)
       end
 
       def find_datastore(datastore_name)

@@ -144,12 +144,22 @@ module LifecycleHelpers
   end
 
   def verify_resource_pool(cpi, cluster_name, resource_pool_name, env_var_name)
-    cluster_mob = cpi.datacenter.find_cluster(cluster_name).mob
-    resource_pool_mob = cpi.client.cloud_searcher.get_managed_objects(
-      VimSdk::Vim::ResourcePool,
-      :root => cluster_mob,
-      :name => resource_pool_name).first
-
+    resource_pool_mob = nil
+    begin
+      resource_pool_path_suffix = resource_pool_name
+      datacenter_cluster_path_prefix = "#{cpi.datacenter.name}/host/#{cluster_name}/Resources/"
+      full_inventory_path = datacenter_cluster_path_prefix + resource_pool_path_suffix
+      resource_pool_mob = cpi.client.service_content.search_index.find_by_inventory_path(full_inventory_path)
+      raise "Could not find resource pool #{resource_pool_path_suffix} for inventory path #{full_inventory_path}" if resource_pool_mob.nil?
+    rescue => e
+      cpi.logger.info("#{e} - #{e.backtrace.join("\n")}")
+      cpi.logger.info("Trying to find #{resource_pool_name} through property collector")
+      cluster_mob = cpi.datacenter.find_cluster(cluster_name).mob
+      resource_pool_mob = cpi.client.cloud_searcher.get_managed_objects(
+          VimSdk::Vim::ResourcePool,
+          :root => cluster_mob,
+          :name => resource_pool_name).first
+    end
     if resource_pool_mob.nil?
       fail "Invalid Environment variable '#{env_var_name}': Expected to find resource pool '#{resource_pool_name}' in cluster '#{cluster_name}'"
     end

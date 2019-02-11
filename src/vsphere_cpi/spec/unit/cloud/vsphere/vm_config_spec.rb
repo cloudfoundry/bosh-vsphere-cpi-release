@@ -14,7 +14,7 @@ module VSphereCloud
         cluster_provider: cluster_provider
       )
     end
-    let(:datacenter) { double(name: 'fake_datacenter') }
+    let(:datacenter) { double(name: 'fake-dc') }
     let(:vm_type) { VmType.new(datacenter, cloud_properties)}
     let(:cluster_provider) { nil }
 
@@ -199,11 +199,12 @@ module VSphereCloud
       let(:global_clusters) { [fake_cluster] }
 
       context 'when multiple clusters are specified within vm_type' do
+        let(:datacenter_name) { 'fake-dc' }
         let(:cloud_properties) {
           {
             'datacenters' => [
               {
-                'name' => 'datacenter-1',
+                'name' => datacenter_name,
                 'clusters' => [
                   { 'fake-cluster-name' => {} },
                   { 'fake-cluster-name-2' => {} }
@@ -224,8 +225,8 @@ module VSphereCloud
         it 'returns the vm_type cluster' do
           expect(VSphereCloud::ClusterConfig).to receive(:new).with('fake-cluster-name', {}).and_return(cluster_config)
           expect(VSphereCloud::ClusterConfig).to receive(:new).with('fake-cluster-name-2', {}).and_return(cluster_config_2)
-          expect(cluster_provider).to receive(:find).with('fake-cluster-name', cluster_config).and_return(fake_cluster)
-          expect(cluster_provider).to receive(:find).with('fake-cluster-name-2', cluster_config_2).and_return(fake_cluster_2)
+          expect(cluster_provider).to receive(:find).with('fake-cluster-name', cluster_config, datacenter_name).and_return(fake_cluster)
+          expect(cluster_provider).to receive(:find).with('fake-cluster-name-2', cluster_config_2, datacenter_name).and_return(fake_cluster_2)
           cluster_placement = vm_config.cluster_placements
           expect(cluster_placement.take(10).size).to eql(2)
         end

@@ -133,10 +133,10 @@ describe VSphereCloud::Resources::Datacenter, fake_logger: true do
     allow(Bosh::Clouds::Config).to receive(:uuid).and_return('fake-uuid')
 
     allow(cluster_provider).to receive(:find)
-      .with('first-cluster', cluster_config1)
+      .with('first-cluster', cluster_config1, datacenter_name)
       .and_return(first_cluster)
     allow(cluster_provider).to receive(:find)
-      .with('second-cluster', cluster_config2)
+      .with('second-cluster', cluster_config2, datacenter_name)
       .and_return(second_cluster)
   end
 

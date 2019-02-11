@@ -6,11 +6,12 @@ module VSphereCloud::Resources
       VSphereCloud::Resources::Cluster.new(
         cluster_config,
         properties,
-        client
+        client,
+        "fake-dc"
       )
     end
-
-    let(:datacenter) { instance_double('VSphereCloud::Resources::Datacenter') }
+    let(:datacenter_name) { 'fake-dc' }
+    let(:datacenter) { instance_double('VSphereCloud::Resources::Datacenter', name: datacenter_name) }
 
     let(:log_output) { StringIO.new("") }
     let(:client) { instance_double('VSphereCloud::VCenterClient', cloud_searcher: cloud_searcher) }
@@ -72,7 +73,7 @@ module VSphereCloud::Resources
 
     before do
       allow(ResourcePool).to receive(:new).with(
-        client, cluster_config, fake_resource_pool_mob
+        client, cluster_config, fake_resource_pool_mob, datacenter_name
       ).and_return(fake_resource_pool)
 
       allow(cloud_searcher).to receive(:get_properties).with(
@@ -489,7 +490,8 @@ module VSphereCloud::Resources
     describe '#resource_pool' do
       it 'returns a resource pool object backed by the resource pool in the cloud properties' do
         expect(cluster.resource_pool).to eq(fake_resource_pool)
-        expect(ResourcePool).to have_received(:new).with(client, cluster_config, fake_resource_pool_mob)
+        expect(ResourcePool).to have_received(:new).with(client, cluster_config, fake_resource_pool_mob,
+                                                         datacenter_name)
       end
     end
 

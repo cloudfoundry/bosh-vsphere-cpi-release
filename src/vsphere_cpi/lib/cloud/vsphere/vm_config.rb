@@ -125,9 +125,10 @@ module VSphereCloud
     
     def find_clusters(clusters_spec)
       clusters = []
+      datacenter_name = vm_type.datacenter.name
       clusters_spec.each do |cluster_spec|
         cluster_config = ClusterConfig.new(cluster_spec.keys.first, cluster_spec.values.first)
-        clusters.push(@cluster_provider.find(cluster_spec.keys.first, cluster_config))
+        clusters.push(@cluster_provider.find(cluster_spec.keys.first, cluster_config, datacenter_name))
       end
       clusters
     end

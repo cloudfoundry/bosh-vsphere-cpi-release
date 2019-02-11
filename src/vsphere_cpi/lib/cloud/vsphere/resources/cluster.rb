@@ -32,13 +32,13 @@ module VSphereCloud
       # @param [ClusterConfig] config cluster configuration as specified by the
       #   operator.
       # @param [Hash] properties prefetched vSphere properties for the cluster.
-      def initialize(cluster_config, properties, client)
+      def initialize(cluster_config, properties, client, datacenter_name)
         @client = client
         @properties = properties
 
         @config = cluster_config
         @mob = properties[:obj]
-        @resource_pool = ResourcePool.new(@client, cluster_config, properties['resourcePool'])
+        @resource_pool = ResourcePool.new(@client, cluster_config, properties['resourcePool'], datacenter_name)
       end
 
       # @return [Integer] amount of free memory in the cluster

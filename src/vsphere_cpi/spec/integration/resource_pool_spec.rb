@@ -9,6 +9,9 @@ context 'given a CPI configured with vSphere resource pools' do
 
     @second_cluster_name = fetch_and_verify_cluster('BOSH_VSPHERE_CPI_SECOND_CLUSTER')
     @second_cluster_datastore_pattern = fetch_and_verify_datastore('BOSH_VSPHERE_CPI_SECOND_CLUSTER_DATASTORE', @second_cluster_name)
+
+    @first_rp_sub_resource_pool = fetch_and_verify_resource_pool('BOSH_VSPHERE_CPI_RESOURCE_POOL_CHILD_ONE', @cluster_name)
+    @second_rp_sub_resource_pool = fetch_and_verify_resource_pool('BOSH_VSPHERE_CPI_SECOND_RESOURCE_POOL_CHILD_ONE', @cluster_name)
   end
 
   let(:network_spec) do
@@ -130,6 +133,76 @@ context 'given a CPI configured with vSphere resource pools' do
         expect(vm.resource_pool).to eq(@second_resource_pool_name)
       ensure
         delete_vm(resource_pool_cpi, vm_id)
+      end
+    end
+  end
+
+  context 'when vm_type.resource_pool is set to a resource pool within a resource pool' do
+    before do
+      resource_pool['datacenters'] = [{'name' => @datacenter_name, 'clusters' => [{@cluster_name => {'resource_pool' => @first_rp_sub_resource_pool}}]}]
+    end
+    context 'when the nested resource pool name is same for two parent pools and we provide relative resource pool path for first nested pool' do
+      it 'places vm in the right nested resource pool' do
+        begin
+          vm_id = resource_pool_cpi.create_vm(
+              'agent-007',
+              @stemcell_id,
+              resource_pool,
+              network_spec
+          )
+
+          vm = resource_pool_cpi.vm_provider.find(vm_id)
+          expect(vm.cluster).to eq(@cluster_name)
+          expect(vm.resource_pool).to eq(@first_rp_sub_resource_pool.split('/').last)
+          rp_mob = vm.instance_variable_get(:@properties)['resourcePool']
+          # Resource Pools look like
+          #
+          # vcpi-cluster-1
+          #  vcpi-rp-1-1
+          #    vcpi-sub-rp
+          #  vcpi-rp-1-2
+          #    vcpi-sub-rp
+          #
+          # The VM must have been created in `vcpi-rp-1-1/vcpi-sub-rp`
+          expect(rp_mob.parent.name).to eq(@resource_pool_name)
+        ensure
+          delete_vm(resource_pool_cpi, vm_id)
+        end
+      end
+    end
+  end
+
+  context 'when vm_type.resource_pool is set to a resource pool within a resource pool in cloud config' do
+    before do
+      resource_pool['datacenters'] = [{'clusters' => [{@cluster_name => {'resource_pool' => @first_rp_sub_resource_pool}}]}]
+    end
+    context 'when the nested resource pool name is same for two parent pools and we provide relative resource pool path for first nested pool' do
+      it 'places vm in the right nested resource pool' do
+        begin
+          vm_id = @cpi.create_vm(
+              'agent-007',
+              @stemcell_id,
+              resource_pool,
+              network_spec
+          )
+
+          vm = resource_pool_cpi.vm_provider.find(vm_id)
+          expect(vm.cluster).to eq(@cluster_name)
+          expect(vm.resource_pool).to eq(@first_rp_sub_resource_pool.split('/').last)
+          rp_mob = vm.instance_variable_get(:@properties)['resourcePool']
+          # Resource Pools look like
+          #
+          # vcpi-cluster-1
+          #  vcpi-rp-1-1
+          #    vcpi-sub-rp
+          #  vcpi-rp-1-2
+          #    vcpi-sub-rp
+          #
+          # The VM must have been created in `vcpi-rp-1-1/vcpi-sub-rp`
+          expect(rp_mob.parent.name).to eq(@resource_pool_name)
+        ensure
+          delete_vm(resource_pool_cpi, vm_id)
+        end
       end
     end
   end
