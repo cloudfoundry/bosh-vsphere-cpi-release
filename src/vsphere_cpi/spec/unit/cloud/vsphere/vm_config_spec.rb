@@ -171,8 +171,8 @@ module VSphereCloud
     describe '#cluster_placements' do
       let(:datastore_mob) { instance_double('VimSdk::Vim::Datastore') }
       let(:cluster_provider) { instance_double(VSphereCloud::Resources::ClusterProvider) }
-      let(:cluster_config) { instance_double(VSphereCloud::ClusterConfig) }
-      let(:cluster_config_2) { instance_double(VSphereCloud::ClusterConfig) }
+      let(:cluster_config) { instance_double(VSphereCloud::ClusterConfig, name: 'fake-cluster-name') }
+      let(:cluster_config_2) { instance_double(VSphereCloud::ClusterConfig, name: 'fake-cluster-name-2') }
       let(:small_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 1024, mob: datastore_mob, maintenance_mode?: false) }
       let(:large_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 2048, mob: datastore_mob, maintenance_mode?: false) }
       let(:huge_ds) { instance_double(VSphereCloud::Resources::Datastore, free_space: 10240, mob: datastore_mob, maintenance_mode?: false) }

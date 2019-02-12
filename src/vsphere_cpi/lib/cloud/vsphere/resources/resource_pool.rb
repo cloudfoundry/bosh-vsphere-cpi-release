@@ -28,24 +28,23 @@ module VSphereCloud
         if @cluster_config.resource_pool.nil?
           @mob = @root_resource_pool
         else
-          begin
-            resource_pool_path_suffix = @cluster_config.resource_pool
-            datacenter_cluster_path_prefix = "#{@datacenter_name}/host/#{@cluster_config.name}/Resources/"
-            full_inventory_path = datacenter_cluster_path_prefix + resource_pool_path_suffix
-            # Replace all multiple consecutive / with single /
-            full_inventory_path.gsub!(/\/+/, '/').chomp!('/')
-            @mob = @client.service_content.search_index.find_by_inventory_path(full_inventory_path)
-            raise "Could not find resource pool #{resource_pool_path_suffix} for inventory path #{full_inventory_path}" if @mob.nil?
-          rescue => e
-            logger.info("#{e} - #{e.backtrace.join("\n")}")
-            logger.info("Trying to find #{@cluster_config.resource_pool} through property collector")
-            @mob = @client.cloud_searcher.get_managed_object(
-                Vim::ResourcePool,
-                :root => @root_resource_pool,
-                :name => @cluster_config.resource_pool)
-            raise "Could not find resource pool #{@cluster_config.resource_pool}" if @mob.nil?
-            logger.debug("Found requested resource pool: #{@mob}")
-          end
+          resource_pool_path_suffix = URI.escape(@cluster_config.resource_pool)
+          datacenter_cluster_path_prefix = "#{URI.escape(@datacenter_name)}/host/#{URI.escape(@cluster_config.name)}/Resources/"
+          full_inventory_path = datacenter_cluster_path_prefix + resource_pool_path_suffix
+          # Replace all multiple consecutive / with single /
+          full_inventory_path.gsub!(/\/+/, '/').chomp!('/')
+          @mob = @client.service_content.search_index.find_by_inventory_path(full_inventory_path)
+          return @mob unless @mob.nil?
+
+          logger.warn("Could not find resource pool #{resource_pool_path_suffix} for inventory path #{full_inventory_path}")
+
+          logger.info("Trying to find #{@cluster_config.resource_pool} through property collector")
+          @mob = @client.cloud_searcher.get_managed_object(
+              Vim::ResourcePool,
+              :root => @root_resource_pool,
+              :name => @cluster_config.resource_pool)
+          raise "Could not find resource pool #{@cluster_config.resource_pool}" if @mob.nil?
+          logger.debug("Found requested resource pool: #{@mob.name}")
         end
         @mob
       end
