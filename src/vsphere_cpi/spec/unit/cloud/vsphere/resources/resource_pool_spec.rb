@@ -4,12 +4,12 @@ describe VSphereCloud::Resources::ResourcePool, fake_logger: true do
   subject { VSphereCloud::Resources::ResourcePool.new(fake_client, cluster_config, root_resource_pool_mob, datacenter_name) }
   let(:fake_client) { instance_double('VSphereCloud::VCenterClient', cloud_searcher: cloud_searcher) }
   let(:cloud_searcher) { instance_double('VSphereCloud::CloudSearcher') }
-  let(:datacenter_name) { 'fake-dc' }
+  let(:datacenter_name) { 'fake-\dc' }
   let(:cluster_config) do
-    instance_double('VSphereCloud::ClusterConfig', name: 'fake-cluster-name', resource_pool: cluster_resource_pool)
+    instance_double('VSphereCloud::ClusterConfig', name: 'fake\-cluster-name', resource_pool: cluster_resource_pool)
   end
   let(:cluster_resource_pool) { nil }
-  let(:root_resource_pool_mob) { instance_double('VimSdk::Vim::ResourcePool') }
+  let(:root_resource_pool_mob) { instance_double('VimSdk::Vim::ResourcePool', name: 'fake-rp') }
 
   describe '#initialize' do
 
@@ -25,7 +25,7 @@ describe VSphereCloud::Resources::ResourcePool, fake_logger: true do
         let(:cluster_resource_pool) { 'cluster-resource-pool' }
         before do
           allow(fake_client).to receive_message_chain(:service_content, :search_index, :find_by_inventory_path)
-                                       .with("fake-dc/host/fake-cluster-name/Resources/#{cluster_resource_pool}")
+                                       .with("fake-%5Cdc/host/fake%5C-cluster-name/Resources/#{cluster_resource_pool}")
                                        .and_return(resource_pool_mob)
         end
         it 'uses the cluster config resource pool' do
@@ -34,10 +34,10 @@ describe VSphereCloud::Resources::ResourcePool, fake_logger: true do
       end
       context 'when CPI is not able to locate resource pool with inventory path' do
         let(:cluster_resource_pool) { 'cluster-resource-pool' }
-        let(:resource_pool_mob) { instance_double('VimSdk::Vim::ResourcePool') }
+        let(:resource_pool_mob) { instance_double('VimSdk::Vim::ResourcePool', name: 'fake-rp') }
         before do
           expect(fake_client).to receive_message_chain(:service_content, :search_index, :find_by_inventory_path)
-                               .with("fake-dc/host/fake-cluster-name/Resources/#{cluster_resource_pool}")
+                               .with("fake-%5Cdc/host/fake%5C-cluster-name/Resources/#{cluster_resource_pool}")
                                .and_return(nil)
         end
         it 'uses the property collector to fetch the resource pool' do
@@ -51,11 +51,11 @@ describe VSphereCloud::Resources::ResourcePool, fake_logger: true do
       context 'when provided resource pool name is malformed' do
         context 'when provided resource pool path has extra /<s>' do
           let(:cluster_config) do
-            instance_double('VSphereCloud::ClusterConfig', name: 'fake-cluster-name', resource_pool: '///////vcpi-rp///vcpi-sub-rp//')
+            instance_double('VSphereCloud::ClusterConfig', name: 'fake\-cluster-name', resource_pool: '///////vcpi-rp///vcpi-sub-rp//')
           end
           it 'removes the extra slashes and then finds resource pool' do
             expect(fake_client).to receive_message_chain(:service_content, :search_index, :find_by_inventory_path)
-                                        .with("fake-dc/host/fake-cluster-name/Resources/vcpi-rp/vcpi-sub-rp")
+                                        .with("fake-%5Cdc/host/fake%5C-cluster-name/Resources/vcpi-rp/vcpi-sub-rp")
                                         .and_return(resource_pool_mob)
             expect(subject.mob).to eq(resource_pool_mob)
           end
