@@ -36,7 +36,8 @@ module VSphereCloud
           logger.info("Found VM '#{vm.name}' with IP '#{ip}'. Checking if VM belongs to network '#{name}'...")
 
           vm.guest.net.each do |nic|
-            if nic.ip_address.include?(ip) && nic.network == name
+            if nic.ip_address.include?(ip) && nic.network == name # nic.network ==name, or nic.split('/') ==name
+
               logger.info("found conflicting vm: #{vm.name}, on network: #{name} with ip: #{ip}")
               conflicts << {vm_name: vm.name, network_name: name, ip: ip}
             end
