@@ -68,6 +68,13 @@
     end
   end
 
+  params["cloud"]["properties"]["debug"] = {
+  'cpi'=> {
+    'api_version'=> p('debug.cpi.api_version', 2)
+  },
+}
+
+
   if_p('vcenter.nsx.address') do
     vcenter = params['cloud']['properties']['vcenters'].first
     vcenter['nsx'] = {

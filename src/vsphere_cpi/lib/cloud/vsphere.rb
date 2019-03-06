@@ -7,7 +7,9 @@ require 'ruby_vim_sdk'
 require 'cloud/vsphere/retryer'
 require 'cloud/vsphere/object_stringifier'
 require 'cloud/vsphere/agent_env'
-require 'cloud/vsphere/cloud'
+require 'cloud/vsphere/cloud_v1'
+require 'cloud/vsphere/cloud_v2'
+require 'cloud/vsphere/cloud_core'
 require 'cloud/vsphere/cloud_searcher'
 require 'cloud/vsphere/config'
 require 'cloud/vsphere/cluster_config'
@@ -88,8 +90,13 @@ module Bosh
                      :info, :set_disk_metadata,
                      :create_network, :delete_network
 
-      def initialize(options)
-        @delegate = VSphereCloud::Cloud.new(options)
+      def initialize(options, cpi_api_version)
+        if cpi_api_version && cpi_api_version > 1
+          @delegate = VSphereCloud::CloudV2.new(options)
+        else
+          @delegate = VSphereCloud::CloudV1.new(options)
+        end
+        @delegate
       end
     end
 

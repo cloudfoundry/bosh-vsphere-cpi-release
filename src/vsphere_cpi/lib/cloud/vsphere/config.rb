@@ -22,6 +22,8 @@ module VSphereCloud
   end
 
   class Config
+    MAX_SUPPORTED_API_VERSION = 2
+
     def self.build(config_hash)
       new(config_hash).tap(&:validate)
     end
@@ -30,8 +32,13 @@ module VSphereCloud
 
     def initialize(config_hash)
       @config = config_hash
-
+      @debug_api_version = config_hash.fetch('debug',{}).fetch('cpi', {}).fetch('api_version', MAX_SUPPORTED_API_VERSION)
       @is_validated = false
+    end
+
+    def supported_api_version
+      expected_version = @debug_api_version || MAX_SUPPORTED_API_VERSION
+      [expected_version, MAX_SUPPORTED_API_VERSION].min
     end
 
     def validate
@@ -84,6 +91,10 @@ module VSphereCloud
       end
 
       true
+    end
+
+    def stemcell_api_version
+      vcenter.fetch('vm', {}).fetch('stemcell', {}).fetch('api_version', 1)
     end
 
     def logger
