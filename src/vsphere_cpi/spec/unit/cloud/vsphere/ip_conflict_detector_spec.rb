@@ -21,6 +21,8 @@ module VSphereCloud
       end
     end
 
+    #let(:fake_network) { instance_double(VimSdk::Vim::Network, vm:[deployed_vm]) }
+
     context 'when existing VMs on a desired network report having the desired IP' do
       let(:deployed_vm) do
         instance_double(
@@ -31,44 +33,79 @@ module VSphereCloud
       end
 
       context 'when a deployed VM has the desired IPs on the same network' do
-        let(:deployed_vm_nics) do
-          [
-            instance_double(
-              VimSdk::Vim::Vm::GuestInfo::NicInfo,
-              ip_address: ['169.254.1.1', 'fe80::250:56ff:fea9:793d'],
-              network: 'network_1'
-            ),
-            instance_double(
-              VimSdk::Vim::Vm::GuestInfo::NicInfo,
-              ip_address: ['169.254.2.1', 'fe80::250:56ff:fea9:793d'],
-              network: 'network_2'
-            ),
-            instance_double(
-              VimSdk::Vim::Vm::GuestInfo::NicInfo,
-              ip_address: ['169.254.3.1', 'fe80::250:56ff:fea9:793d'],
-              network: 'network_2'
-            )
-          ]
+        context 'when the passed network name is unqualified name of same network' do
+          let(:deployed_vm_nics) do
+            [
+                instance_double(
+                    VimSdk::Vim::Vm::GuestInfo::NicInfo,
+                    ip_address: ['169.254.1.1', 'fe80::250:56ff:fea9:793d'],
+                    network: 'network_1'
+                ),
+                instance_double(
+                    VimSdk::Vim::Vm::GuestInfo::NicInfo,
+                    ip_address: ['169.254.2.1', 'fe80::250:56ff:fea9:793d'],
+                    network: 'network_2'
+                ),
+                instance_double(
+                    VimSdk::Vim::Vm::GuestInfo::NicInfo,
+                    ip_address: ['169.254.3.1', 'fe80::250:56ff:fea9:793d'],
+                    network: 'network_2'
+                )
+            ]
+          end
+          context 'when find network returns the correct single network' do
+            it 'detects conflicts with deployed VMs' do
+              allow(client).to receive(:find_vm_by_ip).with('169.254.1.1').and_return(deployed_vm)
+              allow(client).to receive(:find_vm_by_ip).with('169.254.2.1').and_return(deployed_vm)
+              allow(client).to receive(:find_vm_by_ip).with('169.254.3.1').and_return(deployed_vm)
+
+              conflict_detector = IPConflictDetector.new(client)
+              expect {
+                conflict_detector.ensure_no_conflicts(networks)
+              }.to raise_error do |error|
+                expect(error.message).to include(
+                                             "squatter-vm",
+                                             "network_1",
+                                             "169.254.1.1",
+                                             "network_2",
+                                             "169.254.2.1",
+                                             "network_2",
+                                             "169.254.3.1"
+                                         )
+              end
+            end
+          end
+          context 'when find network raises multiple network found exception' do
+            it 'raises and passes on the exception' do
+              # allow(client).to receive(:find_vm_by_ip).with('169.254.1.1').and_return(deployed_vm)
+              # allow(client).to receive(:find_vm_by_ip).with('169.254.2.1').and_return(deployed_vm)
+              # allow(client).to receive(:find_vm_by_ip).with('169.254.3.1').and_return(deployed_vm)
+              #
+              # conflict_detector = IPConflictDetector.new(client)
+              # expect {
+              #   conflict_detector.ensure_no_conflicts(networks)
+              # }.to raise_error do |error|
+              #   expect(error.message).to include(
+              #                                "squatter-vm",
+              #                                "network_1",
+              #                                "169.254.1.1",
+              #                                "network_2",
+              #                                "169.254.2.1",
+              #                                "network_2",
+              #                                "169.254.3.1"
+              #                            )
+              end
+            end
+          end
         end
-
-        it 'detects conflicts with deployed VMs' do
-          allow(client).to receive(:find_vm_by_ip).with('169.254.1.1').and_return(deployed_vm)
-          allow(client).to receive(:find_vm_by_ip).with('169.254.2.1').and_return(deployed_vm)
-          allow(client).to receive(:find_vm_by_ip).with('169.254.3.1').and_return(deployed_vm)
-
-          conflict_detector = IPConflictDetector.new(client)
-          expect {
-            conflict_detector.ensure_no_conflicts(networks)
-          }.to raise_error do |error|
-            expect(error.message).to include(
-              "squatter-vm",
-              "network_1",
-              "169.254.1.1",
-              "network_2",
-              "169.254.2.1",
-              "network_2",
-              "169.254.3.1"
-            )
+        context 'when the passed network name is fully qualified name of same network' do
+          context 'when the network has that VM on it' do
+            it 'detects conflict' do
+            end
+          end
+          context 'when the network does not have that VM on it' do
+            it 'returns empty conflict list' do
+            end
           end
         end
       end

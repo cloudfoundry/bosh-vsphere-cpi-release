@@ -26,6 +26,23 @@ describe 'ip conflict detection' do
   end
 
   describe 'avoiding the creation of vms with duplicate IP addresses' do
+    context 'when a VM already exists on network' do
+      context 'when  the VM exists on a different network with same unqualified name (you are creating on 1/2/3 and VM exists on 4/5/3)' do
+        before do
+          # create your pre-existing VM
+        end
+        it 'should create the VM' do
+        end
+      end
+      context 'when  the VM exists on a same network with same unqualified name (you are creating on 1/2/3 and vm exists on 1/2/3' do
+        before do
+          # create your pre-existing VM
+        end
+        it 'should raise an error' do
+        end
+      end
+      # create a vm here
+    end
     it 'raises an error in create_vm if the ip address is in use' do
       begin
         test_vm_id = @cpi.create_vm(
@@ -55,5 +72,6 @@ describe 'ip conflict detection' do
         delete_vm(@cpi, duplicate_ip_vm_id)
       end
     end
+
   end
 end
