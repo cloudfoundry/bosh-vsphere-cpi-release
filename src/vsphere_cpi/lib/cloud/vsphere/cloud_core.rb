@@ -1,11 +1,10 @@
 require 'cloud/vsphere/logger'
 require 'json'
 require 'membrane'
-require 'cloud'
 require 'cloud/vsphere/cpi_extension'
 
 module VSphereCloud
-  class Cloud < Bosh::Cloud
+  class CloudCore
     include VimSdk
     include Logger
 
@@ -24,8 +23,8 @@ module VSphereCloud
     def enable_telemetry
       http_client = VSphereCloud::CpiHttpClient.new
       other_client = VCenterClient.new(
-        vcenter_api_uri: @config.vcenter_api_uri,
-        http_client: http_client
+          vcenter_api_uri: @config.vcenter_api_uri,
+          http_client: http_client
       )
       other_client.define_singleton_method(:logger) do
         @logger ||= ::Logger.new('/dev/null')
@@ -54,37 +53,37 @@ module VSphereCloud
       @http_client = VSphereCloud::CpiHttpClient.new(@config.soap_log)
 
       @client = VCenterClient.new(
-        vcenter_api_uri: @config.vcenter_api_uri,
-        http_client: @http_client
+          vcenter_api_uri: @config.vcenter_api_uri,
+          http_client: @http_client
       )
       @client.login(@config.vcenter_user, @config.vcenter_password, 'en')
 
       @cloud_searcher = CloudSearcher.new(@client.service_content)
       @cluster_provider = Resources::ClusterProvider.new(
-        datacenter_name: @config.datacenter_name,
-        client: @client
+          datacenter_name: @config.datacenter_name,
+          client: @client
       )
       @datacenter = Resources::Datacenter.new(
-        client: @client,
-        ephemeral_pattern: @config.datacenter_datastore_pattern,
-        persistent_pattern: @config.datacenter_persistent_datastore_pattern,
-        use_sub_folder: @config.datacenter_use_sub_folder,
-        vm_folder: @config.datacenter_vm_folder,
-        template_folder: @config.datacenter_template_folder,
-        name: @config.datacenter_name,
-        disk_path: @config.datacenter_disk_path,
-        clusters: @config.datacenter_clusters,
-        cluster_provider: @cluster_provider
+          client: @client,
+          ephemeral_pattern: @config.datacenter_datastore_pattern,
+          persistent_pattern: @config.datacenter_persistent_datastore_pattern,
+          use_sub_folder: @config.datacenter_use_sub_folder,
+          vm_folder: @config.datacenter_vm_folder,
+          template_folder: @config.datacenter_template_folder,
+          name: @config.datacenter_name,
+          disk_path: @config.datacenter_disk_path,
+          clusters: @config.datacenter_clusters,
+          cluster_provider: @cluster_provider
       )
       @file_provider = FileProvider.new(
-        client: @client,
-        http_client: @http_client,
-        vcenter_host: @config.vcenter_host
+          client: @client,
+          http_client: @http_client,
+          vcenter_host: @config.vcenter_host
       )
       @agent_env = AgentEnv.new(
-        client: client,
-        file_provider: @file_provider,
-      )
+          client: client,
+          file_provider: @file_provider,
+          )
 
       VMAttributeManager.init(@client.service_content.custom_fields_manager)
 
@@ -160,18 +159,18 @@ module VSphereCloud
 
           # TODO: this code re-use is messy, extract the necessary functionality out of vm_config
           manifest_params = {
-            vm_type: vm_type,
-            global_clusters: @datacenter.clusters,
-            disk_configurations: [
-              VSphereCloud::DiskConfig.new(
-                size: stemcell_size,
-                target_datastore_pattern: @datacenter.ephemeral_pattern,
-                ephemeral: true
-              )
-            ],
+              vm_type: vm_type,
+              global_clusters: @datacenter.clusters,
+              disk_configurations: [
+                  VSphereCloud::DiskConfig.new(
+                      size: stemcell_size,
+                      target_datastore_pattern: @datacenter.ephemeral_pattern,
+                      ephemeral: true
+                  )
+              ],
           }
           vm_config = VmConfig.new(
-            manifest_params: manifest_params
+              manifest_params: manifest_params
           )
 
           vm_config.cluster_placements.each do |cluster_placement|
@@ -190,10 +189,10 @@ module VSphereCloud
 
             lease_obtainer = LeaseObtainer.new(@cloud_searcher)
             nfc_lease = lease_obtainer.obtain(
-              cluster.resource_pool,
-              import_spec_result.import_spec,
-              @datacenter.template_folder,
-            )
+                cluster.resource_pool,
+                import_spec_result.import_spec,
+                @datacenter.template_folder,
+                )
 
             logger.info('Uploading')
             vm = upload_ovf(ovf_file, nfc_lease, import_spec_result.file_item)
@@ -214,7 +213,7 @@ module VSphereCloud
 
             # add extension managed by info to config spec only if extension exists
             if @client.service_content.extension_manager.find_extension(
-              VCPIExtension::DEFAULT_VSPHERE_CPI_EXTENSION_KEY) then
+                VCPIExtension::DEFAULT_VSPHERE_CPI_EXTENSION_KEY) then
               managed_by_info = VimSdk::Vim::Ext::ManagedByInfo.new
               managed_by_info.extension_key = VCPIExtension::DEFAULT_VSPHERE_CPI_EXTENSION_KEY
               managed_by_info.type =  VCPIExtension::DEFAULT_VSPHERE_MANAGED_BY_INFO_RESOURCE
@@ -268,41 +267,40 @@ module VSphereCloud
     end
 
     def create_vm(agent_id, stemcell_cid, vm_type, networks_spec, existing_disk_cids = [], environment = nil)
-      with_thread_name("create_vm(#{agent_id}, ...)") do
-        verify_props('VM', [ 'cpu', 'ram', 'disk' ], vm_type)
+      verify_props('VM', [ 'cpu', 'ram', 'disk' ], vm_type)
 
-        stemcell_vm = stemcell_vm(stemcell_cid)
-        raise "Could not find VM for stemcell '#{stemcell_cid}'" if stemcell_vm.nil?
-        begin
-          stemcell_size = @cloud_searcher.get_property(
+      stemcell_vm = stemcell_vm(stemcell_cid)
+      raise "Could not find VM for stemcell '#{stemcell_cid}'" if stemcell_vm.nil?
+      begin
+        stemcell_size = @cloud_searcher.get_property(
             stemcell_vm,
             VimSdk::Vim::VirtualMachine,
             'summary.storage.committed',
             ensure_all: true
-          )
-          stemcell_size /= 1024 * 1024
+        )
+        stemcell_size /= 1024 * 1024
 
-          vm_type = VmType.new(@datacenter, vm_type)
+        vm_type = VmType.new(@datacenter, vm_type)
 
-          manifest_params = {
+        manifest_params = {
             vm_type: vm_type,
             networks_spec: networks_spec,
             agent_id: agent_id,
             agent_env: environment,
             stemcell: {
-              cid: stemcell_cid,
-              size: stemcell_size
+                cid: stemcell_cid,
+                size: stemcell_size
             },
             global_clusters: @datacenter.clusters,
             disk_configurations: disk_configurations(vm_type,  existing_disk_cids),
-          }
+        }
 
-          vm_config = VmConfig.new(
+        vm_config = VmConfig.new(
             manifest_params: manifest_params,
             cluster_provider: @cluster_provider
-          )
+        )
 
-          vm_creator = VmCreator.new(
+        vm_creator = VmCreator.new(
             client: @client,
             cloud_searcher: @cloud_searcher,
             cpi: self,
@@ -313,87 +311,86 @@ module VSphereCloud
             enable_auto_anti_affinity_drs_rules: @config.vcenter_enable_auto_anti_affinity_drs_rules,
             stemcell: Stemcell.new(stemcell_cid),
             upgrade_hw_version: @config.upgrade_hw_version
-          )
-          created_vm = vm_creator.create(vm_config)
-        rescue => e
-          logger.error("Error in creating vm: #{e}, Backtrace - #{e.backtrace.join("\n")}")
-          raise e
-        end
-
-        begin
-          if @config.nsxt_enabled?
-            ns_groups = vm_type.ns_groups || []
-            if vm_type.nsxt_server_pools
-              #For static server pools add vm as server pool member
-              #For dynamic server pools add vm to the corresponding nsgroup
-              static_server_pools, dynamic_server_pools = @nsxt_provider.retrieve_server_pools(vm_type.nsxt_server_pools)
-              lb_ns_groups = dynamic_server_pools.map{ |server_pool| server_pool.member_group.grouping_object.target_display_name } if dynamic_server_pools
-              logger.info("NSGroup names corresponding to load balancer's dynamic server pools are: #{lb_ns_groups}")
-              ns_groups.concat(lb_ns_groups) if lb_ns_groups
-              @nsxt_provider.add_vm_to_server_pools(created_vm, static_server_pools) if static_server_pools
-            end
-            @nsxt_provider.add_vm_to_nsgroups(created_vm, ns_groups)
-            @nsxt_provider.set_vif_type(created_vm, vm_type.nsxt)
-          end
-        rescue => e
-          logger.info("Failed to apply NSX properties to VM '#{created_vm.cid}' with error: #{e.message}")
-          begin
-            logger.info("Deleting VM '#{created_vm.cid}'...")
-            delete_vm(created_vm.cid)
-          rescue => ex
-            logger.info("Failed to delete VM '#{created_vm.cid}' with message: #{ex.inspect}")
-          end
-          raise e
-        end
-
-        begin
-
-          if @config.nsx_enabled?
-            all_nsx_security_groups = Set.new
-
-            # Gather all security groups from three sources into a Set
-            # 1. VM Type
-            # 2. BOSH Groups
-            # 3. NSX Load Balancers
-
-            # VM Type
-            vm_type_security_group = vm_type.nsx_security_groups
-            all_nsx_security_groups.merge(vm_type_security_group) unless vm_type_security_group.nil?
-
-            # BOSH Group
-            bosh_groups_security_groups = (environment || {}).fetch('bosh', {}).fetch('groups', [])
-            all_nsx_security_groups.merge(bosh_groups_security_groups) unless bosh_groups_security_groups.nil?
-
-            # Load Balancer
-            unless vm_type.nsx_lbs.nil?
-              nsx_lbs_security_groups = vm_type.nsx_lbs.map { |m| m['security_group'] }
-              all_nsx_security_groups.merge(nsx_lbs_security_groups.compact)
-            end
-
-            # Add vm to security groups
-            all_nsx_security_groups.each do |security_group|
-              nsx.add_vm_to_security_group(security_group, created_vm.mob_id)
-            end
-
-            # Add vm to load balancer
-            unless vm_type.nsx_lbs.nil? || vm_type.nsx_lbs.empty?
-              nsx.add_members_to_lbs(vm_type.nsx_lbs)
-            end
-          end
-
-        rescue => e
-          logger.info("Failed to apply NSX properties to VM '#{created_vm.cid}' with error: #{e}")
-          begin
-            logger.info("Deleting VM '#{created_vm.cid}'...")
-            delete_vm(created_vm.cid)
-          rescue => ex
-            logger.info("Failed to delete vm '#{created_vm.cid}' with message:  #{ex.inspect}")
-          end
-          raise e
-        end
-
-        created_vm.cid
+        )
+        created_vm = vm_creator.create(vm_config)
+      rescue => e
+        logger.error("Error in creating vm: #{e}, Backtrace - #{e.backtrace.join("\n")}")
+        raise e
       end
+
+      begin
+        if @config.nsxt_enabled?
+          ns_groups = vm_type.ns_groups || []
+          if vm_type.nsxt_server_pools
+            #For static server pools add vm as server pool member
+            #For dynamic server pools add vm to the corresponding nsgroup
+            static_server_pools, dynamic_server_pools = @nsxt_provider.retrieve_server_pools(vm_type.nsxt_server_pools)
+            lb_ns_groups = dynamic_server_pools.map{ |server_pool| server_pool.member_group.grouping_object.target_display_name } if dynamic_server_pools
+            logger.info("NSGroup names corresponding to load balancer's dynamic server pools are: #{lb_ns_groups}")
+            ns_groups.concat(lb_ns_groups) if lb_ns_groups
+            @nsxt_provider.add_vm_to_server_pools(created_vm, static_server_pools) if static_server_pools
+          end
+          @nsxt_provider.add_vm_to_nsgroups(created_vm, ns_groups)
+          @nsxt_provider.set_vif_type(created_vm, vm_type.nsxt)
+        end
+      rescue => e
+        logger.info("Failed to apply NSX properties to VM '#{created_vm.cid}' with error: #{e.message}")
+        begin
+          logger.info("Deleting VM '#{created_vm.cid}'...")
+          delete_vm(created_vm.cid)
+        rescue => ex
+          logger.info("Failed to delete VM '#{created_vm.cid}' with message: #{ex.inspect}")
+        end
+        raise e
+      end
+
+      begin
+
+        if @config.nsx_enabled?
+          all_nsx_security_groups = Set.new
+
+          # Gather all security groups from three sources into a Set
+          # 1. VM Type
+          # 2. BOSH Groups
+          # 3. NSX Load Balancers
+
+          # VM Type
+          vm_type_security_group = vm_type.nsx_security_groups
+          all_nsx_security_groups.merge(vm_type_security_group) unless vm_type_security_group.nil?
+
+          # BOSH Group
+          bosh_groups_security_groups = (environment || {}).fetch('bosh', {}).fetch('groups', [])
+          all_nsx_security_groups.merge(bosh_groups_security_groups) unless bosh_groups_security_groups.nil?
+
+          # Load Balancer
+          unless vm_type.nsx_lbs.nil?
+            nsx_lbs_security_groups = vm_type.nsx_lbs.map { |m| m['security_group'] }
+            all_nsx_security_groups.merge(nsx_lbs_security_groups.compact)
+          end
+
+          # Add vm to security groups
+          all_nsx_security_groups.each do |security_group|
+            nsx.add_vm_to_security_group(security_group, created_vm.mob_id)
+          end
+
+          # Add vm to load balancer
+          unless vm_type.nsx_lbs.nil? || vm_type.nsx_lbs.empty?
+            nsx.add_members_to_lbs(vm_type.nsx_lbs)
+          end
+        end
+
+      rescue => e
+        logger.info("Failed to apply NSX properties to VM '#{created_vm.cid}' with error: #{e}")
+        begin
+          logger.info("Deleting VM '#{created_vm.cid}'...")
+          delete_vm(created_vm.cid)
+        rescue => ex
+          logger.info("Failed to delete vm '#{created_vm.cid}' with message:  #{ex.inspect}")
+        end
+        raise e
+      end
+
+      created_vm.cid
     end
 
     def calculate_vm_cloud_properties(vm_properties)
@@ -405,52 +402,50 @@ module VSphereCloud
     end
 
     def delete_vm(vm_cid)
-      with_thread_name("delete_vm(#{vm_cid})") do
-        logger.info("Deleting vm: #{vm_cid}")
+      logger.info("Deleting vm: #{vm_cid}")
 
-        vm = vm_provider.find(vm_cid)
-        vm_ip = vm.mob.guest&.ip_address
+      vm = vm_provider.find(vm_cid)
+      vm_ip = vm.mob.guest&.ip_address
 
-        # find vm_groups vm is part of before deleting it
-        cluster = vm.mob.runtime.host&.parent #host can be nil if vm is not running
-        if cluster
-          groups = cluster.configuration_ex.group
-          vm_groups = groups.select do |group|
-            group.is_a?(VimSdk::Vim::Cluster::VmGroup) && group.vm.include?(vm.mob)
-          end
-          vm_group_names = vm_groups.map(&:name)
+      # find vm_groups vm is part of before deleting it
+      cluster = vm.mob.runtime.host&.parent #host can be nil if vm is not running
+      if cluster
+        groups = cluster.configuration_ex.group
+        vm_groups = groups.select do |group|
+          group.is_a?(VimSdk::Vim::Cluster::VmGroup) && group.vm.include?(vm.mob)
         end
-        vm.power_off
+        vm_group_names = vm_groups.map(&:name)
+      end
+      vm.power_off
 
-        persistent_disks = vm.persistent_disks
-        unless persistent_disks.empty?
-          vm.detach_disks(persistent_disks)
+      persistent_disks = vm.persistent_disks
+      unless persistent_disks.empty?
+        vm.detach_disks(persistent_disks)
+      end
+
+      # Delete env.iso and VM specific files managed by the director
+      @agent_env.clean_env(vm.mob) if vm.cdrom
+
+      if @config.nsxt_enabled?
+        begin
+          @nsxt_provider.remove_vm_from_nsgroups(vm)
+        rescue => e
+          logger.info("Failed to remove VM from NSGroups: #{e.message}")
         end
-
-        # Delete env.iso and VM specific files managed by the director
-        @agent_env.clean_env(vm.mob) if vm.cdrom
-
-        if @config.nsxt_enabled?
-          begin
-            @nsxt_provider.remove_vm_from_nsgroups(vm)
-          rescue => e
-            logger.info("Failed to remove VM from NSGroups: #{e.message}")
-          end
-          begin
-            @nsxt_provider.remove_vm_from_server_pools(vm_ip)
-          rescue => e
-            logger.info("Failed to remove VM from ServerPool: #{e.message}")
-          end
+        begin
+          @nsxt_provider.remove_vm_from_server_pools(vm_ip)
+        rescue => e
+          logger.info("Failed to remove VM from ServerPool: #{e.message}")
         end
+      end
 
-        vm.delete
-        logger.info("Deleted vm: #{vm_cid}")
+      vm.delete
+      logger.info("Deleted vm: #{vm_cid}")
 
-        # Delete vm_groups
-        unless vm_group_names.nil? || vm_group_names.empty?
-          vm_group = VSphereCloud::VmGroup.new(client, cluster)
-          vm_group.delete_vm_groups(vm_group_names)
-        end
+      # Delete vm_groups
+      unless vm_group_names.nil? || vm_group_names.empty?
+        vm_group = VSphereCloud::VmGroup.new(client, cluster)
+        vm_group.delete_vm_groups(vm_group_names)
       end
     end
 
@@ -496,68 +491,75 @@ module VSphereCloud
       raise Bosh::Clouds::NotImplemented, 'resize_disk has not been implemented'
     end
 
+    def snapshot_disk(disk_id, meta_data)
+      raise Bosh::Clouds::NotImplemented, 'snapshot_disk has not been implemented'
+    end
+
+    def delete_snapshot(snapshot_id)
+      raise Bosh::Clouds::NotImplemented, 'delete_snapshot has not been implemented'
+    end
+
+    def resize_disk(disk_id, new_size)
+      raise Bosh::Clouds::NotImplemented, 'resize_disk has not been implemented'
+    end
+
     def configure_networks(vm_cid, networks)
       raise Bosh::Clouds::NotSupported, 'configure_networks is no longer supported'
     end
 
     def attach_disk(vm_cid, raw_director_disk_cid)
-      with_thread_name("attach_disk(#{vm_cid}, #{raw_director_disk_cid})") do
-        director_disk_cid = DirectorDiskCID.new(raw_director_disk_cid)
-        vm = vm_provider.find(vm_cid)
-        disk_to_attach = @datacenter.find_disk(director_disk_cid, vm)
+      director_disk_cid = DirectorDiskCID.new(raw_director_disk_cid)
+      vm = vm_provider.find(vm_cid)
+      disk_to_attach = @datacenter.find_disk(director_disk_cid, vm)
 
-        disk_config = VSphereCloud::DiskConfig.new(
+      disk_config = VSphereCloud::DiskConfig.new(
           cid: disk_to_attach.cid,
           size: disk_to_attach.size_in_mb,
           existing_datastore_name: disk_to_attach.datastore.name,
           target_datastore_pattern: director_disk_cid.target_datastore_pattern || @datacenter.persistent_pattern
-        )
+      )
 
-        logger.debug("Gathering storage placement accessible from VM: #{vm_cid}")
-        accessible_datastores = vm.accessible_datastores
+      logger.debug("Gathering storage placement accessible from VM: #{vm_cid}")
+      accessible_datastores = vm.accessible_datastores
 
-        disk_is_accessible = accessible_datastores.include?(disk_config.existing_datastore_name)
+      disk_is_accessible = accessible_datastores.include?(disk_config.existing_datastore_name)
 
-        disk_is_in_target_datastore = disk_config.existing_datastore_name =~ Regexp.new(disk_config.target_datastore_pattern)
+      disk_is_in_target_datastore = disk_config.existing_datastore_name =~ Regexp.new(disk_config.target_datastore_pattern)
 
-        unless disk_is_accessible && disk_is_in_target_datastore
-          # Create a new disk selection pipeline with a gathering block.
-          pipeline = DiskPlacementSelectionPipeline.new(disk_config.size,
-            disk_config.target_datastore_pattern,
-            disk_config.existing_datastore_name) do
-            logger.info("Gathering storage placement resources for disk allocator pipeline")
-            accessible_datastores.values
-          end.with_filter do |storage_placement|
-            logger.debug("Filter #{storage_placement.name} for accessibility")
-            storage_placement.accessible?
-          end
-          storage_placement_enum = pipeline.each
-          storage_placement = storage_placement_enum.first
-          raise "Unable to attach disk to the VM. There is no datastore matching pattern or required space available for disk to move" if storage_placement.nil?
-          destination_datastore = @datacenter.find_datastore(storage_placement.name)
-          disk_to_attach = @datacenter.move_disk_to_datastore(disk_to_attach, destination_datastore)
+      unless disk_is_accessible && disk_is_in_target_datastore
+        # Create a new disk selection pipeline with a gathering block.
+        pipeline = DiskPlacementSelectionPipeline.new(disk_config.size,
+                                                      disk_config.target_datastore_pattern,
+                                                      disk_config.existing_datastore_name) do
+          logger.info("Gathering storage placement resources for disk allocator pipeline")
+          accessible_datastores.values
+        end.with_filter do |storage_placement|
+          logger.debug("Filter #{storage_placement.name} for accessibility")
+          storage_placement.accessible?
         end
-
-        disk_spec = vm.attach_disk(disk_to_attach)
-        # Overwrite cid with the director cid
-        # Since director sends messages with "director cid" to agent, the agent needs that ID in its env, not the clean_cid
-        add_disk_to_agent_env(vm, director_disk_cid, disk_spec.device.unit_number)
+        storage_placement_enum = pipeline.each
+        storage_placement = storage_placement_enum.first
+        raise "Unable to attach disk to the VM. There is no datastore matching pattern or required space available for disk to move" if storage_placement.nil?
+        destination_datastore = @datacenter.find_datastore(storage_placement.name)
+        disk_to_attach = @datacenter.move_disk_to_datastore(disk_to_attach, destination_datastore)
       end
+
+      disk_spec = vm.attach_disk(disk_to_attach)
+      yield(vm, director_disk_cid, disk_spec.device.unit_number) if block_given?
+      disk_spec.device.unit_number
     end
 
     def detach_disk(vm_cid, raw_director_disk_cid)
-      with_thread_name("detach_disk(#{vm_cid}, #{raw_director_disk_cid})") do
-        director_disk_cid = DirectorDiskCID.new(raw_director_disk_cid)
+      director_disk_cid = DirectorDiskCID.new(raw_director_disk_cid)
 
-        logger.info("Detaching disk: #{director_disk_cid.value} from vm: #{vm_cid}")
+      logger.info("Detaching disk: #{director_disk_cid.value} from vm: #{vm_cid}")
 
-        vm = vm_provider.find(vm_cid)
-        disk = vm.disk_by_cid(director_disk_cid.value)
-        raise Bosh::Clouds::DiskNotAttached.new(true), "Disk '#{director_disk_cid.value}' is not attached to VM '#{vm_cid}'" if disk.nil?
+      vm = vm_provider.find(vm_cid)
+      disk = vm.disk_by_cid(director_disk_cid.value)
+      raise Bosh::Clouds::DiskNotAttached.new(true), "Disk '#{director_disk_cid.value}' is not attached to VM '#{vm_cid}'" if disk.nil?
 
-        vm.detach_disks([disk])
-        delete_disk_from_agent_env(vm, director_disk_cid)
-      end
+      vm.detach_disks([disk])
+      yield(vm, director_disk_cid) if block_given?
     end
 
     def create_disk(size_in_mb, cloud_properties, vm_cid = nil)
@@ -653,16 +655,16 @@ module VSphereCloud
 
     def generate_disk_env(system_disk, ephemeral_disk)
       {
-        'system' => system_disk.unit_number.to_s,
-        'ephemeral' => ephemeral_disk.unit_number.to_s,
-        'persistent' => {}
+          'system' => system_disk.unit_number.to_s,
+          'ephemeral' => ephemeral_disk.unit_number.to_s,
+          'persistent' => {}
       }
     end
 
     def generate_agent_env(name, vm, agent_id, networking_env, disk_env)
       vm_env = {
-        'name' => name,
-        'id' => vm.__mo_id__
+          'name' => name,
+          'id' => vm.__mo_id__
       }
 
       env = {}
@@ -721,21 +723,24 @@ module VSphereCloud
       @config.validate_nsx_options
 
       nsx_http_client = NsxHttpClient.new(
-        @config.nsx_user,
-        @config.nsx_password,
-        @config.soap_log,
-      )
+          @config.nsx_user,
+          @config.nsx_password,
+          @config.soap_log,
+          )
       @nsx = NSX.new(@config.nsx_url, nsx_http_client)
     end
 
     def cleanup
       @heartbeat_thread.terminate
       @client.logout
-      rescue VSphereCloud::VCenterClient::NotLoggedInException
+    rescue VSphereCloud::VCenterClient::NotLoggedInException
     end
 
     def info
-      {'stemcell_formats' =>  ['vsphere-ovf', 'vsphere-ova']}
+      {
+          'stemcell_formats' =>  ['vsphere-ovf', 'vsphere-ova'],
+          'api_version' => config.supported_api_version,
+      }
     end
 
     def create_network(network_definition)
@@ -750,8 +755,6 @@ module VSphereCloud
       network = Network.new(@switch_provider, @router_provider, @ip_block_provider)
       network.destroy(switch_id)
     end
-
-    private
 
     def import_ovf(name, ovf, resource_pool, datastore)
       import_spec_params = Vim::OvfManager::CreateImportSpecParams.new
@@ -791,8 +794,8 @@ module VSphereCloud
             logger.info("Uploading disk to: #{device_url.url}")
 
             @file_provider.upload_file_to_url(device_url.url,
-                             disk_file,
-                             { 'Content-Type' => 'application/x-vnd.vmware-streamVmdk' })
+                                              disk_file,
+                                              { 'Content-Type' => 'application/x-vnd.vmware-streamVmdk' })
 
             progress_thread.kill
             disk_file.close
@@ -841,20 +844,24 @@ module VSphereCloud
         directory_disk_cid = DirectorDiskCID.new(cid)
         disk = @datacenter.find_disk(directory_disk_cid)
         VSphereCloud::DiskConfig.new(
-          cid: disk.cid,
-          size: disk.size_in_mb,
-          existing_datastore_name: disk.datastore.name,
-          target_datastore_pattern: directory_disk_cid.target_datastore_pattern || @datacenter.persistent_pattern
+            cid: disk.cid,
+            size: disk.size_in_mb,
+            existing_datastore_name: disk.datastore.name,
+            target_datastore_pattern: directory_disk_cid.target_datastore_pattern || @datacenter.persistent_pattern
         )
       end
       #ephemeral disk configuration
       ephemeral_pattern = StoragePicker.choose_ephemeral_pattern(vm_type)
       ephemeral_disk_config = VSphereCloud::DiskConfig.new(
-        size: vm_type.disk,
-        ephemeral: true,
-        target_datastore_pattern: ephemeral_pattern
+          size: vm_type.disk,
+          ephemeral: true,
+          target_datastore_pattern: ephemeral_pattern
       )
       disk_configurations.push(ephemeral_disk_config)
     end
+  end
+  # To make integration tests work without changing
+  # cloud class name they initialize
+  class Cloud < CloudCore
   end
 end

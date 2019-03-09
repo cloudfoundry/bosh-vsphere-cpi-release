@@ -15,6 +15,9 @@ packages:
 - vsphere_cpi
 
 properties:
+  debug.cpi.api_version:
+    description: api_version supported by cpi (can be used as an override for fallback).
+    default: null
   vcenter.host:
     description: Address of vCenter server used by vsphere cpi
   vcenter.address:
