@@ -84,8 +84,13 @@ describe 'ip conflict detection' do
               }
           }
         end
-        let(:vlan_1) { ENV.fetch('BOSH_VSPHERE_CPI_FOLDER_PORTGROUP_ONE') } # vcpi-network-folder/vcpi-pg-1-2
-        let(:vlan_2) { ENV.fetch('BOSH_VSPHERE_CPI_FOLDER_PORTGROUOP_TWO') }  # vcpi-network-folder-2/vcpi-pg-1-2
+        let(:vlan_1) { ENV.fetch('BOSH_VSPHERE_CPI_FOLDER_PORTGROUP_ONE') } # vcpi-network-folder/vcpi-switch-5/vcpi-same-uq-1
+        let(:vlan_2) { ENV.fetch('BOSH_VSPHERE_CPI_FOLDER_PORTGROUP_TWO') }  # vcpi-switch-4/vcpi-same-uq-1
+
+        before do
+          verify_vlan(@cpi, vlan_1, 'BOSH_VSPHERE_CPI_FOLDER_PORTGROUP_ONE')
+          verify_vlan(@cpi, vlan_2, 'BOSH_VSPHERE_CPI_FOLDER_PORTGROUP_TWO')
+        end
 
         it 'should create the VM' do
           begin
@@ -114,7 +119,14 @@ describe 'ip conflict detection' do
                   {'key' => 'value'}
               )
             }.to_not raise_error
+
             expect(duplicate_ip_vm_id).to_not be_nil
+            block_on_vmware_tools(@cpi, duplicate_ip_vm_id)
+
+            test_vm = @cpi.vm_provider.find(test_vm_id)
+            duplicate_ip_vm = @cpi.vm_provider.find(duplicate_ip_vm_id)
+
+            expect(test_vm.mob.guest.ip_address).to eq(duplicate_ip_vm.mob.guest.ip_address)
           ensure
             delete_vm(@cpi, test_vm_id)
             delete_vm(@cpi, duplicate_ip_vm_id)
