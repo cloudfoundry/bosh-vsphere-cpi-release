@@ -446,8 +446,8 @@ module VSphereCloud
         allow(datacenter).to receive(:persistent_pattern).and_return(target_datastore_pattern)
         allow(datacenter).to receive(:find_disk).with(director_disk_cid).and_return(fake_disk)
         allow(VSphereCloud::DirectorDiskCID).to receive(:new).with(encoded_disk_cid).and_return(director_disk_cid)
-        allow(IPConflictDetector).to receive(:new).with(vcenter_client).and_return(ip_conflict_detector)
-        allow(IPConflictDetector).to receive(:new).with(vcenter_client).and_return(ip_conflict_detector)
+        allow(IPConflictDetector).to receive(:new).with(vcenter_client, datacenter).and_return(ip_conflict_detector)
+        allow(IPConflictDetector).to receive(:new).with(vcenter_client, datacenter).and_return(ip_conflict_detector)
         allow(DiskConfig).to receive(:new)
           .with(
             cid: fake_disk.cid,
