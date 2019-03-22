@@ -180,7 +180,7 @@ module VSphereCloud
             cluster = cluster_placement.cluster
             datastore_name = cluster_placement.disk_placement.name
             datastore = @datacenter.find_datastore(datastore_name)
-            encryption_policy = @pbm.find_policy(@config.vm_encryption_policy_name) if @config.vm_encryption_policy_name
+            #encryption_policy = @pbm.find_policy(@config.vm_encryption_policy_name) if @config.vm_encryption_policy_name
 
             logger.info("Deploying to: #{cluster.mob} / #{datastore.mob}")
 
@@ -192,12 +192,12 @@ module VSphereCloud
             system_disk.device.backing.thin_provisioned = @config.vcenter_default_disk_type == 'thin'
 
             # if encryption policy is set, apply encryption policy to Stemcell VM and system_disk
-            if encryption_policy
-              logger.info("Using encryption policy: #{@config.vm_encryption_policy_name}")
-              profile_spec = Resources::VM.create_profile_spec(encryption_policy)
-              import_spec_result.import_spec.config_spec.vm_profile = [profile_spec]
-              system_disk.profile = [profile_spec]
-            end
+            # if encryption_policy
+            #   logger.info("Using encryption policy: #{@config.vm_encryption_policy_name}")
+            #   profile_spec = Resources::VM.create_profile_spec(encryption_policy)
+            #   import_spec_result.import_spec.config_spec.vm_profile = [profile_spec]
+            #   system_disk.profile = [profile_spec]
+            # end
 
             lease_obtainer = LeaseObtainer.new(@cloud_searcher)
             nfc_lease = lease_obtainer.obtain(
@@ -294,7 +294,7 @@ module VSphereCloud
           stemcell_size /= 1024 * 1024
 
           vm_type = VmType.new(@datacenter, vm_type, @pbm)
-
+          disk_configs, policy_name = disk_configurations(vm_type, existing_disk_cids)
           manifest_params = {
             vm_type: vm_type,
             networks_spec: networks_spec,
@@ -305,7 +305,8 @@ module VSphereCloud
               size: stemcell_size
             },
             global_clusters: @datacenter.clusters,
-            disk_configurations: disk_configurations(vm_type,  existing_disk_cids),
+            disk_configurations: disk_configs,
+            storage_policy: policy_name,
           }
 
           vm_config = VmConfig.new(
@@ -327,7 +328,6 @@ module VSphereCloud
             stemcell: Stemcell.new(stemcell_cid),
             upgrade_hw_version: @config.upgrade_hw_version,
             pbm: @pbm,
-            vm_encryption_policy_name: @config.vm_encryption_policy_name
           )
           created_vm = vm_creator.create(vm_config)
         rescue => e
@@ -863,13 +863,14 @@ module VSphereCloud
         )
       end
       #ephemeral disk configuration
-      ephemeral_pattern = StoragePicker.choose_ephemeral_pattern(vm_type)
+      ephemeral_pattern, policy_name = StoragePicker.choose_ephemeral_pattern(config, vm_type)
       ephemeral_disk_config = VSphereCloud::DiskConfig.new(
         size: vm_type.disk,
         ephemeral: true,
         target_datastore_pattern: ephemeral_pattern
       )
       disk_configurations.push(ephemeral_disk_config)
+      return disk_configurations, policy_name
     end
   end
 end

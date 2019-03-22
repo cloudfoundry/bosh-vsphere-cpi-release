@@ -545,6 +545,36 @@ module LifecycleHelpers
     end
   end
 
+  def check_vm_not_assigned_any_policy(cpi, vm)
+    compliance_manager = cpi.pbm.service_content.compliance_manager
+    entities = [VimSdk::Pbm::ServerObjectRef.new(key: vm.mob_id, object_type: 'virtualMachine')]
+    disks = [vm.ephemeral_disk, vm.system_disk]
+    entities += disks.map do |disk|
+      disk_id = "#{vm.mob_id}:#{disk.key}"
+      VimSdk::Pbm::ServerObjectRef.new(key: disk_id, object_type: 'virtualDiskId')
+    end
+    compliance_result = compliance_manager.check_compliance(entities)
+    expect(compliance_result).to be_empty
+  end
+
+  # Checks that VM and given disks are not compliant with given policy
+  # They must be compliant to some policy
+  def check_non_compliance(cpi, policy_name, vm, disks=[])
+    policy = cpi.pbm.find_policy(policy_name)
+    compliance_manager = cpi.pbm.service_content.compliance_manager
+    entities = [VimSdk::Pbm::ServerObjectRef.new(key: vm.mob_id, object_type: 'virtualMachine')]
+    disks = [vm.ephemeral_disk, vm.system_disk]
+    entities += disks.map do |disk|
+      disk_id = "#{vm.mob_id}:#{disk.key}"
+      VimSdk::Pbm::ServerObjectRef.new(key: disk_id, object_type: 'virtualDiskId')
+    end
+    compliance_result = compliance_manager.check_compliance(entities)
+    expect(compliance_result.count).to eq(entities.count)
+    compliance_result.each do |result|
+      expect(result.profile.unique_id).to_not eq(policy.profile_id.unique_id)
+    end
+  end
+
   def update_host_group(cpi, cluster_name, host_group_name, operation)
     cluster = cpi.client.cloud_searcher.get_managed_object(VimSdk::Vim::ClusterComputeResource, name: cluster_name)
     existing_host_group = cluster.configuration_ex.group.find { |group| group.name == host_group_name && group.is_a?(VimSdk::Vim::Cluster::HostGroup)}

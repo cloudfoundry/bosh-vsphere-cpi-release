@@ -44,8 +44,8 @@ module VSphereCloud
     end
 
     # Datastores compatible with given storage policy
-    def storage_policy_datastores
-      storage_policy_name ? @pbm.find_compatible_datastores(storage_policy_name, @datacenter) : []
+    def storage_policy_datastores(policy_name)
+      policy_name ? @pbm.find_compatible_datastores(policy_name, @datacenter) : []
     end
   end
 end

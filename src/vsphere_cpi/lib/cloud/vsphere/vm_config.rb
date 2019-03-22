@@ -52,6 +52,10 @@ module VSphereCloud
       @manifest_params[:agent_env]
     end
 
+    def storage_policy_name
+      @manifest_params[:storage_policy]
+    end
+
     def networks_spec
       @manifest_params[:networks_spec] || {}
     end

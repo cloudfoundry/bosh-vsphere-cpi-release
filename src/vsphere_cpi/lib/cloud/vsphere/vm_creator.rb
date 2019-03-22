@@ -5,7 +5,8 @@ module VSphereCloud
   class VmCreator
     include Logger
 
-    def initialize(client:, cloud_searcher:, cpi:, datacenter:, agent_env:, ip_conflict_detector:, default_disk_type:, enable_auto_anti_affinity_drs_rules:, stemcell:, upgrade_hw_version:, pbm:, vm_encryption_policy_name:)
+    def initialize(client:, cloud_searcher:, cpi:, datacenter:, agent_env:, ip_conflict_detector:, default_disk_type:,
+                   enable_auto_anti_affinity_drs_rules:, stemcell:, upgrade_hw_version:, pbm:)
       @client = client
       @cloud_searcher = cloud_searcher
       @cpi = cpi
@@ -17,7 +18,6 @@ module VSphereCloud
       @stemcell = stemcell
       @upgrade_hw_version = upgrade_hw_version
       @pbm = pbm
-      @vm_encryption_policy_name = vm_encryption_policy_name
     end
 
     def create(vm_config)
@@ -71,11 +71,11 @@ module VSphereCloud
           disk_controller_id: replicated_stemcell_vm.system_disk.controller_key,
         )
 
-        # Encrypt ephemeral disk of the VM if encryption_policy is defined
-        if @vm_encryption_policy_name
-          policy = @pbm.find_policy(@vm_encryption_policy_name)
-          ephemeral_disk_config.profile = Resources::VM.create_profile_spec(policy)
-        end
+        # # Encrypt ephemeral disk of the VM if encryption_policy is defined
+        # if @vm_encryption_policy_name
+        #   policy = @pbm.find_policy(@vm_encryption_policy_name)
+        #   ephemeral_disk_config.profile = Resources::VM.create_profile_spec(policy)
+        # end
 
         config_spec.device_change << ephemeral_disk_config
 
@@ -304,8 +304,9 @@ module VSphereCloud
     end
 
     def apply_storage_policy(vm_config, vm)
-      return if vm_config.vm_type.storage_policy_name.nil?
-      policy = @pbm.find_policy(vm_config.vm_type.storage_policy_name)
+      return if vm_config.storage_policy_name.nil?
+      policy = @pbm.find_policy(vm_config.storage_policy_name)
+      logger.info("Applying storage policy #{vm_config.storage_policy_name} to the vm: #{vm.cid}")
       vm.apply_storage_policy(policy)
     end
   end

@@ -51,7 +51,7 @@ module VSphereCloud
       # datastore_clusters = results.select { |r| r.hub.hub_type == 'StoragePod' }
 
       compatible_datastores_mo_id = datastore_hubs.map { |d| d.hub.hub_id }
-      all_datastores = datacenter.mob.datastore_folder.child_entity.select {|ce| ce.class == VimSdk::Vim::Datastore}
+      all_datastores = datacenter.mob.datastore
       all_datastores.select { |d| compatible_datastores_mo_id.include?(d.__mo_id__) }
     end
   end
