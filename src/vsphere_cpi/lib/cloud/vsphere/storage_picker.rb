@@ -73,7 +73,7 @@ module VSphereCloud
       # return if exists
       if vm_type.storage_policy_name
         datastore_names = vm_type.storage_policy_datastores(vm_type.storage_policy_name).map{|d| d.name }
-        logger.info("Using compatible datastores for given Storage policy: #{datastore_names.join(', ')}")
+        logger.info("Using compatible datastores: #{datastore_names.join(', ')} for Storage policy #{vm_type.storage_policy_name}")
         return "^(#{datastore_names.map { |name| Regexp.escape(name) }.join('|')})$", vm_type.storage_policy_name
       end
 
