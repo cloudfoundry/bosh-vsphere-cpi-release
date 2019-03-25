@@ -54,14 +54,14 @@ module VSphereCloud
     describe '#storage_policy_datastores' do
       context 'when storage policy is not defined' do
         it 'returns empty array' do
-          expect(vm_type.storage_policy_datastores).to be_empty
+          expect(vm_type.storage_policy_datastores(nil)).to be_empty
         end
       end
       context 'when storage policy name is defined' do
         let(:storage_policy) { { 'name' => 'Gold Policy' } }
         it 'returns list of compatible datastores when storage_policy_name is defined' do
           expect(pbm).to receive(:find_compatible_datastores).with('Gold Policy', datacenter).and_return(['expected-datastore'])
-          expect(vm_type.storage_policy_datastores).to eq(['expected-datastore'])
+          expect(vm_type.storage_policy_datastores('Gold Policy')).to eq(['expected-datastore'])
         end
       end
     end

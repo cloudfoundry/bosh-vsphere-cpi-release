@@ -35,7 +35,7 @@ module VSphereCloud
     let(:nsx_url) { 'fake-nsx-url' }
     let(:nsx_user) { 'fake-nsx-user' }
     let(:nsx_password) { 'fake-nsx-password' }
-    let(:vm_encryption_policy_name)  { 'VM Encryption Policy' }
+    let(:vm_storage_policy_name)  { 'VM Encryption Policy' }
     before do
       allow(VimSdk::Vim::ServiceInstance).to receive(:new).
         and_return(double(:service_instance, content: service_content))
@@ -49,7 +49,7 @@ module VSphereCloud
           'user' => user,
           'password' => password,
           'default_disk_type' => default_disk_type,
-          'vm_encryption_policy_name' => vm_encryption_policy_name,
+          'vm_storage_policy_name' => vm_storage_policy_name,
           'datacenters' => datacenters,
           'nsx' => {
             'address' => nsx_url,
@@ -469,9 +469,9 @@ module VSphereCloud
       end
     end
 
-    describe '#vm_encryption_policy_name' do
+    describe '#vm_storage_policy_name' do
       it 'returns value from config' do
-        expect(config.vm_encryption_policy_name).to eq(vm_encryption_policy_name)
+        expect(config.vm_storage_policy_name).to eq(vm_storage_policy_name)
       end
     end
 

@@ -4,6 +4,8 @@ require 'ostruct'
 module VSphereCloud
   describe Cloud, fake_logger: true do
     subject(:vsphere_cloud) { Cloud.new(config) }
+    let(:vm_type_storage_policy) { 'vcpi-vm-type-fake-policy' }
+    let(:global_storage_policy) { 'vcpi-global-fake-policy' }
     let(:custom_fields_manager) { instance_double('VimSdk::Vim::CustomFieldsManager') }
     let(:config) { { 'vcenters' => [fake: 'config'] } }
     let(:cloud_config) do
@@ -21,7 +23,7 @@ module VSphereCloud
         vcenter_http_logging: true,
         nsxt_enabled?: nsxt_enabled,
         nsxt: nsxt,
-        vm_encryption_policy_name: nil
+        vm_storage_policy_name: global_storage_policy
       ).as_null_object
     end
     let(:custom_fields_manager) { instance_double('VimSdk::Vim::CustomFieldsManager') }
@@ -44,15 +46,15 @@ module VSphereCloud
     let(:agent_env) { instance_double('VSphereCloud::AgentEnv') }
     let(:vcenter_host) { 'fake-host' }
     let(:vcenter_api_uri) { URI.parse("https://#{vcenter_host}") }
-    before do
-      allow(VSphereCloud::AgentEnv).to receive(:new).and_return(agent_env)
-    end
-
     let(:cloud_searcher) { instance_double('VSphereCloud::CloudSearcher') }
-    before { allow(CloudSearcher).to receive(:new).and_return(cloud_searcher) }
-
     let(:pbm) { instance_double('VSphereCloud::Pbm') }
-    before { allow(Pbm).to receive(:new).and_return(pbm) }
+    let(:datacenter) do
+      instance_double('VSphereCloud::Resources::Datacenter', name: 'fake-datacenter', clusters: [])
+    end
+    let(:vm_provider) { instance_double('VSphereCloud::VMProvider') }
+    let(:vm) { instance_double('VSphereCloud::Resources::VM', mob: vm_mob, reload: nil, cid: 'vm-id') }
+    let(:vm_mob) { instance_double('VimSdk::Vim::VirtualMachine') }
+    let(:cluster_provider) { instance_double(VSphereCloud::Resources::ClusterProvider) }
 
     before do |example|
       allow(Config).to receive(:build).with(config).and_return(cloud_config)
@@ -69,18 +71,16 @@ module VSphereCloud
       end
       allow_any_instance_of(Cloud).to receive(:at_exit)
     end
-
-    let(:datacenter) do
-      instance_double('VSphereCloud::Resources::Datacenter', name: 'fake-datacenter', clusters: [])
+    before do
+      allow(Resources::ClusterProvider).to receive(:new).and_return(cluster_provider)
+      allow(Resources::Datacenter).to receive(:new).and_return(datacenter)
+      allow(VSphereCloud::VMProvider).to receive(:new).and_return(vm_provider)
+      allow(vm_provider).to receive(:find).with('vm-id').and_return(vm)
+      allow(Pbm).to receive(:new).and_return(pbm)
+      allow(CloudSearcher).to receive(:new).and_return(cloud_searcher)
+      allow(VSphereCloud::AgentEnv).to receive(:new).and_return(agent_env)
     end
-    before { allow(Resources::Datacenter).to receive(:new).and_return(datacenter) }
-    let(:vm_provider) { instance_double('VSphereCloud::VMProvider') }
-    before { allow(VSphereCloud::VMProvider).to receive(:new).and_return(vm_provider) }
-    let(:vm) { instance_double('VSphereCloud::Resources::VM', mob: vm_mob, reload: nil, cid: 'vm-id') }
-    let(:vm_mob) { instance_double('VimSdk::Vim::VirtualMachine') }
-    before { allow(vm_provider).to receive(:find).with('vm-id').and_return(vm) }
-    let(:cluster_provider) { instance_double(VSphereCloud::Resources::ClusterProvider) }
-    before { allow(Resources::ClusterProvider).to receive(:new).and_return(cluster_provider) }
+
 
     describe '#enable_telemetry' do
       before do
@@ -410,6 +410,7 @@ module VSphereCloud
       let(:nsx) { instance_double(NSX) }
       let(:fake_cluster) { instance_double(VSphereCloud::Resources::Cluster, name: 'fake-cluster') }
       let(:target_datastore_pattern) { 'fake-persistent-pattern' }
+      let(:target_datastore_ephemeral_pattern) { 'fake-ephemeral-pattern' }
       let(:fake_persistent_disk) do
         instance_double(VSphereCloud::DiskConfig,
           cid: fake_disk.cid,
@@ -430,24 +431,21 @@ module VSphereCloud
       let(:nsxt_provider) { instance_double(VSphereCloud::NSXTProvider) }
       let(:stemcell) { VSphereCloud::Stemcell.new('fake-stemcell-cid') }
       let(:disk_pool) { VSphereCloud::DiskPool.new(datacenter,vm_type['datastores']) }
-
+      let(:disk_configurations) { [fake_persistent_disk, fake_ephemeral_disk] }
       before do
         allow(VSphereCloud::NSXTProvider).to receive(:new).with(any_args).and_return(nsxt_provider)
         allow(vsphere_cloud).to receive(:stemcell_vm).with('fake-stemcell-cid').and_return(stemcell_vm)
-        allow(cloud_searcher).to receive(:get_property)
-          .with(
+        allow(cloud_searcher).to receive(:get_property).with(
             stemcell_vm,
             VimSdk::Vim::VirtualMachine,
             'summary.storage.committed',
             ensure_all: true
           ).and_return(1024 * 1024 * 1024)
-
         allow(datacenter).to receive(:clusters).and_return([fake_cluster])
-        allow(datacenter).to receive(:ephemeral_pattern).and_return('fake-ephemeral-pattern')
-        allow(datacenter).to receive(:persistent_pattern).and_return('fake-persistent-pattern')
+        allow(datacenter).to receive(:ephemeral_pattern).and_return(target_datastore_ephemeral_pattern)
+        allow(datacenter).to receive(:persistent_pattern).and_return(target_datastore_pattern)
         allow(datacenter).to receive(:find_disk).with(director_disk_cid).and_return(fake_disk)
         allow(VSphereCloud::DirectorDiskCID).to receive(:new).with(encoded_disk_cid).and_return(director_disk_cid)
-
         allow(IPConflictDetector).to receive(:new).with(vcenter_client).and_return(ip_conflict_detector)
         allow(IPConflictDetector).to receive(:new).with(vcenter_client).and_return(ip_conflict_detector)
         allow(DiskConfig).to receive(:new)
@@ -461,8 +459,11 @@ module VSphereCloud
           .with(
             size: 4096,
             ephemeral: true,
-            target_datastore_pattern: 'fake-ephemeral-pattern'
+            target_datastore_pattern: target_datastore_ephemeral_pattern
           ).and_return(fake_ephemeral_disk)
+        #allow(vsphere_cloud).to receive(:disk_configurations).and_return([disk_configurations, nil])
+        allow(StoragePicker).to receive(:choose_ephemeral_pattern).and_return(
+            [target_datastore_ephemeral_pattern, nil])
       end
 
       it 'creates a new VM with provided manifest properties' do
@@ -476,7 +477,8 @@ module VSphereCloud
             size: 1024
           },
           global_clusters: [fake_cluster],
-          disk_configurations: [fake_persistent_disk, fake_ephemeral_disk],
+          disk_configurations: disk_configurations,
+          storage_policy: nil,
         }
 
         allow(VmConfig).to receive(:new)
@@ -498,7 +500,6 @@ module VSphereCloud
             stemcell: stemcell,
             upgrade_hw_version: true,
             pbm: pbm,
-            vm_encryption_policy_name: nil
           ).and_return(vm_creator)
         expect(vm_creator).to receive(:create).with(vm_config).and_return(fake_vm)
 
@@ -524,6 +525,7 @@ module VSphereCloud
           },
           global_clusters: [fake_cluster],
           disk_configurations: [fake_ephemeral_disk],
+          storage_policy: nil,
         }
         expect(VmConfig).to receive(:new)
           .with(
@@ -545,9 +547,8 @@ module VSphereCloud
             upgrade_hw_version: true,
             stemcell: stemcell,
             pbm: pbm,
-            vm_encryption_policy_name: nil
-        )
-          .and_return(vm_creator)
+        ).and_return(vm_creator)
+
         expect(vm_creator).to receive(:create)
           .with(vm_config)
           .and_return(fake_vm)
@@ -688,7 +689,8 @@ module VSphereCloud
               size: 1024
             },
             global_clusters: [fake_cluster],
-            disk_configurations: [fake_persistent_disk, fake_ephemeral_disk]
+            disk_configurations: disk_configurations,
+            storage_policy: nil,
           }
 
           allow(VmConfig).to receive(:new)
@@ -711,7 +713,6 @@ module VSphereCloud
                                    upgrade_hw_version: true,
                                    stemcell: stemcell,
                                    pbm: pbm,
-                                   vm_encryption_policy_name: nil
                                  )
                                  .and_return(vm_creator)
           expect(vm_creator).to receive(:create)
