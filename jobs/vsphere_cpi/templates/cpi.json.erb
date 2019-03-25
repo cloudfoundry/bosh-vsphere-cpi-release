@@ -10,11 +10,6 @@
     vcenter_host = p('vcenter.address') if vcenter_host.nil?
   end
 
-  global_storage_policy = nil
-  if_p('vcenter.vm_storage_policy_name') do
-    global_storage_policy = p('vcenter.vm_storage_policy_name')
-  end
-
   params = {
     "cloud" => {
       "plugin" => "vsphere",
@@ -38,9 +33,9 @@
     }
   }
 
-  unless global_storage_policy.nil?
+  if_p('vcenter.vm_storage_policy_name') do
     vcenter = params['cloud']['properties']['vcenters'].first
-    vcenter['vm_storage_policy_name'] = global_storage_policy
+    vcenter['vm_storage_policy_name'] = p('vcenter.vm_storage_policy_name')
   end
 
   params["cloud"]["properties"]["vcenters"].each do |vcenter|

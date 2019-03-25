@@ -23,16 +23,16 @@ module VSphereCloud
     end
 
     describe '#find_policy' do
-      let(:profile) { instance_double(VimSdk::Pbm::Profile::Profile, name: 'VM Encryption Policy', profile_id: 1)}
+      let(:profile) { instance_double(VimSdk::Pbm::Profile::Profile, name: 'VM Storage Policy', profile_id: 1)}
       before do
         profile_ids = [1]
         allow(profile_manager).to receive(:query_profile).and_return(profile_ids)
         allow(profile_manager).to receive(:retrieve_content).and_return([profile])
       end
       it 'should find and return the given policy' do
-        policy = pbm.find_policy('VM Encryption Policy')
+        policy = pbm.find_policy('VM Storage Policy')
         expect(policy.profile_id).to eq(1)
-        expect(policy.name).to eq('VM Encryption Policy')
+        expect(policy.name).to eq('VM Storage Policy')
       end
 
       it 'should raise an error if policy is not found' do

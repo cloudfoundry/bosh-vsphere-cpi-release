@@ -35,7 +35,7 @@ module VSphereCloud
     let(:nsx_url) { 'fake-nsx-url' }
     let(:nsx_user) { 'fake-nsx-user' }
     let(:nsx_password) { 'fake-nsx-password' }
-    let(:vm_storage_policy_name)  { 'VM Encryption Policy' }
+    let(:vm_storage_policy_name)  { 'VM Storage Policy' }
     before do
       allow(VimSdk::Vim::ServiceInstance).to receive(:new).
         and_return(double(:service_instance, content: service_content))

@@ -528,7 +528,7 @@ module LifecycleHelpers
   end
 
   # Checks that VM and given disks are compliant with given policy
-  def check_compliance(cpi, policy_name, vm, disks=[])
+  def check_compliance(cpi, policy_name, vm)
     policy = cpi.pbm.find_policy(policy_name)
     compliance_manager = cpi.pbm.service_content.compliance_manager
     entities = [VimSdk::Pbm::ServerObjectRef.new(key: vm.mob_id, object_type: 'virtualMachine')]
