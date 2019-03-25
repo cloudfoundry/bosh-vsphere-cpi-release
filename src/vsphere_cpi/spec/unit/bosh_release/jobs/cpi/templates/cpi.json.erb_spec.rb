@@ -295,6 +295,15 @@ describe 'cpi.json.erb' do
       end
     end
   end
+
+  context 'when global storage policy is not provided' do
+    before(:each) {
+      manifest['properties']['vcenter'].delete('vm_storage_policy_name')
+    }
+    it 'renders the vcenter without storage policy' do
+      expect(subject['cloud']['properties']['vcenters'].first['vm_storage_policy_name']).to be_nil
+    end
+  end
 end
 
 class TemplateEvaluationContext

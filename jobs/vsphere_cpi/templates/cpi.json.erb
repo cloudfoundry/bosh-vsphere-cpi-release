@@ -10,6 +10,11 @@
     vcenter_host = p('vcenter.address') if vcenter_host.nil?
   end
 
+  global_storage_policy = nil
+  if_p('vcenter.vm_storage_policy_name') do
+    global_storage_policy = p('vcenter.vm_storage_policy_name')
+  end
+
   params = {
     "cloud" => {
       "plugin" => "vsphere",
@@ -23,7 +28,6 @@
             "default_disk_type" => p('vcenter.default_disk_type'),
             "enable_auto_anti_affinity_drs_rules" => p('vcenter.enable_auto_anti_affinity_drs_rules'),
             "upgrade_hw_version" => p('vcenter.upgrade_hw_version'),
-            "vm_storage_policy_name" => p('vcenter.vm_storage_policy_name'),
             "http_logging" => p('vcenter.http_logging')
           }
         ],
@@ -33,6 +37,11 @@
       }
     }
   }
+
+  unless global_storage_policy.nil?
+    vcenter = params['cloud']['properties']['vcenters'].first
+    vcenter['vm_storage_policy_name'] = global_storage_policy
+  end
 
   params["cloud"]["properties"]["vcenters"].each do |vcenter|
     p('vcenter.datacenters').each do |datacenter|
