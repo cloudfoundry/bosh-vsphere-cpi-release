@@ -2,6 +2,13 @@ module VSphereCloud
   class VmConfig
     include Logger
 
+
+    UUID_SUFFIX_LENGTH = 12
+    DEPLOYMENT_NAME_LENGTH = 25
+    MAX_VSPHERE_VM_NAME_LENGTH = 79
+
+    #attr_accessor :vm_cid
+
     def initialize(manifest_params:, cluster_provider: nil)
       @manifest_params = manifest_params
       @cluster_provider = cluster_provider
@@ -12,7 +19,40 @@ module VSphereCloud
     end
 
     def name
-      @vm_cid ||= "vm-#{SecureRandom.uuid}"
+
+      return @vm_cid if @vm_cid
+
+      if not human_readable_name_enabled?
+        @vm_cid = "vm-#{SecureRandom.uuid}"
+        return @vm_cid
+      end
+
+      # might need change according to function get_name_info_from_bosh_env in cloud.rb
+      # # update
+      # # Since the human_readable_name_info relies on the correctness of environment,
+      # # it is either have 2 keys or empty
+      if human_readable_name_info.has_key?('instance_group_name') && human_readable_name_info.has_key?('deployment_name')
+        @vm_cid = generate_human_readable_name(human_readable_name_info['instance_group_name'], human_readable_name_info['deployment_name'])
+      ############################################################
+      # these will be deleted if current deployment has no problem
+      # ##########################################################
+      # elsif  !human_readable_name_info.has_key?('instance_group_name') && !human_readable_name_info.has_key?('deployment_name')
+      #   logger.info("Deployment and job name not found, will use default type of names")
+      #   @vm_cid = "vm-#{SecureRandom.uuid}"
+      # elsif !human_readable_name_info.has_key?('instance_group')
+      #   logger.info("Deployment name not found, will use default type of names")
+      #   @vm_cid = "vm-#{SecureRandom.uuid}"
+      # else
+      #   logger.info("Job name not found, will use default type of names")
+      #
+      #   @vm_cid = "vm-#{SecureRandom.uuid}"
+      # end
+      #
+      else
+        @vm_cid = "vm-#{SecureRandom.uuid}"
+      end
+
+      @vm_cid
     end
 
     def cluster_placements
@@ -52,8 +92,56 @@ module VSphereCloud
       @manifest_params[:agent_env]
     end
 
+    # unit test passed
+    # Question here
+    def human_readable_name_enabled?
+      @manifest_params[:enable_human_readable_name]
+    end
+
+    # unit test passed
+    def human_readable_name_info
+      @manifest_params.fetch(:human_readable_name_info, {})
+    end
+
     def networks_spec
       @manifest_params[:networks_spec] || {}
+    end
+
+    # instance_name_deployment_name_12_uuid
+    # instance and deployment should be less or equal to 65
+    # for len_in and len_de
+    #  if len_in + len_de <=65 won't cut
+    #  else
+    #     x = in + de -65 # need cut x in total
+    #
+    #     int max_cut_in = max(len_in - 15, 0 )
+    #     int max_cut_dp = max(len_dp - 15, 0 )
+    #
+    #     while cut one of the name. we need to compare the other
+    #     the other could be min(x/2, max_cut_in)
+    #     make the length of dep be max (15, len_de - x/2)
+    #     make the length of instance be
+    #
+    def generate_human_readable_name(instance_name, deployment_name)
+      allowed_prefix_len = MAX_VSPHERE_VM_NAME_LENGTH - UUID_SUFFIX_LENGTH - 2 # current its 65
+      uuid_suffix = SecureRandom.uuid.slice(-UUID_SUFFIX_LENGTH, UUID_SUFFIX_LENGTH)
+
+      if instance_name.size + deployment_name.size <= allowed_prefix_len
+        return "#{instance_name}_#{deployment_name}_#{uuid_suffix}"
+      end
+
+      cut_length = instance_name.size + deployment_name.size - allowed_prefix_len
+
+      if deployment_name.size <= DEPLOYMENT_NAME_LENGTH
+        readable_name = "#{instance_name.slice(0, instance_name.size - cut_length)}_#{deployment_name}_#{uuid_suffix}"
+      else
+        # eg. deployment name length is 80 and instance name length is 20, cut_length is 80 + 20 - 65 = 35
+        # thus we can make instance name length as min (65 - 25, 20), which is 20
+        # then we can calculate the allowed length of deployment  (65 - 20) which is larger than default value 25
+        instance_name_length = [allowed_prefix_len -  DEPLOYMENT_NAME_LENGTH, instance_name.size].min
+        readable_name = "#{instance_name.slice(0, instance_name_length)}_#{deployment_name.slice(0, allowed_prefix_len - instance_name_length)}_#{uuid_suffix}"
+      end
+      readable_name
     end
 
     def vsphere_networks

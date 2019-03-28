@@ -295,6 +295,8 @@ module VSphereCloud
             },
             global_clusters: @datacenter.clusters,
             disk_configurations: disk_configurations(vm_type,  existing_disk_cids),
+            human_readable_name_info: get_name_info_from_bosh_env(environment),
+            enable_human_readable_name: config.human_readable_name_enabled?
           }
 
           vm_config = VmConfig.new(
@@ -855,6 +857,35 @@ module VSphereCloud
         target_datastore_pattern: ephemeral_pattern
       )
       disk_configurations.push(ephemeral_disk_config)
+    end
+
+
+    # return name info as a hash
+    # if  there are both instance group name and deployment name
+    #   return a valid hash name info table
+    # else return a empty hash
+    #
+    # The bosh is guaranteed to give a environment with no error
+    # which means in the groups array , there are always
+    # director-name, deployment-name and job-name in order
+
+    def get_name_info_from_bosh_env(environment)
+      name_info = {}
+      if environment.nil? || environment.empty?
+        return name_info
+      end
+      instance_group_name = environment.dig('bosh', 'groups', 2)
+      deployment_name = environment.dig('bosh', 'groups', 1)
+
+      if instance_group_name.nil? or deployment_name.nil?
+        logger.info("Environment value invalid, should have both deployment and instance group name")
+        logger.info("Will use default name for created virtual machines")
+        return name_info
+      end
+
+      name_info['instance_group_name'] = instance_group_name
+      name_info['deployment_name'] = deployment_name
+      name_info
     end
   end
 end

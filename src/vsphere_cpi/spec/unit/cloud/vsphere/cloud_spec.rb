@@ -20,7 +20,8 @@ module VSphereCloud
         upgrade_hw_version: true,
         vcenter_http_logging: true,
         nsxt_enabled?: nsxt_enabled,
-        nsxt: nsxt
+        nsxt: nsxt,
+        human_readable_name_enabled?: true
       ).as_null_object
     end
     let(:custom_fields_manager) { instance_double('VimSdk::Vim::CustomFieldsManager') }
@@ -472,9 +473,11 @@ module VSphereCloud
           },
           global_clusters: [fake_cluster],
           disk_configurations: [fake_persistent_disk, fake_ephemeral_disk],
+          human_readable_name_info: {},
+          enable_human_readable_name: true,
         }
 
-        allow(VmConfig).to receive(:new)
+        expect(VmConfig).to receive(:new)
           .with(
             manifest_params: expected_manifest_params,
             cluster_provider: cluster_provider
@@ -517,6 +520,8 @@ module VSphereCloud
           },
           global_clusters: [fake_cluster],
           disk_configurations: [fake_ephemeral_disk],
+          human_readable_name_info: {},
+          enable_human_readable_name: true,
         }
         expect(VmConfig).to receive(:new)
           .with(
@@ -679,7 +684,9 @@ module VSphereCloud
               size: 1024
             },
             global_clusters: [fake_cluster],
-            disk_configurations: [fake_persistent_disk, fake_ephemeral_disk]
+            disk_configurations: [fake_persistent_disk, fake_ephemeral_disk],
+            human_readable_name_info: {},
+            enable_human_readable_name: true
           }
 
           allow(VmConfig).to receive(:new)
@@ -2113,5 +2120,82 @@ module VSphereCloud
         end
       end
     end
+
+    # questions for here
+    # 1 . do I need to make an object and then call the function ?
+    #     1-2 if no for question 1, what should I do to deal with
+    #       You must pass an argument rather than a block to use the provided matcher (be empty),
+    #       or the matcher must implement `supports_block_expectations?`.
+    #
+    describe '#get_name_info_from_bosh_env' do
+
+      context "when environment is nil" do
+        let(:environment){ nil }
+        it "returns an empty hash " do
+          expect( vsphere_cloud.send( :get_name_info_from_bosh_env, environment ) ).to be_empty
+        end
+      end
+
+      context "When environment is empty" do
+        let(:environment) { {} }
+        let(:key1) {"instance_group_name"}
+        let(:key2) {"deployment_name"}
+        it "returns an empty hash " do
+          expect( vsphere_cloud.send( :get_name_info_from_bosh_env, environment ) ).to be_empty
+        end
+      end
+
+      context "When environment has no deployment name" do
+        let(:key1) {"instance_group_name"}
+        let(:key2) {"deployment_name"}
+        let(:environment) do
+          {
+            'bosh' => {
+              'group' => 'fake-group',
+              'groups' => ['fake-director-name', 'fake-instance-group-name']
+            }
+          }
+        end
+        it "returns an empty hash " do
+          expect( vsphere_cloud.send(:get_name_info_from_bosh_env, environment) ).to be_empty
+        end
+      end
+
+      context "When environment has no instance group name" do
+        let(:key1) {"instance_group_name"}
+        let(:key2) {"deployment_name"}
+        let(:environment) do
+          {
+            'bosh' => {
+              'group' => 'fake-group',
+              'groups' => ['fake-director-name', 'fake-deployment-name']
+            }
+          }
+        end
+        it "returns an empty hash" do
+          expect( vsphere_cloud.send(:get_name_info_from_bosh_env, environment) ).to be_empty
+        end
+      end
+
+      context "When environment has deployment and instance group name" do
+        let(:key1) {"instance_group_name"}
+        let(:key2) {"deployment_name"}
+        let(:environment) do
+          {
+            'bosh' => {
+                'group' => 'fake-group',
+                'groups' => ['fake-director-name', 'fake-deployment-name', 'fake-instance-group-name']
+            }
+          }
+        end
+        it "returns an hash with only 2 keys" do
+          result = vsphere_cloud.send(:get_name_info_from_bosh_env, environment)
+          expect(result.size).to eq(2)
+          expect(result).to include(key1 => 'fake-instance-group-name')
+          expect(result).to include(key2 => 'fake-deployment-name')
+        end
+      end
+    end
+
   end
 end
