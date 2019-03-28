@@ -7,7 +7,7 @@ module VSphereCloud
     let(:config) do
       {
         'resource_pool' => 'fake-resource-pool',
-        'host_group' => 'fake-host-group',
+        'host_group' => {'name' => 'fake-host-group', 'drs_rule' => 'MUST'},
       }
     end
 
@@ -23,9 +23,27 @@ module VSphereCloud
       end
     end
 
-    describe '#host_group' do
+    describe '#host_group_name' do
       it 'returns the host group name' do
-        expect(cluster_config.host_group).to eq('fake-host-group')
+        expect(cluster_config.host_group_name).to eq('fake-host-group')
+      end
+      context 'when host group is not defined' do
+        let(:config){ {'resource_pool' => 'fake-resource-pool'} }
+        it 'returns nil' do
+          expect(cluster_config.host_group_name).to be_nil
+        end
+      end
+    end
+
+    describe '#host_group_drs_rule' do
+      it 'returns the host group drs rule condition' do
+        expect(cluster_config.host_group_drs_rule).to eq('MUST')
+      end
+      context 'when host group is not defined' do
+        let(:config){ {'resource_pool' => 'fake-resource-pool'} }
+        it 'returns nil' do
+          expect(cluster_config.host_group_drs_rule).to be_nil
+        end
       end
     end
   end
