@@ -22,7 +22,8 @@ module VSphereCloud::Resources
         'VSphereCloud::ClusterConfig',
         name: 'fake-cluster-name',
         resource_pool: 'fake-resource-pool',
-        host_group: nil,
+        host_group_name: nil,
+        host_group_drs_rule: nil,
       )
     end
 
@@ -383,11 +384,23 @@ module VSphereCloud::Resources
             'VSphereCloud::ClusterConfig',
             name: 'fake-cluster-name',
             resource_pool: 'fake-resource-pool',
-            host_group: 'vcpi-hg1',
+            host_group_name: 'vcpi-hg1',
           )
         end
-        it 'returns host_group name suffixed with _vm_group' do
-          expect(cluster.vm_group).to eq(cluster.host_group+VSphereCloud::Resources::Cluster::CLUSTER_VM_GROUP_SUFFIX)
+        before do
+          expect(subject).to receive(:rule_type_suffix).and_return(rule_type_suffix)
+        end
+        context 'when rule type is must rule' do
+          let(:rule_type_suffix) { 'must' }
+          it 'returns host_group name suffixed with _vm_group and rule type' do
+            expect(cluster.vm_group).to eq(cluster.host_group+rule_type_suffix+VSphereCloud::Resources::Cluster::CLUSTER_VM_GROUP_SUFFIX)
+          end
+        end
+        context 'when rule type is should rule' do
+          let(:rule_type_suffix) { 'should' }
+          it 'returns host_group name suffixed with _vm_group and rule type' do
+            expect(cluster.vm_group).to eq(cluster.host_group+rule_type_suffix+VSphereCloud::Resources::Cluster::CLUSTER_VM_GROUP_SUFFIX)
+          end
         end
       end
       context 'when host group name is longer than 100 characters' do
@@ -395,11 +408,23 @@ module VSphereCloud::Resources
           instance_double(
             'VSphereCloud::ClusterConfig',
             name: 'fake-cluster-name',
-            host_group: 'vcpi-hg1'*20,
+            host_group_name: 'vcpi-hg1'*20,
           )
         end
-        it 'returns a random name' do
-          expect(cluster.vm_group).to_not eq(cluster.host_group+VSphereCloud::Resources::Cluster::CLUSTER_VM_GROUP_SUFFIX)
+        before do
+          expect(subject).to receive(:rule_type_suffix).and_return(rule_type_suffix)
+        end
+        context 'when rule type is must rule' do
+          let(:rule_type_suffix) { 'must' }
+          it 'returns a random name that includes "must" ' do
+            expect(cluster.vm_group).to include(rule_type_suffix)
+          end
+        end
+        context 'when rule type is should rule' do
+          let(:rule_type_suffix) { 'should' }
+          it 'returns a random name that includes "should" ' do
+            expect(cluster.vm_group).to include(rule_type_suffix)
+          end
         end
       end
       describe '#host_group' do
@@ -413,11 +438,32 @@ module VSphereCloud::Resources
             instance_double(
               'VSphereCloud::ClusterConfig',
               name: 'fake-cluster-name',
-              host_group: 'fake-host-group',
+              host_group_name: 'fake-host-group',
+              host_group_drs_rule: 'MUST',
             )
           end
           it 'returns name of the defined host Group)' do
             expect(cluster.host_group).to eq('fake-host-group')
+          end
+        end
+      end
+      describe '#host_group_drs_rule' do
+        context 'when host group is not defined in config' do
+          it 'returns nil' do
+            expect(cluster.host_group_drs_rule).to be(nil)
+          end
+        end
+        context 'when host group drs rule is defined in config' do
+          let(:cluster_config) do
+            instance_double(
+                'VSphereCloud::ClusterConfig',
+                name: 'fake-cluster-name',
+                host_group_name: 'fake-host-group',
+                host_group_drs_rule: 'MUST',
+                )
+          end
+          it 'returns name of the defined host Group drs rule' do
+            expect(cluster.host_group_drs_rule).to eq('MUST')
           end
         end
       end
@@ -432,11 +478,26 @@ module VSphereCloud::Resources
             instance_double(
               'VSphereCloud::ClusterConfig',
               name: 'fake-cluster-name',
-              host_group: 'fake-host-group',
+              host_group_name: 'fake-host-group',
             )
           end
-          it 'returns default rule name' do
-            expect(cluster.vm_host_affinity_rule_name).to eq(cluster.vm_group + VSphereCloud::Resources::Cluster::CLUSTER_VM_HOST_RULE_SUFFIX)
+          let(:rule_type_suffix) { 'must' }
+          before do
+            allow(subject).to receive(:rule_type_suffix).and_return(rule_type_suffix)
+          end
+          context 'when rule type is must rule' do
+            let(:rule_type_suffix) { 'must' }
+            it 'returns rule name suffixed with rule type' do
+              expect(cluster.vm_host_affinity_rule_name).to eq(cluster.vm_group + VSphereCloud::Resources::Cluster::CLUSTER_VM_HOST_RULE_SUFFIX)
+              expect(cluster.vm_host_affinity_rule_name).to include(rule_type_suffix)
+            end
+          end
+          context 'when rule type is should rule' do
+            let(:rule_type_suffix) { 'should' }
+            it 'returns rule name suffixed with rule type' do
+              expect(cluster.vm_host_affinity_rule_name).to eq(cluster.vm_group + VSphereCloud::Resources::Cluster::CLUSTER_VM_HOST_RULE_SUFFIX)
+              expect(cluster.vm_host_affinity_rule_name).to include(rule_type_suffix)
+            end
           end
         end
       end
@@ -454,7 +515,7 @@ module VSphereCloud::Resources
             instance_double(
               'VSphereCloud::ClusterConfig',
               name: 'fake-cluster-name',
-              host_group: 'fake-host-group',
+              host_group_name: 'fake-host-group',
             )
           end
           it 'returns mob of defined host group' do
@@ -470,12 +531,54 @@ module VSphereCloud::Resources
             instance_double(
               'VSphereCloud::ClusterConfig',
               name: 'fake-cluster-name',
-              host_group: 'fake-host-group',
+              host_group_name: 'fake-host-group',
             )
           end
           it 'returns mob of defined host group' do
             allow(cluster).to receive_message_chain(:mob, :configuration_ex, :group).and_return([host_group_mob])
             expect{cluster.host_group_mob}.to raise_error(/Failed to find the HostGroup/)
+          end
+        end
+      end
+      describe '#rule_type_suffix' do
+        context 'when host group rule type is not defined(nil)' do
+          it 'returns SHOULD' do
+            expect(cluster.rule_type_suffix).to be(VSphereCloud::Resources::Cluster::CLUSTER_VM_HOST_RULE_SHOULD)
+          end
+        end
+        context 'when host group rule type is defined' do
+          let(:cluster_config) do
+            instance_double(
+                'VSphereCloud::ClusterConfig',
+                name: 'fake-cluster-name',
+                host_group_name: 'fake-host-group',
+                host_group_drs_rule: host_group_drs_rule
+                )
+          end
+          let(:host_group_drs_rule) { nil }
+          context 'when rule type has a bad value' do
+            let(:host_group_drs_rule) { 'a bad value' }
+            it 'returns SHOULD type suffix' do
+              expect(cluster.rule_type_suffix).to eq(VSphereCloud::Resources::Cluster::CLUSTER_VM_HOST_RULE_SHOULD)
+            end
+          end
+          context 'when rule type has shoULD (with mixed case)' do
+            let(:host_group_drs_rule) { 'shoULD' }
+            it 'returns SHOULD type suffix' do
+              expect(cluster.rule_type_suffix).to eq(VSphereCloud::Resources::Cluster::CLUSTER_VM_HOST_RULE_SHOULD)
+            end
+          end
+          context 'when rule type has " shouLd  " (with mixed case and leading & trailing spaces)' do
+            let(:host_group_drs_rule) { ' shouLd  ' }
+            it 'returns SHOULD type suffix' do
+              expect(cluster.rule_type_suffix).to eq(VSphereCloud::Resources::Cluster::CLUSTER_VM_HOST_RULE_SHOULD)
+            end
+          end
+          context 'when rule type has must' do
+            let(:host_group_drs_rule) { 'Must' }
+            it 'returns MUST type suffix' do
+              expect(cluster.rule_type_suffix).to eq(VSphereCloud::Resources::Cluster::CLUSTER_VM_HOST_RULE_MUST)
+            end
           end
         end
       end
@@ -519,7 +622,7 @@ module VSphereCloud::Resources
           instance_double(
             'VSphereCloud::ClusterConfig',
             name: 'fake-cluster-name',
-            host_group: 'fake-host-group',
+            host_group_name: 'fake-host-group',
           )
         end
         it 'returns the hosts defined under the host group' do

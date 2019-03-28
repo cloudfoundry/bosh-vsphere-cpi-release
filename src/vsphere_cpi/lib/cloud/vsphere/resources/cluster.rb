@@ -11,6 +11,8 @@ module VSphereCloud
 
       CLUSTER_VM_GROUP_SUFFIX = '_vm_group'.freeze
       CLUSTER_VM_HOST_RULE_SUFFIX = '_rule'.freeze
+      CLUSTER_VM_HOST_RULE_SHOULD = 'SHOULD'.freeze
+      CLUSTER_VM_HOST_RULE_MUST = 'MUST'.freeze
       PROPERTIES = %w(name datastore resourcePool host)
       HOST_PROPERTIES = %w(name hardware.memorySize runtime.connectionState runtime.inMaintenanceMode runtime.powerState)
       HOST_COUNTERS = %w(mem.usage.average)
@@ -75,7 +77,15 @@ module VSphereCloud
       #
       # @return [String] Name of the host Group specified under a cluster config.
       def host_group
-        config.host_group
+        config.host_group_name
+      end
+
+      # Returns a host group rule if specified in cluster config. Otherwise,
+      # it returns a nil.
+      #
+      # @return [String] Name of the host Group rule type specified under a cluster config.
+      def host_group_drs_rule
+        config.host_group_drs_rule
       end
 
       # it returns a default name created by adding suffix to host group name
@@ -83,9 +93,22 @@ module VSphereCloud
       # @return [String] Name of the VM Group
       def vm_group
         return nil if host_group.nil?
-        return "vm_group-#{(0...6).map { (97 + rand(26)).chr }.join}" if host_group.length > 100
-        host_group + CLUSTER_VM_GROUP_SUFFIX
+        # TODO TA SG : Derive a shorter unique name (unique across process calls from the host group name only. Using rand will create multiple vm groups with 1 vm each.
+        # if host_group.length > 100
+        #   return "#{self.rule_type_suffix}-vm_group-#{(0...6).map { (97 + rand(26)).chr }.join}"
+        # end
+        host_group + self.rule_type_suffix + CLUSTER_VM_GROUP_SUFFIX
       end
+
+      def rule_type_suffix
+        rule_type = host_group_drs_rule
+        # rule_type can never be nil as Cluster Config
+        # makes sure to return default 'SHOULD'
+        rule_type.strip.casecmp?(CLUSTER_VM_HOST_RULE_MUST) == false ?
+            CLUSTER_VM_HOST_RULE_SHOULD :
+            CLUSTER_VM_HOST_RULE_MUST
+      end
+      alias host_group_rule_type rule_type_suffix
 
       def host_group_mob
         return nil if host_group.nil?

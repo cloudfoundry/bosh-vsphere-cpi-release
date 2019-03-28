@@ -32,14 +32,14 @@ module VSphereCloud
     # @param [Vim::VirtualMachine] vm
     # @param [String] vm_group_name
     # @param [String] host_group_name
-    def add_vm_host_affinity_rule(vm_group_name, host_group_name)
+    def add_vm_host_affinity_rule(vm_group_name, host_group_name, rule_type)
       DrsLock.new(DRS_LOCK_HOST_VM_GROUP).with_drs_lock do
         rule = find_rule
         # Do not create the rule if it already exists
         unless rule
           # No error is raised if given host group does not exist,
           # it still creates the rule
-          create_vm_host_affinity_rule(vm_group_name, host_group_name)
+          create_vm_host_affinity_rule(vm_group_name, host_group_name, rule_type)
         end
       end
     end
@@ -71,11 +71,15 @@ module VSphereCloud
       add_anti_affinity_rule(VimSdk::Vim::Option::ArrayUpdateSpec::Operation::EDIT, rule_key)
     end
 
-    def create_vm_host_affinity_rule(vm_group_name, host_group_name)
+    def create_vm_host_affinity_rule(vm_group_name, host_group_name, rule_type)
       vm_host_rule_info = VimSdk::Vim::Cluster::VmHostRuleInfo.new
       vm_host_rule_info.enabled = true
-      # This is a HARD AFFINITY rule.
-      vm_host_rule_info.mandatory = true
+      # Check Hard or Soft Affinity
+      if rule_type == VSphereCloud::Resources::Cluster::CLUSTER_VM_HOST_RULE_MUST
+        vm_host_rule_info.mandatory = true
+      else
+        vm_host_rule_info.mandatory =  false
+      end
       vm_host_rule_info.name = @rule_name
       vm_host_rule_info.vm_group_name = vm_group_name
       vm_host_rule_info.affine_host_group_name = host_group_name
