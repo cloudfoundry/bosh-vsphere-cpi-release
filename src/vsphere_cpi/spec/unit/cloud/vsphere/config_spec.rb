@@ -50,6 +50,7 @@ module VSphereCloud
           'password' => password,
           'default_disk_type' => default_disk_type,
           'vm_storage_policy_name' => vm_storage_policy_name,
+          'enable_human_readable_name' => false,
           'datacenters' => datacenters,
           'nsx' => {
             'address' => nsx_url,
@@ -427,6 +428,22 @@ module VSphereCloud
 
         it 'returns true' do
           expect(config.datacenter_use_sub_folder).to eq(true)
+        end
+      end
+    end
+
+    describe '#human_readable_name_enabled?' do
+      context 'when it is set to false' do
+        let(:config_hash) { {'vcenters' => ['enable_human_readable_name' => false] } }
+        it 'returns value false from config' do
+          expect(config.human_readable_name_enabled?).to eq(false)
+        end
+      end
+
+      context 'when it is set to true' do
+        let(:config_hash) { {'vcenters' => ['enable_human_readable_name' => true] } }
+        it 'returns value true from config' do
+          expect(config.human_readable_name_enabled?).to eq(true)
         end
       end
     end

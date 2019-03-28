@@ -23,7 +23,8 @@ module VSphereCloud
         vcenter_http_logging: true,
         nsxt_enabled?: nsxt_enabled,
         nsxt: nsxt,
-        vm_storage_policy_name: global_storage_policy
+        vm_storage_policy_name: global_storage_policy,
+        human_readable_name_enabled?: true
       ).as_null_object
     end
     let(:custom_fields_manager) { instance_double('VimSdk::Vim::CustomFieldsManager') }
@@ -479,9 +480,11 @@ module VSphereCloud
           global_clusters: [fake_cluster],
           disk_configurations: disk_configurations,
           storage_policy: nil,
+          human_readable_name_info: nil,
+          enable_human_readable_name: true,
         }
 
-        allow(VmConfig).to receive(:new)
+        expect(VmConfig).to receive(:new)
           .with(
             manifest_params: expected_manifest_params,
             cluster_provider: cluster_provider
@@ -526,6 +529,8 @@ module VSphereCloud
           global_clusters: [fake_cluster],
           disk_configurations: [fake_ephemeral_disk],
           storage_policy: nil,
+          human_readable_name_info: nil,
+          enable_human_readable_name: true,
         }
         expect(VmConfig).to receive(:new)
           .with(
@@ -691,6 +696,8 @@ module VSphereCloud
             global_clusters: [fake_cluster],
             disk_configurations: disk_configurations,
             storage_policy: nil,
+            human_readable_name_info: nil,
+            enable_human_readable_name: true
           }
 
           allow(VmConfig).to receive(:new)
@@ -2125,5 +2132,69 @@ module VSphereCloud
         end
       end
     end
+
+    describe '#update_name_info_from_bosh_env' do
+      context "when environment is nil" do
+        let(:environment){ nil }
+        it "returns nil " do
+          expect( vsphere_cloud.send(:update_name_info_from_bosh_env, environment) ).to be_nil
+        end
+      end
+
+      context "when environment is empty" do
+        let(:environment) { {} }
+        it "returns nil " do
+          expect( vsphere_cloud.send(:update_name_info_from_bosh_env, environment) ).to be_nil
+        end
+      end
+
+      context "when environment has no deployment name" do
+        let(:environment) do
+          {
+            'bosh' => {
+              'group' => 'fake-group',
+              'groups' => ['fake-director-name', 'fake-instance-group-name']
+            }
+          }
+        end
+        it "returns nil " do
+          expect( vsphere_cloud.send(:update_name_info_from_bosh_env, environment) ).to be_nil
+        end
+      end
+
+      context "When environment has no instance group name" do
+        let(:environment) do
+          {
+            'bosh' => {
+              'group' => 'fake-group',
+              'groups' => ['fake-director-name', 'fake-deployment-name']
+            }
+          }
+        end
+        it "returns nil" do
+          expect( vsphere_cloud.send(:update_name_info_from_bosh_env, environment) ).to be_nil
+        end
+      end
+
+      context "When environment has deployment and instance group name" do
+        let(:key1) {"instance_group_name"}
+        let(:key2) {"deployment_name"}
+        let(:environment) do
+          {
+            'bosh' => {
+                'group' => 'fake-group',
+                'groups' => ['fake-director-name', 'fake-deployment-name', 'fake-instance-group-name']
+            }
+          }
+        end
+        it "returns an array with 2 strings inside" do
+          result = vsphere_cloud.send(:update_name_info_from_bosh_env, environment)
+          expect(result.size).to eq(2)
+          expect(result[0]).to eq('fake-instance-group-name')
+          expect(result[1]).to eq('fake-deployment-name')
+        end
+      end
+    end
+
   end
 end

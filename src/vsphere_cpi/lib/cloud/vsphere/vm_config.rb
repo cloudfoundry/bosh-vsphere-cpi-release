@@ -1,3 +1,6 @@
+require 'uri'
+require 'ostruct'
+
 module VSphereCloud
   class VmConfig
     include Logger
@@ -12,7 +15,24 @@ module VSphereCloud
     end
 
     def name
-      @vm_cid ||= "vm-#{SecureRandom.uuid}"
+      return @vm_cid if defined? @vm_cid
+
+      unless human_readable_name_enabled?
+        @vm_cid = "vm-#{SecureRandom.uuid}"
+        return @vm_cid
+      end
+
+      if human_readable_name_info.nil?
+        logger.info("Not enough metadata to construct human readable name, using UUID based naming.")
+        @vm_cid = "vm-#{SecureRandom.uuid}"
+        return @vm_cid
+      end
+      @vm_cid = generate_human_readable_name(human_readable_name_info.inst_grp, human_readable_name_info.deployment)
+      if @vm_cid != "#{URI.escape(@vm_cid)}"
+        logger.info("Metadata contains non ASCII characters, using UUID based naming.")
+        @vm_cid = "vm-#{SecureRandom.uuid}"
+      end
+      @vm_cid
     end
 
     def cluster_placements
@@ -56,8 +76,33 @@ module VSphereCloud
       @manifest_params[:storage_policy]
     end
 
+    def human_readable_name_enabled?
+      @manifest_params[:enable_human_readable_name]
+    end
+
+    def human_readable_name_info
+      @manifest_params.fetch(:human_readable_name_info, nil)
+    end
+
     def networks_spec
       @manifest_params[:networks_spec] || {}
+    end
+
+    def generate_human_readable_name(instance_name, deployment_name)
+      max_prefix = 79 - 12 - 2  # vCenter size limit 80, suffix 12, underscores 2
+      uuid_suffix = SecureRandom.uuid.slice(-12, 12)
+
+      if instance_name.size + deployment_name.size > max_prefix
+        trim_codepoint_size = instance_name.size + deployment_name.size - max_prefix
+        if deployment_name.size <= 25 #  deployment name length set to 25
+          instance_name = instance_name.slice(0, instance_name.size - trim_codepoint_size)
+        else
+          instance_codepoint_size = [max_prefix -  25, instance_name.size].min
+          instance_name = instance_name.slice(0, instance_codepoint_size)
+          deployment_name = deployment_name.slice(0, max_prefix - instance_codepoint_size)
+        end
+      end
+      "#{instance_name}_#{deployment_name}_#{uuid_suffix}"
     end
 
     def vsphere_networks

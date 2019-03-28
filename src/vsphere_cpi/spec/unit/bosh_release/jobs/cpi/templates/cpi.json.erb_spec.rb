@@ -23,6 +23,7 @@ describe 'cpi.json.erb' do
           'user' => 'vcenter-user',
           'password' => 'vcenter-password',
           'enable_auto_anti_affinity_drs_rules' => true,
+          'enable_human_readable_name' => true,
           'upgrade_hw_version' => true,
           'vm_storage_policy_name' => 'VM Storage Policy',
           'http_logging' => true,
@@ -94,6 +95,7 @@ describe 'cpi.json.erb' do
               'user' => 'vcenter-user',
               'default_disk_type' => 'preallocated',
               'enable_auto_anti_affinity_drs_rules' => true,
+              'enable_human_readable_name' => true,
               'upgrade_hw_version' => true,
               'http_logging' => true,
               'vm_storage_policy_name' => 'VM Storage Policy'
