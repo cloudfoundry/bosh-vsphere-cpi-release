@@ -117,7 +117,7 @@ module VSphereCloud
         host = nil
         # Before cloning we need to make sure the host is correctly picked up
         # from cluster's host group if provided.
-        unless cluster.host_group.nil?
+        if !cluster.host_group.nil? && cluster.host_group_drs_rule.strip.casecmp?('MUST') == true
           # placement_spec = VimSdk::Vim::Cluster::PlacementSpec.new
           # placement_spec.config_spec = config_spec
           # placement_spec.datastores = [datastore.mob]
@@ -185,7 +185,7 @@ module VSphereCloud
           # Add vm to VM Group present in vm_type
           add_vm_to_vm_group(vm_config.vm_type.vm_group, created_vm_mob, cluster)
 
-          if !cluster.host_group.nil?
+          unless cluster.host_group.nil?
             # Add vm to VMGroup listed in the cluster description
             add_vm_to_vm_group(cluster.vm_group, created_vm.mob, cluster)
             # Create VM/Host affinity rule
@@ -265,7 +265,7 @@ module VSphereCloud
         @client,
         cluster.mob
       )
-      drs_rule.add_vm_host_affinity_rule(cluster.vm_group, cluster.host_group)
+      drs_rule.add_vm_host_affinity_rule(cluster.vm_group, cluster.host_group, cluster.host_group_rule_type)
     end
   end
 end
