@@ -8,6 +8,8 @@ module VSphereCloud
       )
     end
 
+    let(:input) { {} }
+
     let(:vm_config) do
       VmConfig.new(
         manifest_params: input,
@@ -49,15 +51,59 @@ module VSphereCloud
 
     describe '#name' do
       let(:input) { {} }
-      it 'returns a valid VM name' do
-        name = vm_config.name
-        expect(name).to match /vm-.*/
-        expect(name.size).to eq 39
+
+      context 'when vm_cid already exists' do
+        let(:vm_cid) { 'vm-82476bf0-4f54-11e9-8647-d663bd873d93' }
+        before do
+          vm_config.instance_variable_set(:@vm_cid, vm_cid)
+        end
+        it 'returns the same name' do
+          expect(vm_config.name).to eq(vm_cid)
+        end
       end
-      it 'is idempotent' do
-        name = vm_config.name
-        expect(name).to match /vm-.*/
-        expect(vm_config.name).to eq name
+
+      context 'when vm_cid does not exists' do
+        context 'when human readable name enabled set to false' do
+          it 'returns a valid UUID based VM name' do
+            allow(vm_config).to receive(:human_readable_name_enabled?).and_return(false)
+            name = vm_config.name
+            expect(name).to match /vm-.*/
+            expect(name.size).to eq 39
+          end
+        end
+
+        context 'when human readable name enabled is set to true' do
+          context 'when human readable name information contains ASCII characters only' do
+            context 'when human readable name information has both instance group name and deployment name' do
+              let(:input){ { human_readable_name_info: ['fake-instance-group-name', 'fake-deployment-name'] } }
+              it 'returns a valid human readable name' do
+                allow(vm_config).to receive(:generate_human_readable_name).with('fake-instance-group-name', 'fake-deployment-name').and_return('fake-instance-group-name_fake-deployment-name_13197a1f437e')
+                allow(vm_config).to receive(:human_readable_name_enabled?).and_return(true)
+                name = vm_config.name
+                expect(name).to eq('fake-instance-group-name_fake-deployment-name_13197a1f437e')
+              end
+            end
+            context 'when human readable name info is nil' do
+              let(:input){ { human_readable_name_info: nil } }
+              it 'returns a UUID based VM name' do
+                allow(vm_config).to receive(:human_readable_name_enabled?).and_return(true)
+                name = vm_config.name
+                expect(name).to match /vm-.*/
+                expect(name.size).to eq 39
+              end
+            end
+          end
+          context 'when human readable name info contains non-ASCII characters' do
+            let(:input){ { human_readable_name_info: ['fake-instance-group-αβ', 'fake-deployment-name'] } }
+            it 'returns a UUID based VM name' do
+              allow(vm_config).to receive(:generate_human_readable_name).with('fake-instance-group-αβ', 'fake-deployment-name').and_return('fake-instance-group-αβ1_fake-deployment-name_13197a1f437e')
+              allow(vm_config).to receive(:human_readable_name_enabled?).and_return(true)
+              name = vm_config.name
+              expect(name).to match /vm-.*/
+              expect(name.size).to eq 39
+            end
+          end
+        end
       end
     end
 
@@ -154,10 +200,97 @@ module VSphereCloud
       end
     end
 
+    describe '#human_readable_name_enabled?' do
+      context 'when enable human readable name set to false' do
+        let(:input) { { enable_human_readable_name: false } }
+        it 'returns value false' do
+          expect(vm_config.human_readable_name_enabled?).to eq(false)
+        end
+      end
+
+      context 'when enable human readable name set to true' do
+        let(:input) { { enable_human_readable_name: true } }
+        it 'returns value true' do
+          expect(vm_config.human_readable_name_enabled?).to eq(true)
+        end
+      end
+    end
+
+    describe '#human_readable_name_info' do
+      context 'when human readable name info is empty' do
+        let(:input) { { human_readable_name_info: nil } }
+        it 'returns nil' do
+          expect(vm_config.human_readable_name_info).to be_nil
+        end
+      end
+
+      context 'when human readable name info is set' do
+        let(:input) { { human_readable_name_info: ['fake_instance_group_name', 'fake_deployment_name'] } }
+        it 'returns name info' do
+          expect(vm_config.human_readable_name_info).to eq( ['fake_instance_group_name', 'fake_deployment_name'] )
+        end
+      end
+    end
+
     describe '#networks_spec' do
       let(:input) { { networks_spec: { 'fake-key' => 'fake-value' } } }
       it 'returns the provided networks_spec' do
         expect(vm_config.networks_spec).to eq({ 'fake-key' => 'fake-value' })
+      end
+    end
+
+    describe '#generate_human_readable_name' do
+      context 'when names are short enough' do
+        let(:instance_name) { 'i-name-length-16' }
+        let(:deployment_name) { 'd-name-length-16' }
+        it 'returns the generated name' do
+          human_readable_name = vm_config.generate_human_readable_name(
+              instance_name, deployment_name
+          )
+          expect(human_readable_name.length).to be < 80 # vCenter VM naming limit
+          expect(human_readable_name).to start_with("#{instance_name}_#{deployment_name}_")
+        end
+      end
+
+
+      context 'when deployment name is longer than expected' do
+        let(:instance_name) { 'i-name-length-27-0123456789' } # name size 27
+        let(:deployment_name) { 'd-name-length-57-0123456789-abcdefg-hijklmn-opqrst-uvwxyz' } # name size 57
+        it 'returned the generated name' do
+          expected_prefix = "#{instance_name}_#{deployment_name[0,38]}" # 65 - 27 = 38 , 65 is max_prefix in vm_config
+          human_readable_name = vm_config.generate_human_readable_name(
+              instance_name, deployment_name
+          )
+          expect(human_readable_name.length).to be < 80
+          expect(human_readable_name).to start_with("#{expected_prefix}_")
+        end
+      end
+
+      context 'when instance group name is longer than expected' do
+        let(:instance_name) { 'i-name-length-57-0123456789-abcdefg-hijklmn-opqrst-uvwxyz' } # name size 57
+        let(:deployment_name) { 'd-name-length-20-012' } # name size 20
+        it 'returned the generated name' do
+          expected_prefix = "#{instance_name[0,45].unicode_normalize}_#{deployment_name.unicode_normalize}" # 65 - 20 = 45
+          human_readable_name = vm_config.generate_human_readable_name(
+              instance_name, deployment_name
+          )
+          expect(human_readable_name.length).to be < 80
+          expect(human_readable_name).to start_with("#{expected_prefix}_")
+        end
+      end
+
+
+      context 'when both names are longer than expected' do
+        let(:instance_name) { 'i-name-length-57-0123456789-abcdefg-hijklmn-opqrst-uvwxyz' } # name size 57
+        let(:deployment_name) { 'd-name-length-57-0123456789-abcdefg-hijklmn-opqrst-uvwxyz' } # name size  57
+        it 'returned the generated name' do
+          expected_prefix = "#{instance_name[0,40]}_#{deployment_name[0,25]}" # 25 , 40 ideal length defined
+          human_readable_name = vm_config.generate_human_readable_name(
+              instance_name, deployment_name
+          )
+          expect(human_readable_name.length).to be < 80
+          expect(human_readable_name).to start_with("#{expected_prefix}_")
+        end
       end
     end
 

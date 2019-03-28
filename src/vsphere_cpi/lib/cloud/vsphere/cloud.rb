@@ -307,7 +307,12 @@ module VSphereCloud
             global_clusters: @datacenter.clusters,
             disk_configurations: disk_configs,
             storage_policy: policy_name,
+            enable_human_readable_name: config.human_readable_name_enabled?
           }
+
+          if config.human_readable_name_enabled?
+            manifest_params.update(human_readable_name_info: update_name_info_from_bosh_env(environment))
+          end
 
           vm_config = VmConfig.new(
             manifest_params: manifest_params,
@@ -871,6 +876,18 @@ module VSphereCloud
       )
       disk_configurations.push(ephemeral_disk_config)
       return disk_configurations, policy_name
+    end
+
+    # An alias to {VSphereCloud::Cloud}'s get name information from bosh environment method
+    # @param environment [Hash] the BOSH environment setting information
+    #  [Array<String>, nil] return a array with 2 strings inside if there are both instance group name and deployment name
+    #   or a nil otherwise
+    def update_name_info_from_bosh_env(environment)
+      return nil if environment.nil?
+      instance_group_name = environment.dig('bosh', 'groups', 2)
+      deployment_name = environment.dig('bosh', 'groups', 1)
+      return nil if instance_group_name.nil? || deployment_name.nil?
+      OpenStruct.new(inst_grp: instance_group_name, deployment: deployment_name)
     end
   end
 end
