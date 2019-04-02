@@ -86,7 +86,7 @@ context 'StoragePolicies' do
         }.to raise_error(RuntimeError, "No compatible Datastore for Storage Policy: #{storage_policy_name}" )
       end
     end
-    context 'and it is an encryption policy' do
+    context 'and it is an encryption policy', spbm_encryption: true do
       # We can use the VM Encryption Policy directly as string here because
       # it is a default vCenter proile which is always going to be there before any
       # CPI tests or operations start.

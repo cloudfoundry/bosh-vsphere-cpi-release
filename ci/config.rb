@@ -2,7 +2,8 @@ $pipeline.pool('6.0-NSXV') do |pool|
   pool.params = {
     RSPEC_FLAGS: [
       '--tag ~nsx_transformers',
-      '--tag ~nsxt_21'
+      '--tag ~nsxt_21',
+      '--tag ~spbm_encryption',
     ].join(' '),
     NSXT_SKIP_SSL_VERIFY: "true"
   }
