@@ -41,8 +41,8 @@ module VSphereCloud
       end
       context 'when host group is not defined' do
         let(:config){ {'resource_pool' => 'fake-resource-pool'} }
-        it 'returns nil' do
-          expect(cluster_config.host_group_drs_rule).to be_nil
+        it "still returns the rule as default 'SHOULD'" do
+          expect(cluster_config.host_group_drs_rule).to eq('SHOULD')
         end
       end
     end
