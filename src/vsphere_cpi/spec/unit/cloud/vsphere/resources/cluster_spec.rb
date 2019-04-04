@@ -22,7 +22,7 @@ module VSphereCloud::Resources
         name: 'fake-cluster-name',
         resource_pool: 'fake-resource-pool',
         host_group_name: nil,
-        host_group_drs_rule: nil,
+        host_group_drs_rule: 'SHOULD',
       )
     end
 
@@ -448,8 +448,8 @@ module VSphereCloud::Resources
       end
       describe '#host_group_drs_rule' do
         context 'when host group is not defined in config' do
-          it 'returns nil' do
-            expect(cluster.host_group_drs_rule).to be(nil)
+          it 'returns SHOULD' do
+            expect(cluster.host_group_drs_rule).to eq('SHOULD')
           end
         end
         context 'when host group drs rule is defined in config' do

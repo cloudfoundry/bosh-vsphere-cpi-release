@@ -20,7 +20,10 @@ describe 'Host Groups in Cluster and VM Host Rules' do
           clusters: [
             {
               @cluster_name => {
-                host_group:  @first_host_group,
+                host_group:  {
+                    'name' => @first_host_group,
+                    'drs_rule' => 'MUST',
+                }
               }
             }
           ]
@@ -45,6 +48,13 @@ describe 'Host Groups in Cluster and VM Host Rules' do
       cpi.client.cloud_searcher.get_managed_object(
         VimSdk::Vim::ClusterComputeResource, name: @second_cluster_name)
     end
+    let(:vm_grp_sfx) { VSphereCloud::Resources::Cluster::CLUSTER_VM_GROUP_SUFFIX }
+    let(:first_host_vm_group_name) { @first_host_group + 'MUST' + vm_grp_sfx }
+    let(:second_host_vm_group_name) { @second_host_group + 'MUST' + vm_grp_sfx }
+    let(:third_host_vm_group_name) { @third_host_group + 'MUST' + vm_grp_sfx }
+    let(:first_host_should_vm_group_name) { @first_host_group + 'SHOULD' + vm_grp_sfx }
+    let(:second_host_should_vm_group_name) { @second_host_group + 'SHOULD' + vm_grp_sfx }
+    let(:third_host_should_vm_group_name) { @third_host_group + 'SHOULD' + vm_grp_sfx }
     let(:first_host_group_mob) { find_host_group_mob(@first_host_group) }
     let(:second_host_group_mob) { find_host_group_mob(@second_host_group) }
     let(:third_host_group_mob) { find_host_group_mob(@third_host_group, second_cluster_mob) }
@@ -129,6 +139,7 @@ describe 'Host Groups in Cluster and VM Host Rules' do
         end
       end
       context 'and multiple host groups are specified in same vSphere cluster' do
+        let(:drs_rule) { 'MUST' }
         let(:cpi) do
           VSphereCloud::Cloud.new(cpi_options)
         end
@@ -142,27 +153,52 @@ describe 'Host Groups in Cluster and VM Host Rules' do
               'clusters' => [
                 {
                   @cluster_name => {
-                    'host_group' =>  @second_host_group,
+                    'host_group' =>  {'name' => @second_host_group, 'drs_rule' => drs_rule}
                   },
                 },
                 {
                   @cluster_name => {
-                    'host_group' =>  @first_host_group,
+                    'host_group' =>  {'name' => @first_host_group, 'drs_rule' => drs_rule}
                   }
                 },
               ]
             }]
           }
         end
-        it 'creates VM and attach vm group host affinity rule' do
-          simple_vm_lifecycle(cpi, '', vm_type, get_network_spec) do |vm_id|
-            vm = cpi.vm_provider.find(vm_id)
-            expect(vm.cluster).to eq(@cluster_name)
-            # We expect VM to be created on first host group
-            # because first host group has two hosts and more memory.
-            expect(hosts_in_first_host_group).to include(vm.mob.runtime.host.name)
+        context 'when the drs rule type is must' do
+          it 'creates VM and attach vm group host affinity rule' do
+            simple_vm_lifecycle(cpi, '', vm_type, get_network_spec) do |vm_id|
+              vm = cpi.vm_provider.find(vm_id)
+              expect(vm.cluster).to eq(@cluster_name)
+              # We expect VM to be created on first host group
+              # because first host group has two hosts and more memory.
+              expect(hosts_in_first_host_group).to include(vm.mob.runtime.host.name)
+              expect(get_count_vm_host_affinity_rules(cluster_mob)).to eq(1)
+              expect(find_vm_group_mob(@first_host_group).vm).to include(vm.mob)
+              vm_host_rule = get_vm_host_affinity_rule(cluster_mob, drs_rule)
+              expect(vm_host_rule.vm_group_name).to eq(first_host_vm_group_name)
+              expect(vm_host_rule.affine_host_group_name).to eq(@first_host_group)
+            end
+            expect(get_count_vm_host_affinity_rules(cluster_mob)).to eq(0)
           end
-          expect(get_count_vm_host_affinity_rules(cluster_mob)).to eq(0)
+        end
+        context 'when the drs rule type is should' do
+          let(:drs_rule) { 'SHOULD' }
+          it 'creates VM and attach vm group host affinity rule' do
+            simple_vm_lifecycle(cpi, '', vm_type, get_network_spec) do |vm_id|
+              vm = cpi.vm_provider.find(vm_id)
+              expect(vm.cluster).to eq(@cluster_name)
+              # We expect VM to be created on first host group
+              # because first host group has two hosts and more memory.
+              expect(hosts_in_first_host_group).to include(vm.mob.runtime.host.name)
+              expect(get_count_vm_host_affinity_rules(cluster_mob)).to eq(1)
+              expect(find_vm_group_mob(@first_host_group, rule: 'SHOULD').vm).to include(vm.mob)
+              vm_host_rule = get_vm_host_affinity_rule(cluster_mob)
+              expect(vm_host_rule.vm_group_name).to eq(first_host_should_vm_group_name)
+              expect(vm_host_rule.affine_host_group_name).to eq(@first_host_group)
+            end
+            expect(get_count_vm_host_affinity_rules(cluster_mob)).to eq(0)
+          end
         end
       end
     end
@@ -175,8 +211,8 @@ describe 'Host Groups in Cluster and VM Host Rules' do
               datastore_pattern: @datastore_shared_pattern,
               persistent_datastore_pattern: @datastore_shared_pattern,
               clusters: [
-                { @cluster_name => { host_group: @first_host_group } },
-                { @second_cluster_name => { host_group: @third_host_group } },
+                { @cluster_name => { host_group: {'name' => @first_host_group, 'drs_rule' => 'MUST'} } },
+                { @second_cluster_name => { host_group: {'name' => @third_host_group, 'drs_rule' => 'must'} } },
               ]
             }]
           )
@@ -194,6 +230,12 @@ describe 'Host Groups in Cluster and VM Host Rules' do
             end
             vm_host = vm.mob.runtime.host.name
             expect(expected_host_group_mob.host.map(&:name)).to include(vm_host)
+            vm_cluster_mob = vm.cluster == @cluster_name ? cluster_mob : second_cluster_mob
+            expect(get_count_vm_host_affinity_rules(vm_cluster_mob)).to eq(1)
+            expect(find_vm_group_mob(expected_host_group_mob.name, clustermob: vm_cluster_mob).vm).to include(vm.mob)
+            vm_host_rule = get_vm_host_affinity_rule(vm_cluster_mob)
+            expect(vm_host_rule.vm_group_name).to eq(expected_host_group_mob.name + 'MUST' + vm_grp_sfx)
+            expect(vm_host_rule.affine_host_group_name).to eq(expected_host_group_mob.name)
           end
           expect(get_count_vm_host_affinity_rules(cluster_mob) +
             get_count_vm_host_affinity_rules(second_cluster_mob)).to eq(0)
@@ -221,6 +263,12 @@ describe 'Host Groups in Cluster and VM Host Rules' do
               end
               vm_host = vm.mob.runtime.host.name
               expect(expected_host_group_mob.host.map(&:name)).to include(vm_host)
+              vm_cluster_mob = vm.cluster == @cluster_name ? cluster_mob : second_cluster_mob
+              expect(get_count_vm_host_affinity_rules(vm_cluster_mob)).to eq(1)
+              expect(find_vm_group_mob(expected_host_group_mob.name, clustermob: vm_cluster_mob).vm).to include(vm.mob)
+              vm_host_rule = get_vm_host_affinity_rule(vm_cluster_mob)
+              expect(vm_host_rule.vm_group_name).to eq(expected_host_group_mob.name + 'MUST' + vm_grp_sfx)
+              expect(vm_host_rule.affine_host_group_name).to eq(expected_host_group_mob.name)
             end
           ensure
             vm_list.each do |vm_id|
@@ -243,6 +291,12 @@ describe 'Host Groups in Cluster and VM Host Rules' do
                 end
                 vm_host = vm.mob.runtime.host.name
                 expect(expected_host_group_mob.host.map(&:name)).to include(vm_host)
+                vm_cluster_mob = vm.cluster == @cluster_name ? cluster_mob : second_cluster_mob
+                expect(get_count_vm_host_affinity_rules(vm_cluster_mob)).to eq(1)
+                expect(find_vm_group_mob(expected_host_group_mob.name, clustermob: vm_cluster_mob).vm).to include(vm.mob)
+                vm_host_rule = get_vm_host_affinity_rule(vm_cluster_mob)
+                expect(vm_host_rule.vm_group_name).to eq(expected_host_group_mob.name + 'MUST' + vm_grp_sfx)
+                expect(vm_host_rule.affine_host_group_name).to eq(expected_host_group_mob.name)
               end
             end
           end
@@ -262,6 +316,11 @@ describe 'Host Groups in Cluster and VM Host Rules' do
               vm_host = vm.mob.runtime.host.name
               expect(third_host_group_mob.host.map(&:name)).to include(vm_host)
               expect(vm.cluster).to eq(@second_cluster_name)
+              expect(get_count_vm_host_affinity_rules(second_cluster_mob)).to eq(1)
+              expect(find_vm_group_mob(@third_host_group, clustermob: second_cluster_mob).vm).to include(vm.mob)
+              vm_host_rule = get_vm_host_affinity_rule(second_cluster_mob)
+              expect(vm_host_rule.vm_group_name).to eq(third_host_vm_group_name)
+              expect(vm_host_rule.affine_host_group_name).to eq(@third_host_group)
             end
             expect(get_count_vm_host_affinity_rules(cluster_mob) +
               get_count_vm_host_affinity_rules(second_cluster_mob)).to eq(0)
@@ -275,6 +334,12 @@ describe 'Host Groups in Cluster and VM Host Rules' do
                   vm_host = vm.mob.runtime.host.name
                   expect(third_host_group_mob.host.map(&:name)).to include(vm_host)
                   expect(vm.cluster).to eq(@second_cluster_name)
+                  vm_cluster_mob = second_cluster_mob
+                  expect(get_count_vm_host_affinity_rules(vm_cluster_mob)).to eq(1)
+                  expect(find_vm_group_mob(@third_host_group, clustermob: vm_cluster_mob).vm).to include(vm.mob)
+                  vm_host_rule = get_vm_host_affinity_rule(vm_cluster_mob)
+                  expect(vm_host_rule.vm_group_name).to eq(third_host_vm_group_name)
+                  expect(vm_host_rule.affine_host_group_name).to eq(@third_host_group)
                 end
               end
             end
@@ -290,7 +355,7 @@ describe 'Host Groups in Cluster and VM Host Rules' do
               'datastore_pattern' => @datastore_shared_pattern,
               'persistent_datastore_pattern' => @datastore_shared_pattern,
               clusters: [
-                { @cluster_name => { host_group: @second_host_group, } },
+                { @cluster_name => { host_group: {'name' => @second_host_group, 'drs_rule' => 'Must'} } },
                 { @second_cluster_name => { resource_pool: @second_cluster_resource_pool_name, } },
               ]
             }]
@@ -340,9 +405,31 @@ describe 'Host Groups in Cluster and VM Host Rules' do
 
   private
 
-  def find_host_group_mob(host_group_name, clustermob=cluster_mob)
+  def find_vm_group_mob(host_group_name, clustermob: cluster_mob, rule: 'MUST')
+    clustermob.configuration_ex.group.find do |group|
+      group.name == host_group_name + rule + VSphereCloud::Resources::Cluster::CLUSTER_VM_GROUP_SUFFIX
+    end
+  end
+
+  def find_host_group_mob(host_group_name, clustermob = cluster_mob)
     clustermob.configuration_ex.group.find do |group|
       group.name == host_group_name && group.is_a?(VimSdk::Vim::Cluster::HostGroup)
     end
   end
+
+  def get_vm_host_affinity_rule(cluster_mob, name_hint = nil)
+    # returning the first as we do not expect more rules to be present while
+    # this test is in progress.
+    # Additionally, use name hint if provided to filter matching rules
+    matching_rules = cluster_mob.configuration_ex.rule.select do |rule_info|
+      rule_info.is_a?(VimSdk::Vim::Cluster::VmHostRuleInfo)
+    end
+    unless name_hint.nil?
+      matching_rules.select do |rule_info|
+        rule_info.name.include?(name_hint)
+      end
+    end
+    matching_rules.first
+  end
+
 end
