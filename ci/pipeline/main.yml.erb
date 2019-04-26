@@ -272,11 +272,10 @@ resources:
       uri: https://github.com/cloudfoundry-incubator/bosh-cpi-certification
       branch: master
   - name: old-bosh-release
-    type: s3
+    type: bosh-io-release
     source:
-      bucket: bosh-cpi-certification-fixtures
-      regexp: precompiled-bosh-(255.8)-on-ubuntu-3232.3.tgz
-      region_name: us-east-1
+      version: "264.17.0"
+      repository: cloudfoundry/bosh
   - name: old-stemcell
     type: s3
     source:
