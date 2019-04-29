@@ -70,8 +70,8 @@ jobs:
         - get: source-ci
         - {get: cpi-release,              trigger: false, resource: bosh-cpi-artifacts, passed: [lock-bats]}
         - {get: environment,              trigger: true,  passed: [lock-bats], resource: pool-6.5-NSXT21}
-        - {get: bosh-release,             trigger: false, resource: old-bosh-release}
-        - {get: stemcell,                 trigger: false, resource: old-stemcell}
+        - {get: bosh-release,             trigger: false, version: {version: "264.17.0"}, resource: old-bosh-release}
+        - {get: stemcell,                 trigger: false, version: {version: "3468.46"}, resource: stemcell}
         - {get: certification,            trigger: false}
         - {get: bosh-deployment,          trigger: false}
         - {get: bats,                     trigger: false}
@@ -276,12 +276,6 @@ resources:
     source:
       version: "264.17.0"
       repository: cloudfoundry/bosh
-  - name: old-stemcell
-    type: s3
-    source:
-      bucket: bosh-cpi-certification-fixtures
-      regexp: bosh-stemcell-(3232.3)-vsphere-esxi-ubuntu-trusty-go_agent.tgz
-      region_name: us-east-1
   - name: bosh-cli
     type: s3
     source:
