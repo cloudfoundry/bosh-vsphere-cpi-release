@@ -1,17 +1,19 @@
 require 'cloud/vsphere/logger'
 require 'cloud/vsphere/cpi_extension'
+require 'cloud/vsphere/attach_tag_to_vm'
 
 module VSphereCloud
   class VmCreator
     include Logger
 
-    def initialize(client:, cloud_searcher:, cpi:, datacenter:, agent_env:, ip_conflict_detector:, default_disk_type:,
+    def initialize(client:, cloud_searcher:, cpi:, datacenter:, agent_env:, ip_conflict_detector:, tagging_tagger:, default_disk_type:,
                    enable_auto_anti_affinity_drs_rules:, stemcell:, upgrade_hw_version:, pbm:)
       @client = client
       @cloud_searcher = cloud_searcher
       @cpi = cpi
       @datacenter = datacenter
       @agent_env = agent_env
+      @tagging_tagger = tagging_tagger
       @ip_conflict_detector = ip_conflict_detector
       @default_disk_type = default_disk_type
       @enable_auto_anti_affinity_drs_rules = enable_auto_anti_affinity_drs_rules
@@ -214,6 +216,16 @@ module VSphereCloud
               created_vm.upgrade_vm_virtual_hardware
             end
           rescue VSphereCloud::VCenterClient::AlreadyUpgraded
+          end
+
+          # Attach Tags to VM
+          if  vm_config.vm_type.tags && !vm_config.vm_type.tags.empty?
+            logger.info("Tags found in config file. Attaching tags to vm '#{vm_config.name}'.")
+            begin
+              @tagging_tagger.attach_tags(created_vm.mob_id, vm_config.vm_type.tags, vm_config.name)
+            rescue => e
+              logger.warn("Attaching tags failed with message: #{e}. Continuing without attaching Tags to the VM." )
+            end
           end
 
           # Power on VM

@@ -103,6 +103,10 @@ module VSphereCloud
         @ip_block_provider = NSXTIpBlockProvider.new(nsxt_client)
       end
 
+      # Initialize tagging tagger object
+      tag_client = TaggingTag::AttachTagToVm.InitializeConnection(@config, logger)
+      @tagging_tagger = TaggingTag::AttachTagToVm.new(tag_client)
+
       # We get disconnected if the connection is inactive for a long period.
       @heartbeat_thread = Thread.new do
         while true do
@@ -327,6 +331,7 @@ module VSphereCloud
             cpi: self,
             datacenter: @datacenter,
             agent_env: @agent_env,
+            tagging_tagger: @tagging_tagger,
             ip_conflict_detector: IPConflictDetector.new(@client, @datacenter),
             default_disk_type: @config.vcenter_default_disk_type,
             enable_auto_anti_affinity_drs_rules: @config.vcenter_enable_auto_anti_affinity_drs_rules,
