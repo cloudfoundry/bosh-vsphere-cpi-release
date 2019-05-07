@@ -56,6 +56,8 @@ module VSphereCloud
     let(:vm) { instance_double('VSphereCloud::Resources::VM', mob: vm_mob, reload: nil, cid: 'vm-id') }
     let(:vm_mob) { instance_double('VimSdk::Vim::VirtualMachine') }
     let(:cluster_provider) { instance_double(VSphereCloud::Resources::ClusterProvider) }
+    let(:tag_client) { instance_double(TaggingTag::AttachTagToVm) }
+    let(:tagging_tagger) { instance_double(TaggingTag::AttachTagToVm) }
 
     before do |example|
       allow(Config).to receive(:build).with(config).and_return(cloud_config)
@@ -73,6 +75,8 @@ module VSphereCloud
       allow_any_instance_of(Cloud).to receive(:at_exit)
     end
     before do
+      allow(TaggingTag::AttachTagToVm).to receive(:new).with(any_args).and_return(tagging_tagger)
+      allow(TaggingTag::AttachTagToVm).to receive(:InitializeConnection).with(any_args).and_return(tag_client)
       allow(Resources::ClusterProvider).to receive(:new).and_return(cluster_provider)
       allow(Resources::Datacenter).to receive(:new).and_return(datacenter)
       allow(VSphereCloud::VMProvider).to receive(:new).and_return(vm_provider)
@@ -497,6 +501,7 @@ module VSphereCloud
             cpi: vsphere_cloud,
             datacenter: datacenter,
             agent_env: agent_env,
+            tagging_tagger: tagging_tagger,
             ip_conflict_detector: ip_conflict_detector,
             default_disk_type: default_disk_type,
             enable_auto_anti_affinity_drs_rules: false,
@@ -546,6 +551,7 @@ module VSphereCloud
             cpi: vsphere_cloud,
             datacenter: datacenter,
             agent_env: agent_env,
+            tagging_tagger: tagging_tagger,
             ip_conflict_detector: ip_conflict_detector,
             default_disk_type: default_disk_type,
             enable_auto_anti_affinity_drs_rules: false,
@@ -714,6 +720,7 @@ module VSphereCloud
                                    cpi: vsphere_cloud,
                                    datacenter: datacenter,
                                    agent_env: agent_env,
+                                   tagging_tagger: tagging_tagger,
                                    ip_conflict_detector: ip_conflict_detector,
                                    default_disk_type: 'thin',
                                    enable_auto_anti_affinity_drs_rules: false,
