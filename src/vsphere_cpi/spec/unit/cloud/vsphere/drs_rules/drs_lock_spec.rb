@@ -29,7 +29,7 @@ describe VSphereCloud::DrsLock, fake_logger: true do
         original_time = Time.now
         Timecop.freeze(original_time)
         expect(vm_attribute_manager).to receive(:create).with('drs_lock') do
-          Timecop.freeze(original_time + 31)
+          Timecop.freeze(original_time + 301)
           raise VimSdk::SoapError.new('field already exists', false)
         end
 

@@ -5,7 +5,7 @@ module VSphereCloud
     include Logger
 
     DRS_LOCK_NAME = 'drs_lock'
-    MAX_LOCK_TIMEOUT_IN_SECONDS = 30
+    MAX_LOCK_TIMEOUT_IN_SECONDS = 300
 
     class LockError < RuntimeError; end
     class TimeoutError < RuntimeError; end
