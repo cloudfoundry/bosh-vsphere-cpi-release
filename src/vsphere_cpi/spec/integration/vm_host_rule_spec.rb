@@ -101,9 +101,9 @@ describe 'Host Groups in Cluster and VM Host Rules' do
             expect(get_count_vm_host_affinity_rules(cluster_mob)).to eq(0)
           end
         end
-        it 'creates and deletes multiple VMs (5) in parallel' do
+        it 'creates and deletes multiple VMs (35) in parallel' do
           thread_list = []
-          5.times do
+          35.times do
             thread_list << Thread.new do
               simple_vm_lifecycle(cpi, '', vm_type, get_network_spec) do |vm_id|
                 vm = cpi.vm_provider.find(vm_id)
