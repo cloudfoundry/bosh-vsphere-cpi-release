@@ -1,0 +1,9 @@
+# SwaggerClient::SessionSummaryParameters
+
+## Properties
+Name | Type | Description | Notes
+------------ | ------------- | ------------- | -------------
+**source** | **String** | The data source, either realtime or cached. If not provided, cached data is returned. | [optional] 
+**site_id** | **String** | Peer site id. | [optional] 
+
+

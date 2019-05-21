@@ -1,5 +1,6 @@
 source 'https://rubygems.org'
 
+gem 'swagger_client', git: 'git@github.com:EleanorRigby/nsxt-policy-gem.git', branch: 'master'
 gem 'bosh_common', '1.3262.24.0'
 gem 'bosh_cpi',    '2.5.0'
 gem 'builder',     '~> 3.2.3'
