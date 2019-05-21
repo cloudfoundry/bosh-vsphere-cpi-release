@@ -19,7 +19,7 @@ module VSphereCloud
     end
 
     attr_accessor :client
-    attr_reader :config, :datacenter, :heartbeat_thread, :pbm
+    attr_reader :config, :datacenter, :heartbeat_thread, :pbm, :nsxt_policy_client
 
     def enable_telemetry
       http_client = VSphereCloud::CpiHttpClient.new
@@ -91,6 +91,8 @@ module VSphereCloud
       @pbm = VSphereCloud::Pbm.new(pbm_api_uri: @config.pbm_api_uri, http_client: @http_client, vc_cookie: @client.soap_stub.vc_cookie)
 
       if @config.nsxt_enabled?
+
+        # Create Manager API Client.
         nsxt_client = NSXTApiClientBuilder::build_api_client(@config.nsxt, logger)
 
         # Setup NSX-T Provider
@@ -101,6 +103,8 @@ module VSphereCloud
         @router_provider = NSXTRouterProvider.new(nsxt_client)
 
         @ip_block_provider = NSXTIpBlockProvider.new(nsxt_client)
+
+        @nsxt_policy_provider = NSXTPolicyProvider.new(NSXTPolicyProvider.build_policy_api_client(@config.nsxt, logger), @nsxt_provider)
       end
 
       # We get disconnected if the connection is inactive for a long period.
@@ -328,6 +332,8 @@ module VSphereCloud
             stemcell: Stemcell.new(stemcell_cid),
             upgrade_hw_version: @config.upgrade_hw_version,
             pbm: @pbm,
+            nsxt_policy_provider: @nsxt_policy_provider,
+            policy_enabled: @config.nsxt.policy_api,
           )
           created_vm = vm_creator.create(vm_config)
         rescue => e
@@ -336,19 +342,27 @@ module VSphereCloud
         end
 
         begin
+          ns_groups = vm_type.ns_groups || []
           if @config.nsxt_enabled?
-            ns_groups = vm_type.ns_groups || []
-            if vm_type.nsxt_server_pools
-              #For static server pools add vm as server pool member
-              #For dynamic server pools add vm to the corresponding nsgroup
-              static_server_pools, dynamic_server_pools = @nsxt_provider.retrieve_server_pools(vm_type.nsxt_server_pools)
-              lb_ns_groups = dynamic_server_pools.map{ |server_pool| server_pool.member_group.grouping_object.target_display_name } if dynamic_server_pools
-              logger.info("NSGroup names corresponding to load balancer's dynamic server pools are: #{lb_ns_groups}")
-              ns_groups.concat(lb_ns_groups) if lb_ns_groups
-              @nsxt_provider.add_vm_to_server_pools(created_vm, static_server_pools) if static_server_pools
+            # Policy API currently only supports adding VM to Policy Groups in CPI code.
+            # If server pools are specified with policy api enabled, they will be ignored.
+            # Also, we do not need to set default vif type for a logical port. This is because
+            # with policy api, we create a segment port with VIF type set at the time of creation.
+            if @config.nsxt.policy_api
+              @nsxt_policy_provider.add_vm_to_groups(created_vm, ns_groups)
+            else
+              if vm_type.nsxt_server_pools
+                #For static server pools add vm as server pool member
+                #For dynamic server pools add vm to the corresponding nsgroup
+                static_server_pools, dynamic_server_pools = @nsxt_provider.retrieve_server_pools(vm_type.nsxt_server_pools)
+                lb_ns_groups = dynamic_server_pools.map{ |server_pool| server_pool.member_group.grouping_object.target_display_name } if dynamic_server_pools
+                logger.info("NSGroup names corresponding to load balancer's dynamic server pools are: #{lb_ns_groups}")
+                ns_groups.concat(lb_ns_groups) if lb_ns_groups
+                @nsxt_provider.add_vm_to_server_pools(created_vm, static_server_pools) if static_server_pools
+              end
+              @nsxt_provider.add_vm_to_nsgroups(created_vm, ns_groups)
+              @nsxt_provider.set_vif_type(created_vm, vm_type.nsxt)
             end
-            @nsxt_provider.add_vm_to_nsgroups(created_vm, ns_groups)
-            @nsxt_provider.set_vif_type(created_vm, vm_type.nsxt)
           end
         rescue => e
           logger.info("Failed to apply NSX properties to VM '#{created_vm.cid}' with error: #{e.message}")
@@ -419,6 +433,18 @@ module VSphereCloud
       vm_properties
     end
 
+
+    def use_nsxt_policy_client?(vm_res)
+      # return false if global cpi flag is false.
+      return false if @config.nsxt.policy_api == false
+      # return false if none of the network on the vm is NSXT n/w
+      return false if vm_res.get_nsxt_segment_vif_list.nil?
+
+      lports = @nsxt_provider.logical_ports(vm_res)
+      return false if lports.nil? || lports.first.tags.nil?
+      lports.first.tags.any? {|tag| tag.scope == "cpi/policy_api"}
+    end
+
     def delete_vm(vm_cid)
       with_thread_name("delete_vm(#{vm_cid})") do
         logger.info("Deleting vm: #{vm_cid}")
@@ -446,15 +472,33 @@ module VSphereCloud
         @agent_env.clean_env(vm.mob) if vm.cdrom
 
         if @config.nsxt_enabled?
-          begin
-            @nsxt_provider.remove_vm_from_nsgroups(vm)
-          rescue => e
-            logger.info("Failed to remove VM from NSGroups: #{e.message}")
-          end
-          begin
-            @nsxt_provider.remove_vm_from_server_pools(vm_ip)
-          rescue => e
-            logger.info("Failed to remove VM from ServerPool: #{e.message}")
+          # Ascertain whether vm was created on
+          # the NSX-T network using Policy API
+          if use_nsxt_policy_client?(vm)
+            begin
+              @nsxt_policy_provider.remove_vm_from_groups(vm)
+            # TA: TODO : Should this be rescued? We should fail if we do not delete membership
+            # Rescuing because we rescued earlier too in manager API but we do not raise
+            # an error if we do not remove VM from group in Manager code below
+            rescue => e
+              logger.info("Failed to remove VM from Groups with message #{e.message}")
+              raise e
+            end
+            # Delete all segment ports
+            @nsxt_policy_provider.delete_segment_ports(vm: vm)
+
+          # Use MANAGER API
+          else
+            begin
+              @nsxt_provider.remove_vm_from_nsgroups(vm)
+            rescue => e
+              logger.info("Failed to remove VM from NSGroups: #{e.message}")
+            end
+            begin
+              @nsxt_provider.remove_vm_from_server_pools(vm_ip)
+            rescue => e
+              logger.info("Failed to remove VM from ServerPool: #{e.message}")
+            end
           end
         end
 
@@ -499,7 +543,13 @@ module VSphereCloud
         metadata.each do |name, value|
           client.set_custom_field(vm.mob, name, value)
         end
-        @nsxt_provider.update_vm_metadata_on_logical_ports(vm, metadata) if @config.nsxt_enabled?
+        if @config.nsxt_enabled?
+          if @config.nsxt.policy_api
+            @nsxt_policy_provider.update_vm_metadata_on_logical_ports(vm, metadata)
+          else
+            @nsxt_provider.update_vm_metadata_on_logical_ports(vm, metadata)
+          end
+        end
       end
     end
 

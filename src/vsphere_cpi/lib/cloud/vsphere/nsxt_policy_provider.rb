@@ -51,7 +51,7 @@ module VSphereCloud
 
       # Get NSX-T segment and port map for this VM
       nsxt_segment_port_map = nsxt_segment_port_list(vm: vm)
-      return if nsxt_segment_port_map.nil?
+      return if nsxt_segment_port_map.nil? || nsxt_segment_port_map.empty?
 
       # Get NSX-T segment port object paths from all the ports
       segment_port_paths = nsxt_segment_port_map.map do |seg_name, port_id|
@@ -68,6 +68,7 @@ module VSphereCloud
           logger.info("Start adding vm: #{vm.cid} , group: #{group_obj}")
           group_obj = policy_group_api.update_group_for_domain(DEFAULT_NSXT_POLICY_DOMAIN, group_obj.id, group_obj)
           logger.info("Done adding vm: #{vm.cid} , group: #{group_obj}")
+          group_obj
         end
       end
       logger.info("Added vm: #{vm.cid} to groups: #{groups}")
@@ -144,6 +145,8 @@ module VSphereCloud
             grp = policy_group_api.update_group_for_domain(DEFAULT_NSXT_POLICY_DOMAIN, grp.id, grp)
             logger.info("Done Removing vm: #{vm.cid} group: #{grp}")
           end
+          # The block must not return nil
+          grp
         end
       end
       logger.info("Removed vm: #{vm.cid} from all Policy Groups it was part of")
@@ -162,8 +165,9 @@ module VSphereCloud
             segment_port = policy_segment_port_api.get_infra_segment_port(seg_name, port_id)
             id_tag = SwaggerClient::Tag.new(scope: 'bosh/id', tag: Digest::SHA1.hexdigest(metadata['id']))
             segment_port.tags << id_tag
-            policy_segment_port_api.create_or_replace_infra_segment_port(seg_name, port_id, segment_port)
+            segment_port = policy_segment_port_api.create_or_replace_infra_segment_port(seg_name, port_id, segment_port)
             logger.info("Added tag: #{metadata['id']} to segment: #{seg_name} and port: #{port_id} for vm: #{vm.cid}")
+            segment_port
           end
         end
       end
@@ -237,7 +241,7 @@ module VSphereCloud
     end
 
     def policy_realization_api
-      @policy_realization_api = SwaggerClient::PolicyRealizationApi.new(@client)
+      @policy_realization_api ||= SwaggerClient::PolicyRealizationApi.new(@client)
     end
 
     def policy_segment_port_api
@@ -272,6 +276,7 @@ module VSphereCloud
         # If none has been realized yet, raise error
         raise UnrealizedResource.new(intent_path) unless realized
         logger.info("Context VM: #{vm.cid unless vm.nil?} Entity: #{intent_path} realized.")
+        realized
       end
     end
 
@@ -331,7 +336,7 @@ module VSphereCloud
         begin
           yield
         rescue SwaggerClient::ApiCallError => e
-          logger.info("Revision Error: #{log_str if log_str} with message #{e.message}") if [402, 409].include?(e.code)
+          logger.info("Revision Error: #{log_str if log_str} with message #{e.message}") if [412, 409].include?(e.code)
           raise e
         end
       end
@@ -351,6 +356,7 @@ module VSphereCloud
   end
 
   module RevisionConflictMatcher
+    include Logger
     def matches?(exception)
       exception.is_a?(SwaggerClient::ApiCallError) && [409, 412].include?(exception.code)
     end
