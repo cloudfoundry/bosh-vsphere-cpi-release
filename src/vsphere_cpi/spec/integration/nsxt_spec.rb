@@ -26,35 +26,30 @@ describe 'CPI', nsx_transformers: true do
     end
     NSXT::ApiClient.new(configuration)
   end
-  let(:nsgroup_name_1) { "BOSH-CPI-test-#{SecureRandom.uuid}" }
-  let(:nsgroup_name_2) { "BOSH-CPI-test-#{SecureRandom.uuid}" }
+  let(:nsgroup_name_1) { 'default.cpi-test' }#"BOSH-CPI-test-#{SecureRandom.uuid}" }
+  let(:nsgroup_name_2) { 'default.Hello' }#"BOSH-CPI-test-#{SecureRandom.uuid}" }
   let(:server_pool_name_1) { "BOSH-CPI-test-#{SecureRandom.uuid}" }
   let(:server_pool_name_2) { "BOSH-CPI-test-#{SecureRandom.uuid}" }
   let(:vm_type) do
     {
       'ram' => 512,
       'disk' => 2048,
-      'cpu' => 1
+      'cpu' => 1,
+      'nsxt' => {
+        'ns_groups' => ['vcpi-sg-1'],
+      },
     }
   end
   let(:network_spec) do
     {
-      'static-bridged' => {
+      'static' => {
         'ip' => "169.254.#{rand(1..254)}.#{rand(4..254)}",
         'netmask' => '255.255.254.0',
-        'cloud_properties' => { 'name' => @nsxt_opaque_vlan_1 },
+        'cloud_properties' => { 'name' => 'vcpi-seg-2' },
         'default' => ['dns', 'gateway'],
         'dns' => ['169.254.1.2'],
         'gateway' => '169.254.1.3'
       },
-      'static' => {
-        'ip' => "169.254.#{rand(1..254)}.#{rand(4..254)}",
-        'netmask' => '255.255.254.0',
-        'cloud_properties' => { 'name' => @nsxt_opaque_vlan_2 },
-        'default' => ['dns', 'gateway'],
-        'dns' => ['169.254.1.2'],
-        'gateway' => '169.254.1.3'
-      }
     }
   end
 
@@ -89,19 +84,51 @@ describe 'CPI', nsx_transformers: true do
           host: @nsxt_host,
           username: @nsxt_username,
           password: @nsxt_password,
-          default_vif_type: 'PARENT'
+          default_vif_type: 'PARENT',
+          policy_api: true
         }))
       end
 
       it 'sets vif_type for logical ports' do
-        simple_vm_lifecycle(cpi, '', vm_type, network_spec) do |vm_id|
-          verify_ports(vm_id) do |lport|
-            expect(lport).not_to be_nil
-            expect(lport.attachment.context.resource_type).to eq('VifAttachmentContext')
-            expect(lport.attachment.context.vif_type).to eq('PARENT')
+        thread_list = []
+        3.times do
+          thread_list << Thread.new do
+            simple_vm_lifecycle(cpi, '', vm_type, network_spec) do |vm_id|
+              # require 'pry-byebug'
+              # binding.pry
+            end
           end
         end
+        thread_list.each {|thread| thread.join}
       end
+
+      it 'sets vif_type for logical ports' do
+        thread_list = []
+        vm_list = []
+        10.times do
+          thread_list << Thread.new do
+            vm_list <<  cpi.create_vm('agent-007', @stemcell_id, vm_type, network_spec, [], nil)
+          end
+        end
+        thread_list.each {|thread| thread.join}
+
+        thread_list = []
+        vm_list.each do |vm_cid|
+          thread_list << Thread.new do
+            cpi.set_vm_metadata(vm_cid, {'id' => 'cpi-test'})
+          end
+        end
+        thread_list.each {|thread| thread.join}
+
+        thread_list = []
+        vm_list.each do |vm_cid|
+          thread_list << Thread.new do
+            vm_list <<  cpi.delete_vm(vm_cid)
+          end
+        end
+        thread_list.each {|thread| thread.join}
+      end
+
 
       context 'and cloud property nsxt.vif_type is set' do
         let(:vm_type) do
@@ -155,8 +182,8 @@ describe 'CPI', nsx_transformers: true do
       end
 
       context 'and all the NSGroups exist' do
-        let!(:nsgroup_1) { create_nsgroup(nsgroup_name_1) }
-        let!(:nsgroup_2) { create_nsgroup(nsgroup_name_2) }
+        #let!(:nsgroup_1) { create_nsgroup(nsgroup_name_1) }
+        #let!(:nsgroup_2) { create_nsgroup(nsgroup_name_2) }
         before do
           grouping_object_svc = NSXT::GroupingObjectsApi.new(nsxt)
           nsgroups = grouping_object_svc.list_ns_groups.results.select do |nsgroup|
@@ -165,8 +192,8 @@ describe 'CPI', nsx_transformers: true do
           expect(nsgroups.length).to eq(2)
         end
         after do
-          delete_nsgroup(nsgroup_1)
-          delete_nsgroup(nsgroup_2)
+          #delete_nsgroup(nsgroup_1)
+          #delete_nsgroup(nsgroup_2)
         end
 
         it 'adds all the logical ports of the VM to all given NSGroups' do
