@@ -104,6 +104,10 @@
     if_p('vcenter.nsxt.default_vif_type') do
       vcenter['nsxt']['default_vif_type'] = p('vcenter.nsxt.default_vif_type')
     end
+
+    if_p('vcenter.nsxt.policy_api') do
+      vcenter['nsxt']['policy_api'] = p('vcenter.nsxt.policy_api')
+    end
   end
 
   if_p('blobstore') do
