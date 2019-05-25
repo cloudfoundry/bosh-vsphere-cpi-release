@@ -4,6 +4,7 @@ $pipeline.pool('6.0-NSXV') do |pool|
       '--tag ~nsx_transformers',
       '--tag ~nsxt_21',
       '--tag ~spbm_encryption',
+      '--tag ~attach_tag'
     ].join(' '),
     NSXT_SKIP_SSL_VERIFY: "true"
   }
