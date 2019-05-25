@@ -37,7 +37,7 @@ module VSphereCloud
       SwaggerClient::ApiClient.new(configuration)
     end
 
-    def initialize(client,  nsxt_mgr_provider)
+    def initialize(client, nsxt_mgr_provider)
       @client = client
       @manager_provider = nsxt_mgr_provider
       @sleep_time = DEFAULT_SLEEP
@@ -202,6 +202,7 @@ module VSphereCloud
     end
 
     def get_or_create_path_expression(group_obj)
+      # NSX-T group objects with zero expressions have nil instead of [] for empty expression list.
       if group_obj.expression.nil?
         group_obj.expression = []
       end
@@ -216,7 +217,7 @@ module VSphereCloud
       # There could be multiple path expressions but we only need one as there is
       # no restriction on number of paths one can add to one path expression
       #   Why would there be multiple?
-      #   Because NSX-T allows it and someone could end up creating multiple
+      #   Because NSX-T allows it and someone could end up creating more such lists.
       path_expression = group_obj.expression.detect{|expr| expr.is_a?(SwaggerClient::PathExpression)}
       return path_expression unless path_expression.nil?
 
