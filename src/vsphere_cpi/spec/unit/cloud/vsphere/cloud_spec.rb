@@ -2187,11 +2187,11 @@ module VSphereCloud
             }
           }
         end
-        it "returns an array with 2 strings inside" do
+        it "returns an struct " do
           result = vsphere_cloud.send(:update_name_info_from_bosh_env, environment)
-          expect(result.size).to eq(2)
-          expect(result[0]).to eq('fake-instance-group-name')
-          expect(result[1]).to eq('fake-deployment-name')
+          expect(result).to_not be_nil
+          expect(result.inst_grp).to eq('fake-instance-group-name')
+          expect(result.deployment).to eq('fake-deployment-name')
         end
       end
     end

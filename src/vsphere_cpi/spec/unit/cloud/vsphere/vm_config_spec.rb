@@ -75,7 +75,9 @@ module VSphereCloud
         context 'when human readable name enabled is set to true' do
           context 'when human readable name information contains ASCII characters only' do
             context 'when human readable name information has both instance group name and deployment name' do
-              let(:input){ { human_readable_name_info: ['fake-instance-group-name', 'fake-deployment-name'] } }
+
+
+              let(:input){ { human_readable_name_info: OpenStruct.new(inst_grp: 'fake-instance-group-name', deployment: 'fake-deployment-name') } }
               it 'returns a valid human readable name' do
                 allow(vm_config).to receive(:generate_human_readable_name).with('fake-instance-group-name', 'fake-deployment-name').and_return('fake-instance-group-name_fake-deployment-name_13197a1f437e')
                 allow(vm_config).to receive(:human_readable_name_enabled?).and_return(true)
@@ -94,7 +96,7 @@ module VSphereCloud
             end
           end
           context 'when human readable name info contains non-ASCII characters' do
-            let(:input){ { human_readable_name_info: ['fake-instance-group-αβ', 'fake-deployment-name'] } }
+            let(:input){ { human_readable_name_info: OpenStruct.new(inst_grp: 'fake-instance-group-αβ', deployment: 'fake-deployment-name') } }
             it 'returns a UUID based VM name' do
               allow(vm_config).to receive(:generate_human_readable_name).with('fake-instance-group-αβ', 'fake-deployment-name').and_return('fake-instance-group-αβ1_fake-deployment-name_13197a1f437e')
               allow(vm_config).to receive(:human_readable_name_enabled?).and_return(true)
