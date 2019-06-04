@@ -26,6 +26,14 @@ These privileges must be granted on the root vCenter Server entity.
     </tr>
     <tr><td>Manage custom attributes</td><td>Global.ManageCustomFields</td></tr>
     <tr><td>Register Extensions</td><td>Extension.Register</td></tr>
+    <tr>
+      <td rowspan="2">Inventory Service</td>
+    </tr>
+    <tr><td>vSphere Tagging > Attach vSphere Tag</td><td>InventoryService.Tagging.AttachTag</td></tr>
+    <tr>
+      <td rowspan="2">Storage Profile</td>
+    </tr>
+    <tr><td>vSphere Tagging > View storage profiles</td><td>StorageProfile.View</td></tr>
   </tbody>
 </table>
 
@@ -76,12 +84,6 @@ These privileges must be granted on any entities in a Datacenter the CPI will in
     <tr><td>Delete folder</td><td>Folder.Delete</td></tr>
     <tr><td>Move folder</td><td>Folder.Move</td></tr>
     <tr><td>Rename folder</td><td>Folder.Rename</td></tr>
-    <tr>
-      <td rowspan="4">Inventory Service</td>
-    </tr>
-    <tr><td>vSphere Tagging > Create vSphere Tag</td><td>InventoryService.Tagging.CreateTag</td></tr>
-    <tr><td>vSphere Tagging > Delete vSphere Tag</td><td>InventoryService.Tagging.DeleteTag</td></tr>
-    <tr><td>vSphere Tagging > Edit vSphere Tag</td><td>InventoryService.Tagging.EditTag</td></tr>
     <tr>
       <td rowspan="4">Resource</td>
     </tr>
