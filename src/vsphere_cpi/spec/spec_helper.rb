@@ -4,7 +4,10 @@ if ENV['COVERAGE']
   require 'simplecov'
   project_root = File.expand_path('../../../..', __FILE__)
   SimpleCov.coverage_dir(File.join(project_root, 'coverage'))
-  SimpleCov.start
+  SimpleCov.start do
+    add_filter '/nsxt/'
+    add_filter '/spec/'
+  end
 end
 
 PROJECT_RUBY_VERSION = ENV.fetch('PROJECT_RUBY_VERSION', '2.4.2')
