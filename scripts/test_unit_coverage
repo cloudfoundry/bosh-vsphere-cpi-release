@@ -2,6 +2,21 @@
 
 set -e
 
+[ -f /usr/local/share/chruby/chruby.sh ] || brew install chruby
+source /usr/local/share/chruby/chruby.sh
+
+if ! chruby $PROJECT_RUBY_VERSION; then
+  echo "Ruby $PROJECT_RUBY_VERSION not found. Installing ..." 1>&2
+
+  command -v ruby-install > /dev/null 2>&1 || brew install ruby-install
+
+  ruby-install ruby $PROJECT_RUBY_VERSION
+  source /usr/local/share/chruby/chruby.sh
+  chruby $PROJECT_RUBY_VERSION
+
+  echo "Ruby $PROJECT_RUBY_VERSION successfully installed" 1>&2
+fi
+
 release_dir="$( cd $(dirname $0) && cd .. && pwd )"
 
 pushd "${release_dir}" > /dev/null
