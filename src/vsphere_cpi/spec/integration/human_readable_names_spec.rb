@@ -88,14 +88,26 @@ RSpec.describe '#human readable names' do
     end
 
     context 'when bosh environment metadata is not in correct format' do
+      let(:human_readable_name_cpi) do
+        options = cpi_options( {'enable_human_readable_name' => true} )
+        VSphereCloud::Cloud.new(options)
+      end
       let(:environment){ {'bosh' => { 'groups' => ['fake-director-name', 'fake-deployment-name'] } } }
       it_behaves_like 'create vm with UUID based name'
     end
     context 'when instance group name and deployment name contain non_ASCII characters' do
+      let(:human_readable_name_cpi) do
+        options = cpi_options( {'enable_human_readable_name' => true} )
+        VSphereCloud::Cloud.new(options)
+      end
       let(:environment){ {'bosh' => { 'groups' => ['fake-director-name', 'ÅÅÅÅ', 'αβ'] } } }
       it_behaves_like 'create vm with UUID based name'
     end
     context 'when both instance group name and deployment name are set with ASCII characters only' do
+      let(:human_readable_name_cpi) do
+        options = cpi_options( {'enable_human_readable_name' => true} )
+        VSphereCloud::Cloud.new(options)
+      end
       let(:environment){ {'bosh' => { 'groups' => ['fake-director-name', 'fake-deployment-name', 'fake-instance-group-name'] } } }
       it_behaves_like 'create a vm with human readable name'
     end
