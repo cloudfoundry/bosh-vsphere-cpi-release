@@ -34,24 +34,35 @@ module VSphereCloud
   end
 
   class VIFNotFound < StandardError
-    def initialize(vm_id, external_id)
+    def initialize(vm_id=nil, external_id=nil)
       @vm_id = vm_id
       @external_id = external_id
     end
 
     def to_s
-      "VIF for VM #{@vm_id} with 'external_id' #{@external_id} was expected in NSX-T but was not found"
+      if @vm_id
+        return "VIF for VM #{@vm_id} with 'external_id' #{@external_id} was expected in NSX-T but was not found"
+      else
+        return "VIF for lport attachment id #{@vif_id} was expected in NSX-T but was not found"
+
+      end
     end
   end
 
   class LogicalPortNotFound < StandardError
-    def initialize(vm_id, external_id)
+    def initialize(vm_id=nil, external_id=nil, vif_id:)
       @vm_id = vm_id
       @external_id = external_id
+      @vif_id = vif_id
     end
 
     def to_s
-      "Logical port for VM #{@vm_id} with 'external_id' #{@external_id} was expected in NSX-T but was not found"
+      if @vm_id
+        return "Logical port for VM #{@vm_id} with 'external_id' #{@external_id} was expected in NSX-T but was not found"
+      else
+        return "Logical port with lport_attachment_id #{@vif_id} was expected in NSX-T but was not found"
+      end
+
     end
   end
 
@@ -275,7 +286,46 @@ module VSphereCloud
         end
       end
     end
-    
+
+    def retrieve_lport_display_names_from_vif_ids(switch_vif_id_list)
+      return [] if switch_vif_id_list.nil?
+      switch_lport_display_id = []
+      switch_vif_id_list.each do |switch, vif_id|
+        logical_port_display_name = logical_port_display_name_from_vif_id(vif_id: vif_id)
+        switch_lport_display_id << [switch, logical_port_display_name]
+      end
+      logger.info("Fetched all switch , port pairs #{switch_lport_display_id}")
+      switch_lport_display_id
+    end
+
+    def logical_ports(vm)
+      Bosh::Retryable.new(
+          tries: @max_tries,
+          sleep: ->(try_count, retry_exception) { @sleep_time },
+          on: [VirtualMachineNotFound, MultipleVirtualMachinesFound, VIFNotFound, LogicalPortNotFound]
+      ).retryer do |i|
+        logger.info("Searching for LogicalPorts for vm '#{vm.cid}'")
+        virtual_machines = fabric_svc.list_virtual_machines(display_name: vm.cid).results
+        raise VirtualMachineNotFound.new(vm.cid) if virtual_machines.empty?
+        raise MultipleVirtualMachinesFound.new(vm.cid, virtual_machines.length) if virtual_machines.length > 1
+        external_id = virtual_machines.first.external_id
+
+        logger.info("Searching VIFs with 'owner_vm_id: #{external_id}'")
+        vifs = fabric_svc.list_vifs(owner_vm_id: external_id).results
+        vifs.select! { |vif| !vif.lport_attachment_id.nil? }
+        raise VIFNotFound.new(vm.cid, external_id) if vifs.empty?
+
+        lports = vifs.inject([]) do |lports, vif|
+          logger.info("Searching LogicalPorts with 'attachment_id: #{vif.lport_attachment_id}'")
+          lports << logical_switching_svc.list_logical_ports(attachment_id: vif.lport_attachment_id).results.first
+        end.compact
+        raise LogicalPortNotFound.new(vm.cid, external_id) if lports.empty?
+        logger.info("LogicalPorts found for vm '#{vm.cid}': #{lports.map(&:id)}'")
+
+        lports
+      end
+    end
+
     private
 
     MAX_TRIES = 20
@@ -301,31 +351,17 @@ module VSphereCloud
       found_nsgroups
     end
 
-    def logical_ports(vm)
+    def logical_port_display_name_from_vif_id(vif_id:)
       Bosh::Retryable.new(
-        tries: @max_tries,
-        sleep: ->(try_count, retry_exception) { @sleep_time },
-        on: [VirtualMachineNotFound, MultipleVirtualMachinesFound, VIFNotFound, LogicalPortNotFound]
-      ).retryer do |i|
-        logger.info("Searching for LogicalPorts for vm '#{vm.cid}'")
-        virtual_machines = fabric_svc.list_virtual_machines(display_name: vm.cid).results
-        raise VirtualMachineNotFound.new(vm.cid) if virtual_machines.empty?
-        raise MultipleVirtualMachinesFound.new(vm.cid, virtual_machines.length) if virtual_machines.length > 1
-        external_id = virtual_machines.first.external_id
-
-        logger.info("Searching VIFs with 'owner_vm_id: #{external_id}'")
-        vifs = fabric_svc.list_vifs(owner_vm_id: external_id).results
-        vifs.select! { |vif| !vif.lport_attachment_id.nil? }
-        raise VIFNotFound.new(vm.cid, external_id) if vifs.empty?
-
-        lports = vifs.inject([]) do |lports, vif|
-          logger.info("Searching LogicalPorts with 'attachment_id: #{vif.lport_attachment_id}'")
-          lports << logical_switching_svc.list_logical_ports(attachment_id: vif.lport_attachment_id).results.first
-        end.compact
-        raise LogicalPortNotFound.new(vm.cid, external_id) if lports.empty?
-        logger.info("LogicalPorts found for vm '#{vm.cid}': #{lports.map(&:id)}'")
-
-        lports
+          tries: @max_tries,
+          sleep: ->(try_count, retry_exception) { @sleep_time },
+          on: [VIFNotFound, LogicalPortNotFound]
+      ).retryer do |_|
+        logger.info("Searching LogicalPorts with attachment_id: #{vif_id}")
+        lport = logical_switching_svc.list_logical_ports(attachment_id: vif_id).results&.first
+        raise LogicalPortNotFound.new(vif_id: vif_id) if lport.nil?
+        logger.info("LogicalPort: #{lport.display_name} found for attachment_id: #{vif_id}")
+        lport.display_name
       end
     end
 
