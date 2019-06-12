@@ -90,4 +90,51 @@ task :swagger do
 
 end
 
+desc 'Create NSXT Policy client from swagger spec'
+task :nsxt_policy do
+
+  rm_rf(["./lib/nsxt_policy/*"])
+
+  #generate all models
+  sh [
+    "swagger-codegen generate",
+    "-i ./data/nsx_policy_api.json",
+    "-l ruby",
+    "-o ./lib/nsxt_policy",
+    "-c ./data/policy_config.json -t ./data/swagger-nsxt-template"
+  ].join(' ')
+
+  rm_rf (["./lib/nsxt_policy/.swagger-codegen-ignore",
+    "./lib/nsxt_policy/.swagger-codegen",
+    "./lib/nsxt_policy/README.md",
+    "./lib/nsxt_policy/.rubocop.yml",
+    "./lib/nsxt_policy/.rspec",
+    "./lib/nsxt_policy/.gitignore",
+    "./lib/nsxt_policy/Gemfile",
+    "./lib/nsxt_policy/git_push.sh",
+    "./lib/nsxt_policy/docs",
+    "./lib/nsxt_policy/spec",
+    "./lib/nsxt_policy/nsxt_policy_client.gemspec",
+    "./lib/nsxt_policy/Rakefile",
+    "./lib/nsxt_policy/nsxt_policy_client"
+  ])
+
+  mv("./lib/nsxt_policy/lib/nsxt_policy_client", "./lib/nsxt_policy/nsxt_policy_client")
+
+  mv("./lib/nsxt_policy/lib/nsxt_policy_client.rb", "./lib/nsxt_policy/nsxt_policy_client.rb")
+
+  rm_rf(["./lib/nsxt_policy/lib"])
+
+  # Prepend load.unshift line
+  # read the file
+  f = File.open("lib/nsxt_policy/nsxt_policy_client.rb", "r+")
+  lines = f.readlines
+  f.close
+  # Add line
+  str = "$LOAD_PATH.unshift(File.join(File.dirname(__FILE__), '..', 'nsxt_policy'))\n"
+  lines = [str] + lines
+  output = File.new("lib/nsxt_policy/nsxt_policy_client.rb", "w")
+  lines.each { |line| output.write line }
+  output.close
+end
 task default: :swagger

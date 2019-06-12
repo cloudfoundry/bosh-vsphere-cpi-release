@@ -1,0 +1,5 @@
+{
+  "basePath" : "nsxt_policy",
+  "gemName" : "nsxt_policy_client",
+  "moduleName" : "NSXTPolicyClient"
+}
