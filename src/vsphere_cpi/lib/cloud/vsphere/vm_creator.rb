@@ -6,7 +6,7 @@ module VSphereCloud
     include Logger
 
     def initialize(client:, cloud_searcher:, cpi:, datacenter:, agent_env:, ip_conflict_detector:, default_disk_type:,
-                   enable_auto_anti_affinity_drs_rules:, stemcell:, upgrade_hw_version:, pbm:)
+                   enable_auto_anti_affinity_drs_rules:, stemcell:, upgrade_hw_version:, pbm:, nsxt_policy_provider:, policy_enabled:)
       @client = client
       @cloud_searcher = cloud_searcher
       @cpi = cpi
@@ -18,6 +18,8 @@ module VSphereCloud
       @stemcell = stemcell
       @upgrade_hw_version = upgrade_hw_version
       @pbm = pbm
+      @nsxt_policy_provider = nsxt_policy_provider
+      @policy_enabled = policy_enabled
     end
 
     def create(vm_config)
@@ -95,7 +97,7 @@ module VSphereCloud
           if network_mob.nil?
             raise "Unable to find network '#{network_name}'. Verify that the portgroup exists."
           end
-          ips.each do |_|
+          ips.each_with_index do |_, index|
             virtual_nic = Resources::Nic.create_virtual_nic(
               @cloud_searcher,
               network_name,
@@ -103,6 +105,11 @@ module VSphereCloud
               replicated_stemcell_vm.pci_controller.key,
               dvs_index
             )
+            if @policy_enabled && network_mob.is_a?(VimSdk::Vim::OpaqueNetwork)
+              tags = OpenStruct.new(vm_name: vm_config.name,  network_index: index, segment: network_name, policy_api: 'true')
+              vif_attach_id = @nsxt_policy_provider.create_segment_port segment: network_name, tags: tags
+              virtual_nic.external_id = vif_attach_id
+            end
             nic_config = Resources::VM.create_add_device_spec(virtual_nic)
             config_spec.device_change << nic_config
           end
@@ -235,7 +242,6 @@ module VSphereCloud
 
         break
       end
-
       created_vm
     end
 

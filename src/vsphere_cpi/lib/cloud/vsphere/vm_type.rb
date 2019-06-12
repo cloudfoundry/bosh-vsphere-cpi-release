@@ -35,6 +35,10 @@ module VSphereCloud
       nsxt&.dig('lb', 'server_pools')
     end
 
+    def policy_api
+      nsxt&.dig('policy_api')
+    end
+
     def ns_groups
       nsxt&.dig('ns_groups')
     end

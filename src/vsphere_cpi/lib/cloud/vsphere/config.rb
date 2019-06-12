@@ -1,12 +1,13 @@
 module VSphereCloud
-  class NSXTConfig < Struct.new(:host, :username, :password, :certificate, :private_key, :default_vif_type)
+  class NSXTConfig < Struct.new(:host, :username, :password, :certificate, :private_key, :default_vif_type, :policy_api)
     def self.validate_schema(config)
       return true if config.nil?
 
       Membrane::SchemaParser.parse do
         common_rules = {
             'host' => String,
-            optional('default_vif_type') => enum('PARENT', 'CHILD')}
+            optional('default_vif_type') => enum('PARENT', 'CHILD'),
+            optional('policy_api') => bool},
         if config['username'].nil?
           #using cert authentication
           common_rules.merge! ({
@@ -191,7 +192,8 @@ module VSphereCloud
         vcenter['nsxt']['password'],
         vcenter['nsxt']['certificate'],
         vcenter['nsxt']['private_key'],
-        vcenter['nsxt']['default_vif_type']
+        vcenter['nsxt']['default_vif_type'],
+        vcenter['nsxt']['policy_api'],
       )
     end
 
@@ -238,7 +240,7 @@ module VSphereCloud
             optional('enable_auto_anti_affinity_drs_rules') => bool,
             optional('upgrade_hw_version') => bool,
             optional('vm_storage_policy_name') => String,
-            optional('nsxt') => dict(String, String),
+            optional('nsxt') => dict(String, Object),
             optional('enable_human_readable_name') => bool,
             'datacenters' => [{
               'name' => String,
