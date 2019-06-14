@@ -279,8 +279,9 @@ module VSphereCloud
     private
 
     MAX_TRIES = 20
-    DEFAULT_SLEEP_TIME = 1
+    DEFAULT_SLEEP_TIME = NSXT_MIN_SLEEP = 1
     NSXT_LOGICAL_SWITCH = 'nsx.LogicalSwitch'.freeze
+    NSXT_MULTI_VM_COPY_RETRY = 62
 
     def retrieve_nsgroups(nsgroup_names)
       logger.info("Searching for groups: #{nsgroup_names}")
@@ -303,15 +304,31 @@ module VSphereCloud
 
     def logical_ports(vm)
       Bosh::Retryable.new(
-        tries: @max_tries,
-        sleep: ->(try_count, retry_exception) { @sleep_time },
+        tries: [@max_tries, NSXT_MULTI_VM_COPY_RETRY].max,
+        sleep: ->(try_count, retry_exception) { [NSXT_MIN_SLEEP, @sleep_time].max },
         on: [VirtualMachineNotFound, MultipleVirtualMachinesFound, VIFNotFound, LogicalPortNotFound]
       ).retryer do |i|
         logger.info("Searching for LogicalPorts for vm '#{vm.cid}'")
         virtual_machines = fabric_svc.list_virtual_machines(display_name: vm.cid).results
+        # NSX-T sometimes returns multiple VMs for same display id. Log it to be able to
+        # study these objects later. @TODO: Can be removed after one stable release.
+        logger.info("Virtual Machines fetched : #{virtual_machines.pretty_inspect}") if virtual_machines.length > 1
+
         raise VirtualMachineNotFound.new(vm.cid) if virtual_machines.empty?
-        raise MultipleVirtualMachinesFound.new(vm.cid, virtual_machines.length) if virtual_machines.length > 1
+
         external_id = virtual_machines.first.external_id
+        # NSX-T in events of v-motion or grouped vm_tool info maintains multiple copies of same
+        # VM. This can last upto a minute. Recaliberating retries and sleep to try at least
+        # for a minute to get single VM eventually. Or try to proceed in case below
+
+        # A best effort algorithm:
+        # if all vms returned by nsxt fabric have same external id,
+        # it means vm was being v-motioned and external_id is safe to use.
+        # else we can keep retrying until single vm appears after a minute max.
+        all_vms_are_equal = virtual_machines.all? do |vm_nsxt_resource|
+          vm_nsxt_resource.external_id == external_id
+        end
+        raise MultipleVirtualMachinesFound.new(vm.cid, virtual_machines.length) unless all_vms_are_equal
 
         logger.info("Searching VIFs with 'owner_vm_id: #{external_id}'")
         vifs = fabric_svc.list_vifs(owner_vm_id: external_id).results
