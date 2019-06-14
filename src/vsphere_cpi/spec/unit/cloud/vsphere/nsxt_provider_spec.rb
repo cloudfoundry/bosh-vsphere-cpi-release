@@ -45,6 +45,9 @@ describe VSphereCloud::NSXTProvider, fake_logger: true do
   let(:virtual_machine) do
     NSXT::VirtualMachine.new(external_id: 'fake-external-id')
   end
+  let(:virtual_machine_diff_ext_id) do
+    NSXT::VirtualMachine.new(external_id: 'fake-diff-external-id')
+  end
   let(:vif) do
     NSXT::VirtualNetworkInterface.new(:lport_attachment_id => 'fake-lport-attachment-id')
   end
@@ -358,6 +361,17 @@ describe VSphereCloud::NSXTProvider, fake_logger: true do
   end
 
   describe '#logical_ports' do
+    before :all do
+      # to supress warning while running unit tests.
+      if VSphereCloud::NSXTProvider.const_defined?('NSXT_MULTI_VM_COPY_RETRY')
+        VSphereCloud::NSXTProvider.send(:remove_const,'NSXT_MULTI_VM_COPY_RETRY')
+      end
+      if VSphereCloud::NSXTProvider.const_defined?('NSXT_MIN_SLEEP')
+        VSphereCloud::NSXTProvider.send(:remove_const,'NSXT_MIN_SLEEP')
+      end
+      VSphereCloud::NSXTProvider::NSXT_MULTI_VM_COPY_RETRY = 1
+      VSphereCloud::NSXTProvider::NSXT_MIN_SLEEP = 0.0
+    end
     context 'retries when' do
       before do
         nsxt_provider.instance_variable_set('@max_tries', 4)
@@ -410,10 +424,9 @@ describe VSphereCloud::NSXTProvider, fake_logger: true do
         before do
           allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:fabric_svc).and_return(fabric_svc)
           expect(fabric_svc).to receive(:list_virtual_machines).with(display_name: vm.cid)
-                                  .and_return(NSXT::VirtualMachineListResult.new(:results => [virtual_machine, virtual_machine]))
+                                  .and_return(NSXT::VirtualMachineListResult.new(:results => [virtual_machine, virtual_machine_diff_ext_id]))
         end
-
-        it 'raises an error' do
+        it 'raises an error if vms do not have same external id' do
           expect do
             nsxt_provider.send(:logical_ports, vm)
           end.to raise_error(VSphereCloud::MultipleVirtualMachinesFound)
@@ -458,18 +471,31 @@ describe VSphereCloud::NSXTProvider, fake_logger: true do
       end
     end
 
-    it 'returns array of logical ports' do
-      allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:fabric_svc).and_return(fabric_svc)
-      allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:logical_switching_svc).and_return(logical_switching_svc)
-      expect(fabric_svc).to receive(:list_virtual_machines).with(display_name: vm.cid)
-                              .and_return(NSXT::VirtualMachineListResult.new(:results => [virtual_machine]))
-      expect(fabric_svc).to receive(:list_vifs).with(owner_vm_id: virtual_machine.external_id)
-                              .and_return(NSXT::VirtualNetworkInterfaceListResult.new(:results => [vif, vif_without_lport_attachment]))
-      expect(logical_switching_svc).to receive(:list_logical_ports).with(attachment_id: vif.lport_attachment_id)
-                                         .and_return(NSXT::LogicalPortListResult.new(:results => [logical_port_1]))
+    context 'when succeeds' do
+      before do
+        # to supress warning
+        if VSphereCloud::NSXTProvider.const_defined?('NSXT_MULTI_VM_COPY_RETRY')
+          VSphereCloud::NSXTProvider.send(:remove_const,'NSXT_MULTI_VM_COPY_RETRY')
+        end
+        VSphereCloud::NSXTProvider.const_set('NSXT_MULTI_VM_COPY_RETRY', 3)
+      end
+      it 'returns array of logical ports' do
+        multi_diff_vm_nsxt_list = NSXT::VirtualMachineListResult.new(:results => [virtual_machine, virtual_machine_diff_ext_id])
+        multi_same_vm_nsxt_list = NSXT::VirtualMachineListResult.new(:results => [virtual_machine, virtual_machine])
 
-      expect(nsxt_provider.send(:logical_ports, vm)).to eq([logical_port_1])
+        allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:fabric_svc).and_return(fabric_svc)
+        allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:logical_switching_svc).and_return(logical_switching_svc)
+        expect(fabric_svc).to receive(:list_virtual_machines).with(display_name: vm.cid)
+                                  .and_return(multi_diff_vm_nsxt_list, multi_diff_vm_nsxt_list, multi_same_vm_nsxt_list)
+        expect(fabric_svc).to receive(:list_vifs).with(owner_vm_id: virtual_machine.external_id)
+                                  .and_return(NSXT::VirtualNetworkInterfaceListResult.new(:results => [vif, vif_without_lport_attachment]))
+        expect(logical_switching_svc).to receive(:list_logical_ports).with(attachment_id: vif.lport_attachment_id)
+                                             .and_return(NSXT::LogicalPortListResult.new(:results => [logical_port_1]))
+
+        expect(nsxt_provider.send(:logical_ports, vm)).to eq([logical_port_1])
+      end
     end
+
   end
 
   describe 'add_vm_to_server_pools' do
