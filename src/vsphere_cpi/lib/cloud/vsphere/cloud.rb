@@ -285,7 +285,8 @@ module VSphereCloud
     def create_vm(agent_id, stemcell_cid, vm_type, networks_spec, existing_disk_cids = [], environment = nil)
       with_thread_name("create_vm(#{agent_id}, ...)") do
         verify_props('VM', [ 'cpu', 'ram', 'disk' ], vm_type)
-
+        logger.info("VM_TYPE is :\n #{vm_type.pretty_inspect}")
+        logger.info("NETWORK_TYPE is :\n #{networks_spec.pretty_inspect}")
         stemcell_vm = stemcell_vm(stemcell_cid)
         raise "Could not find VM for stemcell '#{stemcell_cid}'" if stemcell_vm.nil?
         begin

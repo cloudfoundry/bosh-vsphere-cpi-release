@@ -25,7 +25,7 @@ end
 RSpec.shared_context 'with a fake logger' do
   require 'cloud/vsphere/logger'
   before { VSphereCloud::Logger.logger = logger }
-  let(:logger) { Logger.new(StringIO.new('')) }
+  let(:logger) { Logger.new(STDOUT) }
 end
 
 RSpec.configure do |config|
