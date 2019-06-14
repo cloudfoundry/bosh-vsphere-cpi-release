@@ -499,7 +499,7 @@ resources:
   - name: pool-6.5
     type: pool
     source:
-      uri:          git@github.com:ktchen14/vcpi-pool.git
+      uri:          git@gitlab.eng.vmware.com:PKS/vcpi-pool.git
       branch:       master
       pool:         v6.5
       private_key:  {{vcpi-pool_deployment_key}}
