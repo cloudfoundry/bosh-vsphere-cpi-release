@@ -125,4 +125,6 @@ builds:
     version: "20"
   f9927894-9dae-4379-4ead-853c88f3b483:
     version: 52.1.0
+  fa7efb03-980d-47d6-704e-eca37e4cd870:
+    version: 52.1.2
 format-version: "2"
