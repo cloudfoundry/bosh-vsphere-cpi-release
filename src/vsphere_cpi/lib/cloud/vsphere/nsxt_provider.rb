@@ -135,7 +135,7 @@ module VSphereCloud
       lports = logical_ports(vm)
 
       lport_ids = lports.map(&:id)
-      nsgroups = grouping_obj_svc.list_ns_groups.results.select do |nsgroup|
+      nsgroups = retrieve_all_ns_groups_with_pagination.select do |nsgroup|
         nsgroup.members&.any? do |member|
           member.is_a?(NSXT::NSGroupSimpleExpression) &&
             member.target_property == 'id' &&
@@ -283,9 +283,22 @@ module VSphereCloud
     NSXT_LOGICAL_SWITCH = 'nsx.LogicalSwitch'.freeze
     NSXT_MULTI_VM_COPY_RETRY = 62
 
+    def retrieve_all_ns_groups_with_pagination
+      logger.info("Gathering all NS Groups")
+      objects = []
+      result_list = grouping_obj_svc.list_ns_groups
+      objects.push(*result_list.results)
+      until result_list.cursor.nil?
+        result_list = grouping_obj_svc.list_ns_groups(cursor: result_list.cursor)
+        objects.push(*result_list.results)
+      end
+      logger.info("Found #{objects.size} number of NS Groups")
+      objects
+    end
+
     def retrieve_nsgroups(nsgroup_names)
       logger.info("Searching for groups: #{nsgroup_names}")
-      nsgroups_by_name = grouping_obj_svc.list_ns_groups.results.each_with_object({}) do |nsgroup, hash|
+      nsgroups_by_name = retrieve_all_ns_groups_with_pagination.each_with_object({}) do |nsgroup, hash|
         hash[nsgroup.display_name] = nsgroup
       end
 
