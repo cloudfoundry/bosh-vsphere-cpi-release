@@ -219,7 +219,7 @@ describe 'CPI', nsx_transformers_policy: true do
     grp_objs.each do |grp|
       next if grp.expression.nil?
       zero = grp.expression.all? do |expr|
-        expr.empty?
+        expr.paths&.empty?
       end
       expect(zero).to eq(true)
     end
@@ -231,9 +231,10 @@ describe 'CPI', nsx_transformers_policy: true do
     end
     lport_display_names = lports.map(&:display_name)
     grp_objs.each do |grp|
-      exists = grp.expression.any? do |expr|
+      exists = grp.expression&.any? do |expr|
         expr.is_a?(NSXTPolicyClient::PathExpression) && !expr.paths.nil? && !expr.paths.include?(lport_display_names)
       end
+      next if exists.nil?
       expect(exists).to eq(true)
     end
   end
@@ -244,10 +245,10 @@ describe 'CPI', nsx_transformers_policy: true do
     end
     lport_display_names = lports.map(&:display_name)
     grp_objs.each do |grp|
-      exists = grp.expression.any? do |expr|
+      exists = grp.expression&.any? do |expr|
         expr.is_a?(NSXTPolicyClient::PathExpression) && !expr.paths.nil? && !expr.paths.include?(lport_display_names)
       end
-      expect(exists).to eq(false)
+      expect(exists).to be_falsey
     end
   end
 
@@ -288,6 +289,7 @@ describe 'CPI', nsx_transformers_policy: true do
   end
 
   def delete_group(name:)
+    puts("Deleting #{name} ")
     policy_group_api.delete_group('default', name)
   end
 
@@ -388,6 +390,7 @@ describe 'CPI', nsx_transformers_policy: true do
   end
 
   def nsxt_client
+    include VSphereCloud::Logger
     return @nsxt_client if @nsxt_client
 
     configuration = NSXTPolicyClient::Configuration.new
@@ -395,6 +398,8 @@ describe 'CPI', nsx_transformers_policy: true do
     configuration.username = @nsxt_username
     configuration.password = @nsxt_password
     configuration.client_side_validation = false
+    configuration.logger=VSphereCloud::Logger.logger
+    configuration.debugging=true
     if ENV['BOSH_NSXT_CA_CERT_FILE']
       configuration.ssl_ca_cert = ENV['BOSH_NSXT_CA_CERT_FILE']
     end
