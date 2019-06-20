@@ -407,6 +407,49 @@ describe 'CPI', nsx_transformers: true do
     end
   end
 
+  describe 'on adding a vm to security groups' do
+    let(:vm_type) do
+      {
+        'ram' => 512,
+        'disk' => 2048,
+        'cpu' => 1,
+        'nsxt' => { 'ns_groups' => @names }
+      }
+    end
+
+    before do
+      @names = []
+      @groups = []
+      200.times do #create 200 ns groups to make multiple pages
+        @names << "BOSH-CPI-test-#{SecureRandom.uuid}"
+        @groups << create_nsgroup(@names[-1])
+      end
+    end
+
+    after do
+      @groups.each do |group|
+        delete_nsgroup(group)
+      end
+    end
+
+    context 'when there are more than one page of security groups (requires client pagination)' do
+      it 'should create/delete vm with add/delete nsgroups' do
+        nsgroups = cpi.instance_variable_get(:@nsxt_provider).send(:retrieve_all_ns_groups_with_pagination).select do |nsgroup|
+          @names.include?(nsgroup.display_name)
+        end
+        expect(nsgroups.length).to eq(200)
+        simple_vm_lifecycle(cpi, '', vm_type, network_spec) do |vm_id|
+          verify_ports(vm_id) do |lport|
+            expect(lport).not_to be_nil
+            @groups.each do |group|
+              expect(nsgroup_effective_logical_port_member_ids(group)).to include(lport.id)
+            end
+          end
+        end
+      end
+    end
+  end
+
   private
 
   def verify_ports(vm_id, expected_vif_number = 2)

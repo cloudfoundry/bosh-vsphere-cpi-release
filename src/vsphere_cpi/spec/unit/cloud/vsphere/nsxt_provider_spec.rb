@@ -174,7 +174,7 @@ describe VSphereCloud::NSXTProvider, fake_logger: true do
         let(:ns_groups) { %w(other-nsgroup-1 other-nsgroup-2) }
 
         it 'should raise a NSGroupsNotFound error' do
-          expect(grouping_obj_svc).to receive_message_chain(:list_ns_groups, :results).and_return([nsgroup_1, nsgroup_2])
+          expect(nsxt_provider).to receive(:retrieve_all_ns_groups_with_pagination).and_return([nsgroup_1, nsgroup_2])
           expect do
             nsxt_provider.add_vm_to_nsgroups(vm, ns_groups)
           end.to raise_error(VSphereCloud::NSGroupsNotFound)
@@ -188,6 +188,7 @@ describe VSphereCloud::NSXTProvider, fake_logger: true do
         end
 
         it 'adds simple expressions containing the logical ports to each NSGroup' do
+          expect(nsxt_provider).to receive(:retrieve_nsgroups).with(ns_groups).and_return([nsgroup_1, nsgroup_2])
           expect(grouping_obj_svc).to receive(:add_or_remove_ns_group_expression).with(any_args).twice
           nsxt_provider.add_vm_to_nsgroups(vm, ns_groups)
         end
@@ -214,13 +215,13 @@ describe VSphereCloud::NSXTProvider, fake_logger: true do
 
     before do
       allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:grouping_obj_svc).and_return(grouping_obj_svc)
-      allow(grouping_obj_svc).to receive_message_chain(:list_ns_groups, :results).and_return([nsgroup_1, nsgroup_2])
       allow(nsxt_provider).to receive(:logical_ports).with(vm)
                                 .and_return([logical_port_1, logical_port_2])
     end
 
     it "removes VM's logical ports from all NSGroups" do
       expect(grouping_obj_svc).to receive(:add_or_remove_ns_group_expression).with(any_args).twice
+      expect(nsxt_provider).to receive(:retrieve_all_ns_groups_with_pagination).and_return([nsgroup_1, nsgroup_2])
       nsxt_provider.remove_vm_from_nsgroups(vm)
     end
 
@@ -626,6 +627,56 @@ describe VSphereCloud::NSXTProvider, fake_logger: true do
     it 'removes VM from all server pools' do
       expect(services_svc).to receive(:perform_pool_member_action).with(server_pool_1.id,an_instance_of(NSXT::PoolMemberSettingList),'REMOVE_MEMBERS').once
       nsxt_provider.remove_vm_from_server_pools(vm_ip_address)
+    end
+  end
+
+  describe '#retrieve_all_ns_groups_with_pagination' do
+    let(:nsgroup_1) do
+      NSXT::NSGroup.new(:id => 'id-1', :display_name => 'test-nsgroup-1')
+    end
+    let(:nsgroup_2) do
+      NSXT::NSGroup.new(:id => 'id-2', :display_name => 'test-nsgroup-2')
+    end
+    let(:nsgroup_3) do
+      NSXT::NSGroup.new(:id => 'id-3', :display_name => 'test-nsgroup-3')
+    end
+    let(:nsgroup_4) do
+      NSXT::NSGroup.new(:id => 'id-4', :display_name => 'test-nsgroup-4')
+    end
+
+    context 'whe there is zero page' do
+      let(:result_list_1) { double(Object, results: [], cursor: nil) }
+      it 'returns all NS Groups in the page' do
+        allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:grouping_obj_svc).and_return(grouping_obj_svc)
+        allow(grouping_obj_svc).to receive(:list_ns_groups).and_return(result_list_1)
+        objects_result = nsxt_provider.send(:retrieve_all_ns_groups_with_pagination)
+        expect(objects_result.size).to eq(0)
+      end
+    end
+
+    context 'whe there is only one page' do
+      let(:result_list_1) { double(Object, results: [nsgroup_1, nsgroup_2], cursor: nil) }
+      it 'returns all NS Groups in the page' do
+        allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:grouping_obj_svc).and_return(grouping_obj_svc)
+        allow(grouping_obj_svc).to receive(:list_ns_groups).and_return(result_list_1)
+        objects_result = nsxt_provider.send(:retrieve_all_ns_groups_with_pagination)
+        expect(objects_result.size).to eq(2)
+      end
+    end
+
+    context 'when there are two pages' do
+      let(:result_list_1) { double(Object, results: [nsgroup_1, nsgroup_2], cursor: 1) }
+      let(:result_list_2) { double(Object, results: [nsgroup_3, nsgroup_4], cursor: nil) }
+      let(:result_list_1_cursor) { "fake-result-list-1-cursor"}
+      it 'returns all NS Groups in the two pages' do
+        allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:grouping_obj_svc).and_return(grouping_obj_svc)
+        allow(grouping_obj_svc).to receive(:list_ns_groups).and_return(result_list_1)
+        allow(grouping_obj_svc).to receive(:list_ns_groups).with(anything).and_return(result_list_2)
+        expect(grouping_obj_svc).to receive(:list_ns_groups).with(any_args).twice
+        allow(result_list_2).to receive(:cursor).and_return(nil)
+        objects_result = nsxt_provider.send(:retrieve_all_ns_groups_with_pagination)
+        expect(objects_result.size).to eq(4)
+      end
     end
   end
 end
