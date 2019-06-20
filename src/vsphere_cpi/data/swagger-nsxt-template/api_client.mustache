@@ -262,9 +262,16 @@ module {{moduleName}}
     end
 
     def build_request_url(path)
+      # This is needed because URI.encode does not handle all characters as well as CGI.escape
+      # Whole URl should not be encoded. Instead individual components should be encoded.
+      # Doing this way I lose the advantage of having a '/' in the name as that will not be encoded.
+      path=path.split('/').map do |path_comp|
+      CGI.escape(path_comp)
+      end.join('/')
       # Add leading and trailing slashes to path
       path = "/#{path}".gsub(/\/+/, '/')
-      URI.encode(@config.base_url + path)
+      # Encode base URl and add path
+      URI.encode(@config.base_url) + path
     end
 
     # Builds the HTTP request body
