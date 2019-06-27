@@ -33,6 +33,14 @@ describe '#add cpi extension' do
   end
 
   context 'when it creates a stemcell on vsphere' do
+    # Safety before to make sure environemnt does not
+    # have any CPI extension when it starts
+    before(:each) do
+      begin
+        cpi.client.service_content.extension_manager.unregister_extension(VSphereCloud::VCPIExtension::DEFAULT_VSPHERE_CPI_EXTENSION_KEY)
+      rescue
+      end
+    end
     it 'adds an extension to vcenter and attaches stemcell to that extension' do
       begin
         stemcell_id = upload_stemcell(cpi)

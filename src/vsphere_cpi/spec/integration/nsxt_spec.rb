@@ -524,7 +524,7 @@ describe 'CPI', nsx_transformers: true do
 
   def retryer
     Bosh::Retryable.new(
-      tries: 20,
+      tries: 61,
       sleep: ->(try_count, retry_exception) { 1 },
       on: [
         VSphereCloud::VirtualMachineNotFound,
