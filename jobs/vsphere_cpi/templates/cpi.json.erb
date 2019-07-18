@@ -94,6 +94,9 @@
     if_p('vcenter.nsxt.password') do
      vcenter['nsxt']['password'] = p('vcenter.nsxt.password')
     end
+    if_p('vcenter.nsxt.remote_auth') do
+     vcenter['nsxt']['remote_auth'] = p('vcenter.nsxt.remote_auth')
+    end
 
     if_p('vcenter.nsxt.auth_certificate') do
       vcenter['nsxt']['certificate'] = '/var/vcap/jobs/vsphere_cpi/config/nsxt_auth_certificate.crt'
