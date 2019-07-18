@@ -3,7 +3,8 @@ module VSphereCloud
     def self.build_api_client(config, logger)
       configuration = NSXT::Configuration.new
       configuration.host = config.host
-
+      configuration.username = config.username
+      configuration.password = config.password
       configuration.logger = logger
       configuration.client_side_validation = false
 
