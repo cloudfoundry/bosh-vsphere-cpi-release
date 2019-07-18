@@ -63,6 +63,9 @@ properties:
     description: Username to connect to NSX-T manager
   vcenter.nsxt.password:
     description: Password to connect to NSX-T manager
+  vcenter.nsxt.remote_auth:
+    description: Set to true if NSX-T manager is using VMware Identity Manager
+    default: false
   vcenter.nsxt.auth_certificate:
     description: Certificate used for certificate-based authentication. Certificate-based authentication takes precedence over username/password if both specified
   vcenter.nsxt.auth_private_key:

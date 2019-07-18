@@ -49,6 +49,11 @@ module NSXT
     # @return [String]
     attr_accessor :password
 
+    # Set this to false if NSX-T is using VMware Identity Manager
+    #
+    # @return [true, false]
+    attr_accessor :remote_auth
+
     # Defines the access token (Bearer) used with OAuth2.
     attr_accessor :access_token
 
@@ -143,6 +148,7 @@ module NSXT
       @debugging = false
       @inject_format = false
       @force_ending_format = false
+      @remote_auth = false
       @logger = defined?(Rails) ? Rails.logger : Logger.new(STDOUT)
 
       yield(self) if block_given?
@@ -189,8 +195,12 @@ module NSXT
     end
 
     # Gets Basic Auth token string
-    def basic_auth_token
-      'Basic ' + ["#{username}:#{password}"].pack('m').delete("\r\n")
+    def nsxt_auth_token
+      if @remote_auth
+        'Remote ' + ["#{username}:#{password}"].pack('m').delete("\r\n")
+      else
+        'Basic ' + ["#{username}:#{password}"].pack('m').delete("\r\n")
+      end
     end
 
     # Returns Auth Settings hash for api client.
@@ -201,7 +211,7 @@ module NSXT
             type: 'basic',
             in: 'header',
             key: 'Authorization',
-            value: basic_auth_token
+            value: nsxt_auth_token
           },
       }
     end
