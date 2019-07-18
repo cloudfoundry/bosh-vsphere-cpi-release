@@ -1,5 +1,5 @@
 module VSphereCloud
-  class NSXTConfig < Struct.new(:host, :username, :password, :certificate, :private_key, :default_vif_type)
+  class NSXTConfig < Struct.new(:host, :username, :password, :remote_auth, :certificate, :private_key, :default_vif_type)
     def self.validate_schema(config)
       return true if config.nil?
 
@@ -14,7 +14,9 @@ module VSphereCloud
               'private_key' => String})
         else
           common_rules.merge!({'username' => String,
-                               'password' => String})
+                               'password' => String,
+                               optional('remote_auth') => bool
+                             })
         end
         common_rules
       end.validate(config)
@@ -189,6 +191,7 @@ module VSphereCloud
         vcenter['nsxt']['host'],
         vcenter['nsxt']['username'],
         vcenter['nsxt']['password'],
+        vcenter['nsxt']['remote_auth'],
         vcenter['nsxt']['certificate'],
         vcenter['nsxt']['private_key'],
         vcenter['nsxt']['default_vif_type']
@@ -238,7 +241,15 @@ module VSphereCloud
             optional('enable_auto_anti_affinity_drs_rules') => bool,
             optional('upgrade_hw_version') => bool,
             optional('vm_storage_policy_name') => String,
-            optional('nsxt') => dict(String, String),
+            optional('nsxt') => {
+              optional('host') => String,
+              optional('username') => String,
+              optional('password') => String,
+              optional('remote_auth') => bool,
+              optional('certificate') => String,
+              optional('private_key') => String,
+              optional('default_vif_type') => String
+            },
             optional('enable_human_readable_name') => bool,
             'datacenters' => [{
               'name' => String,
