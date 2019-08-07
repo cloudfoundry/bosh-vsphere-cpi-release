@@ -146,10 +146,14 @@ These privileges must be granted on any entities in a Datacenter the CPI will in
     <tr><td>Snapshot management > Rename snapshot</td><td>VirtualMachine.State.RenameSnapshot</td></tr>
     <tr><td>Snapshot management > Revert snapshot</td><td>VirtualMachine.State.RevertToSnapshot</td></tr>
     <tr>
-      <td rowspan="4">vApp</td>
+      <td rowspan="3">vApp</td>
     </tr>
     <tr><td>Import</td><td>VApp.Import</td></tr>
     <tr><td>vApp application configuration</td><td>VApp.ApplicationConfig</td></tr>
+    <tr>
+      <td rowspan="2">Host</td>
+    </tr>
+    <tr><td>Config > System Management</td><td>Host.Config.SystemManagement</td></tr>
   </tbody>
 </table>
 
