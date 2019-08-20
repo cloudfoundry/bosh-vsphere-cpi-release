@@ -17,7 +17,9 @@ module VSphereCloud
       begin
         logger.info("Trying to fetch file from Datastore through Host System")
         fetch_file_from_datastore_via_host(datacenter_name, datastore, path)
-      rescue FileTransferError
+      # rescue everything as fallback is absolute
+      rescue => e
+        logger.warn("Failed to upload file through HOST with #{e}")
         logger.info("Trying to fetch file from Datastore through Datacenter")
         fetch_file_from_datastore_via_datacenter(datacenter_name, datastore.name, path)
       end
@@ -27,7 +29,9 @@ module VSphereCloud
       begin
         logger.info("Trying to upload file to Datastore through Host System")
         upload_file_to_datastore_via_host(datacenter_name, datastore, path, contents)
-      rescue FileTransferError
+      # rescue everything as fallback is absolute
+      rescue => e
+        logger.warn("Failed to upload file through HOST with #{e}")
         logger.info("Trying to upload file from Datastore through Datacenter")
         upload_file_to_datastore_via_datacenter(datacenter_name, datastore.name, path, contents)
       end
@@ -180,7 +184,6 @@ module VSphereCloud
       else
         raise "Invalid request type: #{request_type}."
       end
-
       response = @retryer.try do
         resp = make_request.call
 
