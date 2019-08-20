@@ -188,12 +188,36 @@ module VSphereCloud
           }
         ).and_return(response)
 
-        file_provider.upload_file_to_datastore(datacenter_name, datastore, path, upload_contents)
+        subject.upload_file_to_datastore(datacenter_name, datastore, path, upload_contents)
+      end
+
+      it 'fails to upload file via host because of Execution Expired error and retries to upload through datacenter and succeeds' do
+
+        expect(http_client).to receive(:put).with(
+            'https://host/folder/fake-path?dsName=fake-datastore-name%201',
+            upload_contents,
+            { 'Content-Type' => 'application/octet-stream', 'Content-Length' => upload_contents.bytesize,
+              'Cookie' => "vmware_cgi_ticket=ticket",
+            }
+        ).and_raise(HTTPClient::ConnectTimeoutError)
+
+        response_body = double('response_body')
+        response = double('response', code: 200, body: response_body)
+
+        expect(http_client).to receive(:put).with(
+            'https://fake-vcenter-host/folder/fake-path?dcPath=fake-datacenter-name%201&dsName=fake-datastore-name%201',
+            upload_contents,
+            { 'Content-Type' => 'application/octet-stream',
+              'Content-Length' => upload_contents.bytesize,
+            }
+        ).and_return(response)
+
+        subject.upload_file_to_datastore(datacenter_name, datastore, path, upload_contents)
       end
 
       context 'when vsphere fails to issue generic service ticket' do
         before do
-          allow(file_provider).to receive(:get_generic_service_ticket).with(anything).and_raise("BOOM : Any Error")
+          allow(subject).to receive(:get_generic_service_ticket).with(anything).and_raise("BOOM : Any Error")
         end
         it 'fails to upload file via host and retries to upload through datacenter and succeeds' do
           response_body = double('response_body')
@@ -216,7 +240,7 @@ module VSphereCloud
               }
           ).and_return(response)
 
-          file_provider.upload_file_to_datastore(datacenter_name, datastore, path, upload_contents)
+          subject.upload_file_to_datastore(datacenter_name, datastore, path, upload_contents)
         end
       end
 
@@ -244,7 +268,7 @@ module VSphereCloud
           ).exactly(Retryer::MAX_TRIES).times.and_return(double('response', code: 500))
 
           expect {
-            file_provider.upload_file_to_datastore(datacenter_name, datastore, path, upload_contents)
+            subject.upload_file_to_datastore(datacenter_name, datastore, path, upload_contents)
           }.to raise_error(/Could not transfer file/)
         end
       end
@@ -260,7 +284,7 @@ module VSphereCloud
         expected_headers = { 'Content-Type' => 'fake-header' , 'Content-Length' => body.bytesize }
         expect(http_client).to receive(:post).with(url, body, expected_headers).and_return(response)
 
-        file_provider.upload_file_to_url(url, body, headers)
+        subject.upload_file_to_url(url, body, headers)
       end
 
       context 'when vSphere cannot handle the request' do
@@ -268,7 +292,7 @@ module VSphereCloud
           expect(http_client).to receive(:post).exactly(Retryer::MAX_TRIES).times.and_return(double('response', code: 500, body: nil))
 
           expect {
-            file_provider.upload_file_to_url(url, body, headers)
+            subject.upload_file_to_url(url, body, headers)
           }.to raise_error(/Could not transfer file/)
         end
       end
