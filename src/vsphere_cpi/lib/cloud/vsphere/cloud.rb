@@ -697,12 +697,26 @@ module VSphereCloud
       network_env
     end
 
-    def generate_disk_env(system_disk, ephemeral_disk)
-      {
-        'system' => system_disk.unit_number.to_s,
-        'ephemeral' => ephemeral_disk.unit_number.to_s,
-        'persistent' => {}
-      }
+    def generate_disk_env(system_disk, ephemeral_disk, vm_config)
+
+      # When disk.enableUUID is true on the vmx options, consistent volume IDs are requested, and we can use them
+      # to ensure the precise ephemeral volume is mounted.   This is mandatory for
+      # cases where multiple SCSI controllers are present on the VM, as is common with Kubernetes VMs.
+      if vm_config.vmx_options['disk.enableUUID'] == "1"
+        logger.info("Using ephemeral disk UUID #{ephemeral_disk.backing.uuid.downcase}")
+        {
+          'system' => system_disk.unit_number.to_s,
+          'ephemeral' => { 'id' => ephemeral_disk.backing.uuid.downcase }, 
+          'persistent' => {}
+        }
+      else
+        logger.info("Using ephemeral disk unit number #{ephemeral_disk.unit_number.to_s}")
+        {
+          'system' => system_disk.unit_number.to_s,
+          'ephemeral' => ephemeral_disk.unit_number.to_s,
+          'persistent' => {}
+        }
+      end
     end
 
     def generate_agent_env(name, vm, agent_id, networking_env, disk_env)
@@ -856,7 +870,31 @@ module VSphereCloud
 
     def add_disk_to_agent_env(vm, director_disk_cid, device_unit_number)
       env = @agent_env.get_current_env(vm.mob, @datacenter.name)
+
       env['disks']['persistent'][director_disk_cid.raw] = device_unit_number.to_s
+
+      # For VMs with multiple SCSI controllers, as is common in Kubernetes workers, 
+      # it is mandatory that disk.enableUUID is set in the VMX options / extra config of the VM to ensure 
+      # that disk mounting can be performed unambigously.   This is typically set as part of a VM extension.
+      # Using the relative device unit number (see above), which is the traditional vSphere CPI disk identifier, 
+      # only presumes a single SCSI controller.   The BOSH agent however does not distinguish SCSI controllers using
+      # this method of volume identification, which can lead to ambiguous mounts, and thus failed agent bootstraps or data loss.
+      # The BOSH agent already supports volume UUID identification, which is used below for unambiguous
+      # BOSH disk association.   
+
+
+      if vm.disk_uuid_is_enabled?
+        # We have to query the VIM API to learn the freshly attached disk UUID. We must also pick the specific
+        # BOSH-managed independent persistent disk and avoid any non-BOSH peristent disks.  Also due to Linux
+        # filsystem case-sensitivity, ensure that the UUID is downcased as VIM returns it upper case.
+        disk = vm.disk_by_cid(director_disk_cid.value)
+        uuid = disk.backing.uuid.downcase
+        logger.info("adding disk to env, disk.enableUUID is TRUE, using volume uuid #{uuid} for mounting")
+        env['disks']['persistent'][director_disk_cid.raw] = {"id" => uuid}
+      else
+        logger.info("adding disk to env, disk.enableUUID is FALSE, using relative device number #{device_unit_number.to_s} for mounting")
+      end
+
       location = { datacenter: @datacenter.name, datastore: get_vm_env_datastore(vm), vm: vm.cid }
       @agent_env.set_env(vm.mob, location, env)
     end
