@@ -15,8 +15,8 @@ describe VSphereCloud::Resources::VM, fake_logger: true do
     allow(cloud_searcher).to receive(:get_properties).with(
       vm_mob,
       VimSdk::Vim::VirtualMachine,
-      ['runtime.powerState', 'runtime.question', 'config.hardware.device', 'name', 'runtime', 'resourcePool'],
-      ensure: ['config.hardware.device', 'runtime']
+      ['runtime.powerState', 'runtime.question', 'config.hardware.device', 'name', 'runtime', 'resourcePool', 'config.extraConfig'],
+      ensure: ['config.hardware.device', 'runtime', 'config.extraConfig']
     ).and_return(vm_properties)
 
     allow(client).to receive(:find_parent)
@@ -216,8 +216,8 @@ describe VSphereCloud::Resources::VM, fake_logger: true do
         allow(cloud_searcher).to receive(:get_properties).with(
           vm_mob,
           VimSdk::Vim::VirtualMachine,
-          ['runtime.powerState', 'runtime.question', 'config.hardware.device', 'name', 'runtime', 'resourcePool'],
-          ensure: ['config.hardware.device', 'runtime']
+          ['runtime.powerState', 'runtime.question', 'config.hardware.device', 'name', 'runtime', 'resourcePool', 'config.extraConfig'],
+          ensure: ['config.hardware.device', 'runtime', 'config.extraConfig']
         ).and_return({'runtime.question' => question, 'config.hardware.device' => vm_devices})
         allow(cloud_searcher).to receive(:get_property).with(
           vm_mob,

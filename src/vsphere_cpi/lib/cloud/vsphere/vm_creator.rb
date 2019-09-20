@@ -178,7 +178,7 @@ module VSphereCloud
         # Set agent env settings
         begin
           network_env = @cpi.generate_network_env(created_vm.devices, vm_config.networks_spec, dvs_index)
-          disk_env = @cpi.generate_disk_env(created_vm.system_disk, ephemeral_disk_config.device)
+          disk_env = @cpi.generate_disk_env(created_vm.system_disk, created_vm.ephemeral_disk, vm_config)
           env = @cpi.generate_agent_env(vm_config.name, created_vm.mob, vm_config.agent_id, network_env, disk_env)
           env['env'] = vm_config.agent_env
 
