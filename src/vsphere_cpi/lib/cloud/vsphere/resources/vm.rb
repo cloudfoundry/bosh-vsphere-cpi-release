@@ -211,6 +211,10 @@ module VSphereCloud
         properties['runtime.powerState']
       end
 
+      def extra_config
+        properties['config.extraConfig'] 
+      end
+
       def has_persistent_disk_property_mismatch?(disk)
         found_property = get_vapp_property_by_key(disk.key)
         return false if found_property.nil? || !verify_persistent_disk_property?(found_property)
@@ -258,6 +262,12 @@ module VSphereCloud
         @client.add_persistent_disk_property_to_vm(self, disk)
         logger.debug('Finished adding persistent disk property to vm')
         return disk_config_spec
+      end
+
+      def disk_uuid_is_enabled?
+        extra_config.any? do |option|
+          option.key == 'disk.enableUUID' && option.value == "TRUE"
+        end
       end
 
       def detach_disks(virtual_disks)
@@ -345,8 +355,8 @@ module VSphereCloud
         @properties ||= cloud_searcher.get_properties(
           @mob,
           Vim::VirtualMachine,
-          ['runtime.powerState', 'runtime.question', 'config.hardware.device', 'name', 'runtime', 'resourcePool'],
-          ensure: ['config.hardware.device', 'runtime']
+          ['runtime.powerState', 'runtime.question', 'config.hardware.device', 'name', 'runtime', 'resourcePool', 'config.extraConfig'],
+          ensure: ['config.hardware.device', 'runtime', 'config.extraConfig']
         )
       end
 

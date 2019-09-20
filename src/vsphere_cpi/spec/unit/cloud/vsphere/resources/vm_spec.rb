@@ -15,8 +15,8 @@ describe VSphereCloud::Resources::VM, fake_logger: true do
     allow(cloud_searcher).to receive(:get_properties).with(
       vm_mob,
       VimSdk::Vim::VirtualMachine,
-      ['runtime.powerState', 'runtime.question', 'config.hardware.device', 'name', 'runtime', 'resourcePool'],
-      ensure: ['config.hardware.device', 'runtime']
+      ['runtime.powerState', 'runtime.question', 'config.hardware.device', 'name', 'runtime', 'resourcePool', 'config.extraConfig'],
+      ensure: ['config.hardware.device', 'runtime', 'config.extraConfig']
     ).and_return(vm_properties)
 
     allow(client).to receive(:find_parent)
@@ -216,8 +216,8 @@ describe VSphereCloud::Resources::VM, fake_logger: true do
         allow(cloud_searcher).to receive(:get_properties).with(
           vm_mob,
           VimSdk::Vim::VirtualMachine,
-          ['runtime.powerState', 'runtime.question', 'config.hardware.device', 'name', 'runtime', 'resourcePool'],
-          ensure: ['config.hardware.device', 'runtime']
+          ['runtime.powerState', 'runtime.question', 'config.hardware.device', 'name', 'runtime', 'resourcePool', 'config.extraConfig'],
+          ensure: ['config.hardware.device', 'runtime', 'config.extraConfig']
         ).and_return({'runtime.question' => question, 'config.hardware.device' => vm_devices})
         allow(cloud_searcher).to receive(:get_property).with(
           vm_mob,
@@ -559,6 +559,37 @@ describe VSphereCloud::Resources::VM, fake_logger: true do
   describe '#to_s' do
     it 'show relevant info' do
       expect(subject.to_s).to eq("(#{subject.class.name} (cid=\"vm-cid\"))")
+    end
+  end
+
+  describe '#disk_uuid_is_enabled' do
+    before(:each) do
+      expect(subject).to receive(:extra_config).and_return(extraconfig)
+    end
+
+    context 'when disk.enableUUID is absent' do
+      let(:extraconfig) do
+        [
+            OpenStruct.new(key: 'test', value: 'test-val'),
+            OpenStruct.new(key: 'disk.enableresize', value: 'TRUE'),
+        ]
+      end
+      it 'returns false' do
+        expect(subject.disk_uuid_is_enabled?).to eq(false)
+      end
+    end
+
+    context 'when disk.enableUUID is present' do
+      let(:extraconfig) do
+        [
+            OpenStruct.new(key: 'test', value: 'test-val'),
+            OpenStruct.new(key: 'disk.enableresize', value: 'True'),
+            OpenStruct.new(key: 'disk.enableUUID', value: 'TRUE'),
+        ]
+      end
+      it 'returns true' do
+        expect(subject.disk_uuid_is_enabled?).to eq(true)
+      end
     end
   end
 end
