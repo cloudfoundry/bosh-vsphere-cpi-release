@@ -17,6 +17,10 @@ module VSphereCloud
         configuration.verify_ssl = false
         configuration.verify_ssl_host = false
       end
+      if config.private_key
+        configuration.key_file = config.private_key
+        configuration.cert_file = config.certificate
+      end
       NSXT::ApiClient.new(configuration)
     end
   end
