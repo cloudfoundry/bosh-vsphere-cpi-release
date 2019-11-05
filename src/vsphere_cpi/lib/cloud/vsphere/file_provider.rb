@@ -13,10 +13,10 @@ module VSphereCloud
       @retryer = retryer || Retryer.new
     end
 
-    def fetch_file_from_datastore(datacenter_name, datastore, path)
+    def fetch_file_from_datastore(datacenter_name, datastore, path, ds_accessible_hosts)
       begin
         logger.info("Trying to fetch file from Datastore through Host System")
-        fetch_file_from_datastore_via_host(datacenter_name, datastore, path)
+        fetch_file_from_datastore_via_host(datacenter_name, datastore, path, ds_accessible_hosts)
       # rescue everything as fallback is absolute
       rescue => e
         logger.warn("Failed to upload file through HOST with #{e}")
@@ -25,10 +25,10 @@ module VSphereCloud
       end
     end
 
-    def upload_file_to_datastore(datacenter_name, datastore, path, contents)
+    def upload_file_to_datastore(datacenter_name, datastore, path, contents, ds_accessible_hosts)
       begin
         logger.info("Trying to upload file to Datastore through Host System")
-        upload_file_to_datastore_via_host(datacenter_name, datastore, path, contents)
+        upload_file_to_datastore_via_host(datacenter_name, datastore, path, contents, ds_accessible_hosts)
       # rescue everything as fallback is absolute
       rescue => e
         logger.warn("Failed to upload file through HOST with #{e}")
@@ -62,8 +62,8 @@ module VSphereCloud
       end
     end
 
-    def fetch_file_from_datastore_via_host(datacenter_name, datastore, path)
-      host = get_healthy_host(datastore)
+    def fetch_file_from_datastore_via_host(datacenter_name, datastore, path, ds_accessible_hosts)
+      host = get_healthy_host(datastore, ds_accessible_hosts)
       return FileTransferError.new("No healthy host available for transfer") if host.nil?
 
       url = "https://#{host.name}/folder/#{path}?" +
@@ -108,8 +108,8 @@ module VSphereCloud
       logger.info('Successfully uploaded file.')
     end
 
-    def upload_file_to_datastore_via_host(datacenter_name, datastore, path, contents)
-      host = get_healthy_host(datastore)
+    def upload_file_to_datastore_via_host(datacenter_name, datastore, path, contents, ds_accessible_hosts)
+      host = get_healthy_host(datastore, ds_accessible_hosts)
       return FileTransferError.new("No healthy host available for transfer") if host.nil?
 
       url = "https://#{host.name}/folder/#{path}?" +
@@ -139,16 +139,18 @@ module VSphereCloud
     end
 
     # Returns first healthy host mob from all host mounts for
-    # this datastore
+    # this datastore and the one which is part of cluster `vm_vsphere_cluster`
     #
     # @return [VimSdk::HostSystem] ESXi Host Managed Object
-    def get_healthy_host(datastore_mob)
+    def get_healthy_host(datastore_mob, ds_accessible_hosts)
       datastore_mob.host.detect do |host_mount|
         host = host_mount.key
-        !host.runtime.in_maintenance_mode && host.runtime.power_state == 'poweredOn' && host.runtime.connection_state = 'connected'
+        !host.runtime.in_maintenance_mode &&\
+        host.runtime.power_state == 'poweredOn' &&\
+        host.runtime.connection_state = 'connected' &&\
+        ds_accessible_hosts.include?(host)
       end&.key
     end
-
 
     def get_generic_service_ticket(url:, method:)
       session_manager = @client.service_content.session_manager

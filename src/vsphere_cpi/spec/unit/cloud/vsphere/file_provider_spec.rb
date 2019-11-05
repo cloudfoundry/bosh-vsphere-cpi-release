@@ -16,11 +16,16 @@ module VSphereCloud
       instance_double('VimSdk::Vim::Datastore',name: 'fake-datastore-name 1')
     }
     let(:host) { instance_double('VimSdk::Vim::HostSystem', name: 'host')}
+    let(:host2) { instance_double('VimSdk::Vim::HostSystem', name: 'host')}
+    let(:host3) { instance_double('VimSdk::Vim::HostSystem', name: 'host')}
+
+    let(:ds_accessible_hosts)  { [host, host2, host3] }
+
     let(:ticket) {
       instance_double('VimSdk::Vim::SessionManager::GenericServiceTicket', id: 'ticket')
     }
     before do
-      allow(file_provider).to receive(:get_healthy_host).with(anything).and_return(host)
+      allow(file_provider).to receive(:get_healthy_host).with(anything, ds_accessible_hosts).and_return(host)
       allow(file_provider).to receive(:get_generic_service_ticket).with(anything).and_return(ticket)
       allow(retryer).to receive(:sleep)
     end
@@ -36,7 +41,7 @@ module VSphereCloud
         ).and_return(response)
 
         expect(
-          file_provider.fetch_file_from_datastore(datacenter_name, datastore, path)
+          file_provider.fetch_file_from_datastore(datacenter_name, datastore, path, ds_accessible_hosts)
         ).to eq(response_body)
       end
 
@@ -57,7 +62,7 @@ module VSphereCloud
         ).and_return(response)
 
         expect(
-          file_provider.fetch_file_from_datastore(datacenter_name, datastore, path)
+          file_provider.fetch_file_from_datastore(datacenter_name, datastore, path, ds_accessible_hosts)
         ).to eq(response_body)
       end
 
@@ -80,7 +85,7 @@ module VSphereCloud
           ).and_return(response)
 
           expect(
-              file_provider.fetch_file_from_datastore(datacenter_name, datastore, path)
+              file_provider.fetch_file_from_datastore(datacenter_name, datastore, path, ds_accessible_hosts)
           ).to eq(response_body)
         end
       end
@@ -103,7 +108,7 @@ module VSphereCloud
          .and_return(double('response', code: 401))
 
         expect {
-          file_provider.fetch_file_from_datastore(datacenter_name, datastore, path)
+          file_provider.fetch_file_from_datastore(datacenter_name, datastore, path, ds_accessible_hosts)
         }.to raise_error(VSphereCloud::FileTransferError, /Could not transfer file/)
       end
 
@@ -122,7 +127,7 @@ module VSphereCloud
           ).and_return(double('response', code: 404))
 
           expect(
-            file_provider.fetch_file_from_datastore(datacenter_name, datastore, path)
+            file_provider.fetch_file_from_datastore(datacenter_name, datastore, path, ds_accessible_hosts)
           ).to be_nil
         end
       end
@@ -143,7 +148,7 @@ module VSphereCloud
            .and_return(double('response', code: 500))
 
           expect {
-            file_provider.fetch_file_from_datastore(datacenter_name, datastore, path)
+            file_provider.fetch_file_from_datastore(datacenter_name, datastore, path, ds_accessible_hosts)
           }.to raise_error(/Could not transfer file/)
         end
       end
@@ -162,7 +167,7 @@ module VSphereCloud
           }
         ).and_return(response)
 
-        file_provider.upload_file_to_datastore(datacenter_name, datastore, path, upload_contents)
+        file_provider.upload_file_to_datastore(datacenter_name, datastore, path, upload_contents, ds_accessible_hosts)
       end
 
       it 'fails to upload file via host and retries to upload through datacenter and succeeds' do
@@ -188,7 +193,7 @@ module VSphereCloud
           }
         ).and_return(response)
 
-        subject.upload_file_to_datastore(datacenter_name, datastore, path, upload_contents)
+        subject.upload_file_to_datastore(datacenter_name, datastore, path, upload_contents, ds_accessible_hosts)
       end
 
       it 'fails to upload file via host because of Execution Expired error and retries to upload through datacenter and succeeds' do
@@ -212,7 +217,7 @@ module VSphereCloud
             }
         ).and_return(response)
 
-        subject.upload_file_to_datastore(datacenter_name, datastore, path, upload_contents)
+        subject.upload_file_to_datastore(datacenter_name, datastore, path, upload_contents, ds_accessible_hosts)
       end
 
       context 'when vsphere fails to issue generic service ticket' do
@@ -240,7 +245,7 @@ module VSphereCloud
               }
           ).and_return(response)
 
-          subject.upload_file_to_datastore(datacenter_name, datastore, path, upload_contents)
+          subject.upload_file_to_datastore(datacenter_name, datastore, path, upload_contents, ds_accessible_hosts)
         end
       end
 
@@ -268,7 +273,7 @@ module VSphereCloud
           ).exactly(Retryer::MAX_TRIES).times.and_return(double('response', code: 500))
 
           expect {
-            subject.upload_file_to_datastore(datacenter_name, datastore, path, upload_contents)
+            subject.upload_file_to_datastore(datacenter_name, datastore, path, upload_contents, ds_accessible_hosts)
           }.to raise_error(/Could not transfer file/)
         end
       end
