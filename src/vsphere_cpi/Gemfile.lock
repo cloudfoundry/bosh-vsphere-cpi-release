@@ -29,7 +29,7 @@ GEM
     mini_portile2 (2.4.0)
     mono_logger (1.1.0)
     multi_json (1.13.1)
-    netaddr (1.5.1)
+    netaddr (2.0.4)
     nokogiri (1.10.4)
       mini_portile2 (~> 2.4.0)
     oga (2.3)
@@ -93,7 +93,7 @@ DEPENDENCIES
   json (~> 2.1, >= 2.1.0)
   membrane (~> 1.1.0)
   mono_logger (~> 1.1.0)
-  netaddr (~> 1.5, >= 1.5.1)
+  netaddr (>= 2.0.4)
   nokogiri (>= 1.10.4)
   oga (= 2.3)
   parallel_tests
@@ -110,4 +110,4 @@ DEPENDENCIES
   vsphere-automation-vcenter (~> 0.1.0)
 
 BUNDLED WITH
-   1.17.2
+   2.0.1
