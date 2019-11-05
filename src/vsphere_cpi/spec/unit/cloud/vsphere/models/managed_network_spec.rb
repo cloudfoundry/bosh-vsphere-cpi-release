@@ -1,7 +1,7 @@
 require 'spec_helper'
 
 module VSphereCloud
-  describe ManagedNetwork, fake_logger: true do
+  xdescribe ManagedNetwork, fake_logger: true do
     let(:logical_switch) { instance_double(NSXT::LogicalSwitch,
                                            :id => 'switch-id',
                                            :display_name => 'switch-name') }
