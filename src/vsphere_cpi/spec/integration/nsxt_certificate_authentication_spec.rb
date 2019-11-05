@@ -108,7 +108,7 @@ describe 'NSXT certificate authentication', :nsxt_21 => true do
     @nsx_component_api.delete_certificate(cert_id)
   end
 
-  def attach_cert_to_principal(cert_id, pi_name = 'testprincipal', node_id = 'node-1')
+  def attach_cert_to_principal(cert_id, pi_name = 'testprincipal-3', node_id = 'node-5')
     pi = NSXT::PrincipalIdentity.new(name: pi_name, node_id: node_id,
                                      certificate_id: cert_id, permission_group: 'superusers')
     @nsx_component_api.register_principal_identity(pi).id

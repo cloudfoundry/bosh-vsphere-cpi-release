@@ -218,8 +218,8 @@ module VSphereCloud
               'host' => 'fake-host',
               'username' => nil,
               'password' => nil,
-              'certificate' => 'cert-path',
-              'private_key' => 'key-path'
+              'auth_certificate' => 'cert-path',
+              'auth_private_key' => 'key-path'
           }
         end
 
