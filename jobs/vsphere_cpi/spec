@@ -6,9 +6,7 @@ templates:
   cpi.json.erb: config/cpi.json
   nsx_cacert.pem.erb: config/nsx_cacert.pem
   nsxt_cacert.pem.erb: config/nsxt_cacert.pem
-  nsxt_auth_certificate.crt.erb: config/nsxt_auth_certificate.crt
-  nsxt_auth_private_key.key.erb: config/nsxt_auth_private_key.key
-
+  
 packages:
 - iso9660wrap
 - ruby-2.4-r4

@@ -1,5 +1,5 @@
 module VSphereCloud
-  class NSXTConfig < Struct.new(:host, :username, :password, :remote_auth, :certificate, :private_key, :default_vif_type)
+  class NSXTConfig < Struct.new(:host, :username, :password, :remote_auth, :auth_certificate, :auth_private_key, :default_vif_type)
     def self.validate_schema(config)
       return true if config.nil?
 
@@ -10,8 +10,8 @@ module VSphereCloud
         if config['username'].nil?
           #using cert authentication
           common_rules.merge! ({
-              'certificate' => String,
-              'private_key' => String})
+              'auth_certificate' => String,
+              'auth_private_key' => String})
         else
           common_rules.merge!({'username' => String,
                                'password' => String,
@@ -188,8 +188,8 @@ module VSphereCloud
         vcenter['nsxt']['username'],
         vcenter['nsxt']['password'],
         vcenter['nsxt']['remote_auth'],
-        vcenter['nsxt']['certificate'],
-        vcenter['nsxt']['private_key'],
+        vcenter['nsxt']['auth_certificate'],
+        vcenter['nsxt']['auth_private_key'],
         vcenter['nsxt']['default_vif_type']
       )
     end
@@ -234,8 +234,8 @@ module VSphereCloud
               optional('username') => String,
               optional('password') => String,
               optional('remote_auth') => bool,
-              optional('certificate') => String,
-              optional('private_key') => String,
+              optional('auth_certificate') => String,
+              optional('auth_private_key') => String,
               optional('default_vif_type') => String
             },
             optional('enable_human_readable_name') => bool,

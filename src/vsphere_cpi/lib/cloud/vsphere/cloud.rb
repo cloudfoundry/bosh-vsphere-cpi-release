@@ -42,6 +42,24 @@ module VSphereCloud
       other_client.logout rescue nil
     end
 
+    def replace_certs_keys_with_temp_files(nsxt_config)
+      if nsxt_config.auth_private_key
+        # Configure private key and cert if provided.
+        @certificate_file = Tempfile.open('auth_certificate') do |f|
+          f << nsxt_config.auth_certificate; f
+        end
+
+        @auth_private_key_file = Tempfile.open('auth_private_key') do |f|
+          f << nsxt_config.auth_private_key; f
+        end
+
+        # Re write values to file paths rather than direct certs.
+        nsxt_config.auth_private_key = @auth_private_key_file.path
+        nsxt_config.auth_certificate = @certificate_file.path
+      end
+      nsxt_config
+    end
+
     def initialize(options)
       @config = Config.build(options)
 
@@ -87,7 +105,10 @@ module VSphereCloud
       )
 
       if @config.nsxt_enabled?
-        nsxt_client = NSXTApiClientBuilder::build_api_client(@config.nsxt, logger)
+
+        nsxt_config =  replace_certs_keys_with_temp_files(@config.nsxt)
+
+        nsxt_client = NSXTApiClientBuilder::build_api_client(nsxt_config, logger)
 
         # Setup NSX-T Provider
         @nsxt_provider = NSXTProvider.new(nsxt_client, @config.nsxt.default_vif_type)

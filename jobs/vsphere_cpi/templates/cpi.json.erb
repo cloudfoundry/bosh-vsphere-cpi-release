@@ -93,10 +93,10 @@
     end
 
     if_p('vcenter.nsxt.auth_certificate') do
-      vcenter['nsxt']['certificate'] = '/var/vcap/jobs/vsphere_cpi/config/nsxt_auth_certificate.crt'
+      vcenter['nsxt']['auth_certificate'] = p('vcenter.nsxt.auth_certificate')
     end
     if_p('vcenter.nsxt.auth_private_key') do
-      vcenter['nsxt']['private_key'] = '/var/vcap/jobs/vsphere_cpi/config/nsxt_auth_private_key.key'
+      vcenter['nsxt']['auth_private_key'] = p('vcenter.nsxt.auth_private_key')
     end
 
     if_p('vcenter.nsxt.default_vif_type') do
