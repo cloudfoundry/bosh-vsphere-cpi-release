@@ -2036,6 +2036,7 @@ module VSphereCloud
       end
     end
 
+    # NOT NEEDED - FEATURE DISCONTINUED
     xdescribe '#create_network' do
       let(:network_definition) { {
                                  'range' => '192.168.111.0/24',
@@ -2092,6 +2093,7 @@ module VSphereCloud
       end
     end
 
+    # NOT NEEDED - FEATURE DISCONTINUED
     xdescribe '#delete_network' do
       let(:nsxt_provider) { instance_double(VSphereCloud::NSXTProvider) }
       let(:nsxt_client) { instance_double(NSXT::ApiClient) }
@@ -2203,5 +2205,32 @@ module VSphereCloud
       end
     end
 
+    describe '#replace_certs_keys_with_temp_files' do
+      let(:nsxt_config) do
+        VSphereCloud::NSXTConfig.new(
+          'host', 'user', 'password', 'true', 'cert', 'key', 'BARE_METAL'
+        )
+      end
+      it 'replaces certs and keys with their tempfile locations' do
+        subject.replace_certs_keys_with_temp_files(nsxt_config)
+        expect(nsxt_config.auth_private_key).to_not eq('key')
+        expect(File.read(nsxt_config.auth_private_key)).to eq('key')
+        expect(nsxt_config.auth_certificate).to_not eq('cert')
+        expect(File.read(nsxt_config.auth_certificate)).to eq('cert')
+      end
+
+      context 'when auth key is not provided' do
+        let(:nsxt_config) do
+          VSphereCloud::NSXTConfig.new(
+              'host', 'user', 'password', 'true', 'cert', nil, 'BARE_METAL'
+          )
+        end
+        it 'does not do anything on passed nsxt config' do
+          subject.replace_certs_keys_with_temp_files(nsxt_config)
+          expect(nsxt_config.auth_private_key).to be_nil
+          expect(nsxt_config.auth_certificate).to eq('cert')
+        end
+      end
+    end
   end
 end
