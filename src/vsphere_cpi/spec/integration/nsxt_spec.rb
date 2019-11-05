@@ -3,13 +3,61 @@ require 'securerandom'
 require 'integration/spec_helper'
 
 describe 'CPI', nsx_transformers: true do
+
+  before(:all) do
+    # Read basic info about env
+    @nsxt_host = fetch_property('BOSH_VSPHERE_CPI_NSXT_HOST')
+    @nsxt_username = fetch_property('BOSH_VSPHERE_CPI_NSXT_USERNAME')
+    @nsxt_password = fetch_property('BOSH_VSPHERE_CPI_NSXT_PASSWORD')
+    @nsxt_ca_cert = ENV['BOSH_VSPHERE_CPI_NSXT_CA_CERT']
+    if @nsxt_ca_cert
+      @ca_cert_file = Tempfile.new('bosh-cpi-ca-cert')
+      @ca_cert_file.write(@nsxt_ca_cert)
+      @ca_cert_file.close
+      ENV['BOSH_NSXT_CA_CERT_FILE'] = @ca_cert_file.path
+    end
+    @nsxt_opaque_vlan_1 = fetch_property('BOSH_VSPHERE_OPAQUE_VLAN')
+    @nsxt_opaque_vlan_2 = fetch_property('BOSH_VSPHERE_SECOND_OPAQUE_VLAN')
+
+    # Configure a user/pass client to add cert/key
+    # Client built Directly in TEST. NOT USING NSXTApiClientBuilder
+    configuration = NSXT::Configuration.new
+    configuration.host = @nsxt_host
+    configuration.username = @nsxt_username
+    configuration.password = @nsxt_password
+    configuration.client_side_validation = false
+    configuration.verify_ssl = false
+    configuration.verify_ssl_host = false
+    client = NSXT::ApiClient.new(configuration)
+
+    # Add cert and key
+    @nsx_component_api = NSXT::NsxComponentAdministrationApi.new(client)
+    @private_key = generate_private_key
+    @certificate = generate_certificate(@private_key)
+    @cert_id = submit_cert_to_nsxt(@certificate)
+    @principal_id = attach_cert_to_principal(@cert_id)
+  end
+
+  after(:all) do
+    delete_principal(@principal_id) unless @principal_id.nil?
+    delete_test_certificate(@cert_id) unless @cert_id.nil?
+    if @nsxt_ca_cert
+      ENV.delete('BOSH_NSXT_CA_CERT_FILE')
+      @ca_cert_file.unlink
+    end
+  end
+
+  # This works exclusively with cert/key pair
+  # Utilizes the CPI code in NSXTApiClientBuilder
   let(:cpi) do
     VSphereCloud::Cloud.new(cpi_options(nsxt: {
       host: @nsxt_host,
-      username: @nsxt_username,
-      password: @nsxt_password
+      auth_certificate: @certificate.to_s,
+      auth_private_key: @private_key.to_s
     }))
   end
+
+  # Verifier Client using user/pass. Built Directly in TEST
   let(:nsxt) do
     configuration = NSXT::Configuration.new
     configuration.host = @nsxt_host
@@ -58,37 +106,15 @@ describe 'CPI', nsx_transformers: true do
     }
   end
 
-  before do
-    @nsxt_host = fetch_property('BOSH_VSPHERE_CPI_NSXT_HOST')
-    @nsxt_username = fetch_property('BOSH_VSPHERE_CPI_NSXT_USERNAME')
-    @nsxt_password = fetch_property('BOSH_VSPHERE_CPI_NSXT_PASSWORD')
-    @nsxt_ca_cert = ENV['BOSH_VSPHERE_CPI_NSXT_CA_CERT']
-
-    if @nsxt_ca_cert
-      @ca_cert_file = Tempfile.new('bosh-cpi-ca-cert')
-      @ca_cert_file.write(@nsxt_ca_cert)
-      @ca_cert_file.close
-      ENV['BOSH_NSXT_CA_CERT_FILE'] = @ca_cert_file.path
-    end
-
-    @nsxt_opaque_vlan_1 = fetch_property('BOSH_VSPHERE_OPAQUE_VLAN')
-    @nsxt_opaque_vlan_2 = fetch_property('BOSH_VSPHERE_SECOND_OPAQUE_VLAN')
-  end
-
-  after do
-    if @nsxt_ca_cert
-      ENV.delete('BOSH_NSXT_CA_CERT_FILE')
-      @ca_cert_file.unlink
-    end
-  end
-
   describe 'on create_vm' do
     context 'when global default_vif_type is set', nsxt_21: true do
+      # This works exclusively with cert/key pair
+      # Utilizes the CPI code in NSXTApiClientBuilder
       let(:cpi) do
         VSphereCloud::Cloud.new(cpi_options(nsxt: {
           host: @nsxt_host,
-          username: @nsxt_username,
-          password: @nsxt_password,
+          auth_certificate: @certificate.to_s,
+          auth_private_key: @private_key.to_s,
           default_vif_type: 'PARENT'
         }))
       end
@@ -173,7 +199,6 @@ describe 'CPI', nsx_transformers: true do
           simple_vm_lifecycle(cpi, '', vm_type, network_spec) do |vm_id|
             verify_ports(vm_id) do |lport|
               expect(lport).not_to be_nil
-
               expect(nsgroup_effective_logical_port_member_ids(nsgroup_1)).to include(lport.id)
               expect(nsgroup_effective_logical_port_member_ids(nsgroup_2)).to include(lport.id)
             end
@@ -223,7 +248,6 @@ describe 'CPI', nsx_transformers: true do
           }
         }
       end
-
       context 'but atleast one server pool does not exists' do
         it 'raises an error' do
           expect do
@@ -316,7 +340,6 @@ describe 'CPI', nsx_transformers: true do
               member.target_type == 'LogicalPort' && member.target_property == 'id' && member.value == id
             end
           end
-
           expect(nsgroups).to eq([])
         end
       end
@@ -536,4 +559,42 @@ describe 'CPI', nsx_transformers: true do
       yield i if block_given?
     end
   end
+
+  def submit_cert_to_nsxt(certificate)
+    trust_object = NSXT::TrustObjectData.new(pem_encoded: certificate)
+    certs = @nsx_component_api.add_certificate_import(trust_object)
+    certs.results[0].id
+  end
+
+  def delete_test_certificate(cert_id)
+    @nsx_component_api.delete_certificate(cert_id)
+  end
+
+  def attach_cert_to_principal(cert_id, pi_name = 'testprincipal-nsxt-spec-4', node_id = 'node-nsxt-spec-4')
+    pi = NSXT::PrincipalIdentity.new(name: pi_name, node_id: node_id,
+                                     certificate_id: cert_id, permission_group: 'superusers')
+    @nsx_component_api.register_principal_identity(pi).id
+  end
+
+  def delete_principal(principal_id)
+    @nsx_component_api.delete_principal_identity(principal_id)
+  end
+
+  def generate_private_key
+    OpenSSL::PKey::RSA.new(2048)
+  end
+
+  def generate_certificate(private_key)
+    subject = '/CN=bosh-test-user'
+    cert = OpenSSL::X509::Certificate.new
+    cert.subject = cert.issuer = OpenSSL::X509::Name.parse(subject)
+    cert.not_before = Time.now
+    cert.not_after = Time.now + 365 * 24 * 60 * 60
+    cert.public_key = private_key.public_key
+    cert.serial = 0x0
+    cert.version = 1
+    cert.sign(private_key, OpenSSL::Digest::SHA256.new)
+    cert
+  end
+
 end
