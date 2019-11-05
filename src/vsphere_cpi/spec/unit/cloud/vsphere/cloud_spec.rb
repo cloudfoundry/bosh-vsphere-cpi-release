@@ -2036,7 +2036,7 @@ module VSphereCloud
       end
     end
 
-    describe '#create_network' do
+    xdescribe '#create_network' do
       let(:network_definition) { {
                                  'range' => '192.168.111.0/24',
                                  'gateway' => '192.168.111.1',
@@ -2092,7 +2092,7 @@ module VSphereCloud
       end
     end
 
-    describe '#delete_network' do
+    xdescribe '#delete_network' do
       let(:nsxt_provider) { instance_double(VSphereCloud::NSXTProvider) }
       let(:nsxt_client) { instance_double(NSXT::ApiClient) }
       let(:switch_provider) { instance_double(VSphereCloud::NSXTSwitchProvider) }
