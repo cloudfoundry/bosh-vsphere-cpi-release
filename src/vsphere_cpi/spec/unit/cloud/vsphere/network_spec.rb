@@ -27,7 +27,7 @@ module VSphereCloud
     let(:t0_router_id) { 't0-router-id' }
     let(:transport_zone_id) { 'zone-id' }
 
-    describe '#create' do
+    xdescribe '#create' do
       let(:logical_switch) { instance_double(NSXT::LogicalSwitch,
                                              :id => 'switch-id',
                                              :display_name => 'switch-name') }
@@ -239,7 +239,7 @@ module VSphereCloud
       end
     end
 
-    describe '#destroy' do
+    xdescribe '#destroy' do
       let(:logical_switch) { instance_double(NSXT::LogicalSwitch, tags: nil) }
       let(:switch_ports) { [instance_double(NSXT::LogicalPort)] }
 
