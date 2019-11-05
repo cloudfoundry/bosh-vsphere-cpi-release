@@ -1,7 +1,7 @@
 require 'spec_helper'
 
 module VSphereCloud
-  describe NetworkDefinition, fake_logger: true do
+  xdescribe NetworkDefinition, fake_logger: true do
     subject(:network) { NetworkDefinition.new(network_definition) }
     let(:network_definition) { {
         'range' => range,
