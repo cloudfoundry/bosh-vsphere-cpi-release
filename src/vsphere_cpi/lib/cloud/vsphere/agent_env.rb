@@ -21,8 +21,8 @@ module VSphereCloud
       result = env_iso_folder.match(/\[#{datastore_pattern}\] (.*)/)
       raise Bosh::Clouds::CloudError.new("Could not find matching datastore name '#{datastore.name}'") unless result
       env_path = result[1]
-
-      contents = @file_provider.fetch_file_from_datastore(datacenter_name, datastore, "#{env_path}/env.json")
+      ds_hosts = get_vm_vsphere_cluster_hosts(vm)
+      contents = @file_provider.fetch_file_from_datastore(datacenter_name, datastore, "#{env_path}/env.json", ds_hosts)
       raise Bosh::Clouds::CloudError.new("Unable to load env.json from '#{env_path}/env.json'") unless contents
 
       JSON.load(contents)
@@ -34,15 +34,16 @@ module VSphereCloud
 
       disconnect_cdrom(vm)
       clean_env(vm)
+      ds_hosts = get_vm_vsphere_cluster_hosts(vm)
       @file_provider.upload_file_to_datastore(location[:datacenter],
                                               location[:datastore].mob,
                                               "#{location[:vm]}/env.json",
-                                              env_json)
+                                              env_json, ds_hosts)
 
       @file_provider.upload_file_to_datastore(location[:datacenter],
                                               location[:datastore].mob,
                                               "#{location[:vm]}/env.iso",
-                                              generate_env_iso(env_json))
+                                              generate_env_iso(env_json), ds_hosts)
 
       file_name = "[#{location[:datastore].name}] #{location[:vm]}/env.iso"
       update_cdrom_env(vm, location[:datastore].mob, file_name)
@@ -66,6 +67,14 @@ module VSphereCloud
     end
 
     private
+
+    def get_vm_vsphere_cluster_hosts(vm_mob)
+      # As per the VC Object hierarchy,
+      #  - VM's host will be there
+      #  - The host will be bound to a cluster
+      #     - (true because CPI is using this and it does not deal with DC hosts)
+      vm_mob.runtime.host.parent.host
+    end
 
     def update_cdrom_env(vm, datastore, file_name)
       backing_info = Vim::Vm::Device::VirtualCdrom::IsoBackingInfo.new

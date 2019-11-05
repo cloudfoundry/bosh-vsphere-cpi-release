@@ -27,6 +27,7 @@ module VSphereCloud
 
       before do
         allow(client).to receive(:get_cdrom_device).with(vm).and_return(cdrom_device)
+        allow(subject).to receive(:get_vm_vsphere_cluster_hosts).with(vm).and_return([])
       end
 
       let(:cdrom_device) do
@@ -54,7 +55,7 @@ module VSphereCloud
         expect(file_provider).to receive(:fetch_file_from_datastore).with(
           'fake-datacenter-name 1',
           cdrom_datastore,
-          'fake-vm-name/env.json',
+          'fake-vm-name/env.json', []
         ).and_return('{"fake-response-json" : "some-value"}')
 
         expect(subject.get_current_env(vm, 'fake-datacenter-name 1')).to eq({'fake-response-json' => 'some-value'})
@@ -64,7 +65,7 @@ module VSphereCloud
         allow(file_provider).to receive(:fetch_file_from_datastore).with(
           'fake-datacenter-name 1',
           cdrom_datastore,
-          'fake-vm-name/env.json',
+          'fake-vm-name/env.json', []
         ).and_return(nil)
 
         expect {
@@ -163,6 +164,7 @@ module VSphereCloud
         allow(cdrom).to receive(:kind_of?).with(VimSdk::Vim::Vm::Device::VirtualCdrom).and_return(true)
         allow(client).to receive(:get_cdrom_device).with(vm).and_return(cdrom)
         allow(client).to receive(:find_parent).with(vm, VimSdk::Vim::Datacenter).and_return(datacenter)
+        allow(subject).to receive(:get_vm_vsphere_cluster_hosts).with(vm).and_return([])
       end
 
       def it_disconnects_cdrom
@@ -185,7 +187,7 @@ module VSphereCloud
           'fake-datacenter-name 1',
           vm_datastore_mob,
           'fake-vm-name/env.json',
-          '["fake-json"]'
+          '["fake-json"]', []
         ).and_return(double(:response, code: code))
       end
 
@@ -216,7 +218,7 @@ module VSphereCloud
           'fake-datacenter-name 1',
           vm_datastore_mob,
           'fake-vm-name/env.iso',
-          'iso contents',
+          'iso contents', []
         ).and_return(double(:response, code: 204))
       end
 
@@ -301,7 +303,7 @@ module VSphereCloud
               'fake-datacenter-name 1',
               vm_datastore_mob,
               'fake-vm-name/env.json',
-              '["fake-json"]'
+              '["fake-json"]', []
             ).and_raise 'Could not upload file'
         }
 
