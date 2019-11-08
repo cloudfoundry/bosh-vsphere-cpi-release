@@ -135,6 +135,8 @@ builds:
     version: "37"
   b7a5fd95-c26a-4152-7bd5-c9a549499a29:
     version: 52.1.5
+  c98c894a-0d3e-4e5c-4422-ff8409a67916:
+    version: 52.1.6
   cab2ea65-ad35-4b13-6aab-bba4291f622e:
     version: 52.1.1
   ddd564ba-3c87-4d54-81b9-77ebe29d17a2:
