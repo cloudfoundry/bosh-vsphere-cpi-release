@@ -64,7 +64,7 @@ module VSphereCloud
 
     def fetch_file_from_datastore_via_host(datacenter_name, datastore, path, ds_accessible_hosts)
       host = get_healthy_host(datastore, ds_accessible_hosts)
-      return FileTransferError.new("No healthy host available for transfer") if host.nil?
+      raise FileTransferError, "No healthy host available for transfer" if host.nil?
 
       url = "https://#{host.name}/folder/#{path}?" +
         "dsName=#{URI.escape(datastore.name)}"
@@ -75,7 +75,7 @@ module VSphereCloud
       # every Standard Error.
       rescue => e
         logger.info("Failed to acquire service ticket because #{e.inspect}")
-        raise FileTransferError.new("Permission to acquire generic service ticket absent")
+        raise FileTransferError, "Permission to acquire generic service ticket absent"
       end
 
       logger.info("Fetching file from #{url}...")
@@ -110,7 +110,7 @@ module VSphereCloud
 
     def upload_file_to_datastore_via_host(datacenter_name, datastore, path, contents, ds_accessible_hosts)
       host = get_healthy_host(datastore, ds_accessible_hosts)
-      return FileTransferError.new("No healthy host available for transfer") if host.nil?
+      raise FileTransferError, "No healthy host available for transfer" if host.nil?
 
       url = "https://#{host.name}/folder/#{path}?" +
         "dsName=#{URI.escape(datastore.name)}"
@@ -121,7 +121,7 @@ module VSphereCloud
       # every Standard Error.
       rescue => e
         logger.info("Failed to acquire service ticket because #{e.inspect}")
-        raise FileTransferError.new("Permission to acquire generic service ticket absent")
+        raise FileTransferError, "Permission to acquire generic service ticket absent"
       end
 
       logger.info("Uploading file to #{url}...")
