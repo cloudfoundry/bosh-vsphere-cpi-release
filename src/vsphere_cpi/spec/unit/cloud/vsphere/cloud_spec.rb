@@ -1616,7 +1616,7 @@ module VSphereCloud
           expect(vm).to receive(:power_off)
           expect(vm).to receive(:delete)
           expect(nsxt_provider).to receive(:remove_vm_from_nsgroups).with(vm)
-          expect(nsxt_provider).to receive(:remove_vm_from_server_pools).with(ip_address)
+          expect(nsxt_provider).to receive(:remove_vm_from_server_pools).with(vm).once
           vsphere_cloud.delete_vm('vm-id')
         end
 
@@ -1627,7 +1627,7 @@ module VSphereCloud
             expect(nsxt_provider).to receive(:remove_vm_from_nsgroups).with(vm).and_raise(
               VIFNotFound.new('vm-id', 'fake-external-id')
             )
-            expect(nsxt_provider).to receive(:remove_vm_from_server_pools).with(ip_address)
+            expect(nsxt_provider).to receive(:remove_vm_from_server_pools).with(vm)
 
             vsphere_cloud.delete_vm('vm-id')
           end
@@ -1637,7 +1637,7 @@ module VSphereCloud
             expect(vm).to receive(:power_off)
             expect(vm).to receive(:delete)
             expect(nsxt_provider).to receive(:remove_vm_from_nsgroups).with(vm)
-            expect(nsxt_provider).to receive(:remove_vm_from_server_pools).with(ip_address).and_raise(
+            expect(nsxt_provider).to receive(:remove_vm_from_server_pools).with(vm).and_raise(
               NSXT::ApiCallError.new('NSX=T API error')
             )
             vsphere_cloud.delete_vm('vm-id')
