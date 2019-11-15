@@ -455,7 +455,6 @@ module VSphereCloud
         logger.info("Deleting vm: #{vm_cid}")
 
         vm = vm_provider.find(vm_cid)
-        vm_ip = vm.mob.guest&.ip_address
 
         # find vm_groups vm is part of before deleting it
         cluster = vm.mob.runtime.host&.parent #host can be nil if vm is not running
@@ -483,7 +482,7 @@ module VSphereCloud
             logger.info("Failed to remove VM from NSGroups: #{e.message}")
           end
           begin
-            @nsxt_provider.remove_vm_from_server_pools(vm_ip)
+            @nsxt_provider.remove_vm_from_server_pools(vm)
           rescue => e
             logger.info("Failed to remove VM from ServerPool: #{e.message}")
           end
