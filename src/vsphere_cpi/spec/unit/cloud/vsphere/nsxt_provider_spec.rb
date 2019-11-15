@@ -522,7 +522,7 @@ describe VSphereCloud::NSXTProvider, fake_logger: true do
         nsxt_provider.add_vm_to_server_pools(vm, nil)
       end
       it 'adds vm to server_pools with given port' do
-        expect(NSXT::PoolMemberSetting).to receive(:new).with(ip_address: ip_address, port: port_no)
+        expect(NSXT::PoolMemberSetting).to receive(:new).with(ip_address: ip_address, port: port_no, display_name: vm.cid)
         expect(services_svc).to receive(:perform_pool_member_action).with(serverpool_1.id, an_instance_of(NSXT::PoolMemberSettingList), 'ADD_MEMBERS')
         nsxt_provider.add_vm_to_server_pools(vm, server_pools)
       end
@@ -617,7 +617,7 @@ describe VSphereCloud::NSXTProvider, fake_logger: true do
 
   describe '#remove_vm_from_server_pools' do
     let(:vm_ip_address) { '192.168.111.5' }
-    let(:pool_member) { NSXT::PoolMember.new(ip_address: vm_ip_address, port: '80') }
+    let(:pool_member) { NSXT::PoolMember.new(ip_address: vm_ip_address, port: '80', display_name: vm.cid) }
     let(:server_pool_1) do
       NSXT::LbPool.new(id: 'id-1', display_name: 'test-static-serverpool', members: [pool_member])
     end
@@ -625,13 +625,33 @@ describe VSphereCloud::NSXTProvider, fake_logger: true do
       NSXT::LbPool.new(id: 'id-2', display_name: 'test-dynamic-serverpool', members: nil)
     end
     before do
+      allow(vm).to receive_message_chain(:mob, :guest, :ip_address).and_return(vm_ip_address)
       allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:services_svc).and_return(services_svc)
       expect(services_svc).to receive_message_chain(:list_load_balancer_pools, :results).and_return([server_pool_1, server_pool_2])
     end
 
     it 'removes VM from all server pools' do
       expect(services_svc).to receive(:perform_pool_member_action).with(server_pool_1.id,an_instance_of(NSXT::PoolMemberSettingList),'REMOVE_MEMBERS').once
-      nsxt_provider.remove_vm_from_server_pools(vm_ip_address)
+      nsxt_provider.remove_vm_from_server_pools(vm)
+    end
+
+
+    context 'when two VMs have same IP and different cid(belong to separate PAS deployments) and are in same server pool' do
+      let(:vm_2) { instance_double(VSphereCloud::Resources::VM, cid: 'fake-vm2-id', nics: nics) }
+      let(:pool_member_2) { NSXT::PoolMember.new(ip_address: vm_ip_address, port: '80', display_name: vm_2.cid) }
+      let(:server_pool_1) do
+        NSXT::LbPool.new(id: 'id-1', display_name: 'test-static-serverpool', members: [pool_member, pool_member_2])
+      end
+      it 'should only remove VM with correct cid and IP' do
+        expect(services_svc).to receive(:perform_pool_member_action).with(server_pool_1.id,
+                                                                          an_instance_of(NSXT::PoolMemberSettingList),'REMOVE_MEMBERS').once
+        allow(services_svc).to receive(:perform_pool_member_action).with(server_pool_1.id,
+                                                                          an_instance_of(NSXT::PoolMemberSettingList),'REMOVE_MEMBERS') do |pool_setting, action|
+                                                                            server_pool_1.members.delete(pool_member)
+                                                                          end
+        nsxt_provider.remove_vm_from_server_pools(vm)
+        expect(server_pool_1.members).to eq([pool_member_2])
+      end
     end
   end
 
