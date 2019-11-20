@@ -98,7 +98,7 @@ module VSphereCloud
       pool_id = document.xpath('poolId').text
       document.xpath('member').remove
 
-      response = @http_client.put("https://#{@nsx_url}/api/4.0/edges/#{edge_id}/loadbalancer/config/pools/#{pool_id}", document.to_xml, { 'Content-Type' => 'text/xml' })
+      response = @http_client.put("https://#{@nsx_url}/api/4.0/edges/#{edge_id}/loadbalancer/config/pools/#{pool_id}", document.to_xml, { 'Content-Type' => 'text/xml', 'Accept' => 'text/xml' })
       unless response.status.between?(200, 299)
         raise "Failed to update Pool '#{pool_name}' under Edge '#{edge_name}' with unknown NSX error: '#{response.body}'"
       end
@@ -157,7 +157,7 @@ module VSphereCloud
         end
 
         pool_xml = create_pool_xml(pool_details, members_to_add)
-        response = @http_client.put("https://#{@nsx_url}/api/4.0/edges/#{edge_id}/loadbalancer/config/pools/#{pool_id}", pool_xml, { 'Content-Type' => 'text/xml' })
+        response = @http_client.put("https://#{@nsx_url}/api/4.0/edges/#{edge_id}/loadbalancer/config/pools/#{pool_id}", pool_xml, { 'Content-Type' => 'text/xml', 'Accept' => 'text/xml' })
         unless response.status.between?(200, 299)
           raise "Failed to update LB Pool ID '#{pool_id}' under Edge ID '#{edge_id}' with unknown NSX error: '#{response.body}'"
         end
@@ -294,7 +294,7 @@ module VSphereCloud
       response = @http_client.post(
         "https://#{@nsx_url}/api/2.0/services/securitygroup/bulk/globalroot-0",
         create_security_group_content(security_group_name),
-        {'Content-Type' => 'text/xml'}
+        { 'Content-Type' => 'text/xml', 'Accept' => 'text/xml' }
       )
       if response.status.between?(200, 299)
         return response.body
