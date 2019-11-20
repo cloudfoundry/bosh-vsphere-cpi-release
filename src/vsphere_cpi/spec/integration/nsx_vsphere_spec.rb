@@ -70,6 +70,46 @@ describe 'NSX for vsphere integration', nsx_vsphere: true do
     end
   end
 
+  context 'when vm_type specifies an nsx Security Group that already exists' do
+    let(:dup_security_grp) { 'cpi-duplicate-gs-test'}
+
+    before do
+      begin
+        cpi.nsx.create_new_security_group(dup_security_grp)
+      rescue => e
+        # ignore clean-up errors
+        puts e
+        raise e
+      end
+    end
+
+    after do
+      begin
+        cpi.nsx.delete_security_group(dup_security_grp)
+      rescue => e
+        # ignore clean-up errors
+        puts e
+      end
+    end
+
+    let(:vm_type) do
+      base_vm_type.merge(
+          'nsx' => {
+              'security_groups' => [
+                  dup_security_grp
+              ]
+          }
+      )
+    end
+
+    it 'does not create the Security Group if it exists and proceeds normally' do
+      vm_lifecycle(cpi, [], vm_type, network_spec, @stemcell_id) do |vm_id|
+        vm_ids = cpi.nsx.get_vms_in_security_group(dup_security_grp)
+        expect(vm_ids).to eq([vm_id])
+      end
+    end
+  end
+
   context 'when vm_type specifies an nsx Security Group' do
     let(:vm_type) do
       base_vm_type.merge(

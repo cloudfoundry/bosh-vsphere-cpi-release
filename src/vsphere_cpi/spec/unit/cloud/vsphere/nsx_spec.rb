@@ -17,6 +17,8 @@ module VSphereCloud
     let(:sg_name)               { 'fake-security-group-name' }
     let(:sg_id)                 { 'fake-security-group-id' }
     let(:algorithm)             { 'fake-algo' }
+    let(:accept_header)         { {"Accept"=>"application/xml"} }
+    let(:accept_content_header) { { 'Content-Type' => 'application/xml', 'Accept' => 'application/xml' } }
     let(:existing_edges) do
       [
         { 'id' => edge_id, 'name' => edge_name }
@@ -521,7 +523,7 @@ module VSphereCloud
     def expect_POST_security_group_happy
       expect(http_client).to receive(:post) do |url, body, headers|
         expect(url).to eq("https://#{nsx_address}/api/2.0/services/securitygroup/bulk/globalroot-0")
-        expect(headers).to eq({'Content-Type' => 'text/xml'})
+        expect(headers).to eq(accept_content_header)
 
         element = Oga.parse_xml(body)
         security_groups = element.xpath('securitygroup')
@@ -538,53 +540,53 @@ module VSphereCloud
 
     def expect_PUT_security_group_vm_happy
       put_response = double('response', status: 200, body: nil)
-      expect(http_client).to receive(:put).with("https://#{nsx_address}/api/2.0/services/securitygroup/#{sg_id}/members/#{vm_id}", nil)
+      expect(http_client).to receive(:put).with("https://#{nsx_address}/api/2.0/services/securitygroup/#{sg_id}/members/#{vm_id}", nil, an_instance_of(Hash))
                                .and_return(put_response)
     end
 
     def expect_PUT_security_group_vm_duplicate
       put_response = double('response', status: 500, body: "<error><details>The object #{vm_id} is already present in the system.</details><errorCode>203</errorCode><moduleName>core-services</moduleName></error>")
-      expect(http_client).to receive(:put).with("https://#{nsx_address}/api/2.0/services/securitygroup/#{sg_id}/members/#{vm_id}", nil)
+      expect(http_client).to receive(:put).with("https://#{nsx_address}/api/2.0/services/securitygroup/#{sg_id}/members/#{vm_id}", nil, an_instance_of(Hash))
                                .and_return(put_response)
     end
 
     def expect_PUT_security_group_vm_duplicate_with_311
       put_response = double('response', status: 500, body: "<error><details>The object #{vm_id} is already present in the system.</details><errorCode>311</errorCode><moduleName>core-services</moduleName></error>")
-      expect(http_client).to receive(:put).with("https://#{nsx_address}/api/2.0/services/securitygroup/#{sg_id}/members/#{vm_id}", nil)
+      expect(http_client).to receive(:put).with("https://#{nsx_address}/api/2.0/services/securitygroup/#{sg_id}/members/#{vm_id}", nil, an_instance_of(Hash))
         .and_return(put_response)
     end
 
     def expect_PUT_security_group_vm_sad(error = 'fake-nsx-error')
       put_response = double('response', status: 500, body: error)
       expect(http_client).to receive(:put)
-        .with("https://#{nsx_address}/api/2.0/services/securitygroup/#{sg_id}/members/#{vm_id}", nil)
+        .with("https://#{nsx_address}/api/2.0/services/securitygroup/#{sg_id}/members/#{vm_id}", nil, an_instance_of(Hash))
         .and_return(put_response)
     end
 
     def expect_GET_security_group_vms_happy
       response_document= Oga.parse_xml("<vmnodes><vmnode><vmName>#{vm_name}</vmName><vmId>#{vm_id}</vmId></vmnode></vmnodes>")
       response = double('response', status: 200, body: response_document.to_xml)
-      expect(http_client).to receive(:get).with("https://#{nsx_address}/api/2.0/services/securitygroup/#{sg_id}/translation/virtualmachines")
+      expect(http_client).to receive(:get).with("https://#{nsx_address}/api/2.0/services/securitygroup/#{sg_id}/translation/virtualmachines", an_instance_of(Hash))
                                .and_return(response)
     end
 
     def expect_GET_security_group_vms_sad
       response = double('response', status: 500, body: 'fake-nsx-error')
-      expect(http_client).to receive(:get).with("https://#{nsx_address}/api/2.0/services/securitygroup/#{sg_id}/translation/virtualmachines")
+      expect(http_client).to receive(:get).with("https://#{nsx_address}/api/2.0/services/securitygroup/#{sg_id}/translation/virtualmachines", an_instance_of(Hash))
                                .and_return(response)
     end
 
     def expect_GET_security_groups_happy
       response_document= Oga.parse_xml("<list><securitygroup><name>#{sg_name}</name><objectId>#{sg_id}</objectId></securitygroup></list>")
       response = double('response', status: 200, body: response_document.to_xml)
-      expect(http_client).to receive(:get).with("https://#{nsx_address}/api/2.0/services/securitygroup/scope/globalroot-0")
+      expect(http_client).to receive(:get).with("https://#{nsx_address}/api/2.0/services/securitygroup/scope/globalroot-0", an_instance_of(Hash))
                                .and_return(response)
     end
 
     def expect_GET_two_security_groups_happy
       response_document= Oga.parse_xml("<list><securitygroup><name>#{sg_name}</name><objectId>#{sg_id}</objectId></securitygroup><securitygroup><name>#{second_sg_name}</name><objectId>#{second_sg_id}</objectId></securitygroup></list>")
       response = double('response', status: 200, body: response_document.to_xml)
-      expect(http_client).to receive(:get).with("https://#{nsx_address}/api/2.0/services/securitygroup/scope/globalroot-0")
+      expect(http_client).to receive(:get).with("https://#{nsx_address}/api/2.0/services/securitygroup/scope/globalroot-0", an_instance_of(Hash))
                                .and_return(response)
     end
 
@@ -603,7 +605,7 @@ module VSphereCloud
 
     def expect_GET_security_group_sad
       find_sg_response = double('response', status: 500, body: 'fake-nsx-error')
-      expect(http_client).to receive(:get).with("https://#{nsx_address}/api/2.0/services/securitygroup/scope/globalroot-0")
+      expect(http_client).to receive(:get).with("https://#{nsx_address}/api/2.0/services/securitygroup/scope/globalroot-0", an_instance_of(Hash))
         .and_return(find_sg_response)
     end
 
@@ -634,7 +636,7 @@ module VSphereCloud
 
       response_body = Helpers::XML.ruby_struct_to_xml('pagedEdgeList', edge_list)
       edges_response = double('response', status: 200, body: response_body)
-      expect(http_client).to receive(:get).with("https://#{nsx_address}/api/4.0/edges")
+      expect(http_client).to receive(:get).with("https://#{nsx_address}/api/4.0/edges", accept_header)
                                .and_return(edges_response)
     end
 
@@ -659,26 +661,27 @@ module VSphereCloud
       end
 
       pool_list_response = double('response', status: 200, body: Helpers::XML.ruby_struct_to_xml('loadBalancer', pool_list))
-      expect(http_client).to receive(:get).with("https://#{nsx_address}/api/4.0/edges/#{edge_id}/loadbalancer/config/pools")
+      expect(http_client).to receive(:get).with("https://#{nsx_address}/api/4.0/edges/#{edge_id}/loadbalancer/config/pools",
+                                                accept_header)
                                .and_return(pool_list_response)
     end
 
     def expect_GET_edges_sad
       edge_name_response = double('response', status: 500, body: 'fake-nsx-edge')
-      expect(http_client).to receive(:get).with("https://#{nsx_address}/api/4.0/edges")
+      expect(http_client).to receive(:get).with("https://#{nsx_address}/api/4.0/edges", accept_header)
                                .and_return(edge_name_response)
     end
 
     def expect_GET_pools_sad
       pool_name_response = double('response', status: 500, body: 'fake-pool-error')
-      expect(http_client).to receive(:get).with("https://#{nsx_address}/api/4.0/edges/#{edge_id}/loadbalancer/config/pools")
-                               .and_return(pool_name_response)
+      expect(http_client).to receive(:get).with("https://#{nsx_address}/api/4.0/edges/#{edge_id}/loadbalancer/config/pools",
+                                                an_instance_of(Hash)).and_return(pool_name_response)
     end
 
     def expect_PUT_pool_happy(edge_id, pool_id, pool_name, members)
       expect(http_client).to receive(:put) do |url, body, headers|
         expect(url).to eq("https://#{nsx_address}/api/4.0/edges/#{edge_id}/loadbalancer/config/pools/#{pool_id}")
-        expect(headers).to eq({'Content-Type' => 'text/xml'})
+        expect(headers).to eq(accept_content_header)
 
         element = Oga.parse_xml(body)
         target_pool_name = element.xpath('pool/name').text
