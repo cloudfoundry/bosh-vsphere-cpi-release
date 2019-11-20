@@ -35,7 +35,7 @@ module VSphereCloud
 
         # TODO : verify `failIfExists` presence in older releases.
         #response = @http_client.put("https://#{@nsx_url}/api/2.0/services/securitygroup/#{sg_id}/members/#{vm_id}?failIfExists=false", nil)
-        response = @http_client.put("https://#{@nsx_url}/api/2.0/services/securitygroup/#{sg_id}/members/#{vm_id}", nil)
+        response = @http_client.put("https://#{@nsx_url}/api/2.0/services/securitygroup/#{sg_id}/members/#{vm_id}", nil, {'Accept' => 'application/xml'})
 
         if vm_belongs_to_security_group?(response.body)
           logger.debug("VM '#{vm_id}' already belongs to Security Group '#{security_group_name}'.")
@@ -72,7 +72,7 @@ module VSphereCloud
 
       sg_id = find_security_group_id_by_name(security_group_name)
 
-      response = @http_client.get("https://#{@nsx_url}/api/2.0/services/securitygroup/#{sg_id}/translation/virtualmachines")
+      response = @http_client.get("https://#{@nsx_url}/api/2.0/services/securitygroup/#{sg_id}/translation/virtualmachines", { 'Accept' => 'application/xml' })
       unless response.status.between?(200, 299)
         raise "Failed to query VMs for Security Group '#{security_group_name}' with unknown NSX error: '#{response.body}'"
       end
@@ -98,7 +98,9 @@ module VSphereCloud
       pool_id = document.xpath('poolId').text
       document.xpath('member').remove
 
-      response = @http_client.put("https://#{@nsx_url}/api/4.0/edges/#{edge_id}/loadbalancer/config/pools/#{pool_id}", document.to_xml, { 'Content-Type' => 'text/xml' })
+      response = @http_client.put("https://#{@nsx_url}/api/4.0/edges/#{edge_id}/loadbalancer/config/pools/#{pool_id}",
+                                  document.to_xml, { 'Content-Type' => 'application/xml', 'Accept' => 'application/xml' })
+      
       unless response.status.between?(200, 299)
         raise "Failed to update Pool '#{pool_name}' under Edge '#{edge_name}' with unknown NSX error: '#{response.body}'"
       end
@@ -129,6 +131,26 @@ module VSphereCloud
       end
     end
 
+    def create_new_security_group(security_group_name)
+      response = @http_client.post(
+          "https://#{@nsx_url}/api/2.0/services/securitygroup/bulk/globalroot-0",
+          create_security_group_content(security_group_name),
+          { 'Content-Type' => 'application/xml', 'Accept' => 'application/xml' }
+      )
+      if response.status.between?(200, 299)
+        return response.body
+      end
+
+      error_document = Oga.parse_xml(response.body)
+      error_code_element = error_document.xpath('error/errorCode')
+
+      tag_already_exists = (!error_code_element.empty? && error_code_element.text == '210')
+      if tag_already_exists
+        return nil
+      end
+
+      raise "Failed to create Security Group with unknown NSX Error: '#{response.body}'"
+    end
     private
 
     def populate_security_group_ids(members)
@@ -157,7 +179,7 @@ module VSphereCloud
         end
 
         pool_xml = create_pool_xml(pool_details, members_to_add)
-        response = @http_client.put("https://#{@nsx_url}/api/4.0/edges/#{edge_id}/loadbalancer/config/pools/#{pool_id}", pool_xml, { 'Content-Type' => 'text/xml' })
+        response = @http_client.put("https://#{@nsx_url}/api/4.0/edges/#{edge_id}/loadbalancer/config/pools/#{pool_id}", pool_xml, { 'Content-Type' => 'application/xml', 'Accept' => 'application/xml' })
         unless response.status.between?(200, 299)
           raise "Failed to update LB Pool ID '#{pool_id}' under Edge ID '#{edge_id}' with unknown NSX error: '#{response.body}'"
         end
@@ -213,7 +235,7 @@ module VSphereCloud
     end
 
     def get_edge_list_element
-      response = @http_client.get("https://#{@nsx_url}/api/4.0/edges")
+      response = @http_client.get("https://#{@nsx_url}/api/4.0/edges", {'Accept' => 'application/xml'})
       unless response.status.between?(200, 299)
         raise "Failed to list Edges with unknown NSX error: '#{response.body}'"
       end
@@ -226,7 +248,7 @@ module VSphereCloud
     end
 
     def get_pool_details(edge_id, pool_name)
-      response = @http_client.get("https://#{@nsx_url}/api/4.0/edges/#{edge_id}/loadbalancer/config/pools")
+      response = @http_client.get("https://#{@nsx_url}/api/4.0/edges/#{edge_id}/loadbalancer/config/pools", {'Accept' => 'application/xml'})
       unless response.status.between?(200, 299)
         raise "Failed to query edge's '#{edge_id}' pool's '#{pool_name}' security tag with unknown NSX error: '#{response.body}'"
       end
@@ -263,7 +285,7 @@ module VSphereCloud
     end
 
     def get_security_group_list_element
-      response = @http_client.get("https://#{@nsx_url}/api/2.0/services/securitygroup/scope/globalroot-0")
+      response = @http_client.get("https://#{@nsx_url}/api/2.0/services/securitygroup/scope/globalroot-0", {'Accept' => 'application/xml'})
       unless response.status.between?(200, 299)
         raise "Failed to query list of Security Groups with unknown NSX error: '#{response.body}'"
       end
@@ -273,7 +295,7 @@ module VSphereCloud
     end
 
     def find_security_group_id_by_name(security_group_name)
-      response = @http_client.get("https://#{@nsx_url}/api/2.0/services/securitygroup/scope/globalroot-0")
+      response = @http_client.get("https://#{@nsx_url}/api/2.0/services/securitygroup/scope/globalroot-0", {'Accept' => 'application/xml'})
       unless response.status.between?(200, 299)
         raise "Failed to query list of Security Groups with unknown NSX error: '#{response.body}'"
       end
@@ -288,27 +310,6 @@ module VSphereCloud
       end
 
       security_group_node.xpath('objectId').text
-    end
-
-    def create_new_security_group(security_group_name)
-      response = @http_client.post(
-        "https://#{@nsx_url}/api/2.0/services/securitygroup/bulk/globalroot-0",
-        create_security_group_content(security_group_name),
-        {'Content-Type' => 'text/xml'}
-      )
-      if response.status.between?(200, 299)
-        return response.body
-      end
-
-      error_document = Oga.parse_xml(response.body)
-      error_code_element = error_document.xpath('error/errorCode')
-
-      tag_already_exists = (!error_code_element.empty? && error_code_element.text == '210')
-      if tag_already_exists
-        return nil
-      end
-
-      raise "Failed to create Security Group with unknown NSX Error: '#{response.body}'"
     end
 
     def create_security_group_content(security_group_name)
