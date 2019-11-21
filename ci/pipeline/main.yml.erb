@@ -52,12 +52,6 @@ jobs:
         - put: environment
           resource: pool-6.5-NSXT21
           params: {acquire: true}
-        - task: extend-lease-6.5
-          file: source-ci/ci/tasks/extend-lease.yml
-          params:
-            DBCUSER: {{dbc_user}}
-            DBCHOST: {{dbc_host}}
-            DBC_SSH_KEY: {{dbc_key}}
           on_failure:
             put: pool-6.5-NSXT21
             params : {release: environment}
@@ -70,7 +64,7 @@ jobs:
         - get: source-ci
         - {get: cpi-release,              trigger: false, resource: bosh-cpi-artifacts, passed: [lock-bats]}
         - {get: environment,              trigger: true,  passed: [lock-bats], resource: pool-6.5-NSXT21}
-        - {get: bosh-release,             trigger: false, version: {version: "264.17.0"}, resource: old-bosh-release}
+        - {get: bosh-release,             trigger: false, resource: old-bosh-release}
         - {get: stemcell,                 trigger: false, version: {version: "3468.46"}, resource: stemcell}
         - {get: certification,            trigger: false}
         - {get: bosh-deployment,          trigger: false}
