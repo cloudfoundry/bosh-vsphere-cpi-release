@@ -9,12 +9,6 @@
       - put: environment
         resource: <%= e "pool-#{pool}" %>
         params: { acquire: true }
-      - task: extend-lease
-        file: source-ci/ci/tasks/extend-lease.yml
-        params:
-          DBCUSER: {{dbc_user}}
-          DBCHOST: {{dbc_host}}
-          DBC_SSH_KEY: {{dbc_key}}
         on_failure:
           put: <%= e "pool-#{pool}" %>
           params : { release: environment }
