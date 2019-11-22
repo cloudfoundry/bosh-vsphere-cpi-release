@@ -13,6 +13,8 @@ builds:
     version: "22"
   0f8fbf54-e156-4b8c-9d23-dfccb1af6929:
     version: "14"
+  128c17b4-a883-4a8c-615c-6450342d236d:
+    version: 53.0.3
   15681db4-166a-4a5b-6e8f-0eeedfdda27f:
     version: 51.0.3
   1592450d-4c4b-4647-8264-3b98437899e3:
