@@ -215,7 +215,7 @@ module VSphereCloud
       if network_name.include?('/')
         container_name = File.dirname(network_name)
         network_name = File.basename(network_name)
-        network_container = find_by_inventory_path([ datacenter.name, 'network', container_name])
+        network_container = find_by_inventory_path([datacenter.name, 'network', container_name])
         if network_container.nil?
           network_container = find_child_by_name(datacenter.mob.network_folder, container_name.split('/'))
         end
@@ -229,7 +229,14 @@ module VSphereCloud
       end
 
       target_network = nil
-      matching_networks = valid_networks.select { |n| n.name == network_name }
+      matching_networks = valid_networks.select do |network|
+        begin
+          network.name == network_name
+        rescue => e
+          logger.warn("Can't retrieve name of network #{network}: #{e}")
+          false
+        end
+      end
       if matching_networks.length == 1
         target_network = matching_networks.first
       elsif matching_networks.length > 1
