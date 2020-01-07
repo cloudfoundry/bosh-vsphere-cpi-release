@@ -7,7 +7,7 @@ if ENV['COVERAGE']
   SimpleCov.start
 end
 
-PROJECT_RUBY_VERSION = ENV.fetch('PROJECT_RUBY_VERSION', '2.4.2')
+PROJECT_RUBY_VERSION = ENV.fetch('PROJECT_RUBY_VERSION', '2.6.5')
 
 require 'fakefs/spec_helpers'
 
