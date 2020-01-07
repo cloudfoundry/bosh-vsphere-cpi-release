@@ -16,7 +16,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       wget && \
     rm -rf /var/lib/apt/lists/*
 
-ENV RUBY_VERSION=2.4.2 GOLANG_VERSION=1.8.3
+ENV RUBY_VERSION=2.6.5 GOLANG_VERSION=1.8.3
 
 COPY ruby-install /work/ruby-install/
 
