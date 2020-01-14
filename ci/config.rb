@@ -8,7 +8,7 @@ $pipeline.pool('6.0-NSXV') do |pool|
   }
 end
 
-$pipeline.pool('6.5-NSXT21') do |pool|
+$pipeline.pool('6.5-NSXT25') do |pool|
   pool.params = {
     RSPEC_FLAGS: [
       '--tag ~disk_migration',
@@ -19,7 +19,7 @@ $pipeline.pool('6.5-NSXT21') do |pool|
   }
 end
 
-$pipeline.pool('6.5-NSXT22') do |pool|
+$pipeline.pool('6.5-NSXT24') do |pool|
   pool.params = {
     RSPEC_FLAGS: [
       '--tag nsx_transformers',
@@ -29,7 +29,7 @@ $pipeline.pool('6.5-NSXT22') do |pool|
   }
 end
 
-$pipeline.pool('6.7-NSXT22') do |pool|
+$pipeline.pool('6.7-NSXT25') do |pool|
   pool.params = {
     RSPEC_FLAGS: [
       '--tag ~nsx_vsphere',
@@ -39,7 +39,7 @@ $pipeline.pool('6.7-NSXT22') do |pool|
   }
 end
 
-$pipeline.pool('6.7-NSXT23') do |pool|
+$pipeline.pool('6.7-NSXT24') do |pool|
   pool.params = {
     RSPEC_FLAGS: [
       '--tag nsx_transformers'
