@@ -23,10 +23,10 @@ jobs:
         trigger: true
         passed:
         - lifecycle-6.0-NSXV
-        - lifecycle-6.5-NSXT21
-        - lifecycle-6.5-NSXT22
-        - lifecycle-6.7-NSXT22
-        - lifecycle-6.7-NSXT23
+        - lifecycle-6.5-NSXT24
+        - lifecycle-6.5-NSXT25
+        - lifecycle-6.7-NSXT24
+        - lifecycle-6.7-NSXT25
       - get: version-semver
         trigger: false
         params: { bump: patch }
@@ -50,10 +50,10 @@ jobs:
           passed: [build-candidate]
       - do:
         - put: environment
-          resource: pool-6.5-NSXT21
+          resource: pool-6.5-NSXT25
           params: {acquire: true}
           on_failure:
-            put: pool-6.5-NSXT21
+            put: pool-6.5-NSXT25
             params : {release: environment}
         attempts: 4
 
@@ -63,7 +63,7 @@ jobs:
       - aggregate:
         - get: source-ci
         - {get: cpi-release,              trigger: false, resource: bosh-cpi-artifacts, passed: [lock-bats]}
-        - {get: environment,              trigger: true,  passed: [lock-bats], resource: pool-6.5-NSXT21}
+        - {get: environment,              trigger: true,  passed: [lock-bats], resource: pool-6.5-NSXT25}
         - {get: bosh-release,             trigger: false, resource: old-bosh-release}
         - {get: stemcell,                 trigger: false, version: {version: "3468.46"}, resource: stemcell}
         - {get: certification,            trigger: false}
@@ -93,7 +93,7 @@ jobs:
             STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-trusty-go_agent
         on_failure:
           aggregate:
-          - put: pool-6.5-NSXT21
+          - put: pool-6.5-NSXT25
             params : {remove: environment}
           - put: notify
             params:
@@ -112,9 +112,9 @@ jobs:
 
   - name: unlock-bats
     plan:
-      - {trigger: true, passed: [bats], get: pool-6.5-NSXT21}
-      - put: pool-6.5-NSXT21
-        params : {release: pool-6.5-NSXT21}
+      - {trigger: true, passed: [bats], get: pool-6.5-NSXT25}
+      - put: pool-6.5-NSXT25
+        params : {release: pool-6.5-NSXT25}
 
   - name: delivery
     plan:
@@ -123,10 +123,10 @@ jobs:
         trigger: ((trigger_delivery_job))
         passed:
         - lifecycle-6.0-NSXV
-        - lifecycle-6.5-NSXT21
-        - lifecycle-6.5-NSXT22
-        - lifecycle-6.7-NSXT22
-        - lifecycle-6.7-NSXT23
+        - lifecycle-6.5-NSXT24
+        - lifecycle-6.5-NSXT25
+        - lifecycle-6.7-NSXT24
+        - lifecycle-6.7-NSXT25
         - bats
     - put: tracker-output
       params: { repos: [bosh-cpi-src] }
@@ -181,19 +181,19 @@ resources:
     type: slack-notification
     source:
       url: {{slack_webhook}}
-  - name: pool-6.5-NSXT21
+  - name: pool-6.5-NSXT25
     type: pool
     source:
       uri:          git@gitlab.eng.vmware.com:PKS/vcpi-pool.git
       branch:       master
-      pool:         v6.5-nsxt21
+      pool:         v6.5-nsxt25
       private_key:  {{vcpi-pool_deployment_key}}
-  - name: pool-6.5-NSXT22
+  - name: pool-6.5-NSXT24
     type: pool
     source:
       uri:          git@gitlab.eng.vmware.com:PKS/vcpi-pool.git
       branch:       master
-      pool:         v6.5-nsxt22
+      pool:         v6.5-nsxt24
       private_key:  {{vcpi-pool_deployment_key}}
   - name: pool-6.0-NSXV
     type: pool
@@ -202,19 +202,19 @@ resources:
       branch:       master
       pool:         v6.0-nsxv
       private_key:  {{vcpi-pool_deployment_key}}
-  - name: pool-6.7-NSXT22
+  - name: pool-6.7-NSXT24
     type: pool
     source:
       uri:          git@gitlab.eng.vmware.com:PKS/vcpi-pool.git
       branch:       master
-      pool:         v6.7-nsxt22
+      pool:         v6.7-nsxt24
       private_key:  {{vcpi-pool_deployment_key}}
-  - name: pool-6.7-NSXT23
+  - name: pool-6.7-NSXT25
     type: pool
     source:
       uri:          git@gitlab.eng.vmware.com:PKS/vcpi-pool.git
       branch:       master
-      pool:         v6.7-nsxt23
+      pool:         v6.7-nsxt25
       private_key:  {{vcpi-pool_deployment_key}}
   - name: bosh-cpi-artifacts
     type: s3
@@ -297,30 +297,30 @@ groups:
   - bats
   - lock-bats
   - unlock-bats
-  - lock-6.7-NSXT23
-  - lifecycle-6.7-NSXT23
-  - unlock-6.7-NSXT23
-  - lock-6.7-NSXT22
-  - lifecycle-6.7-NSXT22
-  - unlock-6.7-NSXT22
+  - lock-6.7-NSXT25
+  - lifecycle-6.7-NSXT25
+  - unlock-6.7-NSXT25
+  - lock-6.7-NSXT24
+  - lifecycle-6.7-NSXT24
+  - unlock-6.7-NSXT24
   - inspect-candidate
   - promote-candidate
-  - lock-6.5-NSXT21
-  - lifecycle-6.5-NSXT21
-  - unlock-6.5-NSXT21
-  - lock-6.5-NSXT22
-  - lifecycle-6.5-NSXT22
-  - unlock-6.5-NSXT22
+  - lock-6.5-NSXT25
+  - lifecycle-6.5-NSXT25
+  - unlock-6.5-NSXT25
+  - lock-6.5-NSXT24
+  - lifecycle-6.5-NSXT24
+  - unlock-6.5-NSXT24
   - lifecycle-6.0-NSXV
   - lock-6.0-NSXV
   - unlock-6.0-NSXV
 
 - name: Delivery
   jobs:
-  - lifecycle-6.7-NSXT23
-  - lifecycle-6.7-NSXT22
-  - lifecycle-6.5-NSXT21
-  - lifecycle-6.5-NSXT22
+  - lifecycle-6.7-NSXT25
+  - lifecycle-6.7-NSXT24
+  - lifecycle-6.5-NSXT25
+  - lifecycle-6.5-NSXT24
   - lifecycle-6.0-NSXV
   - bats
   - delivery
@@ -335,12 +335,12 @@ groups:
 - name: v6.5
   jobs:
   - unit-test
-  - lock-6.5-NSXT21
-  - lifecycle-6.5-NSXT21
-  - unlock-6.5-NSXT21
-  - lock-6.5-NSXT22
-  - lifecycle-6.5-NSXT22
-  - unlock-6.5-NSXT22
+  - lock-6.5-NSXT25
+  - lifecycle-6.5-NSXT25
+  - unlock-6.5-NSXT25
+  - lock-6.5-NSXT24
+  - lifecycle-6.5-NSXT24
+  - unlock-6.5-NSXT24
 
 - name: v6.0
   jobs:
@@ -352,9 +352,9 @@ groups:
 - name: v6.7
   jobs:
   - unit-test
-  - lifecycle-6.7-NSXT22
-  - lock-6.7-NSXT22
-  - unlock-6.7-NSXT22
-  - lifecycle-6.7-NSXT23
-  - lock-6.7-NSXT23
-  - unlock-6.7-NSXT23
+  - lifecycle-6.7-NSXT24
+  - lock-6.7-NSXT24
+  - unlock-6.7-NSXT24
+  - lifecycle-6.7-NSXT25
+  - lock-6.7-NSXT25
+  - unlock-6.7-NSXT25
