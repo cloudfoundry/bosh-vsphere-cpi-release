@@ -4,10 +4,10 @@
 | :--- | :--- |
 | Unit | [![ci.vcna.io](https://ci.vcna.io/api/v1/teams/vcpi/pipelines/vSphere-CPI/jobs/unit-test/badge)](https://ci.vcna.io/teams/vcpi/pipelines/vSphere-CPI?groups=Complete-View)|
 | Lifecycle-6.0 with NSXV (6.4.2) | [![ci.vcna.io](https://ci.vcna.io/api/v1/teams/vcpi/pipelines/vSphere-CPI/jobs/lifecycle-6.0-NSXV/badge)](https://ci.vcna.io/teams/vcpi/pipelines/vSphere-CPI?groups=Complete-View)|
-| Lifecycle-6.5 with NSXT-21 | [![ci.vcna.io](https://ci.vcna.io/api/v1/teams/vcpi/pipelines/vSphere-CPI/jobs/lifecycle-6.5-NSXT21/badge)](https://ci.vcna.io/teams/vcpi/pipelines/vSphere-CPI?groups=Complete-View)|
-| Lifecycle-6.5 with NSXT-22 | [![ci.vcna.io](https://ci.vcna.io/api/v1/teams/vcpi/pipelines/vSphere-CPI/jobs/lifecycle-6.5-NSXT22/badge)](https://ci.vcna.io/teams/vcpi/pipelines/vSphere-CPI?groups=Complete-View)|
-| Lifecycle-6.7 with NSXT-22 | [![ci.vcna.io](https://ci.vcna.io/api/v1/teams/vcpi/pipelines/vSphere-CPI/jobs/lifecycle-6.7-NSXT22/badge)](https://ci.vcna.io/teams/vcpi/pipelines/vSphere-CPI?groups=Complete-View)|
-| Lifecycle-6.7 with NSXT-23 | [![ci.vcna.io](https://ci.vcna.io/api/v1/teams/vcpi/pipelines/vSphere-CPI/jobs/lifecycle-6.7-NSXT23/badge)](https://ci.vcna.io/teams/vcpi/pipelines/vSphere-CPI?groups=Complete-View)|
+| Lifecycle-6.5 with NSXT-24 | [![ci.vcna.io](https://ci.vcna.io/api/v1/teams/vcpi/pipelines/vSphere-CPI/jobs/lifecycle-6.5-NSXT25/badge)](https://ci.vcna.io/teams/vcpi/pipelines/vSphere-CPI?groups=Complete-View)|
+| Lifecycle-6.5 with NSXT-25 | [![ci.vcna.io](https://ci.vcna.io/api/v1/teams/vcpi/pipelines/vSphere-CPI/jobs/lifecycle-6.5-NSXT25/badge)](https://ci.vcna.io/teams/vcpi/pipelines/vSphere-CPI?groups=Complete-View)|
+| Lifecycle-6.7 with NSXT-24 | [![ci.vcna.io](https://ci.vcna.io/api/v1/teams/vcpi/pipelines/vSphere-CPI/jobs/lifecycle-6.7-NSXT24/badge)](https://ci.vcna.io/teams/vcpi/pipelines/vSphere-CPI?groups=Complete-View)|
+| Lifecycle-6.7 with NSXT-25 | [![ci.vcna.io](https://ci.vcna.io/api/v1/teams/vcpi/pipelines/vSphere-CPI/jobs/lifecycle-6.7-NSXT25/badge)](https://ci.vcna.io/teams/vcpi/pipelines/vSphere-CPI?groups=Complete-View)|
 | BATS | [![ci.vcna.io](https://ci.vcna.io/api/v1/teams/vcpi/pipelines/vSphere-CPI/jobs/bats/badge)](https://ci.vcna.io/teams/vcpi/pipelines/vSphere-CPI?groups=Complete-View)|
 
 # BOSH vSphere CPI Release
