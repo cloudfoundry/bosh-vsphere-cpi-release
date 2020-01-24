@@ -5,6 +5,10 @@ require 'ci/pool'
 # A pipeline to be generated. Each ERB template in the pipeline is evaluated in
 # the context of an instance of {Pipeline}.
 class Pipeline
+  def initialize(branch: '')
+    @branch = branch
+  end
+
   def pool(name)
     pool = Pool.new(name)
     pool.instance_eval { yield pool } if block_given?
@@ -17,6 +21,10 @@ class Pipeline
   def each_pool
     return enum_for(__method__) unless block_given?
     @pool.each { |_, pool| yield pool }
+  end
+
+  def check_if_master
+    return @branch == 'master'
   end
 
   # Format an object for inclusion into a YAML document
