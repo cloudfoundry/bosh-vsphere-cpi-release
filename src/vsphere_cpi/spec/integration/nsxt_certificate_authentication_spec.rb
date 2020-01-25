@@ -13,11 +13,12 @@ describe 'NSXT certificate authentication', :nsxt_21 => true do
     configuration.verify_ssl = false
     configuration.verify_ssl_host = false
     client = NSXT::ApiClient.new(configuration)
-    @nsx_component_api = NSXT::NsxComponentAdministrationApi.new(client)
+    @nsx_component_api = NSXT::ManagementPlaneApiNsxComponentAdministrationTrustManagementCertificateApi.new(client)
+    @nsx_component_pricipal_id_api = NSXT::ManagementPlaneApiNsxComponentAdministrationTrustManagementPrincipalIdentityApi.new(client)
   end
 
   let(:client) { create_client_cert_auth_client(@private_key, @certificate) }
-  let(:nsx_component_api) { NSXT::NsxComponentAdministrationApi.new(client) }
+  let(:nsx_component_api) { NSXT::ManagementPlaneApiNsxComponentAdministrationTrustManagementCertificateApi.new(client) }
 
   context 'when certificate is attached to principal' do
     before do
@@ -43,8 +44,8 @@ describe 'NSXT certificate authentication', :nsxt_21 => true do
       let(:client2) { create_client_cert_auth_client(@private_key2, @certificate2) }
       let(:nsx_component_api2) { NSXT::NsxComponentAdministrationApi.new(client2) }
 
-      let(:router_api) { NSXT::LogicalRoutingAndServicesApi.new(client) }
-      let(:router_api2) { NSXT::LogicalRoutingAndServicesApi.new(client2) }
+      let(:router_api) { NSXT::ManagementPlaneApiLogicalRoutingAndServicesLogicalRoutersApi.new(client) }
+      let(:router_api2) { NSXT::ManagementPlaneApiLogicalRoutingAndServicesLogicalRoutersApi.new(client2) }
 
       before do
         @private_key2 = generate_private_key
@@ -111,11 +112,11 @@ describe 'NSXT certificate authentication', :nsxt_21 => true do
   def attach_cert_to_principal(cert_id, pi_name = 'testprincipal-3', node_id = 'node-5')
     pi = NSXT::PrincipalIdentity.new(name: pi_name, node_id: node_id,
                                      certificate_id: cert_id, permission_group: 'superusers')
-    @nsx_component_api.register_principal_identity(pi).id
+    @nsx_component_pricipal_id_api.register_principal_identity(pi).id
   end
 
   def delete_principal(principal_id)
-    @nsx_component_api.delete_principal_identity(principal_id)
+    @nsx_component_pricipal_id_api.delete_principal_identity(principal_id)
   end
 
   def generate_private_key

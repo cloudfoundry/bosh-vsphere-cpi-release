@@ -1,7 +1,7 @@
 require 'digest'
 require 'spec_helper'
 
-describe VSphereCloud::NSXTSwitchProvider, fake_logger: true do
+xdescribe VSphereCloud::NSXTSwitchProvider, fake_logger: true do
   let(:switch_api) { instance_double(NSXT::LogicalSwitchingApi) }
   let(:client) { instance_double(NSXT::ApiClient) }
   subject(:switch_provider) do

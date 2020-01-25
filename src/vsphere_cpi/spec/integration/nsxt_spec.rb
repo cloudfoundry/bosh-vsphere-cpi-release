@@ -31,7 +31,8 @@ describe 'CPI', nsx_transformers: true do
     client = NSXT::ApiClient.new(configuration)
 
     # Add cert and key
-    @nsx_component_api = NSXT::NsxComponentAdministrationApi.new(client)
+    @nsx_component_api = NSXT::ManagementPlaneApiNsxComponentAdministrationTrustManagementCertificateApi.new(client)
+    @nsx_component_trust_mgmt_api = NSXT::ManagementPlaneApiNsxComponentAdministrationTrustManagementPrincipalIdentityApi.new(client)
     @private_key = generate_private_key
     @certificate = generate_certificate(@private_key)
     @cert_id = submit_cert_to_nsxt(@certificate)
@@ -184,7 +185,7 @@ describe 'CPI', nsx_transformers: true do
         let!(:nsgroup_1) { create_nsgroup(nsgroup_name_1) }
         let!(:nsgroup_2) { create_nsgroup(nsgroup_name_2) }
         before do
-          grouping_object_svc = NSXT::GroupingObjectsApi.new(nsxt)
+          grouping_object_svc = NSXT::ManagementPlaneApiGroupingObjectsNsGroupsApi.new(nsxt)
           nsgroups = grouping_object_svc.list_ns_groups.results.select do |nsgroup|
             [nsgroup_name_1, nsgroup_name_2].include?(nsgroup.display_name)
           end
@@ -209,13 +210,14 @@ describe 'CPI', nsx_transformers: true do
           it 'does NOT add VM to NSGroups' do
             simple_vm_lifecycle(cpi, @vlan, vm_type) do |vm_id|
               retryer do
-                fabric_svc = NSXT::FabricApi.new(nsxt)
+                fabric_svc = NSXT::ManagementPlaneApiFabricVirtualMachinesApi.new(nsxt)
                 nsxt_vms = fabric_svc.list_virtual_machines(:display_name => vm_id).results
                 raise VSphereCloud::VirtualMachineNotFound.new(vm_id) if nsxt_vms.empty?
                 raise VSphereCloud::MultipleVirtualMachinesFound.new(vm_id, nsxt_vms.length) if nsxt_vms.length > 1
 
                 external_id = nsxt_vms.first.external_id
-                vifs = fabric_svc.list_vifs(:owner_vm_id => external_id).results
+                vif_fabric_svc ||= NSXT::ManagementPlaneApiFabricVifsApi.new(nsxt)
+                vifs = vif_fabric_svc.list_vifs(:owner_vm_id => external_id).results
                 expect(vifs.length).to eq(1)
                 expect(vifs.first.lport_attachment_id).to be_nil
               end
@@ -333,7 +335,7 @@ describe 'CPI', nsx_transformers: true do
         expect(lport_ids.length).to eq(2)
 
         lport_ids.each do |id|
-          grouping_object_svc = NSXT::GroupingObjectsApi.new(nsxt)
+          grouping_object_svc = NSXT::ManagementPlaneApiGroupingObjectsNsGroupsApi.new(nsxt)
           nsgroups = grouping_object_svc.list_ns_groups.results.select do |nsgroup|
             next unless nsgroup.members
             nsgroup.members.find do |member|
@@ -386,7 +388,7 @@ describe 'CPI', nsx_transformers: true do
         expect(lport_ids.length).to eq(2)
 
         lport_ids.each do |id|
-          grouping_object_svc = NSXT::GroupingObjectsApi.new(nsxt)
+          grouping_object_svc = NSXT::ManagementPlaneApiGroupingObjectsNsGroupsApi.new(nsxt)
           nsgroups = grouping_object_svc.list_ns_groups.results.select do |nsgroup|
             next unless nsgroup.members
             nsgroup.members.find do |member|
@@ -477,7 +479,7 @@ describe 'CPI', nsx_transformers: true do
 
   def verify_ports(vm_id, expected_vif_number = 2)
     retryer do
-      fabric_svc = NSXT::FabricApi.new(nsxt)
+      fabric_svc = NSXT::ManagementPlaneApiFabricVirtualMachinesApi.new(nsxt)
       nsxt_vms = fabric_svc.list_virtual_machines(:display_name => vm_id).results
       raise VSphereCloud::VirtualMachineNotFound.new(vm_id) if nsxt_vms.empty?
       raise VSphereCloud::MultipleVirtualMachinesFound.new(vm_id, nsxt_vms.length) if nsxt_vms.length > 1
@@ -485,11 +487,12 @@ describe 'CPI', nsx_transformers: true do
       expect(nsxt_vms.length).to eq(1)
       expect(nsxt_vms.first.external_id).not_to be_nil
 
-      vifs = fabric_svc.list_vifs(:owner_vm_id => nsxt_vms.first.external_id).results
+      vif_fabric_svc ||= NSXT::ManagementPlaneApiFabricVifsApi.new(nsxt)
+      vifs = vif_fabric_svc.list_vifs(:owner_vm_id => nsxt_vms.first.external_id).results
       expect(vifs.length).to eq(expected_vif_number)
       expect(vifs.map(&:lport_attachment_id).compact.length).to eq(expected_vif_number)
 
-      logical_switching_svc = NSXT::LogicalSwitchingApi.new(nsxt)
+      logical_switching_svc = NSXT::ManagementPlaneApiLogicalSwitchingLogicalSwitchPortsApi.new(nsxt)
       vifs.each do |vif|
         lports = logical_switching_svc.list_logical_ports(attachment_id: vif.lport_attachment_id).results.first
         yield lports if block_given?
@@ -503,17 +506,17 @@ describe 'CPI', nsx_transformers: true do
 
   def create_nsgroup(display_name)
     nsgrp = NSXT::NSGroup.new(:display_name => display_name)
-    grouping_object_svc = NSXT::GroupingObjectsApi.new(nsxt)
+    grouping_object_svc = NSXT::ManagementPlaneApiGroupingObjectsNsGroupsApi.new(nsxt)
     grouping_object_svc.create_ns_group(nsgrp)
   end
 
   def delete_nsgroup(nsgroup)
-    grouping_object_svc = NSXT::GroupingObjectsApi.new(nsxt)
+    grouping_object_svc = NSXT::ManagementPlaneApiGroupingObjectsNsGroupsApi.new(nsxt)
     grouping_object_svc.delete_ns_group(nsgroup.id)
   end
 
   def nsgroup_effective_logical_port_member_ids(nsgroup)
-    grouping_object_svc = NSXT::GroupingObjectsApi.new(nsxt)
+    grouping_object_svc = NSXT::ManagementPlaneApiGroupingObjectsNsGroupsApi.new(nsxt)
     results = grouping_object_svc.get_effective_logical_port_members(nsgroup.id).results
     results.map { |member| member.target_id }
   end
@@ -542,7 +545,7 @@ describe 'CPI', nsx_transformers: true do
   end
 
   def services_svc
-    NSXT::ServicesApi.new(nsxt)
+    NSXT::ManagementPlaneApiServicesLoadbalancerApi.new(nsxt)
   end
 
   def retryer
@@ -570,14 +573,14 @@ describe 'CPI', nsx_transformers: true do
     @nsx_component_api.delete_certificate(cert_id)
   end
 
-  def attach_cert_to_principal(cert_id, pi_name = 'testprincipal-nsxt-spec-4', node_id = 'node-nsxt-spec-4')
+  def attach_cert_to_principal(cert_id, pi_name = 'testprincipal-nsxt-spec-3', node_id = 'node-nsxt-spec-3')
     pi = NSXT::PrincipalIdentity.new(name: pi_name, node_id: node_id,
                                      certificate_id: cert_id, permission_group: 'superusers')
-    @nsx_component_api.register_principal_identity(pi).id
+    @nsx_component_trust_mgmt_api.register_principal_identity(pi).id
   end
 
   def delete_principal(principal_id)
-    @nsx_component_api.delete_principal_identity(principal_id)
+    @nsx_component_trust_mgmt_api.delete_principal_identity(principal_id)
   end
 
   def generate_private_key
