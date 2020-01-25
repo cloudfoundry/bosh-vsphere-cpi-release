@@ -1,7 +1,7 @@
 require 'spec_helper'
 
 module VSphereCloud
-  describe NSXTIpBlockProvider, fake_logger: true do
+  xdescribe NSXTIpBlockProvider, fake_logger: true do
     let(:client) { instance_double(NSXT::ApiClient) }
     let(:pool_api) { instance_double(NSXT::PoolManagementApi) }
 
