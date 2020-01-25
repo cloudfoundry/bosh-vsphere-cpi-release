@@ -1,7 +1,7 @@
 require 'digest'
 require 'spec_helper'
 
-describe VSphereCloud::NSXTRouterProvider, fake_logger: true do
+xdescribe VSphereCloud::NSXTRouterProvider, fake_logger: true do
   let(:router_api) { instance_double(NSXT::LogicalRoutingAndServicesApi) }
   let(:client) { instance_double(NSXT::ApiClient) }
   subject(:router_provider) do
