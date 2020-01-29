@@ -36,7 +36,7 @@ module VSphereCloud
     # @param [Vim::VirtualMachine] vm
     # @param [String] vm_group_name
     # @param [String] host_group_name
-    def add_vm_host_affinity_rule(vm_group_name, host_group_name)
+    def add_vm_host_affinity_rule(vm_group_name, host_group_name, rule_type)
       DrsLock.new(@vm_attribute_manager, DRS_LOCK_HOST_VM_GROUP).with_drs_lock do
         rule = find_rule
         # Do not create the rule if it already exists
