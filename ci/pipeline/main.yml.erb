@@ -11,13 +11,20 @@ jobs:
       - task: unit-test
         file: source-ci/ci/tasks/unit-test.yml
 
-<% each_pool do |pool| -%>
-<%= render('partition', pool: pool) %>
-<% end -%>
+    <% if check_if_master -%>
+    <%= render('promote-candidate-major', pool: pool) %>
+    <%= else render(promote-candidate-minor) %>
+    <% end -%>
 
 <% if check_if_master -%>
 <%= render('promote-candidate-major', pool: pool) %>
 <%= else render(promote-candidate-minor-patch) %>
+<% end -%>
+
+<% if check_if_master -%>
+<%= render('promote-candidate-major', pool: pool) %>
+<%= elsif check_if_release_branch -%>
+<%= render(promote-candidate-minor-patch, pool: pool) %>
 <% end -%>
 
   - name: build-candidate
