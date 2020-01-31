@@ -1,6 +1,8 @@
 builds:
   077cfa52-bac8-4c98-87b2-d4afc3ee1a9d:
     version: "42"
+  07e81d4b-3888-486e-6a69-90effd74c692:
+    version: 53.0.7
   080ceb5f-1f0b-496c-8e57-6356f285d9a4:
     version: "26"
   09c14d96-69f1-4a9a-6e75-3165ac41bddd:
