@@ -33,6 +33,12 @@ module VSphereCloud
           expect(cluster_config.host_group_name).to be_nil
         end
       end
+      context 'when host group is defined in backward compatible way' do
+        let(:config){ {'resource_pool' => 'fake-resource-pool', 'host_group' => 'vcpi-cl1-hg-1'} }
+        it 'returns host group name' do
+          expect(cluster_config.host_group_name).to eq('vcpi-cl1-hg-1')
+        end
+      end
     end
 
     describe '#host_group_drs_rule' do
@@ -41,7 +47,19 @@ module VSphereCloud
       end
       context 'when host group is not defined' do
         let(:config){ {'resource_pool' => 'fake-resource-pool'} }
-        it "still returns the rule as default 'SHOULD'" do
+        it "returns the default rule as 'MUST'" do
+          expect(cluster_config.host_group_drs_rule).to eq('MUST')
+        end
+      end
+      context 'when host group is defined in backward compatible way' do
+        let(:config){ {'resource_pool' => 'fake-resource-pool', 'host_group' => 'vcpi-cl1-hg-1'} }
+        it "returns the default rule as 'MUST'" do
+          expect(cluster_config.host_group_drs_rule).to eq('MUST')
+        end
+      end
+      context 'when host group is defined as a HASH of name and rule with rule not present' do
+        let(:config){ {'resource_pool' => 'fake-resource-pool', 'host_group' => {'name' => 'vcpi-cl1-hg-1'}} }
+        it "returns the default rule as 'SHOULD'" do
           expect(cluster_config.host_group_drs_rule).to eq('SHOULD')
         end
       end
