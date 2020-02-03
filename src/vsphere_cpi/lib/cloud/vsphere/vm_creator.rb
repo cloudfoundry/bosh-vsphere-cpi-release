@@ -51,6 +51,9 @@ module VSphereCloud
           ensure_all: true
         )
 
+        # Initialize Device Key generator
+        VSphereCloud::DeviceKeyGenerator.init(keys: replicated_stemcell_vm_mob.config&.hardware&.device&.map(&:key))
+
         #create vm/ephemeral disk on same datastore as stemcell if datastore cluster is being used.
         if datastore_cluster
           datastore = Resources::Datastore.build_from_client(@client, replicated_stemcell_properties['datastore']).first
