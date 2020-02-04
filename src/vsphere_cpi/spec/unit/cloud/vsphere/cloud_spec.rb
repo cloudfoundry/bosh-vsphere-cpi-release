@@ -2337,8 +2337,6 @@ module VSphereCloud
       end
 
       context "When environment has deployment and instance group name" do
-        let(:key1) {"instance_group_name"}
-        let(:key2) {"deployment_name"}
         let(:environment) do
           {
             'bosh' => {
@@ -2347,7 +2345,41 @@ module VSphereCloud
             }
           }
         end
-        it "returns an struct " do
+        it "returns a struct " do
+          result = vsphere_cloud.send(:update_name_info_from_bosh_env, environment)
+          expect(result).to_not be_nil
+          expect(result.inst_grp).to eq('fake-instance-group-name')
+          expect(result.deployment).to eq('fake-deployment-name')
+        end
+      end
+      context "When environment has a deployment tag, deployment name and instance group name" do
+        let(:environment) do
+          {
+              'bosh' => {
+                  'group' => 'fake-group',
+                  'groups' => ['fake-director-name', 'fake-deployment-name', 'fake-instance-group-name'],
+                  'tags' => {'deployment' => 'deployment_tag'}
+              }
+          }
+        end
+        it "returns a struct with deployment tag overriding default bosh deployment name " do
+          result = vsphere_cloud.send(:update_name_info_from_bosh_env, environment)
+          expect(result).to_not be_nil
+          expect(result.inst_grp).to eq('fake-instance-group-name')
+          expect(result.deployment).to eq('deployment_tag')
+        end
+      end
+      context "When environment has an empty deployment tag and deployment name and instance group name" do
+        let(:environment) do
+          {
+              'bosh' => {
+                  'group' => 'fake-group',
+                  'groups' => ['fake-director-name', 'fake-deployment-name', 'fake-instance-group-name'],
+                  'tags' => {'deployment' => ''}
+              }
+          }
+        end
+        it "returns a struct with default bosh deployment name " do
           result = vsphere_cloud.send(:update_name_info_from_bosh_env, environment)
           expect(result).to_not be_nil
           expect(result.inst_grp).to eq('fake-instance-group-name')

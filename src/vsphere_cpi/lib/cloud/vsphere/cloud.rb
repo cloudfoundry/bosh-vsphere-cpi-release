@@ -948,10 +948,19 @@ module VSphereCloud
     #   or a nil otherwise
     def update_name_info_from_bosh_env(environment)
       return nil if environment.nil?
+
       instance_group_name = environment.dig('bosh', 'groups', 2)
-      deployment_name = environment.dig('bosh', 'groups', 1)
+      # Try to extract deployment name from BOSH manifest tags first
+      # and then default deployment name passed by BOSH.
+      # This is done to avoid service_instanceXXXX style deployment names ODB generates.
+      deployment_name = environment.dig('bosh', 'tags', 'deployment')
+      if deployment_name.nil? || deployment_name == ''
+        deployment_name = environment.dig('bosh', 'groups', 1)
+      end
+
       return nil if instance_group_name.nil? || deployment_name.nil?
-      OpenStruct.new(inst_grp: instance_group_name, deployment: deployment_name)
+      # strip whitespaces
+      OpenStruct.new(inst_grp: instance_group_name.strip, deployment: deployment_name.strip)
     end
   end
 end
