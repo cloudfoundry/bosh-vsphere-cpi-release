@@ -9,7 +9,7 @@ module VSphereCloud::Resources
       let(:cloud_searcher) { instance_double('VSphereCloud::CloudSearcher') }
 
       before do
-        VSphereCloud::DeviceKeyGenerator.init(keys: [1,2,3])
+        VSphereCloud::DeviceKeyGenerator.instance.init([1,2,3])
       end
 
       context 'using a distributed switch' do
