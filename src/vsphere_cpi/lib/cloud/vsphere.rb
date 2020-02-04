@@ -69,7 +69,7 @@ require 'cloud/vsphere/selection_pipeline'
 require 'cloud/vsphere/disk_placement_selection_pipeline'
 require 'cloud/vsphere/vm_placement_selection_pipeline'
 require 'cloud/vsphere/pbm'
-require 'cloud/vsphere/device_key_gen'
+require 'cloud/vsphere/device_key_generator'
 
 
 module Bosh

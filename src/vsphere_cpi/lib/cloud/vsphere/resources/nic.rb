@@ -33,7 +33,7 @@ module VSphereCloud
         end
 
         nic = VimSdk::Vim::Vm::Device::VirtualVmxnet3.new
-        nic.key = VSphereCloud::DeviceKeyGenerator.get_device_key
+        nic.key = VSphereCloud::DeviceKeyGenerator.instance.device_key
         nic.controller_key = controller_key
         nic.backing = backing_info
 

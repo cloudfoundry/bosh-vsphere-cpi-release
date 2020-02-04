@@ -248,7 +248,7 @@ module VSphereCloud
         disk = disk_resource_object
 
         # Initialize the device key generator
-        VSphereCloud::DeviceKeyGenerator.init(keys: mob.config&.hardware&.device&.map(&:key))
+        VSphereCloud::DeviceKeyGenerator.instance.init(mob.config&.hardware&.device&.map(&:key))
 
         disk_config_spec = disk.create_disk_attachment_spec(disk_controller_id: system_disk.controller_key)
 

@@ -23,7 +23,7 @@ module VSphereCloud
         end
 
         virtual_disk = VimSdk::Vim::Vm::Device::VirtualDisk.new.tap do |virtual_disk|
-          virtual_disk.key = VSphereCloud::DeviceKeyGenerator.get_device_key
+          virtual_disk.key = VSphereCloud::DeviceKeyGenerator.instance.device_key
           virtual_disk.controller_key = disk_controller_id
           virtual_disk.capacity_in_kb = size_in_mb * 1024
           virtual_disk.backing = backing
