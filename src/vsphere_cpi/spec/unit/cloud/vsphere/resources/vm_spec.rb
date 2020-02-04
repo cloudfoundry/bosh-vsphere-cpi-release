@@ -343,7 +343,9 @@ describe VSphereCloud::Resources::VM, fake_logger: true do
         expect(disk_spec.device.controller_key).to eq('fake-controller-key')
       end
       allow(client).to receive(:add_persistent_disk_property_to_vm)
-      vm.attach_disk(disk)
+      allow(vm).to receive_message_chain(:mob, :config, :hardware, :device, :map).and_return([-1,-2,-3])
+      disk_config_spec = vm.attach_disk(disk)
+      expect(disk_config_spec.device.key). to eq(-4)
     end
   end
 

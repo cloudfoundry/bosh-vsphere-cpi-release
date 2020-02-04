@@ -4,10 +4,14 @@ module VSphereCloud::Resources
   describe Nic do
     describe '#create_nic_config_spec' do
       subject(:vsphere_cloud) { Cloud.new(config) }
-
       let(:config) { { fake: 'config' } }
       let(:dvs_index) { {} }
       let(:cloud_searcher) { instance_double('VSphereCloud::CloudSearcher') }
+
+      before do
+        VSphereCloud::DeviceKeyGenerator.init(keys: [1,2,3])
+      end
+
       context 'using a distributed switch' do
         let(:v_network_name) { 'fake_network1' }
         let(:network) { instance_double('VimSdk::Vim::Dvs::DistributedVirtualPortgroup', class: VimSdk::Vim::Dvs::DistributedVirtualPortgroup) }
