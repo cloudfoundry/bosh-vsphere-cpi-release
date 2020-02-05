@@ -535,6 +535,7 @@ module VSphereCloud
           logger.warn("Cannot separate out valid category and tag from metadata with error #{e}")
           valid_cat_tag_hash = {}
         end
+<<<<<<< HEAD
         logger.info("Custom Attributes : #{metadata}")
         logger.info("Category Tag Pairs : #{valid_cat_tag_hash}")
 
@@ -547,6 +548,29 @@ module VSphereCloud
         #set custom attributes
         metadata.each do |name, value|
           logger.info("Setting custom attribute : #{name}/#{value}")
+=======
+
+        # Subtract the hash from metadata to get custom_attr_list
+        custom_attr_hash = metadata.reject do |key, value|
+          valid_cat_tag_hash.has_key?(key) && valid_cat_tag_hash[key] == value
+        end
+
+        valid_cat_tag_hash.each do |cat_name, tag_name|
+          # make sure operation is safe and rescues all errors so as to not halt deployment creation
+          begin
+            category_ids = tagging_category_api.list.value
+            cat_id = retrieve_category_id(cat_name.to_s, category_ids)
+            tag_id_list  = retrieve_tag_id(tag.to_s, tagging_tag_api.list_tags_for_category(cat_id))
+            tag_id = @tagging_tagger.retrieve_tag_id(tag_name, tag_id_list)
+            @tagging_tagger.attach_single_tag(vm.mob_id, tag_id)
+          rescue => e
+            logger.warn("Cannot attach category/tag pair :  #{cat_name}/#{tag_name} with error #{e}")
+            next
+          end
+        end
+
+        custom_attr_hash.each do |name, value|
+>>>>>>> 248f286c... Assign tag to a VM from metadata
           client.set_custom_field(vm.mob, name, value)
         end
 
