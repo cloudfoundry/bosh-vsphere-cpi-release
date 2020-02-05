@@ -140,6 +140,15 @@ module  VSphereCloud
         category_assoc_types.empty? || category_assoc_types.include?("VirtualMachine")
       end
 
+      def valid_cat_tag(category_tag_hash)
+        category_ids = tagging_category_api.list.value
+        return {} if category_ids.empty?
+        category_tag_hash.reject do |cat_name, tag|
+          cat_id = retrieve_category_id(cat_name.to_s, category_ids)
+          cat_id.nil? || retrieve_tag_id(tag.to_s, tagging_tag_api.list_tags_for_category(cat_id)).nil?
+        end
+      end
+
       def create_tag_hash(vm_config_tags)
         tag_hash = Hash.new
         vm_config_tags.each do |vm_config_tag|
