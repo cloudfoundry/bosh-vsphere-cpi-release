@@ -25,7 +25,7 @@ module VSphereCloud
                           )
           )
         end
-        let(:category_ids) { %w[ fake-category-id-1 fake-category-id-2 ] }
+        let(:category_ids) { %w[ fake-category-id-1 fake-category-id-2 ]}
 
         context 'when trying to find a category that exists on vCenter' do
           let(:category_name ) { "fake-category-name-1" }
@@ -136,6 +136,63 @@ module VSphereCloud
             allow_any_instance_of(VSphereAutomation::CIS::TaggingCategoryApi).to receive(:get).with(target_category_id).and_return(category_information_3)
             expect(tagging_tag.vm_association?(target_category_id)).to be(false)
           end
+        end
+      end
+
+      describe '#valid_cat_tag' do
+        context 'when VC has no categories' do
+          it 'should return an empty hash' do
+            allow_any_instance_of(VSphereAutomation::CIS::TaggingCategoryApi).to \
+              receive_message_chain(:list, :value).and_return([])
+            expect(tagging_tag.valid_cat_tag({:a => 1, :b => 2})).to eq({})
+          end
+        end
+        context 'when input category tag hash is empty' do
+          it 'should return an empty hash' do
+            allow_any_instance_of(VSphereAutomation::CIS::TaggingCategoryApi).to \
+              receive_message_chain(:list, :value).and_return(%w[id1 id2 id3])
+            expect(tagging_tag.valid_cat_tag({})).to eq({})
+          end
+        end
+        context 'when VC has no matching categories in category tag hash' do
+          let(:category_tag_hash) do
+            {
+                'cat1' => 'tag1',
+                'cat2' => 'tag2',
+                'cat3' => 'tag3',
+            }
+          end
+          let(:category_ids) { %w[cat_id1 cat_id2 cat_id3] }
+          it 'should return an empty hash' do
+            allow_any_instance_of(VSphereAutomation::CIS::TaggingCategoryApi).to \
+              receive_message_chain(:list, :value).and_return(category_ids)
+            expect(tagging_tag).to receive(:retrieve_category_id).thrice.and_return(nil)
+            expect(tagging_tag.valid_cat_tag(category_tag_hash)).to eq({})
+          end
+        end
+        context 'when VC has some categories that match but none of the tags match' do
+          let(:category_tag_hash) do
+            {
+                'cat1' => 'tag1',
+                'cat2' => 'tag2',
+                'cat3' => 'tag3',
+            }
+          end
+          let(:category_ids) { %w[cat_id1 cat_id5 cat_id6] }
+          let(:tag_id_list) { %w[tag_id4 tag_id5 tag_id6] }
+          it 'should return an empty hash' do
+            allow_any_instance_of(VSphereAutomation::CIS::TaggingCategoryApi).to \
+              receive_message_chain(:list, :value).and_return(category_ids)
+            expect(tagging_tag).to receive(:retrieve_category_id).with(anything,\
+              category_ids).thrice.and_return('cat_id1', nil, nil)
+            allow_any_instance_of(VSphereAutomation::CIS::TaggingTagApi).to \
+              receive(:list_tags_for_category).with('cat_id1').and_return(tag_id_list)
+            expect(tagging_tag).to receive(:retrieve_tag_id).with('tag1',\
+              tag_id_list).and_return(nil)
+            expect(tagging_tag.valid_cat_tag(category_tag_hash)).to eq ({})
+          end
+        end
+        context 'when VC has some valid category tag pairs matching pairs in input category tag hash' do
         end
       end
 

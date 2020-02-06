@@ -8,10 +8,11 @@ describe 'set_vm_metadata' do
     subject(:cpi) { VSphereCloud::Cloud.new(cpi_options) }
     let(:metadata) { {
         "bosh-#{SecureRandom.uuid}-key" => "test value",
-        "a" => "b",
-        "real_cat" => "real_rtag",
-        "spell_mistake" => "right_tag",
-        "right_cat" => "spell_mistake_tag"
+        "OS" => "Linux",
+        "BU" => "MAPBU",
+        "team" => "kaitingc", #non-existent category
+        "type" => "prodd",#tag does not match
+        "deployment" => "zookeeper"
     } }
     let(:network_spec) do
       {
