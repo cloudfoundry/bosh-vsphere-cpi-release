@@ -141,6 +141,7 @@ module VSphereCloud
       end
 
       describe '#valid_cat_tag' do
+<<<<<<< HEAD
         let(:category_tag_hash) do
           {
               'cat1' => 'tag1',
@@ -148,6 +149,8 @@ module VSphereCloud
               'cat3' => 'tag3',
           }
         end
+=======
+>>>>>>> 8cd2c977... Add Unit tests
         context 'when VC has no categories' do
           it 'should return an empty hash' do
             allow_any_instance_of(VSphereAutomation::CIS::TaggingCategoryApi).to \
@@ -163,6 +166,16 @@ module VSphereCloud
           end
         end
         context 'when VC has no matching categories in category tag hash' do
+<<<<<<< HEAD
+=======
+          let(:category_tag_hash) do
+            {
+                'cat1' => 'tag1',
+                'cat2' => 'tag2',
+                'cat3' => 'tag3',
+            }
+          end
+>>>>>>> 8cd2c977... Add Unit tests
           let(:category_ids) { %w[cat_id1 cat_id2 cat_id3] }
           it 'should return an empty hash' do
             allow_any_instance_of(VSphereAutomation::CIS::TaggingCategoryApi).to \
@@ -172,6 +185,16 @@ module VSphereCloud
           end
         end
         context 'when VC has some categories that match but none of the tags match' do
+<<<<<<< HEAD
+=======
+          let(:category_tag_hash) do
+            {
+                'cat1' => 'tag1',
+                'cat2' => 'tag2',
+                'cat3' => 'tag3',
+            }
+          end
+>>>>>>> 8cd2c977... Add Unit tests
           let(:category_ids) { %w[cat_id1 cat_id5 cat_id6] }
           let(:tag_id_list) { %w[tag_id4 tag_id5 tag_id6] }
           it 'should return an empty hash' do
@@ -180,13 +203,18 @@ module VSphereCloud
             expect(tagging_tag).to receive(:retrieve_category_id).with(anything,\
               category_ids).thrice.and_return('cat_id1', nil, nil)
             allow_any_instance_of(VSphereAutomation::CIS::TaggingTagApi).to \
+<<<<<<< HEAD
               receive_message_chain(:list_tags_for_category, :value).and_return(tag_id_list)
+=======
+              receive(:list_tags_for_category).with('cat_id1').and_return(tag_id_list)
+>>>>>>> 8cd2c977... Add Unit tests
             expect(tagging_tag).to receive(:retrieve_tag_id).with('tag1',\
               tag_id_list).and_return(nil)
             expect(tagging_tag.valid_cat_tag(category_tag_hash)).to eq ({})
           end
         end
         context 'when VC has some valid category tag pairs matching pairs in input category tag hash' do
+<<<<<<< HEAD
           let(:category_ids) { %w[cat_id1 cat_id5 cat_id6] }
           let(:tag_id_list) { %w[tag_id1 tag_id5 tag_id6] }
           it 'should return valid category:tag pairs' do
@@ -283,6 +311,8 @@ module VSphereCloud
                 receive(:attach_single_tag).with(anything, 'tag_id1').and_raise(RuntimeError.new('Error encountered'))
             tagging_tag.attach_cat_tag_to_vm('cat1','tag1',vm_mob)
           end
+=======
+>>>>>>> 8cd2c977... Add Unit tests
         end
       end
 
