@@ -6,7 +6,13 @@ require 'yaml'
 describe 'set_vm_metadata' do
   context 'when called with duplicate keys with multiple threads' do
     subject(:cpi) { VSphereCloud::Cloud.new(cpi_options) }
-    let(:metadata) { { "bosh-#{SecureRandom.uuid}-key" => "test value" } }
+    let(:metadata) { {
+        "bosh-#{SecureRandom.uuid}-key" => "test value",
+        "a" => "b",
+        "real_cat" => "real_rtag",
+        "spell_mistake" => "right_tag",
+        "right_cat" => "spell_mistake_tag"
+    } }
     let(:network_spec) do
       {
         'static' => {
@@ -57,6 +63,9 @@ describe 'set_vm_metadata' do
       expect {
         threads.map(&:join)
       }.to_not raise_error
+
+      require 'pry-byebug'
+      binding.pry
     end
   end
 end
