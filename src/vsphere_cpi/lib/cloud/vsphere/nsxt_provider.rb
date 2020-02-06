@@ -96,19 +96,23 @@ module VSphereCloud
     end
 
     private def grouping_obj_svc
-      @grouping_obj_svc ||= NSXT::GroupingObjectsApi.new(@client)
+      @grouping_obj_svc ||= NSXT::ManagementPlaneApiGroupingObjectsNsGroupsApi.new(@client)
     end
 
     private def logical_switching_svc
-      @logical_switching_svc ||= NSXT::LogicalSwitchingApi.new(@client)
+      @logical_switching_svc ||= NSXT::ManagementPlaneApiLogicalSwitchingLogicalSwitchPortsApi.new(@client)
     end
 
-    private def fabric_svc
-      @fabric_svc ||= NSXT::FabricApi.new(@client)
+    private def vm_fabric_svc
+      @vm_fabric_svc ||= NSXT::ManagementPlaneApiFabricVirtualMachinesApi.new(@client)
+    end
+
+    private def vif_fabric_svc
+      @vif_fabric_svc ||= NSXT::ManagementPlaneApiFabricVifsApi.new(@client)
     end
 
     private def services_svc
-      @services_svc ||= NSXT::ServicesApi.new(@client)
+      @services_svc ||= NSXT::ManagementPlaneApiServicesLoadbalancerApi.new(@client)
     end
 
     def add_vm_to_nsgroups(vm, ns_groups)
@@ -322,7 +326,7 @@ module VSphereCloud
         on: [VirtualMachineNotFound, MultipleVirtualMachinesFound, VIFNotFound, LogicalPortNotFound]
       ).retryer do |i|
         logger.info("Searching for LogicalPorts for vm '#{vm.cid}'")
-        virtual_machines = fabric_svc.list_virtual_machines(display_name: vm.cid).results
+        virtual_machines = vm_fabric_svc.list_virtual_machines(display_name: vm.cid).results
         # NSX-T sometimes returns multiple VMs for same display id. Log it to be able to
         # study these objects later. @TODO: Can be removed after one stable release.
         logger.info("Virtual Machines fetched : #{virtual_machines.pretty_inspect}") if virtual_machines.length > 1
@@ -344,7 +348,7 @@ module VSphereCloud
         raise MultipleVirtualMachinesFound.new(vm.cid, virtual_machines.length) unless all_vms_are_equal
 
         logger.info("Searching VIFs with 'owner_vm_id: #{external_id}'")
-        vifs = fabric_svc.list_vifs(owner_vm_id: external_id).results
+        vifs = vif_fabric_svc.list_vifs(owner_vm_id: external_id).results
         vifs.select! { |vif| !vif.lport_attachment_id.nil? }
         raise VIFNotFound.new(vm.cid, external_id) if vifs.empty?
 
