@@ -4,6 +4,7 @@ require 'tempfile'
 require 'yaml'
 
 describe 'set_vm_metadata' do
+<<<<<<< HEAD
   before(:all) do
     cat_config_1 = {
         "create_spec" => {
@@ -57,6 +58,20 @@ describe 'set_vm_metadata' do
   let(:network_spec) do
     {
       'static' => {
+=======
+  context 'when called with duplicate keys with multiple threads' do
+    subject(:cpi) { VSphereCloud::Cloud.new(cpi_options) }
+    let(:metadata) { {
+        "bosh-#{SecureRandom.uuid}-key" => "test value",
+        "a" => "b",
+        "real_cat" => "real_rtag",
+        "spell_mistake" => "right_tag",
+        "right_cat" => "spell_mistake_tag"
+    } }
+    let(:network_spec) do
+      {
+        'static' => {
+>>>>>>> 3bbd3920... Integration Test (Manual Check) TBRL
           'ip' => "169.254.1.#{rand(4..254)}",
           'netmask' => '255.255.254.0',
           'cloud_properties' => { 'name' => @vlan },
@@ -114,6 +129,7 @@ describe 'set_vm_metadata' do
         threads.map(&:join)
       }.to_not raise_error
 
+<<<<<<< HEAD
     end
   end
 
@@ -136,6 +152,10 @@ describe 'set_vm_metadata' do
       expect(verify_tags(mob_id, ['Type', 'deployment'])).to be(false)
     ensure
       delete_vm(@cpi, vm_cid)
+=======
+      require 'pry-byebug'
+      binding.pry
+>>>>>>> 3bbd3920... Integration Test (Manual Check) TBRL
     end
   end
 end
