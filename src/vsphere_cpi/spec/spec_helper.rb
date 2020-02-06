@@ -44,3 +44,17 @@ RSpec.configure do |config|
 
   config.include_context 'with a fake logger', fake_logger: true
 end
+
+# Silence output from pending examples in documentation formatter
+module FormatterOverrides
+  def example_pending(_)
+  end
+
+  def dump_pending(_)
+  end
+end
+
+RSpec::Core::Formatters::DocumentationFormatter.prepend FormatterOverrides
+
+# Silence output from pending examples in progress formatter
+RSpec::Core::Formatters::ProgressFormatter.prepend FormatterOverrides
