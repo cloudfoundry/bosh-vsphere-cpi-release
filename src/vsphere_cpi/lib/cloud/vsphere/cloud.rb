@@ -542,20 +542,12 @@ module VSphereCloud
         end
 
         valid_cat_tag_hash.each do |cat_name, tag_name|
-          # make sure operation is safe and rescues all errors so as to not halt deployment creation
-          begin
-            category_ids = tagging_category_api.list.value
-            cat_id = retrieve_category_id(cat_name.to_s, category_ids)
-            tag_id_list  = retrieve_tag_id(tag.to_s, tagging_tag_api.list_tags_for_category(cat_id))
-            tag_id = @tagging_tagger.retrieve_tag_id(tag_name, tag_id_list)
-            @tagging_tagger.attach_single_tag(vm.mob_id, tag_id)
-          rescue => e
-            logger.warn("Cannot attach category/tag pair :  #{cat_name}/#{tag_name} with error #{e}")
-            next
-          end
+          logger.info("Attaching tag to category/tag pair : #{cat_name}/#{tag_name}")
+          @tagging_tagger.attach_cat_tag_to_vm(cat_name, tag_name, vm.mob)
         end
 
         custom_attr_hash.each do |name, value|
+          logger.info("Setting custom attribute : #{name}/#{value}")
           client.set_custom_field(vm.mob, name, value)
         end
 

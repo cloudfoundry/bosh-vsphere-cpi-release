@@ -122,7 +122,7 @@ module  VSphereCloud
         @tagging_tag_api ||= VSphereAutomation::CIS::TaggingTagApi.new(@api_client)
       end
 
-      private def tagging_category_api
+      def tagging_category_api
         @tagging_category_api ||= VSphereAutomation::CIS::TaggingCategoryApi.new(@api_client)
       end
 
@@ -145,7 +145,19 @@ module  VSphereCloud
         return {} if category_ids.empty?
         category_tag_hash.reject do |cat_name, tag|
           cat_id = retrieve_category_id(cat_name.to_s, category_ids)
-          cat_id.nil? || retrieve_tag_id(tag.to_s, tagging_tag_api.list_tags_for_category(cat_id)).nil?
+          cat_id.nil? || retrieve_tag_id(tag.to_s, tagging_tag_api.list_tags_for_category(cat_id).value).nil?
+        end
+      end
+
+      def attach_cat_tag_to_vm(cat_name, tag_name, vm_mob_id)
+        begin
+          category_ids = tagging_category_api.list.value
+          cat_id = retrieve_category_id(cat_name.to_s, category_ids)
+          tag_id_list  = tagging_tag_api.list_tags_for_category(cat_id).value
+          tag_id = retrieve_tag_id(tag_name, tag_id_list)
+          attach_single_tag(vm_mob_id, tag_id)
+        rescue => e
+          logger.warn("Cannot attach category/tag pair :  #{cat_name}/#{tag_name} with error #{e}")
         end
       end
 
