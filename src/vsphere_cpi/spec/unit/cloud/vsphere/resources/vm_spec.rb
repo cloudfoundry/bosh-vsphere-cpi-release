@@ -75,6 +75,36 @@ describe VSphereCloud::Resources::VM, fake_logger: true do
   end
 
   describe '#fix_device_unit_numbers' do
+    let(:vm_devices) do
+      vm_devices = []
+      4.times do |i|
+        vm_devices << double(:device, controller_key: 7, unit_number: i, key: -i-1)
+      end
+      vm_devices
+    end
+
+    let(:device_1) { VimSdk::Vim::Vm::Device::VirtualDevice.new(key: -1) }
+    let(:device_2) { VimSdk::Vim::Vm::Device::VirtualDevice.new(key: -1) }
+    let(:device_3) { VimSdk::Vim::Vm::Device::VirtualDevice.new(key: -1) }
+
+    let(:device_changes) do
+      [
+        double(:device_change, device: device_1,operation: VimSdk::Vim::Vm::Device::VirtualDeviceSpec::Operation::ADD),
+        double(:device_change, device: device_2,operation: VimSdk::Vim::Vm::Device::VirtualDeviceSpec::Operation::REMOVE),
+        double(:device_change, device: device_3,operation: VimSdk::Vim::Vm::Device::VirtualDeviceSpec::Operation::ADD),
+      ]
+    end
+
+    it 'sets unique negative integers as keys for devices to be added' do
+      expect(vm_mob).to receive_message_chain(:config, :hardware, :device).and_return(vm_devices)
+      vm.fix_device_key(device_changes)
+      expect(device_changes.first.device.key).to eq(-5)
+      expect(device_changes[1].device.key).to eq(-1)
+      expect(device_changes.last.device.key).to eq(-6)
+    end
+  end
+
+  describe '#fix_device_key' do
     let(:vm_properties) { { 'config.hardware.device' => vm_devices } }
     let(:vm_devices) do
       vm_devices = []
@@ -328,7 +358,8 @@ describe VSphereCloud::Resources::VM, fake_logger: true do
     let(:devices) { [disk] }
 
     it 'updates persistent disk' do
-      allow(vm).to receive(:fix_device_unit_numbers)
+      expect(vm).to receive(:fix_device_unit_numbers).once
+      expect(vm).to receive(:fix_device_key).once
       allow(vm).to receive(:devices).and_return(devices)
       allow(vm).to receive(:system_disk).and_return(disk)
       allow(disk).to receive(:controller_key).and_return('fake-controller-key')
