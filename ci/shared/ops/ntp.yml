@@ -5,6 +5,6 @@
 
 
 - type: replace
-  path: /cloud_provider/properties/ntp
+  path: /resource_pools/0/env/bosh/ntp?
   value:
     - time.vmware.com
