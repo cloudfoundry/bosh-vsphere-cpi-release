@@ -117,6 +117,16 @@ module VSphereCloud
 
         replicated_stemcell_vm.fix_device_unit_numbers(config_spec.device_change)
 
+        # Re-assign new keys to devices being added.
+        # from vc api docs:
+        #   When adding new devices, it may be necessary for a client to assign keys temporarily
+        #   in order to associate controllers with devices in configuring a virtual machine.
+        #   However, the server does not allow a client to reassign a device key,
+        #   and the server may assign a different value from the one passed during configuration.
+        #   Clients should ensure that existing device keys are not reused as temporary key values
+        #   for the new device to be added (for example, by using unique negative integers as temporary keys).
+        replicated_stemcell_vm.fix_device_key(config_spec.device_change)
+
         if vm_config.vmx_options.is_a?(Hash)
           config_spec.extra_config = vm_config.vmx_options.keys.map { |key|
             VimSdk::Vim::Option::OptionValue.new(key: key, value: vm_config.vmx_options[key])

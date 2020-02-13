@@ -99,6 +99,18 @@ module VSphereCloud
         devices.find { |device| device.kind_of?(Vim::Vm::Device::VirtualPCIController) }
       end
 
+      def fix_device_key(device_changes)
+        # Create a set of all current device keys in the VM
+        key_memo = Set.new(mob.config&.hardware&.device&.map(&:key))
+        seed = -1
+        device_changes.each do |device_change|
+          # Re assing keys for only those devices which are being added.
+          next unless device_change.operation == VimSdk::Vim::Vm::Device::VirtualDeviceSpec::Operation::ADD
+          seed -=1 while key_memo.add?(seed).nil?
+          device_change.device.key = seed
+        end
+      end
+
       def fix_device_unit_numbers(device_changes)
         controllers_available_unit_numbers = Hash.new { |h, k| h[k] = (0..15).to_a }
         devices.each do |device|
@@ -252,6 +264,7 @@ module VSphereCloud
         vm_config.device_change = []
         vm_config.device_change << disk_config_spec
         fix_device_unit_numbers(vm_config.device_change)
+        fix_device_key(vm_config.device_change)
 
         logger.info('Attaching disk')
         @client.reconfig_vm(@mob, vm_config)
