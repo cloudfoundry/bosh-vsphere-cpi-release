@@ -3,6 +3,7 @@
   value:
     - time.vmware.com
 
+
 - type: replace
   path: /cloud_provider/properties/ntp
   value:
