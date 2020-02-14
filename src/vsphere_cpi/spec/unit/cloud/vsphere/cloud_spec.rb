@@ -2192,8 +2192,11 @@ module VSphereCloud
           expect(vcenter_client).to receive(:set_custom_field).with(vm_mob, 'cat2', 'tag2')
           expect(vcenter_client).to receive(:set_custom_field).with(vm_mob, 'cat3', 'tag3')
           vsphere_cloud.set_vm_metadata(vm.cid, metadata)
+<<<<<<< HEAD
           #vsphere_cloud.set_vm_metadata(vm.cid, {'key' => 'other-value', 'other-key' => 'value'})
 >>>>>>> 834c5bb4... Fixed unit tests for new changes
+=======
+>>>>>>> ae3817f7... added integration tests
         end
       end
       context 'when valid_cat_tag method throws an error' do
@@ -2201,6 +2204,7 @@ module VSphereCloud
           expect(tagging_tagger).to receive(:valid_cat_tag).with(metadata).and_raise(RuntimeError.new('Error encountered'))
           expect(tagging_tagger).not_to receive(:attach_cat_tag_to_vm)
           expect(vcenter_client).to receive(:set_custom_field).thrice
+<<<<<<< HEAD
 <<<<<<< HEAD
 =======
           #expect(tagging_tagger).not_to receive(:attach_single_tag)
@@ -2216,6 +2220,8 @@ module VSphereCloud
           expect(vcenter_client).not_to receive(:set_custom_field).with(vm_mob, 'cat1', 'tag1')
           expect(vcenter_client).not_to receive(:set_custom_field).with(vm_mob, 'cat2', 'tag2')
 >>>>>>> 834c5bb4... Fixed unit tests for new changes
+=======
+>>>>>>> ae3817f7... added integration tests
           vsphere_cloud.set_vm_metadata(vm.cid, metadata)
         end
       end

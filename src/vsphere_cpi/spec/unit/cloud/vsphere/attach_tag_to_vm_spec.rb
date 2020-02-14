@@ -262,10 +262,14 @@ module VSphereCloud
         let(:tag_id_list) { %w[tag_id1 tag_id5 tag_id6] }
         context 'when tagging_category_api_list throws an error' do
 <<<<<<< HEAD
+<<<<<<< HEAD
           it 'should rescue and log the error' do
 =======
           it 'should rescue and log the error and move to the next iteration' do
 >>>>>>> 834c5bb4... Fixed unit tests for new changes
+=======
+          it 'should rescue and log the error' do
+>>>>>>> ae3817f7... added integration tests
             expect_any_instance_of(VSphereAutomation::CIS::TaggingCategoryApi).to \
                 receive_message_chain(:list, :value).and_raise(RuntimeError.new('Error encountered'))
             expect(tagging_tag).not_to receive(:retrieve_category_id)
@@ -279,10 +283,14 @@ module VSphereCloud
         end
         context 'when retrieve_category_id function throws an error' do
 <<<<<<< HEAD
+<<<<<<< HEAD
           it 'should rescue and log the error' do
 =======
           it 'should rescue and log the error and move to the next iteration' do
 >>>>>>> 834c5bb4... Fixed unit tests for new changes
+=======
+          it 'should rescue and log the error' do
+>>>>>>> ae3817f7... added integration tests
             allow_any_instance_of(VSphereAutomation::CIS::TaggingCategoryApi).to \
                 receive_message_chain(:list, :value).and_return(category_ids)
             expect(tagging_tag).to receive(:retrieve_category_id).with('cat1',\
@@ -297,10 +305,14 @@ module VSphereCloud
         end
         context 'when list_tags_for_category function throws an error' do
 <<<<<<< HEAD
+<<<<<<< HEAD
           it 'should rescue and log the error' do
 =======
           it 'should rescue and log the error and move to the next iteration' do
 >>>>>>> 834c5bb4... Fixed unit tests for new changes
+=======
+          it 'should rescue and log the error' do
+>>>>>>> ae3817f7... added integration tests
             allow_any_instance_of(VSphereAutomation::CIS::TaggingCategoryApi).to \
                 receive_message_chain(:list, :value).and_return(category_ids)
             expect(tagging_tag).to receive(:retrieve_category_id).with('cat1',\
@@ -315,10 +327,14 @@ module VSphereCloud
         end
         context 'when retrieve_tag_id function throws an error' do
 <<<<<<< HEAD
+<<<<<<< HEAD
           it 'should rescue and log the error' do
 =======
           it 'should rescue and log the error and move to the next iteration' do
 >>>>>>> 834c5bb4... Fixed unit tests for new changes
+=======
+          it 'should rescue and log the error' do
+>>>>>>> ae3817f7... added integration tests
             allow_any_instance_of(VSphereAutomation::CIS::TaggingCategoryApi).to \
                 receive_message_chain(:list, :value).and_return(category_ids)
             expect(tagging_tag).to receive(:retrieve_category_id).with('cat1',\
@@ -334,10 +350,14 @@ module VSphereCloud
         end
         context 'when attach_single_tag function throws an error' do
 <<<<<<< HEAD
+<<<<<<< HEAD
           it 'should rescue and log the error' do
 =======
           it 'should rescue and log the error and move to the next iteration' do
 >>>>>>> 834c5bb4... Fixed unit tests for new changes
+=======
+          it 'should rescue and log the error' do
+>>>>>>> ae3817f7... added integration tests
             allow_any_instance_of(VSphereAutomation::CIS::TaggingCategoryApi).to \
                 receive_message_chain(:list, :value).and_return(category_ids)
             expect(tagging_tag).to receive(:retrieve_category_id).with('cat1',\

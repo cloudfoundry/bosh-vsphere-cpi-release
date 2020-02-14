@@ -122,7 +122,7 @@ module  VSphereCloud
         @tagging_tag_api ||= VSphereAutomation::CIS::TaggingTagApi.new(@api_client)
       end
 
-      def tagging_category_api
+      private def tagging_category_api
         @tagging_category_api ||= VSphereAutomation::CIS::TaggingCategoryApi.new(@api_client)
       end
 

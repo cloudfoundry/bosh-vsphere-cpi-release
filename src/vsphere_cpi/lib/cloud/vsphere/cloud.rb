@@ -536,6 +536,7 @@ module VSphereCloud
           valid_cat_tag_hash = {}
         end
 <<<<<<< HEAD
+<<<<<<< HEAD
         logger.info("Custom Attributes : #{metadata}")
         logger.info("Category Tag Pairs : #{valid_cat_tag_hash}")
 
@@ -550,10 +551,15 @@ module VSphereCloud
           logger.info("Setting custom attribute : #{name}/#{value}")
 =======
 
+=======
+>>>>>>> ae3817f7... added integration tests
         # Subtract the hash from metadata to get custom_attr_list
         custom_attr_hash = metadata.reject do |key, value|
           valid_cat_tag_hash.has_key?(key) && valid_cat_tag_hash[key] == value
         end
+
+        logger.info("Custom Attributes : #{custom_attr_hash}")
+        logger.info("Category Tag Pairs : #{valid_cat_tag_hash}")
 
         valid_cat_tag_hash.each do |cat_name, tag_name|
           logger.info("Attaching tag to category/tag pair : #{cat_name}/#{tag_name}")
