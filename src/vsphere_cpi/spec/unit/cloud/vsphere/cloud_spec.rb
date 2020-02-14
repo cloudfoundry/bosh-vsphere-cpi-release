@@ -2178,7 +2178,6 @@ module VSphereCloud
           expect(vcenter_client).to receive(:set_custom_field).with(vm_mob, 'cat2', 'tag2')
           expect(vcenter_client).to receive(:set_custom_field).with(vm_mob, 'cat3', 'tag3')
           vsphere_cloud.set_vm_metadata(vm.cid, metadata)
-          #vsphere_cloud.set_vm_metadata(vm.cid, {'key' => 'other-value', 'other-key' => 'value'})
         end
       end
       context 'when valid_cat_tag method throws an error' do
@@ -2186,18 +2185,6 @@ module VSphereCloud
           expect(tagging_tagger).to receive(:valid_cat_tag).with(metadata).and_raise(RuntimeError.new('Error encountered'))
           expect(tagging_tagger).not_to receive(:attach_cat_tag_to_vm)
           expect(vcenter_client).to receive(:set_custom_field).thrice
-          #expect(tagging_tagger).not_to receive(:attach_single_tag)
-          vsphere_cloud.set_vm_metadata(vm.cid, metadata)
-        end
-      end
-      context 'when a particular category:tag pair cannot be attached' do
-        let(:category_ids) { %w[cat_id1 cat_id2] }
-        let(:tag_id_list) { %w[tag_id1 tag_id2] }
-        it 'should log a warning and move to next iteration' do
-          expect(tagging_tagger).to receive(:valid_cat_tag).with(metadata).and_return({'cat1' => 'tag1', 'cat2' => 'tag2'})
-          expect(tagging_tagger).to receive(:attach_cat_tag_to_vm).twice.with(anything, anything, vm_mob)
-          expect(vcenter_client).not_to receive(:set_custom_field).with(vm_mob, 'cat1', 'tag1')
-          expect(vcenter_client).not_to receive(:set_custom_field).with(vm_mob, 'cat2', 'tag2')
           vsphere_cloud.set_vm_metadata(vm.cid, metadata)
         end
       end
