@@ -535,20 +535,17 @@ module VSphereCloud
           logger.warn("Cannot separate out valid category and tag from metadata with error #{e}")
           valid_cat_tag_hash = {}
         end
-        # Subtract the hash from metadata to get custom_attr_list
-        custom_attr_hash = metadata.reject do |key, value|
-          valid_cat_tag_hash.has_key?(key) && valid_cat_tag_hash[key] == value
-        end
-
-        logger.info("Custom Attributes : #{custom_attr_hash}")
+        logger.info("Custom Attributes : #{metadata}")
         logger.info("Category Tag Pairs : #{valid_cat_tag_hash}")
 
+        #assign tags to VM
         valid_cat_tag_hash.each do |cat_name, tag_name|
           logger.info("Attaching tag to category/tag pair : #{cat_name}/#{tag_name}")
-          @tagging_tagger.attach_cat_tag_to_vm(cat_name, tag_name, vm.mob)
+          @tagging_tagger.attach_cat_tag_to_vm(cat_name, tag_name, vm.mob_id)
         end
 
-        custom_attr_hash.each do |name, value|
+        #set custom attributes
+        metadata.each do |name, value|
           logger.info("Setting custom attribute : #{name}/#{value}")
           client.set_custom_field(vm.mob, name, value)
         end
