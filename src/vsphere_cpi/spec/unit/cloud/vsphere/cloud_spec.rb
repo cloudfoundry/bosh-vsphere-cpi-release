@@ -2164,6 +2164,7 @@ module VSphereCloud
       end
       context 'when all category:tag pairs match with existing pairs in vCenter' do
 <<<<<<< HEAD
+<<<<<<< HEAD
         it 'should assign all metadata as tags and custom attributes' do
           expect(tagging_tagger).to receive(:valid_cat_tag).with(metadata).and_return(metadata)
           expect(vm).to receive(:mob_id).thrice
@@ -2175,12 +2176,20 @@ module VSphereCloud
           expect(tagging_tagger).to receive(:attach_cat_tag_to_vm).with(anything, anything, vm_mob).thrice
           expect(vcenter_client).not_to receive(:set_custom_field)
 >>>>>>> 834c5bb4... Fixed unit tests for new changes
+=======
+        it 'should assign all metadata as tags and custom attributes' do
+          expect(tagging_tagger).to receive(:valid_cat_tag).with(metadata).and_return(metadata)
+          expect(vm).to receive(:mob_id).thrice
+          expect(tagging_tagger).to receive(:attach_cat_tag_to_vm).thrice.with(anything, anything, anything)
+          expect(vcenter_client).to receive(:set_custom_field).with(vm_mob, anything, anything).thrice
+>>>>>>> 12fd3a59... Changed functionality for all metadata to become custom attr and fixed unit tests
           vsphere_cloud.set_vm_metadata(vm.cid, metadata)
         end
       end
       context 'when some valid category:tag pairs are present' do
         it 'should assign the metadata correctly as tags and custom fields on the VM' do
           expect(tagging_tagger).to receive(:valid_cat_tag).with(metadata).and_return({'cat1' => 'tag1'})
+<<<<<<< HEAD
 <<<<<<< HEAD
           expect(vm).to receive(:mob_id)
           expect(tagging_tagger).to receive(:attach_cat_tag_to_vm)
@@ -2191,6 +2200,11 @@ module VSphereCloud
           expect(vcenter_client).not_to receive(:set_custom_field).with(vm_mob, 'cat1', 'tag1')
           expect(vcenter_client).to receive(:set_custom_field).with(vm_mob, 'cat2', 'tag2')
           expect(vcenter_client).to receive(:set_custom_field).with(vm_mob, 'cat3', 'tag3')
+=======
+          expect(vm).to receive(:mob_id)
+          expect(tagging_tagger).to receive(:attach_cat_tag_to_vm)
+          expect(vcenter_client).to receive(:set_custom_field).with(vm_mob, anything, anything).thrice
+>>>>>>> 12fd3a59... Changed functionality for all metadata to become custom attr and fixed unit tests
           vsphere_cloud.set_vm_metadata(vm.cid, metadata)
 <<<<<<< HEAD
           #vsphere_cloud.set_vm_metadata(vm.cid, {'key' => 'other-value', 'other-key' => 'value'})
