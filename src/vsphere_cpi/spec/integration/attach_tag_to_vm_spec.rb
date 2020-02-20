@@ -2,6 +2,7 @@ require 'integration/spec_helper'
 require 'vsphere-automation-cis'
 require 'vsphere-automation-vcenter'
 require 'ostruct'
+include LifecycleHelpers
 
 module VSphereCloud
   describe TaggingTag::AttachTagToVm, attach_tag:true do
@@ -220,5 +221,60 @@ module VSphereCloud
         end
       end
     end
+<<<<<<< HEAD
+=======
+
+    private
+    def create_cat_and_tag
+      cate_config_1 = {
+        "create_spec" => {
+          "name" => "category-name-a",
+          "description" => "category contains multi-tag, associable to vm, multi-cardinality",
+          "associable_types" => [],
+          "cardinality" => "MULTIPLE"
+        }
+      }
+      cate_config_2 = {
+          "create_spec" => {
+            "name" => "category-name-b",
+            "description" => "category contains multi-tag, not associable to vm, multi-cardinality",
+            "associable_types" => ["VirtualApp", "StoragePod", "Datacenter"],
+            "cardinality" => "MULTIPLE"
+          }
+      }
+      cate_config_3 = {
+        "create_spec" => {
+          "name" => "category-name-c",
+          "description" => "category contains multi-tag, associable to vm, single-cardinality",
+          "associable_types" => [],
+          "cardinality" => "SINGLE"
+        }
+      }
+
+      cate_config_array = [cate_config_1, cate_config_2, cate_config_3]
+      cate_config_array.each do |cate_config|
+        cate_id = create_category(cate_config)
+        cate_ids << cate_id unless cate_id.nil?
+      end
+
+      tag_config_array = Array.new
+      tag_config_array << { "create_spec" => { "name" => "tag-name-a-1", "description" => "null", "category_id" => cate_ids[0] } }
+      tag_config_array << { "create_spec" => { "name" => "tag-name-a-2", "description" => "null", "category_id" => cate_ids[0] } }
+      tag_config_array << { "create_spec" => { "name" => "tag-name-a-3", "description" => "null", "category_id" => cate_ids[0] } }
+      tag_config_array << { "create_spec" => { "name" => "tag-name-b-1", "description" => "null", "category_id" => cate_ids[1] } }
+      tag_config_array << { "create_spec" => { "name" => "tag-name-b-2", "description" => "null", "category_id" => cate_ids[1] } }
+      tag_config_array << { "create_spec" => { "name" => "tag-name-c-1", "description" => "null", "category_id" => cate_ids[2] } }
+      tag_config_array << { "create_spec" => { "name" => "tag-name-c-2", "description" => "null", "category_id" => cate_ids[2] } }
+      tag_config_array << { "create_spec" => { "name" => "tag-name-c-3", "description" => "null", "category_id" => cate_ids[2] } }
+
+      tag_config_array.each do |tag_config|
+        unless tag_config["create_spec"]["category_id"].nil?
+          tag_id = create_tag(tag_config)
+          tag_ids << tag_id unless tag_id.nil?
+        end
+      end
+    end
+
+>>>>>>> 8420aba5... Moved helper functions to lifecycle helpers
   end
 end

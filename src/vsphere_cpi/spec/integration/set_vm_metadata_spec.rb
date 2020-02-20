@@ -2,6 +2,7 @@ require 'integration/spec_helper'
 require 'securerandom'
 require 'tempfile'
 require 'yaml'
+include LifecycleHelpers
 
 describe 'set_vm_metadata' do
 <<<<<<< HEAD
@@ -47,9 +48,6 @@ describe 'set_vm_metadata' do
 
 =======
   before(:all) do
-    @host = fetch_property('BOSH_VSPHERE_CPI_HOST')
-    @user = fetch_property('BOSH_VSPHERE_CPI_USER')
-    @password = fetch_property('BOSH_VSPHERE_CPI_PASSWORD')
     create_cat_and_tag
   end
 >>>>>>> 856b5d1e... added integration tests
@@ -214,25 +212,6 @@ describe 'set_vm_metadata' do
     end
   end
 
-  def verify_tags(vm_mob_id, attached_tags)
-    object_id_hash = { "type" => "VirtualMachine",  "id" => vm_mob_id }
-    object_ids = { "object_ids" => [VSphereAutomation::CIS::VapiStdDynamicID.new(object_id_hash)] }
-    list_attached_tags_on_object = VSphereAutomation::CIS::CisTaggingTagAssociationListAttachedTagsOnObjects.new(object_ids)
-    list_attached_tags_on_objects_result  = tag_association_api.list_attached_tags_on_objects(list_attached_tags_on_object)
-    tags_on_vm_info = list_attached_tags_on_objects_result.value[0]
-    if tags_on_vm_info.nil?
-      tags_on_vm = []
-    else
-      tags_on_vm = tags_on_vm_info.tag_ids
-    end
-    return false unless attached_tags.size == tags_on_vm.size
-    tags_on_vm.each do |tag_id|
-      tag_info = tagging_tag_api.get(tag_id)
-      return false unless attached_tags.include?(tag_info.value.name)
-    end
-    return true
-  end
-
   def create_cat_and_tag
     cate_config_1 = {
         "create_spec" => {
@@ -278,6 +257,7 @@ describe 'set_vm_metadata' do
       end
     end
   end
+<<<<<<< HEAD
 
   def delete_cat_and_tag
 
@@ -469,4 +449,6 @@ describe 'set_vm_metadata' do
 =end
 =======
 >>>>>>> 856b5d1e... added integration tests
+=======
+>>>>>>> 8420aba5... Moved helper functions to lifecycle helpers
 end
