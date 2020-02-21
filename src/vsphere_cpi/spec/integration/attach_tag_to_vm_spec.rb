@@ -222,6 +222,7 @@ module VSphereCloud
       end
     end
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 
     private
@@ -276,5 +277,7 @@ module VSphereCloud
     end
 
 >>>>>>> 8420aba5... Moved helper functions to lifecycle helpers
+=======
+>>>>>>> f2538e9e... fixed integration tests and moved helper functions to lifecycle_helpers.rb
   end
 end

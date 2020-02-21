@@ -686,12 +686,16 @@ module LifecycleHelpers
   end
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> f2538e9e... fixed integration tests and moved helper functions to lifecycle_helpers.rb
   def create_cat_and_tag(tag_config_array)
     tag_config_array.each do |tag_config|
       unless tag_config["create_spec"]["category_id"].nil?
         tag_id = create_tag(tag_config)
         tag_ids << tag_id unless tag_id.nil?
       end
+<<<<<<< HEAD
     end
   end
 
@@ -717,18 +721,23 @@ module LifecycleHelpers
     tags_on_vm.each do |tag_id|
       tag_info = tagging_tag_api.get(tag_id)
       return false unless attached_tags.include?(tag_info.value.name)
+=======
+>>>>>>> f2538e9e... fixed integration tests and moved helper functions to lifecycle_helpers.rb
     end
-    return true
   end
 
   def delete_cat_and_tag
-
     tag_ids.each do |tag_id|
       tagging_tag_api.delete(tag_id)
     end
+<<<<<<< HEAD
     cate_ids.each do |cate_id|
       tagging_category_api.delete(cate_id)
 >>>>>>> 8420aba5... Moved helper functions to lifecycle helpers
+=======
+    @cat_ids.each do |cat_id|
+      tagging_category_api.delete(cat_id)
+>>>>>>> f2538e9e... fixed integration tests and moved helper functions to lifecycle_helpers.rb
     end
   end
 
@@ -745,6 +754,7 @@ module LifecycleHelpers
   end
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
   def fetch_property(key)
     fail "Missing Environment variable #{key}: #{MISSING_KEY_MESSAGES[key]}" unless (ENV.has_key?(key))
@@ -754,12 +764,17 @@ module LifecycleHelpers
   end
 
 >>>>>>> 8420aba5... Moved helper functions to lifecycle helpers
+=======
+>>>>>>> f2538e9e... fixed integration tests and moved helper functions to lifecycle_helpers.rb
   def tag_ids
     return @tag_ids unless @tag_ids.nil?
     @tag_ids = Array.new
   end
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> f2538e9e... fixed integration tests and moved helper functions to lifecycle_helpers.rb
   def cat_ids(cat_config_array)
     return @cat_ids unless @cat_ids.nil?
     @cat_ids = Array.new
@@ -768,11 +783,14 @@ module LifecycleHelpers
       @cat_ids << cat_id unless cat_id.nil?
     end
     return @cat_ids
+<<<<<<< HEAD
 =======
   def cate_ids
     return @cate_ids unless @cate_ids.nil?
     @cate_ids = Array.new
 >>>>>>> 8420aba5... Moved helper functions to lifecycle helpers
+=======
+>>>>>>> f2538e9e... fixed integration tests and moved helper functions to lifecycle_helpers.rb
   end
 
   def tag_client
@@ -797,6 +815,9 @@ module LifecycleHelpers
   end
 
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> f2538e9e... fixed integration tests and moved helper functions to lifecycle_helpers.rb
   def fetch_property(key)
     fail "Missing Environment variable #{key}: #{MISSING_KEY_MESSAGES[key]}" unless (ENV.has_key?(key))
     value = ENV[key]
@@ -823,6 +844,9 @@ module LifecycleHelpers
     return true
   end
 
+<<<<<<< HEAD
 =======
 >>>>>>> 8420aba5... Moved helper functions to lifecycle helpers
+=======
+>>>>>>> f2538e9e... fixed integration tests and moved helper functions to lifecycle_helpers.rb
 end

@@ -48,7 +48,41 @@ describe 'set_vm_metadata' do
 
 =======
   before(:all) do
-    create_cat_and_tag
+    cat_config_1 = {
+        "create_spec" => {
+            "name" => "OS",
+            "description" => "category contains multi-tag, associable to vm, single-cardinality",
+            "associable_types" => [],
+            "cardinality" => "SINGLE"
+        }
+    }
+    cat_config_2 = {
+        "create_spec" => {
+            "name" => "BU",
+            "description" => "category contains multi-tag, associable to vm, single-cardinality",
+            "associable_types" => [],
+            "cardinality" => "SINGLE"
+        }
+    }
+    cat_config_3 = {
+        "create_spec" => {
+            "name" => "Team",
+            "description" => "category contains multi-tag, associable to vm, single-cardinality",
+            "associable_types" => [],
+            "cardinality" => "SINGLE"
+        }
+    }
+    cat_config_array = [cat_config_1, cat_config_2, cat_config_3]
+    #extract category_ids from category_configurations and create categories on Vm in VCenter
+    cat_id_array = cat_ids(cat_config_array)
+
+    tag_config_array = Array.new
+    tag_config_array << { "create_spec" => { "name" => "Linux", "description" => "null", "category_id" => cat_id_array[0] } }
+    tag_config_array << { "create_spec" => { "name" => "MAPBU", "description" => "null", "category_id" => cat_id_array[1] } }
+    tag_config_array << { "create_spec" => { "name" => "vcpi-team", "description" => "null", "category_id" => cat_id_array[2] } }
+
+    #assign category/tag pairs to VM in VCenter using tag_name and category_id specified in tag_config_array
+    create_cat_and_tag(tag_config_array)
   end
 >>>>>>> 856b5d1e... added integration tests
   after(:all) do
@@ -211,6 +245,7 @@ describe 'set_vm_metadata' do
       delete_vm(@cpi, vm_cid)
     end
   end
+<<<<<<< HEAD
 
   def create_cat_and_tag
     cate_config_1 = {
@@ -451,4 +486,6 @@ describe 'set_vm_metadata' do
 >>>>>>> 856b5d1e... added integration tests
 =======
 >>>>>>> 8420aba5... Moved helper functions to lifecycle helpers
+=======
+>>>>>>> f2538e9e... fixed integration tests and moved helper functions to lifecycle_helpers.rb
 end
