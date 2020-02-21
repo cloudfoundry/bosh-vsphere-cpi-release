@@ -685,32 +685,21 @@ module LifecycleHelpers
     end.count
   end
 
-  def verify_tags(vm_mob_id, attached_tags)
-    object_id_hash = { "type" => "VirtualMachine",  "id" => vm_mob_id }
-    object_ids = { "object_ids" => [VSphereAutomation::CIS::VapiStdDynamicID.new(object_id_hash)] }
-    list_attached_tags_on_object = VSphereAutomation::CIS::CisTaggingTagAssociationListAttachedTagsOnObjects.new(object_ids)
-    list_attached_tags_on_objects_result  = tag_association_api.list_attached_tags_on_objects(list_attached_tags_on_object)
-    tags_on_vm_info = list_attached_tags_on_objects_result.value[0]
-    if tags_on_vm_info.nil?
-      tags_on_vm = []
-    else
-      tags_on_vm = tags_on_vm_info.tag_ids
+  def create_cat_and_tag(tag_config_array)
+    tag_config_array.each do |tag_config|
+      unless tag_config["create_spec"]["category_id"].nil?
+        tag_id = create_tag(tag_config)
+        tag_ids << tag_id unless tag_id.nil?
+      end
     end
-    return false unless attached_tags.size == tags_on_vm.size
-    tags_on_vm.each do |tag_id|
-      tag_info = tagging_tag_api.get(tag_id)
-      return false unless attached_tags.include?(tag_info.value.name)
-    end
-    return true
   end
 
   def delete_cat_and_tag
-
     tag_ids.each do |tag_id|
       tagging_tag_api.delete(tag_id)
     end
-    cate_ids.each do |cate_id|
-      tagging_category_api.delete(cate_id)
+    @cat_ids.each do |cat_id|
+      tagging_category_api.delete(cat_id)
     end
   end
 
@@ -726,21 +715,19 @@ module LifecycleHelpers
     tag_id_info.value
   end
 
-  def fetch_property(key)
-    fail "Missing Environment variable #{key}: #{MISSING_KEY_MESSAGES[key]}" unless (ENV.has_key?(key))
-    value = ENV[key]
-    fail "Environment variable #{key} must not be blank: #{MISSING_KEY_MESSAGES[key]}" if (value =~ /^\s*$/)
-    value
-  end
-
   def tag_ids
     return @tag_ids unless @tag_ids.nil?
     @tag_ids = Array.new
   end
 
-  def cate_ids
-    return @cate_ids unless @cate_ids.nil?
-    @cate_ids = Array.new
+  def cat_ids(cat_config_array)
+    return @cat_ids unless @cat_ids.nil?
+    @cat_ids = Array.new
+    cat_config_array.each do |cat_config|
+      cat_id = create_category(cat_config)
+      @cat_ids << cat_id unless cat_id.nil?
+    end
+    return @cat_ids
   end
 
   def tag_client
@@ -762,6 +749,32 @@ module LifecycleHelpers
 
   def tagging_category_api
     @tagging_category_api ||= VSphereAutomation::CIS::TaggingCategoryApi.new(tag_client)
+  end
+
+  def fetch_property(key)
+    fail "Missing Environment variable #{key}: #{MISSING_KEY_MESSAGES[key]}" unless (ENV.has_key?(key))
+    value = ENV[key]
+    fail "Environment variable #{key} must not be blank: #{MISSING_KEY_MESSAGES[key]}" if (value =~ /^\s*$/)
+    value
+  end
+
+  def verify_tags(vm_mob_id, attached_tags)
+    object_id_hash = { "type" => "VirtualMachine",  "id" => vm_mob_id }
+    object_ids = { "object_ids" => [VSphereAutomation::CIS::VapiStdDynamicID.new(object_id_hash)] }
+    list_attached_tags_on_object = VSphereAutomation::CIS::CisTaggingTagAssociationListAttachedTagsOnObjects.new(object_ids)
+    list_attached_tags_on_objects_result  = tag_association_api.list_attached_tags_on_objects(list_attached_tags_on_object)
+    tags_on_vm_info = list_attached_tags_on_objects_result.value[0]
+    if tags_on_vm_info.nil?
+      tags_on_vm = []
+    else
+      tags_on_vm = tags_on_vm_info.tag_ids
+    end
+    return false unless attached_tags.size == tags_on_vm.size
+    tags_on_vm.each do |tag_id|
+      tag_info = tagging_tag_api.get(tag_id)
+      return false unless attached_tags.include?(tag_info.value.name)
+    end
+    return true
   end
 
 end
