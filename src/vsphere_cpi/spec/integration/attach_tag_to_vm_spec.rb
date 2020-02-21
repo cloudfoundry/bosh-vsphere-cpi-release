@@ -2,7 +2,6 @@ require 'integration/spec_helper'
 require 'vsphere-automation-cis'
 require 'vsphere-automation-vcenter'
 require 'ostruct'
-include LifecycleHelpers
 
 module VSphereCloud
   describe TaggingTag::AttachTagToVm, attach_tag:true do
@@ -65,7 +64,6 @@ module VSphereCloud
         }
       }
     end
-
     let(:vm_type) do
       {
         'ram' => 512,
