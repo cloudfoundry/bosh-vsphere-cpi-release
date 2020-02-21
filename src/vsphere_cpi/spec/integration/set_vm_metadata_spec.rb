@@ -2,7 +2,6 @@ require 'integration/spec_helper'
 require 'securerandom'
 require 'tempfile'
 require 'yaml'
-include LifecycleHelpers
 
 describe 'set_vm_metadata' do
 <<<<<<< HEAD
@@ -46,6 +45,7 @@ describe 'set_vm_metadata' do
     create_cat_and_tag(tag_config_array)
   end
 
+<<<<<<< HEAD
 =======
   before(:all) do
     cat_config_1 = {
@@ -85,6 +85,8 @@ describe 'set_vm_metadata' do
     create_cat_and_tag(tag_config_array)
   end
 >>>>>>> 856b5d1e... added integration tests
+=======
+>>>>>>> dc048cd9... added changes after initial review
   after(:all) do
     delete_cat_and_tag
   end
@@ -196,12 +198,12 @@ describe 'set_vm_metadata' do
     end
     it 'succeeds' do
       @vm_cid = cpi.create_vm(
-          'agent-007',
-          @stemcell_id,
-          vm_type,
-          network_spec,
-          [],
-          {'key' => 'value'}
+        'agent-007',
+        @stemcell_id,
+        vm_type,
+        network_spec,
+        [],
+        {'key' => 'value'}
       )
       threads = []
       cpis = []
@@ -224,19 +226,18 @@ describe 'set_vm_metadata' do
   end
 
   context 'when attaching tags and custom fields to VM' do
-    subject(:cpi) { VSphereCloud::Cloud.new(cpi_options) }
+    let (:cpi) { VSphereCloud::Cloud.new(cpi_options) }
     it 'assigns relevant tags on VM' do
       vm_cid = @cpi.create_vm(
-          'agent-007',
-          @stemcell_id,
-          vm_type,
-          network_spec,
-          [],
-          {}
+        'agent-007',
+        @stemcell_id,
+        vm_type,
+        network_spec,
+        [],
+        {}
       )
       @cpi.set_vm_metadata(vm_cid, metadata)
-
-      #expect current vm to have tags attached
+      
       mob_id = @cpi.vm_provider.find(vm_cid).mob.__mo_id__
       expect(vm_cid).to_not be_nil
       expect(verify_tags(mob_id, ['Linux', 'MAPBU', 'vcpi-team'])).to be(true)
