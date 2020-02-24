@@ -5,6 +5,7 @@ require 'yaml'
 
 describe 'set_vm_metadata' do
 <<<<<<< HEAD
+<<<<<<< HEAD
   before(:all) do
     cat_config_1 = {
         "create_spec" => {
@@ -47,16 +48,23 @@ describe 'set_vm_metadata' do
     delete_cat_and_tag
   end
 
+=======
+>>>>>>> 834c5bb4... Fixed unit tests for new changes
   let(:metadata) { {
       "bosh-#{SecureRandom.uuid}-key" => "test value",
       "OS" => "Linux",
       "BU" => "MAPBU",
+<<<<<<< HEAD
       "Team" => "vcpi-team", #non-existent category
+=======
+      "Team" => "kaitingc", #non-existent category
+>>>>>>> 834c5bb4... Fixed unit tests for new changes
       "Type" => "Sandbox",#tag does not match
       "deployment" => "zookeeper"
   } }
   let(:network_spec) do
     {
+<<<<<<< HEAD
       'static' => {
 =======
   context 'when called with duplicate keys with multiple threads' do
@@ -80,6 +88,16 @@ describe 'set_vm_metadata' do
           'dns' => ['169.254.1.2'],
           'gateway' => '169.254.1.3'
       }
+=======
+        'static' => {
+            'ip' => "169.254.1.#{rand(4..254)}",
+            'netmask' => '255.255.254.0',
+            'cloud_properties' => { 'name' => @vlan },
+            'default' => ['dns', 'gateway'],
+            'dns' => ['169.254.1.2'],
+            'gateway' => '169.254.1.3'
+        }
+>>>>>>> 834c5bb4... Fixed unit tests for new changes
     }
   end
   let(:vm_type) do
@@ -87,6 +105,7 @@ describe 'set_vm_metadata' do
         'ram' => 512,
         'disk' => 2048,
         'cpu' => 1,
+<<<<<<< HEAD
         'tags' => tags
     }
   end
@@ -99,11 +118,46 @@ describe 'set_vm_metadata' do
   }
 
   context 'when called with duplicate keys with multiple threads' do
+=======
+    }
+  end
+
+=begin
+  context 'when metadata has to be separated into tags and custom field attributes' do
+    subject(:tagging_tag_api) { VSphereAutomation::CIS::TaggingTagApi.new(tag_client) }
+>>>>>>> 834c5bb4... Fixed unit tests for new changes
     subject(:cpi) { VSphereCloud::Cloud.new(cpi_options) }
     after do
       cpi.delete_vm(@vm_cid) if @vm_cid
       cpi.client.remove_custom_field_def(metadata.keys.first, VimSdk::Vim::VirtualMachine)
     end
+<<<<<<< HEAD
+=======
+    it 'assigns correct category:tag pairs as tags and custom field attributes' do
+      @vm_cid = cpi.create_vm(
+          'agent-007',
+          @stemcell_id,
+          vm_type,
+          network_spec,
+          [],
+          {'key' => 'value'}
+      )
+      cpis = VSphereCloud::Cloud.new(cpi_options)
+      thread = Thread.new do
+        cpis.set_vm_metadata(@vm_cid, metadata)
+      end
+      expect
+    end
+  end
+=end
+
+  context 'when called with duplicate keys with multiple threads' do
+    subject(:cpi) { VSphereCloud::Cloud.new(cpi_options) }
+    after do
+      cpi.delete_vm(@vm_cid) if @vm_cid
+      cpi.client.remove_custom_field_def(metadata.keys.first, VimSdk::Vim::VirtualMachine)
+    end
+>>>>>>> 834c5bb4... Fixed unit tests for new changes
     it 'succeeds' do
       @vm_cid = cpi.create_vm(
         'agent-007',
@@ -131,6 +185,7 @@ describe 'set_vm_metadata' do
       }.to_not raise_error
 
 <<<<<<< HEAD
+<<<<<<< HEAD
     end
   end
 
@@ -157,6 +212,10 @@ describe 'set_vm_metadata' do
       require 'pry-byebug'
       binding.pry
 >>>>>>> 3bbd3920... Integration Test (Manual Check) TBRL
+=======
+      #require 'pry-byebug'
+      #binding.pry
+>>>>>>> 834c5bb4... Fixed unit tests for new changes
     end
   end
 end
