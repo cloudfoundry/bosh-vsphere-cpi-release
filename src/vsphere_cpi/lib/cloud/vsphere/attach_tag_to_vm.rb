@@ -145,10 +145,6 @@ module  VSphereCloud
         return {} if category_ids.empty?
         category_tag_hash.reject do |cat_name, tag|
           cat_id = retrieve_category_id(cat_name.to_s, category_ids)
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 834c5bb4... Fixed unit tests for new changes
           cat_id.nil? || retrieve_tag_id(tag.to_s, tagging_tag_api.list_tags_for_category(cat_id).value).nil?
         end
       end
@@ -162,12 +158,6 @@ module  VSphereCloud
           attach_single_tag(vm_mob_id, tag_id)
         rescue => e
           logger.warn("Cannot attach category/tag pair :  #{cat_name}/#{tag_name} with error #{e}")
-<<<<<<< HEAD
-=======
-          cat_id.nil? || retrieve_tag_id(tag.to_s, tagging_tag_api.list_tags_for_category(cat_id)).nil?
->>>>>>> 248f286c... Assign tag to a VM from metadata
-=======
->>>>>>> 834c5bb4... Fixed unit tests for new changes
         end
       end
 
