@@ -138,11 +138,5 @@ describe 'set_vm_metadata' do
       delete_vm(@cpi, vm_cid)
     end
   end
-=end
-=======
->>>>>>> 856b5d1e... added integration tests
-=======
->>>>>>> 8420aba5... Moved helper functions to lifecycle helpers
-=======
->>>>>>> f2538e9e... fixed integration tests and moved helper functions to lifecycle_helpers.rb
 end
+
