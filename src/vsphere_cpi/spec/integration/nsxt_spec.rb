@@ -239,11 +239,9 @@ describe 'CPI', nsx_transformers: true do
               'server_pools' => [
                 {
                   'name' => server_pool_name_1,
-                  'port' => port_no
                 },
                 {
                   'name' => server_pool_name_2,
-                  'port' => 80
                 }
               ]
             }
@@ -536,7 +534,7 @@ describe 'CPI', nsx_transformers: true do
   def find_pool_members(server_pool, ip_address, port_no)
     server_pool = services_svc.read_load_balancer_pool(server_pool.id)
     server_pool.members.select do |member|
-      member.ip_address == ip_address && member.port == port_no
+      member.ip_address == ip_address
     end
   end
 
