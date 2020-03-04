@@ -523,6 +523,16 @@ describe VSphereCloud::NSXTProvider, fake_logger: true do
       allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:services_svc).and_return(services_svc)
     end
 
+    context "when port number is not present " do
+      let (:port_no) { nil }
+      it 'creates an instance of a pool member using only an IP address' do
+        allow(vm).to receive_message_chain(:mob, :guest, :ip_address).and_return(ip_address)
+        expect(NSXT::PoolMemberSetting).to receive(:new).with(ip_address: ip_address)
+        expect(services_svc).to receive(:perform_pool_member_action).with(serverpool_1.id, an_instance_of(NSXT::PoolMemberSettingList), 'ADD_MEMBERS')
+        nsxt_provider.add_vm_to_server_pools(vm, server_pools)
+      end
+    end
+
     context "when vm's primary ip is present" do
       before do
         allow(vm).to receive_message_chain(:mob, :guest, :ip_address).and_return(ip_address)
