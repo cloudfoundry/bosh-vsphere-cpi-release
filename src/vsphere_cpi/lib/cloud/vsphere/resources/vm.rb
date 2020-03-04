@@ -9,6 +9,8 @@ module VSphereCloud
 
       NSXT_LOGICAL_SWITCH = 'nsx.LogicalSwitch'.freeze
 
+      DiskWithForcedPath = Struct.new(:disk, :path)
+
       stringify_with :cid
 
       attr_reader :mob, :cid
@@ -308,7 +310,7 @@ module VSphereCloud
         end
       end
 
-      def detach_disks(virtual_disks)
+      def detach_disks(virtual_disks, force_disk_path = nil)
         reload
         check_for_nonpersistent_disk_modes
 
@@ -322,19 +324,21 @@ module VSphereCloud
           config.device_change << Resources::VM.create_delete_device_spec(virtual_disk)
 
           disk_property = get_vapp_property_by_key(virtual_disk.key)
-          unless disk_property.nil?
-            if has_persistent_disk_property_mismatch?(virtual_disk) && !@client.disk_path_exists?(@mob, disk_property.value)
-              logger.info('Persistent disk was moved: moving disk to expected location')
-              disks_to_move << virtual_disk
-            end
+          if disk_property.nil? && !force_disk_path.nil?
+            logger.info('Persistent disk is BOSH-managed but VM has no vApp property: moving disk to current location on same datastore')
+            disks_to_move << DiskWithForcedPath.new(virtual_disk, force_disk_path)
+          elsif has_persistent_disk_property_mismatch?(virtual_disk) && !@client.disk_path_exists?(@mob, disk_property.value)
+            logger.info('Persistent disk was moved: moving disk to vApp property recorded location')
+            disks_to_move << DiskWithForcedPath.new(virtual_disk,  nil)
           end
         end
 
         @client.reconfig_vm(@mob, config)
         logger.info("Detached #{virtual_disks.size} persistent disk(s)")
 
-        move_disks_to_old_path(disks_to_move)
-
+        logger.info("Renaming #{disks_to_move.size} persistent disk(s) to proper path")
+        move_disks(disks_to_move)
+        
         logger.info('Finished detaching disk(s)')
 
         virtual_disks.each do |disk|
@@ -344,17 +348,26 @@ module VSphereCloud
         logger.debug('Finished deleting persistent disk properties from vm')
       end
 
-      def move_disks_to_old_path(disks_to_move)
-        logger.info("Renaming #{disks_to_move.size} persistent disk(s)")
-        disks_to_move.each do |disk|
-          current_datastore = disk.backing.file_name.match(/^\[([^\]]+)\]/)[1]
-          original_disk_path = get_old_disk_filepath(disk.key)
-          dest_filename = original_disk_path.match(/^\[[^\]]+\] (.*)/)[1]
-          dest_path = "[#{current_datastore}] #{dest_filename}"
+      def move_disks(disks_to_move)
+        disks_to_move.each do |disk_with_path|
+          disk = disk_with_path.disk
+          disk_path = disk_with_path.path
 
+          current_datastore = disk.backing.file_name.match(/^\[([^\]]+)\]/)[1]
+          if disk_path.nil?
+            original_disk_path = get_old_disk_filepath(disk.key)
+            dest_filename = original_disk_path.match(/^\[[^\]]+\] (.*)/)[1]
+          else
+            # Use current disk path incuded with the disk
+            dest_filename =  disk.backing.file_name.match(/^\[[^\]]+\] .*\/(.*)/)[1]
+            dest_filename = "#{disk_path}/#{dest_filename}"
+          end
+          dest_path = "[#{current_datastore}] #{dest_filename}"
+          
           @client.move_disk(datacenter_mob, disk.backing.file_name, datacenter_mob, dest_path)
         end
       end
+
 
       # Apply new storage policy to VM, system disk and ephemeral disk.
 

@@ -442,6 +442,27 @@ describe VSphereCloud::Resources::VM, fake_logger: true do
       vm.detach_disks([disk0, disk1])
     end
 
+    context 'when a vm is missing a disk property but force_move indicates the disk to detach is bosh managed' do
+      before do
+        allow(vm_mob).to receive_message_chain(:config, :v_app_config, :property).and_return([])
+      end
+      it 'tries to move the disk to the current path' do
+        expect(client).to receive(:reconfig_vm) do |mob, spec|
+          expect(mob).to equal(vm_mob)
+          expect(spec.device_change.first.device).to eq(disk0)
+          expect(spec.device_change.first.operation).to eq(VimSdk::Vim::Vm::Device::VirtualDeviceSpec::Operation::REMOVE)
+        end
+        expect(client).to receive(:move_disk).with(
+          datacenter,
+          '[datastore x] fake-disk-path/fake-file_name.vmdk',
+          datacenter,
+          '[datastore x] current-fake-disk-path/fake-file_name.vmdk'
+        )
+        expect(client).to receive(:delete_persistent_disk_property_from_vm).with(vm, 'first-disk-key')
+        vm.detach_disks([disk0], 'current-fake-disk-path')
+      end
+    end
+
     context 'when a disk has a property mismatch' do
       let(:disk0_property) do
         instance_double(
