@@ -429,7 +429,6 @@ module VSphereCloud
       let(:stemcell_vm) { instance_double(Resources::VM) }
       let(:vm_creator) { instance_double(VmCreator) }
       let(:vm_config) { instance_double(VmConfig) }
-      let(:ip_conflict_detector) { instance_double(IPConflictDetector) }
       let(:existing_disk_cids) { ['fake-disk-cid'] }
       let(:fake_disk) do
         instance_double(Resources::PersistentDisk,
@@ -486,8 +485,6 @@ module VSphereCloud
         allow(datacenter).to receive(:persistent_pattern).and_return(target_datastore_pattern)
         allow(datacenter).to receive(:find_disk).with(director_disk_cid).and_return(fake_disk)
         allow(VSphereCloud::DirectorDiskCID).to receive(:new).with(encoded_disk_cid).and_return(director_disk_cid)
-        allow(IPConflictDetector).to receive(:new).with(vcenter_client, datacenter).and_return(ip_conflict_detector)
-        allow(IPConflictDetector).to receive(:new).with(vcenter_client, datacenter).and_return(ip_conflict_detector)
         allow(DiskConfig).to receive(:new)
           .with(
             cid: fake_disk.cid,
@@ -537,7 +534,6 @@ module VSphereCloud
             datacenter: datacenter,
             agent_env: agent_env,
             tagging_tagger: tagging_tagger,
-            ip_conflict_detector: ip_conflict_detector,
             default_disk_type: default_disk_type,
             enable_auto_anti_affinity_drs_rules: false,
             stemcell: stemcell,
@@ -587,7 +583,6 @@ module VSphereCloud
             datacenter: datacenter,
             agent_env: agent_env,
             tagging_tagger: tagging_tagger,
-            ip_conflict_detector: ip_conflict_detector,
             default_disk_type: default_disk_type,
             enable_auto_anti_affinity_drs_rules: false,
             upgrade_hw_version: true,
@@ -756,7 +751,6 @@ module VSphereCloud
                                    datacenter: datacenter,
                                    agent_env: agent_env,
                                    tagging_tagger: tagging_tagger,
-                                   ip_conflict_detector: ip_conflict_detector,
                                    default_disk_type: 'thin',
                                    enable_auto_anti_affinity_drs_rules: false,
                                    upgrade_hw_version: true,
