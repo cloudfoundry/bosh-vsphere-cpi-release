@@ -6,7 +6,7 @@ module VSphereCloud
   class VmCreator
     include Logger
 
-    def initialize(client:, cloud_searcher:, cpi:, datacenter:, agent_env:, ip_conflict_detector:, tagging_tagger:, default_disk_type:,
+    def initialize(client:, cloud_searcher:, cpi:, datacenter:, agent_env:, tagging_tagger:, default_disk_type:,
                    enable_auto_anti_affinity_drs_rules:, stemcell:, upgrade_hw_version:, pbm:)
       @client = client
       @cloud_searcher = cloud_searcher
@@ -14,7 +14,6 @@ module VSphereCloud
       @datacenter = datacenter
       @agent_env = agent_env
       @tagging_tagger = tagging_tagger
-      @ip_conflict_detector = ip_conflict_detector
       @default_disk_type = default_disk_type
       @enable_auto_anti_affinity_drs_rules = enable_auto_anti_affinity_drs_rules
       @stemcell = stemcell
@@ -36,8 +35,6 @@ module VSphereCloud
           cluster.accessible_datastores, vm_config.vm_type)
 
         datastore, datastore_cluster = storage.is_a?(Resources::StoragePod) ? [nil, storage] : [storage, nil]
-
-        @ip_conflict_detector.ensure_no_conflicts(vm_config.vsphere_networks)
 
         logger.info("Creating vm: #{vm_config.name} on #{cluster.mob} stored in #{datastore.mob}") if datastore
         logger.info("Creating vm: #{vm_config.name} on #{cluster.mob} stored in datastore cluster: #{datastore_cluster.name}") if datastore_cluster

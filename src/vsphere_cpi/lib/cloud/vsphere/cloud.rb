@@ -353,7 +353,6 @@ module VSphereCloud
             datacenter: @datacenter,
             agent_env: @agent_env,
             tagging_tagger: @tagging_tagger,
-            ip_conflict_detector: IPConflictDetector.new(@client, @datacenter),
             default_disk_type: @config.vcenter_default_disk_type,
             enable_auto_anti_affinity_drs_rules: @config.vcenter_enable_auto_anti_affinity_drs_rules,
             stemcell: Stemcell.new(stemcell_cid),
