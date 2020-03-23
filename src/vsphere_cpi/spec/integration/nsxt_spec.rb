@@ -289,7 +289,7 @@ describe 'CPI', nsx_transformers: true do
               expect(vm_ip).to_not be_nil
               server_pool_1_members = find_pool_members(server_pool_1, vm_ip, port_no)
               expect(server_pool_1_members.count).to eq(1)
-              server_pool_3_members = find_pool_members(server_pool_3, vm_ip, port_no)
+              server_pool_3_members = find_pool_members(server_pool_3, vm_ip)
               expect(server_pool_3_members.count).to eq(1)
             end
           ensure
@@ -405,7 +405,7 @@ describe 'CPI', nsx_transformers: true do
 
           server_poo1_1_members = find_pool_members(server_pool_1, vm_ip, port_no1)
           server_poo1_1_members.concat(find_pool_members(server_pool_1, vm_ip, port_no2))
-          expect(server_poo1_1_members.count).to eq(2)
+          expect(server_poo1_1_members.count).to eq(4)
         end
 
         server_poo1_1_members = services_svc.read_load_balancer_pool(server_pool_1.id).members
@@ -531,10 +531,10 @@ describe 'CPI', nsx_transformers: true do
     services_svc.create_load_balancer_pool(server_pool)
   end
 
-  def find_pool_members(server_pool, ip_address, port_no)
+  def find_pool_members(server_pool, ip_address, *port_no)
     server_pool = services_svc.read_load_balancer_pool(server_pool.id)
     server_pool.members.select do |member|
-      member.ip_address == ip_address
+      member.ip_address == ip_address || (member.ip_address == ip_address && member.port == port_no)
     end
   end
 
