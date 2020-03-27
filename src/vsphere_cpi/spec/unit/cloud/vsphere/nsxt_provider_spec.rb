@@ -209,19 +209,18 @@ describe VSphereCloud::NSXTProvider, fake_logger: true do
             nsxt_provider.add_vm_to_nsgroups(vm, ns_groups)
           end.to raise_error(NSXT::ApiCallError)
         end
-        it "should retry when there is a CONFLICT in adding vm to nsgroup" do
+        it "should retry when there is a CONFLICT in adding vm to the nsgroup" do
           conflict_response = NSXT::ApiCallError.new(:code => 409, :response_body => 'The object was modified by somebody else')
           expect(nsxt_provider).to receive(:retrieve_nsgroups).with(ns_groups).and_return([nsgroup_1, nsgroup_2])
           expect(grouping_obj_svc).to receive(:add_or_remove_ns_group_expression).with(any_args).and_raise(conflict_response)
-          #expect(grouping_obj_svc).to receive(:add_or_remove_ns_group_expression).with(any_args).and_raise(conflict_response)
+          expect(grouping_obj_svc).to receive(:add_or_remove_ns_group_expression).with(any_args).and_raise(conflict_response) #retry twice
           expect(grouping_obj_svc).to receive(:add_or_remove_ns_group_expression).with(any_args).twice
           nsxt_provider.add_vm_to_nsgroups(vm, ns_groups)
         end
-        it "should retry when there is a PreconditionFailed in adding vm to nsgroup" do
+        it "should retry when there is a PreconditionFailed in adding vm to the nsgroup" do
           conflict_response = NSXT::ApiCallError.new(:code => 412, :response_body => 'PreconditionFailed')
           expect(nsxt_provider).to receive(:retrieve_nsgroups).with(ns_groups).and_return([nsgroup_1, nsgroup_2])
           expect(grouping_obj_svc).to receive(:add_or_remove_ns_group_expression).with(any_args).and_raise(conflict_response)
-          #expect(grouping_obj_svc).to receive(:add_or_remove_ns_group_expression).with(any_args).and_raise(conflict_response)
           expect(grouping_obj_svc).to receive(:add_or_remove_ns_group_expression).with(any_args).twice
           nsxt_provider.add_vm_to_nsgroups(vm, ns_groups)
         end
@@ -255,6 +254,29 @@ describe VSphereCloud::NSXTProvider, fake_logger: true do
     it "removes VM's logical ports from all NSGroups" do
       expect(grouping_obj_svc).to receive(:add_or_remove_ns_group_expression).with(any_args).twice
       expect(nsxt_provider).to receive(:retrieve_all_ns_groups_with_pagination).and_return([nsgroup_1, nsgroup_2])
+      nsxt_provider.remove_vm_from_nsgroups(vm)
+    end
+    it 'should raise an error if there is error removing vm from the nsgroup' do
+      failure_response = NSXT::ApiCallError.new(:code => 400)
+      expect(nsxt_provider).to receive(:retrieve_all_ns_groups_with_pagination).and_return([nsgroup_1, nsgroup_2])
+      expect(grouping_obj_svc).to receive(:add_or_remove_ns_group_expression).with(any_args).and_raise(failure_response)
+      expect do
+        nsxt_provider.remove_vm_from_nsgroups(vm)
+      end.to raise_error(NSXT::ApiCallError)
+    end
+    it "should retry when there is a CONFLICT in removing vm from the nsgroup" do
+      conflict_response = NSXT::ApiCallError.new(:code => 409, :response_body => 'The object was modified by somebody else')
+      expect(nsxt_provider).to receive(:retrieve_all_ns_groups_with_pagination).and_return([nsgroup_1, nsgroup_2])
+      expect(grouping_obj_svc).to receive(:add_or_remove_ns_group_expression).with(any_args).and_raise(conflict_response)
+      expect(grouping_obj_svc).to receive(:add_or_remove_ns_group_expression).with(any_args).twice
+      nsxt_provider.remove_vm_from_nsgroups(vm)
+    end
+    it "should retry when there is a PreconditionFailed in removing vm from the nsgroup" do
+      conflict_response = NSXT::ApiCallError.new(:code => 412, :response_body => 'PreconditionFailed')
+      expect(nsxt_provider).to receive(:retrieve_all_ns_groups_with_pagination).and_return([nsgroup_1, nsgroup_2])
+      expect(grouping_obj_svc).to receive(:add_or_remove_ns_group_expression).with(any_args).and_raise(conflict_response)
+      expect(grouping_obj_svc).to receive(:add_or_remove_ns_group_expression).with(any_args).and_raise(conflict_response) #retry twice
+      expect(grouping_obj_svc).to receive(:add_or_remove_ns_group_expression).with(any_args).twice
       nsxt_provider.remove_vm_from_nsgroups(vm)
     end
 

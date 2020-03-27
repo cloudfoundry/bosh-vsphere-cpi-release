@@ -154,11 +154,16 @@ module VSphereCloud
 
       nsgroups.each do |nsgroup|
         logger.info("Removing LogicalPorts: #{lport_ids} to NSGroup '#{nsgroup.id}'")
-        grouping_obj_svc.add_or_remove_ns_group_expression(
-          nsgroup.id,
-          *to_simple_expressions(lports),
-          'REMOVE_MEMBERS'
-        )
+        begin
+          grouping_obj_svc.add_or_remove_ns_group_expression(
+            nsgroup.id,
+            *to_simple_expressions(lports),
+            'REMOVE_MEMBERS'
+          )
+        rescue NSXT::ApiCallError => e
+          retry if e.code == 409 || e.code == 412 #Conflict or PreconditionFailed
+          raise e
+        end
       end
     end
 
