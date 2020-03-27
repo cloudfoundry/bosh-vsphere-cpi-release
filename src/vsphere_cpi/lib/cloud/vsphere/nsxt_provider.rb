@@ -125,11 +125,16 @@ module VSphereCloud
       lports = logical_ports(vm)
       nsgroups.each do |nsgroup|
         logger.info("Adding LogicalPorts: #{lports.map(&:id)} to NSGroup '#{nsgroup.id}'")
-        grouping_obj_svc.add_or_remove_ns_group_expression(
-          nsgroup.id,
-          *to_simple_expressions(lports),
-          'ADD_MEMBERS'
-        )
+        begin
+          grouping_obj_svc.add_or_remove_ns_group_expression(
+            nsgroup.id,
+            *to_simple_expressions(lports),
+            'ADD_MEMBERS'
+          )
+        rescue NSXT::ApiCallError => e
+          retry if e.code == 409 || e.code == 412 #Conflict or PreconditionFailed
+          raise e
+        end
       end
     end
 
