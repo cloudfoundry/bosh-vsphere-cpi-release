@@ -85,8 +85,8 @@ module VSphereCloud
     end
   end
 
-  class NSXTApiCallError < StandardError
-    def initialize(error)
+  class NSXTSecGrpUpdateError < StandardError
+    def initialize(*error)
       @error = error
     end
   end
@@ -124,15 +124,13 @@ module VSphereCloud
     def add_vm_to_nsgroups(vm, ns_groups)
       return if ns_groups.nil? || ns_groups.empty?
       return if nsxt_nics(vm).empty?
-
+      lports = logical_ports(vm)
       logger.info("Adding vm '#{vm.cid}' to NSGroups: #{ns_groups}")
       Bosh::Retryable.new(
           tries: 5,
-          sleep: ->(try_count, retry_exception) { 2 },
-          on: [NSXTApiCallError]
+          on: [NSXTSecGrpUpdateError]
       ).retryer do |i|
         nsgroups = retrieve_nsgroups(ns_groups)
-        lports = logical_ports(vm)
         nsgroups.each do |nsgroup|
           logger.info("Adding LogicalPorts: #{lports.map(&:id)} to NSGroup '#{nsgroup.id}'")
           begin
@@ -142,7 +140,7 @@ module VSphereCloud
               'ADD_MEMBERS'
             )
           rescue NSXT::ApiCallError => e
-            retry if e.code == 409 || e.code == 412 #Conflict or PreconditionFailed
+            raise NSXTSecGrpUpdateError if e.code == 409 || e.code == 412 #Conflict or PreconditionFailed
             raise e
           end
         end
@@ -151,13 +149,12 @@ module VSphereCloud
 
     def remove_vm_from_nsgroups(vm)
       return if nsxt_nics(vm).empty?
+      lports = logical_ports(vm)
+      lport_ids = lports.map(&:id)
       Bosh::Retryable.new(
           tries: 5,
-          sleep: ->(try_count, retry_exception) { 2 },
-          on: [NSXTApiCallError]
+          on: [NSXTSecGrpUpdateError]
       ).retryer do |i|
-        lports = logical_ports(vm)
-        lport_ids = lports.map(&:id)
         nsgroups = retrieve_all_ns_groups_with_pagination.select do |nsgroup|
           nsgroup.members&.any? do |member|
             member.is_a?(NSXT::NSGroupSimpleExpression) &&
@@ -175,7 +172,7 @@ module VSphereCloud
               'REMOVE_MEMBERS'
             )
           rescue NSXT::ApiCallError => e
-            retry if e.code == 409 || e.code == 412 #Conflict or PreconditionFailed
+            raise NSXTSecGrpUpdateError if e.code == 409 || e.code == 412 #Conflict or PreconditionFailed
             raise e
           end
         end
