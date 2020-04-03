@@ -85,6 +85,12 @@ module VSphereCloud
     end
   end
 
+  class NSXTApiCallError < StandardError
+    def initialize(error)
+      @error = error
+    end
+  end
+
   class NSXTProvider
     include Logger
 
@@ -120,49 +126,58 @@ module VSphereCloud
       return if nsxt_nics(vm).empty?
 
       logger.info("Adding vm '#{vm.cid}' to NSGroups: #{ns_groups}")
-      nsgroups = retrieve_nsgroups(ns_groups)
-
-      lports = logical_ports(vm)
-      nsgroups.each do |nsgroup|
-        logger.info("Adding LogicalPorts: #{lports.map(&:id)} to NSGroup '#{nsgroup.id}'")
-        begin
-          grouping_obj_svc.add_or_remove_ns_group_expression(
-            nsgroup.id,
-            *to_simple_expressions(lports),
-            'ADD_MEMBERS'
-          )
-        rescue NSXT::ApiCallError => e
-          retry if e.code == 409 || e.code == 412 #Conflict or PreconditionFailed
-          raise e
+      Bosh::Retryable.new(
+          tries: 5,
+          sleep: ->(try_count, retry_exception) { 2 },
+          on: [NSXTApiCallError]
+      ).retryer do |i|
+        nsgroups = retrieve_nsgroups(ns_groups)
+        lports = logical_ports(vm)
+        nsgroups.each do |nsgroup|
+          logger.info("Adding LogicalPorts: #{lports.map(&:id)} to NSGroup '#{nsgroup.id}'")
+          begin
+            grouping_obj_svc.add_or_remove_ns_group_expression(
+              nsgroup.id,
+              *to_simple_expressions(lports),
+              'ADD_MEMBERS'
+            )
+          rescue NSXT::ApiCallError => e
+            retry if e.code == 409 || e.code == 412 #Conflict or PreconditionFailed
+            raise e
+          end
         end
       end
     end
 
     def remove_vm_from_nsgroups(vm)
       return if nsxt_nics(vm).empty?
-
-      lports = logical_ports(vm)
-
-      lport_ids = lports.map(&:id)
-      nsgroups = retrieve_all_ns_groups_with_pagination.select do |nsgroup|
-        nsgroup.members&.any? do |member|
-          member.is_a?(NSXT::NSGroupSimpleExpression) &&
-            member.target_property == 'id' &&
-            lport_ids.include?(member.value)
+      Bosh::Retryable.new(
+          tries: 5,
+          sleep: ->(try_count, retry_exception) { 2 },
+          on: [NSXTApiCallError]
+      ).retryer do |i|
+        lports = logical_ports(vm)
+        lport_ids = lports.map(&:id)
+        nsgroups = retrieve_all_ns_groups_with_pagination.select do |nsgroup|
+          nsgroup.members&.any? do |member|
+            member.is_a?(NSXT::NSGroupSimpleExpression) &&
+              member.target_property == 'id' &&
+              lport_ids.include?(member.value)
+          end
         end
-      end
 
-      nsgroups.each do |nsgroup|
-        logger.info("Removing LogicalPorts: #{lport_ids} to NSGroup '#{nsgroup.id}'")
-        begin
-          grouping_obj_svc.add_or_remove_ns_group_expression(
-            nsgroup.id,
-            *to_simple_expressions(lports),
-            'REMOVE_MEMBERS'
-          )
-        rescue NSXT::ApiCallError => e
-          retry if e.code == 409 || e.code == 412 #Conflict or PreconditionFailed
-          raise e
+        nsgroups.each do |nsgroup|
+          logger.info("Removing LogicalPorts: #{lport_ids} to NSGroup '#{nsgroup.id}'")
+          begin
+            grouping_obj_svc.add_or_remove_ns_group_expression(
+              nsgroup.id,
+              *to_simple_expressions(lports),
+              'REMOVE_MEMBERS'
+            )
+          rescue NSXT::ApiCallError => e
+            retry if e.code == 409 || e.code == 412 #Conflict or PreconditionFailed
+            raise e
+          end
         end
       end
     end
