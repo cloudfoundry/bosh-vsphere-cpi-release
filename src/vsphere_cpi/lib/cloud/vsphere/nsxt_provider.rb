@@ -85,9 +85,8 @@ module VSphereCloud
     end
   end
 
-  class NSXTSecGrpUpdateError < StandardError
-    def initialize(*error)
-      @error = error
+  class NSXTOptimisticUpdateError < StandardError
+    def initialize()
     end
   end
 
@@ -126,13 +125,13 @@ module VSphereCloud
       return if nsxt_nics(vm).empty?
       lports = logical_ports(vm)
       logger.info("Adding vm '#{vm.cid}' to NSGroups: #{ns_groups}")
-      Bosh::Retryable.new(
-          tries: 5,
-          on: [NSXTSecGrpUpdateError]
-      ).retryer do |i|
-        nsgroups = retrieve_nsgroups(ns_groups)
-        nsgroups.each do |nsgroup|
-          logger.info("Adding LogicalPorts: #{lports.map(&:id)} to NSGroup '#{nsgroup.id}'")
+      nsgroups = retrieve_nsgroups(ns_groups)
+      nsgroups.each do |nsgroup|
+        logger.info("Adding LogicalPorts: #{lports.map(&:id)} to NSGroup '#{nsgroup.id}'")
+        Bosh::Retryable.new(
+            tries: 50,
+            on: [NSXTOptimisticUpdateError]
+        ).retryer do |i|
           begin
             grouping_obj_svc.add_or_remove_ns_group_expression(
               nsgroup.id,
@@ -140,7 +139,7 @@ module VSphereCloud
               'ADD_MEMBERS'
             )
           rescue NSXT::ApiCallError => e
-            raise NSXTSecGrpUpdateError if e.code == 409 || e.code == 412 #Conflict or PreconditionFailed
+            raise NSXTOptimisticUpdateError if e.code == 409 || e.code == 412 #Conflict or PreconditionFailed
             raise e
           end
         end
@@ -151,20 +150,19 @@ module VSphereCloud
       return if nsxt_nics(vm).empty?
       lports = logical_ports(vm)
       lport_ids = lports.map(&:id)
-      Bosh::Retryable.new(
-          tries: 5,
-          on: [NSXTSecGrpUpdateError]
-      ).retryer do |i|
-        nsgroups = retrieve_all_ns_groups_with_pagination.select do |nsgroup|
-          nsgroup.members&.any? do |member|
-            member.is_a?(NSXT::NSGroupSimpleExpression) &&
-              member.target_property == 'id' &&
-              lport_ids.include?(member.value)
-          end
+      nsgroups = retrieve_all_ns_groups_with_pagination.select do |nsgroup|
+        nsgroup.members&.any? do |member|
+          member.is_a?(NSXT::NSGroupSimpleExpression) &&
+            member.target_property == 'id' &&
+            lport_ids.include?(member.value)
         end
-
-        nsgroups.each do |nsgroup|
-          logger.info("Removing LogicalPorts: #{lport_ids} to NSGroup '#{nsgroup.id}'")
+      end
+      nsgroups.each do |nsgroup|
+        logger.info("Removing LogicalPorts: #{lport_ids} to NSGroup '#{nsgroup.id}'")
+        Bosh::Retryable.new(
+            tries: 50,
+            on: [NSXTOptimisticUpdateError]
+        ).retryer do |i|
           begin
             grouping_obj_svc.add_or_remove_ns_group_expression(
               nsgroup.id,
@@ -172,7 +170,7 @@ module VSphereCloud
               'REMOVE_MEMBERS'
             )
           rescue NSXT::ApiCallError => e
-            raise NSXTSecGrpUpdateError if e.code == 409 || e.code == 412 #Conflict or PreconditionFailed
+            raise NSXTOptimisticUpdateError if e.code == 409 || e.code == 412 #Conflict or PreconditionFailed
             raise e
           end
         end
