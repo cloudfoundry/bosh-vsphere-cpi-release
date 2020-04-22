@@ -86,8 +86,6 @@ module VSphereCloud
   end
 
   class NSXTOptimisticUpdateError < StandardError
-    def initialize()
-    end
   end
 
   class NSXTProvider
@@ -132,16 +130,14 @@ module VSphereCloud
             tries: 50,
             on: [NSXTOptimisticUpdateError]
         ).retryer do |i|
-          begin
-            grouping_obj_svc.add_or_remove_ns_group_expression(
-              nsgroup.id,
-              *to_simple_expressions(lports),
-              'ADD_MEMBERS'
-            )
-          rescue NSXT::ApiCallError => e
-            raise NSXTOptimisticUpdateError if e.code == 409 || e.code == 412 #Conflict or PreconditionFailed
-            raise e
-          end
+          grouping_obj_svc.add_or_remove_ns_group_expression(
+            nsgroup.id,
+            *to_simple_expressions(lports),
+            'ADD_MEMBERS'
+          )
+        rescue NSXT::ApiCallError => e
+          raise NSXTOptimisticUpdateError if e.code == 409 || e.code == 412 #Conflict or PreconditionFailed
+          raise
         end
       end
     end
@@ -163,16 +159,14 @@ module VSphereCloud
             tries: 50,
             on: [NSXTOptimisticUpdateError]
         ).retryer do |i|
-          begin
-            grouping_obj_svc.add_or_remove_ns_group_expression(
-              nsgroup.id,
-              *to_simple_expressions(lports),
-              'REMOVE_MEMBERS'
-            )
-          rescue NSXT::ApiCallError => e
-            raise NSXTOptimisticUpdateError if e.code == 409 || e.code == 412 #Conflict or PreconditionFailed
-            raise e
-          end
+          grouping_obj_svc.add_or_remove_ns_group_expression(
+            nsgroup.id,
+            *to_simple_expressions(lports),
+            'REMOVE_MEMBERS'
+          )
+        rescue NSXT::ApiCallError => e
+          raise NSXTOptimisticUpdateError if e.code == 409 || e.code == 412 #Conflict or PreconditionFailed
+          raise
         end
       end
     end
