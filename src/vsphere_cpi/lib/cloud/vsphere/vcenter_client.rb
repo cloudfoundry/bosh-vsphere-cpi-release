@@ -11,6 +11,7 @@ module VSphereCloud
     class AlreadyUpgraded < TaskException; end
     class AlreadyLoggedInException < StandardError; end
     class NotLoggedInException < StandardError; end
+    class NetworkNotFoundError < StandardError; end
 
     attr_reader :cloud_searcher, :service_content, :service_instance, :soap_stub
 
@@ -208,6 +209,22 @@ module VSphereCloud
         end
       end
       matches
+    end
+
+    def find_network_retryably(datacenter, network_name)
+      begin
+        Bosh::Retryable.new(
+            tries: 62, #total retry time - 10 minutes
+            on: [NetworkNotFoundError]
+        ).retryer do |i|
+          logger.info("Trying to find network #{i}th time")
+          network_mob = find_network(datacenter, network_name)
+          raise NetworkNotFoundError if network_mob.nil?
+          network_mob
+        end
+      rescue NetworkNotFoundError => e
+        raise "Error #{e} in finding network '#{network_name}' after multiple retries. Verify that the portgroup exists."
+      end
     end
 
     def find_network(datacenter, network_name)
