@@ -393,7 +393,7 @@ describe 'Host Groups in Cluster and VM Host Rules' do
             thread_list.each {|thread| thread.join}
             expect(get_count_vm_host_affinity_rules(cluster_mob)).to eq(0)
           end
-          context 'and all hosts in first cluster host group are in maintenance mode' do
+          context 'and all hosts in first cluster host group are in maintenance mode', host_maintenance: true do
             before do
               turn_maintenance_on_for_hosts(cpi, first_host_group_mob.host)
             end
