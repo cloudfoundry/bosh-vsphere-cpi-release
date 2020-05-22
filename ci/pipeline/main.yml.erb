@@ -27,8 +27,8 @@ jobs:
         - lifecycle-6.5-NSXT25
         - lifecycle-6.7-NSXT24
         - lifecycle-6.7-NSXT25
-        - lifecycle-6.7-NSXT23
         - lifecycle-7.0-NSXT30
+        - lifecycle-7.0-NSXT30-CVDS
       - get: version-semver
         trigger: false
         params: { bump: patch }
@@ -118,6 +118,83 @@ jobs:
       - put: pool-6.5-NSXT25
         params : {release: pool-6.5-NSXT25}
 
+  - name: lock-bats-70-CVDS
+    plan:
+      - aggregate:
+          - get: source-ci
+          - get: bosh-cpi-src
+            passed: [build-candidate]
+          - get: bosh-cpi-artifacts
+            trigger: true
+            passed: [build-candidate]
+      - do:
+          - put: environment
+            resource: pool-7.0-NSXT30-CVDS
+            params: {acquire: true}
+            on_failure:
+              put: pool-7.0-NSXT30-CVDS
+              params : {release: environment}
+        attempts: 4
+
+  - name: bats-70-CVDS
+    serial: true
+    plan:
+      - aggregate:
+          - get: source-ci
+          - {get: cpi-release,              trigger: false, resource: bosh-cpi-artifacts, passed: [lock-bats]}
+          - {get: environment,              trigger: true,  passed: [lock-bats-70-CVDS], resource: pool-7.0-NSXT30-CVDS}
+          - {get: bosh-release,             trigger: false, resource: old-bosh-release}
+          - {get: stemcell,                 trigger: false, version: {version: "3468.46"}, resource: stemcell}
+          - {get: certification,            trigger: false}
+          - {get: bosh-deployment,          trigger: false}
+          - {get: bats,                     trigger: false}
+          - {get: bosh-cli,                 trigger: false}
+          - get: bosh-cpi-src
+            passed:
+              - lock-bats-70-CVDS
+      - task: prepare-director
+        file: source-ci/ci/tasks/prepare-director.yml
+        params:
+          OPTIONAL_OPS_FILE:  |
+            -o certification/shared/assets/ops/remove-hm.yml
+            -o bosh-deployment/vsphere/resource-pool.yml
+            -o certification/shared/assets/ops/remove-provider-cert.yml
+            -o bosh-deployment/experimental/postgres-9-4.yml
+      - do:
+          - task: deploy-director
+            file: source-ci/ci/tasks/deploy-director.yml
+          - task: run-bats
+            file: source-ci/ci/tasks/run-bats.yml
+            params:
+              BAT_INFRASTRUCTURE: vsphere
+              BAT_NETWORKING:     manual
+              BAT_RSPEC_FLAGS:    "--tag ~dns --tag ~vip_networking --tag ~dynamic_networking --tag ~root_partition --tag ~raw_ephemeral_storage"
+              STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-trusty-go_agent
+        on_failure:
+          aggregate:
+            - put: pool-7.0-NSXT30-CVDS
+              params : {remove: environment}
+            - put: notify
+              params:
+                username: 'CPI-Doctor'
+                text: |
+                  The bats test failed. Check it out at: https://ci.vcna.io/teams/$BUILD_TEAM_NAME/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME
+        ensure:
+          do:
+            - task: teardown
+              file: source-ci/ci/tasks/teardown.yml
+      - put: notify
+        params:
+          username: 'CPI-Doctor'
+          text: |
+            The bats tests passed. Check it out at: https://ci.vcna.io/teams/$BUILD_TEAM_NAME/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME
+
+  - name: unlock-bats-70-CVDS
+    plan:
+      - {trigger: true, passed: [bats-70-CVDS], get: pool-7.0-NSXT30-CVDS}
+      - put: pool-7.0-NSXT30-CVDS
+        params : {release: pool-7.0-NSXT30-CVDS}
+
   - name: delivery
     plan:
     - aggregate:
@@ -128,10 +205,11 @@ jobs:
         - lifecycle-6.5-NSXT24
         - lifecycle-6.5-NSXT25
         - lifecycle-6.7-NSXT24
-        - lifecycle-6.7-NSXT23
         - lifecycle-6.7-NSXT25
         - lifecycle-7.0-NSXT30
+        - lifecycle-7.0-NSXT30-CVDS
         - bats
+        - bats-70-CVDS
     - put: tracker-output
       params: { repos: [bosh-cpi-src] }
 
@@ -141,9 +219,9 @@ jobs:
     - aggregate:
       - get: source-ci
       - get: bosh-cpi-artifacts
-        passed: [bats]
+        passed: [bats, bats-70-CVDS]
       - get: bosh-cpi-src
-        passed: [bats]
+        passed: [bats, bats-70-CVDS]
       - get: release-version-semver
         params: { bump: major }
     - task: inspect
@@ -220,19 +298,19 @@ resources:
       branch:       master
       pool:         v6.7-nsxt25
       private_key:  {{vcpi-pool_deployment_key}}
-  - name: pool-6.7-NSXT23
-    type: pool
-    source:
-      uri:          git@gitlab.eng.vmware.com:PKS/vcpi-pool.git
-      branch:       master
-      pool:         v6.7-nsxt23
-      private_key:  {{vcpi-pool_deployment_key}}
   - name: pool-7.0-NSXT30
     type: pool
     source:
       uri:          git@gitlab.eng.vmware.com:PKS/vcpi-pool.git
       branch:       master
       pool:         v7.0-nsxt30
+      private_key:  {{vcpi-pool_deployment_key}}
+  - name: pool-7.0-NSXT30-CVDS
+    type: pool
+    source:
+      uri:          git@gitlab.eng.vmware.com:PKS/vcpi-pool.git
+      branch:       master
+      pool:         v7.0-nsxt30-cvds
       private_key:  {{vcpi-pool_deployment_key}}
   - name: bosh-cpi-artifacts
     type: s3
@@ -315,12 +393,18 @@ groups:
   - bats
   - lock-bats
   - unlock-bats
+  - bats-70-CVDS
+  - lock-bats-70-CVDS
+  - unlock-bats-70-CVDS
   - lock-6.7-NSXT25
   - lifecycle-6.7-NSXT25
   - unlock-6.7-NSXT25
   - lock-7.0-NSXT30
   - lifecycle-7.0-NSXT30
   - unlock-7.0-NSXT30
+  - lock-7.0-NSXT30-CVDS
+  - lifecycle-7.0-NSXT30-CVDS
+  - unlock-7.0-NSXT30-CVDS
   - lock-6.7-NSXT24
   - lifecycle-6.7-NSXT24
   - unlock-6.7-NSXT24
@@ -335,9 +419,6 @@ groups:
   - lifecycle-6.0-NSXV
   - lock-6.0-NSXV
   - unlock-6.0-NSXV
-  - lifecycle-6.7-NSXT23
-  - lock-6.7-NSXT23
-  - unlock-6.7-NSXT23
 
 - name: Delivery
   jobs:
@@ -347,16 +428,20 @@ groups:
   - lifecycle-6.5-NSXT24
   - lifecycle-6.0-NSXV
   - lifecycle-7.0-NSXT30
-  - lifecycle-6.7-NSXT23
+  - lifecycle-7.0-NSXT30-CVDS
   - bats
+  - bats-70-CVDS
   - delivery
 
 - name: bats
   jobs:
   - unit-test
   - bats
+  - bats-70-CVDS
   - lock-bats
+  - lock-bats-70-CVDS
   - unlock-bats
+  - unlock-bats-70-CVDS
 
 - name: v6.5
   jobs:
@@ -384,9 +469,6 @@ groups:
   - lifecycle-6.7-NSXT25
   - unlock-6.7-NSXT25
   - lock-6.7-NSXT25
-  - unlock-6.7-NSXT23
-  - lifecycle-6.7-NSXT23
-  - lock-6.7-NSXT23
 
 - name: v7.0
   jobs:
@@ -394,4 +476,7 @@ groups:
     - lifecycle-7.0-NSXT30
     - lock-7.0-NSXT30
     - unlock-7.0-NSXT30
+    - lifecycle-7.0-NSXT30-CVDS
+    - lock-7.0-NSXT30-CVDS
+    - unlock-7.0-NSXT30-CVDS
 
