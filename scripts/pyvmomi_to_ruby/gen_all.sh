@@ -21,5 +21,5 @@ files_to_download="{ServerObjects.py,CoreTypes.py,QueryTypes.py,PbmObjects.py,Sm
 
 curl --remote-name "${vmware_pyvmimu_url}/${version_tag}/pyVmomi/${files_to_download}"
 
-./gen_server_objects.py > "${ruby_vim_sdk_path}/server_objects.rb"
-./gen_core_types.py > "${ruby_vim_sdk_path}/core_types.rb"
+./gen_server_objects.py > "${ruby_vim_sdk_path}/server_objects_70.rb"
+./gen_core_types.py > "${ruby_vim_sdk_path}/core_types_70.rb"

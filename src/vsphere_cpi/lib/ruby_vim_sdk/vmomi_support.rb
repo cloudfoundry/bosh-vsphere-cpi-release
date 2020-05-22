@@ -268,11 +268,14 @@ module VimSdk
         qualified_wsdl_name(type).last
       end
     end
-
     require "ruby_vim_sdk/missing_types"
-    require "ruby_vim_sdk/core_types"
-    require "ruby_vim_sdk/server_objects"
-
+    unless $vc_version == "7.0"
+      require "ruby_vim_sdk/core_types"
+      require "ruby_vim_sdk/server_objects"
+    else
+      require "ruby_vim_sdk/core_types_70"
+      require "ruby_vim_sdk/server_objects_70"
+    end
     load_types
   end
 

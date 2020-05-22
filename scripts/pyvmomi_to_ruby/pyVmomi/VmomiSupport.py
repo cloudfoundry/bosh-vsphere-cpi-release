@@ -18,6 +18,7 @@ newestVersions = VersionsStub()
 stableVersions = VersionsStub()
 publicVersions = VersionsStub()
 oldestVersions = VersionsStub()
+dottedVersions = VersionsStub()
 
 def CreateDataType(a, b, c, d, e, out=sys.stdout):
     e=pyvmomi_to_ruby.formatter.zero_to_empty_hash(e)
