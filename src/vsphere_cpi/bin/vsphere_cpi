@@ -12,6 +12,11 @@ require 'bosh/cpi/cli'
 require 'cloud'
 require 'cloud/vsphere'
 
+
+def get_vc_version()
+  return '6.5'
+end
+
 cpi_config = YAML.load_file(ARGV.shift)
 
 Bosh::Clouds::Config.configure(OpenStruct.new(
@@ -35,6 +40,9 @@ cpi_lambda = lambda do |context, _|
   cloud_properties['vcenters'][0].merge!(context)
 
   cloud_properties['soap_log'] = soap_log
+
+  $vc_version = get_vc_version()
+  require 'cloud/vsphere'
   Bosh::Clouds::VSphere.new(cloud_properties)
 end
 
