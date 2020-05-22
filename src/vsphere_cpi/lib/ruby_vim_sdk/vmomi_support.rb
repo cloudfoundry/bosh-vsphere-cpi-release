@@ -2,7 +2,7 @@ module VimSdk
 
   module VmomiSupport
 
-    @logger = MonoLogger.new(STDOUT)
+    @logger = MonoLogger.new(STDERR)
 
     @type_info = {}
     @wsdl_type_info = {}
@@ -272,9 +272,11 @@ module VimSdk
     unless $vc_version == "7.0"
       require "ruby_vim_sdk/core_types"
       require "ruby_vim_sdk/server_objects"
+      logger.info('Loaded vSphere 6.5 SDK')
     else
       require "ruby_vim_sdk/core_types_70"
       require "ruby_vim_sdk/server_objects_70"
+      logger.info('Loaded vSphere 7.0 SDK')
     end
     load_types
   end

@@ -1,4 +1,6 @@
 require 'httpclient'
+require 'openssl'
+require 'cloud/vsphere/sdk_helpers/log_filter'
 
 module VSphereCloud
   class BaseHttpClient
