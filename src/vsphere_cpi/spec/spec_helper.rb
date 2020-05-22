@@ -14,6 +14,7 @@ PROJECT_RUBY_VERSION = ENV.fetch('PROJECT_RUBY_VERSION', '2.6.5')
 
 require 'fakefs/spec_helpers'
 
+require 'vapi_version'
 require 'cloud'
 require 'cloud/vsphere'
 
