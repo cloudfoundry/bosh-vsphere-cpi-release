@@ -27,7 +27,6 @@ jobs:
         - lifecycle-6.5-NSXT25
         - lifecycle-6.7-NSXT24
         - lifecycle-6.7-NSXT25
-        - lifecycle-6.7-NSXT23
         - lifecycle-7.0-NSXT30
         - lifecycle-7.0-NSXT30-CVDS
       - get: version-semver
@@ -171,6 +170,19 @@ jobs:
               BAT_NETWORKING:     manual
               BAT_RSPEC_FLAGS:    "--tag ~dns --tag ~vip_networking --tag ~dynamic_networking --tag ~root_partition --tag ~raw_ephemeral_storage"
               STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-trusty-go_agent
+              NETWORK_STATIC_IP_2: 192.168.111.156 \
+              NETWORK_STATIC_IP_1: 192.168.111.157 \
+              NETWORK_VCENTER_CIDR: 192.168.111.0/24 \
+              NETOWORK_STATIC_RANGE: [192.168.111.156-192.168.111.163] \
+              NETWORK_RESERVED_RANGE: "['192.168.111.0-192.168.111.155' , '192.168.111.164-192.168.111.174']" \
+              NETWORK_VCENTER_GATEWAY: 192.168.111.1 \
+              NETWORK_VCENTER_LAN: "VM-CVDS" \
+              NETWORK_STATIC_IP_1: 192.168.111.164 \
+              NETWORK_VCENTERCIDR: 192.168.111.0/24 \
+              NETWORK2_STATIC_RANGE: [192.168.111.164-192.168.111.174] \
+              NETWORK2_RESERVED_RANGE: "['192.168.111.0-192.168.111.163']" \
+              NETWORK2_VCENTER_GATEWAY: 192.168.111.1 \
+              NETWORK2_VCENTER_VLAN: "VM-CVDS" > bats-config/bats-config.yml
         on_failure:
           aggregate:
             - put: pool-6.5-NSXT25
@@ -206,7 +218,6 @@ jobs:
         - lifecycle-6.5-NSXT24
         - lifecycle-6.5-NSXT25
         - lifecycle-6.7-NSXT24
-        - lifecycle-6.7-NSXT23
         - lifecycle-6.7-NSXT25
         - lifecycle-7.0-NSXT30
         - lifecycle-7.0-NSXT30-CVDS
@@ -299,13 +310,6 @@ resources:
       uri:          git@gitlab.eng.vmware.com:PKS/vcpi-pool.git
       branch:       master
       pool:         v6.7-nsxt25
-      private_key:  {{vcpi-pool_deployment_key}}
-  - name: pool-6.7-NSXT23
-    type: pool
-    source:
-      uri:          git@gitlab.eng.vmware.com:PKS/vcpi-pool.git
-      branch:       master
-      pool:         v6.7-nsxt23
       private_key:  {{vcpi-pool_deployment_key}}
   - name: pool-7.0-NSXT30
     type: pool
@@ -428,9 +432,6 @@ groups:
   - lifecycle-6.0-NSXV
   - lock-6.0-NSXV
   - unlock-6.0-NSXV
-  - lifecycle-6.7-NSXT23
-  - lock-6.7-NSXT23
-  - unlock-6.7-NSXT23
 
 - name: Delivery
   jobs:
@@ -441,7 +442,6 @@ groups:
   - lifecycle-6.0-NSXV
   - lifecycle-7.0-NSXT30
   - lifecycle-7.0-NSXT30-CVDS
-  - lifecycle-6.7-NSXT23
   - bats
   - bats-70
   - delivery
@@ -482,9 +482,6 @@ groups:
   - lifecycle-6.7-NSXT25
   - unlock-6.7-NSXT25
   - lock-6.7-NSXT25
-  - unlock-6.7-NSXT23
-  - lifecycle-6.7-NSXT23
-  - lock-6.7-NSXT23
 
 - name: v7.0
   jobs:
