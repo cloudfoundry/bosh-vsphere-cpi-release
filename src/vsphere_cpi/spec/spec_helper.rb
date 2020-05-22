@@ -14,10 +14,17 @@ PROJECT_RUBY_VERSION = ENV.fetch('PROJECT_RUBY_VERSION', '2.6.5')
 
 require 'fakefs/spec_helpers'
 
+require 'vmodl_version'
 require 'cloud'
-$vc_version = ENV['VC_VERSION'] || '6.5'
-require 'cloud/vsphere'
 
+# Use a closure here so that local variables don't escape to the actual tests
+proc {
+  host = ENV["BOSH_VSPHERE_CPI_HOST"]
+  logger = Logger.new(STDERR)
+  $vc_version = VmodlVersionDiscriminant.retrieve_vmodl_version(host, logger)
+}.call if ENV["BOSH_VSPHERE_CPI_HOST"]
+
+require 'cloud/vsphere'
 require 'base64'
 
 Dir[Pathname(__FILE__).parent.join('support', '**/*.rb')].each { |file| require file }

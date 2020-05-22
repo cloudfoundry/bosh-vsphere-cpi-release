@@ -10,12 +10,7 @@ require 'bosh/cpi'
 require 'bosh/cpi/cli'
 
 require 'cloud'
-require 'cloud/vsphere'
-
-
-def get_vc_version()
-  return '6.5'
-end
+require 'vmodl_version'
 
 cpi_config = YAML.load_file(ARGV.shift)
 
@@ -41,7 +36,9 @@ cpi_lambda = lambda do |context, _|
 
   cloud_properties['soap_log'] = soap_log
 
-  $vc_version = get_vc_version()
+  host = cloud_properties['vcenters'][0]['host']
+  $vc_version = VmodlVersionDiscriminant.retrieve_vmodl_version(
+    host, Bosh::Clouds::Config.logger)
   require 'cloud/vsphere'
   Bosh::Clouds::VSphere.new(cloud_properties)
 end
