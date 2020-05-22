@@ -31,6 +31,13 @@ RSpec.shared_context 'with a fake logger' do
   let(:logger) { Logger.new(StringIO.new('')) }
 end
 
+RSpec.shared_context 'with fast retries' do
+  require 'bosh/cpi'
+  before do
+    allow_any_instance_of(Bosh::Retryable).to receive(:sleep).with(any_args)
+  end
+end
+
 RSpec.configure do |config|
   config.include Support
 
@@ -43,6 +50,7 @@ RSpec.configure do |config|
   end
 
   config.include_context 'with a fake logger', fake_logger: true
+  config.include_context 'with fast retries', fast_retries: true
 end
 
 # Silence output from pending examples in documentation formatter

@@ -1,7 +1,7 @@
 require 'digest'
 require 'spec_helper'
 
-describe VSphereCloud::NSXTProvider, fake_logger: true do
+describe VSphereCloud::NSXTProvider, fake_logger: true, fast_retries: true do
   let(:client) { instance_double(NSXT::ApiClient) }
   let(:nsxt_config) { VSphereCloud::NSXTConfig.new('fake-host', 'fake-username', 'fake-password') }
   let(:opaque_nsxt) do
@@ -259,57 +259,73 @@ describe VSphereCloud::NSXTProvider, fake_logger: true do
 
     before do
       allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:grouping_obj_svc).and_return(grouping_obj_svc)
+      allow(nsxt_provider).to receive(
+        :retrieve_all_ns_groups_with_pagination
+      ).and_return([nsgroup_1, nsgroup_2])
       allow(nsxt_provider).to receive(:logical_ports).with(vm)
-                                .and_return([logical_port_1, logical_port_2])
+        .and_return([logical_port_1, logical_port_2])
     end
 
     it "removes VM's logical ports from all NSGroups" do
-      expect(grouping_obj_svc).to receive(:add_or_remove_ns_group_expression).with(any_args).and_return(true).twice
-      expect(nsxt_provider).to receive(:retrieve_all_ns_groups_with_pagination).and_return([nsgroup_1, nsgroup_2])
+      expect(grouping_obj_svc).to receive(
+        :add_or_remove_ns_group_expression
+      ).with(any_args).and_return(true).twice
 
       nsxt_provider.remove_vm_from_nsgroups(vm)
     end
-    it 'should raise an error if there is error removing vm from the nsgroup' do
-      failure_response = NSXT::ApiCallError.new(:code => 400)
-      expect(nsxt_provider).to receive(:retrieve_all_ns_groups_with_pagination).and_return([nsgroup_1, nsgroup_2])
-      expect(grouping_obj_svc).to receive(:add_or_remove_ns_group_expression).with(any_args).and_raise(failure_response)
+
+    it "raises an error if there's an error removing the VM from the NSgroup" do
+      expect(grouping_obj_svc).to receive(
+        :add_or_remove_ns_group_expression
+      ).with(any_args).and_raise(NSXT::ApiCallError.new(code: 400))
 
       expect do
         nsxt_provider.remove_vm_from_nsgroups(vm)
       end.to raise_error(NSXT::ApiCallError)
     end
-    it "should retry when there is a CONFLICT in removing vm from the nsgroup" do
-      conflict_response = NSXT::ApiCallError.new(code: 409, response_body: 'The object was modified by somebody else')
-      expect(nsxt_provider).to receive(:retrieve_all_ns_groups_with_pagination).and_return([nsgroup_1, nsgroup_2])
-      expect(grouping_obj_svc).to receive(:add_or_remove_ns_group_expression).with(any_args).and_raise(conflict_response).exactly(7).times
-      expect(grouping_obj_svc).to receive(:add_or_remove_ns_group_expression).with(any_args).and_return(true).twice
+
+    it "retries when there's a conflict in removing the VM from the NSgroup" do
+      expect(grouping_obj_svc).to receive(
+        :add_or_remove_ns_group_expression
+      ).with(any_args).and_raise(NSXT::ApiCallError.new(code: 409))
+
+      expect(grouping_obj_svc).to receive(
+        :add_or_remove_ns_group_expression
+      ).with(any_args).and_return(true).twice
 
       nsxt_provider.remove_vm_from_nsgroups(vm)
     end
-    it "should retry when there is a PreconditionFailed in removing vm from the nsgroup" do
-      precondition_failed_response = NSXT::ApiCallError.new(code: 412, response_body: 'PreconditionFailed')
-      expect(nsxt_provider).to receive(:retrieve_all_ns_groups_with_pagination).and_return([nsgroup_1, nsgroup_2])
-      expect(grouping_obj_svc).to receive(:add_or_remove_ns_group_expression).with(any_args).and_return(true)
-      expect(grouping_obj_svc).to receive(:add_or_remove_ns_group_expression).with(any_args).and_raise(precondition_failed_response).exactly(4).times
-      expect(grouping_obj_svc).to receive(:add_or_remove_ns_group_expression).with(any_args).and_return(true)
+
+    it "retries on a PreconditionFailed in removing the VM from the NSgroup" do
+      expect(grouping_obj_svc).to receive(
+        :add_or_remove_ns_group_expression
+      ).with(any_args).and_raise(
+        NSXT::ApiCallError.new(code: 412)
+      ).exactly(4).times
+
+      expect(grouping_obj_svc).to receive(
+        :add_or_remove_ns_group_expression
+      ).with(any_args).and_return(true).twice
 
       nsxt_provider.remove_vm_from_nsgroups(vm)
     end
+
     it "should retry 50 times when there is a conflict or precondition failed while removing vm from nsgroup" do
-      conflict_response = NSXT::ApiCallError.new(code: 409, response_body: 'The object was modified by somebody else')
-      expect(nsxt_provider).to receive(:retrieve_all_ns_groups_with_pagination).and_return([nsgroup_1, nsgroup_2])
-      allow_any_instance_of(Bosh::Retryable).to receive(:new).with(hash_including(tries: 50, on: VSphereCloud::NSXTOptimisticUpdateError))
-      expect(grouping_obj_svc).to receive(:add_or_remove_ns_group_expression).with(any_args).and_raise(conflict_response).at_most(50).times
+      expect(grouping_obj_svc).to receive(
+        :add_or_remove_ns_group_expression
+      ).with(any_args).and_raise(
+        NSXT::ApiCallError.new(code: 409)
+      ).at_most(50).times
 
       expect do
         nsxt_provider.remove_vm_from_nsgroups(vm)
       end.to raise_error(VSphereCloud::NSXTOptimisticUpdateError)
     end
 
-    context 'but VM does NOT have any NSX-T Opaque Network' do
+    context "when the VM doesn't have any NSX-T opaque networks" do
       let(:nics) { [opaque_non_nsxt, network_backing] }
 
-      it 'should no-op' do
+      it 'does nothing' do
         # No call to client should be made
         nsxt_provider.remove_vm_from_nsgroups(vm)
       end
@@ -583,14 +599,13 @@ describe VSphereCloud::NSXTProvider, fake_logger: true do
 
   describe 'add_vm_to_server_pools' do
     let(:serverpool_1) do
-      NSXT::LbPool.new(:id => 'id-1', :display_name => 'test-static-serverpool-1')
+      NSXT::LbPool.new(id: 'id-1', display_name: 'test-static-serverpool-1')
     end
     let(:ip_address) { '192.168.111.1' }
-    let(:port_no) { 443 }
-    let(:server_pools) { [[serverpool_1, port_no]] }
-    let(:failure_response) do
-      NSXT::ApiCallError.new(:code => 400)
-    end
+    let(:port_number) { 443 }
+    let(:server_pools) { [[serverpool_1, port_number]] }
+    let(:failure_response) { NSXT::ApiCallError.new(code: 400) }
+
     before do
       allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:services_svc).and_return(services_svc)
     end
@@ -599,27 +614,32 @@ describe VSphereCloud::NSXTProvider, fake_logger: true do
       before do
         allow(vm).to receive_message_chain(:mob, :guest, :ip_address).and_return(ip_address)
       end
-      it 'does nothing if server_pools is not present' do
+
+      it 'does nothing if server_pools is absent' do
         nsxt_provider.add_vm_to_server_pools(vm, [])
         nsxt_provider.add_vm_to_server_pools(vm, nil)
       end
+
       it 'adds vm to server_pools with given port' do
-        expect(NSXT::PoolMemberSetting).to receive(:new).with(ip_address: ip_address, port: port_no)
+        expect(NSXT::PoolMemberSetting).to receive(:new).with(ip_address: ip_address, port: port_number)
         expect(services_svc).to receive(:perform_pool_member_action).with(serverpool_1.id, an_instance_of(NSXT::PoolMemberSettingList), 'ADD_MEMBERS')
         nsxt_provider.add_vm_to_server_pools(vm, server_pools)
       end
+
       it 'should raise an error if there is error adding vm to the server pool' do
         expect(services_svc).to receive(:perform_pool_member_action).with(serverpool_1.id, anything, anything).and_raise(failure_response)
         expect do
           nsxt_provider.add_vm_to_server_pools(vm, server_pools)
         end.to raise_error(NSXT::ApiCallError)
       end
+
       it "should retry when there is a CONFLICT in server_pool's version" do
         conflict_response = NSXT::ApiCallError.new(:code => 409, :response_body => 'The object was modified by somebody else')
         expect(services_svc).to receive(:perform_pool_member_action).with(serverpool_1.id, anything, anything).and_raise(conflict_response)
         expect(services_svc).to receive(:perform_pool_member_action).with(serverpool_1.id, anything, anything).and_return(serverpool_1)
         nsxt_provider.add_vm_to_server_pools(vm, server_pools)
       end
+
       it "should retry when there is a PreconditionFailed in server_pool's version" do
         conflict_response = NSXT::ApiCallError.new(:code => 412, :response_body => 'PreconditionFailed')
         expect(services_svc).to receive(:perform_pool_member_action).with(serverpool_1.id, anything, anything).and_raise(conflict_response)
@@ -627,21 +647,17 @@ describe VSphereCloud::NSXTProvider, fake_logger: true do
         nsxt_provider.add_vm_to_server_pools(vm, server_pools)
       end
     end
-    context "when vm's primary ip is missing it retries 50 times" do
-      let(:retryable) { Bosh::Retryable.new(tries: 1, sleep: 1)}
 
-      before do
-        allow(vm).to receive_message_chain(:mob, :guest, :ip_address).and_return(nil)
-      end
-      xit "and raises an error" do
-        allow(Bosh::Retryable)
-          .to receive(:new)
-                .with(hash_including(tries: 50))
-                .and_return(retryable)
-        expect do
-          nsxt_provider.add_vm_to_server_pools(vm, server_pools)
-        end.to raise_error(VSphereCloud::VirtualMachineIpNotFound)
-      end
+    it "retries 50 times before erroring when the VM's primary IP is missing" do
+      allow(vm).to receive_message_chain(:mob, :guest, :ip_address).and_return(nil)
+      retryable = Bosh::Retryable.new(tries: 1, sleep: 0)
+
+      allow(Bosh::Retryable).to receive(:new)
+        .with(hash_including(tries: 50)).and_return(retryable)
+
+      expect do
+        nsxt_provider.add_vm_to_server_pools(vm, server_pools)
+      end.to raise_error(VSphereCloud::VirtualMachineIpNotFound)
     end
   end
 
