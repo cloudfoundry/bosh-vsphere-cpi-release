@@ -29,6 +29,7 @@ jobs:
         - lifecycle-6.7-NSXT25
         - lifecycle-6.7-NSXT23
         - lifecycle-7.0-NSXT30
+        - lifecycle-7.0-NSXT30-CVDS
       - get: version-semver
         trigger: false
         params: { bump: patch }
@@ -208,6 +209,7 @@ jobs:
         - lifecycle-6.7-NSXT23
         - lifecycle-6.7-NSXT25
         - lifecycle-7.0-NSXT30
+        - lifecycle-7.0-NSXT30-CVDS
         - bats
         - bats-70
     - put: tracker-output
@@ -312,6 +314,13 @@ resources:
       branch:       master
       pool:         v7.0-nsxt30
       private_key:  {{vcpi-pool_deployment_key}}
+  - name: pool-7.0-NSXT30-CVDS
+    type: pool
+    source:
+      uri:          git@gitlab.eng.vmware.com:PKS/vcpi-pool.git
+      branch:       master
+      pool:         v7.0-nsxt30-cvds
+      private_key:  {{vcpi-pool_deployment_key}}
   - name: bosh-cpi-artifacts
     type: s3
     source:
@@ -402,6 +411,9 @@ groups:
   - lock-7.0-NSXT30
   - lifecycle-7.0-NSXT30
   - unlock-7.0-NSXT30
+  - lock-7.0-NSXT30-CVDS
+  - lifecycle-7.0-NSXT30-CVDS
+  - unlock-7.0-NSXT30-CVDS
   - lock-6.7-NSXT24
   - lifecycle-6.7-NSXT24
   - unlock-6.7-NSXT24
@@ -428,6 +440,7 @@ groups:
   - lifecycle-6.5-NSXT24
   - lifecycle-6.0-NSXV
   - lifecycle-7.0-NSXT30
+  - lifecycle-7.0-NSXT30-CVDS
   - lifecycle-6.7-NSXT23
   - bats
   - bats-70
@@ -479,4 +492,7 @@ groups:
     - lifecycle-7.0-NSXT30
     - lock-7.0-NSXT30
     - unlock-7.0-NSXT30
+    - lifecycle-7.0-NSXT30-CVDS
+    - lock-7.0-NSXT30-CVDS
+    - unlock-7.0-NSXT30-CVDS
 

@@ -60,6 +60,16 @@ $pipeline.pool('7.0-NSXT30') do |pool|
   }
 end
 
+$pipeline.pool('7.0-NSXT30-CVDS') do |pool|
+  pool.params = {
+      RSPEC_FLAGS: [
+          '--tag nsx_transformers'
+      ].join(' '),
+      NSXT_SKIP_SSL_VERIFY: "true",
+      VC_VERSION: "7.0"
+  }
+end
+
 $pipeline.pool('6.7-NSXT23') do |pool|
   pool.params = {
     RSPEC_FLAGS: [
