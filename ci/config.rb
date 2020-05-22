@@ -53,10 +53,10 @@ end
 $pipeline.pool('7.0-NSXT30') do |pool|
   pool.params = {
     RSPEC_FLAGS: [
-        '--tag nsx_transformers'
+        '--tag ~nsx_vsphere',
+        '--tag ~host_maintenance',
     ].join(' '),
     NSXT_SKIP_SSL_VERIFY: "true",
-    VC_VERSION: "7.0"
   }
 end
 
@@ -66,7 +66,6 @@ $pipeline.pool('7.0-NSXT30-CVDS') do |pool|
           '--tag nsx_transformers'
       ].join(' '),
       NSXT_SKIP_SSL_VERIFY: "true",
-      VC_VERSION: "7.0"
   }
 end
 
