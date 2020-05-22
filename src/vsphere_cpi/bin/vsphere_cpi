@@ -13,16 +13,40 @@ require 'cloud'
 require 'cloud/vsphere'
 
 
-def get_vc_version()
-  return '6.5'
+Bosh::Clouds::Config.configure(OpenStruct.new(
+    logger: Bosh::Cpi::Logger.new(STDERR),
+    task_checkpoint: nil,
+    ))
+
+def get_vc_version(vcenter_hash)
+  require 'cloud/vsphere/cpi_http_client'
+  require 'cloud/vsphere/retryer'
+  require 'cloud/vsphere/logger'
+  require 'cloud/vsphere/base_http_client'
+  require 'cloud/vsphere/sdk_helpers/log_filter'
+  require 'nokogiri'
+
+  begin
+    http_client = VSphereCloud::CpiHttpClient.new()
+    url = "https://#{vcenter_hash['vcenters'][0]['host']}/sdk/vimServiceVersions.xml"
+
+    response = VSphereCloud::Retryer.new.try do
+      resp = http_client.get(url, {})
+      if resp.code >= 400
+        err = "Could not fetch '#{url}', received status code '#{resp.code}'"
+        Bosh::Clouds::Config.logger.warn(err)
+        [nil, RuntimeError.new(err)]
+      else
+        [resp, nil]
+      end
+    end
+    VAPIVersionDiscriminant.vapi_version(Nokogiri.XML(response.body))
+  rescue
+    '6.5'
+  end
 end
 
 cpi_config = YAML.load_file(ARGV.shift)
-
-Bosh::Clouds::Config.configure(OpenStruct.new(
-  logger: Bosh::Cpi::Logger.new(STDERR),
-  task_checkpoint: nil,
-))
 
 soap_log = StringIO.new
 
@@ -41,7 +65,7 @@ cpi_lambda = lambda do |context, _|
 
   cloud_properties['soap_log'] = soap_log
 
-  $vc_version = get_vc_version()
+  $vc_version = get_vc_version(cloud_properties)
   require 'cloud/vsphere'
   Bosh::Clouds::VSphere.new(cloud_properties)
 end

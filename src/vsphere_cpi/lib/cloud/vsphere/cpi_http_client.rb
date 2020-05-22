@@ -1,3 +1,5 @@
+require 'cloud/vsphere/base_http_client'
+
 module VSphereCloud
   class CpiHttpClient < BaseHttpClient
 
