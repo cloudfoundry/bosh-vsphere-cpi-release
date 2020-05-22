@@ -16,9 +16,38 @@ require 'fakefs/spec_helpers'
 
 require 'vapi_version'
 require 'cloud'
-$vc_version = ENV['VC_VERSION'] || '6.5'
-require 'cloud/vsphere'
 
+def get_vc_version()
+  require 'cloud/vsphere/cpi_http_client'
+  require 'cloud/vsphere/retryer'
+  require 'cloud/vsphere/logger'
+  require 'cloud/vsphere/base_http_client'
+  require 'cloud/vsphere/sdk_helpers/log_filter'
+  require 'nokogiri'
+
+  begin
+    http_client = VSphereCloud::CpiHttpClient.new()
+    url = "https://#{ENV["BOSH_VSPHERE_CPI_HOST"]}/sdk/vimServiceVersions.xml"
+
+    response = VSphereCloud::Retryer.new.try do
+      resp = http_client.get(url, {})
+      if resp.code >= 400
+        err = "Could not fetch '#{url}', received status code '#{resp.code}'"
+        Bosh::Clouds::Config.logger.warn(err)
+        [nil, RuntimeError.new(err)]
+      else
+        [resp, nil]
+      end
+    end
+    VAPIVersionDiscriminant.vapi_version(Nokogiri.XML(response.body))
+  rescue
+    '6.5'
+  end
+end
+
+
+$vc_version = get_vc_version()
+require 'cloud/vsphere'
 require 'base64'
 
 Dir[Pathname(__FILE__).parent.join('support', '**/*.rb')].each { |file| require file }
