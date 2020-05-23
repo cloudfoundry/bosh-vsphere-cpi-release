@@ -119,7 +119,7 @@ jobs:
       - put: pool-6.5-NSXT25
         params : {release: pool-6.5-NSXT25}
 
-  - name: lock-bats-70
+  - name: lock-bats-70-CVDS
     plan:
       - aggregate:
           - get: source-ci
@@ -130,20 +130,20 @@ jobs:
             passed: [build-candidate]
       - do:
           - put: environment
-            resource: pool-7.0-NSXT30
+            resource: pool-7.0-NSXT30-CVDS
             params: {acquire: true}
             on_failure:
-              put: pool-7.0-NSXT30
+              put: pool-7.0-NSXT30-CVDS
               params : {release: environment}
         attempts: 4
 
-  - name: bats-70
+  - name: bats-70-CVDS
     serial: true
     plan:
       - aggregate:
           - get: source-ci
           - {get: cpi-release,              trigger: false, resource: bosh-cpi-artifacts, passed: [lock-bats]}
-          - {get: environment,              trigger: true,  passed: [lock-bats-70], resource: pool-7.0-NSXT30}
+          - {get: environment,              trigger: true,  passed: [lock-bats-70-CVDS], resource: pool-7.0-NSXT30-CVDS}
           - {get: bosh-release,             trigger: false, resource: old-bosh-release}
           - {get: stemcell,                 trigger: false, version: {version: "3468.46"}, resource: stemcell}
           - {get: certification,            trigger: false}
@@ -152,7 +152,7 @@ jobs:
           - {get: bosh-cli,                 trigger: false}
           - get: bosh-cpi-src
             passed:
-              - lock-bats-70
+              - lock-bats-70-CVDS
       - task: prepare-director
         file: source-ci/ci/tasks/prepare-director.yml
         params:
@@ -173,7 +173,7 @@ jobs:
               STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-trusty-go_agent
         on_failure:
           aggregate:
-            - put: pool-6.5-NSXT25
+            - put: pool-7.0-NSXT30-CVDS
               params : {remove: environment}
             - put: notify
               params:
@@ -190,11 +190,11 @@ jobs:
           text: |
             The bats tests passed. Check it out at: https://ci.vcna.io/teams/$BUILD_TEAM_NAME/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME
 
-  - name: unlock-bats-70
+  - name: unlock-bats-70-CVDS
     plan:
-      - {trigger: true, passed: [bats-70], get: pool-7.0-NSXT30}
-      - put: pool-7.0-NSXT30
-        params : {release: pool-7.0-NSXT30}
+      - {trigger: true, passed: [bats-70-CVDS], get: pool-7.0-NSXT30-CVDS}
+      - put: pool-7.0-NSXT30-CVDS
+        params : {release: pool-7.0-NSXT30-CVDS}
 
   - name: delivery
     plan:
@@ -211,7 +211,7 @@ jobs:
         - lifecycle-7.0-NSXT30
         - lifecycle-7.0-NSXT30-CVDS
         - bats
-        - bats-70
+        - bats-70-CVDS
     - put: tracker-output
       params: { repos: [bosh-cpi-src] }
 
@@ -221,9 +221,9 @@ jobs:
     - aggregate:
       - get: source-ci
       - get: bosh-cpi-artifacts
-        passed: [bats, bats-70]
+        passed: [bats, bats-70-CVDS]
       - get: bosh-cpi-src
-        passed: [bats, bats-70]
+        passed: [bats, bats-70-CVDS]
       - get: release-version-semver
         params: { bump: major }
     - task: inspect
@@ -402,9 +402,9 @@ groups:
   - bats
   - lock-bats
   - unlock-bats
-  - bats-70
-  - lock-bats-70
-  - unlock-bats-70
+  - bats-70-CVDS
+  - lock-bats-70-CVDS
+  - unlock-bats-70-CVDS
   - lock-6.7-NSXT25
   - lifecycle-6.7-NSXT25
   - unlock-6.7-NSXT25
@@ -443,18 +443,18 @@ groups:
   - lifecycle-7.0-NSXT30-CVDS
   - lifecycle-6.7-NSXT23
   - bats
-  - bats-70
+  - bats-70-CVDS
   - delivery
 
 - name: bats
   jobs:
   - unit-test
   - bats
-  - bats-70
+  - bats-70-CVDS
   - lock-bats
-  - lock-bats-70
+  - lock-bats-70-CVDS
   - unlock-bats
-  - unlock-bats-70
+  - unlock-bats-70-CVDS
 
 - name: v6.5
   jobs:
