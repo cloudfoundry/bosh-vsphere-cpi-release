@@ -14,7 +14,7 @@ PROJECT_RUBY_VERSION = ENV.fetch('PROJECT_RUBY_VERSION', '2.6.5')
 
 require 'fakefs/spec_helpers'
 
-require 'vapi_version'
+require 'vmodl_version'
 require 'cloud'
 
 def get_vc_version()
@@ -39,7 +39,7 @@ def get_vc_version()
         [resp, nil]
       end
     end
-    VAPIVersionDiscriminant.vapi_version(Nokogiri.XML(response.body))
+    VmodlVersionDiscriminant.vmodl_version(Nokogiri.XML(response.body))
   rescue
     '6.5'
   end

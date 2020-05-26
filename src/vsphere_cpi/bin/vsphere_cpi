@@ -41,7 +41,7 @@ def get_vc_version(vcenter_hash)
         [resp, nil]
       end
     end
-    VAPIVersionDiscriminant.vapi_version(Nokogiri.XML(response.body))
+    VmodlVersionDiscriminant.vmodl_version(Nokogiri.XML(response.body))
   rescue
     '6.5'
   end

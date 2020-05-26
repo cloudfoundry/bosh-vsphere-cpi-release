@@ -1,10 +1,10 @@
-module VAPIVersionDiscriminant
+module VmodlVersionDiscriminant
   # @return [String] the usable vSphere management API version as one of "7.0",
   #   "6.7", or "6.5"
   # @param [Nokogiri::XML::Document] the XML document from the vCenter server's
   #   `vimServiceVersions.xml` file
-  def self.vapi_version(document)
-    sequence = retrieve_vapi_version_sequence(document)
+  def self.vmodl_version(document)
+    sequence = retrieve_vmodl_version_sequence(document)
     return '6.5' if sequence.nil?
     return '7.0' if (sequence[0 .. 1] <=> [7, 0]) >= 0
     return '6.7' if (sequence[0 .. 1] <=> [6, 7]) >= 0
@@ -20,7 +20,7 @@ module VAPIVersionDiscriminant
   #   `vimServiceVersions.xml` file
   # @return [Array<Integer>, nil] the version sequence of the vSphere management
   #   API or `nil` on failure
-  def self.retrieve_vapi_version_sequence(document)
+  def self.retrieve_vmodl_version_sequence(document)
     # Find the VIM service version of the urn:vim25 namespace (the namespace of
     # the vSphere management SDK).
     version = document % '/namespaces/namespace[name="urn:vim25"]/version'
@@ -47,5 +47,5 @@ module VAPIVersionDiscriminant
     end.max
   end
 
-  private_class_method :retrieve_vapi_version_sequence
+  private_class_method :retrieve_vmodl_version_sequence
 end
