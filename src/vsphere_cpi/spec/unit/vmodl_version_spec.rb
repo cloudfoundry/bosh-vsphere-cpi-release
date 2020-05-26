@@ -12,7 +12,7 @@ describe VmodlVersionDiscriminant do
     end
   end
 
-  describe '.vmodl_version' do
+  describe '.extract_vmodl_version' do
     context 'when multiple namespaces are in the document' do
       let_document(<<~XML)
         <namespace>
@@ -28,7 +28,7 @@ describe VmodlVersionDiscriminant do
       XML
 
       it 'returns the version of the urn:vim25 namespace' do
-        expect(described_class.vmodl_version(document)).to eq('6.5')
+        expect(described_class.extract_vmodl_version(document)).to eq('6.5')
       end
     end
 
@@ -42,7 +42,7 @@ describe VmodlVersionDiscriminant do
       XML
 
       it 'returns the fallback version' do
-        expect(described_class.vmodl_version(document)).to eq('6.5')
+        expect(described_class.extract_vmodl_version(document)).to eq('6.5')
       end
     end
 
@@ -60,7 +60,7 @@ describe VmodlVersionDiscriminant do
       XML
 
       it 'returns the highest version that is a . delimited version string' do
-        expect(described_class.vmodl_version(document)).to eq('6.5')
+        expect(described_class.extract_vmodl_version(document)).to eq('6.5')
       end
     end
 
@@ -74,7 +74,7 @@ describe VmodlVersionDiscriminant do
       XML
 
       it 'returns 7.0' do
-        expect(described_class.vmodl_version(document)).to eq('7.0')
+        expect(described_class.extract_vmodl_version(document)).to eq('7.0')
       end
     end
 
@@ -88,7 +88,7 @@ describe VmodlVersionDiscriminant do
       XML
 
       it 'returns 6.7' do
-        expect(described_class.vmodl_version(document)).to eq('6.7')
+        expect(described_class.extract_vmodl_version(document)).to eq('6.7')
       end
     end
 
@@ -102,7 +102,7 @@ describe VmodlVersionDiscriminant do
       XML
 
       it 'returns 6.5' do
-        expect(described_class.vmodl_version(document)).to eq('6.5')
+        expect(described_class.extract_vmodl_version(document)).to eq('6.5')
       end
     end
   end

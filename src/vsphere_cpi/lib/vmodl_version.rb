@@ -1,10 +1,44 @@
+require 'bosh/cpi'
+require 'cloud/vsphere/cpi_http_client'
+require 'nokogiri'
+
+# This file can't require 'cloud/vsphere' as that will load the vSphere SDK. It
+# should depend on as little as possible.
+
 module VmodlVersionDiscriminant
+  # Determine the supported version of the vSphere management API version from
+  # the vCenter server's `vimServiceVersions.xml` file. If it's indeterminate or
+  # an error occurs then fallback to "6.5".
+  #
+  # @param [String] the hostname of the vCenter server
   # @return [String] the usable vSphere management API version as one of "7.0",
   #   "6.7", or "6.5"
+  def self.retrieve_vmodl_version(host, logger = nil)
+    logger.info('Fetching vSphere version to locate SDK') unless logger.nil?
+    http_client = VSphereCloud::CpiHttpClient.new
+    url = "https://#{host}/sdk/vimServiceVersions.xml"
+
+    body = Bosh::Retryable.new(tries: 3, on: [StandardError]).retryer do
+      response = http_client.get(url)
+      unless (200 ... 300).include?(response.code)
+        Bosh::Clouds::Config.logger.warn(<<~TEXT) unless logger.nil?
+          Couldn't GET #{url.inspect}, received status code #{response.code}
+        TEXT
+        next
+      end
+      response.body
+    end
+    extract_vmodl_version(Nokogiri.XML(response.body))
+  rescue
+    '6.5'
+  end
+
   # @param [Nokogiri::XML::Document] the XML document from the vCenter server's
   #   `vimServiceVersions.xml` file
-  def self.vmodl_version(document)
-    sequence = retrieve_vmodl_version_sequence(document)
+  # @return [String] the usable vSphere management API version as one of "7.0",
+  #   "6.7", or "6.5"
+  def self.extract_vmodl_version(document)
+    sequence = extract_vmodl_version_sequence(document)
     return '6.5' if sequence.nil?
     return '7.0' if (sequence[0 .. 1] <=> [7, 0]) >= 0
     return '6.7' if (sequence[0 .. 1] <=> [6, 7]) >= 0
@@ -20,7 +54,7 @@ module VmodlVersionDiscriminant
   #   `vimServiceVersions.xml` file
   # @return [Array<Integer>, nil] the version sequence of the vSphere management
   #   API or `nil` on failure
-  def self.retrieve_vmodl_version_sequence(document)
+  def self.extract_vmodl_version_sequence(document)
     # Find the VIM service version of the urn:vim25 namespace (the namespace of
     # the vSphere management SDK).
     version = document % '/namespaces/namespace[name="urn:vim25"]/version'
@@ -47,5 +81,5 @@ module VmodlVersionDiscriminant
     end.max
   end
 
-  private_class_method :retrieve_vmodl_version_sequence
+  private_class_method :extract_vmodl_version_sequence
 end

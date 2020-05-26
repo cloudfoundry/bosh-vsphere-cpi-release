@@ -17,37 +17,9 @@ require 'fakefs/spec_helpers'
 require 'vmodl_version'
 require 'cloud'
 
-def get_vc_version()
-  require 'cloud/vsphere/cpi_http_client'
-  require 'cloud/vsphere/retryer'
-  require 'cloud/vsphere/logger'
-  require 'cloud/vsphere/base_http_client'
-  require 'cloud/vsphere/sdk_helpers/log_filter'
-  require 'nokogiri'
+$vc_version = VmodlVersionDiscriminant.retrieve_vmodl_version(ENV["BOSH_VSPHERE_CPI_HOST"])
+$stderr.puts("vSphere version is #{$vc_version}")
 
-  begin
-    http_client = VSphereCloud::CpiHttpClient.new()
-    url = "https://#{ENV["BOSH_VSPHERE_CPI_HOST"]}/sdk/vimServiceVersions.xml"
-
-    response = VSphereCloud::Retryer.new.try do
-      resp = http_client.get(url, {})
-      if resp.code >= 400
-        err = "Could not fetch '#{url}', received status code '#{resp.code}'"
-        Bosh::Clouds::Config.logger.warn(err)
-        [nil, RuntimeError.new(err)]
-      else
-        [resp, nil]
-      end
-    end
-    VmodlVersionDiscriminant.vmodl_version(Nokogiri.XML(response.body))
-  rescue
-    '6.5'
-  end
-end
-
-
-$vc_version = get_vc_version()
-puts "VC Version is #{$vc_version}"
 require 'cloud/vsphere'
 require 'base64'
 
