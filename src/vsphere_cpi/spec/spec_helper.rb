@@ -47,6 +47,7 @@ end
 
 
 $vc_version = get_vc_version()
+puts "VC Version is #{$vc_version}"
 require 'cloud/vsphere'
 require 'base64'
 
