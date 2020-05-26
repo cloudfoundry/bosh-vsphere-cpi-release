@@ -27,6 +27,7 @@ def get_vc_version(vcenter_hash)
   require 'nokogiri'
 
   begin
+    Bosh::Clouds::Config.logger.info("Fetching vSphere version for using correct SDK")
     http_client = VSphereCloud::CpiHttpClient.new()
     url = "https://#{vcenter_hash['vcenters'][0]['host']}/sdk/vimServiceVersions.xml"
 
@@ -66,6 +67,7 @@ cpi_lambda = lambda do |context, _|
   cloud_properties['soap_log'] = soap_log
 
   $vc_version = get_vc_version(cloud_properties)
+  Bosh::Clouds::Config.logger.info("vSphere version retrieved is #{$vc_version}")
   require 'cloud/vsphere'
   Bosh::Clouds::VSphere.new(cloud_properties)
 end
