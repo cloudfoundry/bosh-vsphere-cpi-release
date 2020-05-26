@@ -482,6 +482,18 @@ module VSphereCloud
       find_child_by_name(mob.child_entity.find {|c| c.name == child_entity_name }, child_path)
     end
 
+    def dvpg_istype_nsxt?(key:, dc:)
+      portgroup = cloud_searcher.get_managed_objects(
+        VimSdk::Vim::DVS::DistributedVirtualPortgroup,
+        root: dc.mob,
+        include_name: true
+      ).detect do |portgroup|
+        portgroup.key = key
+      end
+      return false unless portgroup.config.respond_to?(:backing_type)
+      portgroup.config.backing_type == "nsx"
+    end
+
     private
 
     def find_perf_metric_names(mob, names)
