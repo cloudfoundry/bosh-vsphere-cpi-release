@@ -21,7 +21,7 @@ module VmodlVersionDiscriminant
     body = Bosh::Retryable.new(tries: 3, on: [StandardError]).retryer do
       response = http_client.get(url)
       unless (200 ... 300).include?(response.code)
-        Bosh::Clouds::Config.logger.warn(<<~TEXT) unless logger.nil?
+        logger.warn(<<~TEXT) unless logger.nil?
           Couldn't GET #{url.inspect}, received status code #{response.code}
         TEXT
         next

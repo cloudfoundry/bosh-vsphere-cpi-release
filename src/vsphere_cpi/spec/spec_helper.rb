@@ -17,8 +17,8 @@ require 'fakefs/spec_helpers'
 require 'vmodl_version'
 require 'cloud'
 
-$vc_version = VmodlVersionDiscriminant.retrieve_vmodl_version(ENV["BOSH_VSPHERE_CPI_HOST"])
-$stderr.puts("vSphere version is #{$vc_version}")
+host = ENV["BOSH_VSPHERE_CPI_HOST"]
+$vc_version = VmodlVersionDiscriminant.retrieve_vmodl_version(host) if host
 
 require 'cloud/vsphere'
 require 'base64'
