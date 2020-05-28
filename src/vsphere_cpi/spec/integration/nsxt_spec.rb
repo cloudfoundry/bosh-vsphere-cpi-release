@@ -108,7 +108,7 @@ describe 'CPI', nsx_transformers: true do
   end
 
   describe 'on create_vm' do
-    context 'when global default_vif_type is set', nsxt_21: true do
+    context 'when global default_vif_type is set' do
       # This works exclusively with cert/key pair
       # Utilizes the CPI code in NSXTApiClientBuilder
       let(:cpi) do
@@ -152,7 +152,7 @@ describe 'CPI', nsx_transformers: true do
       end
     end
 
-    context 'when global default_vif_type is not set', nsxt_21: true do
+    context 'when global default_vif_type is not set' do
       it 'should not set vif_type for logical ports' do
         simple_vm_lifecycle(cpi, '', vm_type, network_spec) do |vm_id|
           verify_ports(vm_id) do |lport|
@@ -227,7 +227,7 @@ describe 'CPI', nsx_transformers: true do
       end
     end
 
-    context 'when server_pools are specified', nsxt_21: true do
+    context 'when server_pools are specified' do
       let(:port_no) { '443' }
       let(:vm_type) do
         {
@@ -346,7 +346,7 @@ describe 'CPI', nsx_transformers: true do
         end
       end
     end
-    context 'when server pools are specified', nsxt_21: true do
+    context 'when server pools are specified' do
       let(:port_no1) {'80'}
       let(:port_no2) {'443'}
       let(:nsxt_spec) {

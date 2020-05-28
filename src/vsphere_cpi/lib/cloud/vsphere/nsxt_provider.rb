@@ -91,11 +91,13 @@ module VSphereCloud
   class NSXTProvider
     include Logger
 
-    def initialize(client, default_vif_type)
+    def initialize(client, default_vif_type, vcenter_client, datacenter)
       @client = client
       @max_tries = MAX_TRIES
       @sleep_time = DEFAULT_SLEEP_TIME
       @default_vif_type = default_vif_type
+      @vcenter_client = vcenter_client
+      @datacenter = datacenter
     end
 
     private def grouping_obj_svc
@@ -394,11 +396,18 @@ module VSphereCloud
 
     def nsxt_nics(vm)
       nics = vm.nics.select do |nic|
-        nic.backing.is_a?(VimSdk::Vim::Vm::Device::VirtualEthernetCard::OpaqueNetworkBackingInfo) &&
-          nic.backing.opaque_network_type == NSXT_LOGICAL_SWITCH
+        case nic.backing
+        when VimSdk::Vim::Vm::Device::VirtualEthernetCard::OpaqueNetworkBackingInfo
+          next unless nic.backing.opaque_network_type == NSXT_LOGICAL_SWITCH
+          logger.info("NIC with device key #{nic.key} is backed by opaque NSXT network")
+        when VimSdk::Vim::Vm::Device::VirtualEthernetCard::DistributedVirtualPortBackingInfo
+          next unless @vcenter_client.dvpg_istype_nsxt?(
+              key: nic.backing.port.portgroup_key, dc: @datacenter
+          )
+          logger.info("NIC with device key #{nic.key} is backed by NSXT DVPG")
+        end
       end
       logger.info("NSX-T networks found for vm '#{vm.cid}': #{nics.map(&:device_info).map(&:summary)}")
-
       nics
     end
 

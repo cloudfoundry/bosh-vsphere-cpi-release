@@ -682,6 +682,39 @@ module VSphereCloud
 
     end
 
+    describe '#dvpg_istype_nsxt' do
+
+      let(:datacenter) { instance_double('VSphereCloud::Resources::Datacenter') }
+      let(:portgroup) { 'dvpg1' }
+      let(:key) { 'dvpg1' }
+
+      context 'when network is not of type dvpg' do
+        it 'should return false if portgroup is nil' do
+          expect(datacenter).to receive_message_chain(:mob, :network, :detect).and_return(nil)
+
+          result = client.dvpg_istype_nsxt?(key: 'dvpg1', dc: datacenter)
+          expect(result).to eq(false)
+        end
+        it 'should return false if portgroup does not have a backing type attribute' do
+          expect(datacenter).to receive_message_chain(:mob, :network, :detect).and_return(portgroup)
+          expect(portgroup).to receive_message_chain(:config, :respond_to?).and_return(false)
+
+          result = client.dvpg_istype_nsxt?(key: 'dvpg1', dc: datacenter)
+          expect(result).to eq(false)
+        end
+        it 'should print an info log and return true if portgroup backing type is nsxt' do
+          expect(logger).to receive(:info).with("Checking if #{key} is backed by NSXT")
+          expect(datacenter).to receive_message_chain(:mob, :network, :detect).and_return(portgroup)
+          allow(portgroup).to receive_message_chain(:config, :respond_to?).with(:backing_type).and_return(true)
+          allow(portgroup).to receive_message_chain(:config, :backing_type).and_return('nsx')
+          allow(logger).to receive(:info).with("DVPG #{key} is backed by NSXT")
+
+          result = client.dvpg_istype_nsxt?(key: 'dvpg1', dc: datacenter)
+          expect(result).to eq(true)
+        end
+      end
+    end
+
     describe '#remove_custom_field_def' do
       let(:custom_fields_manager) { instance_double(VimSdk::Vim::CustomFieldsManager) }
       let(:vm_mob) { instance_double(VimSdk::Vim::VirtualMachine) }

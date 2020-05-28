@@ -115,7 +115,7 @@ module VSphereCloud
         nsxt_client = NSXTApiClientBuilder::build_api_client(nsxt_config, logger)
 
         # Setup NSX-T Provider
-        @nsxt_provider = NSXTProvider.new(nsxt_client, @config.nsxt.default_vif_type)
+        @nsxt_provider = NSXTProvider.new(nsxt_client, @config.nsxt.default_vif_type, @client, @datacenter)
 
         @switch_provider = NSXTSwitchProvider.new(nsxt_client)
 
