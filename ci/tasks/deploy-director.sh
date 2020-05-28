@@ -29,6 +29,7 @@ finish() {
   echo 'Final state of BOSH director deployment:' 1>&2
   echo '========================================' 1>&2
   cat director-state/director-state.json 1>&2
+  echo 1>&2
   echo '========================================' 1>&2
 
   rm -f "$BOSH_LOG_PATH"
@@ -47,9 +48,8 @@ if [ $status -ne 0 ]; then
   exit $status
 fi
 
-BOSH_ENVIRONMENT="$(bosh int director-state/director.yml
-  --path=/instance_groups/name=bosh/networks/name=default/static_ips/0
-)"
+BOSH_ENVIRONMENT="$(bosh int director-state/director.yml \
+  --path=/instance_groups/name=bosh/networks/name=default/static_ips/0)"
 BOSH_CLIENT=admin
 BOSH_CLIENT_SECRET="$(bosh int director-state/creds.yml --path=/admin_password)"
 BOSH_CA_CERT="$(bosh int director-state/creds.yml --path=/director_ssl/ca)"
