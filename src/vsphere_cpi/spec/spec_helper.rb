@@ -24,6 +24,9 @@ proc {
   $vc_version = VmodlVersionDiscriminant.retrieve_vmodl_version(host, logger)
 }.call if ENV["BOSH_VSPHERE_CPI_HOST"]
 
+# set $vc_version for unit tests
+$vc_version = '6.5' if $vc_version.nil?
+
 require 'cloud/vsphere'
 require 'base64'
 

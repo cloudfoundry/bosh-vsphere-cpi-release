@@ -2,6 +2,8 @@ require 'digest'
 require 'spec_helper'
 
 describe VSphereCloud::NSXTProvider, fake_logger: true, fast_retries: true do
+  let(:vcenter_client) { instance_double('VSphereCloud::VCenterClient') }
+  let(:datacenter) {instance_double('VSphereCloud::Resources::Datacenter') }
   let(:client) { instance_double(NSXT::ApiClient) }
   let(:nsxt_config) { VSphereCloud::NSXTConfig.new('fake-host', 'fake-username', 'fake-password') }
   let(:opaque_nsxt) do
@@ -41,6 +43,7 @@ describe VSphereCloud::NSXTProvider, fake_logger: true, fast_retries: true do
     )
   end
   let(:nics) { [opaque_non_nsxt, network_backing, opaque_nsxt] }
+  let(:nsxt_nic_array) { ['nic1', 'nic2'] }
   let(:vm) { instance_double(VSphereCloud::Resources::VM, cid: 'fake-vm-id', nics: nics) }
   let(:virtual_machine) do
     NSXT::VirtualMachine.new(external_id: 'fake-external-id')
@@ -93,16 +96,16 @@ describe VSphereCloud::NSXTProvider, fake_logger: true, fast_retries: true do
   let(:default_vif_type) { 'PARENT' }
 
   subject(:nsxt_provider) do
-    described_class.new(client, default_vif_type).tap do |provider|
+    described_class.new(client, default_vif_type, vcenter_client, datacenter).tap do |provider|
       provider.instance_variable_set('@client', client)
     end
   end
 
   describe '#set_vif_type' do
     let(:success_response) { HTTP::Message.new_response('') }
-
     before do
       allow(nsxt_provider).to receive(:logical_ports).with(vm).and_return([logical_port_1])
+      allow(nsxt_provider).to receive(:nsxt_nics).with(vm).and_return(nsxt_nic_array)
     end
 
     context ' when both default_vif_type and vif_type are nil' do
@@ -181,8 +184,8 @@ describe VSphereCloud::NSXTProvider, fake_logger: true, fast_retries: true do
 
       context 'if any of the nsgroups cannot be found in NSXT' do
         let(:ns_groups) { %w(other-nsgroup-1 other-nsgroup-2) }
-
         it 'should raise a NSGroupsNotFound error' do
+          allow(nsxt_provider).to receive(:nsxt_nics).with(vm).and_return(nsxt_nic_array)
           expect(nsxt_provider).to receive(:logical_ports).with(vm).and_return([logical_port_1, logical_port_2])
           expect(nsxt_provider).to receive(:retrieve_all_ns_groups_with_pagination).and_return([nsgroup_1, nsgroup_2])
 
@@ -194,6 +197,7 @@ describe VSphereCloud::NSXTProvider, fake_logger: true, fast_retries: true do
 
       context 'when logical ports are found' do
         before do
+          allow(nsxt_provider).to receive(:nsxt_nics).with(vm).and_return(nsxt_nic_array)
           expect(nsxt_provider).to receive(:logical_ports).with(vm)
                                      .and_return([logical_port_1, logical_port_2])
           expect(nsxt_provider).to receive(:retrieve_nsgroups).with(ns_groups).and_return([nsgroup_1, nsgroup_2])
@@ -267,14 +271,15 @@ describe VSphereCloud::NSXTProvider, fake_logger: true, fast_retries: true do
     end
 
     it "removes VM's logical ports from all NSGroups" do
+      allow(nsxt_provider).to receive(:nsxt_nics).with(vm).and_return(nsxt_nic_array)
       expect(grouping_obj_svc).to receive(
         :add_or_remove_ns_group_expression
       ).with(any_args).and_return(true).twice
-
       nsxt_provider.remove_vm_from_nsgroups(vm)
     end
 
     it "raises an error if there's an error removing the VM from the NSgroup" do
+      allow(nsxt_provider).to receive(:nsxt_nics).with(vm).and_return(nsxt_nic_array)
       expect(grouping_obj_svc).to receive(
         :add_or_remove_ns_group_expression
       ).with(any_args).and_raise(NSXT::ApiCallError.new(code: 400))
@@ -285,6 +290,7 @@ describe VSphereCloud::NSXTProvider, fake_logger: true, fast_retries: true do
     end
 
     it "retries when there's a conflict in removing the VM from the NSgroup" do
+      allow(nsxt_provider).to receive(:nsxt_nics).with(vm).and_return(nsxt_nic_array)
       expect(grouping_obj_svc).to receive(
         :add_or_remove_ns_group_expression
       ).with(any_args).and_raise(NSXT::ApiCallError.new(code: 409))
@@ -297,6 +303,7 @@ describe VSphereCloud::NSXTProvider, fake_logger: true, fast_retries: true do
     end
 
     it "retries on a PreconditionFailed in removing the VM from the NSgroup" do
+      allow(nsxt_provider).to receive(:nsxt_nics).with(vm).and_return(nsxt_nic_array)
       expect(grouping_obj_svc).to receive(
         :add_or_remove_ns_group_expression
       ).with(any_args).and_raise(
@@ -311,6 +318,7 @@ describe VSphereCloud::NSXTProvider, fake_logger: true, fast_retries: true do
     end
 
     it "should retry 50 times when there is a conflict or precondition failed while removing vm from nsgroup" do
+      allow(nsxt_provider).to receive(:nsxt_nics).with(vm).and_return(nsxt_nic_array)
       expect(grouping_obj_svc).to receive(
         :add_or_remove_ns_group_expression
       ).with(any_args).and_raise(
@@ -348,6 +356,7 @@ describe VSphereCloud::NSXTProvider, fake_logger: true, fast_retries: true do
 
     context 'with bosh id' do
       before do
+        allow(nsxt_provider).to receive(:nsxt_nics).with(vm).and_return(nsxt_nic_array)
         expect(logical_port_1).to receive(:tags).and_return(existing_tags)
         allow(logical_port_2).to receive(:tags).and_return(existing_tags)
         expect(nsxt_provider).to receive(:logical_ports).with(vm)
@@ -424,6 +433,7 @@ describe VSphereCloud::NSXTProvider, fake_logger: true, fast_retries: true do
 
       before do
         allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:logical_switching_svc).and_return(logical_switching_svc)
+        allow(nsxt_provider).to receive(:nsxt_nics).with(vm).and_return(nsxt_nic_array)
         expect(logical_port).to receive(:tags).at_least(:once).and_return(existing_tags)
         expect(nsxt_provider).to receive(:logical_ports).with(vm).and_return([logical_port])
         expect(logical_switching_svc).to receive(:update_logical_port_with_http_info).with(any_args).and_raise(failure_response)
