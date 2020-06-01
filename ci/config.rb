@@ -2,9 +2,9 @@ $pipeline.pool('6.0-NSXV') do |pool|
   pool.params = {
     RSPEC_FLAGS: [
       '--tag ~nsx_transformers',
-      '--tag ~nsxt_21',
       '--tag ~spbm_encryption',
-      '--tag ~attach_tag'
+      '--tag ~attach_tag',
+      '--tag ~host_maintenance',
     ].join(' '),
     NSXT_SKIP_SSL_VERIFY: "true"
   }
@@ -25,7 +25,6 @@ $pipeline.pool('6.5-NSXT24') do |pool|
   pool.params = {
     RSPEC_FLAGS: [
       '--tag nsx_transformers',
-      '--tag ~nsxt_21'
   ].join(' '),
     NSXT_SKIP_SSL_VERIFY: "true"
   }
@@ -63,7 +62,8 @@ end
 $pipeline.pool('7.0-NSXT30-CVDS') do |pool|
   pool.params = {
       RSPEC_FLAGS: [
-          '--tag nsx_transformers'
+          '--tag nsx_transformers',
+          '--tag ~nvds'
       ].join(' '),
       NSXT_SKIP_SSL_VERIFY: "true",
   }
