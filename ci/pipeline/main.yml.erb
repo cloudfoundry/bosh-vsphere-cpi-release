@@ -164,7 +164,7 @@ jobs:
           - task: deploy-director
             file: source-ci/ci/tasks/deploy-director.yml
           - task: run-bats
-            file: source-ci/ci/tasks/run-bats.yml
+            file: source-ci/ci/tasks/run-bats-cvds.yml
             params:
               BAT_INFRASTRUCTURE: vsphere
               BAT_NETWORKING:     manual
