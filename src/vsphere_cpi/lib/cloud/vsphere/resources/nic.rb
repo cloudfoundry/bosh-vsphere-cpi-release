@@ -4,22 +4,29 @@ module VSphereCloud
       def self.create_virtual_nic(cloud_searcher, v_network_name, network, controller_key, dvs_index)
         raise "Invalid network '#{v_network_name}'" if network.nil?
         if network.class == VimSdk::Vim::Dvs::DistributedVirtualPortgroup
-          portgroup_properties = cloud_searcher.get_properties(network,
-            VimSdk::Vim::Dvs::DistributedVirtualPortgroup,
-            ['config.key', 'config.distributedVirtualSwitch'],
-            ensure_all: true)
+          if $vc_version == '7.0' && network.is_a?(VimSdk::Vim::Dvs::DistributedVirtualPortgroup) && network.config.backing_type == 'nsx'
+            backing_info = VimSdk::Vim::Vm::Device::VirtualEthernetCard::OpaqueNetworkBackingInfo.new
+            backing_info.opaque_network_id = network.config.logical_switch_uuid
+            dvs_index[backing_info.opaque_network_id] = v_network_name
+            backing_info.opaque_network_type = 'nsx.LogicalSwitch'
+          else
+            portgroup_properties = cloud_searcher.get_properties(network,
+              VimSdk::Vim::Dvs::DistributedVirtualPortgroup,
+              ['config.key', 'config.distributedVirtualSwitch'],
+              ensure_all: true)
 
-          switch = portgroup_properties['config.distributedVirtualSwitch']
-          switch_uuid = cloud_searcher.get_property(switch, VimSdk::Vim::DistributedVirtualSwitch, 'uuid', ensure_all: true)
+            switch = portgroup_properties['config.distributedVirtualSwitch']
+            switch_uuid = cloud_searcher.get_property(switch, VimSdk::Vim::DistributedVirtualSwitch, 'uuid', ensure_all: true)
 
-          port = VimSdk::Vim::Dvs::PortConnection.new
-          port.switch_uuid = switch_uuid
-          port.portgroup_key = portgroup_properties['config.key']
+            port = VimSdk::Vim::Dvs::PortConnection.new
+            port.switch_uuid = switch_uuid
+            port.portgroup_key = portgroup_properties['config.key']
 
-          backing_info = VimSdk::Vim::Vm::Device::VirtualEthernetCard::DistributedVirtualPortBackingInfo.new
-          backing_info.port = port
+            backing_info = VimSdk::Vim::Vm::Device::VirtualEthernetCard::DistributedVirtualPortBackingInfo.new
+            backing_info.port = port
 
-          dvs_index[port.portgroup_key] = v_network_name
+            dvs_index[port.portgroup_key] = v_network_name
+          end
         elsif network.class == VimSdk::Vim::OpaqueNetwork
           backing_info = VimSdk::Vim::Vm::Device::VirtualEthernetCard::OpaqueNetworkBackingInfo.new
           network_id = network.summary.opaque_network_id

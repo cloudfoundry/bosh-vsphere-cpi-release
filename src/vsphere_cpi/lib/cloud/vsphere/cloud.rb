@@ -671,7 +671,13 @@ module VSphereCloud
         if device.kind_of?(Vim::Vm::Device::VirtualEthernetCard)
           backing = device.backing
           if backing.kind_of?(Vim::Vm::Device::VirtualEthernetCard::DistributedVirtualPortBackingInfo)
-            v_network_name = dvs_index[backing.port.portgroup_key]
+            if $vc_version == '7.0'
+              network = @datacenter.mob.network.detect do |n|
+                n.is_a?(VimSdk::Vim::Dvs::DistributedVirtualPortgroup) && n.key == device.backing.port.portgroup_key
+              end
+              v_network_name = network&.name
+            end
+            v_network_name = dvs_index[backing.port.portgroup_key] if v_network_name.nil?
           elsif backing.kind_of?(Vim::Vm::Device::VirtualEthernetCard::OpaqueNetworkBackingInfo)
             v_network_name = dvs_index[backing.opaque_network_id]
           else
