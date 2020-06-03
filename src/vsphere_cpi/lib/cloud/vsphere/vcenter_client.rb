@@ -227,44 +227,46 @@ module VSphereCloud
       end
     end
 
-    def find_network(datacenter, network_name)
-      valid_networks = []
-      if network_name.include?('/')
-        container_name = File.dirname(network_name)
-        network_name = File.basename(network_name)
-        network_container = find_by_inventory_path([datacenter.name, 'network', container_name])
-        if network_container.nil?
-          network_container = find_child_by_name(datacenter.mob.network_folder, container_name.split('/'))
-        end
-        if network_container.instance_of?(VimSdk::Vim::Dvs::VmwareDistributedVirtualSwitch)
-          valid_networks = network_container.portgroup
-        elsif network_container.instance_of?(VimSdk::Vim::Folder)
-          valid_networks = network_container.child_entity
-        end
+    def find_network(datacenter, name)
+      # Split the name into an optional container part and name part
+      *container_path, name = name.split('/')
+
+      # Find the container if specified
+      if !container_path.empty?
+        container = find_by_inventory_path([datacenter.name, 'network', *container_path])
+        container ||= find_child_by_name(datacenter.mob.network_folder, container_path)
+        raise "Can't find network container #{container_path.join('/')}" if container.nil?
       else
-        valid_networks = datacenter.mob.network
+        container = nil
       end
 
-      target_network = nil
-      matching_networks = valid_networks.select do |network|
-        begin
-          network.name == network_name
-        rescue => e
-          logger.warn("Can't retrieve name of network #{network}: #{e}")
-          false
-        end
-      end
-      if matching_networks.length == 1
-        target_network = matching_networks.first
-      elsif matching_networks.length > 1
-        # pick the Standard Portgroup if multiple networks exist with the given name
-        target_network = matching_networks.find { |n| n.instance_of?(VimSdk::Vim::Network) }
-        if target_network.nil?
-          raise "Multiple networks found for #{network_name}. Please specify the full path, for example 'FOLDER_NAME/DISTRIBUTED_SWITCH_NAME/DISTRIBUTED_PORTGROUP_NAME'"
-        end
+      # Make the list of candidate networks from the container
+      networks = case container
+        when VimSdk::Vim::Dvs::VmwareDistributedVirtualSwitch
+          container.portgroup
+        when VimSdk::Vim::Folder
+          container.child_entity
+        when nil
+          datacenter.mob.network
       end
 
-      target_network
+      # Find networks that match the network name
+      networks.select! do |network|
+        network.name == name
+      rescue => e
+        logger.warn("Can't retrieve name of network #{network}: #{e}")
+        false
+      end
+
+      return nil if networks.empty?
+      return networks.first if networks.length == 1
+
+      # Pick the Standard Portgroup if multiple networks exist with the given name
+      network = networks.find { |n| n.instance_of?(VimSdk::Vim::Network) }
+      raise <<~HERE if network.nil?
+        Multiple networks found for #{name}. Please specify the full path, for example 'FOLDER_NAME/DISTRIBUTED_SWITCH_NAME/DISTRIBUTED_PORTGROUP_NAME'
+      HERE
+      network
     end
 
     def get_perf_counters(mobs, names, options = {})
