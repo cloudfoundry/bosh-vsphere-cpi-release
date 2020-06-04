@@ -677,7 +677,7 @@ module VSphereCloud
                     n.key == device.backing.port.portgroup_key &&
                     n.config.backing_type == 'nsx'
               end
-              v_network_name = network&.name
+              v_network_name = dvs_index[network.config.logical_switch_uuid]
             end
             v_network_name = dvs_index[backing.port.portgroup_key] if v_network_name.nil?
           elsif backing.kind_of?(Vim::Vm::Device::VirtualEthernetCard::OpaqueNetworkBackingInfo)
