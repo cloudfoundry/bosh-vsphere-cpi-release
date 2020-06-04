@@ -18,6 +18,10 @@ describe 'CPI', nsx_transformers: true do
     end
     @nsxt_opaque_vlan_1 = fetch_property('BOSH_VSPHERE_OPAQUE_VLAN')
     @nsxt_opaque_vlan_2 = fetch_property('BOSH_VSPHERE_SECOND_OPAQUE_VLAN')
+    @nsxt_opaque_vlan_1_full_path_1 = ENV['VCPI_NSXT_OPAQUE_VLAN_ONE_FULL_PATH_ONE']
+    @nsxt_opaque_vlan_1_full_path_2 = ENV['VCPI_NSXT_OPAQUE_VLAN_ONE_FULL_PATH_TWO']
+    @nsxt_opaque_vlan_2_full_path_1 = ENV['VCPI_NSXT_OPAQUE_VLAN_TWO_FULL_PATH_ONE']
+    @nsxt_opaque_vlan_2_full_path_2 = ENV['VCPI_NSXT_OPAQUE_VLAN_TWO_FULL_PATH_TWO']
 
     # Configure a user/pass client to add cert/key
     # Client built Directly in TEST. NOT USING NSXTApiClientBuilder
@@ -87,8 +91,7 @@ describe 'CPI', nsx_transformers: true do
     }
   end
   let(:network_spec) do
-    {
-      'static-bridged' => {
+    spec = {'static-bridged' => {
         'ip' => "169.254.#{rand(1..254)}.#{rand(4..254)}",
         'netmask' => '255.255.254.0',
         'cloud_properties' => { 'name' => @nsxt_opaque_vlan_1 },
@@ -103,8 +106,42 @@ describe 'CPI', nsx_transformers: true do
         'default' => ['dns', 'gateway'],
         'dns' => ['169.254.1.2'],
         'gateway' => '169.254.1.3'
-      }
-    }
+    }}
+    spec.merge!({
+        'static-1' => {
+           'ip' => "169.254.#{rand(1..254)}.#{rand(4..254)}",
+           'netmask' => '255.255.254.0',
+           'cloud_properties' => { 'name' => @nsxt_opaque_vlan_1_full_path_1 },
+           'default' => ['dns', 'gateway'],
+           'dns' => ['169.254.1.2'],
+           'gateway' => '169.254.1.3'
+        },
+        'static-2' => {
+           'ip' => "169.254.#{rand(1..254)}.#{rand(4..254)}",
+           'netmask' => '255.255.254.0',
+           'cloud_properties' => { 'name' => @nsxt_opaque_vlan_1_full_path_2 },
+           'default' => ['dns', 'gateway'],
+           'dns' => ['169.254.1.2'],
+           'gateway' => '169.254.1.3'
+        },
+        'static-3' => {
+           'ip' => "169.254.#{rand(1..254)}.#{rand(4..254)}",
+           'netmask' => '255.255.254.0',
+           'cloud_properties' => { 'name' => @nsxt_opaque_vlan_2_full_path_1 },
+           'default' => ['dns', 'gateway'],
+           'dns' => ['169.254.1.2'],
+           'gateway' => '169.254.1.3'
+        },
+        'static-4' => {
+           'ip' => "169.254.#{rand(1..254)}.#{rand(4..254)}",
+           'netmask' => '255.255.254.0',
+           'cloud_properties' => { 'name' => @nsxt_opaque_vlan_2_full_path_2 },
+           'default' => ['dns', 'gateway'],
+           'dns' => ['169.254.1.2'],
+           'gateway' => '169.254.1.3'
+        },
+      }) unless @nsxt_opaque_vlan_1_full_path_1.nil?
+    spec
   end
 
   describe 'on create_vm' do
