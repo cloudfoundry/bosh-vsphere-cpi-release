@@ -141,7 +141,7 @@ jobs:
     plan:
       - aggregate:
           - get: source-ci
-          - {get: cpi-release,              trigger: false, resource: bosh-cpi-artifacts, passed: [lock-bats]}
+          - {get: cpi-release,              trigger: false, resource: bosh-cpi-artifacts, passed: [lock-bats-70-CVDS]}
           - {get: environment,              trigger: true,  passed: [lock-bats-70-CVDS], resource: pool-7.0-NSXT30-CVDS}
           - {get: bosh-release,             trigger: false, resource: old-bosh-release}
           - {get: stemcell,                 trigger: false, version: {version: "3468.46"}, resource: stemcell}
