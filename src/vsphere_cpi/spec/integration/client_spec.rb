@@ -70,9 +70,10 @@ module VSphereCloud
         expect(network).to be_a(VimSdk::Vim::Dvs::DistributedVirtualPortgroup)
       end
 
-      it 'returns nil if the distributed virtual switch doesn\'t exist' do
-        network = @client.find_network(@datacenter, "non-existent-dvs/#{ambiguous_portgroup}")
-        expect(network).to be_nil
+      it 'raises network not found error if the distributed virtual switch doesn\'t exist' do
+        expect do
+          @client.find_network(@datacenter, "non-existent-dvs/#{ambiguous_portgroup}")
+        end.to raise_error(VSphereCloud::VCenterClient::NetworkNotFoundError, /Can't find network container/)
       end
 
       it 'returns nil if the standard virtual portgroup doesn\'t exist' do
@@ -129,8 +130,9 @@ module VSphereCloud
         it 'returns nil if the distributed virtual switch doesn\'t exist' do
           folder_name = distributed_virtual_portgroup.split('/').first
           network_name = distributed_virtual_portgroup.split('/').last
-          network = @client.find_network(@datacenter, "#{folder_name}/non-existent-dvs/#{network_name}")
-          expect(network).to be_nil
+          expect do
+            @client.find_network(@datacenter, "#{folder_name}/non-existent-dvs/#{network_name}")
+          end.to raise_error(VSphereCloud::VCenterClient::NetworkNotFoundError, /Can't find network container/)
         end
 
         it 'returns nil if the standard virtual portgroup doesn\'t exist' do

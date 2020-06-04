@@ -673,7 +673,9 @@ module VSphereCloud
           if backing.kind_of?(Vim::Vm::Device::VirtualEthernetCard::DistributedVirtualPortBackingInfo)
             if $vc_version == '7.0'
               network = @datacenter.mob.network.detect do |n|
-                n.is_a?(VimSdk::Vim::Dvs::DistributedVirtualPortgroup) && n.key == device.backing.port.portgroup_key
+                n.is_a?(VimSdk::Vim::Dvs::DistributedVirtualPortgroup) &&
+                    n.key == device.backing.port.portgroup_key &&
+                    n.config.backing_type == 'nsx'
               end
               v_network_name = network&.name
             end
