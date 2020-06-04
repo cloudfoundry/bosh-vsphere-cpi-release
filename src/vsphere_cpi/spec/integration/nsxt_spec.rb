@@ -489,6 +489,7 @@ describe 'CPI', nsx_transformers: true do
 
       vif_fabric_svc ||= NSXT::ManagementPlaneApiFabricVifsApi.new(nsxt)
       vifs = vif_fabric_svc.list_vifs(:owner_vm_id => nsxt_vms.first.external_id).results
+      raise VIFNotFound.new(vm_id, nsxt_vms.first.external_id) if vifs.empty?
       expect(vifs.length).to eq(expected_vif_number)
       expect(vifs.map(&:lport_attachment_id).compact.length).to eq(expected_vif_number)
 
