@@ -217,10 +217,10 @@ module VSphereCloud
             tries: 62, #total retry time - 10 minutes
             on: [NetworkNotFoundError]
         ).retryer do |i|
-          logger.info("Trying to find network #{i}th time")
+          logger.info("Trying to find network #{network_name} for #{i} time")
           network_mob = find_network(datacenter, network_name)
           raise NetworkNotFoundError if network_mob.nil?
-          network_mob
+          VSphereCloud::Resources::Network.NetworkBuilder(network_name,  network_mob, self)
         end
       rescue NetworkNotFoundError => e
         raise "Error #{e} in finding network '#{network_name}' after multiple retries. Verify that the portgroup exists."

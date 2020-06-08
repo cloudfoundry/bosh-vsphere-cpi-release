@@ -90,12 +90,12 @@ module VSphereCloud
 
         dvs_index = {}
         vm_config.vsphere_networks.each do |network_name, ips|
-          network_mob = @client.find_network_retryably(@datacenter, network_name)
+          network = @client.find_network_retryably(@datacenter, network_name)
           ips.each do |_|
             virtual_nic = Resources::Nic.create_virtual_nic(
               @cloud_searcher,
               network_name,
-              network_mob,
+              network,
               replicated_stemcell_vm.pci_controller.key,
               dvs_index
             )
