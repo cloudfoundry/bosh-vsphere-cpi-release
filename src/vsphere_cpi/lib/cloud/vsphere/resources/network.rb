@@ -7,12 +7,12 @@ module VSphereCloud
       include ObjectStringifier
       stringify_with :name, :mob, :bosh_name
 
-      attr_reader :mob, :client, :bosh_name, :vim_name
-
-      def self.NetworkBuilder(bosh_name, mob, client)
-        if mob.is_a?(VimSdk::Vim::Dvs::DistributedVirtualPortgroup)
+      attr_reader :mob, :client, :bosh_name
+      def self.make_network_resource(bosh_name, mob, client)
+        case mob
+        when VimSdk::Vim::Dvs::DistributedVirtualPortgroup
           DistributedVirtualPortGroupNetwork.new(bosh_name, mob, client)
-        elsif mob.is_a?(VimSdk::Vim::OpaqueNetwork)
+        when VimSdk::Vim::OpaqueNetwork
           OpaqueNetwork.new(bosh_name, mob, client)
         else
           Network.new(bosh_name, mob, client)
@@ -22,12 +22,11 @@ module VSphereCloud
       def initialize(bosh_name, mob, client)
         @bosh_name = bosh_name
         @mob = mob
-        @vim_name = @mob.name
         @client = client
       end
 
-      def hash
-        @bosh_name.hash
+      def vim_name
+        @mob.name
       end
 
       def nic_backing(_)
@@ -43,9 +42,6 @@ module VSphereCloud
     end
 
     class OpaqueNetwork < Network
-      def initialize(*args, &block)
-        super
-      end
 
       def nic_backing(dvs_index)
         backing_info = VimSdk::Vim::Vm::Device::VirtualEthernetCard::OpaqueNetworkBackingInfo.new
@@ -58,9 +54,6 @@ module VSphereCloud
     end
 
     class DistributedVirtualPortGroupNetwork < Network
-      def initialize(*args, &block)
-        super
-      end
 
       def nic_backing(dvs_index)
         # NSXT backed DVPG are a CVDS feature supported with only 7.0
