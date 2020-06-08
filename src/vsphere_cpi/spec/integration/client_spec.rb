@@ -38,106 +38,97 @@ module VSphereCloud
     end
 
     describe '#find_network' do
-      let(:standard_virtual_portgroup) { ENV.fetch('BOSH_VSPHERE_CPI_PORTGROUP_STANDARD') }
-      let(:distributed_virtual_portgroup) { ENV.fetch('BOSH_VSPHERE_CPI_PORTGROUP_DISTRIBUTED') }
-      let(:ambiguous_portgroup) { ENV.fetch('BOSH_VSPHERE_CPI_PORTGROUP_AMBIGUOUS') }
-      let(:ambiguous_portgroup_raise_issue) { ENV.fetch('BOSH_VSPHERE_CPI_PORTGROUP_AMBIGUOUS_RAISE_ISSUE') }
+      let(:standard_portgroup_name) { ENV.fetch('BOSH_VSPHERE_CPI_PORTGROUP_STANDARD') }
+      let(:dvpg_name) { ENV.fetch('BOSH_VSPHERE_CPI_PORTGROUP_DISTRIBUTED') }
+      let(:ambiguous_dvpg_name) { ENV.fetch('BOSH_VSPHERE_CPI_PORTGROUP_AMBIGUOUS') }
+      let(:erroneous_dvpg_name) { ENV.fetch('BOSH_VSPHERE_CPI_PORTGROUP_AMBIGUOUS_RAISE_ISSUE') }
 
-      it 'returns the standard virtual switch if it exists' do
-        network = @client.find_network(@datacenter, standard_virtual_portgroup)
-        expect(network.name).to eq(standard_virtual_portgroup)
-        expect(network).to be_a(VimSdk::Vim::Network)
+      it 'returns the standard switch if it exists' do
+        network = @client.find_network(@datacenter, standard_portgroup_name)
+        expect(network.name).to eq(standard_portgroup_name)
+        expect(network).to be_an_instance_of(VimSdk::Vim::Network)
       end
 
-      it 'returns the distributed_virtual_portgroup if it exists' do
-        network = @client.find_network(@datacenter, distributed_virtual_portgroup)
-        expect(network.name).to eq(distributed_virtual_portgroup)
+      it 'returns the DVPG if it exists' do
+        network = @client.find_network(@datacenter, dvpg_name)
+        expect(network.name).to eq(dvpg_name)
         expect(network).to be_a(VimSdk::Vim::Dvs::DistributedVirtualPortgroup)
       end
 
-      it 'returns the standard virtual switch if a standard switch has the same name as a distributed virtual portgroup' do
-        network = @client.find_network(@datacenter, ambiguous_portgroup)
-        expect(network.name).to eq(ambiguous_portgroup)
-        expect(network).to be_a(VimSdk::Vim::Network)
+      it 'returns the standard switch if it exists when ambiguous' do
+        network = @client.find_network(@datacenter, ambiguous_dvpg_name)
+        expect(network.name).to eq(ambiguous_dvpg_name)
+        expect(network).to be_an_instance_of(VimSdk::Vim::Network)
       end
 
-      it 'returns the distributed virtual portgroup if it is prefixed with the distributed virtual switch\'s name' do
-        dvs_name = parent_dvs_from_portgroup(distributed_virtual_portgroup)
+      it "returns the DVPG if it's prefixed with the DVS's name" do
+        dvs_name = @datacenter.mob.network.select do |network|
+          network.is_a?(VimSdk::Vim::Dvs::DistributedVirtualPortgroup)
+        end.find do |network|
+          network.name == dvpg_name
+        end.config.distributed_virtual_switch.name
 
-        network = @client.find_network(@datacenter, "#{dvs_name}/#{distributed_virtual_portgroup}")
-        expect(network.name).to eq(distributed_virtual_portgroup)
+        network = @client.find_network(@datacenter, "#{dvs_name}/#{dvpg_name}")
+        expect(network.name).to eq(dvpg_name)
+        expect(network).to be_a(VimSdk::Vim::Dvs::DistributedVirtualPortgroup)
         expect(network.config.distributed_virtual_switch.name).to eq(dvs_name)
-        expect(network).to be_a(VimSdk::Vim::Dvs::DistributedVirtualPortgroup)
       end
 
-      it 'raises network not found error if the distributed virtual switch doesn\'t exist' do
+      it "returns nil if the DVS doesn't exist" do
+        expect(@client.find_network(@datacenter, "absent-dvs/#{dvpg_name}")).to be_nil
+      end
+
+      it 'returns nil if no such network exists' do
+        expect(@client.find_network(@datacenter, 'absent-network')).to be_nil
+      end
+
+      it 'raises an error when the network name is ambiguous' do
         expect do
-          @client.find_network(@datacenter, "non-existent-dvs/#{ambiguous_portgroup}")
-        end.to raise_error(VSphereCloud::VCenterClient::NetworkNotFoundError, /Can't find network container/)
+          @client.find_network(@datacenter, erroneous_dvpg_name)
+        end.to raise_error(/#{erroneous_dvpg_name}/)
       end
 
-      it 'returns nil if the standard virtual portgroup doesn\'t exist' do
-        network = @client.find_network(@datacenter, 'non-existent-standard-portgroup')
-        expect(network).to be_nil
-      end
+      context "if the network is prefixed with folders' names" do
+        let(:standard_portgroup_path) { ENV.fetch('BOSH_VSPHERE_CPI_PORTGROUP_FOLDER_STANDARD') }
+        let(:dvpg_path) { ENV.fetch('BOSH_VSPHERE_CPI_PORTGROUP_FOLDER_DISTRIBUTED') }
+        let(:ambiguous_dvpg_path) { ENV.fetch('BOSH_VSPHERE_CPI_PORTGROUP_FOLDER_AMBIGUOUS') }
 
-      it 'raises ambiguous issue when provided network name matches multiple networks' do
-        expect do
-          @client.find_network(@datacenter, ambiguous_portgroup_raise_issue)
-        end.to raise_error(/#{ambiguous_portgroup_raise_issue}/)
-      end
-
-      context 'if the network is prefixed with folders\' names' do
-        let(:standard_virtual_portgroup) { ENV.fetch('BOSH_VSPHERE_CPI_PORTGROUP_FOLDER_STANDARD') }
-        let(:distributed_virtual_portgroup) { ENV.fetch('BOSH_VSPHERE_CPI_PORTGROUP_FOLDER_DISTRIBUTED') }
-        let(:ambiguous_portgroup) { ENV.fetch('BOSH_VSPHERE_CPI_PORTGROUP_FOLDER_AMBIGUOUS') }
-
-        it 'returns the standard virtual switch if it exists' do
-          network = @client.find_network(@datacenter, standard_virtual_portgroup)
-          expect(network).not_to be_nil
-          expected_name = standard_virtual_portgroup.split('/').last
-          expect(network.name).to eq(expected_name)
-          expect(network).to be_a(VimSdk::Vim::Network)
+        it 'returns the standard switch if it exists' do
+          network = @client.find_network(@datacenter, standard_portgroup_path)
+          expect(network).to be_an_instance_of(VimSdk::Vim::Network)
+          expect(network.name).to eq(standard_portgroup_path.split('/').last)
         end
 
-        it 'returns the distributed_virtual_portgroup if it exists' do
-          network = @client.find_network(@datacenter, distributed_virtual_portgroup)
-          expect(network).not_to be_nil
-          expected_name = distributed_virtual_portgroup.split('/').last
-          expect(network.name).to eq(expected_name)
+        it 'returns the DVPG if it exists' do
+          network = @client.find_network(@datacenter, dvpg_path)
+          expect(network.name).to eq(dvpg_path.split('/').last)
           expect(network).to be_a(VimSdk::Vim::Dvs::DistributedVirtualPortgroup)
         end
 
-        it 'returns the standard virtual switch if a standard switch has the same name as a distributed virtual portgroup' do
-          network = @client.find_network(@datacenter, ambiguous_portgroup)
-          expect(network).not_to be_nil
-          expected_name = ambiguous_portgroup.split('/').last
-          expect(network.name).to eq(expected_name)
-          expect(network).to be_a(VimSdk::Vim::Network)
+        it 'returns the standard switch if it exists when ambiguous' do
+          network = @client.find_network(@datacenter, ambiguous_dvpg_path)
+          expect(network).to be_an_instance_of(VimSdk::Vim::Network)
+          expect(network.name).to eq(ambiguous_dvpg_path.split('/').last)
         end
 
-        it 'returns the distributed virtual portgroup if it is prefixed with the distributed virtual switch\'s name' do
-          expected_network_name = distributed_virtual_portgroup.split('/')[-1]
-          expected_dvs_name = distributed_virtual_portgroup.split('/')[-2]
-
-          network = @client.find_network(@datacenter, distributed_virtual_portgroup)
-          expect(network).not_to be_nil
-          expect(network.name).to eq(expected_network_name)
-          expect(network.config.distributed_virtual_switch.name).to eq(expected_dvs_name)
+        it "returns the DVPG if it's prefixed with the DVS's name" do
+          network = @client.find_network(@datacenter, dvpg_path)
           expect(network).to be_a(VimSdk::Vim::Dvs::DistributedVirtualPortgroup)
+
+          *_, dvs_name, name = dvpg_path.split('/')
+          expect(network.name).to eq(name)
+          expect(network.config.distributed_virtual_switch.name).to eq(dvs_name)
         end
 
-        it 'returns nil if the distributed virtual switch doesn\'t exist' do
-          folder_name = distributed_virtual_portgroup.split('/').first
-          network_name = distributed_virtual_portgroup.split('/').last
-          expect do
-            @client.find_network(@datacenter, "#{folder_name}/non-existent-dvs/#{network_name}")
-          end.to raise_error(VSphereCloud::VCenterClient::NetworkNotFoundError, /Can't find network container/)
+        it "returns nil if the DVS doesn't exist" do
+          folder_name, *_, name = dvpg_path.split('/')
+          network = @client.find_network(@datacenter, "#{folder_name}/absent-dvs/#{name}")
+          expect(network).to be_nil
         end
 
-        it 'returns nil if the standard virtual portgroup doesn\'t exist' do
-          folder_name = standard_virtual_portgroup.split('/').first
-          network = @client.find_network(@datacenter, "#{folder_name}/non-existent-standard-portgroup")
+        it 'returns nil if no such network exists' do
+          folder_name = standard_portgroup_path.split('/').first
+          network = @client.find_network(@datacenter, "#{folder_name}/absent-network")
           expect(network).to be_nil
         end
       end
@@ -186,11 +177,6 @@ module VSphereCloud
         name =~ regexp
       end.values
       return client, datacenter, persistent_datastores.first, disk_folder
-    end
-
-    def parent_dvs_from_portgroup(portgroup_name)
-      pg = @datacenter.mob.network.find { |n| n.name == portgroup_name && n.instance_of?(VimSdk::Vim::Dvs::DistributedVirtualPortgroup) }
-      pg.config.distributed_virtual_switch.name
     end
   end
 end
