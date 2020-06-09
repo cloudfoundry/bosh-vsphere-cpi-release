@@ -3,7 +3,7 @@ require 'rspec/its'
 
 describe VSphereCloud::Resources::Network do
   subject do
-    described_class.new('foo_net', mob, client, )
+    described_class.new(mob, client)
   end
 
   let(:client) { instance_double('VSphereCloud::VCenterClient', cloud_searcher: cloud_searcher) }
@@ -26,10 +26,10 @@ describe VSphereCloud::Resources::Network do
       expect(backing_info.device_name).to be(vim_network_name)
     end
 
-    describe '#get_dvs_index_hash' do
+    describe '#network_id' do
       it 'returns empty hash' do
-        dvs_index = subject.get_dvs_index_hash
-        expect(dvs_index).to eq({})
+        dvs_index = subject.network_id
+        expect(dvs_index).to be(nil)
       end
     end
   end
@@ -43,7 +43,7 @@ describe VSphereCloud::Resources::Network do
     end
 
     it 'returns standard network instance if mob is a standard network' do
-      network = VSphereCloud::Resources::Network.make_network_resource('foo_net', mob, client)
+      network = VSphereCloud::Resources::Network.make_network_resource(mob, client)
       expect(network).to be_an_instance_of(VSphereCloud::Resources::Network)
     end
 
@@ -53,7 +53,7 @@ describe VSphereCloud::Resources::Network do
       end
 
       it 'returns opaque network instance if mob is a opaque network' do
-        network = VSphereCloud::Resources::Network.make_network_resource('foo_net', mob, client)
+        network = VSphereCloud::Resources::Network.make_network_resource(mob, client)
         expect(network).to be_an_instance_of(VSphereCloud::Resources::OpaqueNetwork)
       end
     end
@@ -75,7 +75,7 @@ describe VSphereCloud::Resources::Network do
         let(:backing_type) { 'standard' }
 
         it 'returns standard DVPG instance if mob is a standard network' do
-          network = VSphereCloud::Resources::Network.make_network_resource('foo_net', mob, client)
+          network = VSphereCloud::Resources::Network.make_network_resource(mob, client)
           expect(network).to be_an_instance_of(VSphereCloud::Resources::DistributedVirtualPortGroupNetwork)
         end
       end
@@ -84,7 +84,7 @@ describe VSphereCloud::Resources::Network do
         let(:mob_config) { double(:mob_config) }
 
         it 'returns standard DVPG instance if mob is a standard network' do
-          network = VSphereCloud::Resources::Network.make_network_resource('foo_net', mob, client)
+          network = VSphereCloud::Resources::Network.make_network_resource(mob, client)
           expect(network).to be_an_instance_of(VSphereCloud::Resources::DistributedVirtualPortGroupNetwork)
         end
       end
@@ -93,7 +93,7 @@ describe VSphereCloud::Resources::Network do
         let(:backing_type) { 'nsx' }
 
         it 'returns standard network instance if mob is a standard network' do
-          network = VSphereCloud::Resources::Network.make_network_resource('foo_net', mob, client)
+          network = VSphereCloud::Resources::Network.make_network_resource(mob, client)
           expect(network).to be_an_instance_of(VSphereCloud::Resources::DistributedVirtualPortGroupNSXTNetwork)
         end
       end
@@ -104,7 +104,7 @@ end
 
 describe VSphereCloud::Resources::OpaqueNetwork do
   subject do
-    described_class.new('foo_net', mob, client, )
+    described_class.new(mob, client)
   end
 
   let(:client) { instance_double('VSphereCloud::VCenterClient', cloud_searcher: cloud_searcher) }
@@ -125,10 +125,10 @@ describe VSphereCloud::Resources::OpaqueNetwork do
     end
   end
 
-  describe '#get_dvs_index_hash' do
+  describe '#network_id' do
     it 'returns key value pair in hash' do
-      dvs_index = subject.get_dvs_index_hash
-      expect(dvs_index).to eq({'fake-id' => 'foo_net'})
+      nid = subject.network_id
+      expect(nid).to eq('fake-id')
     end
   end
 end
@@ -136,7 +136,7 @@ end
 
 describe VSphereCloud::Resources::DistributedVirtualPortGroupNetwork do
   subject do
-    described_class.new('foo_net', mob, client, )
+    described_class.new(mob, client)
   end
 
   let(:client) { instance_double('VSphereCloud::VCenterClient', cloud_searcher: cloud_searcher) }
@@ -172,10 +172,10 @@ describe VSphereCloud::Resources::DistributedVirtualPortGroupNetwork do
     end
   end
 
-  describe '#get_dvs_index_hash' do
+  describe '#network_id' do
     it 'returns key value pair in hash' do
-      dvs_index = subject.get_dvs_index_hash
-      expect(dvs_index).to eq({dvpg_key => 'foo_net'})
+      nid = subject.network_id
+      expect(nid).to eq(dvpg_key)
     end
   end
 end
@@ -183,7 +183,7 @@ end
 
 describe VSphereCloud::Resources::DistributedVirtualPortGroupNSXTNetwork do
   subject do
-    described_class.new('foo_net', mob, client, )
+    described_class.new(mob, client)
   end
 
   let(:client) { instance_double('VSphereCloud::VCenterClient', cloud_searcher: cloud_searcher) }
@@ -207,10 +207,10 @@ describe VSphereCloud::Resources::DistributedVirtualPortGroupNSXTNetwork do
     expect(backing_info.opaque_network_id).to eq(mob_config.logical_switch_uuid)
   end
 
-  describe '#get_dvs_index_hash' do
+  describe '#network_id' do
     it 'returns key value pair in hash' do
-      dvs_index = subject.get_dvs_index_hash
-      expect(dvs_index).to eq({'fake-ls-uuid' => 'foo_net'})
+      nid = subject.network_id
+      expect(nid).to eq('fake-ls-uuid')
     end
   end
 end

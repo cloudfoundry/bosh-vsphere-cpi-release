@@ -5,7 +5,7 @@ module VSphereCloud
         raise "Invalid network '#{v_network_name}'" if network.nil?
 
         backing_info = network.nic_backing
-        dvs_index.merge!(network.get_dvs_index_hash)
+        dvs_index[network.network_id] = v_network_name unless network.network_id.nil?
         nic = VimSdk::Vim::Vm::Device::VirtualVmxnet3.new
         nic.key = -1
         nic.controller_key = controller_key

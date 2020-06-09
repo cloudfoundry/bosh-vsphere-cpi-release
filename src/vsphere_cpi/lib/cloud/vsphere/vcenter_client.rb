@@ -220,7 +220,7 @@ module VSphereCloud
           logger.info("Trying to find network #{network_name} for #{i} time")
           network_mob = find_network(datacenter, network_name)
           raise NetworkNotFoundError if network_mob.nil?
-          VSphereCloud::Resources::Network.make_network_resource(network_name,  network_mob, self)
+          VSphereCloud::Resources::Network.make_network_resource(network_mob, self)
         end
       rescue NetworkNotFoundError => e
         raise "Error #{e} in finding network '#{network_name}' after multiple retries. Verify that the portgroup exists."

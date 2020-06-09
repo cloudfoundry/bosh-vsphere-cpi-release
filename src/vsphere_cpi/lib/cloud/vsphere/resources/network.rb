@@ -5,10 +5,10 @@ module VSphereCloud
     class Network
       include VimSdk
       include ObjectStringifier
-      stringify_with :name, :mob, :bosh_name
+      stringify_with :name, :mob
 
-      attr_reader :mob, :client, :bosh_name
-      def self.make_network_resource(bosh_name, mob, client)
+      attr_reader :mob, :client
+      def self.make_network_resource(mob, client)
         nw_type = case mob
         when VimSdk::Vim::Dvs::DistributedVirtualPortgroup
           if mob.config.respond_to?(:backing_type) && mob.config.backing_type == 'nsx'
@@ -21,11 +21,10 @@ module VSphereCloud
         else
           Network
         end
-        nw_type.new(bosh_name, mob, client)
+        nw_type.new(mob, client)
       end
 
-      def initialize(bosh_name, mob, client)
-        @bosh_name = bosh_name
+      def initialize(mob, client)
         @mob = mob
         @client = client
       end
@@ -41,12 +40,12 @@ module VSphereCloud
         backing_info
       end
 
-      def get_dvs_index_hash()
-        {}
+      def network_id()
+        nil
       end
 
       def inspect
-        "<network: / #{@bosh_name} / #{@mob}>"
+        "<network: / #{@mob}>"
       end
     end
 
@@ -59,8 +58,8 @@ module VSphereCloud
         backing_info
       end
 
-      def get_dvs_index_hash()
-        {mob.summary.opaque_network_id => bosh_name}
+      def network_id()
+        mob.summary.opaque_network_id
       end
     end
 
@@ -84,8 +83,8 @@ module VSphereCloud
         backing_info
       end
 
-      def get_dvs_index_hash()
-        {mob.config.key => bosh_name}
+      def network_id()
+        mob.config.key
       end
     end
 
@@ -101,8 +100,8 @@ module VSphereCloud
         backing_info
       end
 
-      def get_dvs_index_hash()
-        {mob.config.logical_switch_uuid => bosh_name}
+      def network_id()
+        mob.config.logical_switch_uuid
       end
     end
   end
