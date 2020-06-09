@@ -267,7 +267,7 @@ module VSphereCloud
       # 1. Network type is DVPG
       # 2. Network responds to backing type (or check vc 7.0) and Network has nsx backing type
       # 3. Logical Switch ID for DVPG exists && it is same for all (Same as first newtwork in list)
-      network = networks.first if networks.all? do |n|
+      return networks.first if networks.all? do |n|
         n.is_a?(VimSdk::Vim::Dvs::DistributedVirtualPortgroup) &&
         n.config.respond_to?(:backing_type) &&
         n.config.backing_type == 'nsx' &&
@@ -275,7 +275,7 @@ module VSphereCloud
         n.config.logical_switch_uuid == networks.first.config.logical_switch_uuid
       end
       # Pick the Standard Portgroup if multiple networks exist with the given name
-      network = networks.find { |n| n.instance_of?(VimSdk::Vim::Network) } if network.nil?
+      network = networks.find { |n| n.instance_of?(VimSdk::Vim::Network) }
       raise <<~HERE if network.nil?
         Multiple networks found for #{name}. Please specify the full path, for example 'FOLDER_NAME/DISTRIBUTED_SWITCH_NAME/DISTRIBUTED_PORTGROUP_NAME'
       HERE
