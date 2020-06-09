@@ -674,10 +674,10 @@ module VSphereCloud
             network = @datacenter.mob.network.select do |n|
               n.is_a?(VimSdk::Vim::Dvs::DistributedVirtualPortgroup)
             end.select do |n|
-              n.config.respond_to?(backing_type) && n.config.backing_type == 'nsx'
-            end.detect do |n|
               # respond_to?(backing_type) indirectly checks if VC vci sdk version is 7.0
               # As backing typer is introduced in 7.0 SDK
+              n.config.respond_to?(backing_type) && n.config.backing_type == 'nsx'
+            end.detect do |n|
               n.key == device.backing.port.portgroup_key
             end
             v_network_name = if network.nil?
@@ -686,7 +686,7 @@ module VSphereCloud
                                # Network must have config here as it was checked in detect loop
                                dvs_index[network.config.logical_switch_uuid]
                              end
-          v_network_name = dvs_index[backing.port.portgroup_key] if v_network_name.nil?
+            v_network_name = dvs_index[backing.port.portgroup_key] if v_network_name.nil?
           elsif backing.kind_of?(Vim::Vm::Device::VirtualEthernetCard::OpaqueNetworkBackingInfo)
             v_network_name = dvs_index[backing.opaque_network_id]
           else
