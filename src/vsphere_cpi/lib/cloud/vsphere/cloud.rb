@@ -671,13 +671,14 @@ module VSphereCloud
         if device.kind_of?(Vim::Vm::Device::VirtualEthernetCard)
           backing = device.backing
           if backing.kind_of?(Vim::Vm::Device::VirtualEthernetCard::DistributedVirtualPortBackingInfo)
-            network = @datacenter.mob.network.detect do |n|
+            network = @datacenter.mob.network.select do |n|
+              n.is_a?(VimSdk::Vim::Dvs::DistributedVirtualPortgroup)
+            end.select do |n|
+              n.config.respond_to?(backing_type) && n.config.backing_type == 'nsx'
+            end.detect do |n|
               # respond_to?(backing_type) indirectly checks if VC vci sdk version is 7.0
               # As backing typer is introduced in 7.0 SDK
-              n.is_a?(VimSdk::Vim::Dvs::DistributedVirtualPortgroup) &&
-                n.key == device.backing.port.portgroup_key &&
-                n.config.respond_to?(backing_type) == 'nsx' &&
-                n.config.backing_type == 'nsx'
+              n.key == device.backing.port.portgroup_key
             end
             v_network_name = if network.nil?
                                nil

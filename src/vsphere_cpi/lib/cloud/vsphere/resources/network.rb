@@ -41,12 +41,11 @@ module VSphereCloud
       end
 
       def inspect
-        "<network: / #{@bosh_name} / #{@mob}"
+        "<network: / #{@bosh_name} / #{@mob}>"
       end
     end
 
     class OpaqueNetwork < Network
-
       def nic_backing(dvs_index)
         backing_info = VimSdk::Vim::Vm::Device::VirtualEthernetCard::OpaqueNetworkBackingInfo.new
         network_id = mob.summary.opaque_network_id
@@ -58,14 +57,14 @@ module VSphereCloud
     end
 
     class DistributedVirtualPortGroupNetwork < Network
-
       def nic_backing(dvs_index)
         portgroup_properties = client.cloud_searcher.get_properties(mob,
-                                                             VimSdk::Vim::Dvs::DistributedVirtualPortgroup,
-                                                             ['config.key', 'config.distributedVirtualSwitch'],
-                                                             ensure_all: true)
+                                 VimSdk::Vim::Dvs::DistributedVirtualPortgroup,
+                                 ['config.key', 'config.distributedVirtualSwitch'],
+                                 ensure_all: true)
         switch = portgroup_properties['config.distributedVirtualSwitch']
-        switch_uuid = client.cloud_searcher.get_property(switch, VimSdk::Vim::DistributedVirtualSwitch, 'uuid', ensure_all: true)
+        switch_uuid = client.cloud_searcher.get_property(switch, VimSdk::Vim::DistributedVirtualSwitch,
+                                                         'uuid', ensure_all: true)
 
         port = VimSdk::Vim::Dvs::PortConnection.new
         port.switch_uuid = switch_uuid
@@ -81,7 +80,6 @@ module VSphereCloud
 
 
     class DistributedVirtualPortGroupNSXTNetwork < Network
-
       def nic_backing(dvs_index)
         # NSXT backed DVPG are a CVDS feature supported with only 7.0
         # CPI treats these NSXT DVPG like an opaque network and uses
