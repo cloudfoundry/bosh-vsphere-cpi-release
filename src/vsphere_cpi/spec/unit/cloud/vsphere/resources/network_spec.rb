@@ -22,7 +22,7 @@ describe VSphereCloud::Resources::Network do
   describe '#nic_backing' do
     it 'returns backing of type plain NetworkBackingInfo ' do
       backing_info = subject.nic_backing
-      expect(backing_info).to be_a(VimSdk::Vim::Vm::Device::VirtualEthernetCard::NetworkBackingInfo)
+      expect(backing_info).to be_an_instance_of(VimSdk::Vim::Vm::Device::VirtualEthernetCard::NetworkBackingInfo)
       expect(backing_info.device_name).to be(vim_network_name)
     end
 
@@ -44,7 +44,7 @@ describe VSphereCloud::Resources::Network do
 
     it 'returns standard network instance if mob is a standard network' do
       network = VSphereCloud::Resources::Network.make_network_resource('foo_net', mob, client)
-      expect(network).to be_a(VSphereCloud::Resources::Network)
+      expect(network).to be_an_instance_of(VSphereCloud::Resources::Network)
     end
 
     context 'when network mob is of opaque network type' do
@@ -54,7 +54,7 @@ describe VSphereCloud::Resources::Network do
 
       it 'returns opaque network instance if mob is a opaque network' do
         network = VSphereCloud::Resources::Network.make_network_resource('foo_net', mob, client)
-        expect(network).to be_a(VSphereCloud::Resources::OpaqueNetwork)
+        expect(network).to be_an_instance_of(VSphereCloud::Resources::OpaqueNetwork)
       end
     end
 
@@ -76,7 +76,7 @@ describe VSphereCloud::Resources::Network do
 
         it 'returns standard DVPG instance if mob is a standard network' do
           network = VSphereCloud::Resources::Network.make_network_resource('foo_net', mob, client)
-          expect(network).to be_a(VSphereCloud::Resources::DistributedVirtualPortGroupNetwork)
+          expect(network).to be_an_instance_of(VSphereCloud::Resources::DistributedVirtualPortGroupNetwork)
         end
       end
 
@@ -85,7 +85,7 @@ describe VSphereCloud::Resources::Network do
 
         it 'returns standard DVPG instance if mob is a standard network' do
           network = VSphereCloud::Resources::Network.make_network_resource('foo_net', mob, client)
-          expect(network).to be_a(VSphereCloud::Resources::DistributedVirtualPortGroupNetwork)
+          expect(network).to be_an_instance_of(VSphereCloud::Resources::DistributedVirtualPortGroupNetwork)
         end
       end
 
@@ -94,7 +94,7 @@ describe VSphereCloud::Resources::Network do
 
         it 'returns standard network instance if mob is a standard network' do
           network = VSphereCloud::Resources::Network.make_network_resource('foo_net', mob, client)
-          expect(network).to be_a(VSphereCloud::Resources::DistributedVirtualPortGroupNSXTNetwork)
+          expect(network).to be_an_instance_of(VSphereCloud::Resources::DistributedVirtualPortGroupNSXTNetwork)
         end
       end
     end
@@ -120,7 +120,7 @@ describe VSphereCloud::Resources::OpaqueNetwork do
   describe '#nic_backing' do
     it 'returns backing of type OpaqueNetworkBackingInfo ' do
       backing_info = subject.nic_backing
-      expect(backing_info).to be_a(VimSdk::Vim::Vm::Device::VirtualEthernetCard::OpaqueNetworkBackingInfo)
+      expect(backing_info).to be_an_instance_of(VimSdk::Vim::Vm::Device::VirtualEthernetCard::OpaqueNetworkBackingInfo)
       expect(backing_info.opaque_network_id).to eq(mob_summary.opaque_network_id)
     end
   end
@@ -165,7 +165,7 @@ describe VSphereCloud::Resources::DistributedVirtualPortGroupNetwork do
         expect(cloud_searcher).to receive(:get_property)
           .with(dvpg_dvs, any_args).and_return(dvpg_dvs_uuid).once
         backing_info = subject.nic_backing
-        expect(backing_info).to be_a(VimSdk::Vim::Vm::Device::VirtualEthernetCard::DistributedVirtualPortBackingInfo)
+        expect(backing_info).to be_an_instance_of(VimSdk::Vim::Vm::Device::VirtualEthernetCard::DistributedVirtualPortBackingInfo)
         expect(backing_info.port.switch_uuid).to eq(dvpg_dvs_uuid)
         expect(backing_info.port.portgroup_key).to eq(dvpg_key)
       end
@@ -203,7 +203,7 @@ describe VSphereCloud::Resources::DistributedVirtualPortGroupNSXTNetwork do
 
   it 'returns backing of type OpaqueNetwork' do
     backing_info = subject.nic_backing
-    expect(backing_info).to be_a(VimSdk::Vim::Vm::Device::VirtualEthernetCard::OpaqueNetworkBackingInfo)
+    expect(backing_info).to be_an_instance_of(VimSdk::Vim::Vm::Device::VirtualEthernetCard::OpaqueNetworkBackingInfo)
     expect(backing_info.opaque_network_id).to eq(mob_config.logical_switch_uuid)
   end
 

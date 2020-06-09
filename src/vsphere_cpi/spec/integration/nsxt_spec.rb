@@ -87,7 +87,8 @@ describe 'CPI', nsx_transformers: true do
     }
   end
   let(:network_spec) do
-    spec = {'static-bridged' => {
+    {
+      'static-bridged' => {
         'ip' => "169.254.#{rand(1..254)}.#{rand(4..254)}",
         'netmask' => '255.255.254.0',
         'cloud_properties' => { 'name' => @nsxt_opaque_vlan_1 },
@@ -102,8 +103,8 @@ describe 'CPI', nsx_transformers: true do
         'default' => ['dns', 'gateway'],
         'dns' => ['169.254.1.2'],
         'gateway' => '169.254.1.3'
-    }}
-    spec
+      }
+    }
   end
 
   describe 'on create_vm' do
