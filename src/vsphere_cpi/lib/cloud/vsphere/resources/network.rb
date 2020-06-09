@@ -9,18 +9,19 @@ module VSphereCloud
 
       attr_reader :mob, :client, :bosh_name
       def self.make_network_resource(bosh_name, mob, client)
-        case mob
+        nw_type = case mob
         when VimSdk::Vim::Dvs::DistributedVirtualPortgroup
           if mob.config.respond_to?(:backing_type) && mob.config.backing_type == 'nsx'
-            DistributedVirtualPortGroupNSXTNetwork.new(bosh_name, mob, client)
+            DistributedVirtualPortGroupNSXTNetwork
           else
-            DistributedVirtualPortGroupNetwork.new(bosh_name, mob, client)
+            DistributedVirtualPortGroupNetwork
           end
         when VimSdk::Vim::OpaqueNetwork
-          OpaqueNetwork.new(bosh_name, mob, client)
+          OpaqueNetwork
         else
-          Network.new(bosh_name, mob, client)
+          Network
         end
+        nw_type.new(bosh_name, mob, client)
       end
 
       def initialize(bosh_name, mob, client)
