@@ -40,6 +40,7 @@ module VSphereCloud
     describe '#find_network' do
       let(:standard_portgroup_name) { ENV.fetch('BOSH_VSPHERE_CPI_PORTGROUP_STANDARD') }
       let(:dvpg_name) { ENV.fetch('BOSH_VSPHERE_CPI_PORTGROUP_DISTRIBUTED') }
+      let(:opaque_network_name) { ENV.fetch('BOSH_VSPHERE_OPAQUE_VLAN') }
 
       it 'returns nil if no such network exists' do
         expect(@client.find_network(@datacenter, 'absent-network')).to be_nil
@@ -61,6 +62,12 @@ module VSphereCloud
         expect(network).to be_a(VimSdk::Vim::Dvs::DistributedVirtualPortgroup)
       end
 
+      it 'returns the opaque network if it exists', nsx_transformers: true, nvds: true do
+        network = @client.find_network(@datacenter, opaque_network_name)
+        expect(network.name).to eq(opaque_network_name)
+        expect(network).to be_a(VimSdk::Vim::OpaqueNetwork)
+      end
+
       it "returns the DVPG if it's prefixed with the DVS's name" do
         dvs_name = @datacenter.mob.network.select do |network|
           network.is_a?(VimSdk::Vim::Dvs::DistributedVirtualPortgroup)
@@ -75,25 +82,37 @@ module VSphereCloud
       end
 
       context 'with a name that matches multiple networks' do
-        context 'when all matches are DVPGs on the same logical switch' do
+        let(:dvpg_name) { ENV.fetch('BOSH_VSPHERE_CPI_PORTGROUP_AMBIGUOUS') }
+        let(:erroneous_dvpg_name) { ENV.fetch('BOSH_VSPHERE_CPI_PORTGROUP_AMBIGUOUS_RAISE_ISSUE') }
+
+        it 'returns the standard switch if a standard switch is matched' do
+          network = @client.find_network(@datacenter, dvpg_name)
+          expect(network.name).to eq(dvpg_name)
+          expect(network).to be_an_instance_of(VimSdk::Vim::Network)
         end
 
-        context 'when a standard switch is matched' do
-          let(:dvpg_name) { ENV.fetch('BOSH_VSPHERE_CPI_PORTGROUP_AMBIGUOUS') }
-          it 'returns the standard switch' do
+        context 'when all matched networks are DVPGs',
+            nsx_transformers: true, nvds: false do
+          let(:dvpg_name) { ENV.fetch('BOSH_VSPHERE_OPAQUE_VLAN') }
+          let(:erroneous_dvpg_name) { ENV.fetch('VCPI_NSXT_AMBIGUOUS_LOGICAL_SWITCH') }
+
+          it 'returns a DVPG if all DVPGs are on the same logical switch' do
             network = @client.find_network(@datacenter, dvpg_name)
             expect(network.name).to eq(dvpg_name)
-            expect(network).to be_an_instance_of(VimSdk::Vim::Network)
+            expect(network).to be_a(VimSdk::Vim::Dvs::DistributedVirtualPortgroup)
+          end
+
+          it 'raises an ambiguous network error otherwise' do
+            expect do
+              @client.find_network(@datacenter, erroneous_dvpg_name)
+            end.to raise_error(/#{erroneous_dvpg_name}/)
           end
         end
 
-        context 'when no standard switch is matched' do
-          let(:dvpg_name) { ENV.fetch('BOSH_VSPHERE_CPI_PORTGROUP_AMBIGUOUS_RAISE_ISSUE') }
-          it 'raises an ambiguous network error' do
-            expect do
-              @client.find_network(@datacenter, dvpg_name)
-            end.to raise_error(/#{dvpg_name}/)
-          end
+        it 'raises an ambiguous network error otherwise' do
+          expect do
+            @client.find_network(@datacenter, erroneous_dvpg_name)
+          end.to raise_error(/#{erroneous_dvpg_name}/)
         end
       end
 
