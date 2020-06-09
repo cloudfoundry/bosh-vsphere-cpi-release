@@ -34,11 +34,15 @@ module VSphereCloud
         @mob.name
       end
 
-      def nic_backing(_)
+      def nic_backing()
         backing_info = VimSdk::Vim::Vm::Device::VirtualEthernetCard::NetworkBackingInfo.new
         backing_info.device_name = vim_name
         backing_info.network = mob
         backing_info
+      end
+
+      def get_dvs_index_hash()
+        {}
       end
 
       def inspect
@@ -47,18 +51,21 @@ module VSphereCloud
     end
 
     class OpaqueNetwork < Network
-      def nic_backing(dvs_index)
+      def nic_backing()
         backing_info = VimSdk::Vim::Vm::Device::VirtualEthernetCard::OpaqueNetworkBackingInfo.new
         network_id = mob.summary.opaque_network_id
         backing_info.opaque_network_id = network_id
-        dvs_index[network_id] = bosh_name
         backing_info.opaque_network_type = mob.summary.opaque_network_type
         backing_info
+      end
+
+      def get_dvs_index_hash()
+        {mob.summary.opaque_network_id => bosh_name}
       end
     end
 
     class DistributedVirtualPortGroupNetwork < Network
-      def nic_backing(dvs_index)
+      def nic_backing()
         portgroup_properties = client.cloud_searcher.get_properties(mob,
                                  VimSdk::Vim::Dvs::DistributedVirtualPortgroup,
                                  ['config.key', 'config.distributedVirtualSwitch'],
@@ -74,22 +81,28 @@ module VSphereCloud
         backing_info = VimSdk::Vim::Vm::Device::VirtualEthernetCard::DistributedVirtualPortBackingInfo.new
         backing_info.port = port
 
-        dvs_index[port.portgroup_key] = bosh_name
         backing_info
+      end
+
+      def get_dvs_index_hash()
+        {mob.config.key => bosh_name}
       end
     end
 
 
     class DistributedVirtualPortGroupNSXTNetwork < Network
-      def nic_backing(dvs_index)
+      def nic_backing()
         # NSXT backed DVPG are a CVDS feature supported with only 7.0
         # CPI treats these NSXT DVPG like an opaque network and uses
         # their logical switch uuid to create opaque backing rather than DVPG type backing
         backing_info = VimSdk::Vim::Vm::Device::VirtualEthernetCard::OpaqueNetworkBackingInfo.new
         backing_info.opaque_network_id = mob.config.logical_switch_uuid
-        dvs_index[backing_info.opaque_network_id] = bosh_name
         backing_info.opaque_network_type = 'nsx.LogicalSwitch'
         backing_info
+      end
+
+      def get_dvs_index_hash()
+        {mob.config.logical_switch_uuid => bosh_name}
       end
     end
   end

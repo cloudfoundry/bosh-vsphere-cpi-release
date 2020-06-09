@@ -7,7 +7,6 @@ describe VSphereCloud::Resources::Network do
   end
 
   let(:client) { instance_double('VSphereCloud::VCenterClient', cloud_searcher: cloud_searcher) }
-  let(:dvs_index) { {} }
   let(:cloud_searcher) { instance_double('VSphereCloud::CloudSearcher') }
   let(:vim_network_name) { 'fake-network' }
   let(:mob) do
@@ -22,9 +21,16 @@ describe VSphereCloud::Resources::Network do
 
   describe '#nic_backing' do
     it 'returns backing of type plain NetworkBackingInfo ' do
-      backing_info = subject.nic_backing(dvs_index)
+      backing_info = subject.nic_backing
       expect(backing_info).to be_a(VimSdk::Vim::Vm::Device::VirtualEthernetCard::NetworkBackingInfo)
       expect(backing_info.device_name).to be(vim_network_name)
+    end
+
+    describe '#get_dvs_index_hash' do
+      it 'returns empty hash' do
+        dvs_index = subject.get_dvs_index_hash
+        expect(dvs_index).to eq({})
+      end
     end
   end
 
@@ -102,7 +108,6 @@ describe VSphereCloud::Resources::OpaqueNetwork do
   end
 
   let(:client) { instance_double('VSphereCloud::VCenterClient', cloud_searcher: cloud_searcher) }
-  let(:dvs_index) { {} }
   let(:cloud_searcher) { instance_double('VSphereCloud::CloudSearcher') }
   let(:vim_network_name) { 'fake-network' }
   let(:mob) do
@@ -114,10 +119,16 @@ describe VSphereCloud::Resources::OpaqueNetwork do
 
   describe '#nic_backing' do
     it 'returns backing of type OpaqueNetworkBackingInfo ' do
-      backing_info = subject.nic_backing(dvs_index)
+      backing_info = subject.nic_backing
       expect(backing_info).to be_a(VimSdk::Vim::Vm::Device::VirtualEthernetCard::OpaqueNetworkBackingInfo)
       expect(backing_info.opaque_network_id).to eq(mob_summary.opaque_network_id)
-      expect(dvs_index[backing_info.opaque_network_id]).to eq('foo_net')
+    end
+  end
+
+  describe '#get_dvs_index_hash' do
+    it 'returns key value pair in hash' do
+      dvs_index = subject.get_dvs_index_hash
+      expect(dvs_index).to eq({'fake-id' => 'foo_net'})
     end
   end
 end
@@ -129,7 +140,6 @@ describe VSphereCloud::Resources::DistributedVirtualPortGroupNetwork do
   end
 
   let(:client) { instance_double('VSphereCloud::VCenterClient', cloud_searcher: cloud_searcher) }
-  let(:dvs_index) { {} }
   let(:cloud_searcher) { instance_double('VSphereCloud::CloudSearcher') }
   let(:vim_network_name) { 'fake-network' }
   let(:mob) do
@@ -138,17 +148,15 @@ describe VSphereCloud::Resources::DistributedVirtualPortGroupNetwork do
                     name: vim_network_name,
                     config: mob_config)
   end
-  let(:mob_config) { nil }
+  let(:mob_config) do
+    double(:mob_config, backing_type: 'standard', key: dvpg_key)
+  end
+  let(:dvpg_key) { 'fake-dvpg-key' }
+  let(:dvpg_dvs) { 'fake-dvpg-dvs' }
+  let(:dvpg_dvs_uuid) { 'fake-dvpg-dvs-uuid' }
 
   describe '#nic_backing' do
     context 'when network is of type standard dvpg' do
-      let(:mob_config) do
-        double(:mob_config, backing_type: 'standard')
-      end
-      let(:dvpg_key) { 'fake-dvpg-key' }
-      let(:dvpg_dvs) { 'fake-dvpg-dvs' }
-      let(:dvpg_dvs_uuid) { 'fake-dvpg-dvs-uuid' }
-
       it 'returns backing of type DVPG' do
         expect(cloud_searcher).to receive(:get_properties).with(mob, any_args).and_return({
             'config.key' => dvpg_key,
@@ -156,12 +164,18 @@ describe VSphereCloud::Resources::DistributedVirtualPortGroupNetwork do
         }).once
         expect(cloud_searcher).to receive(:get_property)
           .with(dvpg_dvs, any_args).and_return(dvpg_dvs_uuid).once
-        backing_info = subject.nic_backing(dvs_index)
+        backing_info = subject.nic_backing
         expect(backing_info).to be_a(VimSdk::Vim::Vm::Device::VirtualEthernetCard::DistributedVirtualPortBackingInfo)
         expect(backing_info.port.switch_uuid).to eq(dvpg_dvs_uuid)
         expect(backing_info.port.portgroup_key).to eq(dvpg_key)
-        expect(dvs_index[backing_info.port.portgroup_key]).to eq('foo_net')
       end
+    end
+  end
+
+  describe '#get_dvs_index_hash' do
+    it 'returns key value pair in hash' do
+      dvs_index = subject.get_dvs_index_hash
+      expect(dvs_index).to eq({dvpg_key => 'foo_net'})
     end
   end
 end
@@ -173,7 +187,6 @@ describe VSphereCloud::Resources::DistributedVirtualPortGroupNSXTNetwork do
   end
 
   let(:client) { instance_double('VSphereCloud::VCenterClient', cloud_searcher: cloud_searcher) }
-  let(:dvs_index) { {} }
   let(:cloud_searcher) { instance_double('VSphereCloud::CloudSearcher') }
   let(:vim_network_name) { 'fake-network' }
   let(:mob) do
@@ -189,9 +202,15 @@ describe VSphereCloud::Resources::DistributedVirtualPortGroupNSXTNetwork do
   end
 
   it 'returns backing of type OpaqueNetwork' do
-    backing_info = subject.nic_backing(dvs_index)
+    backing_info = subject.nic_backing
     expect(backing_info).to be_a(VimSdk::Vim::Vm::Device::VirtualEthernetCard::OpaqueNetworkBackingInfo)
     expect(backing_info.opaque_network_id).to eq(mob_config.logical_switch_uuid)
-    expect(dvs_index[backing_info.opaque_network_id]).to eq('foo_net')
+  end
+
+  describe '#get_dvs_index_hash' do
+    it 'returns key value pair in hash' do
+      dvs_index = subject.get_dvs_index_hash
+      expect(dvs_index).to eq({'fake-ls-uuid' => 'foo_net'})
+    end
   end
 end
