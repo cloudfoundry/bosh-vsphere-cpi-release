@@ -11,7 +11,11 @@ module VSphereCloud
       def self.make_network_resource(bosh_name, mob, client)
         case mob
         when VimSdk::Vim::Dvs::DistributedVirtualPortgroup
-          DistributedVirtualPortGroupNetwork.new(bosh_name, mob, client)
+          if mob.config.respond_to?(:backing_type) && mob.config.backing_type == 'nsx'
+            DistributedVirtualPortGroupNSXTNetwork.new(bosh_name, mob, client)
+          else
+            DistributedVirtualPortGroupNetwork.new(bosh_name, mob, client)
+          end
         when VimSdk::Vim::OpaqueNetwork
           OpaqueNetwork.new(bosh_name, mob, client)
         else
@@ -56,32 +60,36 @@ module VSphereCloud
     class DistributedVirtualPortGroupNetwork < Network
 
       def nic_backing(dvs_index)
+        portgroup_properties = client.cloud_searcher.get_properties(mob,
+                                                             VimSdk::Vim::Dvs::DistributedVirtualPortgroup,
+                                                             ['config.key', 'config.distributedVirtualSwitch'],
+                                                             ensure_all: true)
+        switch = portgroup_properties['config.distributedVirtualSwitch']
+        switch_uuid = client.cloud_searcher.get_property(switch, VimSdk::Vim::DistributedVirtualSwitch, 'uuid', ensure_all: true)
+
+        port = VimSdk::Vim::Dvs::PortConnection.new
+        port.switch_uuid = switch_uuid
+        port.portgroup_key = portgroup_properties['config.key']
+
+        backing_info = VimSdk::Vim::Vm::Device::VirtualEthernetCard::DistributedVirtualPortBackingInfo.new
+        backing_info.port = port
+
+        dvs_index[port.portgroup_key] = bosh_name
+        backing_info
+      end
+    end
+
+
+    class DistributedVirtualPortGroupNSXTNetwork < Network
+
+      def nic_backing(dvs_index)
         # NSXT backed DVPG are a CVDS feature supported with only 7.0
         # CPI treats these NSXT DVPG like an opaque network and uses
         # their logical switch uuid to create opaque backing rather than DVPG type backing
-        if mob.config.respond_to?(:backing_type) && mob.config.backing_type == 'nsx' &&
-          backing_info = VimSdk::Vim::Vm::Device::VirtualEthernetCard::OpaqueNetworkBackingInfo.new
-          backing_info.opaque_network_id = mob.config.logical_switch_uuid
-          dvs_index[backing_info.opaque_network_id] = bosh_name
-          backing_info.opaque_network_type = 'nsx.LogicalSwitch'
-        else
-          portgroup_properties = client.cloud_searcher.get_properties(mob,
-                                                               VimSdk::Vim::Dvs::DistributedVirtualPortgroup,
-                                                               ['config.key', 'config.distributedVirtualSwitch'],
-                                                               ensure_all: true)
-
-          switch = portgroup_properties['config.distributedVirtualSwitch']
-          switch_uuid = client.cloud_searcher.get_property(switch, VimSdk::Vim::DistributedVirtualSwitch, 'uuid', ensure_all: true)
-
-          port = VimSdk::Vim::Dvs::PortConnection.new
-          port.switch_uuid = switch_uuid
-          port.portgroup_key = portgroup_properties['config.key']
-
-          backing_info = VimSdk::Vim::Vm::Device::VirtualEthernetCard::DistributedVirtualPortBackingInfo.new
-          backing_info.port = port
-
-          dvs_index[port.portgroup_key] = bosh_name
-        end
+        backing_info = VimSdk::Vim::Vm::Device::VirtualEthernetCard::OpaqueNetworkBackingInfo.new
+        backing_info.opaque_network_id = mob.config.logical_switch_uuid
+        dvs_index[backing_info.opaque_network_id] = bosh_name
+        backing_info.opaque_network_type = 'nsx.LogicalSwitch'
         backing_info
       end
     end

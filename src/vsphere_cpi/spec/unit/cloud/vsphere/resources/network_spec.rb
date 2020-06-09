@@ -46,20 +46,50 @@ describe VSphereCloud::Resources::Network do
         VimSdk::Vim::OpaqueNetwork.new(name: vim_network_name)
       end
 
-      it 'returns standard network instance if mob is a standard network' do
+      it 'returns opaque network instance if mob is a opaque network' do
         network = VSphereCloud::Resources::Network.make_network_resource('foo_net', mob, client)
         expect(network).to be_a(VSphereCloud::Resources::OpaqueNetwork)
       end
     end
 
-    context 'when network mob is of DVPF type' do
+    context 'when network mob is of DVPG type' do
+      before(:each) do
+        allow(mob).to receive(:config).and_return(mob_config)
+      end
       let(:mob) do
-        VimSdk::Vim::Dvs::DistributedVirtualPortgroup.new(name: vim_network_name)
+        VimSdk::Vim::Dvs::DistributedVirtualPortgroup.new(name: vim_network_name, config: mob_config)
+      end
+      let(:mob_config) do
+        double(:mob_config,
+               backing_type: backing_type,
+               logical_switch_uuid: 'fake-ls-uuid')
       end
 
-      it 'returns standard network instance if mob is a standard network' do
-        network = VSphereCloud::Resources::Network.make_network_resource('foo_net', mob, client)
-        expect(network).to be_a(VSphereCloud::Resources::DistributedVirtualPortGroupNetwork)
+      context 'when DVPG is standard type' do
+        let(:backing_type) { 'standard' }
+
+        it 'returns standard DVPG instance if mob is a standard network' do
+          network = VSphereCloud::Resources::Network.make_network_resource('foo_net', mob, client)
+          expect(network).to be_a(VSphereCloud::Resources::DistributedVirtualPortGroupNetwork)
+        end
+      end
+
+      context 'when DVPG is standard type and does not respond to backing type' do
+        let(:mob_config) { double(:mob_config) }
+
+        it 'returns standard DVPG instance if mob is a standard network' do
+          network = VSphereCloud::Resources::Network.make_network_resource('foo_net', mob, client)
+          expect(network).to be_a(VSphereCloud::Resources::DistributedVirtualPortGroupNetwork)
+        end
+      end
+
+      context 'when DVPG is NSXT type' do
+        let(:backing_type) { 'nsx' }
+
+        it 'returns standard network instance if mob is a standard network' do
+          network = VSphereCloud::Resources::Network.make_network_resource('foo_net', mob, client)
+          expect(network).to be_a(VSphereCloud::Resources::DistributedVirtualPortGroupNSXTNetwork)
+        end
       end
     end
   end
@@ -111,21 +141,6 @@ describe VSphereCloud::Resources::DistributedVirtualPortGroupNetwork do
   let(:mob_config) { nil }
 
   describe '#nic_backing' do
-    context 'when network is of type nsx dvpg' do
-      let(:mob_config) do
-        double(:mob_config,
-                backing_type: 'nsx',
-                logical_switch_uuid: 'fake-ls-uuid')
-      end
-
-      it 'returns backing of type OpaqueNetwork' do
-        backing_info = subject.nic_backing(dvs_index)
-        expect(backing_info).to be_a(VimSdk::Vim::Vm::Device::VirtualEthernetCard::OpaqueNetworkBackingInfo)
-        expect(backing_info.opaque_network_id).to eq(mob_config.logical_switch_uuid)
-        expect(dvs_index[backing_info.opaque_network_id]).to eq('foo_net')
-      end
-    end
-
     context 'when network is of type standard dvpg' do
       let(:mob_config) do
         double(:mob_config, backing_type: 'standard')
@@ -148,5 +163,35 @@ describe VSphereCloud::Resources::DistributedVirtualPortGroupNetwork do
         expect(dvs_index[backing_info.port.portgroup_key]).to eq('foo_net')
       end
     end
+  end
+end
+
+
+describe VSphereCloud::Resources::DistributedVirtualPortGroupNSXTNetwork do
+  subject do
+    described_class.new('foo_net', mob, client, )
+  end
+
+  let(:client) { instance_double('VSphereCloud::VCenterClient', cloud_searcher: cloud_searcher) }
+  let(:dvs_index) { {} }
+  let(:cloud_searcher) { instance_double('VSphereCloud::CloudSearcher') }
+  let(:vim_network_name) { 'fake-network' }
+  let(:mob) do
+    instance_double('VimSdk::Vim::Dvs::DistributedVirtualPortgroup',
+                    to_s: 'mob_as_string',
+                    name: vim_network_name,
+                    config: mob_config)
+  end
+  let(:mob_config) do
+    double(:mob_config,
+           backing_type: 'nsx',
+           logical_switch_uuid: 'fake-ls-uuid')
+  end
+
+  it 'returns backing of type OpaqueNetwork' do
+    backing_info = subject.nic_backing(dvs_index)
+    expect(backing_info).to be_a(VimSdk::Vim::Vm::Device::VirtualEthernetCard::OpaqueNetworkBackingInfo)
+    expect(backing_info.opaque_network_id).to eq(mob_config.logical_switch_uuid)
+    expect(dvs_index[backing_info.opaque_network_id]).to eq('foo_net')
   end
 end
