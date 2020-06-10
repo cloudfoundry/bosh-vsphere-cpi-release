@@ -665,37 +665,33 @@ module VSphereCloud
     end
 
     def generate_network_env(devices, networks, dvs_index)
-      nics = {}
+      nics = Hash.new { |hash, k| hash[k] = [] }
 
       devices.each do |device|
-        if device.kind_of?(Vim::Vm::Device::VirtualEthernetCard)
-          backing = device.backing
-          if backing.kind_of?(Vim::Vm::Device::VirtualEthernetCard::DistributedVirtualPortBackingInfo)
+        next unless device.kind_of?(Vim::Vm::Device::VirtualEthernetCard)
+        v_network_name = case device.backing
+          when Vim::Vm::Device::VirtualEthernetCard::DistributedVirtualPortBackingInfo
             network = @datacenter.mob.network.select do |n|
               n.is_a?(VimSdk::Vim::Dvs::DistributedVirtualPortgroup)
             end.select do |n|
-              # respond_to?(backing_type) indirectly checks if VC vci sdk version is 7.0
-              # As backing typer is introduced in 7.0 SDK
+              # respond_to?(backing_type) indirectly checks if the VC SDK version
+              # is 7.0 as #backing_type is introduced in 7.0 SDK
               n.config.respond_to?(:backing_type) && n.config.backing_type == 'nsx'
             end.detect do |n|
               n.key == device.backing.port.portgroup_key
             end
-            v_network_name = if network.nil?
-                               nil
-                             else
-                               # Network must have config here as it was checked in detect loop
-                               dvs_index[network.config.logical_switch_uuid]
-                             end
-            v_network_name = dvs_index[backing.port.portgroup_key] if v_network_name.nil?
-          elsif backing.kind_of?(Vim::Vm::Device::VirtualEthernetCard::OpaqueNetworkBackingInfo)
-            v_network_name = dvs_index[backing.opaque_network_id]
+
+            if network.nil?
+              dvs_index[device.backing.port.portgroup_key]
+            else
+              dvs_index[network.config.logical_switch_uuid]
+            end
+          when Vim::Vm::Device::VirtualEthernetCard::OpaqueNetworkBackingInfo
+            dvs_index[device.backing.opaque_network_id]
           else
-            v_network_name = PathFinder.new.path(backing.network)
-          end
-          allocated_networks = nics[v_network_name] || []
-          allocated_networks << device
-          nics[v_network_name] = allocated_networks
+            PathFinder.new.path(device.backing.network)
         end
+        nics[v_network_name] << device
       end
 
       network_env = {}
