@@ -223,7 +223,7 @@ module VSphereCloud
           VSphereCloud::Resources::Network.make_network_resource(network_mob, self)
         end
       rescue NetworkNotFoundError => e
-        raise "Error #{e} in finding network '#{network_name}' after multiple retries. Verify that the portgroup exists."
+        raise e, "Error in finding network '#{network_name}' after multiple retries. Verify that the portgroup exists."
       end
     end
 
