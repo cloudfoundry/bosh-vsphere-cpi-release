@@ -665,7 +665,7 @@ module VSphereCloud
     end
 
     def generate_network_env(devices, networks, dvs_index)
-      nics = Hash.new { |hash, k| hash[k] = [] }
+      nics = {}
 
       devices.each do |device|
         next unless device.kind_of?(Vim::Vm::Device::VirtualEthernetCard)
@@ -691,7 +691,7 @@ module VSphereCloud
           else
             PathFinder.new.path(device.backing.network)
         end
-        nics[v_network_name] << device
+        nics[v_network_name] = (nics.fetch(v_network_name, []) << device)
       end
 
       network_env = {}
