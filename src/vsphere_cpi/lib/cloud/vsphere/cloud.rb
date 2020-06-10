@@ -676,7 +676,7 @@ module VSphereCloud
             end.select do |n|
               # respond_to?(backing_type) indirectly checks if VC vci sdk version is 7.0
               # As backing typer is introduced in 7.0 SDK
-              n.config.respond_to?(backing_type) && n.config.backing_type == 'nsx'
+              n.config.respond_to?(:backing_type) && n.config.backing_type == 'nsx'
             end.detect do |n|
               n.key == device.backing.port.portgroup_key
             end
