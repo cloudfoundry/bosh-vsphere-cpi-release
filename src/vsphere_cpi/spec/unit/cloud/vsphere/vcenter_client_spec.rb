@@ -476,30 +476,36 @@ module VSphereCloud
     end
 
     describe '#find_network_retryably' do
-      let(:datacenter) { VSphereCloud::Resources::Datacenter }
+      let(:datacenter) { instance_double(VSphereCloud::Resources::Datacenter) }
       let(:network_name) { 'network_1' }
       let(:network_mob) { VimSdk::Vim::Network.new(name: network_name) }
 
-      context 'when trying to find a network' do
-        it 'retries until it finds a network' do
-          expect(client).to receive(:find_network).with(datacenter, network_name).and_return(nil)
-          expect(client).to receive(:find_network).with(datacenter, network_name).and_return(network_mob)
-          network = client.find_network_retryably(datacenter, network_name)
-          expect(network).to be_a(VSphereCloud::Resources::Network)
-        end
+      it 'retries until it finds a network' do
+        expect(client).to receive(:find_network).with(datacenter, network_name).and_return(nil)
+        expect(client).to receive(:find_network).with(datacenter, network_name).and_return(network_mob)
+        expect(network_mob).to receive(:nil?).and_return(false)
+        allow_any_instance_of(VSphereCloud::Resources::Network).to receive(:make_network_resource).with(network_name, network_mob , self)
 
-        it 'retries for ~10 minutes and raises network not found error' do
-          expect(client).to receive(:find_network).with(datacenter, network_name).and_return(nil).at_most(62).times
-          expect do
-            client.find_network_retryably(datacenter, network_name)
-          end.to raise_error(/VSphereCloud::VCenterClient::NetworkNotFoundError/)# in finding network '#{network_name}' after multiple retries. Verify that the portgroup exists.")
-        end
+        network = client.find_network_retryably(datacenter, network_name)
+        expect(network).to be_a(VSphereCloud::Resources::Network)
+      end
 
-        it 'makes a new network resource on finding a network' do
-          expect(client).to receive(:find_network).with(datacenter, network_name).and_return(network_mob)
-          network = client.find_network_retryably(datacenter, network_name)
-          expect(network).to be_a(VSphereCloud::Resources::Network)
-        end
+      it 'retries for ~10 minutes and raises network not found error' do
+        expect(client).to receive(:find_network).with(datacenter, network_name).and_return(nil).at_most(62).times
+        allow(network_mob).to receive(:nil?).and_return(true)
+
+        expect do
+          client.find_network_retryably(datacenter, network_name)
+        end.to raise_error(VSphereCloud::VCenterClient::NetworkNotFoundError, /in finding network.*after multiple retries/)
+      end
+
+      it 'makes a new network resource on finding a network' do
+        expect(client).to receive(:find_network).with(datacenter, network_name).and_return(network_mob)
+        expect(network_mob).to receive(:nil?).and_return(false)
+        allow_any_instance_of(VSphereCloud::Resources::Network).to receive(:make_network_resource).with(network_name, network_mob , self)
+
+        network = client.find_network_retryably(datacenter, network_name)
+        expect(network).to be_a(VSphereCloud::Resources::Network)
       end
     end
 
