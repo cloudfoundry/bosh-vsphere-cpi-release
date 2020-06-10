@@ -94,7 +94,7 @@ module VSphereCloud
         context 'when all matched networks are DVPGs',
             nsx_transformers: true, nvds: false do
           let(:dvpg_name) { ENV.fetch('BOSH_VSPHERE_OPAQUE_VLAN') }
-          let(:erroneous_dvpg_name) { ENV.fetch('VCPI_NSXT_AMBIGUOUS_LOGICAL_SWITCH') }
+          let(:erroneous_dvpg_name) { ENV.fetch('BOSH_VSPHERE_AMBIGUOUS_OPAQUE_VLAN') }
 
           it 'returns a DVPG if all DVPGs are on the same logical switch' do
             network = @client.find_network(@datacenter, dvpg_name)
