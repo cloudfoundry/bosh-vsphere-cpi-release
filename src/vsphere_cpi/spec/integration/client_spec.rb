@@ -139,7 +139,8 @@ module VSphereCloud
         end
 
         it 'returns the DVPG if it exists' do
-          network = @client.find_network(@datacenter, dvpg_path)
+          folder_name, dvs_name, name = dvpg_path.split('/')
+          network = @client.find_network(@datacenter, "#{folder_name}/#{name}")
           expect(network.name).to eq(dvpg_path.split('/').last)
           expect(network).to be_a(VimSdk::Vim::Dvs::DistributedVirtualPortgroup)
         end
