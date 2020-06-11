@@ -62,7 +62,7 @@ module VSphereCloud
         expect(network).to be_a(VimSdk::Vim::Dvs::DistributedVirtualPortgroup)
       end
 
-      it 'returns the opaque network if it exists', nsx_transformers: true, nvds: true do
+      it 'returns the opaque network if it exists', nvds: true do
         network = @client.find_network(@datacenter, opaque_network_name)
         expect(network.name).to eq(opaque_network_name)
         expect(network).to be_a(VimSdk::Vim::OpaqueNetwork)
@@ -91,8 +91,7 @@ module VSphereCloud
           expect(network).to be_an_instance_of(VimSdk::Vim::Network)
         end
 
-        context 'when all matched networks are DVPGs',
-            nsx_transformers: true, nvds: false do
+        context 'when all matched networks are DVPGs', cvds: true do
           let(:dvpg_name) { ENV.fetch('BOSH_VSPHERE_OPAQUE_VLAN') }
           let(:erroneous_dvpg_name) { ENV.fetch('BOSH_VSPHERE_AMBIGUOUS_OPAQUE_VLAN') }
 

@@ -1,6 +1,6 @@
 require 'integration/spec_helper'
 
-describe 'NSX Tranformers integration', nsx_transformers: true, nvds: true do
+describe 'NSX Tranformers integration', nvds: true, cvds: true do
   before (:all) do
     @opaque_vlan = fetch_property('BOSH_VSPHERE_OPAQUE_VLAN')
   end
