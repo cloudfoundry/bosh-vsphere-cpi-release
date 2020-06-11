@@ -1,7 +1,7 @@
 require 'integration/spec_helper'
 require 'openssl'
 
-describe 'NSXT certificate authentication', nvds: true, cvds: true do
+describe 'NSXT certificate authentication', nsxt_all: true do
 
   before(:all) do
     @nsxt_host = fetch_property('BOSH_VSPHERE_CPI_NSXT_HOST')

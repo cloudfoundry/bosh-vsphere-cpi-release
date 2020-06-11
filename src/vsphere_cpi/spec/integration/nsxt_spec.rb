@@ -2,7 +2,7 @@ require 'digest'
 require 'securerandom'
 require 'integration/spec_helper'
 
-describe 'CPI', nvds: true, cvds: true do
+describe 'CPI', nsxt_all: true do
 
   before(:all) do
     # Read basic info about env
