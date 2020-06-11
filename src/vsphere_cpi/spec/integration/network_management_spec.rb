@@ -1,6 +1,6 @@
 require 'integration/spec_helper'
 
-xdescribe 'network management', :nsx_transformers => true  do
+xdescribe 'network management', nvds: true, cvds: true do
 
   #TODO: setup is duplicating code in nsxt_spec. Remove duplication
   before(:all) do
