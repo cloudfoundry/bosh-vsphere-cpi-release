@@ -15,8 +15,6 @@ $pipeline.pool('6.5-NSXT25') do |pool|
   pool.params = {
     RSPEC_FLAGS: [
       '--tag ~cvds',
-      '--tag nvds',
-      '--tag nsxt_all',
       '--tag ~disk_migration',
       '--tag ~nsxv',
       '--tag ~host_maintenance',
@@ -41,8 +39,6 @@ $pipeline.pool('6.7-NSXT25') do |pool|
   pool.params = {
     RSPEC_FLAGS: [
       '--tag ~cvds',
-      '--tag nvds',
-      '--tag nsxt_all',
       '--tag ~nsxv',
       '--tag ~host_maintenance',
     ].join(' '),
@@ -66,8 +62,6 @@ $pipeline.pool('7.0-NSXT30') do |pool|
   pool.params = {
     RSPEC_FLAGS: [
       '--tag ~cvds',
-      '--tag nvds',
-      '--tag nsxt_all',
       '--tag ~nsxv',
       '--tag ~host_maintenance',
     ].join(' '),
