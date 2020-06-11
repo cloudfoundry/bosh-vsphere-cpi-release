@@ -1,6 +1,6 @@
 require 'integration/spec_helper'
 
-describe 'NSX for vsphere integration', nsx_vsphere: true do
+describe 'NSX for vsphere integration', nsxv: true do
   before (:all) do
     @nsx_address = fetch_property('BOSH_VSPHERE_CPI_NSX_ADDRESS')
     @nsx_user = fetch_property('BOSH_VSPHERE_CPI_NSX_USER')
