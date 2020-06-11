@@ -37,7 +37,7 @@ module VSphereCloud
       end
     end
 
-    describe '#find_network' do
+    describe '#find_network', vsphere_networking: true do
       let(:standard_portgroup_name) { ENV.fetch('BOSH_VSPHERE_CPI_PORTGROUP_STANDARD') }
       let(:dvpg_name) { ENV.fetch('BOSH_VSPHERE_CPI_PORTGROUP_DISTRIBUTED') }
       let(:opaque_network_name) { ENV.fetch('BOSH_VSPHERE_OPAQUE_VLAN') }
