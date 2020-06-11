@@ -235,7 +235,7 @@ module VSphereCloud
       if !container_path.empty?
         container = find_by_inventory_path([datacenter.name, 'network', *container_path])
         container ||= find_child_by_name(datacenter.mob.network_folder, container_path)
-        raise NetworkNotFoundError, "Can't find network container #{container_path.join('/')}" if container.nil?
+        return nil if container.nil?
       else
         container = nil
       end
