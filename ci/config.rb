@@ -6,6 +6,7 @@ $pipeline.pool('6.0-NSXV') do |pool|
       '--tag ~spbm_encryption',
       '--tag ~attach_tag',
       '--tag ~host_maintenance',
+      '--tag ~nsxt_all',
     ].join(' '),
     NSXT_SKIP_SSL_VERIFY: "true"
   }
