@@ -14,7 +14,7 @@ module VSphereCloud
       CLUSTER_VM_HOST_RULE_SHOULD = 'SHOULD'.freeze
       CLUSTER_VM_HOST_RULE_MUST = 'MUST'.freeze
       PROPERTIES = %w(name datastore resourcePool host)
-      HOST_PROPERTIES = %w(name hardware.memorySize runtime.connectionState runtime.inMaintenanceMode runtime.powerState)
+      HOST_PROPERTIES = %w(name hardware.memorySize runtime.connectionState runtime.inMaintenanceMode runtime.powerState summary.hardware.cpuMhz)
       HOST_COUNTERS = %w(mem.usage.average)
 
       MEMORY_HEADROOM = 128
