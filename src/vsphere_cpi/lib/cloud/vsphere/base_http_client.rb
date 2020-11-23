@@ -12,6 +12,7 @@ module VSphereCloud
       @backing_client.send_timeout = 14400 # 4 hours, for stemcell uploads
       @backing_client.receive_timeout = 14400
       @backing_client.connect_timeout = 60
+      @backing_client.tcp_keepalive = true
       @ca_cert_manifest_key = ca_cert_manifest_key
       @log_filter = VSphereCloud::SdkHelpers::LogFilter.new
 
