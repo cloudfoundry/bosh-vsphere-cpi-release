@@ -1,0 +1,14 @@
+#! /bin/bash
+
+set -e
+
+SOURCE=index.docker.io
+TARGET=gcr.io/round-essence-187720
+
+LIST=(python:2.7 vcpici/vcpi-main)
+
+for i in "${LIST[@]}"; do
+  docker pull "$SOURCE/$i"
+  docker tag "$SOURCE/$i" "$TARGET/${i//\//-}"
+  docker push "$TARGET/${i//\//-}"
+done
