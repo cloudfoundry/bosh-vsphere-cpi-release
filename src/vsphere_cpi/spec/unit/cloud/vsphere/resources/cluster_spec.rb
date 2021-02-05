@@ -240,6 +240,7 @@ module VSphereCloud::Resources
           allow(subject).to receive_message_chain(:host_group_mob,
             :host).and_return([host1, host2])
           allow(subject).to receive_messages(host_group: 'fake-host-group')
+          allow(subject).to receive(:host_group_rule_type).and_return('MUST')
           allow(host1).to receive_message_chain(:hardware,
             :memory_size).and_return(10 * 1024 * 1024)
           allow(host2).to receive_message_chain(:hardware,
@@ -605,14 +606,16 @@ module VSphereCloud::Resources
     end
 
     describe '#host' do
+      let(:hosts) { instance_double('VimSdk::Vim::HostSystem') }
+
       context 'when a host group is not defined' do
-        let(:hosts) { instance_double('VimSdk::Vim::HostSystem') }
         it 'returns all hosts in the cluster' do
           allow(cluster_mob).to receive(:host).and_return([hosts])
           expect(cluster.host).to eq([hosts])
         end
       end
-      context 'when host group is defined and exists' do
+
+      context 'when a host group is defined' do
         let(:host_group_hosts) { instance_double('VimSdk::Vim::HostSystem') }
         let(:host_group_mob) do
           instance_double('VimSdk::Vim::Cluster::HostGroup',
@@ -625,10 +628,23 @@ module VSphereCloud::Resources
             host_group_name: 'fake-host-group',
           )
         end
-        it 'returns the hosts defined under the host group' do
-          allow(cluster).to receive(:host_group_mob).and_return(host_group_mob)
-          allow(host_group_mob).to receive(:host).and_return([host_group_hosts])
-          expect(cluster.host).to eq([host_group_hosts])
+
+        context 'when the cluster-VM affinity type is "must"' do
+          it 'returns the hosts defined under the host group' do
+            allow(cluster).to receive(:host_group_mob).and_return(host_group_mob)
+            allow(cluster).to receive(:host_group_rule_type).and_return('MUST')
+            allow(host_group_mob).to receive(:host).and_return([host_group_hosts])
+            expect(cluster.host).to eq([host_group_hosts])
+          end
+        end
+
+        context 'when the cluster-VM affinity type is "should"' do
+          it 'returns all hosts in the cluster' do
+            allow(cluster).to receive(:host_group_mob).and_return(host_group_mob)
+            allow(cluster).to receive(:host_group_rule_type).and_return('SHOULD')
+            allow(cluster_mob).to receive(:host).and_return([hosts])
+            expect(cluster.host).to eq([hosts])
+          end
         end
       end
     end

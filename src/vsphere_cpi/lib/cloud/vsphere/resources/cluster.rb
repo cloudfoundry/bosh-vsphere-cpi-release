@@ -50,7 +50,7 @@ module VSphereCloud
         # whether we're using resource pools or raw clusters.
         if @config.resource_pool.nil?
           # Get cluster utilization only if host group is nil
-          @synced_free_memory = if host_group.nil?
+          @synced_free_memory = if host_group.nil? || host_group_rule_type == CLUSTER_VM_HOST_RULE_SHOULD
             fetch_cluster_utilization
           else
             fetch_host_group_utilization
@@ -128,7 +128,11 @@ module VSphereCloud
       # @return [List] List of hosts in the cluster resource.
       def host
         return @host if @host
-        @host = host_group_mob.nil? ? mob.host : host_group_mob.host
+        @host = if host_group_mob.nil? || host_group_rule_type == CLUSTER_VM_HOST_RULE_SHOULD
+          mob.host
+        else
+          host_group_mob.host
+        end
       end
 
       # @return [String] cluster name.
