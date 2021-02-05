@@ -260,20 +260,40 @@ module VSphereCloud
 
       return nil if networks.empty?
       return networks.first if networks.length == 1
-      # If it is VC 7.0, then NSXT 3.0 can configure same Logical switch as separate dvpgs
-      # under each VC cluster's VDS. But all such dvpg map back to same LS in NSXT.
-      # Hence, disambiguation is needed
-      # Check if all portgroups are actually same by checking these conditions
-      # 1. Network type is DVPG
-      # 2. Network responds to backing type (or check vc 7.0) and Network has nsx backing type
-      # 3. Logical Switch ID for DVPG exists && it is same for all (Same as first newtwork in list)
-      return networks.first if networks.all? do |n|
-        n.is_a?(VimSdk::Vim::Dvs::DistributedVirtualPortgroup) &&
-        n.config.respond_to?(:backing_type) &&
-        n.config.backing_type == 'nsx' &&
-        !n.config.logical_switch_uuid.nil? &&
-        n.config.logical_switch_uuid == networks.first.config.logical_switch_uuid
+
+      # If this is VC 7.0, then NSXT 3.0 can configure the same logical switch
+      # as separate DVPGs under each VC cluster's VDS. But all such DVPGs map
+      # back to same logical switch in NSXT. Hence, a disambiguation is needed.
+      # Check if all portgroups are actually the same by checking these
+      # conditions:
+      #   1. Network type is DVPG
+      #   2. Network responds to backing type (to see if this is VC 7.0) and it
+      #      has "nsx" backing type
+      #   3. Logical switch ID for the DVPG exists and it's the same for all
+      #      such DVPGs (same as the first network in list)
+      # In addition, in rare circumstances the same logical switch can be
+      # exposed through *both* CVDS and NVDS. Thus, we also allow a single
+      # opaque network with the same logical switch UUID.
+      dvpg_networks, opaque_networks = networks.partition do |n|
+        n.is_a?(VimSdk::Vim::Dvs::DistributedVirtualPortgroup)
       end
+      opaque_networks.select! { |n| n.is_a?(VimSdk::Vim::OpaqueNetwork) }
+
+      if !dvpg_networks.empty? && opaque_networks.length <= 1
+        referent = if !opaque_networks.empty?
+          opaque_networks.first.mob.summary.opaque_network_id
+        end
+
+        return dvpg_networks.first if dvpg_networks.all? do |n|
+          next unless n.config.respond_to?(:backing_type)
+          next unless n.config.backing_type == 'nsx'
+          next if n.config.logical_switch_uuid.nil?
+
+          referent ||= networks.first.config.logical_switch_uuid
+          n.config.logical_switch_uuid == referent
+        end
+      end
+
       # Pick the Standard Portgroup if multiple networks exist with the given name
       network = networks.find { |n| n.instance_of?(VimSdk::Vim::Network) }
       raise <<~HERE if network.nil?
