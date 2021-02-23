@@ -19,6 +19,7 @@ $pipeline.pool('6.5-NSXT25') do |pool|
       '--tag ~disk_migration',
       '--tag ~nsxv',
       '--tag ~host_maintenance',
+      '--tag ~nsxt_policy',
     ].join(' '),
     NSXT_SKIP_SSL_VERIFY: "true"
   }
@@ -31,6 +32,7 @@ $pipeline.pool('6.5-NSXT24') do |pool|
       '--tag nvds',
       '--tag nsxt_all',
       '--tag vsphere_networking',
+      '--tag ~nsxt_policy',
     ].join(' '),
     NSXT_SKIP_SSL_VERIFY: "true"
   }
@@ -42,6 +44,7 @@ $pipeline.pool('6.7-NSXT25') do |pool|
       '--tag ~cvds',
       '--tag ~nsxv',
       '--tag ~host_maintenance',
+      '--tag ~nsxt_policy',
     ].join(' '),
     NSXT_SKIP_SSL_VERIFY: "true"
   }
@@ -54,6 +57,7 @@ $pipeline.pool('6.7-NSXT24') do |pool|
       '--tag nvds',
       '--tag nsxt_all',
       '--tag vsphere_networking',
+      '--tag ~nsxt_policy',
     ].join(' '),
     NSXT_SKIP_SSL_VERIFY: "true"
   }

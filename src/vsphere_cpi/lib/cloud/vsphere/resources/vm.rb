@@ -7,6 +7,8 @@ module VSphereCloud
       include ObjectStringifier
       include Logger
 
+      NSXT_LOGICAL_SWITCH = 'nsx.LogicalSwitch'.freeze
+
       stringify_with :cid
 
       attr_reader :mob, :cid
@@ -72,6 +74,20 @@ module VSphereCloud
 
       def system_disk
         devices.find { |device| device.kind_of?(Vim::Vm::Device::VirtualDisk) }
+      end
+
+      def get_nsxt_segment_vif_list
+        nsxt_nics = get_nsxt_nics
+        if nsxt_nics.empty?
+          logger.info("No NSXT network/nic present on the VM")
+          return nil
+        end
+        opaque_networks_id_name_map = get_opaque_networks_id_name_map
+        nsxt_nics.reduce([]) do |list, nic|
+          segment_name = opaque_networks_id_name_map[nic.backing.opaque_network_id]
+          port_id = nic.external_id
+          list << [segment_name, port_id]
+        end
       end
 
       def persistent_disks
@@ -380,6 +396,24 @@ module VSphereCloud
       end
 
       private
+
+      def get_nsxt_nics
+        nsxt_nics = nics.select do |nic|
+          nic.backing.is_a?(VimSdk::Vim::Vm::Device::VirtualEthernetCard::OpaqueNetworkBackingInfo) &&
+              nic.backing.opaque_network_type == NSXT_LOGICAL_SWITCH
+        end
+        logger.info("NSX-T networks found for VM: #{cid}: #{nics.map(&:device_info).map(&:summary)}")
+        nsxt_nics
+      end
+
+      def get_opaque_networks_id_name_map
+        mob.network.reduce({}) do |map, net|
+          if net.summary.is_a?(VimSdk::Vim::OpaqueNetwork::Summary)
+            map[net.summary.opaque_network_id] = net.name
+          end
+          map
+        end
+      end
 
       def verify_persistent_disk_property?(property)
         property.category == 'BOSH Persistent Disks'

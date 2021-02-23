@@ -87,7 +87,6 @@ module VSphereCloud
           config_spec.managed_by = managed_by_info
         end
 
-
         dvs_index = {}
         vm_config.vsphere_networks.each do |network_name, ips|
           network = @client.find_network_retryably(@datacenter, network_name)
@@ -251,7 +250,6 @@ module VSphereCloud
 
         break
       end
-
       created_vm
     end
 

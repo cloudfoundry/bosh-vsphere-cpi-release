@@ -1,6 +1,8 @@
 GEM
   remote: https://rubygems.org/
   specs:
+    addressable (2.7.0)
+      public_suffix (>= 2.0.2, < 5.0)
     ansi (1.5.0)
     ast (2.4.0)
     bosh_common (1.3262.24.0)
@@ -44,6 +46,7 @@ GEM
     pry-byebug (3.7.0)
       byebug (~> 11.0)
       pry (~> 0.10)
+    public_suffix (4.0.6)
     rack (2.0.7)
     rake (10.5.0)
     rspec (3.5.0)
@@ -86,6 +89,7 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
+  addressable (~> 2.7.0)
   bosh_common (= 1.3262.24.0)
   bosh_cpi (= 2.5.0)
   builder (~> 3.2.3)

@@ -1,0 +1,5 @@
+{
+  "basePath" : "nsxt",
+  "gemName" : "nsxt_manager_client",
+  "moduleName" : "NSXT"
+}
