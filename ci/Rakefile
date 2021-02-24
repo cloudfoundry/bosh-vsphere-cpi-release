@@ -27,7 +27,7 @@ desc "Pull, build, and push the docker image '#{DOCKER_NAME}'"
 task docker: %w[docker:pull docker:make docker:push]
 
 file 'pipeline.yml' => FileList['pipeline/*.yml.erb'] do |t|
-  $pipeline = Pipeline.new
+  $pipeline = Pipeline.new(branch:ENV.fetch('BRANCH') { `git symbolic-ref -q --short HEAD`.strip })
   load 'config.rb'
   File.write(t.name, $pipeline.render)
 end

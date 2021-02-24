@@ -8,6 +8,7 @@ inputs:
   - name: bosh-cpi-src
   - name: bosh-cpi-artifacts
   - name: release-version-semver
+  - name: past-releases-version-semver
 
 outputs:
   - name: updated-repo
