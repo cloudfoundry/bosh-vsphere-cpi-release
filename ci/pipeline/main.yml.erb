@@ -298,9 +298,9 @@ jobs:
     - aggregate:
       - get: source-ci
       - get: bosh-cpi-artifacts
-        passed: [bats, bats-70-CVDS]
+        passed: [bats, bats-policy, bats-70-CVDS]
       - get: bosh-cpi-src
-        passed: [bats, bats-70-CVDS]
+        passed: [bats, bats-policy, bats-70-CVDS]
       - get: release-version-semver
         params: { bump: major }
     - task: inspect
