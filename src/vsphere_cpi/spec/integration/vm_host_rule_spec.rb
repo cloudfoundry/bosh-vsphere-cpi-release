@@ -275,7 +275,7 @@ describe 'Host Groups in Cluster and VM Host Rules' do
           end
           context 'when the drs rule type is should' do
             let(:drs_rule) { 'SHOULD' }
-            it 'creates VM and attach vm group host affinity rule' do
+            it 'creates VM and attaches vm group host affinity rule' do
               simple_vm_lifecycle(cpi, '', vm_type, get_network_spec) do |vm_id|
                 vm = cpi.vm_provider.find(vm_id)
                 expect(vm.cluster).to eq(@cluster_name)

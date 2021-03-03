@@ -38,8 +38,12 @@ module VSphereCloud
       @balance_score = min + mean + median
     end
 
-    def free_memory
-      cluster.free_memory
+    def cluster_free_memory
+      cluster.free_memory.cluster_free_memory
+    end
+
+    def host_group_free_memory
+      cluster.free_memory.host_group_free_memory
     end
 
     def inspect_before
@@ -52,7 +56,7 @@ module VSphereCloud
     end
 
     def cluster_inspect
-      "VM Placement Cluster: #{cluster.name} Memory: #{free_memory}"
+      "VM Placement Cluster: #{cluster.name} Cluster free memory: #{cluster_free_memory}, host group free memory: #{host_group_free_memory}"
     end
 
     def datastore_inspect
@@ -84,7 +88,7 @@ module VSphereCloud
 
     with_filter do |vm_placement, criteria_object|
       logger.debug("Filter #{vm_placement.cluster_inspect} for free memory required: #{criteria_object.required_memory}")
-      vm_placement.free_memory > criteria_object.required_memory
+      vm_placement.cluster_free_memory > criteria_object.required_memory
     end
 
     with_filter ->(vm_placement, criteria_object) do
@@ -140,7 +144,7 @@ module VSphereCloud
     end
 
     with_scorer do |p1, p2|
-      -(p1.free_memory <=> p2.free_memory)
+      -(p1.host_group_free_memory <=> p2.host_group_free_memory)
     end
 
     def initialize(*args)

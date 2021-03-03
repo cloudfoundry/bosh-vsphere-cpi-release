@@ -27,6 +27,8 @@ module VSphereCloud
       #   @return [ResourcePool] resource pool.
       attr_reader :resource_pool
 
+      class FreeMemory < Struct.new(:cluster_free_memory, :host_group_free_memory); end
+
       # Creates a new Cluster resource from the specified datacenter, cluster
       # configuration, and prefetched properties.
       #
@@ -43,20 +45,22 @@ module VSphereCloud
         @resource_pool = ResourcePool.new(@client, cluster_config, properties['resourcePool'], datacenter_name)
       end
 
-      # @return [Integer] amount of free memory in the cluster
+      # @return [FreeMemory] amount of free memory in the cluster
       def free_memory
         return @synced_free_memory if @synced_free_memory
         # Have to use separate mechanisms for fetching utilization depending on
         # whether we're using resource pools or raw clusters.
         if @config.resource_pool.nil?
           # Get cluster utilization only if host group is nil
-          @synced_free_memory = if host_group.nil? || host_group_rule_type == CLUSTER_VM_HOST_RULE_SHOULD
-            fetch_cluster_utilization
-          else
-            fetch_host_group_utilization
-          end
+          @synced_free_memory = if host_group.nil?
+                                  FreeMemory.new(fetch_cluster_utilization, fetch_cluster_utilization)
+                                elsif host_group_rule_type == CLUSTER_VM_HOST_RULE_SHOULD
+                                  FreeMemory.new(fetch_cluster_utilization, fetch_host_group_utilization)
+                                elsif host_group_rule_type == CLUSTER_VM_HOST_RULE_MUST
+                                  FreeMemory.new(fetch_host_group_utilization, fetch_host_group_utilization)
+                                end
         else
-          @synced_free_memory = fetch_resource_pool_utilization
+          @synced_free_memory = FreeMemory.new(fetch_resource_pool_utilization, fetch_resource_pool_utilization)
         end
       end
 
