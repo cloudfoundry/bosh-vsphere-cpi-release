@@ -81,6 +81,7 @@ $pipeline.pool('7.0-NSXT30-CVDS') do |pool|
       '--tag cvds',
       '--tag nsxt_all',
       '--tag vsphere_networking',
+      '--tag ~nsxt_policy',
     ].join(' '),
     NSXT_SKIP_SSL_VERIFY: "true",
   }
