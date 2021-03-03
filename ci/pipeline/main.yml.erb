@@ -99,20 +99,10 @@ jobs:
           aggregate:
           - put: pool-7.0-nsxt30-policy
             params : {remove: environment}
-          - put: notify
-            params:
-              username: 'CPI-Doctor'
-              text: |
-                The bats test failed. Check it out at: https://ci.vcna.io/teams/$BUILD_TEAM_NAME/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME
         ensure:
           do:
             - task: teardown
               file: source-ci/ci/tasks/teardown.yml
-      - put: notify
-        params:
-          username: 'CPI-Doctor'
-          text: |
-            The bats tests passed. Check it out at: https://ci.vcna.io/teams/$BUILD_TEAM_NAME/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME
 
   - name: unlock-bats-policy
     plan:
@@ -176,20 +166,10 @@ jobs:
           aggregate:
           - put: pool-6.5-NSXT25
             params : {remove: environment}
-          - put: notify
-            params:
-              username: 'CPI-Doctor'
-              text: |
-                The bats test failed. Check it out at: https://ci.vcna.io/teams/$BUILD_TEAM_NAME/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME
         ensure:
           do:
             - task: teardown
               file: source-ci/ci/tasks/teardown.yml
-      - put: notify
-        params:
-          username: 'CPI-Doctor'
-          text: |
-            The bats tests passed. Check it out at: https://ci.vcna.io/teams/$BUILD_TEAM_NAME/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME
 
   - name: unlock-bats
     plan:
@@ -253,20 +233,10 @@ jobs:
           aggregate:
             - put: pool-7.0-NSXT30-CVDS
               params : {remove: environment}
-            - put: notify
-              params:
-                username: 'CPI-Doctor'
-                text: |
-                  The bats test failed. Check it out at: https://ci.vcna.io/teams/$BUILD_TEAM_NAME/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME
         ensure:
           do:
             - task: teardown
               file: source-ci/ci/tasks/teardown.yml
-      - put: notify
-        params:
-          username: 'CPI-Doctor'
-          text: |
-            The bats tests passed. Check it out at: https://ci.vcna.io/teams/$BUILD_TEAM_NAME/pipelines/$BUILD_PIPELINE_NAME/jobs/$BUILD_JOB_NAME/builds/$BUILD_NAME
 
   - name: unlock-bats-70-CVDS
     plan:
@@ -331,17 +301,7 @@ jobs:
     - put: release-version-semver
       params: { file: release-version-semver/number }
 
-resource_types:
-  - name: slack-notification
-    type: docker-image
-    source:
-      repository: cfcommunity/slack-notification-resource
-
 resources:
-  - name: notify
-    type: slack-notification
-    source:
-      url: ((slack_webhook))
   - name: pool-6.5-NSXT25
     type: pool
     source:
