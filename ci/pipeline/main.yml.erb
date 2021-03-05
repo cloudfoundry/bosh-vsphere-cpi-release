@@ -1,11 +1,11 @@
 jobs:
   - name: unit-test
     plan:
-    - aggregate:
+    - in_parallel:
       - get: source-ci
       - get: bosh-cpi-src
         trigger: true
-    - aggregate:
+    - in_parallel:
       - task: test-pyvmomi_to_ruby
         file: source-ci/ci/tasks/test-pyvmomi_to_ruby.yml
       - task: unit-test
@@ -17,7 +17,7 @@ jobs:
 
   - name: build-candidate
     plan:
-    - aggregate:
+    - in_parallel:
       - get: source-ci
       - get: bosh-cpi-src
         trigger: true
@@ -96,7 +96,7 @@ jobs:
               BAT_RSPEC_FLAGS:    "--tag ~dns --tag ~vip_networking --tag ~dynamic_networking --tag ~root_partition --tag ~raw_ephemeral_storage"
               STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-trusty-go_agent
         on_failure:
-          aggregate:
+          in_parallel:
           - put: pool-7.0-nsxt30-policy
             params : {remove: environment}
         ensure:
@@ -112,7 +112,7 @@ jobs:
 
   - name: lock-bats
     plan:
-      - aggregate:
+      - in_parallel:
         - get: source-ci
         - get: bosh-cpi-src
           passed: [build-candidate]
@@ -131,7 +131,7 @@ jobs:
   - name: bats
     serial: true
     plan:
-      - aggregate:
+      - in_parallel:
         - get: source-ci
         - {get: cpi-release,              trigger: false, resource: bosh-cpi-artifacts, passed: [lock-bats]}
         - {get: environment,              trigger: true,  passed: [lock-bats], resource: pool-6.5-NSXT25}
@@ -163,7 +163,7 @@ jobs:
             BAT_RSPEC_FLAGS:    "--tag ~dns --tag ~vip_networking --tag ~dynamic_networking --tag ~root_partition --tag ~raw_ephemeral_storage"
             STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-trusty-go_agent
         on_failure:
-          aggregate:
+          in_parallel:
           - put: pool-6.5-NSXT25
             params : {remove: environment}
         ensure:
@@ -179,7 +179,7 @@ jobs:
 
   - name: lock-bats-70-CVDS
     plan:
-      - aggregate:
+      - in_parallel:
           - get: source-ci
           - get: bosh-cpi-src
             passed: [build-candidate]
@@ -198,7 +198,7 @@ jobs:
   - name: bats-70-CVDS
     serial: true
     plan:
-      - aggregate:
+      - in_parallel:
           - get: source-ci
           - {get: cpi-release,              trigger: false, resource: bosh-cpi-artifacts, passed: [lock-bats-70-CVDS]}
           - {get: environment,              trigger: true,  passed: [lock-bats-70-CVDS], resource: pool-7.0-NSXT30-CVDS}
@@ -230,7 +230,7 @@ jobs:
               BAT_RSPEC_FLAGS:    "--tag ~dns --tag ~vip_networking --tag ~dynamic_networking --tag ~root_partition --tag ~raw_ephemeral_storage"
               STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-trusty-go_agent
         on_failure:
-          aggregate:
+          in_parallel:
             - put: pool-7.0-NSXT30-CVDS
               params : {remove: environment}
         ensure:
@@ -246,7 +246,7 @@ jobs:
 
   - name: delivery
     plan:
-    - aggregate:
+    - in_parallel:
       - get: bosh-cpi-src
         trigger: ((trigger_delivery_job))
         passed:
@@ -265,7 +265,7 @@ jobs:
   - name: inspect-candidate
     serial: true
     plan:
-    - aggregate:
+    - in_parallel:
       - get: source-ci
       - get: bosh-cpi-artifacts
         passed: [bats, bats-policy, bats-70-CVDS]
@@ -279,7 +279,7 @@ jobs:
   - name: promote-candidate
     serial: true
     plan:
-    - aggregate:
+    - in_parallel:
       - get: source-ci
       - get: bosh-cpi-artifacts
         passed: [inspect-candidate]
@@ -436,7 +436,7 @@ resources:
 
 groups:
 
-- name: Complete-View
+- name: complete-view
   jobs:
   - unit-test
   - build-candidate
@@ -473,7 +473,7 @@ groups:
   - lock-6.0-NSXV
   - unlock-6.0-NSXV
 
-- name: Delivery
+- name: delivery
   jobs:
   - lifecycle-6.7-NSXT25
   - lifecycle-6.7-NSXT24
