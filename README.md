@@ -4,7 +4,7 @@ The `vsphere` CPI can be used with [VMware vSphere](https://www.vmware.com/produ
 
 * Documentation: [bosh.io/docs](https://bosh.io/docs) and [bosh.io/docs/vsphere-cpi](https://bosh.io/docs/vsphere-cpi.html)
 * Slack: #bosh on <https://slack.cloudfoundry.org>
-* Release: [cloudfoundry-incubator/bosh-vsphere-cpi-release](https://github.com/cloudfoundry-incubator/bosh-vsphere-cpi-release)
+* Release: [cloudfoundry/bosh-vsphere-cpi-release](https://github.com/cloudfoundry/bosh-vsphere-cpi-release)
 * Issues: [GitHub Issues](https://github.com/cloudfoundry-incubator/bosh-vsphere-cpi-release/issues)
 * Mailing list: [cf-bosh](https://lists.cloudfoundry.org/pipermail/cf-bosh)
 * Roadmap: [Pivotal Tracker](https://www.pivotaltracker.com/n/projects/2110693)
