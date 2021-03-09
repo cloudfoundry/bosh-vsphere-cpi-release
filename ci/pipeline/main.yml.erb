@@ -244,24 +244,6 @@ jobs:
       - put: pool-7.0-nsxt30-cvds
         params : {release: pool-7.0-nsxt30-cvds}
 
-  - name: delivery
-    plan:
-    - in_parallel:
-      - get: bosh-cpi-src
-        trigger: ((trigger_delivery_job))
-        passed:
-        - lifecycle-6.0-nsxv
-        - lifecycle-6.5-nsxt24
-        - lifecycle-6.5-nsxt25
-        - lifecycle-6.7-nsxt24
-        - lifecycle-6.7-nsxt25
-        - lifecycle-7.0-nsxt30
-        - lifecycle-7.0-nsxt30-cvds
-        - bats
-        - bats-70-cvds
-    - put: tracker-output
-      params: { repos: [bosh-cpi-src] }
-
   - name: inspect-candidate
     serial: true
     plan:
@@ -427,12 +409,6 @@ resources:
     source:
       uri: https://github.com/cloudfoundry/bosh-acceptance-tests.git
       branch: master
-  - name: tracker-output
-    type: tracker
-    source:
-      token: ((tracker_api_token))
-      project_id: ((tracker_project_id))
-      tracker_url: https://www.pivotaltracker.com
 
 groups:
 
@@ -472,20 +448,6 @@ groups:
   - lifecycle-6.0-nsxv
   - lock-6.0-nsxv
   - unlock-6.0-nsxv
-
-- name: delivery
-  jobs:
-  - lifecycle-6.7-nsxt25
-  - lifecycle-6.7-nsxt24
-  - lifecycle-6.5-nsxt25
-  - lifecycle-6.5-nsxt24
-  - lifecycle-6.0-nsxv
-  - lifecycle-7.0-nsxt30
-  - lifecycle-7.0-nsxt30-cvds
-  - bats
-  - bats-policy
-  - bats-70-cvds
-  - delivery
 
 - name: bats
   jobs:
