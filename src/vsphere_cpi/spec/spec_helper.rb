@@ -5,7 +5,8 @@ if ENV['COVERAGE']
   project_root = File.expand_path('../../../..', __FILE__)
   SimpleCov.coverage_dir(File.join(project_root, 'coverage'))
   SimpleCov.start do
-    add_filter '/nsxt/'
+    add_filter '/nsxt_manager_client/'
+    add_filter '/nsxt_policy_client/'
     add_filter '/spec/'
   end
 end

@@ -37,6 +37,20 @@ describe 'CPI', nsxt_all: true do
     @certificate = generate_certificate(@private_key)
     @cert_id = submit_cert_to_nsxt(@certificate)
     @principal_id = attach_cert_to_principal(@cert_id)
+
+    policy_configuration = NSXTPolicy::Configuration.new
+    policy_configuration.host = @nsxt_host
+    policy_configuration.username = @nsxt_username
+    policy_configuration.password = @nsxt_password
+    policy_configuration.client_side_validation = false
+    policy_configuration.verify_ssl = false
+    policy_configuration.verify_ssl_host = false
+    policy_client = NSXTPolicy::ApiClient.new(policy_configuration)
+    @policy_group_api = NSXTPolicy::PolicyInventoryGroupsGroupsApi.new(policy_client)
+    @policy_segment_port_api = NSXTPolicy::PolicyNetworkingConnectivitySegmentsPortsApi.new(policy_client)
+    @policy_group_members_api = NSXTPolicy::PolicyInventoryGroupsGroupMembersApi.new(policy_client)
+    @policy_segment_api = NSXTPolicy::PolicyNetworkingConnectivitySegmentsSegmentsApi.new(policy_client)
+    @policy_enforcement_points_api = NSXTPolicy::PolicyInfraEnforcementPointsApi.new(policy_client)
   end
 
   after(:all) do
@@ -77,6 +91,8 @@ describe 'CPI', nsxt_all: true do
   end
   let(:nsgroup_name_1) { "BOSH-CPI-test-#{SecureRandom.uuid}" }
   let(:nsgroup_name_2) { "BOSH-CPI-test-#{SecureRandom.uuid}" }
+  let(:segment_name_1) { "BOSH-CPI-test-#{SecureRandom.uuid}" }
+  let(:segment_name_2) { "BOSH-CPI-test-#{SecureRandom.uuid}" }
   let(:server_pool_name_1) { "BOSH-CPI-test-#{SecureRandom.uuid}" }
   let(:server_pool_name_2) { "BOSH-CPI-test-#{SecureRandom.uuid}" }
   let(:vm_type) do
@@ -104,6 +120,26 @@ describe 'CPI', nsxt_all: true do
         'dns' => ['169.254.1.2'],
         'gateway' => '169.254.1.3'
       }
+    }
+  end
+  let(:policy_network_spec) do
+    {
+        'static-bridged' => {
+            'ip' => "169.254.#{rand(1..254)}.#{rand(4..254)}",
+            'netmask' => '255.255.254.0',
+            'cloud_properties' => { 'name' => segment_name_1 },
+            'default' => ['dns', 'gateway'],
+            'dns' => ['169.254.1.2'],
+            'gateway' => '169.254.1.3'
+        },
+        'static' => {
+            'ip' => "169.254.#{rand(1..254)}.#{rand(4..254)}",
+            'netmask' => '255.255.254.0',
+            'cloud_properties' => { 'name' => segment_name_2 },
+            'default' => ['dns', 'gateway'],
+            'dns' => ['169.254.1.2'],
+            'gateway' => '169.254.1.3'
+        }
     }
   end
 
@@ -297,6 +333,69 @@ describe 'CPI', nsxt_all: true do
           ensure
             delete_server_pool(server_pool_3)
           end
+        end
+      end
+    end
+
+    context 'when using NSXT Policy API', nsxt_policy: true do
+      let(:cpi) do
+        VSphereCloud::Cloud.new(cpi_options(nsxt: {
+            host: @nsxt_host,
+            username: @nsxt_username,
+            password: @nsxt_password,
+            use_policy_api: true,
+        }))
+      end
+      let(:vm_type) do
+        {
+            'ram' => 512,
+            'disk' => 2048,
+            'cpu' => 1,
+            'nsxt' => nsxt_spec
+        }
+      end
+      let(:nsxt_spec) {
+        {
+            'ns_groups' => [nsgroup_name_1, nsgroup_name_2],
+        }
+      }
+      let!(:nsgroup_1) { create_policy_group(nsgroup_name_1) }
+      let!(:nsgroup_2) { create_policy_group(nsgroup_name_2) }
+      before do
+        tzs = @policy_enforcement_points_api.list_transport_zones_for_enforcement_point(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, 'default')
+        overlay_tz = tzs.results.find { |tz| tz.display_name == 'tz-overlay' }
+        seg_1 = NSXTPolicy::Segment.new(display_name: segment_name_1, transport_zone_path: overlay_tz.path)
+        @policy_segment_api.create_or_replace_infra_segment(segment_name_1, seg_1)
+        seg_2 = NSXTPolicy::Segment.new(display_name: segment_name_2, transport_zone_path: overlay_tz.path)
+        @policy_segment_api.create_or_replace_infra_segment(segment_name_2, seg_2)
+      end
+      after do
+        delete_policy_group(nsgroup_name_1)
+        delete_policy_group(nsgroup_name_2)
+        Bosh::Retryable.new(
+            tries: 61,
+            sleep: ->(try_count, retry_exception) { 1 },
+            on: [NSXTPolicy::ApiCallError]
+        ).retryer do |i|
+          @policy_segment_api.delete_infra_segment(segment_name_1)
+          @policy_segment_api.delete_infra_segment(segment_name_2)
+          true
+        end
+      end
+
+      it 'creates VM in specified segments' do
+        simple_vm_lifecycle(cpi, '', vm_type, policy_network_spec) do |vm_id|
+          vm = @cpi.vm_provider.find(vm_id)
+          segment_names = vm.get_nsxt_segment_vif_list.map { |x| x[0] }
+          expect(segment_names.length).to eq(2)
+          expect(segment_names).to include(segment_name_1)
+          expect(segment_names).to include(segment_name_2)
+          results = @policy_group_members_api.get_group_vm_members_0(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, nsgroup_name_1).results
+          expect(results.length).to eq(1)
+          expect(results[0].display_name).to eq(vm_id)
+          results = @policy_group_members_api.get_group_vm_members_0(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, nsgroup_name_2).results
+          expect(results.length).to eq(1)
+          expect(results[0].display_name).to eq(vm_id)
         end
       end
     end
@@ -516,6 +615,20 @@ describe 'CPI', nsxt_all: true do
     grouping_object_svc.delete_ns_group(nsgroup.id)
   end
 
+  def create_policy_group(group_name)
+    grp = NSXTPolicy::Group.new(:display_name => group_name)
+    @policy_group_api.update_group_for_domain(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, group_name, grp)
+  end
+
+  def delete_policy_group(group_name)
+    @policy_group_api.delete_group(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, group_name)
+  end
+
+  def create_segment(segment_name)
+    seg = NSXTPolicy::Segment.new(:display_name => segment_name, :overlay_id => 'tz-overlay')
+    @policy_segment_api.create_or_replace_infra_segment(segment_name, awg)
+  end
+
   def nsgroup_effective_logical_port_member_ids(nsgroup)
     grouping_object_svc = NSXT::ManagementPlaneApiGroupingObjectsNsGroupsApi.new(nsxt)
     results = grouping_object_svc.get_effective_logical_port_members(nsgroup.id).results
@@ -574,7 +687,7 @@ describe 'CPI', nsxt_all: true do
     @nsx_component_api.delete_certificate(cert_id)
   end
 
-  def attach_cert_to_principal(cert_id, pi_name = 'testprincipal-nsxt-spec-3', node_id = 'node-nsxt-spec-3')
+  def attach_cert_to_principal(cert_id, pi_name = 'testprincipal-nsxt-spec-7', node_id = 'node-nsxt-spec-3')
     pi = NSXT::PrincipalIdentity.new(name: pi_name, node_id: node_id,
                                      certificate_id: cert_id, permission_group: 'superusers')
     @nsx_component_trust_mgmt_api.register_principal_identity(pi).id

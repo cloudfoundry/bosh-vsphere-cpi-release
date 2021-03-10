@@ -21,7 +21,7 @@ describe VSphereCloud::VmPlacementSelectionPipeline do
   def fake_cluster(name, *args)
     instance_double('VSphereCloud::Resources::Cluster',
       :name => name,
-      :free_memory => 8192,
+      :free_memory => VSphereCloud::Resources::Cluster::FreeMemory.new(8192),
       :accessible_datastores => args.map{|ds| [ds.name, ds]}.to_h )
   end
 
@@ -39,10 +39,10 @@ describe VSphereCloud::VmPlacementSelectionPipeline do
   let(:disk_config) {[]}
 
   context 'when there are no disks to be configured' do
-    it 'only generates placements with enough memory' do
+    it 'only generates placements with enough cluster memory' do
       allow_any_instance_of(VSphereCloud::Resources::Datastore).to receive(:maintenance_mode?).and_return(false)
-      allow(cluster_1).to receive(:free_memory).and_return(1024)
-      allow(cluster_2).to receive(:free_memory).and_return(2048)
+      allow(cluster_1).to receive(:free_memory).and_return(VSphereCloud::Resources::Cluster::FreeMemory.new(1024, 1024))
+      allow(cluster_2).to receive(:free_memory).and_return(VSphereCloud::Resources::Cluster::FreeMemory.new(2048, 2048))
       expect(subject.to_a).to contain_exactly(placement_2)
     end
 
@@ -61,25 +61,32 @@ describe VSphereCloud::VmPlacementSelectionPipeline do
       expect(subject.to_a.first).to eq(placement_2)
     end
 
-    it 'sorts the placements in descending order of free memory if migration size and balance score are same' do
+    it 'sorts the placements in descending order of free memory in the host group if migration size and balance score are same' do
       allow_any_instance_of(VSphereCloud::Resources::Datastore).to receive(:maintenance_mode?).and_return(false)
       allow_any_instance_of(VSphereCloud::VmPlacement).to receive(:migration_size).and_return(10)
       allow_any_instance_of(VSphereCloud::VmPlacement).to receive(:balance_score).and_return(10)
-      allow(placement_1).to receive(:free_memory).and_return (10000)
-      allow(placement_2).to receive(:free_memory).and_return (20000)
+      allow(placement_1).to receive(:host_group_free_memory).and_return (10000)
+      allow(placement_2).to receive(:host_group_free_memory).and_return (20000)
       expect(subject.to_a.first).to eq(placement_2)
     end
 
     it 'sorts the placements in ascending order of migration size then descending order of balance score and then free memory' do
       allow_any_instance_of(VSphereCloud::Resources::Datastore).to receive(:maintenance_mode?).and_return(false)
       placement_4 = placement_3 = placement_5 = placement_1.dup
-      allow(placement_1).to receive_messages(:free_memory => 10000, :balance_score => 10 , :migration_size => 10)
-      allow(placement_2).to receive_messages(:free_memory => 20000, :balance_score => 10 , :migration_size => 10)
-      allow(placement_3).to receive_messages(:free_memory => 10000, :balance_score => 4 , :migration_size => 5)
-      allow(placement_4).to receive_messages(:free_memory => 10000, :balance_score => 7 , :migration_size => 5)
-      allow(placement_5).to receive_messages(:free_memory => 40000, :balance_score => 10 , :migration_size => 1)
+      allow(placement_1).to receive_messages(:host_group_free_memory => 10000, :balance_score => 10 , :migration_size => 10)
+      allow(placement_2).to receive_messages(:host_group_free_memory => 20000, :balance_score => 10 , :migration_size => 10)
+      allow(placement_3).to receive_messages(:host_group_free_memory => 10000, :balance_score => 4 , :migration_size => 5)
+      allow(placement_4).to receive_messages(:host_group_free_memory => 10000, :balance_score => 7 , :migration_size => 5)
+      allow(placement_5).to receive_messages(:host_group_free_memory => 40000, :balance_score => 10 , :migration_size => 1)
       pipeline = described_class.new(*criteria) {[placement_1, placement_2, placement_3, placement_4, placement_5]}
       expect(pipeline.to_a).to eq([placement_5, placement_4, placement_3, placement_2, placement_1])
+    end
+
+    it 'returns the cluster when it has enough cluster memory and does not have enough host group memory' do
+      allow_any_instance_of(VSphereCloud::Resources::Datastore).to receive(:maintenance_mode?).and_return(false)
+      allow(cluster_1).to receive(:free_memory).and_return(VSphereCloud::Resources::Cluster::FreeMemory.new(2048, 1024))
+      allow(cluster_2).to receive(:free_memory).and_return(VSphereCloud::Resources::Cluster::FreeMemory.new(1024, 1024))
+      expect(subject.to_a).to contain_exactly(placement_1)
     end
   end
 

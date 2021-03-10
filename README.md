@@ -1,18 +1,3 @@
-##### vSphere-CPI CI pipeline Status 
-
-| Job | Status |
-| :--- | :--- |
-| Unit | [![ci.vcna.io](https://ci.vcna.io/api/v1/teams/vcpi/pipelines/vSphere-CPI/jobs/unit-test/badge)](https://ci.vcna.io/teams/vcpi/pipelines/vSphere-CPI?groups=Complete-View)|
-| Lifecycle-6.0 with NSXV (6.4.2) | [![ci.vcna.io](https://ci.vcna.io/api/v1/teams/vcpi/pipelines/vSphere-CPI/jobs/lifecycle-6.0-NSXV/badge)](https://ci.vcna.io/teams/vcpi/pipelines/vSphere-CPI?groups=Complete-View)|
-| Lifecycle-6.5 with NSXT-24 | [![ci.vcna.io](https://ci.vcna.io/api/v1/teams/vcpi/pipelines/vSphere-CPI/jobs/lifecycle-6.5-NSXT25/badge)](https://ci.vcna.io/teams/vcpi/pipelines/vSphere-CPI?groups=Complete-View)|
-| Lifecycle-6.5 with NSXT-25 | [![ci.vcna.io](https://ci.vcna.io/api/v1/teams/vcpi/pipelines/vSphere-CPI/jobs/lifecycle-6.5-NSXT25/badge)](https://ci.vcna.io/teams/vcpi/pipelines/vSphere-CPI?groups=Complete-View)|
-| Lifecycle-6.7 with NSXT-24 | [![ci.vcna.io](https://ci.vcna.io/api/v1/teams/vcpi/pipelines/vSphere-CPI/jobs/lifecycle-6.7-NSXT24/badge)](https://ci.vcna.io/teams/vcpi/pipelines/vSphere-CPI?groups=Complete-View)|
-| Lifecycle-6.7 with NSXT-25 | [![ci.vcna.io](https://ci.vcna.io/api/v1/teams/vcpi/pipelines/vSphere-CPI/jobs/lifecycle-6.7-NSXT25/badge)](https://ci.vcna.io/teams/vcpi/pipelines/vSphere-CPI?groups=Complete-View)|
-| Lifecycle-7.0 with NSXT-30 | [![ci.vcna.io](https://ci.vcna.io/api/v1/teams/vcpi/pipelines/vSphere-CPI/jobs/lifecycle-7.0-NSXT30/badge)](https://ci.vcna.io/teams/vcpi/pipelines/vSphere-CPI?groups=Complete-View)|
-| Lifecycle-7.0 with NSXT-30-CVDS | [![ci.vcna.io](https://ci.vcna.io/api/v1/teams/vcpi/pipelines/vSphere-CPI/jobs/lifecycle-7.0-NSXT30-CVDS/badge)](https://ci.vcna.io/teams/vcpi/pipelines/vSphere-CPI?groups=Complete-View)|
-| BATS | [![ci.vcna.io](https://ci.vcna.io/api/v1/teams/vcpi/pipelines/vSphere-CPI/jobs/bats/badge)](https://ci.vcna.io/teams/vcpi/pipelines/vSphere-CPI?groups=Complete-View)|
-| BATS-70-CVDS | [![ci.vcna.io](https://ci.vcna.io/api/v1/teams/vcpi/pipelines/vSphere-CPI/jobs/bats-70-CVDS/badge)](https://ci.vcna.io/teams/vcpi/pipelines/vSphere-CPI?groups=Complete-View)|
-
 # BOSH vSphere CPI Release
 
 The `vsphere` CPI can be used with [VMware vSphere](https://www.vmware.com/products/vsphere.html).
@@ -41,6 +26,7 @@ An environment running one of the following supported releases:
   * [vSphere 6.0](https://docs.vmware.com/en/VMware-vSphere/6.0/rn/vsphere-esxi-vcenter-server-60-release-notes.html) (actively tested)
   * [vSphere 6.5](https://docs.vmware.com/en/VMware-vSphere/6.5/rn/vsphere-esxi-vcenter-server-65-release-notes.html) (actively tested)
   * [vSphere 6.7](https://docs.vmware.com/en/VMware-vSphere/6.7/rn/vsphere-esxi-vcenter-server-67-release-notes.html) (actively tested)
+  * [vSphere 7.0](https://docs.vmware.com/en/VMware-vSphere/7.0/rn/vsphere-esxi-vcenter-server-70-release-notes.html) (actively tested)
 
 NSX Support:
 

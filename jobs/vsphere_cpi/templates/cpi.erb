@@ -26,8 +26,10 @@ export no_proxy="<%= no_proxy %>"
 <% if_p('vcenter.nsx.ca_cert') do %>
   export BOSH_NSX_CA_CERT_FILE=$BOSH_JOBS_DIR/vsphere_cpi/config/nsx_cacert.pem
 <% end %>
-<% if_p('vcenter.nsxt.ca_cert') do %>
+<% if p('vcenter.nsxt.ca_cert', false) %>
   export BOSH_NSXT_CA_CERT_FILE=$BOSH_JOBS_DIR/vsphere_cpi/config/nsxt_cacert.pem
+<% else %>
+  export NSXT_SKIP_SSL_VERIFY=true
 <% end %>
 
 export PATH=$BOSH_PACKAGES_DIR/ruby-2.6.5-r0.29.0/bin:$BOSH_PACKAGES_DIR/iso9660wrap/bin:$PATH

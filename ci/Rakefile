@@ -44,33 +44,6 @@ task :pipeline, [:name] => 'pipeline.yml' do |t, args|
     target.name
   end
 
-  # Ensure that the remote host is set from DBCHOST
-  DBCHOST = ENV.fetch('DBCHOST') do
-    fail 'DBCHOST must be set to the unqualified hostname of your DBC host'
-  end
-  dbcfqdn = "#{DBCHOST}.eng.vmware.com"
-
-  # Get the remote user name from DBCUSER, the SSH configuration for DBCHOST, or
-  # the current user name
-  DBCUSER = ENV.fetch('DBCUSER') do
-    output, _, status = Open3.capture3('ssh', '-G', dbcfqdn)
-    break nil unless status.success?
-    record = output.each_line(chomp: true).map do |text|
-      text.split(nil, 2)
-    end.find { |option, _| option == 'user' }
-    break record[1] unless record.nil?
-  end || (require 'etc'; Etc.getpwuid.name)
-
-  # Find the SSH identity file to use from the SSH configuration for DBCHOST
-  output, _, status = Open3.capture3('ssh', '-G', dbcfqdn)
-  fail "Unable to get SSH configuration for #{DBCHOST}" unless status.success?
-  dbc_ssh_key = output.each_line(chomp: true).map do |text|
-    text.split(nil, 2)
-  end.find do |option, v|
-    option == 'identityfile' && File.exist?(File.expand_path(v))
-  end or fail "No SSH identity file available for #{DBCHOST}"
-  dbc_ssh_key = File.expand_path(dbc_ssh_key[1])
-
   # Get the git branch name
   branch = ENV.fetch('BRANCH') { `git symbolic-ref -q --short HEAD`.strip }
 
@@ -94,14 +67,10 @@ task :pipeline, [:name] => 'pipeline.yml' do |t, args|
     "-p #{args.name.shellescape}",
     "-c #{t.prerequisites.first.shellescape}",
     "-v vcpi_branch=#{branch.shellescape}",
-    "-v dbc_host=#{DBCHOST.shellescape}",
-    "-v dbc_user=#{DBCUSER.shellescape}",
     # Set the trigger for delivery job based on which branch it is.
     # Only master branch should trigger delivery jobs.
     "--yaml-var trigger_delivery_job=#{branch == 'master'}",
-    "-v dbc_key=\"$(cat #{dbc_ssh_key.shellescape})\"",
-    '-v s3_vsphere_cpi_bucket=bosh-vsphere-cpi-release',
-    '-l <(secret show ~/.dot/vcpi-ci.gpg)'
+    '-v s3_vsphere_cpi_bucket=bosh-vsphere-cpi-release'
   ].join(' ')
 end
 

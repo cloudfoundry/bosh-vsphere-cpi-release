@@ -450,6 +450,7 @@ module VSphereCloud
       let(:encoded_disk_cid) { 'fake-disk-cid' }
       let(:director_disk_cid) { VSphereCloud::DirectorDiskCID.new(encoded_disk_cid) }
       let(:nsxt_provider) { instance_double(VSphereCloud::NSXTProvider) }
+      let(:nsxt_policy_provider) { instance_double(VSphereCloud::NSXTPolicyProvider) }
       let(:stemcell) { VSphereCloud::Stemcell.new('fake-stemcell-cid') }
       let(:disk_pool) { VSphereCloud::DiskPool.new(datacenter,vm_type['datastores']) }
       let(:disk_configurations) { [fake_persistent_disk, fake_ephemeral_disk] }
@@ -2223,7 +2224,7 @@ module VSphereCloud
     # NOT NEEDED - FEATURE DISCONTINUED
     xdescribe '#delete_network' do
       let(:nsxt_provider) { instance_double(VSphereCloud::NSXTProvider) }
-      let(:nsxt_client) { instance_double(NSXT::ApiClient) }
+      let(:nsxt_manager_client) { instance_double(NSXT::ApiClient) }
       let(:switch_provider) { instance_double(VSphereCloud::NSXTSwitchProvider) }
       let(:router_provider) { instance_double(VSphereCloud::NSXTRouterProvider) }
       let(:ip_block_provider) { instance_double(VSphereCloud::NSXTIpBlockProvider) }
@@ -2231,7 +2232,7 @@ module VSphereCloud
 
       before do
         allow(VSphereCloud::NSXTApiClientBuilder).to receive(:build_api_client)
-         .with(any_args).and_return(nsxt_client)
+         .with(any_args).and_return(nsxt_manager_client)
         allow(VSphereCloud::NSXTProvider).to receive(:new)
          .with(any_args).and_return(nsxt_provider)
         allow(VSphereCloud::NSXTIpBlockProvider).to receive(:new)

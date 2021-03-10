@@ -315,7 +315,7 @@ module VSphereCloud
       let(:fake_cluster) do
         instance_double(VSphereCloud::Resources::Cluster,
           name: 'fake-cluster-name',
-          free_memory: 2048,
+          free_memory: VSphereCloud::Resources::Cluster::FreeMemory.new(2048),
           accessible_datastores: {
             'small-ds' => small_ds,
             'large-ds' => large_ds
@@ -325,7 +325,7 @@ module VSphereCloud
       let(:fake_cluster_2) do
         instance_double(VSphereCloud::Resources::Cluster,
           name: 'fake-cluster-name-2',
-          free_memory: 4096,
+          free_memory: VSphereCloud::Resources::Cluster::FreeMemory.new(4096),
           accessible_datastores: {
               'small-ds' => small_ds,
               'huge-ds' => huge_ds
@@ -399,7 +399,7 @@ module VSphereCloud
         let(:cluster_1) do
           instance_double(VSphereCloud::Resources::Cluster,
             name: 'cluster-1',
-            free_memory: 1024,
+            free_memory: VSphereCloud::Resources::Cluster::FreeMemory.new(1024),
             accessible_datastores: {
               'smaller-ds'=> smaller_ds,
             },
@@ -410,7 +410,7 @@ module VSphereCloud
         let(:cluster_2) do
           instance_double(VSphereCloud::Resources::Cluster,
             name: 'cluster-2',
-            free_memory: 1024,
+            free_memory: VSphereCloud::Resources::Cluster::FreeMemory.new(1024),
             accessible_datastores: {
               'larger-ds' => larger_ds,
             },

@@ -1,0 +1,20 @@
+- path: /instance_groups/name=bosh/properties/vcenter/nsxt?
+  type: replace
+  value:
+    host: ((nsxt_host))
+    username: ((nsxt_username))
+    password: ((nsxt_password))
+    use_policy_api: true
+    ca_cert: ((nsxt_ca_cert))
+- path: /cloud_provider/properties/vcenter/nsxt?
+  type: replace
+  value:
+    host: ((nsxt_host))
+    username: ((nsxt_username))
+    password: ((nsxt_password))
+    use_policy_api: true
+    ca_cert: ((nsxt_ca_cert))
+- path: /networks/name=default/subnets/0/cloud_properties?
+  type: replace
+  value:
+    name: ((nsxt_segment))

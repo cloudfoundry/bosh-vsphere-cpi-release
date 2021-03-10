@@ -131,13 +131,14 @@ module VSphereCloud::Resources
             end
 
             it 'sets resources to values in the runtime status' do
-              expect(cluster.free_memory).to eq(25)
+              expect(cluster.free_memory.cluster_free_memory).to eq(25)
+              expect(cluster.free_memory.host_group_free_memory).to eq(25)
             end
           end
         end
       end
 
-      context 'when we are using clusters directly' do
+      context 'when we are using clusters directly without host groups' do
         def generate_host_property(mob:, name:, connection_state:, maintenance_mode:, memory_size:, power_state:)
           {
             mob => {
@@ -174,7 +175,8 @@ module VSphereCloud::Resources
         end
 
         it 'sets resources to values based on the active hosts in the cluster' do
-          expect(cluster.free_memory).to eq(85)
+          expect(cluster.free_memory.cluster_free_memory).to eq(85)
+          expect(cluster.free_memory.host_group_free_memory).to eq(85)
         end
 
         context 'when an ESXi host is not powered on' do
@@ -187,7 +189,8 @@ module VSphereCloud::Resources
           end
 
           it 'includes the free memory of only powered on hosts' do
-            expect(cluster.free_memory).to eq(85)
+            expect(cluster.free_memory.cluster_free_memory).to eq(85)
+            expect(cluster.free_memory.host_group_free_memory).to eq(85)
           end
         end
 
@@ -201,7 +204,8 @@ module VSphereCloud::Resources
           end
 
           it 'includes the free memory of only connected hosts' do
-            expect(cluster.free_memory).to eq(85)
+            expect(cluster.free_memory.cluster_free_memory).to eq(85)
+            expect(cluster.free_memory.host_group_free_memory).to eq(85)
           end
         end
 
@@ -215,7 +219,8 @@ module VSphereCloud::Resources
           end
 
           it 'includes the free memory of only hosts not in maintenance mode' do
-            expect(cluster.free_memory).to eq(85)
+            expect(cluster.free_memory.cluster_free_memory).to eq(85)
+            expect(cluster.free_memory.host_group_free_memory).to eq(85)
           end
         end
 
@@ -229,7 +234,8 @@ module VSphereCloud::Resources
             allow(compute_summary).to receive(:effective_memory).and_return(0)
           end
           it 'defaults free memory to zero' do
-            expect(cluster.free_memory).to eq(0)
+            expect(cluster.free_memory.cluster_free_memory).to eq(0)
+            expect(cluster.free_memory.host_group_free_memory).to eq(0)
           end
         end
       end
@@ -262,8 +268,32 @@ module VSphereCloud::Resources
         let(:host1) { instance_double('VimSdk::Vim::HostSystem') }
         let(:host2) { instance_double('VimSdk::Vim::HostSystem') }
 
-        it 'returns sum of raw available memory on two hosts in Megabytes' do
-          expect(cluster.free_memory).to eq(18)
+        context 'when host group rule type is MUST' do
+          it 'returns sum of raw available memory on two hosts in Megabytes for cluster free memory' do
+            expect(cluster.free_memory.cluster_free_memory).to eq(18)
+          end
+
+          it 'returns sum of raw available memory on two hosts in Megabytes for host group free memory' do
+            expect(cluster.free_memory.host_group_free_memory).to eq(18)
+          end
+        end
+
+        context 'when host group rule type is SHOULD' do
+          let(:compute_summary) { instance_double('VimSdk::Vim::ComputeResource::Summary') }
+
+          before do
+            allow(subject).to receive(:host_group_rule_type).and_return('SHOULD')
+            allow(cloud_searcher).to receive(:get_properties).and_return({"summary" => compute_summary})
+            allow(compute_summary).to receive(:effective_memory).and_return(85)
+          end
+
+          it 'returns full cluster free memory in Megabytes for cluster free memory' do
+            expect(cluster.free_memory.cluster_free_memory).to eq(85)
+          end
+
+          it 'returns sum of raw available memory on two hosts in Megabytes for host group free memory' do
+            expect(cluster.free_memory.host_group_free_memory).to eq(18)
+          end
         end
 
         context 'when host hardware summary is not available' do
@@ -273,7 +303,8 @@ module VSphereCloud::Resources
           end
 
           it 'returns 0' do
-            expect(cluster.free_memory).to eq(0)
+            expect(cluster.free_memory.cluster_free_memory).to eq(0)
+            expect(cluster.free_memory.host_group_free_memory).to eq(0)
           end
         end
 
@@ -286,65 +317,10 @@ module VSphereCloud::Resources
           end
 
           it 'returns 0' do
-            expect(cluster.free_memory).to eq(0)
+            expect(cluster.free_memory.cluster_free_memory).to eq(0)
+            expect(cluster.free_memory.host_group_free_memory).to eq(0)
           end
         end
-
-        # context 'when an ESXi host is not powered on' do
-        #   let(:hosts_properties) do
-        #     {}.merge(
-        #       generate_host_property(mob: instance_double('VimSdk::Vim::ClusterComputeResource'), name: 'fake-powered-off', maintenance_mode: false, memory_size: 5 * 1024 * 1024, power_state: 'poweredOff', connection_state: 'connected')
-        #     ).merge(
-        #       active_hosts_properties
-        #     )
-        #   end
-        #
-        #   it 'includes the free memory of only powered on hosts' do
-        #     expect(cluster.free_memory).to eq(85)
-        #   end
-        # end
-        #
-        # context 'when an ESXi host is disconnected' do
-        #   let(:hosts_properties) do
-        #     {}.merge(
-        #       generate_host_property(mob: instance_double('VimSdk::Vim::ClusterComputeResource'), name: 'fake-host-disc', maintenance_mode: false, memory_size: 5 * 1024 * 1024, power_state: 'poweredOn', connection_state: 'disconnected')
-        #     ).merge(
-        #       active_hosts_properties
-        #     )
-        #   end
-        #
-        #   it 'includes the free memory of only connected hosts' do
-        #     expect(cluster.free_memory).to eq(85)
-        #   end
-        # end
-        #
-        # context 'when an ESXi host is in maintenance mode' do
-        #   let(:hosts_properties) do
-        #     {}.merge(
-        #       generate_host_property(mob: instance_double('VimSdk::Vim::ClusterComputeResource'), name: 'fake-host-maint', maintenance_mode: true, memory_size: 5 * 1024 * 1024, power_state: 'poweredOn', connection_state: 'connected')
-        #     ).merge(
-        #       active_hosts_properties
-        #     )
-        #   end
-        #
-        #   it 'includes the free memory of only hosts not in maintenance mode' do
-        #     expect(cluster.free_memory).to eq(85)
-        #   end
-        # end
-        #
-        # context 'when there are no active cluster hosts' do
-        #   let(:hosts_properties) do
-        #     {}.merge(
-        #       generate_host_property(mob: instance_double('VimSdk::Vim::ClusterComputeResource'), name: 'fake-host-inactive', maintenance_mode: false, memory_size: 5 * 1024 * 1024, power_state: 'poweredOff', connection_state: 'disconnected')
-        #     )
-        #   end
-        #   before do
-        #     allow(compute_summary).to receive(:effective_memory).and_return(0)
-        #   end
-        #   it 'defaults free memory to zero' do
-        #     expect(cluster.free_memory).to eq(0)
-        #   end
-        # end
       end
     end
 
@@ -362,7 +338,8 @@ module VSphereCloud::Resources
       end
 
       it 'returns the amount of free memory in the cluster' do
-        expect(cluster.free_memory).to eq(25)
+        expect(cluster.free_memory.cluster_free_memory).to eq(25)
+        expect(cluster.free_memory.host_group_free_memory).to eq(25)
       end
 
       context 'when we fail to get the utilization for a resource pool' do
