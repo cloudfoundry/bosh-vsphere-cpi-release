@@ -509,11 +509,11 @@ module VSphereCloud
           datastore = Resources::Datastore.build_from_client(@client, vm.mob.datastore)
           location = {
               datacenter: @datacenter.name,
-              datastore: datastore,
+              datastore: datastore[0],
               vm: new_vm_cid,
           }
 
-          @agent_env.set_env(created_vm.mob, location, env) #TODO: fails?
+          @agent_env.create_env(created_vm.mob, location, env)
         rescue => e
           logger.error("Error in creating vm: #{e}, Backtrace - #{e.backtrace.join("\n")}")
           raise e
@@ -826,7 +826,7 @@ module VSphereCloud
           'persistent' => {}
         }
       else
-        ephemeral_disk_size = ephemeral_disk.nil? ? '0': ephemeral_disk.unit_number.to_s
+        ephemeral_disk_size = ephemeral_disk.nil? ? '1': ephemeral_disk.unit_number.to_s
         logger.info("Using ephemeral disk unit number #{ephemeral_disk_size}")
         {
           'system' => system_disk.unit_number.to_s,
