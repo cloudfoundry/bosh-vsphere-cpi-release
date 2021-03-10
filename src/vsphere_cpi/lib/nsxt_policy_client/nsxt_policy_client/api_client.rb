@@ -270,7 +270,7 @@ module NSXTPolicy
     def build_request_url(path)
       # Add leading and trailing slashes to path
       path = "/#{path}".gsub(/\/+/, '/')
-      URI.encode(@config.base_url + path)
+      URI.encode(@config.base_url) + URI.encode(path).gsub("[","%5B").gsub("]","%5D")
     end
 
     # Builds the HTTP request body
