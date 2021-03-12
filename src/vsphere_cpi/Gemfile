@@ -25,4 +25,5 @@ group :development, :test do
   gem 'rspec-its'
   gem 'simplecov', require: false
   gem 'timecop',   '~>0.8.1'
+  gem 'webmock'
 end

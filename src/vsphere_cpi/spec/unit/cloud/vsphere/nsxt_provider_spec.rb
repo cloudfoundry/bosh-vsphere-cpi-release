@@ -4,7 +4,7 @@ require 'spec_helper'
 describe VSphereCloud::NSXTProvider, fake_logger: true, fast_retries: true do
   let(:vcenter_client) { instance_double('VSphereCloud::VCenterClient') }
   let(:datacenter) {instance_double('VSphereCloud::Resources::Datacenter') }
-  let(:client) { instance_double(NSXT::ApiClient) }
+  let(:client) { NSXT::ApiClient.new }
   let(:nsxt_config) { VSphereCloud::NSXTConfig.new('fake-host', 'fake-username', 'fake-password') }
   let(:opaque_nsxt) do
     instance_double(
@@ -73,24 +73,20 @@ describe VSphereCloud::NSXTProvider, fake_logger: true, fast_retries: true do
                                       :target_property => 'id', :value => logical_port_2.id)
   end
 
-  let(:grouping_obj_svc) do
-    NSXT::ManagementPlaneApiGroupingObjectsNsGroupsApi.new(client)
-  end
-
   let(:logical_switching_svc) do
-    NSXT::ManagementPlaneApiLogicalSwitchingLogicalSwitchPortsApi.new(client)
+    NSXT::ManagementPlaneApiLogicalSwitchingLogicalSwitchPortsApi.new
   end
 
   let(:vm_fabric_svc) do
-    NSXT::ManagementPlaneApiFabricVirtualMachinesApi.new(client)
+    NSXT::ManagementPlaneApiFabricVirtualMachinesApi.new
   end
 
   let(:vif_fabric_svc) do
-    NSXT::ManagementPlaneApiFabricVifsApi.new(client)
+    NSXT::ManagementPlaneApiFabricVifsApi.new
   end
 
   let(:services_svc) do
-    NSXT::ManagementPlaneApiServicesLoadbalancerApi.new(client)
+    NSXT::ManagementPlaneApiServicesLoadbalancerApi.new
   end
 
   let(:default_vif_type) { 'PARENT' }
@@ -168,11 +164,6 @@ describe VSphereCloud::NSXTProvider, fake_logger: true, fast_retries: true do
         NSXT::NSGroup.new(:id => 'id-2', :display_name => 'test-nsgroup-2')
       end
 
-      before do
-        allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:grouping_obj_svc).and_return(grouping_obj_svc)
-        allow(grouping_obj_svc).to receive_message_chain(:list_ns_groups, :results).and_return([nsgroup_1, nsgroup_2])
-      end
-
       context 'but VM does NOT have any NSX-T opaque network' do
         let(:nics) { [opaque_non_nsxt, network_backing] }
 
@@ -204,37 +195,124 @@ describe VSphereCloud::NSXTProvider, fake_logger: true, fast_retries: true do
         end
 
         it 'adds simple expressions containing the logical ports to each NSGroup' do
-          expect(grouping_obj_svc).to receive(:add_or_remove_ns_group_expression).with(any_args).and_return(true).twice
+          stub_request(:post, "https://nsxmanager.your.domain/api/v1/ns-groups/id-1?action=ADD_MEMBERS").
+            with(
+              body: "{\"members\":[{\"op\":\"EQUALS\",\"target_type\":null,\"target_property\":\"id\",\"value\":\"fake-logical-port-id\",\"resource_type\":\"NSGroupSimpleExpression\"},{\"op\":\"EQUALS\",\"target_type\":null,\"target_property\":\"id\",\"value\":\"fake-logical-port-id-2\",\"resource_type\":\"NSGroupSimpleExpression\"}]}",
+              headers: {
+                'Accept'=>'application/json',
+                'Authorization'=>'Basic Og==',
+                'Content-Type'=>'application/json',
+                'Expect'=>'',
+                'User-Agent'=>'Swagger-Codegen/1.0.0/ruby',
+                'X-Allow-Overwrite'=>'true'
+              }).
+            to_return(status: 200, body: "{\"description\":\"some description\",\"display_name\":\"some display name\",\"id\":\"id-1\",\"member_count\":2,\"members\":[],\"membership_criteria\":[],\"resource_type\":\"NSGroupSimpleExpression\",\"tags\":[]}", headers: {'Accept'=>'application/json'})
+
+          stub_request(:post, "https://nsxmanager.your.domain/api/v1/ns-groups/id-2?action=ADD_MEMBERS").
+            with(
+              body: "{\"members\":[{\"op\":\"EQUALS\",\"target_type\":null,\"target_property\":\"id\",\"value\":\"fake-logical-port-id\",\"resource_type\":\"NSGroupSimpleExpression\"},{\"op\":\"EQUALS\",\"target_type\":null,\"target_property\":\"id\",\"value\":\"fake-logical-port-id-2\",\"resource_type\":\"NSGroupSimpleExpression\"}]}",
+              headers: {
+                'Accept'=>'application/json',
+                'Authorization'=>'Basic Og==',
+                'Content-Type'=>'application/json',
+                'Expect'=>'',
+                'User-Agent'=>'Swagger-Codegen/1.0.0/ruby',
+                'X-Allow-Overwrite'=>'true'
+              }).
+            to_return(status: 200, body: "{\"description\":\"some description\",\"display_name\":\"some display name\",\"id\":\"id-2\",\"member_count\":2,\"members\":[],\"membership_criteria\":[],\"resource_type\":\"NSGroupSimpleExpression\",\"tags\":[]}", headers: {'Accept'=>'application/json'})
 
           nsxt_provider.add_vm_to_nsgroups(vm, ns_groups)
         end
         it 'should raise an error if there is error adding vm to the nsgroup' do
-          failure_response = NSXT::ApiCallError.new(:code => 400)
-          expect(grouping_obj_svc).to receive(:add_or_remove_ns_group_expression).with(any_args).and_raise(failure_response)
+          stub_request(:post, "https://nsxmanager.your.domain/api/v1/ns-groups/id-1?action=ADD_MEMBERS").
+            with(
+              body: "{\"members\":[{\"op\":\"EQUALS\",\"target_type\":null,\"target_property\":\"id\",\"value\":\"fake-logical-port-id\",\"resource_type\":\"NSGroupSimpleExpression\"},{\"op\":\"EQUALS\",\"target_type\":null,\"target_property\":\"id\",\"value\":\"fake-logical-port-id-2\",\"resource_type\":\"NSGroupSimpleExpression\"}]}",
+              headers: {
+                'Accept'=>'application/json',
+                'Authorization'=>'Basic Og==',
+                'Content-Type'=>'application/json',
+                'Expect'=>'',
+                'User-Agent'=>'Swagger-Codegen/1.0.0/ruby',
+                'X-Allow-Overwrite'=>'true'
+              }).
+            to_return(status: 400, body: "{\"message\":\"Not Found\"}", headers: {})
 
           expect do
             nsxt_provider.add_vm_to_nsgroups(vm, ns_groups)
           end.to raise_error(NSXT::ApiCallError)
         end
         it "should retry when there is a CONFLICT in adding vm to the nsgroup" do
-          conflict_response = NSXT::ApiCallError.new(code: 409, response_body: 'The object was modified by somebody else')
-          expect(grouping_obj_svc).to receive(:add_or_remove_ns_group_expression).with(any_args).and_return(true)
-          expect(grouping_obj_svc).to receive(:add_or_remove_ns_group_expression).with(any_args).and_raise(conflict_response).twice
-          expect(grouping_obj_svc).to receive(:add_or_remove_ns_group_expression).with(any_args).and_return(true)
+          stub_request(:post, "https://nsxmanager.your.domain/api/v1/ns-groups/id-1?action=ADD_MEMBERS").
+            with(
+              body: "{\"members\":[{\"op\":\"EQUALS\",\"target_type\":null,\"target_property\":\"id\",\"value\":\"fake-logical-port-id\",\"resource_type\":\"NSGroupSimpleExpression\"},{\"op\":\"EQUALS\",\"target_type\":null,\"target_property\":\"id\",\"value\":\"fake-logical-port-id-2\",\"resource_type\":\"NSGroupSimpleExpression\"}]}",
+              headers: {
+                'Accept'=>'application/json',
+                'Authorization'=>'Basic Og==',
+                'Content-Type'=>'application/json',
+                'Expect'=>'',
+                'User-Agent'=>'Swagger-Codegen/1.0.0/ruby',
+                'X-Allow-Overwrite'=>'true'
+              }).
+            to_return(status: 200, body: "{\"description\":\"some description\",\"display_name\":\"some display name\",\"id\":\"id-1\",\"member_count\":2,\"members\":[],\"membership_criteria\":[],\"resource_type\":\"NSGroupSimpleExpression\",\"tags\":[]}", headers: {'Accept'=>'application/json'})
+
+          stub_request(:post, "https://nsxmanager.your.domain/api/v1/ns-groups/id-2?action=ADD_MEMBERS").
+            with(
+              body: "{\"members\":[{\"op\":\"EQUALS\",\"target_type\":null,\"target_property\":\"id\",\"value\":\"fake-logical-port-id\",\"resource_type\":\"NSGroupSimpleExpression\"},{\"op\":\"EQUALS\",\"target_type\":null,\"target_property\":\"id\",\"value\":\"fake-logical-port-id-2\",\"resource_type\":\"NSGroupSimpleExpression\"}]}",
+              headers: {
+                'Accept'=>'application/json',
+                'Authorization'=>'Basic Og==',
+                'Content-Type'=>'application/json',
+                'Expect'=>'',
+                'User-Agent'=>'Swagger-Codegen/1.0.0/ruby',
+                'X-Allow-Overwrite'=>'true'
+              }).
+            to_return(status: 409, body: "{\"message\":\"The object was modified by somebody else\"}", headers: {}).times(2).then.
+            to_return(status: 200, body: "{\"description\":\"some description\",\"display_name\":\"some display name\",\"id\":\"id-2\",\"member_count\":2,\"members\":[],\"membership_criteria\":[],\"resource_type\":\"NSGroupSimpleExpression\",\"tags\":[]}", headers: {'Accept'=>'application/json'})
 
           nsxt_provider.add_vm_to_nsgroups(vm, ns_groups)
         end
         it "should retry when there is a PreconditionFailed in adding vm to the nsgroup" do
-          precondition_failed_response = NSXT::ApiCallError.new(code: 412, response_body: 'PreconditionFailed')
-          expect(grouping_obj_svc).to receive(:add_or_remove_ns_group_expression).with(any_args).and_raise(precondition_failed_response).exactly(4).times
-          expect(grouping_obj_svc).to receive(:add_or_remove_ns_group_expression).with(any_args).and_return(true).twice
+          stub_request(:post, "https://nsxmanager.your.domain/api/v1/ns-groups/id-1?action=ADD_MEMBERS").
+            with(
+              body: "{\"members\":[{\"op\":\"EQUALS\",\"target_type\":null,\"target_property\":\"id\",\"value\":\"fake-logical-port-id\",\"resource_type\":\"NSGroupSimpleExpression\"},{\"op\":\"EQUALS\",\"target_type\":null,\"target_property\":\"id\",\"value\":\"fake-logical-port-id-2\",\"resource_type\":\"NSGroupSimpleExpression\"}]}",
+              headers: {
+                'Accept'=>'application/json',
+                'Authorization'=>'Basic Og==',
+                'Content-Type'=>'application/json',
+                'Expect'=>'',
+                'User-Agent'=>'Swagger-Codegen/1.0.0/ruby',
+                'X-Allow-Overwrite'=>'true'
+              }).
+            to_return(status: 200, body: "{\"description\":\"some description\",\"display_name\":\"some display name\",\"id\":\"id-1\",\"member_count\":2,\"members\":[],\"membership_criteria\":[],\"resource_type\":\"NSGroupSimpleExpression\",\"tags\":[]}", headers: {'Accept'=>'application/json'})
 
+          stub_request(:post, "https://nsxmanager.your.domain/api/v1/ns-groups/id-2?action=ADD_MEMBERS").
+            with(
+              body: "{\"members\":[{\"op\":\"EQUALS\",\"target_type\":null,\"target_property\":\"id\",\"value\":\"fake-logical-port-id\",\"resource_type\":\"NSGroupSimpleExpression\"},{\"op\":\"EQUALS\",\"target_type\":null,\"target_property\":\"id\",\"value\":\"fake-logical-port-id-2\",\"resource_type\":\"NSGroupSimpleExpression\"}]}",
+              headers: {
+                'Accept'=>'application/json',
+                'Authorization'=>'Basic Og==',
+                'Content-Type'=>'application/json',
+                'Expect'=>'',
+                'User-Agent'=>'Swagger-Codegen/1.0.0/ruby',
+                'X-Allow-Overwrite'=>'true'
+              }).
+            to_return(status: 412, body: "{\"message\":\"PreconditionFailed\"}", headers: {}).times(2).then.
+            to_return(status: 200, body: "{\"description\":\"some description\",\"display_name\":\"some display name\",\"id\":\"id-2\",\"member_count\":2,\"members\":[],\"membership_criteria\":[],\"resource_type\":\"NSGroupSimpleExpression\",\"tags\":[]}", headers: {'Accept'=>'application/json'})
           nsxt_provider.add_vm_to_nsgroups(vm, ns_groups)
         end
         it "should retry 50 times when there is a conflict or precondition failed while adding vm to nsgroup" do
-          conflict_response = NSXT::ApiCallError.new(code: 409, response_body: 'The object was modified by somebody else')
-          allow_any_instance_of(Bosh::Retryable).to receive(:new).with(hash_including(tries: 50, on: VSphereCloud::NSXTOptimisticUpdateError))
-          expect(grouping_obj_svc).to receive(:add_or_remove_ns_group_expression).with(any_args).and_raise(conflict_response).at_most(50).times
+          stub_request(:post, "https://nsxmanager.your.domain/api/v1/ns-groups/id-1?action=ADD_MEMBERS").
+            with(
+              body: "{\"members\":[{\"op\":\"EQUALS\",\"target_type\":null,\"target_property\":\"id\",\"value\":\"fake-logical-port-id\",\"resource_type\":\"NSGroupSimpleExpression\"},{\"op\":\"EQUALS\",\"target_type\":null,\"target_property\":\"id\",\"value\":\"fake-logical-port-id-2\",\"resource_type\":\"NSGroupSimpleExpression\"}]}",
+              headers: {
+                'Accept'=>'application/json',
+                'Authorization'=>'Basic Og==',
+                'Content-Type'=>'application/json',
+                'Expect'=>'',
+                'User-Agent'=>'Swagger-Codegen/1.0.0/ruby',
+                'X-Allow-Overwrite'=>'true'
+              }).
+            to_return(status: 409, body: "{\"message\":\"The object was modified by somebody else\"}", headers: {})
 
           expect do
             nsxt_provider.add_vm_to_nsgroups(vm, ns_groups)
@@ -262,7 +340,6 @@ describe VSphereCloud::NSXTProvider, fake_logger: true, fast_retries: true do
     end
 
     before do
-      allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:grouping_obj_svc).and_return(grouping_obj_svc)
       allow(nsxt_provider).to receive(
         :retrieve_all_ns_groups_with_pagination
       ).and_return([nsgroup_1, nsgroup_2])
@@ -272,18 +349,47 @@ describe VSphereCloud::NSXTProvider, fake_logger: true, fast_retries: true do
 
     it "removes VM's logical ports from all NSGroups" do
       allow(nsxt_provider).to receive(:nsxt_nics).with(vm).and_return(nsxt_nic_array)
-      expect(grouping_obj_svc).to receive(
-        :add_or_remove_ns_group_expression
-      ).with(any_args).and_return(true).twice
+      stub_request(:post, "https://nsxmanager.your.domain/api/v1/ns-groups/id-1?action=REMOVE_MEMBERS").
+        with(
+          body: "{\"members\":[{\"op\":\"EQUALS\",\"target_type\":null,\"target_property\":\"id\",\"value\":\"fake-logical-port-id\",\"resource_type\":\"NSGroupSimpleExpression\"},{\"op\":\"EQUALS\",\"target_type\":null,\"target_property\":\"id\",\"value\":\"fake-logical-port-id-2\",\"resource_type\":\"NSGroupSimpleExpression\"}]}",
+          headers: {
+            'Accept'=>'application/json',
+            'Authorization'=>'Basic Og==',
+            'Content-Type'=>'application/json',
+            'Expect'=>'',
+            'User-Agent'=>'Swagger-Codegen/1.0.0/ruby',
+            'X-Allow-Overwrite'=>'true'
+          }).
+        to_return(status: 200, body: "{}", headers: {})
+      stub_request(:post, "https://nsxmanager.your.domain/api/v1/ns-groups/id-2?action=REMOVE_MEMBERS").
+        with(
+          body: "{\"members\":[{\"op\":\"EQUALS\",\"target_type\":null,\"target_property\":\"id\",\"value\":\"fake-logical-port-id\",\"resource_type\":\"NSGroupSimpleExpression\"},{\"op\":\"EQUALS\",\"target_type\":null,\"target_property\":\"id\",\"value\":\"fake-logical-port-id-2\",\"resource_type\":\"NSGroupSimpleExpression\"}]}",
+          headers: {
+            'Accept'=>'application/json',
+            'Authorization'=>'Basic Og==',
+            'Content-Type'=>'application/json',
+            'Expect'=>'',
+            'User-Agent'=>'Swagger-Codegen/1.0.0/ruby',
+            'X-Allow-Overwrite'=>'true'
+          }).
+        to_return(status: 200, body: "{}", headers: {})
       nsxt_provider.remove_vm_from_nsgroups(vm)
     end
 
     it "raises an error if there's an error removing the VM from the NSgroup" do
       allow(nsxt_provider).to receive(:nsxt_nics).with(vm).and_return(nsxt_nic_array)
-      expect(grouping_obj_svc).to receive(
-        :add_or_remove_ns_group_expression
-      ).with(any_args).and_raise(NSXT::ApiCallError.new(code: 400))
-
+      stub_request(:post, "https://nsxmanager.your.domain/api/v1/ns-groups/id-1?action=REMOVE_MEMBERS").
+        with(
+          body: "{\"members\":[{\"op\":\"EQUALS\",\"target_type\":null,\"target_property\":\"id\",\"value\":\"fake-logical-port-id\",\"resource_type\":\"NSGroupSimpleExpression\"},{\"op\":\"EQUALS\",\"target_type\":null,\"target_property\":\"id\",\"value\":\"fake-logical-port-id-2\",\"resource_type\":\"NSGroupSimpleExpression\"}]}",
+          headers: {
+            'Accept'=>'application/json',
+            'Authorization'=>'Basic Og==',
+            'Content-Type'=>'application/json',
+            'Expect'=>'',
+            'User-Agent'=>'Swagger-Codegen/1.0.0/ruby',
+            'X-Allow-Overwrite'=>'true'
+          }).
+        to_return(status: 400, body: "{}", headers: {})
       expect do
         nsxt_provider.remove_vm_from_nsgroups(vm)
       end.to raise_error(NSXT::ApiCallError)
@@ -291,39 +397,81 @@ describe VSphereCloud::NSXTProvider, fake_logger: true, fast_retries: true do
 
     it "retries when there's a conflict in removing the VM from the NSgroup" do
       allow(nsxt_provider).to receive(:nsxt_nics).with(vm).and_return(nsxt_nic_array)
-      expect(grouping_obj_svc).to receive(
-        :add_or_remove_ns_group_expression
-      ).with(any_args).and_raise(NSXT::ApiCallError.new(code: 409))
+      stub_request(:post, "https://nsxmanager.your.domain/api/v1/ns-groups/id-1?action=REMOVE_MEMBERS").
+        with(
+          body: "{\"members\":[{\"op\":\"EQUALS\",\"target_type\":null,\"target_property\":\"id\",\"value\":\"fake-logical-port-id\",\"resource_type\":\"NSGroupSimpleExpression\"},{\"op\":\"EQUALS\",\"target_type\":null,\"target_property\":\"id\",\"value\":\"fake-logical-port-id-2\",\"resource_type\":\"NSGroupSimpleExpression\"}]}",
+          headers: {
+            'Accept'=>'application/json',
+            'Authorization'=>'Basic Og==',
+            'Content-Type'=>'application/json',
+            'Expect'=>'',
+            'User-Agent'=>'Swagger-Codegen/1.0.0/ruby',
+            'X-Allow-Overwrite'=>'true'
+          }).
+        to_return(status: 200, body: "{\"description\":\"some description\",\"display_name\":\"some display name\",\"id\":\"id-1\",\"member_count\":2,\"members\":[],\"membership_criteria\":[],\"resource_type\":\"NSGroupSimpleExpression\",\"tags\":[]}", headers: {'Accept'=>'application/json'})
 
-      expect(grouping_obj_svc).to receive(
-        :add_or_remove_ns_group_expression
-      ).with(any_args).and_return(true).twice
-
+      stub_request(:post, "https://nsxmanager.your.domain/api/v1/ns-groups/id-2?action=REMOVE_MEMBERS").
+        with(
+          body: "{\"members\":[{\"op\":\"EQUALS\",\"target_type\":null,\"target_property\":\"id\",\"value\":\"fake-logical-port-id\",\"resource_type\":\"NSGroupSimpleExpression\"},{\"op\":\"EQUALS\",\"target_type\":null,\"target_property\":\"id\",\"value\":\"fake-logical-port-id-2\",\"resource_type\":\"NSGroupSimpleExpression\"}]}",
+          headers: {
+            'Accept'=>'application/json',
+            'Authorization'=>'Basic Og==',
+            'Content-Type'=>'application/json',
+            'Expect'=>'',
+            'User-Agent'=>'Swagger-Codegen/1.0.0/ruby',
+            'X-Allow-Overwrite'=>'true'
+          }).
+        to_return(status: 409, body: "{\"message\":\"The object was modified by somebody else\"}", headers: {}).times(2).then.
+        to_return(status: 200, body: "{\"description\":\"some description\",\"display_name\":\"some display name\",\"id\":\"id-2\",\"member_count\":2,\"members\":[],\"membership_criteria\":[],\"resource_type\":\"NSGroupSimpleExpression\",\"tags\":[]}", headers: {'Accept'=>'application/json'})
       nsxt_provider.remove_vm_from_nsgroups(vm)
     end
 
     it "retries on a PreconditionFailed in removing the VM from the NSgroup" do
       allow(nsxt_provider).to receive(:nsxt_nics).with(vm).and_return(nsxt_nic_array)
-      expect(grouping_obj_svc).to receive(
-        :add_or_remove_ns_group_expression
-      ).with(any_args).and_raise(
-        NSXT::ApiCallError.new(code: 412)
-      ).exactly(4).times
+      stub_request(:post, "https://nsxmanager.your.domain/api/v1/ns-groups/id-1?action=REMOVE_MEMBERS").
+        with(
+          body: "{\"members\":[{\"op\":\"EQUALS\",\"target_type\":null,\"target_property\":\"id\",\"value\":\"fake-logical-port-id\",\"resource_type\":\"NSGroupSimpleExpression\"},{\"op\":\"EQUALS\",\"target_type\":null,\"target_property\":\"id\",\"value\":\"fake-logical-port-id-2\",\"resource_type\":\"NSGroupSimpleExpression\"}]}",
+          headers: {
+            'Accept'=>'application/json',
+            'Authorization'=>'Basic Og==',
+            'Content-Type'=>'application/json',
+            'Expect'=>'',
+            'User-Agent'=>'Swagger-Codegen/1.0.0/ruby',
+            'X-Allow-Overwrite'=>'true'
+          }).
+        to_return(status: 200, body: "{\"description\":\"some description\",\"display_name\":\"some display name\",\"id\":\"id-1\",\"member_count\":2,\"members\":[],\"membership_criteria\":[],\"resource_type\":\"NSGroupSimpleExpression\",\"tags\":[]}", headers: {'Accept'=>'application/json'})
 
-      expect(grouping_obj_svc).to receive(
-        :add_or_remove_ns_group_expression
-      ).with(any_args).and_return(true).twice
+      stub_request(:post, "https://nsxmanager.your.domain/api/v1/ns-groups/id-2?action=REMOVE_MEMBERS").
+        with(
+          body: "{\"members\":[{\"op\":\"EQUALS\",\"target_type\":null,\"target_property\":\"id\",\"value\":\"fake-logical-port-id\",\"resource_type\":\"NSGroupSimpleExpression\"},{\"op\":\"EQUALS\",\"target_type\":null,\"target_property\":\"id\",\"value\":\"fake-logical-port-id-2\",\"resource_type\":\"NSGroupSimpleExpression\"}]}",
+          headers: {
+            'Accept'=>'application/json',
+            'Authorization'=>'Basic Og==',
+            'Content-Type'=>'application/json',
+            'Expect'=>'',
+            'User-Agent'=>'Swagger-Codegen/1.0.0/ruby',
+            'X-Allow-Overwrite'=>'true'
+          }).
+        to_return(status: 412, body: "{\"message\":\"PreconditionFailed\"}", headers: {}).times(2).then.
+        to_return(status: 200, body: "{\"description\":\"some description\",\"display_name\":\"some display name\",\"id\":\"id-2\",\"member_count\":2,\"members\":[],\"membership_criteria\":[],\"resource_type\":\"NSGroupSimpleExpression\",\"tags\":[]}", headers: {'Accept'=>'application/json'})
 
       nsxt_provider.remove_vm_from_nsgroups(vm)
     end
 
     it "should retry 50 times when there is a conflict or precondition failed while removing vm from nsgroup" do
       allow(nsxt_provider).to receive(:nsxt_nics).with(vm).and_return(nsxt_nic_array)
-      expect(grouping_obj_svc).to receive(
-        :add_or_remove_ns_group_expression
-      ).with(any_args).and_raise(
-        NSXT::ApiCallError.new(code: 409)
-      ).at_most(50).times
+      stub_request(:post, "https://nsxmanager.your.domain/api/v1/ns-groups/id-1?action=REMOVE_MEMBERS").
+        with(
+          body: "{\"members\":[{\"op\":\"EQUALS\",\"target_type\":null,\"target_property\":\"id\",\"value\":\"fake-logical-port-id\",\"resource_type\":\"NSGroupSimpleExpression\"},{\"op\":\"EQUALS\",\"target_type\":null,\"target_property\":\"id\",\"value\":\"fake-logical-port-id-2\",\"resource_type\":\"NSGroupSimpleExpression\"}]}",
+          headers: {
+            'Accept'=>'application/json',
+            'Authorization'=>'Basic Og==',
+            'Content-Type'=>'application/json',
+            'Expect'=>'',
+            'User-Agent'=>'Swagger-Codegen/1.0.0/ruby',
+            'X-Allow-Overwrite'=>'true'
+          }).
+        to_return(status: 409, body: "{\"message\":\"The object was modified by somebody else\"}", headers: {})
 
       expect do
         nsxt_provider.remove_vm_from_nsgroups(vm)
@@ -760,8 +908,17 @@ describe VSphereCloud::NSXTProvider, fake_logger: true, fast_retries: true do
     context 'whe there is zero page' do
       let(:result_list_1) { double(Object, results: [], cursor: nil) }
       it 'returns all NS Groups in the page' do
-        allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:grouping_obj_svc).and_return(grouping_obj_svc)
-        allow(grouping_obj_svc).to receive(:list_ns_groups).and_return(result_list_1)
+        stub_request(:get, "https://nsxmanager.your.domain/api/v1/ns-groups").
+          with(
+            headers: {
+              'Accept'=>'application/json',
+              'Authorization'=>'Basic Og==',
+              'Content-Type'=>'application/json',
+              'Expect'=>'',
+              'User-Agent'=>'Swagger-Codegen/1.0.0/ruby',
+              'X-Allow-Overwrite'=>'true'
+            }).
+          to_return(status: 200, body: "{}", headers: {})
         objects_result = nsxt_provider.send(:retrieve_all_ns_groups_with_pagination)
         expect(objects_result.size).to eq(0)
       end
@@ -770,8 +927,17 @@ describe VSphereCloud::NSXTProvider, fake_logger: true, fast_retries: true do
     context 'whe there is only one page' do
       let(:result_list_1) { double(Object, results: [nsgroup_1, nsgroup_2], cursor: nil) }
       it 'returns all NS Groups in the page' do
-        allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:grouping_obj_svc).and_return(grouping_obj_svc)
-        allow(grouping_obj_svc).to receive(:list_ns_groups).and_return(result_list_1)
+        stub_request(:get, "https://nsxmanager.your.domain/api/v1/ns-groups").
+                  with(
+                    headers: {
+                      'Accept'=>'application/json',
+                      'Authorization'=>'Basic Og==',
+                      'Content-Type'=>'application/json',
+                      'Expect'=>'',
+                      'User-Agent'=>'Swagger-Codegen/1.0.0/ruby',
+                      'X-Allow-Overwrite'=>'true'
+                    }).
+                  to_return(status: 200, body: "{\"results\":[{}, {}]}", headers: {})
         objects_result = nsxt_provider.send(:retrieve_all_ns_groups_with_pagination)
         expect(objects_result.size).to eq(2)
       end
@@ -782,11 +948,29 @@ describe VSphereCloud::NSXTProvider, fake_logger: true, fast_retries: true do
       let(:result_list_2) { double(Object, results: [nsgroup_3, nsgroup_4], cursor: nil) }
       let(:result_list_1_cursor) { "fake-result-list-1-cursor"}
       it 'returns all NS Groups in the two pages' do
-        allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:grouping_obj_svc).and_return(grouping_obj_svc)
-        allow(grouping_obj_svc).to receive(:list_ns_groups).and_return(result_list_1)
-        allow(grouping_obj_svc).to receive(:list_ns_groups).with(anything).and_return(result_list_2)
-        expect(grouping_obj_svc).to receive(:list_ns_groups).with(any_args).twice
-        allow(result_list_2).to receive(:cursor).and_return(nil)
+        stub_request(:get, "https://nsxmanager.your.domain/api/v1/ns-groups").
+          with(
+            headers: {
+              'Accept'=>'application/json',
+              'Authorization'=>'Basic Og==',
+              'Content-Type'=>'application/json',
+              'Expect'=>'',
+              'User-Agent'=>'Swagger-Codegen/1.0.0/ruby',
+              'X-Allow-Overwrite'=>'true'
+            }).
+          to_return(status: 200, body: "{\"results\":[{}, {}], \"cursor\":1}", headers: {})
+
+        stub_request(:get, "https://nsxmanager.your.domain/api/v1/ns-groups?cursor=1").
+          with(
+            headers: {
+              'Accept'=>'application/json',
+              'Authorization'=>'Basic Og==',
+              'Content-Type'=>'application/json',
+              'Expect'=>'',
+              'User-Agent'=>'Swagger-Codegen/1.0.0/ruby',
+              'X-Allow-Overwrite'=>'true'
+            }).
+          to_return(status: 200, body: "{\"results\":[{}, {}]}", headers: {})
         objects_result = nsxt_provider.send(:retrieve_all_ns_groups_with_pagination)
         expect(objects_result.size).to eq(4)
       end
