@@ -16,8 +16,9 @@ module ColorizeExceptionMessageDetails
 end
 Rake::Application.send(:prepend, ColorizeExceptionMessageDetails)
 
-desc 'Create swagger client from swagger spec'
+
 namespace :swagger do
+  desc 'Create swagger manager client from swagger spec'
   task :nsxt_manager_client do
   
     rm_rf(["./lib/nsxt_manager_client/*"])
@@ -84,7 +85,7 @@ namespace :swagger do
     lines.each { |line| output.write line }
     output.close
   end
-
+  desc 'Create swagger policy client from swagger spec'
   task :nsxt_policy_client do
   
     rm_rf(["./lib/nsxt_policy_client/*"])
