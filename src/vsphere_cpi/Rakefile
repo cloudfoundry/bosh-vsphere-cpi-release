@@ -16,7 +16,8 @@ module ColorizeExceptionMessageDetails
 end
 Rake::Application.send(:prepend, ColorizeExceptionMessageDetails)
 
-
+# if you are regenearating the manager client, make sure you check that configuration.rb still has remote_auth for
+# VMware Identity Manager
 namespace :swagger do
   desc 'Create swagger manager client from swagger spec'
   task :nsxt_manager_client do
