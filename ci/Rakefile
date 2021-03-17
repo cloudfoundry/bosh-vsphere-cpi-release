@@ -10,7 +10,7 @@ require 'ci/pipeline'
 require 'ci/pool'
 require 'ci/target'
 
-DOCKER_NAME = ENV.fetch('DOCKER_NAME', 'vcpici/vcpi-main')
+DOCKER_NAME = ENV.fetch('DOCKER_NAME', 'gcr.io/cf-pas-nx-t-pineapple/vcpi-main')
 
 namespace :docker do
   desc 'Build a docker image from the Dockerfile'
