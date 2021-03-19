@@ -1,4 +1,4 @@
-FROM ubuntu:14.04
+FROM ubuntu:18.04
 
 ENV LANG C.UTF-8
 
@@ -8,8 +8,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       git \
       jq \
       make \
+      netcat-openbsd \
       openssh-client \
-      realpath \
       rsync \
       sshpass \
       tar \
@@ -41,10 +41,10 @@ ENV GOPATH /opt/go
 ENV PATH /usr/local/go/bin:/opt/go/bin:$PATH
 
 RUN cd /tmp && \
-    wget -nv https://s3.amazonaws.com/bosh-cli-artifacts/bosh-cli-2.0.45-linux-amd64 && \
+    wget -nv https://s3.amazonaws.com/bosh-cli-artifacts/bosh-cli-6.4.1-linux-amd64 && \
     ( \
-      echo bf04be72daa7da0c9bbeda16fda7fc7b2b8af51e bosh-cli-2.0.45-linux-amd64 | \
-      sha1sum -c - \
+      echo 756d8e403f1d349ef3766d28980379c24da6212fa45dcf296c0519d4ec54d66a bosh-cli-6.4.1-linux-amd64 | \
+      sha256sum -c - \
     ) && \
-    install -Dm755 bosh-cli-2.0.45-linux-amd64 /usr/local/bin/bosh && \
-    rm -f bosh-cli-2.0.45-linux-amd64
+    install -Dm755 bosh-cli-6.4.1-linux-amd64 /usr/local/bin/bosh && \
+    rm -f bosh-cli-6.4.1-linux-amd64
