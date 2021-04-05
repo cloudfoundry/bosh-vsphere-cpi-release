@@ -52,6 +52,25 @@ module VSphereCloud
       end
     end
 
+    def add_vm_to_server_pools(vm, server_pools)
+      Bosh::Retryable.new(
+        tries: 50,
+        sleep: ->(try_count, retry_exception) { 2 },
+        on: [VirtualMachineIpNotFound]
+      ).retryer do |i|
+        vm_ip = vm.mob.guest&.ip_address
+        raise VirtualMachineIpNotFound.new(vm) unless vm_ip
+        server_pools.each do |server_pool|
+          retry_on_conflict("while adding vm: #{vm.cid} to group #{server_pool['name']}") do
+            load_balancer_pool = policy_load_balancer_pools_api.read_lb_pool_0(server_pool['name'])
+            logger.info("Adding vm: '#{vm.cid}' with ip:#{vm_ip} to ServerPool: #{load_balancer_pool.id} on Port: #{server_pool['port']} ")
+            (load_balancer_pool.members ||= []).push(NSXTPolicy::LBPoolMember.new(port: server_pool['port'], ip_address: vm_ip))
+            policy_load_balancer_pools_api.update_lb_pool_0(server_pool['name'], load_balancer_pool)
+          end
+        end
+      end
+    end
+
     private
 
     DEFAULT_SLEEP = 1
@@ -156,6 +175,10 @@ module VSphereCloud
 
     def policy_group_api
       @policy_group_api ||= NSXTPolicy::PolicyInventoryGroupsGroupsApi.new(@client)
+    end
+
+    def policy_load_balancer_pools_api
+      @policy_load_balancer_pools_api ||= NSXTPolicy::PolicyNetworkingNetworkServicesLoadBalancingLoadBalancerPoolsApi.new(@client)
     end
   end
 end

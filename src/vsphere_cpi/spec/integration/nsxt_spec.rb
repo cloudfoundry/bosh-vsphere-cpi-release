@@ -47,6 +47,7 @@ describe 'CPI', nsxt_all: true do
     policy_configuration.verify_ssl_host = false
     policy_client = NSXTPolicy::ApiClient.new(policy_configuration)
     @policy_group_api = NSXTPolicy::PolicyInventoryGroupsGroupsApi.new(policy_client)
+    @policy_load_balancer_pools_api = NSXTPolicy::PolicyNetworkingNetworkServicesLoadBalancingLoadBalancerPoolsApi.new(policy_client)
     @policy_segment_port_api = NSXTPolicy::PolicyNetworkingConnectivitySegmentsPortsApi.new(policy_client)
     @policy_group_members_api = NSXTPolicy::PolicyInventoryGroupsGroupMembersApi.new(policy_client)
     @policy_segment_api = NSXTPolicy::PolicyNetworkingConnectivitySegmentsSegmentsApi.new(policy_client)
@@ -354,13 +355,7 @@ describe 'CPI', nsxt_all: true do
             'nsxt' => nsxt_spec
         }
       end
-      let(:nsxt_spec) {
-        {
-            'ns_groups' => [nsgroup_name_1, nsgroup_name_2],
-        }
-      }
-      let!(:nsgroup_1) { create_policy_group(nsgroup_name_1) }
-      let!(:nsgroup_2) { create_policy_group(nsgroup_name_2) }
+
       before do
         tzs = @policy_enforcement_points_api.list_transport_zones_for_enforcement_point(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, 'default')
         overlay_tz = tzs.results.find { |tz| tz.display_name == 'tz-overlay' }
@@ -369,13 +364,12 @@ describe 'CPI', nsxt_all: true do
         seg_2 = NSXTPolicy::Segment.new(display_name: segment_name_2, transport_zone_path: overlay_tz.path)
         @policy_segment_api.create_or_replace_infra_segment(segment_name_2, seg_2)
       end
+
       after do
-        delete_policy_group(nsgroup_name_1)
-        delete_policy_group(nsgroup_name_2)
         Bosh::Retryable.new(
-            tries: 61,
-            sleep: ->(try_count, retry_exception) { 1 },
-            on: [NSXTPolicy::ApiCallError]
+          tries: 61,
+          sleep: ->(try_count, retry_exception) { 1 },
+          on: [NSXTPolicy::ApiCallError]
         ).retryer do |i|
           @policy_segment_api.delete_infra_segment(segment_name_1)
           @policy_segment_api.delete_infra_segment(segment_name_2)
@@ -383,19 +377,75 @@ describe 'CPI', nsxt_all: true do
         end
       end
 
-      it 'creates VM in specified segments' do
-        simple_vm_lifecycle(cpi, '', vm_type, policy_network_spec) do |vm_id|
-          vm = @cpi.vm_provider.find(vm_id)
-          segment_names = vm.get_nsxt_segment_vif_list.map { |x| x[0] }
-          expect(segment_names.length).to eq(2)
-          expect(segment_names).to include(segment_name_1)
-          expect(segment_names).to include(segment_name_2)
-          results = @policy_group_members_api.get_group_vm_members_0(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, nsgroup_name_1).results
-          expect(results.length).to eq(1)
-          expect(results[0].display_name).to eq(vm_id)
-          results = @policy_group_members_api.get_group_vm_members_0(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, nsgroup_name_2).results
-          expect(results.length).to eq(1)
-          expect(results[0].display_name).to eq(vm_id)
+      context 'with ns groups' do
+        let(:nsxt_spec) {
+          {
+            'ns_groups' => [nsgroup_name_1, nsgroup_name_2],
+          }
+        }
+        let!(:nsgroup_1) { create_policy_group(nsgroup_name_1) }
+        let!(:nsgroup_2) { create_policy_group(nsgroup_name_2) }
+        after do
+          delete_policy_group(nsgroup_name_1)
+          delete_policy_group(nsgroup_name_2)
+        end
+
+        it 'creates VM in specified segments' do
+          simple_vm_lifecycle(cpi, '', vm_type, policy_network_spec) do |vm_id|
+            vm = @cpi.vm_provider.find(vm_id)
+            segment_names = vm.get_nsxt_segment_vif_list.map { |x| x[0] }
+            expect(segment_names.length).to eq(2)
+            expect(segment_names).to include(segment_name_1)
+            expect(segment_names).to include(segment_name_2)
+            results = @policy_group_members_api.get_group_vm_members_0(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, nsgroup_name_1).results
+            expect(results.length).to eq(1)
+            expect(results[0].display_name).to eq(vm_id)
+            results = @policy_group_members_api.get_group_vm_members_0(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, nsgroup_name_2).results
+            expect(results.length).to eq(1)
+            expect(results[0].display_name).to eq(vm_id)
+          end
+        end
+      end
+
+      context 'with lb server pools' do
+        let(:nsxt_spec) {
+          {
+            'lb'=> { 'server_pools' => [
+              {
+                'name' => server_pool_name_1,
+                'port' => 80,
+              },
+              {
+                'name' => server_pool_name_2,
+                'port' => 80,
+              },
+            ],
+            }
+          }
+        }
+        let!(:lb_pool_1) { create_lb_pool(server_pool_name_1) }
+        let!(:lb_pool_2) { create_lb_pool(server_pool_name_2) }
+        after do
+          delete_lb_pool(server_pool_name_1)
+          delete_lb_pool(server_pool_name_2)
+        end
+
+        it 'creates VM in specified segments' do
+          simple_vm_lifecycle(cpi, '', vm_type, policy_network_spec) do |vm_id|
+            vm = @cpi.vm_provider.find(vm_id)
+            segment_names = vm.get_nsxt_segment_vif_list.map { |x| x[0] }
+            expect(segment_names.length).to eq(2)
+            expect(segment_names).to include(segment_name_1)
+            expect(segment_names).to include(segment_name_2)
+            server_pool_1 = @policy_load_balancer_pools_api.read_lb_pool_0(server_pool_name_1)
+            expect(server_pool_1.members.length).to eq(1)
+            expect(server_pool_1.members[0].ip_address).to eq(vm.mob.guest&.ip_address)
+            expect(server_pool_1.members[0].port).to eq("80")
+            server_pool_2 = @policy_load_balancer_pools_api.read_lb_pool_0(server_pool_name_2)
+            expect(server_pool_2.members.length).to eq(1)
+            expect(server_pool_2.members[0].ip_address).to eq(vm.mob.guest&.ip_address)
+            expect(server_pool_2.members[0].port).to eq("80")
+          end
         end
       end
     end
@@ -660,6 +710,14 @@ describe 'CPI', nsxt_all: true do
 
   def services_svc
     NSXT::ManagementPlaneApiServicesLoadbalancerApi.new(nsxt)
+  end
+
+  def create_lb_pool(pool_name)
+    @policy_load_balancer_pools_api.update_lb_pool_0(pool_name, NSXTPolicy::LBPool.new)
+  end
+
+  def delete_lb_pool(pool_name)
+    @policy_load_balancer_pools_api.delete_lb_pool_0(pool_name)
   end
 
   def retryer

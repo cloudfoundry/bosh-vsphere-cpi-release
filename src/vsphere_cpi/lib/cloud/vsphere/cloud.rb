@@ -374,6 +374,9 @@ module VSphereCloud
           if @config.nsxt_enabled?
             ns_groups = vm_type.ns_groups || []
             if @config.nsxt.use_policy_api?
+              if vm_type.nsxt_server_pools
+                @nsxt_policy_provider.add_vm_to_server_pools(created_vm, vm_type.nsxt_server_pools)
+              end
               @nsxt_policy_provider.add_vm_to_groups(created_vm, ns_groups)
             else
               if vm_type.nsxt_server_pools
