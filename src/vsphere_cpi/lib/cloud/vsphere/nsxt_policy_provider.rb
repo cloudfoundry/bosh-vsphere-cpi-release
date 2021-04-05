@@ -71,6 +71,20 @@ module VSphereCloud
       end
     end
 
+    def remove_vm_from_server_pools(vm_ip)
+      policy_load_balancer_pools_api.list_lb_pools.results.each do |server_pool|
+        original_size = server_pool.members&.length
+        server_pool.members&.each do |member|
+          if member.ip_address == vm_ip
+            logger.info("Removing vm with ip: '#{vm_ip}', port_no: #{member.port} from ServerPool: #{server_pool.id} ")
+            server_pool.members&.delete(member)
+          end
+        end
+        next if server_pool.members&.length == original_size
+        policy_load_balancer_pools_api.update_lb_pool_0(server_pool.id, server_pool)
+      end
+    end
+
     private
 
     DEFAULT_SLEEP = 1

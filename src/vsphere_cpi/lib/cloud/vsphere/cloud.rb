@@ -500,6 +500,11 @@ module VSphereCloud
               logger.info("Failed to remove VM from Groups with message #{e.message}")
               raise e
             end
+            begin
+              @nsxt_policy_provider.remove_vm_from_server_pools(vm_ip)
+            rescue => e
+              logger.info("Failed to remove VM from ServerPool: #{e.message}")
+            end
           # MANAGER API
           else
             begin

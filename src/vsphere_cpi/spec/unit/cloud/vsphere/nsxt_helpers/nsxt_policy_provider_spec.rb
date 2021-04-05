@@ -285,4 +285,25 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
       end
     end
   end
+
+  describe '#remove_vm_from_server_pools' do
+    let(:vm_ip_address) { '192.168.111.5' }
+    let(:pool_member) { NSXTPolicy::LBPoolMember.new(port: 80, ip_address: vm_ip_address) }
+    let(:server_pool_1) do
+      NSXTPolicy::LBPool.new(id: 'some-serverpool',  members: [pool_member])
+    end
+    let(:server_pool_2) do
+      NSXTPolicy::LBPool.new(id: 'some-other-serverpool')
+    end
+
+    before do
+      allow(policy_load_balancer_pools_api).to receive_message_chain(:list_lb_pools, :results).and_return([server_pool_1, server_pool_2])
+    end
+
+    it 'removes VM from all server pools' do
+      expected_server_pool = NSXTPolicy::LBPool.new(id: 'some-serverpool', members: [])
+      expect(policy_load_balancer_pools_api).to receive(:update_lb_pool_0).with('some-serverpool', expected_server_pool).once
+      nsxt_policy_provider.remove_vm_from_server_pools(vm_ip_address)
+    end
+  end
 end

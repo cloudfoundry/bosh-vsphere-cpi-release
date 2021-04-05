@@ -430,7 +430,7 @@ describe 'CPI', nsxt_all: true do
           delete_lb_pool(server_pool_name_2)
         end
 
-        it 'creates VM in specified segments' do
+        it 'creates VM in specified server pools and deletes from pools when VM is deleted' do
           simple_vm_lifecycle(cpi, '', vm_type, policy_network_spec) do |vm_id|
             vm = @cpi.vm_provider.find(vm_id)
             segment_names = vm.get_nsxt_segment_vif_list.map { |x| x[0] }
@@ -446,6 +446,11 @@ describe 'CPI', nsxt_all: true do
             expect(server_pool_2.members[0].ip_address).to eq(vm.mob.guest&.ip_address)
             expect(server_pool_2.members[0].port).to eq("80")
           end
+
+          server_pool_1 = @policy_load_balancer_pools_api.read_lb_pool_0(server_pool_name_1)
+          expect(server_pool_1.members).to be_nil
+          server_pool_2 = @policy_load_balancer_pools_api.read_lb_pool_0(server_pool_name_2)
+          expect(server_pool_2.members).to be_nil
         end
       end
     end
