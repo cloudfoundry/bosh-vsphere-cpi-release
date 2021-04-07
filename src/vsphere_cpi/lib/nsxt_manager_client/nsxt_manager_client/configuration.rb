@@ -133,7 +133,7 @@ module NSXT
     def initialize
       @scheme = 'https'
       @host = 'nsxmanager.your.domain'
-      @base_path = 'https://nsxmanager.your.domain/api/v1'
+      @base_path = '/api/v1'
       @api_key = {}
       @api_key_prefix = {}
       @timeout = 0
