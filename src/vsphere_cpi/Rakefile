@@ -53,6 +53,16 @@ namespace :swagger do
        "-c ./data/nsxt_manager_api/config.json -t ./data/swagger-nsxt-template-deserialization",
        "-Dmodels=LogicalPortAttachment"
      ].join(' ')
+
+    #Patch Configuration which also has wrong _deserialize method
+    sh [
+           "swagger-codegen generate",
+           "-i ./data/nsxt_manager_api/nsxt_manager_api.json",
+           "-l ruby",
+           "-o ./lib/nsxt_manager_client",
+           "-c ./data/nsxt_manager_api/config.json -t ./data/swagger-nsxt-template-deserialization",
+           "-Dmodels=Configuration"
+       ].join(' ')
   
     rm_rf (["./lib/nsxt_manager_client/.swagger-codegen-ignore",
       "./lib/nsxt_manager_client/.swagger-codegen",
