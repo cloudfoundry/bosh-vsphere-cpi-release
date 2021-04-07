@@ -47,6 +47,11 @@ module NSXT
     # @return [String]
     attr_accessor :password
 
+    # Set this to false if NSX-T is using VMware Identity Manager
+    #
+    # @return [true, false]
+    attr_accessor :remote_auth
+
     # Defines the access token (Bearer) used with OAuth2.
     attr_accessor :access_token
 
@@ -141,6 +146,7 @@ module NSXT
       @debugging = false
       @inject_format = false
       @force_ending_format = false
+      @remote_auth = false
       @logger = defined?(Rails) ? Rails.logger : Logger.new(STDOUT)
 
       yield(self) if block_given?
