@@ -35,3 +35,18 @@ Create the lifecycle.env file with the following [environment variables](https:/
 source lifecycle.env
 $SRC_DIR/bin/test-integration
 ```
+
+## Generating clients
+
+### NSX-T manager client
+
+NSX-T manager client is generated with [swagger-codegen](https://github.com/swagger-api/swagger-codegen) of major version `2`. To install `swagger-codegen` version `2.x.x` run the following:
+
+```
+brew install swagger-codegen@2
+
+export PATH="/usr/local/opt/swagger-codegen@2/bin:$PATH"
+
+cd src/vsphere_cpi
+bundle exec rake swagger:nsxt_manager_client
+```
