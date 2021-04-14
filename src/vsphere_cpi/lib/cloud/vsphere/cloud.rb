@@ -562,13 +562,14 @@ module VSphereCloud
           client.set_custom_field(vm.mob, name, value)
         end
         if @config.nsxt_enabled?
-          unless @config.nsxt.use_policy_api?
+          if @config.nsxt.use_policy_api?
+            @nsxt_policy_provider.update_vm_metadata_on_segment_ports(vm, metadata)
+          else
             @nsxt_provider.update_vm_metadata_on_logical_ports(vm, metadata)
           end
        end
       end
     end
-
 
     def set_disk_metadata(disk_id, metadata)
       # not implemented

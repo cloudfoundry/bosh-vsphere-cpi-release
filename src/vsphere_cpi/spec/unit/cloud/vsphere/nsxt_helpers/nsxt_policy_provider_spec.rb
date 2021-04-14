@@ -16,6 +16,16 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
     allow(nsxt_policy_provider).to receive(:policy_load_balancer_pools_api).and_return(policy_load_balancer_pools_api)
   end
 
+  let(:search_api) { instance_double(NSXTPolicy::SearchSearchAPIApi) }
+  before do
+    allow(nsxt_policy_provider).to receive(:search_api).and_return(search_api)
+  end
+
+  let(:policy_segment_port_api) { instance_double(NSXTPolicy::PolicyNetworkingConnectivitySegmentsPortsApi) }
+  before do
+    allow(nsxt_policy_provider).to receive(:policy_segment_port_api).and_return(policy_segment_port_api)
+  end
+
   let(:vm_expression) {
     NSXTPolicy::Condition.new(resource_type: 'Condition',
                               key: 'Name',
@@ -304,6 +314,97 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
       expected_server_pool = NSXTPolicy::LBPool.new(id: 'some-serverpool', members: [])
       expect(policy_load_balancer_pools_api).to receive(:update_lb_pool_0).with('some-serverpool', expected_server_pool).once
       nsxt_policy_provider.remove_vm_from_server_pools(vm_ip_address)
+    end
+  end
+
+  describe '#update_vm_metadata_on_segment_ports' do
+    let(:metadata) { { 'id' => 'new-bosh-id' } }
+    let(:id_hex) { Digest::SHA1.hexdigest('new-bosh-id') }
+    let(:vm) { instance_double(VSphereCloud::Resources::VM, get_nsxt_segment_vif_list: [['segment-name-1', 'attachment-1'], ['segment-name-2', 'attachment-2']]) }
+    let(:search_result1) { instance_double(NSXTPolicy::SearchResponse, results: [id: 'segment-port-id-1']) }
+    let(:search_result2) { instance_double(NSXTPolicy::SearchResponse, results: [id: 'segment-port-id-2']) }
+    let(:segment_port1) { NSXTPolicy::SegmentPort.new(id: 'segment-port-id-1', tags: existing_tags) }
+    let(:segment_port2) { NSXTPolicy::SegmentPort.new(id: 'segment-port-id-2', tags: existing_tags) }
+
+    before do
+      allow(search_api).to receive(:query_search).with('attachment.id:attachment-1').and_return(search_result1)
+      allow(search_api).to receive(:query_search).with('attachment.id:attachment-2').and_return(search_result2)
+      allow(policy_segment_port_api).to receive(:get_infra_segment_port).with('segment-name-1', 'segment-port-id-1').and_return(segment_port1)
+      allow(policy_segment_port_api).to receive(:get_infra_segment_port).with('segment-name-2', 'segment-port-id-2').and_return(segment_port2)
+    end
+
+    context 'when segment ports do not have any tags' do
+      let(:existing_tags) { nil }
+      let(:new_tags) { [NSXTPolicy::Tag.new('scope' => 'bosh/id', 'tag' => id_hex)] }
+
+      it 'adds the id tag' do
+        expect(policy_segment_port_api).to receive(:patch_infra_segment_port).once.ordered do |segment_name, port_id, segment_port|
+          expect(segment_name).to eq('segment-name-1')
+          expect(port_id).to eq('segment-port-id-1')
+          expect(segment_port.tags).to eq(new_tags)
+        end
+        expect(policy_segment_port_api).to receive(:patch_infra_segment_port).once.ordered do |segment_name, port_id, segment_port|
+          expect(segment_name).to eq('segment-name-2')
+          expect(port_id).to eq('segment-port-id-2')
+          expect(segment_port.tags).to eq(new_tags)
+        end
+
+        nsxt_policy_provider.update_vm_metadata_on_segment_ports(vm, metadata)
+      end
+    end
+
+    context 'when logical ports have non id tags' do
+      let(:non_id_tag) { NSXTPolicy::Tag.new('scope' => 'bosh/fake', 'tag' => 'fake-data') }
+      let(:existing_tags) { [non_id_tag] }
+      let(:new_tags) { [non_id_tag, NSXTPolicy::Tag.new('scope' => 'bosh/id', 'tag' => id_hex)] }
+
+      it 'sets the id tag' do
+        expect(policy_segment_port_api).to receive(:patch_infra_segment_port).once.ordered do |segment_name, port_id, segment_port|
+          expect(segment_name).to eq('segment-name-1')
+          expect(port_id).to eq('segment-port-id-1')
+          expect(segment_port.tags).to eq(new_tags)
+        end
+        expect(policy_segment_port_api).to receive(:patch_infra_segment_port).once.ordered do |segment_name, port_id, segment_port|
+          expect(segment_name).to eq('segment-name-2')
+          expect(port_id).to eq('segment-port-id-2')
+          expect(segment_port.tags).to eq(new_tags)
+        end
+
+        nsxt_policy_provider.update_vm_metadata_on_segment_ports(vm, metadata)
+      end
+    end
+
+    context 'when segment ports have one id tag' do
+      let(:old_vm_id_tag) { NSXTPolicy::Tag.new('scope' => 'bosh/id', 'tag' => Digest::SHA1.hexdigest('old-bosh-id')) }
+      let(:non_id_tag) { NSXTPolicy::Tag.new('scope' => 'bosh/fake', 'tag' => 'fake-data') }
+      let(:existing_tags) { [non_id_tag, old_vm_id_tag] }
+      let(:new_tags) { [non_id_tag, NSXTPolicy::Tag.new('scope' => 'bosh/id', 'tag' => id_hex)] }
+
+      it 'consolidates the existing id tags and sets it' do
+        expect(policy_segment_port_api).to receive(:patch_infra_segment_port).once.ordered do |segment_name, port_id, segment_port|
+          expect(segment_name).to eq('segment-name-1')
+          expect(port_id).to eq('segment-port-id-1')
+          expect(segment_port.tags).to eq(new_tags)
+        end
+        expect(policy_segment_port_api).to receive(:patch_infra_segment_port).once.ordered do |segment_name, port_id, segment_port|
+          expect(segment_name).to eq('segment-name-2')
+          expect(port_id).to eq('segment-port-id-2')
+          expect(segment_port.tags).to eq(new_tags)
+        end
+
+        nsxt_policy_provider.update_vm_metadata_on_segment_ports(vm, metadata)
+      end
+    end
+
+    context 'when segment ports more than one id tag' do
+      let(:old_vm_id_tag) { NSXTPolicy::Tag.new('scope' => 'bosh/id', 'tag' => Digest::SHA1.hexdigest('old-bosh-id')) }
+      let(:existing_tags) { [NSXTPolicy::Tag.new('scope' => 'bosh/id', 'tag' => id_hex), old_vm_id_tag] }
+
+      it 'raises an error' do
+        expect do
+          nsxt_policy_provider.update_vm_metadata_on_segment_ports(vm, metadata)
+        end.to raise_error(VSphereCloud::InvalidSegmentPortError)
+      end
     end
   end
 end

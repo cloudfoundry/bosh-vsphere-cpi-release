@@ -52,6 +52,7 @@ describe 'CPI', nsxt_all: true do
     @policy_group_members_api = NSXTPolicy::PolicyInventoryGroupsGroupMembersApi.new(policy_client)
     @policy_segment_api = NSXTPolicy::PolicyNetworkingConnectivitySegmentsSegmentsApi.new(policy_client)
     @policy_enforcement_points_api = NSXTPolicy::PolicyInfraEnforcementPointsApi.new(policy_client)
+    @segments_ports_api = NSXTPolicy::PolicyNetworkingConnectivitySegmentsPortsApi.new(policy_client)
   end
 
   after(:all) do
@@ -143,6 +144,8 @@ describe 'CPI', nsxt_all: true do
         }
     }
   end
+
+  class SegmentPortsAreNotInitialized < StandardError; end
 
   describe 'on create_vm' do
     context 'when global default_vif_type is set' do
@@ -356,26 +359,9 @@ describe 'CPI', nsxt_all: true do
         }
       end
 
-      before do
-        tzs = @policy_enforcement_points_api.list_transport_zones_for_enforcement_point(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, 'default')
-        overlay_tz = tzs.results.find { |tz| tz.display_name == 'tz-overlay' }
-        seg_1 = NSXTPolicy::Segment.new(display_name: segment_name_1, transport_zone_path: overlay_tz.path)
-        @policy_segment_api.create_or_replace_infra_segment(segment_name_1, seg_1)
-        seg_2 = NSXTPolicy::Segment.new(display_name: segment_name_2, transport_zone_path: overlay_tz.path)
-        @policy_segment_api.create_or_replace_infra_segment(segment_name_2, seg_2)
-      end
+      before { create_segments([segment_name_1, segment_name_2]) }
 
-      after do
-        Bosh::Retryable.new(
-          tries: 61,
-          sleep: ->(try_count, retry_exception) { 1 },
-          on: [NSXTPolicy::ApiCallError]
-        ).retryer do |i|
-          @policy_segment_api.delete_infra_segment(segment_name_1)
-          @policy_segment_api.delete_infra_segment(segment_name_2)
-          true
-        end
-      end
+      after { delete_segments([segment_name_1, segment_name_2]) }
 
       context 'with ns groups' do
         let(:nsxt_spec) {
@@ -574,12 +560,43 @@ describe 'CPI', nsxt_all: true do
     context 'with bosh id' do
       let(:bosh_id) { SecureRandom.uuid }
 
-      it "tags the VM's logical ports with the bosh id" do
-        simple_vm_lifecycle(cpi, '', vm_type, network_spec) do |vm_id|
-          cpi.set_vm_metadata(vm_id, 'id' => bosh_id)
-          verify_ports(vm_id) do |logical_port|
-            expect(logical_port.tags.first.scope).to eq('bosh/id')
-            expect(logical_port.tags.first.tag).to eq(Digest::SHA1.hexdigest(bosh_id))
+      context 'when using policy API' do
+        let(:cpi) do
+          VSphereCloud::Cloud.new(cpi_options(nsxt: {
+              host: @nsxt_host,
+              username: @nsxt_username,
+              password: @nsxt_password,
+              use_policy_api: true,
+          }))
+        end
+
+        before { create_segments([segment_name_1, segment_name_2]) }
+
+        after { delete_segments([segment_name_1, segment_name_2]) }
+
+        it "tags the VM's segment ports with the bosh id" do
+          simple_vm_lifecycle(cpi, '', vm_type, policy_network_spec) do |vm_id|
+            cpi.set_vm_metadata(vm_id, 'id' => bosh_id)
+            verify_policy_ports([segment_name_1, segment_name_2]) do |ports|
+              expect(ports.length).to eq(1)
+              ports.each do |port|
+                expect(port.tags.length).to eq(1)
+                expect(port.tags.first.scope).to eq('bosh/id')
+                expect(port.tags.first.tag).to eq(Digest::SHA1.hexdigest(bosh_id))
+              end
+            end
+          end
+        end
+      end
+
+      context 'when using management API' do
+        it "tags the VM's logical ports with the bosh id" do
+          simple_vm_lifecycle(cpi, '', vm_type, network_spec) do |vm_id|
+            cpi.set_vm_metadata(vm_id, 'id' => bosh_id)
+            verify_ports(vm_id) do |logical_port|
+              expect(logical_port.tags.first.scope).to eq('bosh/id')
+              expect(logical_port.tags.first.tag).to eq(Digest::SHA1.hexdigest(bosh_id))
+            end
           end
         end
       end
@@ -655,6 +672,17 @@ describe 'CPI', nsxt_all: true do
     end
   end
 
+  def verify_policy_ports(segment_names)
+    retryer do
+      segment_names.each do |segment_name|
+        segment_ports = @segments_ports_api.list_infra_segment_ports(segment_name).results
+        raise SegmentPortsAreNotInitialized.new if segment_ports.empty?
+        expect(segment_ports.length).to eq(1)
+        yield segment_ports if block_given?
+      end
+    end
+  end
+
   def nsxt_client
     nsxt.instance_variable_get('@client')
   end
@@ -679,9 +707,13 @@ describe 'CPI', nsxt_all: true do
     @policy_group_api.delete_group(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, group_name)
   end
 
-  def create_segment(segment_name)
-    seg = NSXTPolicy::Segment.new(:display_name => segment_name, :overlay_id => 'tz-overlay')
-    @policy_segment_api.create_or_replace_infra_segment(segment_name, awg)
+  def create_segments(segment_names)
+    tzs = @policy_enforcement_points_api.list_transport_zones_for_enforcement_point(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, 'default')
+    overlay_tz = tzs.results.find { |tz| tz.display_name == 'tz-overlay' }
+    segment_names.each do |segment_name|
+      seg_1 = NSXTPolicy::Segment.new(display_name: segment_name, transport_zone_path: overlay_tz.path)
+      @policy_segment_api.create_or_replace_infra_segment(segment_name, seg_1)
+    end
   end
 
   def nsgroup_effective_logical_port_member_ids(nsgroup)
@@ -727,13 +759,14 @@ describe 'CPI', nsxt_all: true do
 
   def retryer
     Bosh::Retryable.new(
-      tries: 61,
+      tries: 300,
       sleep: ->(try_count, retry_exception) { 1 },
       on: [
         VSphereCloud::VirtualMachineNotFound,
         VSphereCloud::MultipleVirtualMachinesFound,
         VSphereCloud::VIFNotFound,
-        VSphereCloud::LogicalPortNotFound
+        VSphereCloud::LogicalPortNotFound,
+        SegmentPortsAreNotInitialized,
       ]
     ).retryer do |i|
       yield i if block_given?
@@ -777,4 +810,16 @@ describe 'CPI', nsxt_all: true do
     cert
   end
 
+  def delete_segments(segment_names)
+    Bosh::Retryable.new(
+        tries: 61,
+        sleep: ->(try_count, retry_exception) { 1 },
+        on: [NSXTPolicy::ApiCallError]
+    ).retryer do |i|
+      segment_names.each do |segment_name|
+        @policy_segment_api.delete_infra_segment(segment_name)
+      end
+      true
+    end
+  end
 end

@@ -12,9 +12,27 @@ module VSphereCloud
     end
   end
 
-  class NSXTPolicyProvider
-    DEFAULT_NSXT_POLICY_DOMAIN = 'default'.freeze
+  class SegmentPortNotFound < StandardError
+    def initialize(attachment_id)
+      @attachment_id = attachment_id
+    end
 
+    def to_s
+      "Segment port with attachment id: #{@attachment_id} not found"
+    end
+  end
+
+  class InvalidSegmentPortError < StandardError
+    def initialize(segment_port)
+      @segment_port = segment_port
+    end
+
+    def to_s
+      "Segment port #{@segment_port.id} has multiple values for tag with scope 'bosh/id'"
+    end
+  end
+
+  class NSXTPolicyProvider
     include Logger
 
     def initialize(client,  default_vif_type='PARENT')
@@ -85,9 +103,45 @@ module VSphereCloud
       end
     end
 
+    def update_vm_metadata_on_segment_ports(vm, metadata)
+      segment_ports = vm.get_nsxt_segment_vif_list
+      segment_ports.each do |segment_name, attachment_id|
+        Bosh::Retryable.new(
+            tries: [@max_tries, NSXT_SEGMENT_PORT_RETRIES].max,
+            sleep: ->(try_count, retry_exception) { [NSXT_MIN_SLEEP, @sleep_time].max },
+            on: [SegmentPortNotFound]
+        ).retryer do |i|
+          segment_port_search_result = search_api.query_search("attachment.id:#{attachment_id}").results[0]
+          raise SegmentPortNotFound.new(attachment_id) if segment_port_search_result.nil?
+
+          segment_port = policy_segment_port_api.get_infra_segment_port(segment_name, segment_port_search_result[:id])
+          raise SegmentPortNotFound.new(attachment_id) if segment_port.nil?
+
+          tags = segment_port.tags || []
+          tags_by_scope = tags.group_by { |tag| tag.scope }
+          bosh_id_tags = tags_by_scope.fetch('bosh/id', [])
+
+          raise InvalidSegmentPortError.new(segment_port) if bosh_id_tags.uniq.length > 1
+
+          id_tag = NSXTPolicy::Tag.new('scope' => 'bosh/id', 'tag' => Digest::SHA1.hexdigest(metadata['id']))
+          tags.delete_if { |tag| tag.scope == 'bosh/id' }
+          tags << id_tag
+
+          segment_port.tags = tags
+
+          policy_segment_port_api.patch_infra_segment_port(segment_name, segment_port.id, segment_port)
+
+          true
+        end
+      end
+    end
+
     private
 
+    DEFAULT_NSXT_POLICY_DOMAIN = 'default'.freeze
+    NSXT_MIN_SLEEP = 1
     DEFAULT_SLEEP = 1
+    NSXT_SEGMENT_PORT_RETRIES = 200
     MAX_TRIES=100
 
     def retry_on_conflict(log_str)
@@ -193,6 +247,14 @@ module VSphereCloud
 
     def policy_load_balancer_pools_api
       @policy_load_balancer_pools_api ||= NSXTPolicy::PolicyNetworkingNetworkServicesLoadBalancingLoadBalancerPoolsApi.new(@client)
+    end
+
+    def policy_infra_realized_state_api
+      @policy_infra_realized_state_api ||= NSXTPolicy::PolicyInfraRealizedStateApi.new(@client)
+    end
+
+    def search_api
+      @search_api ||= NSXTPolicy::SearchSearchAPIApi.new(@client)
     end
   end
 end
