@@ -306,4 +306,14 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
       nsxt_policy_provider.remove_vm_from_server_pools(vm_ip_address)
     end
   end
+
+  describe '#update_vm_metadata_on_segment_ports' do
+    let(:metadata) { { 'id' => 'new-bosh-id' } }
+
+    context 'when segment ports do not have any tags' do
+      it 'adds the id tag' do
+        nsxt_policy_provider.update_vm_metadata_on_segment_ports(vm, metadata)
+      end
+    end
+  end
 end

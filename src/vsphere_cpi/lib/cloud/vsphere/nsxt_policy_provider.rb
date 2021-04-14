@@ -85,6 +85,18 @@ module VSphereCloud
       end
     end
 
+    def update_vm_metadata_on_segment_ports(vm, metadata)
+      require 'pry'
+      binding.pry
+      policy_vms = policy_infra_realized_state_api.list_all_virtual_machines(display_name: vm.cid).results
+      raise VirtualMachineNotFound.new(vm.cid) if policy_vms.empty?
+      external_id = policy_vms.first.external_id
+
+      vm_info = policy_infra_realized_state_api.read_virtual_machine_details(DEFAULT_NSXT_POLICY_DOMAIN, external_id)
+
+      segment_ports = policy_segments_ports_api.list_infra_segment_ports(segment_name).results
+    end
+
     private
 
     DEFAULT_SLEEP = 1
@@ -193,6 +205,10 @@ module VSphereCloud
 
     def policy_load_balancer_pools_api
       @policy_load_balancer_pools_api ||= NSXTPolicy::PolicyNetworkingNetworkServicesLoadBalancingLoadBalancerPoolsApi.new(@client)
+    end
+
+    def policy_infra_realized_state_api
+      @policy_infra_realized_state_api ||= NSXTPolicy::PolicyInfraRealizedStateApi.new(@client)
     end
   end
 end
