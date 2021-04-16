@@ -560,7 +560,7 @@ describe 'CPI', nsxt_all: true do
     context 'with bosh id' do
       let(:bosh_id) { SecureRandom.uuid }
 
-      context 'when using policy API' do
+      context 'when using policy API', nsxt_policy: true do
         let(:cpi) do
           VSphereCloud::Cloud.new(cpi_options(nsxt: {
               host: @nsxt_host,
