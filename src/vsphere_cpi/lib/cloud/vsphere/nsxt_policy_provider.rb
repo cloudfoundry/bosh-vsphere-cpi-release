@@ -104,6 +104,8 @@ module VSphereCloud
     end
 
     def update_vm_metadata_on_segment_ports(vm, metadata)
+      return unless metadata && metadata.has_key?('id')
+
       segment_ports = vm.get_nsxt_segment_vif_list
       segment_ports.each do |segment_name, attachment_id|
         Bosh::Retryable.new(

@@ -406,5 +406,25 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
         end.to raise_error(VSphereCloud::InvalidSegmentPortError)
       end
     end
+
+    context 'when metadata does not have an id' do
+      let(:existing_tags) { nil }
+
+      it 'does not raise an error' do
+        expect do
+          nsxt_policy_provider.update_vm_metadata_on_segment_ports(vm, {})
+        end.to_not raise_error
+      end
+    end
+
+    context 'when metadata is nil' do
+      let(:existing_tags) { nil }
+
+      it 'does not raise an error' do
+        expect do
+          nsxt_policy_provider.update_vm_metadata_on_segment_ports(vm, nil)
+        end.to_not raise_error
+      end
+    end
   end
 end
