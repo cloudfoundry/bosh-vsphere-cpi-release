@@ -70,7 +70,6 @@ $pipeline.pool('7.0-nsxt30') do |pool|
       '--tag ~nsxv',
       '--tag ~host_maintenance',
     ].join(' '),
-    NSXT_SKIP_SSL_VERIFY: "true",
   }
 end
 

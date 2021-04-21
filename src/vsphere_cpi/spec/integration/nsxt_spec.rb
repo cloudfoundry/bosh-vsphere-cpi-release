@@ -48,7 +48,6 @@ describe 'CPI', nsxt_all: true do
     policy_client = NSXTPolicy::ApiClient.new(policy_configuration)
     @policy_group_api = NSXTPolicy::PolicyInventoryGroupsGroupsApi.new(policy_client)
     @policy_load_balancer_pools_api = NSXTPolicy::PolicyNetworkingNetworkServicesLoadBalancingLoadBalancerPoolsApi.new(policy_client)
-    @policy_segment_port_api = NSXTPolicy::PolicyNetworkingConnectivitySegmentsPortsApi.new(policy_client)
     @policy_group_members_api = NSXTPolicy::PolicyInventoryGroupsGroupMembersApi.new(policy_client)
     @policy_segment_api = NSXTPolicy::PolicyNetworkingConnectivitySegmentsSegmentsApi.new(policy_client)
     @policy_enforcement_points_api = NSXTPolicy::PolicyInfraEnforcementPointsApi.new(policy_client)

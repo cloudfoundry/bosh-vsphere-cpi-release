@@ -21,9 +21,9 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
     allow(nsxt_policy_provider).to receive(:search_api).and_return(search_api)
   end
 
-  let(:policy_segment_port_api) { instance_double(NSXTPolicy::PolicyNetworkingConnectivitySegmentsPortsApi) }
+  let(:policy_segment_ports_api) { instance_double(NSXTPolicy::PolicyNetworkingConnectivitySegmentsPortsApi) }
   before do
-    allow(nsxt_policy_provider).to receive(:policy_segment_port_api).and_return(policy_segment_port_api)
+    allow(nsxt_policy_provider).to receive(:policy_segment_ports_api).and_return(policy_segment_ports_api)
   end
 
   let(:vm_expression) {
@@ -321,109 +321,138 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
     let(:metadata) { { 'id' => 'new-bosh-id' } }
     let(:id_hex) { Digest::SHA1.hexdigest('new-bosh-id') }
     let(:vm) { instance_double(VSphereCloud::Resources::VM, get_nsxt_segment_vif_list: [['segment-name-1', 'attachment-1'], ['segment-name-2', 'attachment-2']]) }
-    let(:search_result1) { instance_double(NSXTPolicy::SearchResponse, results: [id: 'segment-port-id-1']) }
-    let(:search_result2) { instance_double(NSXTPolicy::SearchResponse, results: [id: 'segment-port-id-2']) }
+    let(:search_result1) { instance_double(NSXTPolicy::SearchResponse, results: [id: 'segment-port-id-1', path: '/infra/segments/segment-name-1/ports/segment-port-id-1']) }
+    let(:search_result2) { instance_double(NSXTPolicy::SearchResponse, results: [id: 'segment-port-id-2', path: '/infra/segments/segment-name-2/ports/segment-port-id-2']) }
     let(:segment_port1) { NSXTPolicy::SegmentPort.new(id: 'segment-port-id-1', tags: existing_tags) }
     let(:segment_port2) { NSXTPolicy::SegmentPort.new(id: 'segment-port-id-2', tags: existing_tags) }
+    let(:existing_tags) { nil }
 
     before do
       allow(search_api).to receive(:query_search).with('attachment.id:attachment-1').and_return(search_result1)
       allow(search_api).to receive(:query_search).with('attachment.id:attachment-2').and_return(search_result2)
-      allow(policy_segment_port_api).to receive(:get_infra_segment_port).with('segment-name-1', 'segment-port-id-1').and_return(segment_port1)
-      allow(policy_segment_port_api).to receive(:get_infra_segment_port).with('segment-name-2', 'segment-port-id-2').and_return(segment_port2)
     end
 
-    context 'when segment ports do not have any tags' do
-      let(:existing_tags) { nil }
+    context 'when segment port is scoped under the tier-1 router' do
+      before do
+        allow(policy_segment_ports_api).to receive(:get_infra_segment_port).with('segment-name-1', 'segment-port-id-1').and_return(segment_port1)
+        allow(policy_segment_ports_api).to receive(:get_infra_segment_port).with('segment-name-2', 'segment-port-id-2').and_return(segment_port2)
+      end
+
+      context 'when segment ports do not have any tags' do
+        let(:new_tags) { [NSXTPolicy::Tag.new('scope' => 'bosh/id', 'tag' => id_hex)] }
+
+        it 'adds the id tag' do
+          expect(policy_segment_ports_api).to receive(:patch_infra_segment_port).once.ordered do |segment_name, port_id, segment_port|
+            expect(segment_name).to eq('segment-name-1')
+            expect(port_id).to eq('segment-port-id-1')
+            expect(segment_port.tags).to eq(new_tags)
+          end
+          expect(policy_segment_ports_api).to receive(:patch_infra_segment_port).once.ordered do |segment_name, port_id, segment_port|
+            expect(segment_name).to eq('segment-name-2')
+            expect(port_id).to eq('segment-port-id-2')
+            expect(segment_port.tags).to eq(new_tags)
+          end
+
+          nsxt_policy_provider.update_vm_metadata_on_segment_ports(vm, metadata)
+        end
+      end
+
+      context 'when logical ports have non id tags' do
+        let(:non_id_tag) { NSXTPolicy::Tag.new('scope' => 'bosh/fake', 'tag' => 'fake-data') }
+        let(:existing_tags) { [non_id_tag] }
+        let(:new_tags) { [non_id_tag, NSXTPolicy::Tag.new('scope' => 'bosh/id', 'tag' => id_hex)] }
+
+        it 'sets the id tag' do
+          expect(policy_segment_ports_api).to receive(:patch_infra_segment_port).once.ordered do |segment_name, port_id, segment_port|
+            expect(segment_name).to eq('segment-name-1')
+            expect(port_id).to eq('segment-port-id-1')
+            expect(segment_port.tags).to eq(new_tags)
+          end
+          expect(policy_segment_ports_api).to receive(:patch_infra_segment_port).once.ordered do |segment_name, port_id, segment_port|
+            expect(segment_name).to eq('segment-name-2')
+            expect(port_id).to eq('segment-port-id-2')
+            expect(segment_port.tags).to eq(new_tags)
+          end
+
+          nsxt_policy_provider.update_vm_metadata_on_segment_ports(vm, metadata)
+        end
+      end
+
+      context 'when segment ports have one id tag' do
+        let(:old_vm_id_tag) { NSXTPolicy::Tag.new('scope' => 'bosh/id', 'tag' => Digest::SHA1.hexdigest('old-bosh-id')) }
+        let(:non_id_tag) { NSXTPolicy::Tag.new('scope' => 'bosh/fake', 'tag' => 'fake-data') }
+        let(:existing_tags) { [non_id_tag, old_vm_id_tag] }
+        let(:new_tags) { [non_id_tag, NSXTPolicy::Tag.new('scope' => 'bosh/id', 'tag' => id_hex)] }
+
+        it 'consolidates the existing id tags and sets it' do
+          expect(policy_segment_ports_api).to receive(:patch_infra_segment_port).once.ordered do |segment_name, port_id, segment_port|
+            expect(segment_name).to eq('segment-name-1')
+            expect(port_id).to eq('segment-port-id-1')
+            expect(segment_port.tags).to eq(new_tags)
+          end
+          expect(policy_segment_ports_api).to receive(:patch_infra_segment_port).once.ordered do |segment_name, port_id, segment_port|
+            expect(segment_name).to eq('segment-name-2')
+            expect(port_id).to eq('segment-port-id-2')
+            expect(segment_port.tags).to eq(new_tags)
+          end
+
+          nsxt_policy_provider.update_vm_metadata_on_segment_ports(vm, metadata)
+        end
+      end
+
+      context 'when segment ports more than one id tag' do
+        let(:old_vm_id_tag) { NSXTPolicy::Tag.new('scope' => 'bosh/id', 'tag' => Digest::SHA1.hexdigest('old-bosh-id')) }
+        let(:existing_tags) { [NSXTPolicy::Tag.new('scope' => 'bosh/id', 'tag' => id_hex), old_vm_id_tag] }
+
+        it 'raises an error' do
+          expect do
+            nsxt_policy_provider.update_vm_metadata_on_segment_ports(vm, metadata)
+          end.to raise_error(VSphereCloud::InvalidSegmentPortError)
+        end
+      end
+
+      context 'when metadata does not have an id' do
+        it 'does not raise an error' do
+          expect do
+            nsxt_policy_provider.update_vm_metadata_on_segment_ports(vm, {})
+          end.to_not raise_error
+        end
+      end
+
+      context 'when metadata is nil' do
+        it 'does not raise an error' do
+          expect do
+            nsxt_policy_provider.update_vm_metadata_on_segment_ports(vm, nil)
+          end.to_not raise_error
+        end
+      end
+    end
+
+    context 'when segment port is not scoped under the tier-1 router' do
+      let(:search_result1) { instance_double(NSXTPolicy::SearchResponse, results: [id: 'segment-port-id-1', path: '/infra/tier-1s/tier-1-name-1/segments/segment-name-1/ports/segment-port-id-1']) }
+      let(:search_result2) { instance_double(NSXTPolicy::SearchResponse, results: [id: 'segment-port-id-2', path: '/infra/tier-1s/tier-1-name-2/segments/segment-name-2/ports/segment-port-id-2']) }
       let(:new_tags) { [NSXTPolicy::Tag.new('scope' => 'bosh/id', 'tag' => id_hex)] }
 
+      before do
+        allow(policy_segment_ports_api).to receive(:get_tier1_segment_port).with('tier-1-name-1', 'segment-name-1', 'segment-port-id-1').and_return(segment_port1)
+        allow(policy_segment_ports_api).to receive(:get_tier1_segment_port).with('tier-1-name-2', 'segment-name-2', 'segment-port-id-2').and_return(segment_port2)
+      end
+
       it 'adds the id tag' do
-        expect(policy_segment_port_api).to receive(:patch_infra_segment_port).once.ordered do |segment_name, port_id, segment_port|
+        expect(policy_segment_ports_api).to receive(:patch_tier1_segment_port).once.ordered do |tier1_name, segment_name, port_id, segment_port|
+          expect(tier1_name).to eq('tier-1-name-1')
           expect(segment_name).to eq('segment-name-1')
           expect(port_id).to eq('segment-port-id-1')
           expect(segment_port.tags).to eq(new_tags)
         end
-        expect(policy_segment_port_api).to receive(:patch_infra_segment_port).once.ordered do |segment_name, port_id, segment_port|
+        expect(policy_segment_ports_api).to receive(:patch_tier1_segment_port).once.ordered do |tier1_name, segment_name, port_id, segment_port|
+          expect(tier1_name).to eq('tier-1-name-2')
           expect(segment_name).to eq('segment-name-2')
           expect(port_id).to eq('segment-port-id-2')
           expect(segment_port.tags).to eq(new_tags)
         end
 
         nsxt_policy_provider.update_vm_metadata_on_segment_ports(vm, metadata)
-      end
-    end
-
-    context 'when logical ports have non id tags' do
-      let(:non_id_tag) { NSXTPolicy::Tag.new('scope' => 'bosh/fake', 'tag' => 'fake-data') }
-      let(:existing_tags) { [non_id_tag] }
-      let(:new_tags) { [non_id_tag, NSXTPolicy::Tag.new('scope' => 'bosh/id', 'tag' => id_hex)] }
-
-      it 'sets the id tag' do
-        expect(policy_segment_port_api).to receive(:patch_infra_segment_port).once.ordered do |segment_name, port_id, segment_port|
-          expect(segment_name).to eq('segment-name-1')
-          expect(port_id).to eq('segment-port-id-1')
-          expect(segment_port.tags).to eq(new_tags)
-        end
-        expect(policy_segment_port_api).to receive(:patch_infra_segment_port).once.ordered do |segment_name, port_id, segment_port|
-          expect(segment_name).to eq('segment-name-2')
-          expect(port_id).to eq('segment-port-id-2')
-          expect(segment_port.tags).to eq(new_tags)
-        end
-
-        nsxt_policy_provider.update_vm_metadata_on_segment_ports(vm, metadata)
-      end
-    end
-
-    context 'when segment ports have one id tag' do
-      let(:old_vm_id_tag) { NSXTPolicy::Tag.new('scope' => 'bosh/id', 'tag' => Digest::SHA1.hexdigest('old-bosh-id')) }
-      let(:non_id_tag) { NSXTPolicy::Tag.new('scope' => 'bosh/fake', 'tag' => 'fake-data') }
-      let(:existing_tags) { [non_id_tag, old_vm_id_tag] }
-      let(:new_tags) { [non_id_tag, NSXTPolicy::Tag.new('scope' => 'bosh/id', 'tag' => id_hex)] }
-
-      it 'consolidates the existing id tags and sets it' do
-        expect(policy_segment_port_api).to receive(:patch_infra_segment_port).once.ordered do |segment_name, port_id, segment_port|
-          expect(segment_name).to eq('segment-name-1')
-          expect(port_id).to eq('segment-port-id-1')
-          expect(segment_port.tags).to eq(new_tags)
-        end
-        expect(policy_segment_port_api).to receive(:patch_infra_segment_port).once.ordered do |segment_name, port_id, segment_port|
-          expect(segment_name).to eq('segment-name-2')
-          expect(port_id).to eq('segment-port-id-2')
-          expect(segment_port.tags).to eq(new_tags)
-        end
-
-        nsxt_policy_provider.update_vm_metadata_on_segment_ports(vm, metadata)
-      end
-    end
-
-    context 'when segment ports more than one id tag' do
-      let(:old_vm_id_tag) { NSXTPolicy::Tag.new('scope' => 'bosh/id', 'tag' => Digest::SHA1.hexdigest('old-bosh-id')) }
-      let(:existing_tags) { [NSXTPolicy::Tag.new('scope' => 'bosh/id', 'tag' => id_hex), old_vm_id_tag] }
-
-      it 'raises an error' do
-        expect do
-          nsxt_policy_provider.update_vm_metadata_on_segment_ports(vm, metadata)
-        end.to raise_error(VSphereCloud::InvalidSegmentPortError)
-      end
-    end
-
-    context 'when metadata does not have an id' do
-      let(:existing_tags) { nil }
-
-      it 'does not raise an error' do
-        expect do
-          nsxt_policy_provider.update_vm_metadata_on_segment_ports(vm, {})
-        end.to_not raise_error
-      end
-    end
-
-    context 'when metadata is nil' do
-      let(:existing_tags) { nil }
-
-      it 'does not raise an error' do
-        expect do
-          nsxt_policy_provider.update_vm_metadata_on_segment_ports(vm, nil)
-        end.to_not raise_error
       end
     end
   end

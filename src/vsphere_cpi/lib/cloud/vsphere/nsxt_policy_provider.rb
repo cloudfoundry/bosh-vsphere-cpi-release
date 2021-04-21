@@ -107,6 +107,7 @@ module VSphereCloud
       return unless metadata && metadata.has_key?('id')
 
       segment_ports = vm.get_nsxt_segment_vif_list
+      return if segment_ports.nil?
       segment_ports.each do |segment_name, attachment_id|
         Bosh::Retryable.new(
             tries: [@max_tries, NSXT_SEGMENT_PORT_RETRIES].max,
@@ -116,7 +117,14 @@ module VSphereCloud
           segment_port_search_result = search_api.query_search("attachment.id:#{attachment_id}").results[0]
           raise SegmentPortNotFound.new(attachment_id) if segment_port_search_result.nil?
 
-          segment_port = policy_segment_port_api.get_infra_segment_port(segment_name, segment_port_search_result[:id])
+          tier1_data = segment_port_search_result[:path].match(/\/infra\/tier-1s\/(.*)\/segments/)
+          tier1_router_name = tier1_data.nil? ? nil: tier1_data[1]
+          if tier1_router_name
+            # Segment port is scoped under the tier-1
+            segment_port = policy_segment_ports_api.get_tier1_segment_port(tier1_router_name, segment_name, segment_port_search_result[:id])
+          else
+            segment_port = policy_segment_ports_api.get_infra_segment_port(segment_name, segment_port_search_result[:id])
+          end
           raise SegmentPortNotFound.new(attachment_id) if segment_port.nil?
 
           tags = segment_port.tags || []
@@ -131,7 +139,11 @@ module VSphereCloud
 
           segment_port.tags = tags
 
-          policy_segment_port_api.patch_infra_segment_port(segment_name, segment_port.id, segment_port)
+          if tier1_router_name
+            policy_segment_ports_api.patch_tier1_segment_port(tier1_router_name, segment_name, segment_port.id, segment_port)
+          else
+            policy_segment_ports_api.patch_infra_segment_port(segment_name, segment_port.id, segment_port)
+          end
 
           true
         end
@@ -235,8 +247,8 @@ module VSphereCloud
       end
     end
 
-    def policy_segment_port_api
-      @policy_segment_port_api ||= NSXTPolicy::PolicyNetworkingConnectivitySegmentsPortsApi.new(@client)
+    def policy_segment_ports_api
+      @policy_segment_ports_api ||= NSXTPolicy::PolicyNetworkingConnectivitySegmentsPortsApi.new(@client)
     end
 
     def policy_segment_api
