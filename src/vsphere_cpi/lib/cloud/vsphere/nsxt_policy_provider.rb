@@ -121,7 +121,7 @@ module VSphereCloud
           tier1_router_name = tier1_data.nil? ? nil: tier1_data[1]
           if tier1_router_name
             # Segment port is scoped under the tier-1
-            segment_port = policy_segment_ports_api.get_tier1_segment_port(tier1_router_name, segment_name, segment_port_search_result[:id])
+            segment_port = policy_segment_ports_api.get_tier1_segment_port_0(tier1_router_name, segment_name, segment_port_search_result[:id])
           else
             segment_port = policy_segment_ports_api.get_infra_segment_port(segment_name, segment_port_search_result[:id])
           end
@@ -140,7 +140,7 @@ module VSphereCloud
           segment_port.tags = tags
 
           if tier1_router_name
-            policy_segment_ports_api.patch_tier1_segment_port(tier1_router_name, segment_name, segment_port.id, segment_port)
+            policy_segment_ports_api.patch_tier1_segment_port_0(tier1_router_name, segment_name, segment_port.id, segment_port)
           else
             policy_segment_ports_api.patch_infra_segment_port(segment_name, segment_port.id, segment_port)
           end

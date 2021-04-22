@@ -434,18 +434,18 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
       let(:new_tags) { [NSXTPolicy::Tag.new('scope' => 'bosh/id', 'tag' => id_hex)] }
 
       before do
-        allow(policy_segment_ports_api).to receive(:get_tier1_segment_port).with('tier-1-name-1', 'segment-name-1', 'segment-port-id-1').and_return(segment_port1)
-        allow(policy_segment_ports_api).to receive(:get_tier1_segment_port).with('tier-1-name-2', 'segment-name-2', 'segment-port-id-2').and_return(segment_port2)
+        allow(policy_segment_ports_api).to receive(:get_tier1_segment_port_0).with('tier-1-name-1', 'segment-name-1', 'segment-port-id-1').and_return(segment_port1)
+        allow(policy_segment_ports_api).to receive(:get_tier1_segment_port_0).with('tier-1-name-2', 'segment-name-2', 'segment-port-id-2').and_return(segment_port2)
       end
 
       it 'adds the id tag' do
-        expect(policy_segment_ports_api).to receive(:patch_tier1_segment_port).once.ordered do |tier1_name, segment_name, port_id, segment_port|
+        expect(policy_segment_ports_api).to receive(:patch_tier1_segment_port_0).once.ordered do |tier1_name, segment_name, port_id, segment_port|
           expect(tier1_name).to eq('tier-1-name-1')
           expect(segment_name).to eq('segment-name-1')
           expect(port_id).to eq('segment-port-id-1')
           expect(segment_port.tags).to eq(new_tags)
         end
-        expect(policy_segment_ports_api).to receive(:patch_tier1_segment_port).once.ordered do |tier1_name, segment_name, port_id, segment_port|
+        expect(policy_segment_ports_api).to receive(:patch_tier1_segment_port_0).once.ordered do |tier1_name, segment_name, port_id, segment_port|
           expect(tier1_name).to eq('tier-1-name-2')
           expect(segment_name).to eq('segment-name-2')
           expect(port_id).to eq('segment-port-id-2')
