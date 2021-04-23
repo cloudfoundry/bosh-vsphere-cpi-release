@@ -155,7 +155,7 @@ module VSphereCloud
     DEFAULT_NSXT_POLICY_DOMAIN = 'default'.freeze
     NSXT_MIN_SLEEP = 1
     DEFAULT_SLEEP = 1
-    NSXT_SEGMENT_PORT_RETRIES = 200
+    NSXT_SEGMENT_PORT_RETRIES = 300
     MAX_TRIES=100
 
     def retry_on_conflict(log_str)
