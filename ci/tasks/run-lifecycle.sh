@@ -33,6 +33,9 @@ if [ $BOSH_VSPHERE_CPI_NSXT_HOST != "null" ]; then
   export BOSH_NSXT_CA_CERT_FILE=$(realpath $PWD/nsxt-manager-cert.pem)
   # To get the cert from nsxt-manager, we run openssl on the jump box, and then pipe that result into a local openssl command that reformats it into PEM
   sshpass -p "vcpi" ssh -o StrictHostKeyChecking=no "vcpi@${BOSH_VSPHERE_JUMPER_HOST}" -C "openssl s_client -showcerts -connect $BOSH_VSPHERE_CPI_NSXT_HOST:443 </dev/null 2>/dev/null" | openssl x509 -outform PEM > $BOSH_NSXT_CA_CERT_FILE
+  # The certificate's subject name is nsxt-manager so SSL validation fails when using the IP address
+  echo "${BOSH_VSPHERE_CPI_NSXT_HOST} nsxt-manager" >> /etc/hosts
+  export BOSH_VSPHERE_CPI_NSXT_HOST="https://nsxt-manager"
 fi
 
 pushd bosh-cpi-src/src/vsphere_cpi
