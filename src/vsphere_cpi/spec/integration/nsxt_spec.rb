@@ -19,13 +19,19 @@ describe 'CPI', nsxt_all: true do
     configuration.username = @nsxt_username
     configuration.password = @nsxt_password
     configuration.client_side_validation = false
-    configuration.verify_ssl = false
-    configuration.verify_ssl_host = false
-    client = NSXT::ApiClient.new(configuration)
+
+    if ENV['BOSH_NSXT_CA_CERT_FILE']
+      configuration.ssl_ca_cert = ENV['BOSH_NSXT_CA_CERT_FILE']
+    end
+    if ENV['NSXT_SKIP_SSL_VERIFY']
+      configuration.verify_ssl = false
+      configuration.verify_ssl_host = false
+    end
+    @manager_client= NSXT::ApiClient.new(configuration)
 
     # Add cert and key
-    @nsx_component_api = NSXT::ManagementPlaneApiNsxComponentAdministrationTrustManagementCertificateApi.new(client)
-    @nsx_component_trust_mgmt_api = NSXT::ManagementPlaneApiNsxComponentAdministrationTrustManagementPrincipalIdentityApi.new(client)
+    @nsx_component_api = NSXT::ManagementPlaneApiNsxComponentAdministrationTrustManagementCertificateApi.new(@manager_client)
+    @nsx_component_trust_mgmt_api = NSXT::ManagementPlaneApiNsxComponentAdministrationTrustManagementPrincipalIdentityApi.new(@manager_client)
     @private_key = generate_private_key
     @certificate = generate_certificate(@private_key)
     @cert_id = submit_cert_to_nsxt(@certificate)
@@ -201,7 +207,7 @@ describe 'CPI', nsxt_all: true do
         let!(:nsgroup_1) { create_nsgroup(nsgroup_name_1) }
         let!(:nsgroup_2) { create_nsgroup(nsgroup_name_2) }
         before do
-          grouping_object_svc = NSXT::ManagementPlaneApiGroupingObjectsNsGroupsApi.new(nsxt)
+          grouping_object_svc = NSXT::ManagementPlaneApiGroupingObjectsNsGroupsApi.new(@manager_client)
           nsgroups = grouping_object_svc.list_ns_groups.results.select do |nsgroup|
             [nsgroup_name_1, nsgroup_name_2].include?(nsgroup.display_name)
           end
@@ -226,13 +232,13 @@ describe 'CPI', nsxt_all: true do
           it 'does NOT add VM to NSGroups' do
             simple_vm_lifecycle(cpi, @vlan, vm_type) do |vm_id|
               retryer do
-                fabric_svc = NSXT::ManagementPlaneApiFabricVirtualMachinesApi.new(nsxt)
+                fabric_svc = NSXT::ManagementPlaneApiFabricVirtualMachinesApi.new(@manager_client)
                 nsxt_vms = fabric_svc.list_virtual_machines(:display_name => vm_id).results
                 raise VSphereCloud::VirtualMachineNotFound.new(vm_id) if nsxt_vms.empty?
                 raise VSphereCloud::MultipleVirtualMachinesFound.new(vm_id, nsxt_vms.length) if nsxt_vms.length > 1
 
                 external_id = nsxt_vms.first.external_id
-                vif_fabric_svc ||= NSXT::ManagementPlaneApiFabricVifsApi.new(nsxt)
+                vif_fabric_svc ||= NSXT::ManagementPlaneApiFabricVifsApi.new(@manager_client)
                 vifs = vif_fabric_svc.list_vifs(:owner_vm_id => external_id).results
                 expect(vifs.length).to eq(1)
                 expect(vifs.first.lport_attachment_id).to be_nil
@@ -451,7 +457,7 @@ describe 'CPI', nsxt_all: true do
         expect(lport_ids.length).to eq(2)
 
         lport_ids.each do |id|
-          grouping_object_svc = NSXT::ManagementPlaneApiGroupingObjectsNsGroupsApi.new(nsxt)
+          grouping_object_svc = NSXT::ManagementPlaneApiGroupingObjectsNsGroupsApi.new(@manager_client)
           nsgroups = grouping_object_svc.list_ns_groups.results.select do |nsgroup|
             next unless nsgroup.members
             nsgroup.members.find do |member|
@@ -504,7 +510,7 @@ describe 'CPI', nsxt_all: true do
         expect(lport_ids.length).to eq(2)
 
         lport_ids.each do |id|
-          grouping_object_svc = NSXT::ManagementPlaneApiGroupingObjectsNsGroupsApi.new(nsxt)
+          grouping_object_svc = NSXT::ManagementPlaneApiGroupingObjectsNsGroupsApi.new(@manager_client)
           nsgroups = grouping_object_svc.list_ns_groups.results.select do |nsgroup|
             next unless nsgroup.members
             nsgroup.members.find do |member|
@@ -626,7 +632,7 @@ describe 'CPI', nsxt_all: true do
 
   def verify_ports(vm_id, expected_vif_number = 2)
     retryer do
-      fabric_svc = NSXT::ManagementPlaneApiFabricVirtualMachinesApi.new(nsxt)
+      fabric_svc = NSXT::ManagementPlaneApiFabricVirtualMachinesApi.new(@manager_client)
       nsxt_vms = fabric_svc.list_virtual_machines(:display_name => vm_id).results
       raise VSphereCloud::VirtualMachineNotFound.new(vm_id) if nsxt_vms.empty?
       raise VSphereCloud::MultipleVirtualMachinesFound.new(vm_id, nsxt_vms.length) if nsxt_vms.length > 1
@@ -634,13 +640,13 @@ describe 'CPI', nsxt_all: true do
       expect(nsxt_vms.length).to eq(1)
       expect(nsxt_vms.first.external_id).not_to be_nil
 
-      vif_fabric_svc ||= NSXT::ManagementPlaneApiFabricVifsApi.new(nsxt)
+      vif_fabric_svc ||= NSXT::ManagementPlaneApiFabricVifsApi.new(@manager_client)
       vifs = vif_fabric_svc.list_vifs(:owner_vm_id => nsxt_vms.first.external_id).results
       raise VSphereCloud::VIFNotFound.new(vm_id, nsxt_vms.first.external_id) if vifs.empty?
       expect(vifs.length).to eq(expected_vif_number)
       expect(vifs.map(&:lport_attachment_id).compact.length).to eq(expected_vif_number)
 
-      logical_switching_svc = NSXT::ManagementPlaneApiLogicalSwitchingLogicalSwitchPortsApi.new(nsxt)
+      logical_switching_svc = NSXT::ManagementPlaneApiLogicalSwitchingLogicalSwitchPortsApi.new(@manager_client)
       vifs.each do |vif|
         lports = logical_switching_svc.list_logical_ports(attachment_id: vif.lport_attachment_id).results.first
         yield lports if block_given?
@@ -661,12 +667,12 @@ describe 'CPI', nsxt_all: true do
 
   def create_nsgroup(display_name)
     nsgrp = NSXT::NSGroup.new(:display_name => display_name)
-    grouping_object_svc = NSXT::ManagementPlaneApiGroupingObjectsNsGroupsApi.new(nsxt)
+    grouping_object_svc = NSXT::ManagementPlaneApiGroupingObjectsNsGroupsApi.new(@manager_client)
     grouping_object_svc.create_ns_group(nsgrp)
   end
 
   def delete_nsgroup(nsgroup)
-    grouping_object_svc = NSXT::ManagementPlaneApiGroupingObjectsNsGroupsApi.new(nsxt)
+    grouping_object_svc = NSXT::ManagementPlaneApiGroupingObjectsNsGroupsApi.new(@manager_client)
     grouping_object_svc.delete_ns_group(nsgroup.id)
   end
 
@@ -689,7 +695,7 @@ describe 'CPI', nsxt_all: true do
   end
 
   def nsgroup_effective_logical_port_member_ids(nsgroup)
-    grouping_object_svc = NSXT::ManagementPlaneApiGroupingObjectsNsGroupsApi.new(nsxt)
+    grouping_object_svc = NSXT::ManagementPlaneApiGroupingObjectsNsGroupsApi.new(@manager_client)
     results = grouping_object_svc.get_effective_logical_port_members(nsgroup.id).results
     results.map { |member| member.target_id }
   end
@@ -718,7 +724,7 @@ describe 'CPI', nsxt_all: true do
   end
 
   def services_svc
-    NSXT::ManagementPlaneApiServicesLoadbalancerApi.new(nsxt)
+    NSXT::ManagementPlaneApiServicesLoadbalancerApi.new(@manager_client)
   end
 
   def create_lb_pool(pool_name)
