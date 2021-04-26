@@ -9,13 +9,6 @@ describe 'CPI', nsxt_all: true do
     @nsxt_host = fetch_property('BOSH_VSPHERE_CPI_NSXT_HOST')
     @nsxt_username = fetch_property('BOSH_VSPHERE_CPI_NSXT_USERNAME')
     @nsxt_password = fetch_property('BOSH_VSPHERE_CPI_NSXT_PASSWORD')
-    @nsxt_ca_cert = ENV['BOSH_VSPHERE_CPI_NSXT_CA_CERT']
-    if @nsxt_ca_cert
-      @ca_cert_file = Tempfile.new('bosh-cpi-ca-cert')
-      @ca_cert_file.write(@nsxt_ca_cert)
-      @ca_cert_file.close
-      ENV['BOSH_NSXT_CA_CERT_FILE'] = @ca_cert_file.path
-    end
     @nsxt_opaque_vlan_1 = fetch_property('BOSH_VSPHERE_OPAQUE_VLAN')
     @nsxt_opaque_vlan_2 = fetch_property('BOSH_VSPHERE_SECOND_OPAQUE_VLAN')
 
@@ -43,8 +36,13 @@ describe 'CPI', nsxt_all: true do
     policy_configuration.username = @nsxt_username
     policy_configuration.password = @nsxt_password
     policy_configuration.client_side_validation = false
-    policy_configuration.verify_ssl = false
-    policy_configuration.verify_ssl_host = false
+    if ENV['BOSH_NSXT_CA_CERT_FILE']
+      policy_configuration.ssl_ca_cert = ENV['BOSH_NSXT_CA_CERT_FILE']
+    end
+    if ENV['NSXT_SKIP_SSL_VERIFY']
+      policy_configuration.verify_ssl = false
+      policy_configuration.verify_ssl_host = false
+    end
     policy_client = NSXTPolicy::ApiClient.new(policy_configuration)
     @policy_group_api = NSXTPolicy::PolicyInventoryGroupsGroupsApi.new(policy_client)
     @policy_load_balancer_pools_api = NSXTPolicy::PolicyNetworkingNetworkServicesLoadBalancingLoadBalancerPoolsApi.new(policy_client)
@@ -57,10 +55,6 @@ describe 'CPI', nsxt_all: true do
   after(:all) do
     delete_principal(@principal_id) unless @principal_id.nil?
     delete_test_certificate(@cert_id) unless @cert_id.nil?
-    if @nsxt_ca_cert
-      ENV.delete('BOSH_NSXT_CA_CERT_FILE')
-      @ca_cert_file.unlink
-    end
   end
 
   # This works exclusively with cert/key pair
@@ -73,23 +67,6 @@ describe 'CPI', nsxt_all: true do
     }))
   end
 
-  # Verifier Client using user/pass. Built Directly in TEST
-  let(:nsxt) do
-    configuration = NSXT::Configuration.new
-    configuration.host = @nsxt_host
-    configuration.username = @nsxt_username
-    configuration.password = @nsxt_password
-    configuration.client_side_validation = false
-
-    if ENV['BOSH_NSXT_CA_CERT_FILE']
-      configuration.ssl_ca_cert = ENV['BOSH_NSXT_CA_CERT_FILE']
-    end
-    if ENV['NSXT_SKIP_SSL_VERIFY']
-      configuration.verify_ssl = false
-      configuration.verify_ssl_host = false
-    end
-    NSXT::ApiClient.new(configuration)
-  end
   let(:nsgroup_name_1) { "BOSH-CPI-test-#{SecureRandom.uuid}" }
   let(:nsgroup_name_2) { "BOSH-CPI-test-#{SecureRandom.uuid}" }
   let(:segment_name_1) { "BOSH-CPI-test-#{SecureRandom.uuid}" }
@@ -680,10 +657,6 @@ describe 'CPI', nsxt_all: true do
         yield segment_ports if block_given?
       end
     end
-  end
-
-  def nsxt_client
-    nsxt.instance_variable_get('@client')
   end
 
   def create_nsgroup(display_name)
