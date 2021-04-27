@@ -28,6 +28,7 @@
       - get: stemcell
     - task: test
       file: source-ci/ci/tasks/run-lifecycle.yml
+      privileged: true
       params:
 <% pool.params.each do |k, v| -%>
         <%= e k %>: <%= e v %>
