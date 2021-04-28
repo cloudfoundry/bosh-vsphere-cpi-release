@@ -9,7 +9,7 @@ gem install bundler
 With bundler installed, run the vendoring script:
 
 ```bash
-$SRC_DIR/vendor_gems
+scripts/vendor_gems
 ```
 
 To create a dev release:

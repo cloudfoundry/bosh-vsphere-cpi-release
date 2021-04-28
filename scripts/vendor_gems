@@ -1,0 +1,9 @@
+#!/bin/bash
+# When vendoring gems, vendor on a linux machine as that is the operating system that
+set -e
+
+release_dir="$( cd $(dirname $0) && cd .. && pwd )"
+
+${release_dir}/scripts/vendor_platform_gems
+
+docker run -v ${release_dir}:/release ruby:2.6.5 bash -c "cd /release && gem install bundler:2.2.13 && ./scripts/vendor_platform_gems"
