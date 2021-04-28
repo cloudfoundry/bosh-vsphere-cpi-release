@@ -1,4 +1,4 @@
-FROM ubuntu:18.04
+FROM harbor-repo.vmware.com/dockerhub-proxy-cache/library/ubuntu:18.04
 
 ENV LANG C.UTF-8
 
