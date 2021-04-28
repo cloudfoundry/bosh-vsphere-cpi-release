@@ -4,6 +4,8 @@ jobs:
   - get: source-ci
   - get: source-ci-trigger
     trigger: true
+  - get: ubuntu-base-image
+    trigger: true
   - config:
       image_resource:
         name: ""
@@ -41,10 +43,18 @@ resources:
     private_key: ((github_deployment_key__bosh-vsphere-cpi-release))
     uri: git@github.com:cloudfoundry-incubator/bosh-vsphere-cpi-release.git
   type: git
+  check_every: 1h
+- name: ubuntu-base-image
+  source:
+    repository: harbor-repo.vmware.com/dockerhub-proxy-cache/library/ubuntu
+    tag: 18.04
+  type: registry-image
+  check_every: 1h
 - name: vcpi-main-image
   source:
     repository: gcr.io/cf-pas-nx-t-pineapple/vcpi-main
     username: _json_key
     password: ((gcr_service_account_key))
   type: registry-image
+  check_every: never
 
