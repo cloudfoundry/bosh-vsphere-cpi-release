@@ -1,0 +1,50 @@
+jobs:
+- name: build-vcpi-main-image
+  plan:
+  - get: source-ci
+  - get: source-ci-trigger
+    trigger: true
+  - config:
+      image_resource:
+        name: ""
+        source:
+          repository: vito/oci-build-task
+        type: registry-image
+      inputs:
+      - name: source-ci
+      outputs:
+      - name: image
+      params:
+        CONTEXT: source-ci/ci/docker
+      platform: linux
+      run:
+        path: build
+    privileged: true
+    task: build
+  - params:
+      image: image/image.tar
+    put: vcpi-main-image
+resources:
+- name: source-ci
+  source:
+    branch: master
+    paths:
+    - ci
+    private_key: ((github_deployment_key__bosh-vsphere-cpi-release))
+    uri: git@github.com:cloudfoundry-incubator/bosh-vsphere-cpi-release.git
+  type: git
+- name: source-ci-trigger
+  source:
+    branch: master
+    paths:
+    - ci/docker
+    private_key: ((github_deployment_key__bosh-vsphere-cpi-release))
+    uri: git@github.com:cloudfoundry-incubator/bosh-vsphere-cpi-release.git
+  type: git
+- name: vcpi-main-image
+  source:
+    repository: gcr.io/cf-pas-nx-t-pineapple/vcpi-main
+    username: _json_key
+    password: ((gcr_service_account_key))
+  type: registry-image
+
