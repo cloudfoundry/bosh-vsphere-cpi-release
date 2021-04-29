@@ -31,12 +31,14 @@ describe 'RetryableStubAdapter', fake_logger: true do
       let(:soap_status) { 500 + rand(100) }
       let(:soap_result) { double('fake-soap-error', fault_cause: 'fake-fault-cause') }
 
-      it 'should try the SOAP operation 5 times' do
+      it 'should try the SOAP operation 7 times' do
         expect(retryer).to receive(:sleep).with(1).once
         expect(retryer).to receive(:sleep).with(2).once
         expect(retryer).to receive(:sleep).with(4).once
         expect(retryer).to receive(:sleep).with(8).once
         expect(retryer).to receive(:sleep).with(16).once
+        expect(retryer).to receive(:sleep).with(32).once
+        expect(retryer).to receive(:sleep).with(32).once
 
         expect(stub_adapter).to receive(:invoke_method)
                                   .exactly(VSphereCloud::Retryer::MAX_TRIES).times
@@ -110,10 +112,10 @@ describe 'RetryableStubAdapter', fake_logger: true do
         expect(retryable_stub_adapter.invoke_method(managed_object, method_info, method_args)).to be(final_soap_result)
       end
 
-      it 'keeps retrying up to 6 times' do
-        expect(retryer).to receive(:sleep).with(any_args).exactly(5).times
+      it 'keeps retrying up to 8 times' do
+        expect(retryer).to receive(:sleep).with(any_args).exactly(7).times
 
-        expect(stub_adapter).to receive(:invoke_method).exactly(6).times
+        expect(stub_adapter).to receive(:invoke_method).exactly(8).times
           .with(managed_object, method_info, method_args, retryable_stub_adapter)
           .and_raise(Errno::ECONNRESET)
 
@@ -125,9 +127,9 @@ describe 'RetryableStubAdapter', fake_logger: true do
       context 'when method invoked is one in SILENT_RUN_METHOD or SILENT_ERROR_METHOD' do
         let(:method_info) { double('some-method-info', wsdl_name: 'UpdateOptions') }
         it 'does not log and run or error warning messages' do
-          expect(retryer).to receive(:sleep).with(any_args).exactly(5).times
+          expect(retryer).to receive(:sleep).with(any_args).exactly(7).times
 
-          expect(stub_adapter).to receive(:invoke_method).exactly(6).times
+          expect(stub_adapter).to receive(:invoke_method).exactly(8).times
             .with(managed_object, method_info, method_args, retryable_stub_adapter)
             .and_raise(Errno::ECONNRESET)
 

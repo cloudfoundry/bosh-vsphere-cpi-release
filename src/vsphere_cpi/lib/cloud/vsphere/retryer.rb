@@ -1,6 +1,6 @@
 module VSphereCloud
   class Retryer
-    MAX_TRIES = 6
+    MAX_TRIES = 8
     RETRY_INTERVAL_CAP_SEC = 32 # exponential increases get really big really fast (geometric progression)
 
     def try(max_tries = MAX_TRIES)

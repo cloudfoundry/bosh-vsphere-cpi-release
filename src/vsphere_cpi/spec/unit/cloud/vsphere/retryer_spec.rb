@@ -54,6 +54,8 @@ module VSphereCloud
       expect(retryer).to receive(:sleep).with(4)
       expect(retryer).to receive(:sleep).with(8)
       expect(retryer).to receive(:sleep).with(16)
+      expect(retryer).to receive(:sleep).with(32)
+      expect(retryer).to receive(:sleep).with(32)
       expect do
         retryer.try do
           [result, 'fake-error']
