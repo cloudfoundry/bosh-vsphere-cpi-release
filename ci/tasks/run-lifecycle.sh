@@ -5,7 +5,7 @@ set -e
 source bosh-cpi-src/.envrc
 
 
-if [ $BOSH_VSPHERE_CPI_NSXT_HOST != "null" ]; then
+if [ "$BOSH_VSPHERE_CPI_NSXT_HOST" != "" ]; then
   source environment/metadata
   export BOSH_NSXT_CA_CERT_FILE=$(realpath $PWD/nsxt-manager-cert.pem)
   # To get the cert from nsxt-manager, we run openssl on the jump box, and then pipe that result into a local openssl command that reformats it into PEM
