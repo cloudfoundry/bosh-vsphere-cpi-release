@@ -558,13 +558,18 @@ describe 'CPI', nsxt_all: true do
 
         it "tags the VM's segment ports with the bosh id" do
           simple_vm_lifecycle(cpi, '', vm_type, policy_network_spec) do |vm_id|
-            cpi.set_vm_metadata(vm_id, 'id' => bosh_id)
+            cpi.set_vm_metadata(vm_id, {
+              'id' => bosh_id,
+              'test-tag-1-key' => 'test-tag-1-value',
+              'test-tag-2-key' => 'test-tag-2-value',
+            })
             verify_policy_ports([segment_name_1, segment_name_2]) do |ports|
               expect(ports.length).to eq(1)
               ports.each do |port|
-                expect(port.tags.length).to eq(1)
-                expect(port.tags.first.scope).to eq('bosh/id')
-                expect(port.tags.first.tag).to eq(Digest::SHA1.hexdigest(bosh_id))
+                expect(port.tags.length).to eq(3)
+                expect(port.tags).to include( an_object_having_attributes(scope: 'bosh/id', tag: Digest::SHA1.hexdigest(bosh_id)) )
+                expect(port.tags).to include( an_object_having_attributes(scope: 'bosh/test-tag-1-key', tag: 'test-tag-1-value') )
+                expect(port.tags).to include( an_object_having_attributes(scope: 'bosh/test-tag-2-key', tag: 'test-tag-2-value') )
               end
             end
           end

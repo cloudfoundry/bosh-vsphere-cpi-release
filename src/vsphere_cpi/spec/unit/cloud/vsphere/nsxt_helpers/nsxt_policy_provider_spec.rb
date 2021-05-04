@@ -318,7 +318,7 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
   end
 
   describe '#update_vm_metadata_on_segment_ports' do
-    let(:metadata) { { 'id' => 'new-bosh-id' } }
+    let(:metadata) { { 'id' => 'new-bosh-id', 'name' => 'new-bosh-name' } }
     let(:id_hex) { Digest::SHA1.hexdigest('new-bosh-id') }
     let(:vm) { instance_double(VSphereCloud::Resources::VM, get_nsxt_segment_vif_list: [['segment-name-1', 'attachment-1'], ['segment-name-2', 'attachment-2']]) }
     let(:search_result1) { instance_double(NSXTPolicy::SearchResponse, results: [id: 'segment-port-id-1', path: '/infra/segments/segment-name-1/ports/segment-port-id-1']) }
@@ -339,7 +339,10 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
       end
 
       context 'when segment ports do not have any tags' do
-        let(:new_tags) { [NSXTPolicy::Tag.new('scope' => 'bosh/id', 'tag' => id_hex)] }
+        let(:new_tags) { [
+          NSXTPolicy::Tag.new('scope' => 'bosh/id', 'tag' => id_hex),
+          NSXTPolicy::Tag.new('scope' => 'bosh/name', 'tag' => 'new-bosh-name')
+        ] }
 
         it 'adds the id tag' do
           expect(policy_segment_ports_api).to receive(:patch_infra_segment_port).once.ordered do |segment_name, port_id, segment_port|
@@ -360,7 +363,11 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
       context 'when logical ports have non id tags' do
         let(:non_id_tag) { NSXTPolicy::Tag.new('scope' => 'bosh/fake', 'tag' => 'fake-data') }
         let(:existing_tags) { [non_id_tag] }
-        let(:new_tags) { [non_id_tag, NSXTPolicy::Tag.new('scope' => 'bosh/id', 'tag' => id_hex)] }
+        let(:new_tags) { [
+          non_id_tag,
+          NSXTPolicy::Tag.new('scope' => 'bosh/id', 'tag' => id_hex),
+          NSXTPolicy::Tag.new('scope' => 'bosh/name', 'tag' => 'new-bosh-name')
+        ] }
 
         it 'sets the id tag' do
           expect(policy_segment_ports_api).to receive(:patch_infra_segment_port).once.ordered do |segment_name, port_id, segment_port|
@@ -382,7 +389,11 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
         let(:old_vm_id_tag) { NSXTPolicy::Tag.new('scope' => 'bosh/id', 'tag' => Digest::SHA1.hexdigest('old-bosh-id')) }
         let(:non_id_tag) { NSXTPolicy::Tag.new('scope' => 'bosh/fake', 'tag' => 'fake-data') }
         let(:existing_tags) { [non_id_tag, old_vm_id_tag] }
-        let(:new_tags) { [non_id_tag, NSXTPolicy::Tag.new('scope' => 'bosh/id', 'tag' => id_hex)] }
+        let(:new_tags) { [
+          non_id_tag,
+          NSXTPolicy::Tag.new('scope' => 'bosh/id', 'tag' => id_hex),
+          NSXTPolicy::Tag.new('scope' => 'bosh/name', 'tag' => 'new-bosh-name')
+        ] }
 
         it 'consolidates the existing id tags and sets it' do
           expect(policy_segment_ports_api).to receive(:patch_infra_segment_port).once.ordered do |segment_name, port_id, segment_port|
@@ -431,7 +442,10 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
     context 'when segment port is not scoped under the tier-1 router' do
       let(:search_result1) { instance_double(NSXTPolicy::SearchResponse, results: [id: 'segment-port-id-1', path: '/infra/tier-1s/tier-1-name-1/segments/segment-name-1/ports/segment-port-id-1']) }
       let(:search_result2) { instance_double(NSXTPolicy::SearchResponse, results: [id: 'segment-port-id-2', path: '/infra/tier-1s/tier-1-name-2/segments/segment-name-2/ports/segment-port-id-2']) }
-      let(:new_tags) { [NSXTPolicy::Tag.new('scope' => 'bosh/id', 'tag' => id_hex)] }
+      let(:new_tags) { [
+        NSXTPolicy::Tag.new('scope' => 'bosh/id', 'tag' => id_hex),
+        NSXTPolicy::Tag.new('scope' => 'bosh/name', 'tag' => 'new-bosh-name')
+      ] }
 
       before do
         allow(policy_segment_ports_api).to receive(:get_tier1_segment_port_0).with('tier-1-name-1', 'segment-name-1', 'segment-port-id-1').and_return(segment_port1)

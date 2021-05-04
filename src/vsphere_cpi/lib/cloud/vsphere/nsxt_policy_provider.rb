@@ -104,7 +104,7 @@ module VSphereCloud
     end
 
     def update_vm_metadata_on_segment_ports(vm, metadata)
-      return unless metadata && metadata.has_key?('id')
+      return if metadata.nil? or metadata.empty?
 
       segment_ports = vm.get_nsxt_segment_vif_list
       return if segment_ports.nil?
@@ -129,13 +129,22 @@ module VSphereCloud
 
           tags = segment_port.tags || []
           tags_by_scope = tags.group_by { |tag| tag.scope }
-          bosh_id_tags = tags_by_scope.fetch('bosh/id', [])
+          bosh_tags = tags_by_scope.select { |key, _| key =~ /^bosh\// }
 
-          raise InvalidSegmentPortError.new(segment_port) if bosh_id_tags.uniq.length > 1
-
-          id_tag = NSXTPolicy::Tag.new('scope' => 'bosh/id', 'tag' => Digest::SHA1.hexdigest(metadata['id']))
-          tags.delete_if { |tag| tag.scope == 'bosh/id' }
-          tags << id_tag
+          metadata.each do |metadata_key, metadata_value|
+            metadata_key = "bosh/" + metadata_key
+            if metadata_key == "bosh/id"
+              metadata_value = Digest::SHA1.hexdigest(metadata_value)
+            end
+            unless bosh_tags[metadata_key].nil?
+              unless bosh_tags[metadata_key].length <= 1
+                raise InvalidSegmentPortError.new(segment_port)
+              end
+            end
+            bosh_tag = NSXTPolicy::Tag.new('scope' => metadata_key, 'tag' => metadata_value)
+            tags.delete_if { |tag| tag.scope == metadata_key }
+            tags << bosh_tag
+          end
 
           segment_port.tags = tags
 
