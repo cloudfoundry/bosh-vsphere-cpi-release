@@ -35,7 +35,7 @@ describe 'CPI', nsxt_all: true do
     @private_key = generate_private_key
     @certificate = generate_certificate(@private_key)
     @cert_id = submit_cert_to_nsxt(@certificate)
-    @principal_id = attach_cert_to_principal(@cert_id)
+    @principal_id = attach_cert_to_principal(@cert_id, "testprincipal-nsxt-spec-#{SecureRandom.alphanumeric(10)}")
 
     policy_configuration = NSXTPolicy::Configuration.new
     policy_configuration.host = @nsxt_host
