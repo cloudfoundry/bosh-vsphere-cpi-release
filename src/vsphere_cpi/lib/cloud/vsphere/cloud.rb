@@ -851,8 +851,10 @@ module VSphereCloud
     end
 
     def create_network(network_definition)
-      network_model = NetworkDefinition.new(network_definition)
       raise 'NSXT must be enabled in CPI to use create_network' unless @config.nsxt_enabled?
+      raise Bosh::Clouds::NotSupported, 'create_network is not supported for the NSXT Policy API' if @config.nsxt.use_policy_api
+
+      network_model = NetworkDefinition.new(network_definition)
       network = Network.new(@switch_provider, @router_provider, @ip_block_provider)
       network.create(network_model)
     end
