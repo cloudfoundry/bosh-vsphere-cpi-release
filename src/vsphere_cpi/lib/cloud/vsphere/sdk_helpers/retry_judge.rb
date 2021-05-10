@@ -61,6 +61,10 @@ module VSphereCloud
             method_name: 'AcquireGenericServiceTicket',
             fault_class: VimSdk::Vim::Fault::NoPermission,
         },
+        {
+            method_name: 'Logout',
+            fault_class: VimSdk::Vim::Fault::NotAuthenticated,
+        },
       ]
 
       def retryable?(entity, method_name, fault)
