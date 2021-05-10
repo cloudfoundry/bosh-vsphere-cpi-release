@@ -208,52 +208,57 @@ module VSphereCloud
     def add_vm_to_group(group_obj, vm_cid)
       group_obj.expression = [] if group_obj.expression.nil?
 
-      group_obj.expression.each do |expr|
-        if expr.is_a?(NSXTPolicy::Condition) &&
-            expr.value == vm_cid &&
-            expr.key == 'Name' &&
-            expr.member_type == 'VirtualMachine' &&
-            expr.operator == 'EQUALS'
-          return
+      vm_external_id = get_vm_external_id(vm_cid)
+
+      external_id_expression = group_obj.expression.find { |expr| expr.is_a?(NSXTPolicy::ExternalIDExpression) && expr.member_type == 'VirtualMachine' }
+      if external_id_expression != nil
+        unless external_id_expression.external_ids.include?(vm_external_id)
+          external_id_expression.external_ids << vm_external_id
         end
+      else
+        unless group_obj.expression.empty?
+          group_obj.expression << NSXTPolicy::ConjunctionOperator.new(resource_type: 'ConjunctionOperator',
+                                                                      conjunction_operator: 'OR',
+                                                                      id: "conjunction-#{vm_cid}")
+        end
+
+        group_obj.expression << NSXTPolicy::ExternalIDExpression.new(resource_type: 'ExternalIDExpression',
+                                                                     member_type: 'VirtualMachine',
+                                                                     external_ids: [vm_external_id])
       end
 
-      original_length = group_obj.expression.length
-      unless group_obj.expression.empty?
-        group_obj.expression << NSXTPolicy::ConjunctionOperator.new(resource_type: 'ConjunctionOperator',
-                                                                    conjunction_operator: 'OR',
-                                                                    id: "conjunction-#{vm_cid}")
-      end
-
-      group_obj.expression << NSXTPolicy::Condition.new(resource_type: 'Condition',
-                                                        key: 'Name',
-                                                        operator: 'EQUALS',
-                                                        member_type: 'VirtualMachine',
-                                                        value: vm_cid)
-      if original_length != group_obj.expression.length
-        logger.info("Adding vm: #{vm_cid}, group #{group_obj}")
-        policy_group_api.update_group_for_domain(DEFAULT_NSXT_POLICY_DOMAIN, group_obj.id, group_obj)
-      end
+      logger.info("Adding vm #{vm_cid} to group #{group_obj}")
+      policy_group_api.update_group_for_domain(DEFAULT_NSXT_POLICY_DOMAIN, group_obj.id, group_obj)
     end
 
     def delete_vm_from_group(group_obj, vm_cid)
       return if group_obj.expression.nil? || group_obj.expression.empty?
 
-      original_length = group_obj.expression.length
-      group_obj.expression.delete_if do |expr|
-        (expr.is_a?(NSXTPolicy::Condition) &&
-            expr.value == vm_cid &&
-            expr.key == 'Name' &&
+      vm_external_id = get_vm_external_id(vm_cid)
+
+      external_id_expression = group_obj.expression.find do |expr|
+        expr.is_a?(NSXTPolicy::ExternalIDExpression) &&
             expr.member_type == 'VirtualMachine' &&
-            expr.operator == 'EQUALS') ||
-        (expr.is_a?(NSXTPolicy::ConjunctionOperator) &&
-            expr.id == "conjunction-#{vm_cid}" &&
-            expr.conjunction_operator == 'OR')
+            expr.resource_type == 'ExternalIDExpression'
       end
-      if original_length != group_obj.expression.length
-        logger.info("Removal of vm: #{vm_cid}, group #{group_obj}")
-        policy_group_api.update_group_for_domain(DEFAULT_NSXT_POLICY_DOMAIN, group_obj.id, group_obj)
+      return if external_id_expression == nil
+
+      external_id_expression.external_ids.delete_if { |id| id == vm_external_id }
+      group_obj.expression.delete(external_id_expression) if external_id_expression.external_ids.empty?
+
+      logger.info("Removing vm #{vm_cid} from group #{group_obj}")
+      policy_group_api.update_group_for_domain(DEFAULT_NSXT_POLICY_DOMAIN, group_obj.id, group_obj)
+    end
+
+    def get_vm_external_id(vm_cid)
+      search_results = policy_infra_realized_state_api.list_virtual_machines_on_enforcement_point(DEFAULT_NSXT_POLICY_DOMAIN, {query: "display_name:#{vm_cid}"}).results
+      # API can return several results of the VM with the same external_id and different power_state
+      if search_results.length < 1
+        err_msg = "Failed to find vm in realized state with cid: #{vm_cid}"
+        logger.info(err_msg)
+        raise err_msg
       end
+      search_results[0][:external_id]
     end
 
     def policy_segment_ports_api

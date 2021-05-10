@@ -128,6 +128,7 @@ describe 'CPI', nsxt_all: true do
   end
 
   class SegmentPortsAreNotInitialized < StandardError; end
+  class VMsAreNotInGroups < StandardError; end
 
   describe 'on create_vm' do
     context 'when global default_vif_type is set' do
@@ -341,9 +342,17 @@ describe 'CPI', nsxt_all: true do
         }
       end
 
-      before { create_segments([segment_name_1, segment_name_2]) }
+      before do
+        @created_vms = []
+        create_segments([segment_name_1, segment_name_2])
+      end
 
-      after { delete_segments([segment_name_1, segment_name_2]) }
+      after do
+        @created_vms.each do |vm_cid|
+          delete_vm(cpi, vm_cid)
+        end
+        delete_segments([segment_name_1, segment_name_2])
+      end
 
       context 'with ns groups' do
         let(:nsxt_spec) {
@@ -353,12 +362,13 @@ describe 'CPI', nsxt_all: true do
         }
         let!(:nsgroup_1) { create_policy_group(nsgroup_name_1) }
         let!(:nsgroup_2) { create_policy_group(nsgroup_name_2) }
+
         after do
           delete_policy_group(nsgroup_name_1)
           delete_policy_group(nsgroup_name_2)
         end
 
-        it 'creates VM in specified segments' do
+        it 'creates VM in specified ns groups' do
           simple_vm_lifecycle(cpi, '', vm_type, policy_network_spec) do |vm_id|
             vm = @cpi.vm_provider.find(vm_id)
             segment_names = vm.get_nsxt_segment_vif_list.map { |x| x[0] }
@@ -372,6 +382,46 @@ describe 'CPI', nsxt_all: true do
             expect(results.length).to eq(1)
             expect(results[0].display_name).to eq(vm_id)
           end
+        end
+
+        it 'creates more than 5 VMs' do
+          6.times do |i|
+            vm_id = cpi.create_vm(
+                "agent-00#{i}",
+                @stemcell_id,
+                vm_type,
+                policy_network_spec
+            )
+            expect(vm_id).to_not be_nil
+            @created_vms << vm_id
+
+            expect(cpi.has_vm?(vm_id)).to be(true)
+          end
+
+          retryer do
+            results = @policy_group_members_api.get_group_vm_members_0(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, nsgroup_name_1).results
+            raise VMsAreNotInGroups if results.map(&:display_name).uniq.length < 6
+
+            # results contain same vms in different power states
+            expect(results.map(&:display_name).uniq.length).to eq(6)
+            expect(results.map(&:display_name).uniq).to match_array(@created_vms)
+
+            results = @policy_group_members_api.get_group_vm_members_0(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, nsgroup_name_2).results
+            raise VMsAreNotInGroups if results.map(&:display_name).uniq.length < 6
+
+            expect(results.map(&:display_name).uniq.length).to eq(6)
+            expect(results.map(&:display_name).uniq).to match_array(@created_vms)
+          end
+
+          until @created_vms.empty?
+            vm_cid, _ = @created_vms.pop
+            delete_vm(cpi, vm_cid)
+          end
+
+          results = @policy_group_members_api.get_group_vm_members_0(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, nsgroup_name_1).results
+          expect(results.length).to eq(0)
+          results = @policy_group_members_api.get_group_vm_members_0(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, nsgroup_name_2).results
+          expect(results.length).to eq(0)
         end
       end
 
@@ -750,6 +800,7 @@ describe 'CPI', nsxt_all: true do
         VSphereCloud::VIFNotFound,
         VSphereCloud::LogicalPortNotFound,
         SegmentPortsAreNotInitialized,
+        VMsAreNotInGroups,
       ]
     ).retryer do |i|
       yield i if block_given?
