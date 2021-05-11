@@ -223,15 +223,16 @@ module VSphereCloud
         allow(disk_spec).to receive(:adapter_type=)
       end
 
-      let(:disk_manager) do
-        instance_double(VimSdk::Vim::VirtualDiskManager,
-          create_virtual_disk: create_disk_task,
+      let(:v_storage_object_manager) do
+        instance_double(VimSdk::Vim::Vslm::Host::VStorageObjectManager,
+                create_disk: create_disk_task
         )
       end
+
       let(:create_disk_task) { instance_double(VimSdk::Vim::Task) }
 
       before do
-        allow(fake_service_content).to receive(:virtual_disk_manager).and_return(disk_manager)
+        allow(fake_service_content).to receive(:v_storage_object_manager).and_return(v_storage_object_manager)
       end
 
       before do
@@ -246,7 +247,7 @@ module VSphereCloud
             expect(block.call).to eq(create_disk_task)
           end
 
-          expect(disk_spec).to receive(:disk_type=).with('eagerZeroedThick')
+          #expect(disk_spec).to receive(:disk_type=).with('eagerZeroedThick')
           expect(Resources::PersistentDisk).to receive(:new).with(cid: 'disk_cid', size_in_mb: 10, datastore: datastore, folder: disk_folder)
           client.create_disk(datacenter, datastore, 'disk_cid', disk_folder, 10, 'eagerZeroedThick')
         end

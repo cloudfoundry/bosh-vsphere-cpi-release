@@ -349,15 +349,18 @@ module VSphereCloud
 
       create_parent_folder(datacenter_mob, disk_path)
 
-      disk_spec = VimSdk::Vim::VirtualDiskManager::FileBackedVirtualDiskSpec.new
-      disk_spec.disk_type = disk_type
-      disk_spec.capacity_kb = disk_size_in_mb * 1024
-      disk_spec.adapter_type = 'lsiLogic'
+      disk_spec = VimSdk::Vim::Vslm::CreateSpec.new
+      disk_spec.capacity_in_mb = disk_size_in_mb
+      disk_spec.name = disk_cid
+      disk_spec.backing_spec = VimSdk::Vim::Vslm::CreateSpec::BackingSpec.new
+      disk_spec.backing_spec.datastore = datastore
+      #disk_spec.disk_type = disk_type
+      #disk_spec.adapter_type = 'lsiLogic'
 
       wait_for_task do
-        service_content.virtual_disk_manager.create_virtual_disk(
-          disk_path,
-          datacenter_mob,
+        service_content.v_storage_object_manager.create_disk(
+          #      disk_path,
+          # datacenter_mob,
           disk_spec
         )
       end
