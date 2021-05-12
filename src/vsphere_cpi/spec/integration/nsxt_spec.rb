@@ -381,6 +381,7 @@ describe 'CPI', nsxt_all: true do
             results = @policy_group_members_api.get_group_vm_members_0(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, nsgroup_name_2).results
             expect(results.length).to eq(1)
             expect(results[0].display_name).to eq(vm_id)
+            delete_vm(cpi, vm)
           end
         end
 
