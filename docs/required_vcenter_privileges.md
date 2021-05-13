@@ -76,7 +76,6 @@ These privileges must be granted on any entities in a Datacenter the CPI will in
     <tr><td>Allocate space</td><td>Datastore.AllocateSpace</td></tr>
     <tr><td>Browse datastore</td><td>Datastore.Browse</td></tr>
     <tr><td>Remove file</td><td>Datastore.DeleteFile</td></tr>
-    <tr><td>Update virtual machine files</td><td>Datastore.UpdateVirtualMachineFiles</td></tr>
     <tr>
       <td rowspan="5">Folder</td>
     </tr>
