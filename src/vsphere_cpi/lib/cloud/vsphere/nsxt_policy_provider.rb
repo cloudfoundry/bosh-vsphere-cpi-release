@@ -210,21 +210,30 @@ module VSphereCloud
 
       vm_external_id = get_vm_external_id(vm_cid)
 
-      external_id_expression = group_obj.expression.find { |expr| expr.is_a?(NSXTPolicy::ExternalIDExpression) && expr.member_type == 'VirtualMachine' }
-      if external_id_expression != nil
-        unless external_id_expression.external_ids.include?(vm_external_id)
-          external_id_expression.external_ids << vm_external_id
-        end
-      else
+      external_id_expressions = group_obj.expression.select { |expr| expr.is_a?(NSXTPolicy::ExternalIDExpression) && expr.member_type == 'VirtualMachine' }
+      if external_id_expressions.size < 1
         unless group_obj.expression.empty?
-          group_obj.expression << NSXTPolicy::ConjunctionOperator.new(resource_type: 'ConjunctionOperator',
-                                                                      conjunction_operator: 'OR',
-                                                                      id: "conjunction-#{vm_cid}")
+          group_obj.expression << generate_conjunction_expression(vm_cid, group_obj.expression)
         end
 
         group_obj.expression << NSXTPolicy::ExternalIDExpression.new(resource_type: 'ExternalIDExpression',
                                                                      member_type: 'VirtualMachine',
                                                                      external_ids: [vm_external_id])
+      else
+        existing_external_id = external_id_expressions.find { |expr| expr.external_ids.include?(vm_external_id) }
+        if existing_external_id != nil
+          return
+        end
+
+        available_external_id_expression = external_id_expressions.find { |expr| expr.external_ids.size < 500 }
+        if available_external_id_expression != nil
+          available_external_id_expression.external_ids << vm_external_id
+        else
+          group_obj.expression << generate_conjunction_expression(vm_cid, group_obj.expression)
+          group_obj.expression << NSXTPolicy::ExternalIDExpression.new(resource_type: 'ExternalIDExpression',
+                                                                       member_type: 'VirtualMachine',
+                                                                       external_ids: [vm_external_id])
+        end
       end
 
       logger.info("Adding vm #{vm_cid} to group #{group_obj}")
@@ -236,15 +245,27 @@ module VSphereCloud
 
       vm_external_id = get_vm_external_id(vm_cid)
 
-      external_id_expression = group_obj.expression.find do |expr|
-        expr.is_a?(NSXTPolicy::ExternalIDExpression) &&
+      group_obj.expression.each do |expr|
+        if expr.is_a?(NSXTPolicy::ExternalIDExpression) &&
             expr.member_type == 'VirtualMachine' &&
             expr.resource_type == 'ExternalIDExpression'
-      end
-      return if external_id_expression == nil
+          expr.external_ids.delete_if { |id| id == vm_external_id }
 
-      external_id_expression.external_ids.delete_if { |id| id == vm_external_id }
-      group_obj.expression.delete(external_id_expression) if external_id_expression.external_ids.empty?
+          if expr.external_ids.empty?
+            group_obj.expression.delete(expr)
+
+            conjunction_expr = group_obj.expression.find do |e|
+              e.is_a?(NSXTPolicy::ConjunctionOperator) &&
+                  e.resource_type == 'ConjunctionOperator' &&
+                  e.conjunction_operator == 'OR' &&
+                  e.id.start_with?("conjunction-#{vm_cid}")
+            end
+            if conjunction_expr != nil
+              group_obj.expression.delete(conjunction_expr)
+            end
+          end
+        end
+      end
 
       logger.info("Removing vm #{vm_cid} from group #{group_obj}")
       policy_group_api.update_group_for_domain(DEFAULT_NSXT_POLICY_DOMAIN, group_obj.id, group_obj)
@@ -259,6 +280,19 @@ module VSphereCloud
         raise err_msg
       end
       search_results[0][:external_id]
+    end
+
+    def generate_conjunction_expression(vm_cid, expressions)
+      existing_expr_count = expressions.count do |expr|
+        expr.is_a?(NSXTPolicy::ConjunctionOperator) &&
+            expr.resource_type == 'ConjunctionOperator' &&
+            expr.conjunction_operator == 'OR' &&
+            expr.id.start_with?("conjunction-#{vm_cid}")
+      end
+
+      NSXTPolicy::ConjunctionOperator.new(resource_type: 'ConjunctionOperator',
+                                          conjunction_operator: 'OR',
+                                          id: "conjunction-#{vm_cid}-#{existing_expr_count}")
     end
 
     def policy_segment_ports_api

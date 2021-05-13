@@ -375,13 +375,19 @@ describe 'CPI', nsxt_all: true do
             expect(segment_names.length).to eq(2)
             expect(segment_names).to include(segment_name_1)
             expect(segment_names).to include(segment_name_2)
-            results = @policy_group_members_api.get_group_vm_members_0(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, nsgroup_name_1).results
-            expect(results.length).to eq(1)
-            expect(results[0].display_name).to eq(vm_id)
-            results = @policy_group_members_api.get_group_vm_members_0(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, nsgroup_name_2).results
-            expect(results.length).to eq(1)
-            expect(results[0].display_name).to eq(vm_id)
-            delete_vm(cpi, vm)
+            retryer do
+              results = @policy_group_members_api.get_group_vm_members_0(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, nsgroup_name_1).results
+              raise VMsAreNotInGroups if results.map(&:display_name).uniq.length < 1
+
+              expect(results.length).to eq(1)
+              expect(results[0].display_name).to eq(vm_id)
+
+              results = @policy_group_members_api.get_group_vm_members_0(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, nsgroup_name_2).results
+              raise VMsAreNotInGroups if results.map(&:display_name).uniq.length < 1
+
+              expect(results.length).to eq(1)
+              expect(results[0].display_name).to eq(vm_id)
+            end
           end
         end
 
@@ -818,7 +824,7 @@ describe 'CPI', nsxt_all: true do
     @nsx_component_api.delete_certificate(cert_id)
   end
 
-  def attach_cert_to_principal(cert_id, pi_name = 'testprincipal-nsxt-spec-7', node_id = 'node-nsxt-spec-3')
+  def attach_cert_to_principal(cert_id, pi_name = 'testprincipal-nsxt-spec-8', node_id = 'node-nsxt-spec-4')
     pi = NSXT::PrincipalIdentity.new(name: pi_name, node_id: node_id,
                                      certificate_id: cert_id, permission_group: 'superusers')
     @nsx_component_trust_mgmt_api.register_principal_identity(pi).id
