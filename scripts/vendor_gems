@@ -4,6 +4,19 @@ set -e
 
 release_dir="$( cd $(dirname $0) && cd .. && pwd )"
 
-${release_dir}/scripts/vendor_platform_gems
+export BUNDLE_GEMFILE="src/vsphere_cpi/Gemfile"
+export BUNDLE_APP_CONFIG=$(mktemp -d $TMPDIR/bundler_config_XXXXXX)
+export BUNDLE_CACHE_PATH="vendor/package"
+export BUNDLE_WITHOUT="development:test"
 
-docker run -v ${release_dir}:/release ruby:2.6.5 bash -c "cd /release && gem install bundler:2.2.13 && ./scripts/vendor_platform_gems"
+bundle package
+
+nokogiri_version=$(bundle info nokogiri | grep \* | awk -F"[()]" '{print $2}')
+
+pushd "src/vsphere_cpi/${BUNDLE_CACHE_PATH}"
+  gem fetch nokogiri -v $nokogiri_version --platform x86-mingw32
+  gem fetch nokogiri -v $nokogiri_version --platform x86_64-linux
+  gem fetch nokogiri -v $nokogiri_version --platform x86_64-darwin
+popd
+
+rm -rf $BUNDLE_APP_CONFIG
