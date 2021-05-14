@@ -2,11 +2,6 @@
 
 set -e
 
-pushd bosh-cpi-src > /dev/null
-  source .envrc
-  ./compile-iso9660wrap.sh
-popd > /dev/null
-
 semver=$(cat version-semver/number)
 
 echo Creating BOSH vSphere CPI release ... 1>&2

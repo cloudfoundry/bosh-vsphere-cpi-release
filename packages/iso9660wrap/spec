@@ -1,5 +1,7 @@
 ---
 name: iso9660wrap
+dependencies:
+- golang-1.8-linux
+- golang-1.8-darwin
 files:
-- iso9660wrap/iso9660wrap-linux-amd64
-- iso9660wrap/iso9660wrap-darwin-amd64
+- iso9660wrap/*
