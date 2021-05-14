@@ -852,7 +852,7 @@ module VSphereCloud
 
     def create_network(network_definition)
       raise 'NSXT must be enabled in CPI to use create_network' unless @config.nsxt_enabled?
-      raise Bosh::Clouds::NotSupported, 'create_network is not supported for the NSXT Policy API' if @config.nsxt.use_policy_api
+      raise Bosh::Clouds::NotSupported, 'create_network is not supported for the NSXT Policy API' if @config.nsxt.use_policy_api?
 
       network_model = NetworkDefinition.new(network_definition)
       network = Network.new(@switch_provider, @router_provider, @ip_block_provider)
@@ -861,6 +861,8 @@ module VSphereCloud
 
     def delete_network(switch_id)
       raise 'NSXT must be enabled in CPI to use delete_network' unless @config.nsxt_enabled?
+      raise Bosh::Clouds::NotSupported, 'delete_network is not supported for the NSXT Policy API' if @config.nsxt.use_policy_api?
+
       network = Network.new(@switch_provider, @router_provider, @ip_block_provider)
       network.destroy(switch_id)
     end

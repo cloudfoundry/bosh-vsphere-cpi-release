@@ -2268,7 +2268,7 @@ module VSphereCloud
       end
 
       context 'when nsxt enabled with policy API' do
-        let(:nsxt) { instance_double(VSphereCloud::NSXTConfig, default_vif_type: 'vif_type', use_policy_api: true, auth_private_key: nil)}
+        let(:nsxt) { instance_double(VSphereCloud::NSXTConfig, default_vif_type: 'vif_type', use_policy_api?: true, auth_private_key: nil)}
 
         it 'raises an error' do
           expect{
@@ -2303,6 +2303,17 @@ module VSphereCloud
           expect{
             vsphere_cloud.delete_network('switch-id')
           }.to raise_error('NSXT must be enabled in CPI to use delete_network')
+        end
+      end
+
+      context 'when nsxt enabled with policy API' do
+        let(:nsxt_enabled) { true }
+        let(:nsxt) { instance_double(VSphereCloud::NSXTConfig, default_vif_type: 'vif_type', use_policy_api?: true, auth_private_key: nil)}
+
+        it 'raises an error' do
+          expect{
+            vsphere_cloud.delete_network(network_definition)
+          }.to raise_error('create_network is not supported for the NSXT Policy API')
         end
       end
 
