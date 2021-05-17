@@ -128,7 +128,7 @@ describe 'CPI', nsxt_all: true do
   end
 
   class SegmentPortsAreNotInitialized < StandardError; end
-  class VMsAreNotInGroups < StandardError; end
+  class StillUpdatingVMsInGroups < StandardError; end
 
   describe 'on create_vm' do
     context 'when global default_vif_type is set' do
@@ -377,13 +377,13 @@ describe 'CPI', nsxt_all: true do
             expect(segment_names).to include(segment_name_2)
             retryer do
               results = @policy_group_members_api.get_group_vm_members_0(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, nsgroup_name_1).results
-              raise VMsAreNotInGroups if results.map(&:display_name).uniq.length < 1
+              raise StillUpdatingVMsInGroups if results.map(&:display_name).uniq.length < 1
 
               expect(results.length).to eq(1)
               expect(results[0].display_name).to eq(vm_id)
 
               results = @policy_group_members_api.get_group_vm_members_0(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, nsgroup_name_2).results
-              raise VMsAreNotInGroups if results.map(&:display_name).uniq.length < 1
+              raise StillUpdatingVMsInGroups if results.map(&:display_name).uniq.length < 1
 
               expect(results.length).to eq(1)
               expect(results[0].display_name).to eq(vm_id)
@@ -407,14 +407,14 @@ describe 'CPI', nsxt_all: true do
 
           retryer do
             results = @policy_group_members_api.get_group_vm_members_0(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, nsgroup_name_1).results
-            raise VMsAreNotInGroups if results.map(&:display_name).uniq.length < 6
+            raise StillUpdatingVMsInGroups if results.map(&:display_name).uniq.length < 6
 
             # results contain same vms in different power states
             expect(results.map(&:display_name).uniq.length).to eq(6)
             expect(results.map(&:display_name).uniq).to match_array(@created_vms)
 
             results = @policy_group_members_api.get_group_vm_members_0(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, nsgroup_name_2).results
-            raise VMsAreNotInGroups if results.map(&:display_name).uniq.length < 6
+            raise StillUpdatingVMsInGroups if results.map(&:display_name).uniq.length < 6
 
             expect(results.map(&:display_name).uniq.length).to eq(6)
             expect(results.map(&:display_name).uniq).to match_array(@created_vms)
@@ -425,10 +425,16 @@ describe 'CPI', nsxt_all: true do
             delete_vm(cpi, vm_cid)
           end
 
-          results = @policy_group_members_api.get_group_vm_members_0(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, nsgroup_name_1).results
-          expect(results.length).to eq(0)
-          results = @policy_group_members_api.get_group_vm_members_0(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, nsgroup_name_2).results
-          expect(results.length).to eq(0)
+          retryer do
+            results = @policy_group_members_api.get_group_vm_members_0(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, nsgroup_name_1).results
+            raise StillUpdatingVMsInGroups if results.map(&:display_name).uniq.length > 0
+
+            expect(results.length).to eq(0)
+            results = @policy_group_members_api.get_group_vm_members_0(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, nsgroup_name_2).results
+            raise StillUpdatingVMsInGroups if results.map(&:display_name).uniq.length > 0
+
+            expect(results.length).to eq(0)
+          end
         end
       end
 
@@ -807,7 +813,7 @@ describe 'CPI', nsxt_all: true do
         VSphereCloud::VIFNotFound,
         VSphereCloud::LogicalPortNotFound,
         SegmentPortsAreNotInitialized,
-        VMsAreNotInGroups,
+        StillUpdatingVMsInGroups,
       ]
     ).retryer do |i|
       yield i if block_given?
