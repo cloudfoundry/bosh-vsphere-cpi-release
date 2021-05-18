@@ -20,6 +20,10 @@ xdescribe 'network management', nvds: true, cvds: true do
     ))
   end
 
+  after(:all) do
+    @cloud.cleanup
+  end
+
   let(:configuration) {
     configuration = NSXT::Configuration.new
     configuration.host = @nsxt_host

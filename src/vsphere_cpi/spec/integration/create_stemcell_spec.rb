@@ -6,6 +6,10 @@ describe '#create_stemcell', fake_logger: true do
     VSphereCloud::Cloud.new(cpi_options('default_disk_type' => 'thin'))
   end
 
+  after do
+    cpi.cleanup
+  end
+
   context 'when "default_disk_type" is not set' do
     it 'creates a stemcell with preallocated system disk' do
       stemcell = VSphereCloud::Resources::VM.new(

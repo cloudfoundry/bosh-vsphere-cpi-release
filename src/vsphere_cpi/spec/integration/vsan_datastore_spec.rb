@@ -44,6 +44,10 @@ context 'given cpis that are configured to use VSAN datastores', vsan_datastore:
     VSphereCloud::Cloud.new(options)
   end
 
+  after do
+    vsan_cpi.cleanup
+  end
+
   it 'should exercise the vm lifecycle with a vsan stemcell' do
     begin
       vsan_stemcell_id = upload_stemcell(vsan_cpi)
@@ -85,6 +89,7 @@ context 'given cpis that are configured to use VSAN datastores', vsan_datastore:
     after do
       delete_vm(vsan_cpi, @vm_id)
       delete_disk(vsan_cpi, @disk_id)
+      non_vsan_cpi.cleanup
     end
 
     it '#attach_disk can move the disk to and from the vsan datastore', focus: true do

@@ -14,14 +14,6 @@ context 'Replicating stemcells across datastores', external_cpi: false, fake_log
     )
   end
 
-  let(:second_cpi) do
-    options = cpi_options(
-      datacenters: [{
-        clusters: [@cluster_name]
-      }],
-    )
-    VSphereCloud::Cloud.new(options)
-  end
   let(:destination_cluster) { @cpi.datacenter.clusters.find {|cluster| cluster.name == @cluster_name } }
 
   it 'raises an error when no stemcell exists for the given stemcell id' do
@@ -32,6 +24,15 @@ context 'Replicating stemcells across datastores', external_cpi: false, fake_log
   end
 
   context 'when a stemcell exists for the given stemcell id' do
+    let(:second_cpi) do
+      options = cpi_options(
+        datacenters: [{
+                        clusters: [@cluster_name]
+                      }],
+        )
+      VSphereCloud::Cloud.new(options)
+    end
+
     before do
       @orig_stemcell_id = nil
       Dir.mktmpdir do |temp_dir|
@@ -44,6 +45,7 @@ context 'Replicating stemcells across datastores', external_cpi: false, fake_log
 
     after do
       @cpi.delete_stemcell(@orig_stemcell_id)
+      second_cpi.cleanup
     end
 
     it 'creates and returns the new stemcell unless it already exists' do
@@ -217,6 +219,10 @@ context 'Replicating stemcells across datastores', external_cpi: false, fake_log
           }]
         )
         VSphereCloud::Cloud.new(options)
+      end
+
+      after do
+        vm_cpi.cleanup
       end
 
       it 'creates a vm from the replicated copy' do

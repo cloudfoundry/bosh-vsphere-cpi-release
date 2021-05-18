@@ -44,6 +44,10 @@ context 'given a CPI configured with vSphere resource pools' do
     VSphereCloud::Cloud.new(options)
   end
 
+  after do
+    resource_pool_cpi.cleanup
+  end
+
   it 'should exercise the vm lifecycle' do
     vm_lifecycle(resource_pool_cpi, [], resource_pool, network_spec, @stemcell_id) do |vm_id|
       vm = resource_pool_cpi.vm_provider.find(vm_id)
@@ -80,6 +84,10 @@ context 'given a CPI configured with vSphere resource pools' do
         VSphereCloud::Cloud.new(options)
       end
 
+      after do
+        second_cpi.cleanup
+      end
+
       it 'can still find a vm created by a cpi configured with a vSphere resource pool' do
         expect(second_cpi.has_vm?(vm_id)).to be(true)
       end
@@ -104,6 +112,10 @@ context 'given a CPI configured with vSphere resource pools' do
 
     before do
       resource_pool['datacenters'] = [{'name' => @datacenter_name, 'clusters' => [{@second_cluster_name => {}}]}]
+    end
+
+    after do
+      second_cluster_cpi.cleanup
     end
 
     it 'places vm in provided cluster' do

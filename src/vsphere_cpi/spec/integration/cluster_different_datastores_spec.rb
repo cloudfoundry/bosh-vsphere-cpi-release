@@ -51,6 +51,9 @@ context 'when a single cluster is defined' do
       )
       VSphereCloud::Cloud.new(options)
     end
+    after do
+      all_datastore_cpi.cleanup
+    end
 
     it 'should pick the datastore with most amount of free space' do
       cluster_resource = all_datastore_cpi.datacenter.find_cluster(@cluster_name)
@@ -125,6 +128,8 @@ context 'when a single cluster is defined' do
     after do
       delete_vm(first_datastore_cpi, @vm_id)
       delete_disk(first_datastore_cpi, @disk_id)
+      first_datastore_cpi.cleanup
+      second_datastore_cpi.cleanup
     end
 
     it 'can exercise lifecycle with the cpi configured with a non-overlapping datastore pattern' do

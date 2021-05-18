@@ -14,6 +14,10 @@ context 'StoragePolicies' do
 
   let(:storage_policy_name) { fetch_property('BOSH_VSPHERE_CPI_LINUX_STORAGE_PROFILE') }
 
+  after do
+    cpi.cleanup
+  end
+
   context 'when storage_policy is set in vm_type' do
     before(:all) do
       @cluster_name = fetch_and_verify_cluster('BOSH_VSPHERE_CPI_CLUSTER')

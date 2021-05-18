@@ -130,6 +130,10 @@ describe 'CPI', nsxt_all: true do
   class SegmentPortsAreNotInitialized < StandardError; end
   class StillUpdatingVMsInGroups < StandardError; end
 
+  after do
+    cpi.cleanup
+  end
+
   describe 'on create_vm' do
     context 'when global default_vif_type is set' do
       # This works exclusively with cert/key pair

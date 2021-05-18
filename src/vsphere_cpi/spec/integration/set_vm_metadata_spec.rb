@@ -30,6 +30,7 @@ describe 'set_vm_metadata' do
     after do
       cpi.delete_vm(@vm_cid) if @vm_cid
       cpi.client.remove_custom_field_def(metadata.keys.first, VimSdk::Vim::VirtualMachine)
+      cpi.cleanup
     end
 
     it 'succeeds' do
@@ -57,6 +58,10 @@ describe 'set_vm_metadata' do
       expect {
         threads.map(&:join)
       }.to_not raise_error
+
+      pool_size.times do |i|
+        cpis[i].cleanup
+      end
     end
   end
 end

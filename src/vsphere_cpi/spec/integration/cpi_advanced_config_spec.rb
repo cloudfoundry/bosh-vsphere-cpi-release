@@ -6,6 +6,10 @@ describe '#add advanced cpi config' do
     VSphereCloud::Cloud.new(cpi_options('default_disk_type' => 'thin'))
   end
 
+  after do
+    cpi.cleanup
+  end
+
   context 'when it creates a stemcell on vsphere' do
     it 'add an advanced cpi config config.SDDC.cpi to vpxd.cfg file' do
       begin

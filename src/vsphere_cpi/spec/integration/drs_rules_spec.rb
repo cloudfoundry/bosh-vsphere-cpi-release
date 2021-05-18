@@ -33,6 +33,10 @@ describe 'DRS rules', drs: true do
       VSphereCloud::Cloud.new(options)
     end
 
+    after do
+      one_cluster_cpi.cleanup
+    end
+
     it 'should exercise the vm lifecycle' do
       vm_lifecycle(one_cluster_cpi, [], vm_type, get_network_spec, @stemcell_id) do |vm_id|
         vm = one_cluster_cpi.vm_provider.find(vm_id)

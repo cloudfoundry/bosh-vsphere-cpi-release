@@ -83,6 +83,12 @@ describe 'host-local storage patterns', :host_local => true do
       @second_cluster_local_datastore,
       @second_cluster_name
     )
+
+    cpi.cleanup
+  end
+
+  after do
+    local_disk_cpi.cleanup
   end
 
   context 'when both ephemeral and persistent storage patterns reference a single host-local datastore' do

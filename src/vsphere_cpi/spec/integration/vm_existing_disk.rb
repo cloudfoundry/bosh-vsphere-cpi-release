@@ -1,7 +1,7 @@
 require 'integration/spec_helper'
 
 describe 'Creating VM with existing persistent disks' do
-  before (:all) do
+  before(:all) do
     @datacenter_name = fetch_and_verify_datacenter('BOSH_VSPHERE_CPI_DATACENTER')
     @cluster_name = fetch_and_verify_cluster('BOSH_VSPHERE_CPI_CLUSTER')
     @datastore_shared_pattern = fetch_and_verify_datastore('BOSH_VSPHERE_CPI_SHARED_DATASTORE', @cluster_name)
@@ -57,6 +57,11 @@ describe 'Creating VM with existing persistent disks' do
       @disk_id_two = cpi.create_disk(2048, {}, nil)
       expect(@disk_id_one).to_not be_nil
       expect(@disk_id_two).to_not be_nil
+    end
+
+    after do
+      cpi.cleanup
+      cpi_different_persistent_pattern.cleanup
     end
 
     it 'cpi should be able to create a VM' do

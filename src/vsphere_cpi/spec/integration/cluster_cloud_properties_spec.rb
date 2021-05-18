@@ -1,6 +1,7 @@
 require 'integration/spec_helper'
 
 describe 'cloud_properties related to clusters' do
+
   before (:all) do
     @datacenter_name = fetch_and_verify_datacenter('BOSH_VSPHERE_CPI_DATACENTER')
 
@@ -11,6 +12,8 @@ describe 'cloud_properties related to clusters' do
     @cluster_less_datastore_free_space = fetch_and_verify_cluster('BOSH_VSPHERE_CPI_CLUSTER_LESS_DATASTORE_FREE_SPACE')
     @shared_datastore = fetch_property('BOSH_VSPHERE_CPI_SHARED_DATASTORE')
   end
+
+  subject(:cpi) { VSphereCloud::Cloud.new(options) }
 
   let(:network_spec) do
     {
@@ -23,6 +26,10 @@ describe 'cloud_properties related to clusters' do
         'gateway' => '169.254.1.3'
       }
     }
+  end
+
+  after do
+    cpi.cleanup
   end
 
   context 'when vm_type specifies a cluster not defined in global config' do
@@ -44,7 +51,7 @@ describe 'cloud_properties related to clusters' do
       }
     end
     let(:options) do
-      options = cpi_options(
+      cpi_options(
         'datacenters' => [
           {
             'name' => @datacenter_name,
@@ -59,7 +66,6 @@ describe 'cloud_properties related to clusters' do
     end
 
     it 'creates vm in cluster defined in `vm_type`' do
-      cpi = VSphereCloud::Cloud.new(options)
       begin
         vm_id = cpi.create_vm(
           'agent-007',
@@ -78,12 +84,12 @@ describe 'cloud_properties related to clusters' do
       ensure
         delete_vm(cpi, vm_id)
       end
-    end
+   end
   end
 
   context 'when vm_type specifies multiple clusters' do
-    before do
-      options = cpi_options(
+    let(:options) do
+      cpi_options(
         'datacenters' => [
           {
             'name' => @datacenter_name,
@@ -98,7 +104,9 @@ describe 'cloud_properties related to clusters' do
           }
         ]
       )
-      cpi = VSphereCloud::Cloud.new(options)
+    end
+
+    before do
       # @cluster_more_memory should have more memory than @cluster_less_memory and
       # both clusters need to have the specified @shared_datastore
       verify_cluster_free_space(cpi, @cluster_more_datastore_free_space, @cluster_less_datastore_free_space)
@@ -144,15 +152,14 @@ describe 'cloud_properties related to clusters' do
     end
 
     it 'creates vm in the best possible cluster defined in `vm_type`' do
-      cpi = VSphereCloud::Cloud.new(options)
       begin
         vm_id = cpi.create_vm(
-            'agent-007',
-            @stemcell_id,
-            vm_type,
-            network_spec,
-            [],
-            {}
+          'agent-007',
+          @stemcell_id,
+          vm_type,
+          network_spec,
+          [],
+          {}
         )
         expect(vm_id).to_not be_nil
 
@@ -189,8 +196,8 @@ describe 'cloud_properties related to clusters' do
         ]
       }
     end
-    let(:cpi) do
-      options = cpi_options(
+    let(:options) do
+      cpi_options(
         'datacenters' => [
           {
             'name' => @datacenter_name,
@@ -204,7 +211,6 @@ describe 'cloud_properties related to clusters' do
           }
         ]
       )
-      VSphereCloud::Cloud.new(options)
     end
 
     let(:disjoint_cluster_cpi) do
@@ -225,17 +231,21 @@ describe 'cloud_properties related to clusters' do
       VSphereCloud::Cloud.new(options)
     end
 
+    after do
+      disjoint_cluster_cpi.cleanup
+    end
+
     let(:disk_pool) { { 'datastores' => [@disjoint_datastore] } }
 
     it 'should be able to create and attach disk to vm' do
       begin
         vm_id = cpi.create_vm(
-            'agent-007',
-            @stemcell_id,
-            vm_type,
-            get_network_spec,
-            [],
-            {}
+          'agent-007',
+          @stemcell_id,
+          vm_type,
+          get_network_spec,
+          [],
+          {}
         )
         expect(vm_id).to_not be_nil
         vm = cpi.vm_provider.find(vm_id)
@@ -245,7 +255,7 @@ describe 'cloud_properties related to clusters' do
         disk_id = cpi.create_disk(2048, disk_pool, vm_id)
         verify_disk_is_in_datastores(disjoint_cluster_cpi, disk_id, [@disjoint_datastore])
 
-        cpi.attach_disk(vm_id,disk_id)
+        cpi.attach_disk(vm_id, disk_id)
         verify_disk_is_in_datastores(disjoint_cluster_cpi, disk_id, [@disjoint_datastore])
       ensure
         delete_vm(cpi, vm_id)

@@ -68,6 +68,7 @@ describe 'NSX for vsphere integration', nsxv: true do
       # ignore clean-up errors
       puts e
     end
+    cpi.cleanup
   end
 
   context 'when vm_type specifies an nsx Security Group that already exists' do

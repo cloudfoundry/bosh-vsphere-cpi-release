@@ -35,14 +35,20 @@ describe 'cloud_properties related to disks' do
     }
   end
 
+  let(:cpi) do
+    VSphereCloud::Cloud.new(options)
+  end
   let(:options) do
     options = cpi_options(
       datacenters: [{persistent_datastore_pattern: @datastore_pattern}],
     )
   end
 
+  after do
+    cpi.cleanup
+  end
+
   it 'creates an ephemeral disk with the default type' do
-    cpi = VSphereCloud::Cloud.new(options)
     begin
       vm_id = cpi.create_vm(
         'agent-007',
@@ -69,7 +75,6 @@ describe 'cloud_properties related to disks' do
   end
 
   it 'creates a persistent disk with the default type' do
-    cpi = VSphereCloud::Cloud.new(options)
     begin
       disk_id = cpi.create_disk(128, {})
       expect(cpi.has_disk?(disk_id)).to be(true)
@@ -95,7 +100,6 @@ describe 'cloud_properties related to disks' do
     end
 
     it 'creates an ephemeral disk with the specified default type' do
-      cpi = VSphereCloud::Cloud.new(options)
       begin
         vm_id = cpi.create_vm(
           'agent-007',
@@ -121,7 +125,6 @@ describe 'cloud_properties related to disks' do
     end
 
     it 'creates a persistent disk with the specified default type' do
-      cpi = VSphereCloud::Cloud.new(options)
       begin
         disk_id = cpi.create_disk(128, {})
         expect(cpi.has_disk?(disk_id)).to be(true)
@@ -138,24 +141,16 @@ describe 'cloud_properties related to disks' do
     end
 
     context 'and type is not supported' do
-      let(:options) do
+      let(:bad_options) do
         cpi_options(
           default_disk_type: 'fake-disk-type',
           datacenters: [{persistent_datastore_pattern: @datastore_pattern}],
-        )
+          )
       end
 
       it 'raises an error' do
         expect do
-          cpi = VSphereCloud::Cloud.new(options)
-          cpi.create_vm(
-            'agent-007',
-            @stemcell_id,
-            vm_type,
-            network_spec,
-            [],
-            {}
-          )
+          VSphereCloud::Cloud.new(bad_options)
         end.to raise_error(/fake-disk-type/)
       end
     end
@@ -165,7 +160,6 @@ describe 'cloud_properties related to disks' do
     let(:disk_pool) { {'type' => 'eagerZeroedThick' } }
 
     it 'creates a persistent disk with the specified type' do
-      cpi = VSphereCloud::Cloud.new(options)
       begin
         disk_id = cpi.create_disk(128, disk_pool)
         expect(cpi.has_disk?(disk_id)).to be(true)
@@ -187,7 +181,6 @@ describe 'cloud_properties related to disks' do
     let(:cloud_properties) { {'datastores' => persistent_datastores} }
 
     it 'places the disk in the specified datastore and does not move it when attached' do
-      cpi = VSphereCloud::Cloud.new(options)
       begin
         director_disk_id = cpi.create_disk(128, cloud_properties)
         director_disk_cid = VSphereCloud::DirectorDiskCID.new(director_disk_id)

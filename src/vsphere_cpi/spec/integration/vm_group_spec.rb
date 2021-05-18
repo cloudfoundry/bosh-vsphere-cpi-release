@@ -12,10 +12,14 @@ describe 'VM Groups' do
   )}
 
   context 'when vm_group is defined' do
-    before (:all) do
+    before(:all) do
       @cpi = VSphereCloud::Cloud.new(cpi_options)
       @cluster_name = fetch_and_verify_cluster('BOSH_VSPHERE_CPI_CLUSTER')
     end
+    after(:all) do
+      @cpi.cleanup
+    end
+
     let(:vm_group_name) { "BOSH-CPI-test-vm-group" }
 
     let(:vm_type) do

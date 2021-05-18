@@ -3,11 +3,6 @@ require 'integration/spec_helper'
 require 'cloud/vsphere/cpi_extension'
 
 describe '#add cpi extension' do
-  before(:all) do
-    @cluster_name = fetch_and_verify_cluster('BOSH_VSPHERE_CPI_SECOND_CLUSTER')
-    @datastore_pattern = fetch_and_verify_datastore('BOSH_VSPHERE_CPI_SECOND_CLUSTER_DATASTORE', @cluster_name)
-  end
-
   subject(:cpi) do
     VSphereCloud::Cloud.new(cpi_options('default_disk_type' => 'thin'))
   end
@@ -30,6 +25,15 @@ describe '#add cpi extension' do
       'disk' => 2048,
       'cpu' => 1,
     }
+  end
+
+  before(:all) do
+    @cluster_name = fetch_and_verify_cluster('BOSH_VSPHERE_CPI_SECOND_CLUSTER')
+    @datastore_pattern = fetch_and_verify_datastore('BOSH_VSPHERE_CPI_SECOND_CLUSTER_DATASTORE', @cluster_name)
+  end
+
+  after do
+    cpi.cleanup
   end
 
   context 'when it creates a stemcell on vsphere' do
@@ -66,6 +70,10 @@ describe '#add cpi extension' do
         }],
       )
       VSphereCloud::Cloud.new(options)
+    end
+
+    after do
+      second_cluster_cpi.cleanup
     end
 
     it 'adds replicated stemcell and vm to extension' do

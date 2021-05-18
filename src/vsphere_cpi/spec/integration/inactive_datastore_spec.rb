@@ -22,6 +22,10 @@ describe 'inactive datastore handling' do
     }
   end
 
+  after do
+    inactive_cpi.cleanup
+  end
+
   context 'when the user specifies an inactive datastore' do
     let(:vm_type) do
       {

@@ -35,6 +35,10 @@ describe 'nested datacenters', nested_datacenter: true  do
     verify_vlan(@nested_datacenter_cpi, @nested_datacenter_nested_vlan, 'BOSH_VSPHERE_CPI_NESTED_DATACENTER_NESTED_VLAN')
   end
 
+  after(:all) do
+    @nested_datacenter_cpi.cleanup
+  end
+
   let(:network_spec) do
     {
       'static' => {

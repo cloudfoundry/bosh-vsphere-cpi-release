@@ -27,6 +27,11 @@ RSpec.describe '#human readable names' do
       VSphereCloud::Cloud.new(options)
     end
     let(:environment){ {'bosh' => { 'groups' => ['fake-director-name', 'fake-deployment-name', 'fake-instance-group-name'] } } }
+
+    after do
+      machine_name_cpi.cleanup
+    end
+
     it 'create vm with UUID based name' do
       begin
         test_vm_id = machine_name_cpi.create_vm(
@@ -60,6 +65,10 @@ RSpec.describe '#human readable names' do
           [],
           environment
       )
+    end
+
+    after do
+      human_readable_name_cpi.cleanup
     end
 
     shared_examples 'create vm with UUID based name' do

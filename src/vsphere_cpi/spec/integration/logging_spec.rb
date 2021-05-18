@@ -43,8 +43,11 @@ context 'debug logging' do
   context 'when http_logging is enabled' do
     let(:cpi) do
       opts = cpi_options({ soap_log: log, http_logging: true})
-      cpi = VSphereCloud::Cloud.new(opts)
-      cpi
+      VSphereCloud::Cloud.new(opts)
+    end
+
+    after do
+      cpi.cleanup
     end
 
     it 'does not log credentials' , log_creds: true do
@@ -65,8 +68,11 @@ context 'debug logging' do
   context 'when http_logging is NOT enabled' do
     let(:cpi) do
       opts = cpi_options({ soap_log: log, http_logging: false})
-      cpi = VSphereCloud::Cloud.new(opts)
-      cpi
+      VSphereCloud::Cloud.new(opts)
+    end
+
+    after do
+      cpi.cleanup
     end
 
     it 'does not log http requests' do
@@ -86,10 +92,13 @@ context 'debug logging' do
   context 'when request_id is present in the context' do
     let(:cpi) do
       opts = cpi_options({ soap_log: log, http_logging: false, request_id: 'fake-id-1234' })
-      cpi = VSphereCloud::Cloud.new(opts)
-      cpi
+      VSphereCloud::Cloud.new(opts)
     end
     let(:env) { {'secret' => 'my-fake-secret'} }
+
+    after do
+      cpi.cleanup
+    end
 
     it 'logs request_id' do
       vm_lifecycle(cpi, [], vm_type, network_spec, @stemcell_id, env)
@@ -100,10 +109,13 @@ context 'debug logging' do
   context 'when request_id is NOT present in the context' do
     let(:cpi) do
       opts = cpi_options({ soap_log: log, http_logging: false })
-      cpi = VSphereCloud::Cloud.new(opts)
-      cpi
+      VSphereCloud::Cloud.new(opts)
     end
     let(:env) { {'secret' => 'my-fake-secret'} }
+
+    after do
+      cpi.cleanup
+    end
 
     it 'logs request_id' do
       vm_lifecycle(cpi, [], vm_type, network_spec, @stemcell_id, env)

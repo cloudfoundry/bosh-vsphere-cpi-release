@@ -26,6 +26,10 @@ context 'when regex matching datastores in a datastore cluster (datastore-*)' do
     VSphereCloud::Cloud.new(options)
   end
 
+  after do
+    cpi.cleanup
+  end
+
   context'when all datastores present in cluster are in maintenance mode' do
     before do
       all_pattern_datastore_enter_maintenance_mode(cpi, @cluster_name, @datastore_pattern)

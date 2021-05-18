@@ -60,6 +60,12 @@ context 'when the datastore is chosen for disk creation' do
     }
   end
 
+  after do
+    first_cluster_cpi.cleanup
+    second_cluster_cpi.cleanup
+    both_cluster_cpi.cleanup
+  end
+
   context 'when a VM hint is provided during disk creation' do
     let(:existing_vm_id) do
       vm_id = create_vm_with_cpi(first_cluster_cpi, @stemcell_id)

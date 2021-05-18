@@ -62,6 +62,10 @@ describe 'Host Groups in Cluster and VM Host Rules' do
     let(:hosts_in_second_host_group) { second_host_group_mob.host.map(&:name) }
     let(:hosts_in_third_host_group) { third_host_group_mob.host.map(&:name) }
 
+    after do
+      cpi.cleanup
+    end
+
     context 'when host groups are declared in a Backward compatible way (Host Group is not a Hash just a String)' do
       context 'and multiple host groups are specified in same vSphere cluster' do
         let(:cpi) do
@@ -89,6 +93,11 @@ describe 'Host Groups in Cluster and VM Host Rules' do
                                 }]
           }
         end
+
+        after do
+          cpi.cleanup
+        end
+
         it 'creates VM and attach vm group host affinity rule' do
           simple_vm_lifecycle(cpi, '', vm_type, get_network_spec) do |vm_id|
             vm = cpi.vm_provider.find(vm_id)
@@ -214,6 +223,11 @@ describe 'Host Groups in Cluster and VM Host Rules' do
             let(:cpi) do
               VSphereCloud::Cloud.new(options)
             end
+
+            after do
+              cpi.cleanup
+            end
+
             it 'raises error for no placement found' do
               expect do
                 cpi.create_vm(
@@ -256,6 +270,11 @@ describe 'Host Groups in Cluster and VM Host Rules' do
                                   }]
             }
           end
+
+          after do
+            cpi.cleanup
+          end
+
           context 'when the drs rule type is must' do
             it 'creates VM and attach vm group host affinity rule' do
               simple_vm_lifecycle(cpi, '', vm_type, get_network_spec) do |vm_id|
@@ -310,6 +329,11 @@ describe 'Host Groups in Cluster and VM Host Rules' do
           let(:cpi) do
             VSphereCloud::Cloud.new(options)
           end
+
+          after do
+            cpi.cleanup
+          end
+
           it 'creates one VM on one of the hosts in the host groups of any cluster' do
             simple_vm_lifecycle(cpi, '', vm_type, get_network_spec) do |vm_id|
               vm = cpi.vm_provider.find(vm_id)
@@ -454,6 +478,11 @@ describe 'Host Groups in Cluster and VM Host Rules' do
           let(:cpi) do
             VSphereCloud::Cloud.new(options)
           end
+
+          after do
+            cpi.cleanup
+          end
+
           it 'creates one VM on the second cluster without host group\
             (as resource pool has more memory available than host group)' do
             simple_vm_lifecycle(cpi, '', vm_type, get_network_spec) do |vm_id|

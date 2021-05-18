@@ -39,6 +39,11 @@ describe 'Give a cluster with DRS On ', host_maintenance: true  do
     before do
       turn_maintenance_on_for_half_hosts(cpi, @cluster_name_maintenance)
     end
+
+    after do
+      cpi.cleanup
+    end
+
     it 'cpi should be able to replicate stemcell (create vm and create ephemeral disk) ' do
       begin
         @vm_id = cpi.create_vm(
@@ -103,6 +108,11 @@ describe 'Give a cluster with DRS On ', host_maintenance: true  do
     before do
       turn_maintenance_on_for_all_hosts(cpi, @cluster_name_maintenance)
     end
+
+    after do
+      cpi.cleanup
+    end
+
     it 'cpi should fail to replicate stemcell (create vm and create ephemeral disk) on a datastore ' do
       begin
         expect do
@@ -159,6 +169,11 @@ describe 'Give a cluster with DRS On ', host_maintenance: true  do
     before do
       turn_maintenance_on_for_all_hosts(cpi, @cluster_name_maintenance)
     end
+
+    after do
+      cpi.cleanup
+    end
+
     it 'cpi should fail to replicate stemcell (create vm and create ephemeral disk) on a datastore ' do
       begin
         expect do

@@ -44,6 +44,10 @@ context 'when datastores are configured in vm_types' do
     VSphereCloud::Cloud.new(options)
   end
 
+  after do
+    second_cluster_cpi.cleanup
+  end
+
   it 'creates a VM in one of the specified datastores' do
     begin
       vm_id = second_cluster_cpi.create_vm(
@@ -139,6 +143,10 @@ context 'when datastores are configured in vm_types' do
       })
     end
 
+    after do
+      two_cluster_cpi.cleanup
+    end
+
     it 'raises an error' do
       begin
         vm_id = nil
@@ -180,6 +188,10 @@ context 'when datastores are configured in vm_types' do
           }]
         }]
       })
+    end
+
+    after do
+      cpi.cleanup
     end
 
     it 'places the VM on that datastore as long as its cluster can reach it' do

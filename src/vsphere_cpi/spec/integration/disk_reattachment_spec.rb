@@ -114,6 +114,11 @@ describe 're-attaching a persistent disk' do
             ]
         }
       end
+
+      after do
+        both_cluster_cpi.cleanup
+      end
+
       it 'raises error ' do
         begin
           vm_id = @cpi.create_vm(
@@ -214,6 +219,11 @@ describe 're-attaching a persistent disk' do
             ]
         }
       end
+
+      after do
+        both_cluster_cpi.cleanup
+      end
+
       it 'raises error ' do
         begin
           vm_id = @cpi.create_vm(

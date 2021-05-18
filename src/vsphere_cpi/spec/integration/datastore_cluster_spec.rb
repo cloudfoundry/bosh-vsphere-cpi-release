@@ -22,6 +22,10 @@ context 'when regex matching datastores in a datastore cluster (datastore-*)' do
     VSphereCloud::Cloud.new(options)
   end
 
+  after do
+    cpi.cleanup
+  end
+
   it 'should place disk into datastores that belong to the datastore cluster' do
     begin
       @vm_id = cpi.create_vm(
@@ -89,6 +93,10 @@ context 'when datastore cluster is also defined in vm_type' do
     }
   end
   let(:cloud_properties) { {'datastores' => datastores} }
+
+  after do
+    cpi.cleanup
+  end
 
   context 'and drs is enabled' do
     let(:datastores) { ['clusters' => [@datastore_cluster => {}]] }
