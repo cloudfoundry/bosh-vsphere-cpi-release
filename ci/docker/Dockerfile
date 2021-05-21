@@ -17,7 +17,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       wget && \
     rm -rf /var/lib/apt/lists/*
 
-ENV RUBY_VERSION=2.6.5 GOLANG_VERSION=1.8.3
+ENV RUBY_VERSION=2.6.5 GOLANG_VERSION=1.16.4
 
 COPY ruby-install /work/ruby-install/
 
@@ -31,7 +31,7 @@ RUN apt-get update && \
 RUN cd /tmp && \
     wget -nv https://storage.googleapis.com/golang/go$GOLANG_VERSION.linux-amd64.tar.gz && \
     ( \
-        echo '1862f4c3d3907e59b04a757cfda0ea7aa9ef39274af99a784f5be843c80c6772 go1.8.3.linux-amd64.tar.gz' | \
+        echo '7154e88f5a8047aad4b80ebace58a059e36e7e2e4eb3b383127a28c711b4ff59 go1.16.4.linux-amd64.tar.gz' | \
         sha256sum -c - \
     ) && \
     tar -C /usr/local -xzf go*.tar.gz && \
