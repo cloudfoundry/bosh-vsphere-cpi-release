@@ -77,7 +77,9 @@ pushd bosh-cpi-src/src/vsphere_cpi
   bundle install
   set +e # do NOT prematurely exit if rspec fails—we want to tear down OpenVPN before we exit
   bundle exec rspec ${RSPEC_FLAGS} --require ./spec/support/verbose_formatter.rb --format VerboseFormatter spec/integration
+  RSPEC_EXIT_CODE=$?
   set -e
 popd
 
 cleanup
+exit $RSPEC_EXIT_CODE
