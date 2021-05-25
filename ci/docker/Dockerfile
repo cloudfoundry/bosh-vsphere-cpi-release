@@ -10,6 +10,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       make \
       netcat-openbsd \
       openssh-client \
+      openvpn \
       rsync \
       sshpass \
       sshuttle \

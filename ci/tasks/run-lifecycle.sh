@@ -10,9 +10,6 @@ mkdir -p /mnt/dev
 mount -t devtmpfs devtmpfs /mnt/dev
 ln -s /mnt/dev/net /dev/net
 
-# install OpenVPN
-apt update && apt install -y openvpn # TODO move this into the Docker image and delete this line
-
 # configure passwordless and sshpass-less ssh to VCPI jumpbox
 mkdir -p ~/.ssh
 ssh-keygen -t ed25519 -f ~/.ssh/vcpi -N ""
