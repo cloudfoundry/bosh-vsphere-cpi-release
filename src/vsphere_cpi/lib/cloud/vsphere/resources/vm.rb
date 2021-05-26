@@ -82,9 +82,13 @@ module VSphereCloud
           logger.info("No NSXT network/nic present on the VM")
           return nil
         end
-        opaque_networks_id_name_map = get_opaque_networks_id_name_map
+        nsxt_networks_id_name_map = get_nsxt_networks_id_name_map
         nsxt_nics.reduce([]) do |list, nic|
-          segment_name = opaque_networks_id_name_map[nic.backing.opaque_network_id]
+          if nic.backing.is_a?(VimSdk::Vim::Vm::Device::VirtualEthernetCard::DistributedVirtualPortBackingInfo)
+            segment_name = nsxt_networks_id_name_map[nic.backing.port.portgroup_key]
+          else
+            segment_name = nsxt_networks_id_name_map[nic.backing.opaque_network_id]
+          end
           port_id = nic.external_id
           list << [segment_name, port_id]
         end
@@ -399,17 +403,20 @@ module VSphereCloud
 
       def get_nsxt_nics
         nsxt_nics = nics.select do |nic|
-          nic.backing.is_a?(VimSdk::Vim::Vm::Device::VirtualEthernetCard::OpaqueNetworkBackingInfo) &&
-              nic.backing.opaque_network_type == NSXT_LOGICAL_SWITCH
+          nic.backing.is_a?(VimSdk::Vim::Vm::Device::VirtualEthernetCard::DistributedVirtualPortBackingInfo) ||
+            ( nic.backing.is_a?(VimSdk::Vim::Vm::Device::VirtualEthernetCard::OpaqueNetworkBackingInfo) &&
+              nic.backing.opaque_network_type == NSXT_LOGICAL_SWITCH )
         end
-        logger.info("NSX-T networks found for VM: #{cid}: #{nics.map(&:device_info).map(&:summary)}")
+        logger.info("Networks found for VM: #{cid}: #{nics.map(&:device_info).map(&:summary)}")
         nsxt_nics
       end
 
-      def get_opaque_networks_id_name_map
+      def get_nsxt_networks_id_name_map
         mob.network.reduce({}) do |map, net|
           if net.summary.is_a?(VimSdk::Vim::OpaqueNetwork::Summary)
             map[net.summary.opaque_network_id] = net.name
+          elsif net.summary.is_a?(VimSdk::Vim::Network::Summary) && net.summary.network.is_a?(VimSdk::Vim::Dvs::DistributedVirtualPortgroup)
+            map[net.summary.network.__mo_id__] = net.name
           end
           map
         end
