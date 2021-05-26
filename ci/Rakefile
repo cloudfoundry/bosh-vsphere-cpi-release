@@ -47,15 +47,15 @@ task :pipeline, [:name] => 'pipeline.yml' do |t, args|
   # Get the git branch name
   branch = ENV.fetch('BRANCH') { `git symbolic-ref -q --short HEAD`.strip }
 
-  # Set the pipeline name to be vSphere-CPI when on the master branch or
-  # vSphere-CPI-#{branch} when on another branch. If the branch name is
+  # Set the pipeline name to be vsphere-cpi when on the master branch or
+  # vcpi-#{branch} when on another branch. If the branch name is
   # indeterminate (because HEAD is detached) then the pipeline name must be
   # provided as the name argument to this task.
   args.with_defaults(name: ENV.fetch('PIPELINE') do
     if branch.empty?
       fail 'Pipeline name must be specified if HEAD is detached'
     end
-    branch == 'master' ? 'vSphere-CPI' : "vcpi-#{branch}"
+    branch == 'master' ? 'vsphere-cpi' : "vcpi-#{branch}"
   end)
 
   # Default to master if the branch name is indeterminate (because HEAD is
