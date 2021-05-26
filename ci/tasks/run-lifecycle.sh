@@ -64,7 +64,7 @@ cleanup() {
   kill %openvpn
   fg %openvpn # make sure OpenVPN shutdown has completed
   rm /dev/net
-  umount /mnt/dev
+  umount -l /mnt/dev
   set -e
 }
 
