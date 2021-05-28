@@ -2,8 +2,10 @@ require 'netaddr'
 
 module VSphereCloud
   class NSXTIpBlockProvider
-    def initialize(client)
-      @client = client
+    extend Hooks
+
+    def initialize(client_builder)
+      @client_builder = client_builder
     end
 
     # @return [IpBlockSubnet]
@@ -17,7 +19,9 @@ module VSphereCloud
     end
 
     def pool_api
-      @pool_api ||= NSXT::PoolManagementApi.new(@client)
+      @pool_api ||= NSXT::PoolManagementApi.new(@client_builder.get_client)
     end
+
+    before(*instance_methods) { require 'nsxt_manager_client/nsxt_manager_client' }
   end
 end

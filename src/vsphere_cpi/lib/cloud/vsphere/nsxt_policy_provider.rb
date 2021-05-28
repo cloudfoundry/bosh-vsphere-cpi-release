@@ -34,9 +34,10 @@ module VSphereCloud
 
   class NSXTPolicyProvider
     include Logger
+    extend Hooks
 
-    def initialize(client,  default_vif_type='PARENT')
-      @client = client
+    def initialize(client_builder, default_vif_type='PARENT')
+      @client_builder = client_builder
       @default_vif_type = default_vif_type
       @sleep_time = DEFAULT_SLEEP
       @max_tries = MAX_TRIES
@@ -158,6 +159,8 @@ module VSphereCloud
         end
       end
     end
+
+    before(*instance_methods) { require 'nsxt_policy_client/nsxt_policy_client' }
 
     private
 
@@ -296,27 +299,27 @@ module VSphereCloud
     end
 
     def policy_segment_ports_api
-      @policy_segment_ports_api ||= NSXTPolicy::PolicyNetworkingConnectivitySegmentsPortsApi.new(@client)
+      @policy_segment_ports_api ||= NSXTPolicy::PolicyNetworkingConnectivitySegmentsPortsApi.new(@client_builder.get_client)
     end
 
     def policy_segment_api
-      @policy_segment_api ||= NSXTPolicy::PolicyNetworkingConnectivitySegmentsSegmentsApi.new(@client)
+      @policy_segment_api ||= NSXTPolicy::PolicyNetworkingConnectivitySegmentsSegmentsApi.new(@client_builder.get_client)
     end
 
     def policy_group_api
-      @policy_group_api ||= NSXTPolicy::PolicyInventoryGroupsGroupsApi.new(@client)
+      @policy_group_api ||= NSXTPolicy::PolicyInventoryGroupsGroupsApi.new(@client_builder.get_client)
     end
 
     def policy_load_balancer_pools_api
-      @policy_load_balancer_pools_api ||= NSXTPolicy::PolicyNetworkingNetworkServicesLoadBalancingLoadBalancerPoolsApi.new(@client)
+      @policy_load_balancer_pools_api ||= NSXTPolicy::PolicyNetworkingNetworkServicesLoadBalancingLoadBalancerPoolsApi.new(@client_builder.get_client)
     end
 
     def policy_infra_realized_state_api
-      @policy_infra_realized_state_api ||= NSXTPolicy::PolicyInfraRealizedStateApi.new(@client)
+      @policy_infra_realized_state_api ||= NSXTPolicy::PolicyInfraRealizedStateApi.new(@client_builder.get_client)
     end
 
     def search_api
-      @search_api ||= NSXTPolicy::SearchSearchAPIApi.new(@client)
+      @search_api ||= NSXTPolicy::SearchSearchAPIApi.new(@client_builder.get_client)
     end
   end
 end

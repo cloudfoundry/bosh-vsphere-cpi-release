@@ -3,9 +3,10 @@ require 'cloud/vsphere/logger'
 module VSphereCloud
   class NSXTSwitchProvider
     include Logger
+    extend Hooks
 
-    def initialize(client)
-      @client = client
+    def initialize(client_builder)
+      @client_builder = client_builder
     end
 
     def create_logical_switch(transport_zone_id, name: nil, tags: nil)
@@ -52,10 +53,12 @@ module VSphereCloud
       end
     end
 
+    before(*instance_methods) { require 'nsxt_manager_client/nsxt_manager_client' }
+
     private
 
     def switch_api
-      @switch_api ||= NSXT::LogicalSwitchingApi.new(@client)
+      @switch_api ||= NSXT::LogicalSwitchingApi.new(@client_builder.get_client)
     end
   end
 end

@@ -102,9 +102,10 @@ module VSphereCloud
 
   class NSXTProvider
     include Logger
+    extend Hooks
 
-    def initialize(client, default_vif_type, vcenter_client, datacenter)
-      @client = client
+    def initialize(client_builder , default_vif_type, vcenter_client, datacenter)
+      @client_builder = client_builder
       @max_tries = MAX_TRIES
       @sleep_time = DEFAULT_SLEEP_TIME
       @default_vif_type = default_vif_type
@@ -113,23 +114,23 @@ module VSphereCloud
     end
 
     private def grouping_obj_svc
-      @grouping_obj_svc ||= NSXT::ManagementPlaneApiGroupingObjectsNsGroupsApi.new(@client)
+      @grouping_obj_svc ||= NSXT::ManagementPlaneApiGroupingObjectsNsGroupsApi.new(@client_builder.get_client)
     end
 
     private def logical_switching_svc
-      @logical_switching_svc ||= NSXT::ManagementPlaneApiLogicalSwitchingLogicalSwitchPortsApi.new(@client)
+      @logical_switching_svc ||= NSXT::ManagementPlaneApiLogicalSwitchingLogicalSwitchPortsApi.new(@client_builder.get_client)
     end
 
     private def vm_fabric_svc
-      @vm_fabric_svc ||= NSXT::ManagementPlaneApiFabricVirtualMachinesApi.new(@client)
+      @vm_fabric_svc ||= NSXT::ManagementPlaneApiFabricVirtualMachinesApi.new(@client_builder.get_client)
     end
 
     private def vif_fabric_svc
-      @vif_fabric_svc ||= NSXT::ManagementPlaneApiFabricVifsApi.new(@client)
+      @vif_fabric_svc ||= NSXT::ManagementPlaneApiFabricVifsApi.new(@client_builder.get_client)
     end
 
     private def services_svc
-      @services_svc ||= NSXT::ManagementPlaneApiServicesLoadbalancerApi.new(@client)
+      @services_svc ||= NSXT::ManagementPlaneApiServicesLoadbalancerApi.new(@client_builder.get_client)
     end
 
     def add_vm_to_nsgroups(vm, ns_groups)
@@ -317,6 +318,8 @@ module VSphereCloud
       logger.info("Fetched all switch, port pairs #{switch_lport_display_id}")
       switch_lport_display_id
     end
+
+    before(*instance_methods) { require 'nsxt_manager_client/nsxt_manager_client' }
 
     private
 

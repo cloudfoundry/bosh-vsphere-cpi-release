@@ -1,6 +1,13 @@
 module VSphereCloud
-  module NSXTApiClientBuilder
-    def self.build_api_client(config, logger)
+  class NSXTApiClientBuilder
+    def initialize(config, logger)
+      @config = config
+      @logger = logger
+    end
+
+    def get_client
+      return @client unless @client.nil?
+
       configuration = NSXT::Configuration.new
       configuration.host = config.host
       configuration.logger = logger
@@ -33,7 +40,7 @@ module VSphereCloud
         configuration.verify_ssl = false
         configuration.verify_ssl_host = false
       end
-      NSXT::ApiClient.new(configuration)
+      @client = NSXT::ApiClient.new(configuration)
     end
   end
 end

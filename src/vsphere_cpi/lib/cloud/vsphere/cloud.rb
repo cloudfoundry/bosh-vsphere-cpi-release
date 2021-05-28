@@ -112,21 +112,20 @@ module VSphereCloud
 
         nsxt_config =  replace_certs_keys_with_temp_files(@config.nsxt)
 
-        nsxt_client = NSXTApiClientBuilder::build_api_client(nsxt_config, logger)
+        nsxt_client_builder = NSXTApiClientBuilder.new(nsxt_config, logger)
 
         # Setup NSX-T Provider
-        @nsxt_provider = NSXTProvider.new(nsxt_client, @config.nsxt.default_vif_type, @client, @datacenter)
+        @nsxt_provider = NSXTProvider.new(nsxt_client_builder, @config.nsxt.default_vif_type, @client, @datacenter)
 
-        @switch_provider = NSXTSwitchProvider.new(nsxt_client)
+        @switch_provider = NSXTSwitchProvider.new(nsxt_client_builder)
 
-        @router_provider = NSXTRouterProvider.new(nsxt_client)
+        @router_provider = NSXTRouterProvider.new(nsxt_client_builder)
 
-        @ip_block_provider = NSXTIpBlockProvider.new(nsxt_client)
+        @ip_block_provider = NSXTIpBlockProvider.new(nsxt_client_builder)
 
         # Create Policy API Client
-        nsxt_policy_client = NSXTPolicyApiClientBuilder::build_policy_api_client(nsxt_config, logger)
-
-        @nsxt_policy_provider = NSXTPolicyProvider.new(nsxt_policy_client, @config.nsxt.default_vif_type)
+        nsxt_policy_client_builder = NSXTPolicyApiClientBuilder.new(nsxt_config, logger)
+        @nsxt_policy_provider = NSXTPolicyProvider.new(nsxt_policy_client_builder, @config.nsxt.default_vif_type)
       end
 
       # Initialize tagging tagger object

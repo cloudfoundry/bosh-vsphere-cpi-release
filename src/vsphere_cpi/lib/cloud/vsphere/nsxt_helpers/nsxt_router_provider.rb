@@ -3,9 +3,10 @@ require 'cloud/vsphere/logger'
 module VSphereCloud
   class NSXTRouterProvider
     include Logger
+    extend Hooks
 
-    def initialize(client)
-      @client = client
+    def initialize(client_builder)
+      @client_builder = client_builder
     end
 
     def create_t1_router(edge_cluster_id, name = nil)
@@ -98,10 +99,12 @@ module VSphereCloud
       end
     end
 
+    before(*instance_methods) { require 'nsxt_manager_client/nsxt_manager_client' }
+
     private
 
     def router_api
-      @router_api ||= NSXT::LogicalRoutingAndServicesApi.new(@client)
+      @router_api ||= NSXT::LogicalRoutingAndServicesApi.new(@client_builder.get_client)
     end
   end
 end

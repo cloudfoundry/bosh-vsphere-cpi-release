@@ -1,6 +1,13 @@
 module VSphereCloud
-  module NSXTPolicyApiClientBuilder
-    def self.build_policy_api_client(config, logger)
+  class NSXTPolicyApiClientBuilder
+    def initialize(config, logger)
+      @config = config
+      @logger = logger
+    end
+
+    def get_client
+      return @client unless @client.nil?
+
       configuration = NSXTPolicy::Configuration.new
       configuration.host = config.host
       configuration.username = config.username
@@ -15,7 +22,7 @@ module VSphereCloud
         configuration.verify_ssl = false
         configuration.verify_ssl_host = false
       end
-      NSXTPolicy::ApiClient.new(configuration)
+      @client = NSXTPolicy::ApiClient.new(configuration)
     end
   end
 end

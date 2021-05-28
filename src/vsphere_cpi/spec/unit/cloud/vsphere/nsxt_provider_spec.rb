@@ -1,5 +1,6 @@
 require 'digest'
 require 'spec_helper'
+require 'nsxt_manager_client/nsxt_manager_client'
 
 describe VSphereCloud::NSXTProvider, fake_logger: true, fast_retries: true do
   let(:vcenter_client) { instance_double('VSphereCloud::VCenterClient') }
