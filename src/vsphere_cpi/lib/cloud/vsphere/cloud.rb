@@ -846,10 +846,6 @@ module VSphereCloud
       rescue VSphereCloud::VCenterClient::NotLoggedInException
     end
 
-    def info
-      {'stemcell_formats' =>  ['vsphere-ovf', 'vsphere-ova']}
-    end
-
     def create_network(network_definition)
       raise 'NSXT must be enabled in CPI to use create_network' unless @config.nsxt_enabled?
       raise Bosh::Clouds::NotSupported, 'create_network is not supported for the NSXT Policy API' if @config.nsxt.use_policy_api?

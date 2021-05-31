@@ -3,6 +3,7 @@
 $LOAD_PATH.unshift File.expand_path('../../lib', __FILE__)
 
 require 'yaml'
+require 'json'
 require 'ostruct'
 require 'logger'
 require 'tmpdir'
@@ -19,7 +20,16 @@ Bosh::Clouds::Config.configure(OpenStruct.new(
   task_checkpoint: nil,
 ))
 
+# optimization shortcut: fast-path the `info` CPI method
+class BoshCloudsVSphereInfo
+  def info
+    {'stemcell_formats' =>  ['vsphere-ovf', 'vsphere-ova']}
+  end
+end
+
 soap_log = StringIO.new
+
+cpi_rpc_api_request_raw = ARGF.read
 
 #cpi_lambda now requires 2 arguments context, cpi_api_version
 cpi_lambda = lambda do |context, _|
@@ -39,10 +49,21 @@ cpi_lambda = lambda do |context, _|
   host = cloud_properties['vcenters'][0]['host']
   $vc_version = VmodlVersionDiscriminant.retrieve_vmodl_version(
     host, Bosh::Clouds::Config.logger)
-  require 'cloud/vsphere'
-  Bosh::Clouds::VSphere.new(cloud_properties)
+
+  begin
+    cpi_rpc_api_request = JSON.load(cpi_rpc_api_request_raw)
+    if cpi_rpc_api_request['method'] == 'info'
+      BoshCloudsVSphereInfo.new
+    else
+      require 'cloud/vsphere'
+      Bosh::Clouds::VSphere.new(cloud_properties)
+    end
+  rescue JSON::ParserError
+    require 'cloud/vsphere'
+    Bosh::Clouds::VSphere.new(cloud_properties)
+  end
 end
 
 cli = Bosh::Cpi::Cli.new(cpi_lambda, soap_log, STDOUT)
 
-cli.run(ARGF.read)
+cli.run(cpi_rpc_api_request_raw)

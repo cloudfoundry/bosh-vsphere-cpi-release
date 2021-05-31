@@ -2158,12 +2158,6 @@ module VSphereCloud
       end
     end
 
-    describe '#info' do
-      it 'returns correct info' do
-        expect(vsphere_cloud.info).to eq({'stemcell_formats' => ['vsphere-ovf', 'vsphere-ova']})
-      end
-    end
-
     # NOT NEEDED - FEATURE DISCONTINUED
     xdescribe '#create_network' do
       let(:network_definition) { {
