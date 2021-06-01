@@ -9,25 +9,25 @@ module VSphereCloud
       return @client unless @client.nil?
 
       configuration = NSXT::Configuration.new
-      configuration.host = config.host
-      configuration.logger = logger
+      configuration.host = @config.host
+      configuration.logger = @logger
       configuration.client_side_validation = false
 
       # Configure auth key/cert or user/paswords
-      if config.auth_private_key
-        configuration.key_file = config.auth_private_key
-        configuration.cert_file = config.auth_certificate
+      if @config.auth_private_key
+        configuration.key_file = @config.auth_private_key
+        configuration.cert_file = @config.auth_certificate
         # Are these required with key/cert pair?
         # configuration.verify_ssl = false
         # configuration.verify_ssl_host = false
       else
-        configuration.username = config.username
-        configuration.password = config.password
+        configuration.username = @config.username
+        configuration.password = @config.password
       end
 
       # REMOTE AUTH for NSX-T vIDM Integration
-      if config.remote_auth != nil
-        configuration.remote_auth = config.remote_auth
+      if @config.remote_auth != nil
+        configuration.remote_auth = @config.remote_auth
       end
 
       # Root CA Cert

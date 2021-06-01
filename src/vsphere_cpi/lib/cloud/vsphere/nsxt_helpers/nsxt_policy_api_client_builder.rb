@@ -9,10 +9,10 @@ module VSphereCloud
       return @client unless @client.nil?
 
       configuration = NSXTPolicy::Configuration.new
-      configuration.host = config.host
-      configuration.username = config.username
-      configuration.password = config.password
-      configuration.logger = logger
+      configuration.host = @config.host
+      configuration.username = @config.username
+      configuration.password = @config.password
+      configuration.logger = @logger
       configuration.client_side_validation = false
       configuration.debugging = false
       if ENV['BOSH_NSXT_CA_CERT_FILE']
