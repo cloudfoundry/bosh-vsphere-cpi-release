@@ -1,5 +1,7 @@
 require 'integration/spec_helper'
 require 'openssl'
+require 'nsxt_manager_client/nsxt_manager_client'
+require 'nsxt_policy_client/nsxt_policy_client'
 
 describe 'NSXT certificate authentication', nsxt_all: true do
 

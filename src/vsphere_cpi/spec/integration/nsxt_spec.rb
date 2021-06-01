@@ -1,6 +1,8 @@
 require 'digest'
 require 'securerandom'
 require 'integration/spec_helper'
+require 'nsxt_manager_client/nsxt_manager_client'
+require 'nsxt_policy_client/nsxt_policy_client'
 
 describe 'CPI', nsxt_all: true do
 
