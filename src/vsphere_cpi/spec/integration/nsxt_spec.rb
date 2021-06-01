@@ -395,6 +395,17 @@ describe 'CPI', nsxt_all: true do
               expect(results[0].display_name).to eq(vm_id)
             end
           end
+
+          retryer do
+            results = @policy_group_members_api.get_group_vm_members_0(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, nsgroup_name_1).results
+            raise StillUpdatingVMsInGroups if results.map(&:display_name).uniq.length > 0
+
+            expect(results.length).to eq(0)
+            results = @policy_group_members_api.get_group_vm_members_0(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, nsgroup_name_2).results
+            raise StillUpdatingVMsInGroups if results.map(&:display_name).uniq.length > 0
+
+            expect(results.length).to eq(0)
+          end
         end
 
         it 'creates more than 5 VMs' do

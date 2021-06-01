@@ -63,7 +63,6 @@ module VSphereCloud
       # For all the groups
       all_groups.each do |grp|
         retry_on_conflict("while removing vm: #{vm.cid} from group #{grp.id}") do
-          grp = retrieve_group(group_id: grp.id)
           delete_vm_from_group(grp, vm.cid)
         end
         grp = policy_group_api.read_group_for_domain(DEFAULT_NSXT_POLICY_DOMAIN, grp.id)
