@@ -26,7 +26,7 @@ end
 desc "Pull, build, and push the docker image '#{DOCKER_NAME}'"
 task docker: %w[docker:pull docker:make docker:push]
 
-file 'pipeline.yml' => FileList['pipeline/*.yml.erb'] do |t|
+file 'pipeline.yml' => FileList['pipeline/*.yml.erb', 'config.rb'] do |t|
   $pipeline = Pipeline.new
   load 'config.rb'
   File.write(t.name, $pipeline.render)
