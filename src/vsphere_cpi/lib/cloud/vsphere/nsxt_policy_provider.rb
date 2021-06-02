@@ -65,8 +65,6 @@ module VSphereCloud
         retry_on_conflict("while removing vm: #{vm.cid} from group #{grp.id}") do
           delete_vm_from_group(grp, vm.cid)
         end
-        grp = policy_group_api.read_group_for_domain(DEFAULT_NSXT_POLICY_DOMAIN, grp.id)
-        logger.info("Removal done vm: #{vm.cid} grp: #{grp}")
       end
     end
 
@@ -247,11 +245,13 @@ module VSphereCloud
 
       vm_external_id = get_vm_external_id(vm_cid)
 
+      updated = false
       group_obj.expression.each do |expr|
         if expr.is_a?(NSXTPolicy::ExternalIDExpression) &&
             expr.member_type == 'VirtualMachine' &&
             expr.resource_type == 'ExternalIDExpression'
           expr.external_ids.delete_if { |id| id == vm_external_id }
+          updated = true
 
           if expr.external_ids.empty?
             group_obj.expression.delete(expr)
@@ -269,8 +269,10 @@ module VSphereCloud
         end
       end
 
-      logger.info("Removing vm #{vm_cid} from group #{group_obj}")
-      policy_group_api.update_group_for_domain(DEFAULT_NSXT_POLICY_DOMAIN, group_obj.id, group_obj)
+      if updated
+        logger.info("Removing vm #{vm_cid} from group #{group_obj}")
+        policy_group_api.update_group_for_domain(DEFAULT_NSXT_POLICY_DOMAIN, group_obj.id, group_obj)
+      end
     end
 
     def get_vm_external_id(vm_cid)
