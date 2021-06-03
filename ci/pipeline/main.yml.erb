@@ -22,13 +22,11 @@ jobs:
       - get: bosh-cpi-src
         trigger: true
         passed:
-        - lifecycle-6.0-nsxv
-        - lifecycle-6.5-nsxt24
         - lifecycle-6.5-nsxt25
-        - lifecycle-6.7-nsxt24
         - lifecycle-6.7-nsxt25
         - lifecycle-7.0-nsxt30
-        - lifecycle-7.0-nsxt30-cvds
+        - lifecycle-7.0-nsxt31
+        - lifecycle-7.0-nsxt31-cvds
       - get: version-semver
         trigger: false
         params: { bump: patch }
@@ -53,10 +51,10 @@ jobs:
             passed: [build-candidate]
       - do:
           - put: environment
-            resource: pool-7.0-nsxt30-policy
+            resource: pool-7.0-nsxt31-policy
             params: {acquire: true}
             on_failure:
-              put: pool-7.0-nsxt30-policy
+              put: pool-7.0-nsxt31-policy
               params : {release: environment}
         attempts: 4
 
@@ -65,10 +63,10 @@ jobs:
     plan:
       - in_parallel:
           - get: source-ci
-          - {get: environment,              trigger: true,  passed: [lock-bats-policy], resource: pool-7.0-nsxt30-policy}
+          - {get: environment,              trigger: true,  passed: [lock-bats-policy], resource: pool-7.0-nsxt31-policy}
           - {get: cpi-release,              trigger: false, resource: bosh-cpi-artifacts, passed: [lock-bats-policy]}
           - {get: bosh-release,             trigger: false, resource: old-bosh-release}
-          - {get: stemcell,                 trigger: false, version: {version: "3468.46"}, resource: stemcell}
+          - {get: stemcell,                 trigger: false, version: {version: "621.125"}, resource: stemcell}
           - {get: certification,            trigger: false}
           - {get: bosh-deployment,          trigger: false}
           - {get: bats,                     trigger: false}
@@ -94,10 +92,10 @@ jobs:
               BAT_INFRASTRUCTURE: vsphere
               BAT_NETWORKING:     manual
               BAT_RSPEC_FLAGS:    "--tag ~dns --tag ~vip_networking --tag ~dynamic_networking --tag ~root_partition --tag ~raw_ephemeral_storage"
-              STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-trusty-go_agent
+              STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-xenial-go_agent
         on_failure:
           in_parallel:
-          - put: pool-7.0-nsxt30-policy
+          - put: pool-7.0-nsxt31-policy
             params : {remove: environment}
         ensure:
           do:
@@ -106,9 +104,9 @@ jobs:
 
   - name: unlock-bats-policy
     plan:
-      - {trigger: true, passed: [bats-policy], get: pool-7.0-nsxt30-policy}
-      - put: pool-7.0-nsxt30-policy
-        params : {release: pool-7.0-nsxt30-policy}
+      - {trigger: true, passed: [bats-policy], get: pool-7.0-nsxt31-policy}
+      - put: pool-7.0-nsxt31-policy
+        params : {release: pool-7.0-nsxt31-policy}
 
   - name: lock-bats
     plan:
@@ -136,7 +134,7 @@ jobs:
         - {get: cpi-release,              trigger: false, resource: bosh-cpi-artifacts, passed: [lock-bats]}
         - {get: environment,              trigger: true,  passed: [lock-bats], resource: pool-6.5-nsxt25}
         - {get: bosh-release,             trigger: false, resource: old-bosh-release}
-        - {get: stemcell,                 trigger: false, version: {version: "3468.46"}, resource: stemcell}
+        - {get: stemcell,                 trigger: false, version: {version: "621.125"}, resource: stemcell}
         - {get: certification,            trigger: false}
         - {get: bosh-deployment,          trigger: false}
         - {get: bats,                     trigger: false}
@@ -161,7 +159,7 @@ jobs:
             BAT_INFRASTRUCTURE: vsphere
             BAT_NETWORKING:     manual
             BAT_RSPEC_FLAGS:    "--tag ~dns --tag ~vip_networking --tag ~dynamic_networking --tag ~root_partition --tag ~raw_ephemeral_storage"
-            STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-trusty-go_agent
+            STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-xenial-go_agent
         on_failure:
           in_parallel:
           - put: pool-6.5-nsxt25
@@ -188,10 +186,10 @@ jobs:
             passed: [build-candidate]
       - do:
           - put: environment
-            resource: pool-7.0-nsxt30-cvds
+            resource: pool-7.0-nsxt31-cvds
             params: {acquire: true}
             on_failure:
-              put: pool-7.0-nsxt30-cvds
+              put: pool-7.0-nsxt31-cvds
               params : {release: environment}
         attempts: 4
 
@@ -201,9 +199,9 @@ jobs:
       - in_parallel:
           - get: source-ci
           - {get: cpi-release,              trigger: false, resource: bosh-cpi-artifacts, passed: [lock-bats-70-cvds]}
-          - {get: environment,              trigger: true,  passed: [lock-bats-70-cvds], resource: pool-7.0-nsxt30-cvds}
+          - {get: environment,              trigger: true,  passed: [lock-bats-70-cvds], resource: pool-7.0-nsxt31-cvds}
           - {get: bosh-release,             trigger: false, resource: old-bosh-release}
-          - {get: stemcell,                 trigger: false, version: {version: "3468.46"}, resource: stemcell}
+          - {get: stemcell,                 trigger: false, version: {version: "621.125"}, resource: stemcell}
           - {get: certification,            trigger: false}
           - {get: bosh-deployment,          trigger: false}
           - {get: bats,                     trigger: false}
@@ -228,10 +226,10 @@ jobs:
               BAT_INFRASTRUCTURE: vsphere
               BAT_NETWORKING:     manual
               BAT_RSPEC_FLAGS:    "--tag ~dns --tag ~vip_networking --tag ~dynamic_networking --tag ~root_partition --tag ~raw_ephemeral_storage"
-              STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-trusty-go_agent
+              STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-xenial-go_agent
         on_failure:
           in_parallel:
-            - put: pool-7.0-nsxt30-cvds
+            - put: pool-7.0-nsxt31-cvds
               params : {remove: environment}
         ensure:
           do:
@@ -240,9 +238,9 @@ jobs:
 
   - name: unlock-bats-70-cvds
     plan:
-      - {trigger: true, passed: [bats-70-cvds], get: pool-7.0-nsxt30-cvds}
-      - put: pool-7.0-nsxt30-cvds
-        params : {release: pool-7.0-nsxt30-cvds}
+      - {trigger: true, passed: [bats-70-cvds], get: pool-7.0-nsxt31-cvds}
+      - put: pool-7.0-nsxt31-cvds
+        params : {release: pool-7.0-nsxt31-cvds}
 
   - name: inspect-candidate
     serial: true
@@ -291,27 +289,6 @@ resources:
       branch:       master
       pool:         v6.5-nsxt25
       private_key:  ((vcpi-pool_deployment_key))
-  - name: pool-6.5-nsxt24
-    type: pool
-    source:
-      uri:          git@gitlab.eng.vmware.com:tas-vcf-vmc-anycloud/vcpi-pool.git
-      branch:       master
-      pool:         v6.5-nsxt24
-      private_key:  ((vcpi-pool_deployment_key))
-  - name: pool-6.0-nsxv
-    type: pool
-    source:
-      uri:          git@gitlab.eng.vmware.com:tas-vcf-vmc-anycloud/vcpi-pool.git
-      branch:       master
-      pool:         v6.0-nsxv
-      private_key:  ((vcpi-pool_deployment_key))
-  - name: pool-6.7-nsxt24
-    type: pool
-    source:
-      uri:          git@gitlab.eng.vmware.com:tas-vcf-vmc-anycloud/vcpi-pool.git
-      branch:       master
-      pool:         v6.7-nsxt24
-      private_key:  ((vcpi-pool_deployment_key))
   - name: pool-6.7-nsxt25
     type: pool
     source:
@@ -326,19 +303,26 @@ resources:
       branch:       master
       pool:         v7.0-nsxt30
       private_key:  ((vcpi-pool_deployment_key))
-  - name: pool-7.0-nsxt30-policy
+  - name: pool-7.0-nsxt31
     type: pool
     source:
       uri:          git@gitlab.eng.vmware.com:tas-vcf-vmc-anycloud/vcpi-pool.git
       branch:       master
-      pool:         v7.0-nsxt30-policy
+      pool:         v7.0-nsxt31
       private_key:  ((vcpi-pool_deployment_key))
-  - name: pool-7.0-nsxt30-cvds
+  - name: pool-7.0-nsxt31-policy
     type: pool
     source:
       uri:          git@gitlab.eng.vmware.com:tas-vcf-vmc-anycloud/vcpi-pool.git
       branch:       master
-      pool:         v7.0-nsxt30-cvds
+      pool:         v7.0-nsxt31-policy
+      private_key:  ((vcpi-pool_deployment_key))
+  - name: pool-7.0-nsxt31-cvds
+    type: pool
+    source:
+      uri:          git@gitlab.eng.vmware.com:tas-vcf-vmc-anycloud/vcpi-pool.git
+      branch:       master
+      pool:         v7.0-nsxt31-cvds
       private_key:  ((vcpi-pool_deployment_key))
   - name: bosh-cpi-artifacts
     type: s3
@@ -382,7 +366,7 @@ resources:
   - name: stemcell
     type: bosh-io-stemcell
     source:
-      name: bosh-vsphere-esxi-ubuntu-trusty-go_agent
+      name: bosh-vsphere-esxi-ubuntu-xenial-go_agent
   - name: bosh-deployment
     type: git
     source:
@@ -396,7 +380,7 @@ resources:
   - name: old-bosh-release
     type: bosh-io-release
     source:
-      version: "270.7.0"
+      version: "271.7.0"
       repository: cloudfoundry/bosh
   - name: bosh-cli
     type: s3
@@ -409,93 +393,3 @@ resources:
     source:
       uri: https://github.com/cloudfoundry/bosh-acceptance-tests.git
       branch: master
-
-groups:
-
-- name: complete-view
-  jobs:
-  - unit-test
-  - build-candidate
-  - bats
-  - lock-bats
-  - unlock-bats
-  - bats-70-cvds
-  - lock-bats-70-cvds
-  - unlock-bats-70-cvds
-  - bats-policy
-  - lock-bats-policy
-  - unlock-bats-policy
-  - lock-6.7-nsxt25
-  - lifecycle-6.7-nsxt25
-  - unlock-6.7-nsxt25
-  - lock-7.0-nsxt30
-  - lifecycle-7.0-nsxt30
-  - unlock-7.0-nsxt30
-  - lock-7.0-nsxt30-cvds
-  - lifecycle-7.0-nsxt30-cvds
-  - unlock-7.0-nsxt30-cvds
-  - lock-6.7-nsxt24
-  - lifecycle-6.7-nsxt24
-  - unlock-6.7-nsxt24
-  - inspect-candidate
-  - promote-candidate
-  - lock-6.5-nsxt25
-  - lifecycle-6.5-nsxt25
-  - unlock-6.5-nsxt25
-  - lock-6.5-nsxt24
-  - lifecycle-6.5-nsxt24
-  - unlock-6.5-nsxt24
-  - lifecycle-6.0-nsxv
-  - lock-6.0-nsxv
-  - unlock-6.0-nsxv
-
-- name: bats
-  jobs:
-  - unit-test
-  - bats
-  - bats-policy
-  - bats-70-cvds
-  - lock-bats
-  - lock-bats-policy
-  - lock-bats-70-cvds
-  - unlock-bats
-  - unlock-bats-policy
-  - unlock-bats-70-cvds
-
-- name: v6.5
-  jobs:
-  - unit-test
-  - lock-6.5-nsxt25
-  - lifecycle-6.5-nsxt25
-  - unlock-6.5-nsxt25
-  - lock-6.5-nsxt24
-  - lifecycle-6.5-nsxt24
-  - unlock-6.5-nsxt24
-
-- name: v6.0
-  jobs:
-  - unit-test
-  - lifecycle-6.0-nsxv
-  - lock-6.0-nsxv
-  - unlock-6.0-nsxv
-
-- name: v6.7
-  jobs:
-  - unit-test
-  - lifecycle-6.7-nsxt24
-  - lock-6.7-nsxt24
-  - unlock-6.7-nsxt24
-  - lifecycle-6.7-nsxt25
-  - unlock-6.7-nsxt25
-  - lock-6.7-nsxt25
-
-- name: v7.0
-  jobs:
-    - unit-test
-    - lifecycle-7.0-nsxt30
-    - lock-7.0-nsxt30
-    - unlock-7.0-nsxt30
-    - lifecycle-7.0-nsxt30-cvds
-    - lock-7.0-nsxt30-cvds
-    - unlock-7.0-nsxt30-cvds
-
