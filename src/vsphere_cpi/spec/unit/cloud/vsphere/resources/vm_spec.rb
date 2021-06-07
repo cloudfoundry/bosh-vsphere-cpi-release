@@ -275,6 +275,13 @@ describe VSphereCloud::Resources::VM, fake_logger: true do
         expect(client).to receive(:power_off_vm).with(vm_mob)
         vm.power_off
       end
+
+      context 'when the operation errors because the vm is powered off' do
+        it 'should ignore the error' do
+          allow(client).to receive(:power_off_vm).with(vm_mob).and_raise(VSphereCloud::VCenterClient::InvalidPowerState, 'vm blah blah (Powered off)')
+          vm.power_off
+        end
+      end
     end
 
     context 'when current state is powered off' do

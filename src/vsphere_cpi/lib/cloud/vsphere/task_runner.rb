@@ -25,13 +25,13 @@ module VSphereCloud
 
         if err
           logger.warn(fault_message(task, err))
-          err = task_exception_for_vim_fault(err)
+          vcenter_client_err = task_exception_for_vim_fault(err)
           unless task.retryable?
-            raise err
+            raise vcenter_client_err
           end
         end
 
-        [result, err]
+        [result, vcenter_client_err]
       end
       method_result
     end
@@ -84,6 +84,8 @@ module VSphereCloud
         VimSdk::Vim::Fault::FileNotFound => VCenterClient::FileNotFoundException,
         VimSdk::Vim::Fault::DuplicateName => VCenterClient::DuplicateName,
         VimSdk::Vim::Fault::AlreadyUpgraded => VCenterClient::AlreadyUpgraded,
+        VimSdk::Vim::Fault::FileAlreadyExists => VCenterClient::FileAlreadyExists,
+        VimSdk::Vim::Fault::InvalidPowerState => VCenterClient::InvalidPowerState,
       }
       exceptions_by_fault.fetch(fault.class, VCenterClient::TaskException).new(fault.msg)
     end

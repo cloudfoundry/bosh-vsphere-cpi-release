@@ -9,6 +9,16 @@ module VSphereCloud
           fault_class: VimSdk::Vim::Fault::DuplicateName,
         },
         {
+          # Don't retry power off when the power is already off
+          fault_class: VimSdk::Vim::Fault::InvalidPowerState,
+          method_name: 'PowerOffVM_Task'
+        },
+        {
+          # Don't retry create disk when the disk is already created
+          fault_class: VimSdk::Vim::Fault::FileAlreadyExists,
+          method_name: 'CreateVirtualDisk_Task'
+        },
+        {
           # Don't retry delete as sometimes the file is already gone
           fault_class: VimSdk::Vim::Fault::FileFault,
           entity_class: VimSdk::Vim::FileManager,

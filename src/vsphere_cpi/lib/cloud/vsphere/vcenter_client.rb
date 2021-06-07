@@ -9,6 +9,8 @@ module VSphereCloud
     class FileNotFoundException < TaskException; end
     class DuplicateName < TaskException; end
     class AlreadyUpgraded < TaskException; end
+    class FileAlreadyExists < TaskException; end
+    class InvalidPowerState < TaskException; end
     class AlreadyLoggedInException < StandardError; end
     class NotLoggedInException < StandardError; end
     class NetworkNotFoundError < StandardError; end
@@ -354,15 +356,19 @@ module VSphereCloud
       disk_spec.capacity_kb = disk_size_in_mb * 1024
       disk_spec.adapter_type = 'lsiLogic'
 
-      wait_for_task do
-        service_content.virtual_disk_manager.create_virtual_disk(
-          disk_path,
-          datacenter_mob,
-          disk_spec
-        )
+      begin
+        wait_for_task do
+          service_content.virtual_disk_manager.create_virtual_disk(
+            disk_path,
+            datacenter_mob,
+            disk_spec
+          )
+        end
+      rescue VCenterClient::FileAlreadyExists
+        logger.warn("Ignoring error disk #{disk_path} already exists")
       end
 
-      Resources::PersistentDisk.new(cid: disk_cid, size_in_mb: disk_size_in_mb, datastore: datastore, folder: disk_folder)
+        Resources::PersistentDisk.new(cid: disk_cid, size_in_mb: disk_size_in_mb, datastore: datastore, folder: disk_folder)
     end
 
     def find_disk_size_using_browser(datastore, disk_cid, disk_folder)

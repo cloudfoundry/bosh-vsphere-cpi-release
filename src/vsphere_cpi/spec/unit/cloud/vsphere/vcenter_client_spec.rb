@@ -252,6 +252,21 @@ module VSphereCloud
         end
       end
 
+      context 'when the disk file already exists' do
+        it 'does not raise an error' do
+          expect(task_runner).to receive(:run) do |*args, &block|
+            expect(block.call).to eq(create_disk_task)
+            raise VSphereCloud::VCenterClient::FileAlreadyExists.new "blah blah blah"
+          end
+          expect(disk_spec).to receive(:disk_type=).with('eagerZeroedThick')
+          expect(Resources::PersistentDisk).to receive(:new).with(cid: 'disk_cid', size_in_mb: 10, datastore: datastore, folder: disk_folder)
+
+          expect {
+            client.create_disk(datacenter, datastore, 'disk_cid', disk_folder, 10, 'eagerZeroedThick')
+          }.not_to raise_error
+        end
+      end
+
       context 'when the type is nil' do
         it 'raises an error' do
           expect {
@@ -259,7 +274,6 @@ module VSphereCloud
           }.to raise_error 'no disk type specified'
         end
       end
-
     end
 
     describe '#delete_folder' do

@@ -184,7 +184,12 @@ module VSphereCloud
         power_state = cloud_searcher.get_property(@mob, Vim::VirtualMachine, 'runtime.powerState')
 
         if power_state != Vim::VirtualMachine::PowerState::POWERED_OFF
-          @client.power_off_vm(@mob)
+          begin
+            @client.power_off_vm(@mob)
+          rescue VCenterClient::InvalidPowerState => e
+            raise e unless e.message.include? 'Powered off'
+            logger.warn('ignoring PowerState exception because vm is powered off')
+          end
         else
           logger.info("VM '#{@cid}' is already powered off, skipping power off task.")
         end
