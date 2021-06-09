@@ -60,10 +60,11 @@ module VSphereCloud
     def remove_vm_from_groups(vm)
       logger.info("Removing vm: #{vm.cid} from all Policy Groups it is part of")
       all_groups = retrieve_all_groups
+      vm_external_id = get_vm_external_id(vm.cid)
       # For all the groups
       all_groups.each do |grp|
         retry_on_conflict("while removing vm: #{vm.cid} from group #{grp.id}") do
-          delete_vm_from_group(grp, vm.cid)
+          delete_vm_from_group(grp, vm.cid, vm_external_id)
         end
       end
     end
@@ -240,10 +241,8 @@ module VSphereCloud
       policy_group_api.update_group_for_domain(DEFAULT_NSXT_POLICY_DOMAIN, group_obj.id, group_obj)
     end
 
-    def delete_vm_from_group(group_obj, vm_cid)
+    def delete_vm_from_group(group_obj, vm_cid, vm_external_id)
       return if group_obj.expression.nil? || group_obj.expression.empty?
-
-      vm_external_id = get_vm_external_id(vm_cid)
 
       updated = false
       group_obj.expression.each do |expr|
