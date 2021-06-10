@@ -23,15 +23,15 @@ See [vSphere API Docs](http://pubs.vmware.com/vsphere-60/topic/com.vmware.wssdk.
 
 An environment running one of the following supported releases:
 
-  * [vSphere 6.0](https://docs.vmware.com/en/VMware-vSphere/6.0/rn/vsphere-esxi-vcenter-server-60-release-notes.html) (actively tested)
   * [vSphere 6.5](https://docs.vmware.com/en/VMware-vSphere/6.5/rn/vsphere-esxi-vcenter-server-65-release-notes.html) (actively tested)
   * [vSphere 6.7](https://docs.vmware.com/en/VMware-vSphere/6.7/rn/vsphere-esxi-vcenter-server-67-release-notes.html) (actively tested)
   * [vSphere 7.0](https://docs.vmware.com/en/VMware-vSphere/7.0/rn/vsphere-esxi-vcenter-server-70-release-notes.html) (actively tested)
 
-NSX Support:
+NSX-T Support:
 
-  * [NSX](https://docs.vmware.com/en/VMware-NSX-for-vSphere/index.html)
-  * [NSX-T](https://docs.vmware.com/en/VMware-NSX-T/index.html)
+  * [NSX-T 2.5](https://docs.vmware.com/en/VMware-NSX-T-Data-Center/2.5.3/rn/VMware-NSX-T-Data-Center-253-Release-Notes.html)
+  * [NSX-T 3.0](https://docs.vmware.com/en/VMware-NSX-T-Data-Center/3.0/rn/VMware-NSX-T-Data-Center-303-Release-Notes.html)
+  * [NSX-T 3.1](https://docs.vmware.com/en/VMware-NSX-T-Data-Center/3.1/rn/VMware-NSX-T-Data-Center-3121-Release-Notes.html)
 
 ## Concepts
 
