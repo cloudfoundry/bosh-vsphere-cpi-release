@@ -89,8 +89,8 @@ module NSXTPolicy
         invalid_properties.push('invalid value for "target_display_name", the character length must be smaller than or equal to 255.')
       end
 
-      if !@target_id.nil? && @target_id.to_s.length > 64
-        invalid_properties.push('invalid value for "target_id", the character length must be smaller than or equal to 64.')
+      if !@target_id.nil? && @target_id.to_s.length > 255
+        invalid_properties.push('invalid value for "target_id", the character length must be smaller than or equal to 255.')
       end
 
       if !@target_type.nil? && @target_type.to_s.length > 255

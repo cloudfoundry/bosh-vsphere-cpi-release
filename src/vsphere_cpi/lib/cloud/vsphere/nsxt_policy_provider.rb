@@ -70,12 +70,14 @@ module VSphereCloud
 
     def remove_vm_from_groups(vm)
       logger.info("Removing vm: #{vm.cid} from all Policy Groups it is part of")
-      all_groups = retrieve_all_groups
       vm_external_id = get_vm_external_id(vm.cid)
+      vm_groups = retrieve_vm_groups(vm_external_id)
+
       # For all the groups
-      all_groups.each do |grp|
-        retry_on_conflict("while removing vm: #{vm.cid} from group #{grp.id}") do
-          delete_vm_from_group(grp, vm.cid, vm_external_id)
+      vm_groups.each do |grp_ref|
+        retry_on_conflict("while removing vm: #{vm.cid} from group #{grp_ref.target_id}") do
+          group_obj = retrieve_group(group_id: grp_ref.path.split('/').last)
+          delete_vm_from_group(group_obj, vm.cid, vm_external_id)
         end
       end
     end
@@ -219,16 +221,16 @@ module VSphereCloud
       group
     end
 
-    def retrieve_all_groups()
-      logger.info("Gathering all Policy Groups")
+    def retrieve_vm_groups(vm_external_id)
+      logger.info("Gathering Policy Groups for VM #{vm_external_id}")
       groups = []
-      group_list = policy_group_api.list_group_for_domain_0(DEFAULT_NSXT_POLICY_DOMAIN)
+      group_list = policy_group_members_api.get_groups_for_vm(vm_external_id)
       groups.push(*group_list.results)
       until group_list.cursor.nil?
-        group_list = policy_group_api.list_group_for_domain_0(DEFAULT_NSXT_POLICY_DOMAIN, cursor: group_list.cursor)
+        group_list = policy_group_members_api.get_groups_for_vm(vm_external_id, cursor: group_list.cursor)
         groups.push(*group_list.results)
       end
-      logger.info("Found #{groups.size} Policy Groups")
+      logger.info("Found #{groups.size} Policy Groups for VM #{vm_external_id}")
       groups
     end
 
@@ -338,6 +340,10 @@ module VSphereCloud
 
     def policy_group_api
       @policy_group_api ||= NSXTPolicy::PolicyInventoryGroupsGroupsApi.new(@client_builder.get_client)
+    end
+
+    def policy_group_members_api
+      @policy_group_members_api ||= NSXTPolicy::PolicyInventoryGroupsGroupMembersApi.new(@client_builder.get_client)
     end
 
     def policy_load_balancer_pools_api

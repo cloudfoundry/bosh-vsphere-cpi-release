@@ -12,6 +12,11 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
     allow(nsxt_policy_provider).to receive(:policy_group_api).and_return(policy_group_api)
   end
 
+  let(:policy_group_members_api) { instance_double(NSXTPolicy::PolicyInventoryGroupsGroupMembersApi) }
+  before do
+    allow(nsxt_policy_provider).to receive(:policy_group_members_api).and_return(policy_group_members_api)
+  end
+
   let(:policy_load_balancer_pools_api) { instance_double(NSXTPolicy::PolicyNetworkingNetworkServicesLoadBalancingLoadBalancerPoolsApi) }
   before do
     allow(nsxt_policy_provider).to receive(:policy_load_balancer_pools_api).and_return(policy_load_balancer_pools_api)
@@ -42,6 +47,10 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
   let(:group2) { instance_double(NSXTPolicy::Group,
                                  expression: [],
                                  id: 'some-group-2')}
+  let(:group1ref) { instance_double(NSXTPolicy::PolicyResourceReferenceForEP,
+                                    target_id: '/something/some-domain/groups/some-group-1', path: '/something/some-domain/groups/some-group-1')}
+  let(:group2ref) { instance_double(NSXTPolicy::PolicyResourceReferenceForEP,
+                                    target_id: '/something/some-domain/groups/some-group-2', path: '/something/some-domain/groups/some-group-2')}
 
 
   let(:conjunction_expression) {
@@ -302,10 +311,9 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
   end
 
   describe '#remove_vm_from_groups' do
+    let(:groups_result) { instance_double(NSXTPolicy::PolicyResourceReferenceForEPListResult, results: [group1ref, group2ref], cursor: nil) }
     before do
-      groups_list_result = instance_double(NSXTPolicy::GroupListResult, results: [group1, group2], cursor: nil)
-      allow(policy_group_api).to receive(:list_group_for_domain_0).
-          with(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN).and_return(groups_list_result)
+      allow(policy_group_members_api).to receive(:get_groups_for_vm).and_return(groups_result)
       allow(policy_group_api).to receive(:read_group_for_domain).
           with(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, "some-group-1").and_return(group1)
       allow(policy_group_api).to receive(:read_group_for_domain).
@@ -313,6 +321,7 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
     end
 
     context 'when groups are empty' do
+      let(:groups_result) { instance_double(NSXTPolicy::PolicyResourceReferenceForEPListResult, results: [], cursor: nil) }
       it 'does not delete from groups' do
         expect(policy_group_api).to_not receive(:update_group_for_domain)
         nsxt_policy_provider.remove_vm_from_groups(vm)
@@ -392,7 +401,7 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
       end
     end
 
-    context 'when group does not have vms' do
+    context 'when group does not have vm condition even though it is a group member somehow' do
       let(:existing_expression) {
         NSXTPolicy::ExternalIDExpression.new(resource_type: 'ExternalIDExpression',
                                              member_type: 'VirtualMachine',
