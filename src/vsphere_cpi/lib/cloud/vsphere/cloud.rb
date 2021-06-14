@@ -1,6 +1,7 @@
 require 'cloud/vsphere/logger'
 require 'json'
 require 'membrane'
+require 'tempfile'
 require 'cloud'
 require 'cloud/vsphere/cpi_extension'
 
