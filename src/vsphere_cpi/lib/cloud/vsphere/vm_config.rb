@@ -8,6 +8,7 @@ module VSphereCloud
     def initialize(manifest_params:, cluster_provider: nil)
       @manifest_params = manifest_params
       @cluster_provider = cluster_provider
+      @max_mhz = 0
     end
 
     def upgrade_hw_version?(vmtype_hw_version, global_hw_version)
@@ -33,6 +34,18 @@ module VSphereCloud
         @vm_cid = "vm-#{SecureRandom.uuid}"
       end
       @vm_cid
+    end
+
+    def calculate_cpu_reservation(cluster)
+      if vm_type.cpu_reserve_full_mhz
+        @maxMhz = 0
+        cluster.host.each do |host|
+          if host.runtime.connection_state == 'connected' &&
+              !host.runtime.in_maintenance_mode
+                @maxMhz = host.summary.hardware.cpu_mhz if host.summary.hardware.cpu_mhz > @maxMhz
+          end
+        end
+      end
     end
 
     def cluster_placements
@@ -122,7 +135,9 @@ module VSphereCloud
       params = {}
       params[:num_cpus] = vm_type.cpu
       params[:memory_mb] = vm_type.ram
+      params[:cpu_allocation] = VimSdk::Vim::ResourceAllocationInfo.new(reservation: @maxMhz * vm_type.cpu) if vm_type.cpu_reserve_full_mhz
       params[:nested_hv_enabled] = true if vm_type.nested_hardware_virtualization
+      params[:memory_reservation_locked_to_max] = true if vm_type.memory_reservation_locked_to_max     
       params[:cpu_hot_add_enabled] = true if vm_type.cpu_hot_add_enabled
       params[:memory_hot_add_enabled] = true if vm_type.memory_hot_add_enabled
       params.delete_if { |k, v| v.nil? }

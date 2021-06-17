@@ -28,6 +28,7 @@ module VSphereCloud
         cluster = cluster_placement.cluster
         # Validates if the rule specified is of right syntax
         vm_config.validate_drs_rules(cluster)
+        vm_config.calculate_cpu_reservation(cluster)
 
         #@TA: TODO Choose host here if needed.
 
