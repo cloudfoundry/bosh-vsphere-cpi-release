@@ -775,7 +775,7 @@ describe 'CPI', nsxt_all: true do
     overlay_tz = tzs.results.find { |tz| tz.display_name == 'tz-overlay' }
     segment_names.each do |segment_name|
       seg_1 = NSXTPolicy::Segment.new(display_name: segment_name, transport_zone_path: overlay_tz.path)
-      @policy_segment_api.create_or_replace_infra_segment(segment_name, seg_1)
+      @policy_segment_api.create_or_replace_infra_segment(SecureRandom.uuid, seg_1)
     end
   end
 
@@ -813,7 +813,7 @@ describe 'CPI', nsxt_all: true do
   end
 
   def create_lb_pool(pool_name)
-    @policy_load_balancer_pools_api.update_lb_pool_0(pool_name, NSXTPolicy::LBPool.new)
+    @policy_load_balancer_pools_api.update_lb_pool_0(SecureRandom.uuid, NSXTPolicy::LBPool.new(display_name: pool_name))
   end
 
   def delete_lb_pool(pool_name)
