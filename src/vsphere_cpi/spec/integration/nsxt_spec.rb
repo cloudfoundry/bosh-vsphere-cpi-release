@@ -77,8 +77,8 @@ describe 'CPI', nsxt_all: true do
 
   let(:nsgroup_name_1) { "BOSH-CPI-test-#{SecureRandom.uuid}" }
   let(:nsgroup_name_2) { "BOSH-CPI-test-#{SecureRandom.uuid}" }
-  let(:segment_name_1) { "BOSH-CPI-test-#{SecureRandom.uuid}" }
-  let(:segment_name_2) { "BOSH-CPI-test-#{SecureRandom.uuid}" }
+  let(:segment_1) { SegmentNameAndID.new }
+  let(:segment_2) { SegmentNameAndID.new }
   let(:server_pool_name_1) { "BOSH-CPI-test-#{SecureRandom.uuid}" }
   let(:server_pool_name_2) { "BOSH-CPI-test-#{SecureRandom.uuid}" }
   let(:vm_type) do
@@ -113,7 +113,7 @@ describe 'CPI', nsxt_all: true do
         'static-bridged' => {
             'ip' => "169.254.#{rand(1..254)}.#{rand(4..254)}",
             'netmask' => '255.255.254.0',
-            'cloud_properties' => { 'name' => segment_name_1 },
+            'cloud_properties' => { 'name' => segment_1.name },
             'default' => ['dns', 'gateway'],
             'dns' => ['169.254.1.2'],
             'gateway' => '169.254.1.3'
@@ -121,7 +121,7 @@ describe 'CPI', nsxt_all: true do
         'static' => {
             'ip' => "169.254.#{rand(1..254)}.#{rand(4..254)}",
             'netmask' => '255.255.254.0',
-            'cloud_properties' => { 'name' => segment_name_2 },
+            'cloud_properties' => { 'name' => segment_2.name },
             'default' => ['dns', 'gateway'],
             'dns' => ['169.254.1.2'],
             'gateway' => '169.254.1.3'
@@ -131,6 +131,13 @@ describe 'CPI', nsxt_all: true do
 
   class SegmentPortsAreNotInitialized < StandardError; end
   class StillUpdatingVMsInGroups < StandardError; end
+  class SegmentNameAndID
+    attr_reader :name, :id
+    def initialize(name: "BOSH-CPI-test-#{SecureRandom.uuid}", id: SecureRandom.uuid)
+      @name = name
+      @id = id
+    end
+  end
 
   after do
     cpi.cleanup
@@ -202,7 +209,7 @@ describe 'CPI', nsxt_all: true do
         }
       end
 
-      context 'but at least one of the NSGroups does NOT exists' do
+      context 'but at least one of the NSGroups do NOT exist' do
         it 'raises NSGroupsNotFound' do
           expect do
             simple_vm_lifecycle(cpi, @nsxt_opaque_vlan_1, vm_type)
@@ -279,7 +286,7 @@ describe 'CPI', nsxt_all: true do
           }
         }
       end
-      context 'but atleast one server pool does not exists' do
+      context 'but at least one server pool does not exist' do
         it 'raises an error' do
           expect do
             simple_vm_lifecycle(cpi, @nsxt_opaque_vlan_1, vm_type)
@@ -330,7 +337,7 @@ describe 'CPI', nsxt_all: true do
       end
     end
 
-    context 'when using NSXT Policy API', nsxt_policy: true do
+    context 'when using NSX-T Policy API', nsxt_policy: true do
       let(:cpi) do
         VSphereCloud::Cloud.new(cpi_options(nsxt: {
             host: @nsxt_host,
@@ -350,14 +357,14 @@ describe 'CPI', nsxt_all: true do
 
       before do
         @created_vms = []
-        create_segments([segment_name_1, segment_name_2])
+        create_segments([segment_1, segment_2])
       end
 
       after do
         @created_vms.each do |vm_cid|
           delete_vm(cpi, vm_cid)
         end
-        delete_segments([segment_name_1, segment_name_2])
+        delete_segments([segment_1, segment_2])
       end
 
       context 'with ns groups' do
@@ -379,8 +386,8 @@ describe 'CPI', nsxt_all: true do
             vm = @cpi.vm_provider.find(vm_id)
             segment_names = vm.get_nsxt_segment_vif_list.map { |x| x[0] }
             expect(segment_names.length).to eq(2)
-            expect(segment_names).to include(segment_name_1)
-            expect(segment_names).to include(segment_name_2)
+            expect(segment_names).to include(segment_1.name)
+            expect(segment_names).to include(segment_2.name)
             retryer do
               results = @policy_group_members_api.get_group_vm_members_0(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, nsgroup_name_1).results
               raise StillUpdatingVMsInGroups if results.map(&:display_name).uniq.length < 1
@@ -483,8 +490,8 @@ describe 'CPI', nsxt_all: true do
             vm = @cpi.vm_provider.find(vm_id)
             segment_names = vm.get_nsxt_segment_vif_list.map { |x| x[0] }
             expect(segment_names.length).to eq(2)
-            expect(segment_names).to include(segment_name_1)
-            expect(segment_names).to include(segment_name_2)
+            expect(segment_names).to include(segment_1.name)
+            expect(segment_names).to include(segment_2.name)
             server_pool_1 = @policy_load_balancer_pools_api.read_lb_pool_0(server_pool_name_1)
             expect(server_pool_1.members.length).to eq(1)
             expect(server_pool_1.members[0].ip_address).to eq(vm.mob.guest&.ip_address)
@@ -632,9 +639,9 @@ describe 'CPI', nsxt_all: true do
           }))
         end
 
-        before { create_segments([segment_name_1, segment_name_2]) }
+        before { create_segments([segment_1, segment_2]) }
 
-        after { delete_segments([segment_name_1, segment_name_2]) }
+        after { delete_segments([segment_1, segment_2]) }
 
         it "tags the VM's segment ports with the bosh id" do
           simple_vm_lifecycle(cpi, '', vm_type, policy_network_spec) do |vm_id|
@@ -643,7 +650,7 @@ describe 'CPI', nsxt_all: true do
               'test-tag-1-key' => 'test-tag-1-value',
               'test-tag-2-key' => 'test-tag-2-value',
             })
-            verify_policy_ports([segment_name_1, segment_name_2]) do |ports|
+            verify_policy_ports([segment_1, segment_2]) do |ports|
               expect(ports.length).to eq(1)
               ports.each do |port|
                 expect(port.tags.length).to eq(3)
@@ -739,10 +746,10 @@ describe 'CPI', nsxt_all: true do
     end
   end
 
-  def verify_policy_ports(segment_names)
+  def verify_policy_ports(segments)
     retryer do
-      segment_names.each do |segment_name|
-        segment_ports = @segments_ports_api.list_infra_segment_ports(segment_name).results
+      segments.each do |segment|
+        segment_ports = @segments_ports_api.list_infra_segment_ports(segment.id).results
         raise SegmentPortsAreNotInitialized.new if segment_ports.empty?
         expect(segment_ports.length).to eq(1)
         yield segment_ports if block_given?
@@ -770,12 +777,12 @@ describe 'CPI', nsxt_all: true do
     @policy_group_api.delete_group(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, group_name)
   end
 
-  def create_segments(segment_names)
+  def create_segments(segments)
     tzs = @policy_enforcement_points_api.list_transport_zones_for_enforcement_point(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, 'default')
     overlay_tz = tzs.results.find { |tz| tz.display_name == 'tz-overlay' }
-    segment_names.each do |segment_name|
-      seg_1 = NSXTPolicy::Segment.new(display_name: segment_name, transport_zone_path: overlay_tz.path)
-      @policy_segment_api.create_or_replace_infra_segment(SecureRandom.uuid, seg_1)
+    segments.each do |segment|
+      seg_1 = NSXTPolicy::Segment.new(display_name: segment.name, transport_zone_path: overlay_tz.path)
+      @policy_segment_api.create_or_replace_infra_segment(segment.id, seg_1)
     end
   end
 
@@ -874,14 +881,14 @@ describe 'CPI', nsxt_all: true do
     cert
   end
 
-  def delete_segments(segment_names)
+  def delete_segments(segments)
     Bosh::Retryable.new(
         tries: 61,
         sleep: ->(try_count, retry_exception) { 1 },
         on: [NSXTPolicy::ApiCallError]
     ).retryer do |i|
-      segment_names.each do |segment_name|
-        @policy_segment_api.delete_infra_segment(segment_name)
+      segments.each do |segment|
+        @policy_segment_api.delete_infra_segment(segment.id)
       end
       true
     end

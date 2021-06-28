@@ -107,7 +107,7 @@ module VSphereCloud
 
       segment_ports = vm.get_nsxt_segment_vif_list
       return if segment_ports.nil?
-      segment_ports.each do |segment_name, attachment_id|
+      segment_ports.each do |_, attachment_id|
         Bosh::Retryable.new(
             tries: [@max_tries, NSXT_SEGMENT_PORT_RETRIES].max,
             sleep: ->(try_count, retry_exception) { [NSXT_MIN_SLEEP, @sleep_time].max },
@@ -117,12 +117,14 @@ module VSphereCloud
           raise SegmentPortNotFound.new(attachment_id) if segment_port_search_result.nil?
 
           tier1_data = segment_port_search_result[:path].match(/\/infra\/tier-1s\/(.*)\/segments/)
-          tier1_router_name = tier1_data.nil? ? nil: tier1_data[1]
-          if tier1_router_name
+          tier1_router_id = tier1_data.nil? ? nil : tier1_data[1]
+          segment_data = segment_port_search_result[:parent_path].match(/\/segments\/(.*)/)
+          segment_id = segment_data.nil? ? nil : segment_data[1]
+          if tier1_router_id
             # Segment port is scoped under the tier-1
-            segment_port = policy_segment_ports_api.get_tier1_segment_port_0(tier1_router_name, segment_name, segment_port_search_result[:id])
+            segment_port = policy_segment_ports_api.get_tier1_segment_port_0(tier1_router_id, segment_id, segment_port_search_result[:id])
           else
-            segment_port = policy_segment_ports_api.get_infra_segment_port(segment_name, segment_port_search_result[:id])
+            segment_port = policy_segment_ports_api.get_infra_segment_port(segment_id, segment_port_search_result[:id])
           end
           raise SegmentPortNotFound.new(attachment_id) if segment_port.nil?
 
@@ -147,10 +149,10 @@ module VSphereCloud
 
           segment_port.tags = tags
 
-          if tier1_router_name
-            policy_segment_ports_api.patch_tier1_segment_port_0(tier1_router_name, segment_name, segment_port.id, segment_port)
+          if tier1_router_id
+            policy_segment_ports_api.patch_tier1_segment_port_0(tier1_router_id, segment_id, segment_port.id, segment_port)
           else
-            policy_segment_ports_api.patch_infra_segment_port(segment_name, segment_port.id, segment_port)
+            policy_segment_ports_api.patch_infra_segment_port(segment_id, segment_port.id, segment_port)
           end
 
           true

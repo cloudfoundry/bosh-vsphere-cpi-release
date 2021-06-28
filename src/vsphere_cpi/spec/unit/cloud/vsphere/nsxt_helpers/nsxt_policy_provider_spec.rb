@@ -580,8 +580,22 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
     let(:metadata) { { 'id' => 'new-bosh-id', 'name' => 'new-bosh-name' } }
     let(:id_hex) { Digest::SHA1.hexdigest('new-bosh-id') }
     let(:vm) { instance_double(VSphereCloud::Resources::VM, get_nsxt_segment_vif_list: [['segment-name-1', 'attachment-1'], ['segment-name-2', 'attachment-2']]) }
-    let(:search_result1) { instance_double(NSXTPolicy::SearchResponse, results: [id: 'segment-port-id-1', path: '/infra/segments/segment-name-1/ports/segment-port-id-1']) }
-    let(:search_result2) { instance_double(NSXTPolicy::SearchResponse, results: [id: 'segment-port-id-2', path: '/infra/segments/segment-name-2/ports/segment-port-id-2']) }
+    let(:search_result1) do
+      instance_double(
+        NSXTPolicy::SearchResponse,
+        results: [id: 'segment-port-id-1',
+                  path: '/infra/segments/segment-id-1/ports/segment-port-id-1',
+                  parent_path: '/infra/segments/segment-id-1']
+      )
+    end
+    let(:search_result2) do
+      instance_double(
+        NSXTPolicy::SearchResponse,
+        results: [id: 'segment-port-id-2',
+                  path: '/infra/segments/segment-id-2/ports/segment-port-id-2',
+                  parent_path: '/infra/segments/segment-id-2']
+      )
+    end
     let(:segment_port1) { NSXTPolicy::SegmentPort.new(id: 'segment-port-id-1', tags: existing_tags) }
     let(:segment_port2) { NSXTPolicy::SegmentPort.new(id: 'segment-port-id-2', tags: existing_tags) }
     let(:existing_tags) { nil }
@@ -593,8 +607,8 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
 
     context 'when segment port is scoped under the tier-1 router' do
       before do
-        allow(policy_segment_ports_api).to receive(:get_infra_segment_port).with('segment-name-1', 'segment-port-id-1').and_return(segment_port1)
-        allow(policy_segment_ports_api).to receive(:get_infra_segment_port).with('segment-name-2', 'segment-port-id-2').and_return(segment_port2)
+        allow(policy_segment_ports_api).to receive(:get_infra_segment_port).with('segment-id-1', 'segment-port-id-1').and_return(segment_port1)
+        allow(policy_segment_ports_api).to receive(:get_infra_segment_port).with('segment-id-2', 'segment-port-id-2').and_return(segment_port2)
       end
 
       context 'when segment ports do not have any tags' do
@@ -604,13 +618,13 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
         ] }
 
         it 'adds the id tag' do
-          expect(policy_segment_ports_api).to receive(:patch_infra_segment_port).once.ordered do |segment_name, port_id, segment_port|
-            expect(segment_name).to eq('segment-name-1')
+          expect(policy_segment_ports_api).to receive(:patch_infra_segment_port).once.ordered do |segment_id, port_id, segment_port|
+            expect(segment_id).to eq('segment-id-1')
             expect(port_id).to eq('segment-port-id-1')
             expect(segment_port.tags).to eq(new_tags)
           end
-          expect(policy_segment_ports_api).to receive(:patch_infra_segment_port).once.ordered do |segment_name, port_id, segment_port|
-            expect(segment_name).to eq('segment-name-2')
+          expect(policy_segment_ports_api).to receive(:patch_infra_segment_port).once.ordered do |segment_id, port_id, segment_port|
+            expect(segment_id).to eq('segment-id-2')
             expect(port_id).to eq('segment-port-id-2')
             expect(segment_port.tags).to eq(new_tags)
           end
@@ -629,13 +643,13 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
         ] }
 
         it 'sets the id tag' do
-          expect(policy_segment_ports_api).to receive(:patch_infra_segment_port).once.ordered do |segment_name, port_id, segment_port|
-            expect(segment_name).to eq('segment-name-1')
+          expect(policy_segment_ports_api).to receive(:patch_infra_segment_port).once.ordered do |segment_id, port_id, segment_port|
+            expect(segment_id).to eq('segment-id-1')
             expect(port_id).to eq('segment-port-id-1')
             expect(segment_port.tags).to eq(new_tags)
           end
-          expect(policy_segment_ports_api).to receive(:patch_infra_segment_port).once.ordered do |segment_name, port_id, segment_port|
-            expect(segment_name).to eq('segment-name-2')
+          expect(policy_segment_ports_api).to receive(:patch_infra_segment_port).once.ordered do |segment_id, port_id, segment_port|
+            expect(segment_id).to eq('segment-id-2')
             expect(port_id).to eq('segment-port-id-2')
             expect(segment_port.tags).to eq(new_tags)
           end
@@ -655,13 +669,13 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
         ] }
 
         it 'consolidates the existing id tags and sets it' do
-          expect(policy_segment_ports_api).to receive(:patch_infra_segment_port).once.ordered do |segment_name, port_id, segment_port|
-            expect(segment_name).to eq('segment-name-1')
+          expect(policy_segment_ports_api).to receive(:patch_infra_segment_port).once.ordered do |segment_id, port_id, segment_port|
+            expect(segment_id).to eq('segment-id-1')
             expect(port_id).to eq('segment-port-id-1')
             expect(segment_port.tags).to eq(new_tags)
           end
-          expect(policy_segment_ports_api).to receive(:patch_infra_segment_port).once.ordered do |segment_name, port_id, segment_port|
-            expect(segment_name).to eq('segment-name-2')
+          expect(policy_segment_ports_api).to receive(:patch_infra_segment_port).once.ordered do |segment_id, port_id, segment_port|
+            expect(segment_id).to eq('segment-id-2')
             expect(port_id).to eq('segment-port-id-2')
             expect(segment_port.tags).to eq(new_tags)
           end
@@ -699,28 +713,43 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
     end
 
     context 'when segment port is not scoped under the tier-1 router' do
-      let(:search_result1) { instance_double(NSXTPolicy::SearchResponse, results: [id: 'segment-port-id-1', path: '/infra/tier-1s/tier-1-name-1/segments/segment-name-1/ports/segment-port-id-1']) }
-      let(:search_result2) { instance_double(NSXTPolicy::SearchResponse, results: [id: 'segment-port-id-2', path: '/infra/tier-1s/tier-1-name-2/segments/segment-name-2/ports/segment-port-id-2']) }
+      let(:search_result1) do
+        instance_double(
+          NSXTPolicy::SearchResponse,
+          results: [id: 'segment-port-id-1',
+                    path: '/infra/tier-1s/tier-1-name-1/segments/segment-id-1/ports/segment-port-id-1',
+                    parent_path: '/infra/tier-1s/tier-1-name-1/segments/segment-id-1']
+        )
+      end
+      let(:search_result2) do
+        instance_double(
+          NSXTPolicy::SearchResponse,
+          results: [id: 'segment-port-id-2',
+                    path: '/infra/tier-1s/tier-1-name-2/segments/segment-id-2/ports/segment-port-id-2',
+                    parent_path: '/infra/tier-1s/tier-1-name-2/segments/segment-id-2']
+        )
+      end
+
       let(:new_tags) { [
         NSXTPolicy::Tag.new('scope' => 'bosh/id', 'tag' => id_hex),
         NSXTPolicy::Tag.new('scope' => 'bosh/name', 'tag' => 'new-bosh-name')
       ] }
 
       before do
-        allow(policy_segment_ports_api).to receive(:get_tier1_segment_port_0).with('tier-1-name-1', 'segment-name-1', 'segment-port-id-1').and_return(segment_port1)
-        allow(policy_segment_ports_api).to receive(:get_tier1_segment_port_0).with('tier-1-name-2', 'segment-name-2', 'segment-port-id-2').and_return(segment_port2)
+        allow(policy_segment_ports_api).to receive(:get_tier1_segment_port_0).with('tier-1-name-1', 'segment-id-1', 'segment-port-id-1').and_return(segment_port1)
+        allow(policy_segment_ports_api).to receive(:get_tier1_segment_port_0).with('tier-1-name-2', 'segment-id-2', 'segment-port-id-2').and_return(segment_port2)
       end
 
       it 'adds the id tag' do
-        expect(policy_segment_ports_api).to receive(:patch_tier1_segment_port_0).once.ordered do |tier1_name, segment_name, port_id, segment_port|
+        expect(policy_segment_ports_api).to receive(:patch_tier1_segment_port_0).once.ordered do |tier1_name, segment_id, port_id, segment_port|
           expect(tier1_name).to eq('tier-1-name-1')
-          expect(segment_name).to eq('segment-name-1')
+          expect(segment_id).to eq('segment-id-1')
           expect(port_id).to eq('segment-port-id-1')
           expect(segment_port.tags).to eq(new_tags)
         end
-        expect(policy_segment_ports_api).to receive(:patch_tier1_segment_port_0).once.ordered do |tier1_name, segment_name, port_id, segment_port|
+        expect(policy_segment_ports_api).to receive(:patch_tier1_segment_port_0).once.ordered do |tier1_name, segment_id, port_id, segment_port|
           expect(tier1_name).to eq('tier-1-name-2')
-          expect(segment_name).to eq('segment-name-2')
+          expect(segment_id).to eq('segment-id-2')
           expect(port_id).to eq('segment-port-id-2')
           expect(segment_port.tags).to eq(new_tags)
         end
