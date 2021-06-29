@@ -32,6 +32,16 @@ module VSphereCloud
     end
   end
 
+  class DuplicateLBPoolDisplayName < StandardError
+    def initialize(display_name)
+      @display_name = display_name
+    end
+
+    def to_s
+      "Multiple server pools have the display name '#{@display_name}'"
+    end
+  end
+
   class NSXTPolicyProvider
     include Logger
     extend Hooks
@@ -41,6 +51,7 @@ module VSphereCloud
       @default_vif_type = default_vif_type
       @sleep_time = DEFAULT_SLEEP
       @max_tries = MAX_TRIES
+      @all_lb_pools = nil
     end
 
     def add_vm_to_groups(vm, groups)
@@ -75,17 +86,30 @@ module VSphereCloud
         sleep: ->(try_count, retry_exception) { 2 },
         on: [VirtualMachineIpNotFound]
       ).retryer do |i|
+
         vm_ip = vm.mob.guest&.ip_address
         raise VirtualMachineIpNotFound.new(vm) unless vm_ip
         server_pools.each do |server_pool|
           retry_on_conflict("while adding vm: #{vm.cid} to group #{server_pool['name']}") do
-            load_balancer_pool = policy_load_balancer_pools_api.read_lb_pool_0(server_pool['name'])
-            logger.info("Adding vm: '#{vm.cid}' with ip:#{vm_ip} to ServerPool: #{load_balancer_pool.id} on Port: #{server_pool['port']} ")
+            server_pool_id=server_pool_display_name_to_id(server_pool['name'])
+            load_balancer_pool = policy_load_balancer_pools_api.read_lb_pool_0(server_pool_id)
+            logger.info("Adding vm: '#{vm.cid}' with ip:#{vm_ip} to ServerPool: #{server_pool['name']} on Port: #{server_pool['port']} ")
             (load_balancer_pool.members ||= []).push(NSXTPolicy::LBPoolMember.new(port: server_pool['port'], ip_address: vm_ip))
-            policy_load_balancer_pools_api.update_lb_pool_0(server_pool['name'], load_balancer_pool)
+            policy_load_balancer_pools_api.update_lb_pool_0(server_pool_id, load_balancer_pool)
           end
         end
       end
+    end
+
+    # vCenter and BOSH use display names; NSX-T uses IDs. This helps translate.
+    def server_pool_display_name_to_id(display_name)
+      @all_lb_pools ||= policy_load_balancer_pools_api.list_lb_pools.results
+      matches = @all_lb_pools.select do |pool|
+        pool.display_name == display_name
+      end
+      raise VSphereCloud::DuplicateLBPoolDisplayName.new(display_name) if matches.size > 1
+      raise VSphereCloud::ServerPoolsNotFound.new(display_name) if matches.empty?
+      matches.first.id
     end
 
     def remove_vm_from_server_pools(vm_ip)

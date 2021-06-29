@@ -456,44 +456,46 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
     let(:server_pools) do
       [
         {
-          'name' => 'some-serverpool',
+          'name' => 'some-server-pool-name',
           'port' => 80
         }
       ]
     end
-    let(:original_pool) do
-      NSXTPolicy::LBPool.new
+    let(:original_nsxt_pool) do
+      NSXTPolicy::LBPool.new(id: "some-server-pool-id", display_name: "some-server-pool-name")
     end
-    let(:pool_with_updates) do
-      NSXTPolicy::LBPool.new(members: [NSXTPolicy::LBPoolMember.new(port: 80, ip_address: "9.8.7.6")])
+    let(:updated_nsxt_pool) do
+      NSXTPolicy::LBPool.new(id: "some-server-pool-id", display_name: "some-server-pool-name", members: [NSXTPolicy::LBPoolMember.new(port: 80, ip_address: "9.8.7.6")])
     end
 
     before do
       allow(vm).to receive_message_chain(:mob, :guest, :ip_address).and_return("9.8.7.6")
       allow(policy_load_balancer_pools_api).to receive(:read_lb_pool_0).
-        with("some-serverpool").and_return(original_pool)
+        with("some-server-pool-id").and_return(original_nsxt_pool)
+      allow(policy_load_balancer_pools_api).to receive_message_chain(:list_lb_pools, :results).
+        and_return([original_nsxt_pool])
     end
 
     context 'when pool is empty' do
       it 'adds vm to pool' do
         expect(policy_load_balancer_pools_api).to receive(:update_lb_pool_0).
-          with("some-serverpool", pool_with_updates)
+          with("some-server-pool-id", updated_nsxt_pool)
 
         nsxt_policy_provider.add_vm_to_server_pools(vm, server_pools)
       end
     end
 
     context 'when pool has existing members' do
-      let(:original_pool) do
-        NSXTPolicy::LBPool.new(members: [NSXTPolicy::LBPoolMember.new(ip_address: "5.6.4.3")])
+      let(:original_nsxt_pool) do
+        NSXTPolicy::LBPool.new(id: "some-server-pool-id", display_name: "some-server-pool-name", members: [NSXTPolicy::LBPoolMember.new(ip_address: "5.6.4.3")])
       end
-      let(:pool_with_updates) do
-        NSXTPolicy::LBPool.new(members: [NSXTPolicy::LBPoolMember.new(ip_address: "5.6.4.3"), NSXTPolicy::LBPoolMember.new(port: 80, ip_address: "9.8.7.6")])
+      let(:updated_nsxt_pool) do
+        NSXTPolicy::LBPool.new(id: "some-server-pool-id", display_name: "some-server-pool-name", members: [NSXTPolicy::LBPoolMember.new(ip_address: "5.6.4.3"), NSXTPolicy::LBPoolMember.new(port: 80, ip_address: "9.8.7.6")])
       end
 
       it 'adds vm to the pool' do
         expect(policy_load_balancer_pools_api).to receive(:update_lb_pool_0).
-          with("some-serverpool", pool_with_updates)
+          with("some-server-pool-id", updated_nsxt_pool)
 
         nsxt_policy_provider.add_vm_to_server_pools(vm, server_pools)
       end
@@ -503,34 +505,67 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
       let(:server_pools) do
         [
           {
-            'name' => 'some-serverpool',
+            'name' => 'some-server-pool-name',
             'port' => 80
           },
           {
-            'name' => 'some-other-serverpool',
+            'name' => 'some-other-server-pool-name',
             'port' => 8080
           }
         ]
       end
-      let(:second_pool_with_updates) do
-        NSXTPolicy::LBPool.new(members: [NSXTPolicy::LBPoolMember.new(port: 8080, ip_address: "9.8.7.6")])
+      let(:second_updated_nsxt_pool) do
+        NSXTPolicy::LBPool.new(id: "some-other-server-pool-id", display_name: "some-other-server-pool-name", members: [NSXTPolicy::LBPoolMember.new(port: 8080, ip_address: "9.8.7.6")])
       end
       let(:original_second_pool) do
-        NSXTPolicy::LBPool.new
+        NSXTPolicy::LBPool.new(id: "some-other-server-pool-id", display_name: "some-other-server-pool-name")
       end
 
       before do
         allow(policy_load_balancer_pools_api).to receive(:read_lb_pool_0).
-          with("some-other-serverpool").and_return(original_second_pool)
+          with("some-other-server-pool-id").and_return(original_second_pool)
+        allow(policy_load_balancer_pools_api).to receive_message_chain(:list_lb_pools, :results).
+            and_return([original_nsxt_pool, original_second_pool])
       end
 
       it 'adds vm to all pools' do
         expect(policy_load_balancer_pools_api).to receive(:update_lb_pool_0).
-          with("some-serverpool", pool_with_updates)
+          with("some-server-pool-id", updated_nsxt_pool)
         expect(policy_load_balancer_pools_api).to receive(:update_lb_pool_0).
-          with("some-other-serverpool", second_pool_with_updates)
+          with("some-other-server-pool-id", second_updated_nsxt_pool)
 
         nsxt_policy_provider.add_vm_to_server_pools(vm, server_pools)
+      end
+
+      context "some pools have identical display_names (duplicates)" do
+        before do
+          allow(policy_load_balancer_pools_api).to receive_message_chain(:list_lb_pools, :results).
+            and_return([original_nsxt_pool, original_second_pool, duplicate_named_nsxt_pool])
+        end
+
+        let(:duplicate_named_nsxt_pool) do
+          NSXTPolicy::LBPool.new(id: "duplicate-named-server-pool-id", display_name: "some-server-pool-name")
+        end
+
+        let(:server_pools_no_duplicates) do
+          [
+            {
+              'name' => 'some-other-server-pool-name',
+              'port' => 8080
+            }
+          ]
+        end
+
+        it 'raises an error when attempting to add the VM to one of the identically-named pools' do
+          expect { nsxt_policy_provider.add_vm_to_server_pools(vm, server_pools) }.to raise_error(VSphereCloud::DuplicateLBPoolDisplayName)
+        end
+
+        it 'does not raise an error when it tries to add the VM to a uniquely-named pool' do
+          expect(policy_load_balancer_pools_api).to receive(:update_lb_pool_0).
+            with("some-other-server-pool-id", original_second_pool)
+
+          expect { nsxt_policy_provider.add_vm_to_server_pools(vm, server_pools_no_duplicates) }.to_not raise_error
+        end
       end
     end
 
@@ -553,16 +588,30 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
         nsxt_policy_provider.add_vm_to_server_pools(vm, server_pools)
       end
     end
+
+    context 'when the pool does not exist' do
+      let(:non_existent_server_pools) do
+        [
+          {
+            'name' => 'does-not-exist',
+            'port' => 80
+          }
+        ]
+        end
+      it 'returns an error' do
+        expect { nsxt_policy_provider.add_vm_to_server_pools(vm, non_existent_server_pools) }.to raise_error(VSphereCloud::ServerPoolsNotFound)
+      end
+    end
   end
 
   describe '#remove_vm_from_server_pools' do
     let(:vm_ip_address) { '192.168.111.5' }
     let(:pool_member) { NSXTPolicy::LBPoolMember.new(port: 80, ip_address: vm_ip_address) }
     let(:server_pool_1) do
-      NSXTPolicy::LBPool.new(id: 'some-serverpool',  members: [pool_member])
+      NSXTPolicy::LBPool.new(id: 'some-server-pool-id', display_name: 'some-server-pool-name',  members: [pool_member])
     end
     let(:server_pool_2) do
-      NSXTPolicy::LBPool.new(id: 'some-other-serverpool')
+      NSXTPolicy::LBPool.new(id: 'some-other-server-pool-id', display_name: 'some-other-server-pool-name', )
     end
 
     before do
@@ -570,8 +619,8 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
     end
 
     it 'removes VM from all server pools' do
-      expected_server_pool = NSXTPolicy::LBPool.new(id: 'some-serverpool', members: [])
-      expect(policy_load_balancer_pools_api).to receive(:update_lb_pool_0).with('some-serverpool', expected_server_pool).once
+      expected_server_pool = NSXTPolicy::LBPool.new(id: 'some-server-pool-id', display_name: 'some-server-pool-name', members: [])
+      expect(policy_load_balancer_pools_api).to receive(:update_lb_pool_0).with('some-server-pool-id', expected_server_pool).once
       nsxt_policy_provider.remove_vm_from_server_pools(vm_ip_address)
     end
   end

@@ -77,10 +77,10 @@ describe 'CPI', nsxt_all: true do
 
   let(:nsgroup_name_1) { "BOSH-CPI-test-#{SecureRandom.uuid}" }
   let(:nsgroup_name_2) { "BOSH-CPI-test-#{SecureRandom.uuid}" }
-  let(:segment_1) { SegmentNameAndID.new }
-  let(:segment_2) { SegmentNameAndID.new }
-  let(:server_pool_name_1) { "BOSH-CPI-test-#{SecureRandom.uuid}" }
-  let(:server_pool_name_2) { "BOSH-CPI-test-#{SecureRandom.uuid}" }
+  let(:segment_1) { NameAndID.new }
+  let(:segment_2) { NameAndID.new }
+  let(:pool_1) { NameAndID.new}
+  let(:pool_2) { NameAndID.new}
   let(:vm_type) do
     {
       'ram' => 512,
@@ -131,7 +131,7 @@ describe 'CPI', nsxt_all: true do
 
   class SegmentPortsAreNotInitialized < StandardError; end
   class StillUpdatingVMsInGroups < StandardError; end
-  class SegmentNameAndID
+  class NameAndID
     attr_reader :name, :id
     def initialize(name: "BOSH-CPI-test-#{SecureRandom.uuid}", id: SecureRandom.uuid)
       @name = name
@@ -274,11 +274,11 @@ describe 'CPI', nsxt_all: true do
             'lb' => {
               'server_pools' => [
                 {
-                  'name' => server_pool_name_1,
+                  'name' => pool_1.name,
                   'port' => port_no
                 },
                 {
-                  'name' => server_pool_name_2,
+                  'name' => pool_2.name,
                   'port' => 80
                 }
               ]
@@ -295,8 +295,8 @@ describe 'CPI', nsxt_all: true do
       end
       context 'and all server pools exist' do
         let!(:nsgroup_1) { create_nsgroup(nsgroup_name_1) }
-        let!(:server_pool_1) { create_static_server_pool(server_pool_name_1) }
-        let!(:server_pool_2) { create_dynamic_server_pool(server_pool_name_2, nsgroup_1) }
+        let!(:server_pool_1) { create_static_server_pool(pool_1.name) }
+        let!(:server_pool_2) { create_dynamic_server_pool(pool_2.name, nsgroup_1) }
 
         after do
           delete_server_pool(server_pool_1)
@@ -320,7 +320,7 @@ describe 'CPI', nsxt_all: true do
         end
         it 'adds vm to all existing static server pools with given name' do
           begin
-            server_pool_3 = create_static_server_pool(server_pool_name_1) #server pool with same name as server_pool_1
+            server_pool_3 = create_static_server_pool(pool_1.name) #server pool with same name as server_pool_1
             simple_vm_lifecycle(cpi, @nsxt_opaque_vlan_1, vm_type) do |vm_id|
               vm = cpi.vm_provider.find(vm_id)
               vm_ip = vm.mob.guest&.ip_address
@@ -467,22 +467,22 @@ describe 'CPI', nsxt_all: true do
           {
             'lb'=> { 'server_pools' => [
               {
-                'name' => server_pool_name_1,
+                'name' => pool_1.name,
                 'port' => 80,
               },
               {
-                'name' => server_pool_name_2,
+                'name' => pool_2.name,
                 'port' => 80,
               },
             ],
             }
           }
         }
-        let!(:lb_pool_1) { create_lb_pool(server_pool_name_1) }
-        let!(:lb_pool_2) { create_lb_pool(server_pool_name_2) }
+        let!(:lb_pool_1) { create_lb_pool(pool_1) }
+        let!(:lb_pool_2) { create_lb_pool(pool_2) }
         after do
-          delete_lb_pool(server_pool_name_1)
-          delete_lb_pool(server_pool_name_2)
+          delete_lb_pool(pool_1)
+          delete_lb_pool(pool_2)
         end
 
         it 'creates VM in specified server pools and deletes from pools when VM is deleted' do
@@ -492,19 +492,19 @@ describe 'CPI', nsxt_all: true do
             expect(segment_names.length).to eq(2)
             expect(segment_names).to include(segment_1.name)
             expect(segment_names).to include(segment_2.name)
-            server_pool_1 = @policy_load_balancer_pools_api.read_lb_pool_0(server_pool_name_1)
+            server_pool_1 = @policy_load_balancer_pools_api.read_lb_pool_0(pool_1.id)
             expect(server_pool_1.members.length).to eq(1)
             expect(server_pool_1.members[0].ip_address).to eq(vm.mob.guest&.ip_address)
             expect(server_pool_1.members[0].port).to eq("80")
-            server_pool_2 = @policy_load_balancer_pools_api.read_lb_pool_0(server_pool_name_2)
+            server_pool_2 = @policy_load_balancer_pools_api.read_lb_pool_0(pool_2.id)
             expect(server_pool_2.members.length).to eq(1)
             expect(server_pool_2.members[0].ip_address).to eq(vm.mob.guest&.ip_address)
             expect(server_pool_2.members[0].port).to eq("80")
           end
 
-          server_pool_1 = @policy_load_balancer_pools_api.read_lb_pool_0(server_pool_name_1)
+          server_pool_1 = @policy_load_balancer_pools_api.read_lb_pool_0(pool_1.id)
           expect(server_pool_1.members).to be_nil
-          server_pool_2 = @policy_load_balancer_pools_api.read_lb_pool_0(server_pool_name_2)
+          server_pool_2 = @policy_load_balancer_pools_api.read_lb_pool_0(pool_2.id)
           expect(server_pool_2.members).to be_nil
         end
       end
@@ -563,15 +563,15 @@ describe 'CPI', nsxt_all: true do
           'lb' => {
             'server_pools' => [
               {
-                'name' => server_pool_name_1,
+                'name' => pool_1.name,
                 'port' => port_no1
               },
               {
-                'name' => server_pool_name_1,
+                'name' => pool_1.name,
                 'port' => port_no2
               },
               {
-                'name' => server_pool_name_2,
+                'name' => pool_2.name,
                 'port' => port_no1
               }
             ]
@@ -579,8 +579,8 @@ describe 'CPI', nsxt_all: true do
         }
       }
       let!(:nsgroup_1) { create_nsgroup(nsgroup_name_1) }
-      let!(:server_pool_1) { create_static_server_pool(server_pool_name_1) }
-      let!(:server_pool_2) { create_dynamic_server_pool(server_pool_name_2, nsgroup_1) }
+      let!(:server_pool_1) { create_static_server_pool(pool_1.name) }
+      let!(:server_pool_2) { create_dynamic_server_pool(pool_2.name, nsgroup_1) }
       after do
         delete_server_pool(server_pool_1)
         delete_server_pool(server_pool_2)
@@ -819,12 +819,12 @@ describe 'CPI', nsxt_all: true do
     NSXT::ManagementPlaneApiServicesLoadbalancerApi.new(@manager_client)
   end
 
-  def create_lb_pool(pool_name)
-    @policy_load_balancer_pools_api.update_lb_pool_0(SecureRandom.uuid, NSXTPolicy::LBPool.new(display_name: pool_name))
+  def create_lb_pool(pool)
+    @policy_load_balancer_pools_api.update_lb_pool_0(pool.id, NSXTPolicy::LBPool.new(id: pool.id, display_name: pool.name))
   end
 
-  def delete_lb_pool(pool_name)
-    @policy_load_balancer_pools_api.delete_lb_pool_0(pool_name)
+  def delete_lb_pool(pool)
+    @policy_load_balancer_pools_api.delete_lb_pool_0(pool.id)
   end
 
   def retryer

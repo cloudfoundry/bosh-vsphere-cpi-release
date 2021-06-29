@@ -73,7 +73,7 @@ module VSphereCloud
     end
 
     def to_s
-      "NSGroups [#{@display_names.join(', ')}] was not found in NSX-T"
+      "NSGroups [#{@display_names.join(', ')}] were not found in NSX-T"
     end
   end
 
@@ -83,7 +83,7 @@ module VSphereCloud
     end
 
     def to_s
-      "ServerPools [#{@display_names.join(', ')}] was not found in NSX-T"
+      "ServerPools [#{@display_names.join(', ')}] were not found in NSX-T"
     end
   end
 
