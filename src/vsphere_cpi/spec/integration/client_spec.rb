@@ -189,6 +189,7 @@ module VSphereCloud
         disk_path: disk_folder,
         ephemeral_pattern: ephemeral_datastore_pattern,
         persistent_pattern: persistent_datastore_pattern,
+        persistent_datastore_cluster_pattern: nil,
         clusters: cluster_configs,
         cluster_provider: cluster_provider
       )
