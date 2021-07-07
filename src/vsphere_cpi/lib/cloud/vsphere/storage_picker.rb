@@ -10,6 +10,39 @@ module VSphereCloud
       storage_objects.max_by { |object| Random.rand * object.free_space }
     end
 
+    # param [DirectorDiskCID] cid
+    # param [Resources::Datacenter] datacenter
+    def choose_existing_disk_pattern(cid, datacenter)
+      cid.target_datastore_pattern || choose_global_persistent_pattern(datacenter)
+    end
+
+    # param [Resources::Datacenter] datacenter
+    def choose_global_persistent_pattern(datacenter)
+      logger.info("Using global persistent disk pattern #{datacenter.persistent_pattern} and global persistent datastore cluster pattern #{datacenter.persistent_datastore_cluster_pattern} ")
+      return datacenter.persistent_pattern unless datacenter.persistent_datastore_cluster_pattern && !datacenter.persistent_datastore_cluster_pattern.empty?
+
+      datastore_cluster_list = Resources::StoragePod.search_storage_pods(Regexp.new(datacenter.persistent_datastore_cluster_pattern), datacenter.mob)
+
+      logger.info("clusters: #{datastore_cluster_list}")
+      cluster_datastore_names = []
+      sdrs_enabled_datastore_clusters = datastore_cluster_list.select(&:drs_enabled?)
+      # pick best sdrs enabled datastore cluster and include its datastores in the set to be used for persistent disk
+      if sdrs_enabled_datastore_clusters.any?
+        datastore_cluster = choose_best_from(sdrs_enabled_datastore_clusters)
+        cluster_datastore_names.concat(datastore_cluster.datastores.map(&:name))
+      end
+
+      if cluster_datastore_names.empty?
+        datacenter.persistent_pattern
+      else
+        ret = "^(#{cluster_datastore_names.map { |name| Regexp.escape(name) }.join('|')})$"
+        if datacenter.persistent_pattern && !datacenter.persistent_pattern.empty?
+          ret += "|"+datacenter.persistent_pattern
+        end
+        ret
+      end
+    end
+
     # @param [DiskPool] disk_pool
     def choose_persistent_pattern(disk_pool)
       datastore_names = disk_pool.datastore_names
@@ -24,8 +57,7 @@ module VSphereCloud
 
       #if datastores is set use that else use global pattern
       if datastore_names.empty? && disk_pool.datastore_clusters.empty?
-        logger.info("Using global persistent disk datastore pattern: #{disk_pool.datacenter.persistent_pattern}")
-        disk_pool.datacenter.persistent_pattern
+        choose_global_persistent_pattern(disk_pool.datacenter)
       else
         logger.info("Using datastore list: #{datastore_names.join(', ')}")
         "^(#{datastore_names.map { |name| Regexp.escape(name) }.join('|')})$"

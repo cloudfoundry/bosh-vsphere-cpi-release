@@ -87,6 +87,7 @@ module VSphereCloud
         client: @client,
         ephemeral_pattern: @config.datacenter_datastore_pattern,
         persistent_pattern: @config.datacenter_persistent_datastore_pattern,
+        persistent_datastore_cluster_pattern: @config.datacenter_persistent_datastore_cluster_pattern,
         use_sub_folder: @config.datacenter_use_sub_folder,
         vm_folder: @config.datacenter_vm_folder,
         template_folder: @config.datacenter_template_folder,
@@ -593,7 +594,7 @@ module VSphereCloud
           cid: disk_to_attach.cid,
           size: disk_to_attach.size_in_mb,
           existing_datastore_name: disk_to_attach.datastore.name,
-          target_datastore_pattern: director_disk_cid.target_datastore_pattern || @datacenter.persistent_pattern
+          target_datastore_pattern: StoragePicker.choose_existing_disk_pattern(director_disk_cid, @datacenter),
         )
 
         logger.debug("Gathering storage placement accessible from VM: #{vm_cid}")
@@ -980,7 +981,7 @@ module VSphereCloud
           cid: disk.cid,
           size: disk.size_in_mb,
           existing_datastore_name: disk.datastore.name,
-          target_datastore_pattern: directory_disk_cid.target_datastore_pattern || @datacenter.persistent_pattern
+          target_datastore_pattern:  StoragePicker.choose_existing_disk_pattern(directory_disk_cid, @datacenter)
         )
       end
       #ephemeral disk configuration

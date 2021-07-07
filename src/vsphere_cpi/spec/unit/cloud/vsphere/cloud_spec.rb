@@ -431,6 +431,7 @@ module VSphereCloud
       let(:nsx) { instance_double(NSX) }
       let(:fake_cluster) { instance_double(VSphereCloud::Resources::Cluster, name: 'fake-cluster') }
       let(:target_datastore_pattern) { 'fake-persistent-pattern' }
+      let(:target_datastore_cluster_pattern) { nil }
       let(:target_datastore_ephemeral_pattern) { 'fake-ephemeral-pattern' }
       let(:fake_persistent_disk) do
         instance_double(VSphereCloud::DiskConfig,
@@ -466,6 +467,7 @@ module VSphereCloud
         allow(datacenter).to receive(:clusters).and_return([fake_cluster])
         allow(datacenter).to receive(:ephemeral_pattern).and_return(target_datastore_ephemeral_pattern)
         allow(datacenter).to receive(:persistent_pattern).and_return(target_datastore_pattern)
+        allow(datacenter).to receive(:persistent_datastore_cluster_pattern).and_return(target_datastore_cluster_pattern)
         allow(datacenter).to receive(:find_disk).with(director_disk_cid).and_return(fake_disk)
         allow(VSphereCloud::DirectorDiskCID).to receive(:new).with(encoded_disk_cid).and_return(director_disk_cid)
         allow(DiskConfig).to receive(:new)
@@ -1389,9 +1391,8 @@ module VSphereCloud
 
       before do
         allow(datacenter).to receive(:persistent_pattern).and_return(/datastore\-.*/)
-
+        allow(datacenter).to receive(:persistent_datastore_cluster_pattern).and_return('')
         allow(vm_provider).to receive(:find).with('fake-vm-cid').and_return(vm)
-
         allow(agent_env).to receive(:get_current_env).and_return(agent_env_hash)
         allow(cdrom).to receive_message_chain(:backing, :datastore, :name) { 'datastore-with-disk' }
         allow(vcenter_client).to receive(:get_cdrom_device).with(vm_mob).and_return(cdrom)
@@ -1961,13 +1962,10 @@ module VSphereCloud
       before do
         allow(small_ds).to receive(:accessible?).and_return(accessible)
         allow(large_ds).to receive(:accessible?).and_return(accessible)
-        allow(datacenter).to receive(:persistent_pattern)
-          .and_return('small-ds')
-        allow(datacenter).to receive(:accessible_datastores)
-          .and_return(accessible_datastores)
-        allow(datacenter).to receive(:find_datastore)
-          .with('small-ds')
-          .and_return(datastore)
+        allow(datacenter).to receive(:persistent_pattern).and_return('small-ds')
+        allow(datacenter).to receive(:persistent_datastore_cluster_pattern).and_return(nil)
+        allow(datacenter).to receive(:accessible_datastores).and_return(accessible_datastores)
+        allow(datacenter).to receive(:find_datastore).with('small-ds').and_return(datastore)
       end
 
       it 'creates disk via datacenter' do

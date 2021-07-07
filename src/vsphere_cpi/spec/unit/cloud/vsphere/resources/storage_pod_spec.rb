@@ -128,4 +128,60 @@ describe VSphereCloud::Resources::StoragePod do
     end
   end
 
+  describe '.find_storage_pod' do
+    let(:datacenter) { double('VimSdk::Vim::Datacenter')}
+    let(:datastore_folder) { double('datastore_folder')}
+    let(:storage_pod_name) {'cpi-sp1'}
+    let(:storage_pod) {instance_double('VimSdk::Vim::StoragePod', name: storage_pod_name)}
+
+    before do
+      allow(datacenter).to receive(:datastore_folder).and_return(datastore_folder)
+    end
+
+    it 'raises an error if storage_pod is not found' do
+      expect(datastore_folder).to receive(:child_entity).and_return([])
+      expect {
+        described_class.find_storage_pod(storage_pod_name, datacenter)
+      }.to raise_error /Datastore Cluster with name: 'cpi-sp1' not found/
+    end
+
+    it 'returns an instance of Resources::StoragePod when storage_pod if found' do
+      expect(datastore_folder).to receive(:child_entity).and_return([storage_pod])
+      allow(storage_pod).to receive(:class).and_return(VimSdk::Vim::StoragePod)
+      storage_pod =  described_class.find_storage_pod(storage_pod_name, datacenter)
+      expect(storage_pod).to be_a(VSphereCloud::Resources::StoragePod)
+    end
+  end
+
+  describe '.search_storage_pods' do
+    let(:datacenter) { double('VimSdk::Vim::Datacenter')}
+    let(:datastore_folder) { double('datastore_folder')}
+    let(:storage_pod_name1) {'cpi-sp1'}
+    let(:storage_pod_name2) {'cpi-sp2'}
+    let(:storage_pod1) {instance_double('VimSdk::Vim::StoragePod', name: storage_pod_name1)}
+    let(:storage_pod2) {instance_double('VimSdk::Vim::StoragePod', name: storage_pod_name2)}
+
+    before do
+      allow(datacenter).to receive(:datastore_folder).and_return(datastore_folder)
+      expect(datastore_folder).to receive(:child_entity).and_return([storage_pod1, storage_pod2])
+      allow(storage_pod1).to receive(:class).and_return(VimSdk::Vim::StoragePod)
+      allow(storage_pod2).to receive(:class).and_return(VimSdk::Vim::StoragePod)
+    end
+
+    it 'returns empty if nothing matches' do
+      storage_pods = described_class.search_storage_pods(/foo/, datacenter)
+      expect(storage_pods).to match_array([])
+    end
+
+    it 'returns an array of Resources::StoragePod when storage_pod if found' do
+      storage_pods = described_class.search_storage_pods(Regexp.new(storage_pod_name1), datacenter)
+      expect(storage_pods[0]).to be_a(VSphereCloud::Resources::StoragePod)
+      expect(storage_pods.count).to eq 1
+    end
+
+    it 'returns all the pods when searching with a broad expression' do
+      storage_pods =  described_class.search_storage_pods(/.*/, datacenter)
+      expect(storage_pods.count).to eq 2
+    end
+  end
 end

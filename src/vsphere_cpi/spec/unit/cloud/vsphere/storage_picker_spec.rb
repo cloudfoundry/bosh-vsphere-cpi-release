@@ -4,15 +4,24 @@ module VSphereCloud
   describe StoragePicker, fake_logger: true do
     let(:global_ephemeral_pattern) { 'global-ephemeral-ds' }
     let(:global_persistent_pattern) { 'global-persistent-ds' }
-    let(:datacenter) { double('Datacenter', ephemeral_pattern: global_ephemeral_pattern, persistent_pattern: global_persistent_pattern) }
+    let(:datastore_folder) { instance_double('VSphereCloud::Resources::Folder') }
+    let(:datacenter_mob) {instance_double('VimSdk::Vim::Datacenter') }
+    let(:datacenter) do
+      double('Datacenter',
+             ephemeral_pattern: global_ephemeral_pattern,
+             persistent_pattern: global_persistent_pattern,
+             persistent_datastore_cluster_pattern: persistent_cluster_pattern, # nil,
+             mob: datacenter_mob,
+      )
+    end
+    let(:persistent_cluster_pattern) { nil }
 
     let(:datastore1) {double('Datastore', name: 'sp-1-ds-1')}
     let(:datastore2) {double('Datastore', name: 'sp-2-ds-1')}
 
-    let(:sdrs_enabled_datastore_cluster1) { double('StoragePod', drs_enabled?: true, datastores: [datastore1], free_space: 20, name: 'sp2')}
-    let(:sdrs_enabled_datastore_cluster2) { double('StoragePod', drs_enabled?: true, datastores: [datastore2], free_space: 120000, name: 'sp1')}
+    let(:sdrs_enabled_datastore_cluster1) { double('StoragePod', drs_enabled?: true, datastores: [datastore1], free_space: 20, name: 'sp1')}
+    let(:sdrs_enabled_datastore_cluster2) { double('StoragePod', drs_enabled?: true, datastores: [datastore2], free_space: 120000, name: 'sp2')}
     let(:sdrs_disabled_datastore_cluster) { double('StoragePod', drs_enabled?: false, name: 'sp3')}
-
 
     describe '.choose_best_from' do
       let(:datastore) {double('Datastore', :free_space => 10)}
@@ -24,6 +33,32 @@ module VSphereCloud
       end
     end
 
+    describe '.choose_existing_disk_pattern' do
+      let(:disk_cid) { double('DirectorDiskCID') }
+      subject { described_class.choose_existing_disk_pattern(disk_cid, datacenter)}
+
+      context 'with an encoded pattern in the disk CID' do
+        before do
+          allow(disk_cid).to receive(:target_datastore_pattern).and_return('foo')
+        end
+        it 'returns the cid pattern' do
+          expect(subject).to eq('foo')
+        end
+      end
+
+      context 'with no encoded pattern in the disk CID' do
+        before do
+          allow(disk_cid).to receive(:target_datastore_pattern).and_return(nil)
+        end
+
+        context 'and no global cluster pattern' do
+          it 'returns the cid pattern' do
+            expect(subject).to eq(global_persistent_pattern)
+          end
+        end
+      end
+    end
+
     describe '.choose_persistent_pattern' do
       let(:disk_pool) { DiskPool.new(datacenter, []) }
 
@@ -32,9 +67,13 @@ module VSphereCloud
       before do
         allow(disk_pool).to receive(:datastore_clusters).and_return(datastore_clusters)
         allow(disk_pool).to receive(:datastore_names).and_return(datastore_names)
+        allow(Resources::StoragePod).to receive(:find_storage_pod).and_return(sdrs_enabled_datastore_cluster1)
       end
 
       context 'with datastore clusters' do
+        before do
+          allow(Resources::StoragePod).to receive(:search_storage_pods).and_return(datastore_clusters)
+        end
         context 'and sdrs enabled on some' do
           let(:datastore_clusters) { [sdrs_enabled_datastore_cluster1, sdrs_enabled_datastore_cluster2, sdrs_disabled_datastore_cluster] }
           context 'along with datastores' do
@@ -64,8 +103,26 @@ module VSphereCloud
       context 'with no datastores and datastore_clusters' do
         let(:datastore_names) { [] }
         let(:datastore_clusters) { [] }
+        let(:global_datastore_clusters) { [sdrs_enabled_datastore_cluster1, sdrs_enabled_datastore_cluster2, sdrs_disabled_datastore_cluster] }
+        before do
+          allow(Resources::StoragePod).to receive(:search_storage_pods).and_return(global_datastore_clusters)
+        end
+
         it 'includes the global persistent pattern' do
           expect(subject).to eq(global_persistent_pattern)
+        end
+
+        context 'with global persistent clusters defined' do
+          let(:persistent_cluster_pattern) { 'sp.' }
+          it 'includes a pattern constructed from datastores from best sdrs enabled global persistent datastore cluster and the global persistent pattern' do
+            expect(subject).to eq('^(sp\-2\-ds\-1)$|global-persistent-ds')
+          end
+          context 'and no global persistent pattern' do
+            let(:global_persistent_pattern) { nil }
+            it 'returns a pattern with only the cluster datastores' do
+              expect(subject).to eq('^(sp\-2\-ds\-1)$')
+            end
+          end
         end
       end
     end

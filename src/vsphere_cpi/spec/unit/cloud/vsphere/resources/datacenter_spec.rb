@@ -15,6 +15,7 @@ describe VSphereCloud::Resources::Datacenter, fake_logger: true do
       disk_path: 'fake-disk-path',
       ephemeral_pattern: ephemeral_pattern,
       persistent_pattern: persistent_pattern,
+      persistent_datastore_cluster_pattern: persistent_datastore_cluster_pattern,
       use_sub_folder: datacenter_use_sub_folder
     )
   end
@@ -78,6 +79,7 @@ describe VSphereCloud::Resources::Datacenter, fake_logger: true do
 
   let(:ephemeral_pattern) {instance_double('Regexp')}
   let(:persistent_pattern) { 'persistent.*' }
+  let(:persistent_datastore_cluster_pattern) { nil }
   let(:cloud_searcher) { instance_double('VSphereCloud::CloudSearcher') }
   let(:datastore_properties) { {} }
   let(:datastore) { instance_double('VSphereCloud::Resources::Datastore', name: 'fake-datastore') }
