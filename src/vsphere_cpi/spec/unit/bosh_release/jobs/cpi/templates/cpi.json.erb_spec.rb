@@ -34,6 +34,7 @@ describe 'cpi.json.erb' do
               'template_folder' => 'template-folder',
               'datastore_pattern' => 'datastore-pattern',
               'persistent_datastore_pattern' => 'persistent-datastore-pattern',
+              'persistent_datastore_cluster_pattern' => nil,
               'disk_path' => 'disk-path',
               'clusters' => ['cluster-1']
             }
@@ -85,6 +86,7 @@ describe 'cpi.json.erb' do
                   'datastore_pattern' => 'datastore-pattern',
                   'disk_path' => 'disk-path',
                   'name' => 'datacenter-1',
+                  'persistent_datastore_cluster_pattern' => nil,
                   'persistent_datastore_pattern' => 'persistent-datastore-pattern',
                   'template_folder' => 'template-folder',
                   'vm_folder' => 'vm-folder'
