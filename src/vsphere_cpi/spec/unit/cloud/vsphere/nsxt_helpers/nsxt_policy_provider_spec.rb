@@ -449,6 +449,30 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
         expect(group1.expression).to match_array([])
         expect(group2.expression).to match_array([another_expression])
       end
+
+      context "the first vm is removed before others in the same external id expression" do
+        let(:conjunction_expression) {
+          NSXTPolicy::ConjunctionOperator.new(resource_type: 'ConjunctionOperator',
+                                              conjunction_operator: 'OR',
+                                              id: 'conjunction-some-vm-not-matching-cid')
+        }
+        let(:group1) { instance_double(NSXTPolicy::Group,
+                                       expression: [another_expression, conjunction_expression, existing_expression],
+                                       id: "some-group-1")}
+        it 'removes the whole expression with conjunction expression' do
+          expect(policy_group_api).to receive(:update_group_for_domain).
+            with(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN,
+                 "some-group-1",
+                 group1)
+          expect(policy_group_api).to receive(:update_group_for_domain).
+            with(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN,
+                 "some-group-2",
+                 group2)
+          nsxt_policy_provider.remove_vm_from_groups(vm)
+          expect(group1.expression).to match_array([another_expression])
+          expect(group2.expression).to match_array([another_expression])
+        end
+      end
     end
   end
 
