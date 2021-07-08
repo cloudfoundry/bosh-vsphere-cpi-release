@@ -271,24 +271,28 @@ module VSphereCloud
       return if group_obj.expression.nil? || group_obj.expression.empty?
 
       updated = false
-      group_obj.expression.each do |expr|
+      group_obj.expression.each_with_index do |expr, index|
         if expr.is_a?(NSXTPolicy::ExternalIDExpression) &&
             expr.member_type == 'VirtualMachine' &&
             expr.resource_type == 'ExternalIDExpression'
           expr.external_ids.delete_if { |id| id == vm_external_id }
+           # not true if id does not exist in any eid expr. but this is very unlikely
           updated = true
 
           if expr.external_ids.empty?
             group_obj.expression.delete(expr)
-
-            conjunction_expr = group_obj.expression.find do |e|
-              e.is_a?(NSXTPolicy::ConjunctionOperator) &&
-                  e.resource_type == 'ConjunctionOperator' &&
-                  e.conjunction_operator == 'OR' &&
-                  e.id.start_with?("conjunction-#{vm_cid}")
-            end
-            if conjunction_expr != nil
-              group_obj.expression.delete(conjunction_expr)
+            if ! group_obj.expression.empty?
+              # delete the OR op before or after
+              if index == 0
+                e=group_obj.expression[0]
+              else
+                e=group_obj.expression[index-1]
+              end
+              if e.is_a?(NSXTPolicy::ConjunctionOperator) &&
+                    e.resource_type == 'ConjunctionOperator' &&
+                    e.conjunction_operator == 'OR'
+                group_obj.expression.delete(e)
+              end
             end
           end
         end
