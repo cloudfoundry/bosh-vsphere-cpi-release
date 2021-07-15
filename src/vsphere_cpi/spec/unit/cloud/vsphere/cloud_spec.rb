@@ -483,7 +483,6 @@ module VSphereCloud
             ephemeral: true,
             target_datastore_pattern: target_datastore_ephemeral_pattern
           ).and_return(fake_ephemeral_disk)
-        #allow(vsphere_cloud).to receive(:disk_configurations).and_return([disk_configurations, nil])
         allow(StoragePicker).to receive(:choose_ephemeral_pattern).and_return(
             [target_datastore_ephemeral_pattern, nil])
       end

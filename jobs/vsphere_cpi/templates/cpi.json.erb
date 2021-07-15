@@ -47,6 +47,7 @@
         "template_folder" => datacenter['template_folder'] || "BOSH_Templates",
         "disk_path" => datacenter['disk_path'] || "BOSH_Disks",
         "datastore_pattern" => datacenter['datastore_pattern'],
+        "datastore_cluster_pattern" => datacenter['datastore_cluster_pattern'],
         "persistent_datastore_pattern" => datacenter['persistent_datastore_pattern'],
         "persistent_datastore_cluster_pattern" => datacenter['persistent_datastore_cluster_pattern'],
         "allow_mixed_datastores" => datacenter.fetch('allow_mixed_datastores', true),

@@ -68,6 +68,7 @@ context 'when regex matching datastore clusters (vcpi-*)' do
   before (:all) do
     @cluster_name = fetch_and_verify_cluster('BOSH_VSPHERE_CPI_CLUSTER')
     @ds_cluster_name = fetch_and_verify_datastore_cluster('BOSH_VSPHERE_CPI_DATASTORE_CLUSTER')
+    @datastore_in_dc = fetch_and_verify_datastore('BOSH_VSPHERE_CPI_DATASTORE_IN_DATASTORE_CLUSTER', @cluster_name) #datastore which is part of datastore cluster
     @datastore_pattern = fetch_and_verify_datastore('BOSH_VSPHERE_CPI_DATASTORE_IN_DATASTORE_CLUSTER', @cluster_name) # datastore-name-*
   end
   let(:vm_type) do
@@ -113,6 +114,43 @@ context 'when regex matching datastore clusters (vcpi-*)' do
     ensure
       delete_vm(cpi, @vm_id)
       delete_disk(cpi, @disk_id)
+    end
+  end
+
+  context 'when ephemeral datastore cluster pattern is also enabled and the datastore pattern matches nothing' do
+    let(:cpi) do
+      options = cpi_options(
+        datacenters: [{
+                        datastore_pattern: '^pattern_matching_nothing$',
+                        datastore_cluster_pattern: "^#{Regexp.escape(@ds_cluster_name)}$",
+                        persistent_datastore_pattern: '',
+                        persistent_datastore_cluster_pattern: "^#{Regexp.escape(@ds_cluster_name)}$",
+                      }],
+        )
+      VSphereCloud::Cloud.new(options)
+    end
+
+    it 'should place ephemeral disk into datastore cluster datastore' do
+      begin
+        @vm_id = cpi.create_vm(
+          'agent-007',
+          @stemcell_id,
+          vm_type,
+          get_network_spec,
+          [],
+          {}
+        )
+        expect(@vm_id).to_not be_nil
+        expect(cpi.has_vm?(@vm_id)).to be(true)
+        vm = cpi.vm_provider.find(@vm_id)
+        ephemeral_disk = vm.ephemeral_disk
+        expect(ephemeral_disk).to_not be_nil
+
+        ephemeral_datastore = ephemeral_disk.backing.datastore
+        expect(ephemeral_datastore.name).to eq(@datastore_in_dc)
+      ensure
+        delete_vm(cpi, @vm_id)
+      end
     end
   end
 end

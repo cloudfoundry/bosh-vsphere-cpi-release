@@ -86,6 +86,7 @@ module VSphereCloud
       @datacenter = Resources::Datacenter.new(
         client: @client,
         ephemeral_pattern: @config.datacenter_datastore_pattern,
+        ephemeral_datastore_cluster_pattern: @config.datacenter_datastore_cluster_pattern,
         persistent_pattern: @config.datacenter_persistent_datastore_pattern,
         persistent_datastore_cluster_pattern: @config.datacenter_persistent_datastore_cluster_pattern,
         use_sub_folder: @config.datacenter_use_sub_folder,

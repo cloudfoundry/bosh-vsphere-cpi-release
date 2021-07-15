@@ -18,10 +18,28 @@ module VSphereCloud
 
     # param [Resources::Datacenter] datacenter
     def choose_global_persistent_pattern(datacenter)
-      logger.info("Using global persistent disk pattern #{datacenter.persistent_pattern} and global persistent datastore cluster pattern #{datacenter.persistent_datastore_cluster_pattern} ")
-      return datacenter.persistent_pattern unless datacenter.persistent_datastore_cluster_pattern && !datacenter.persistent_datastore_cluster_pattern.empty?
+      choose_global_datastore_pattern(datacenter, true)
+    end
 
-      datastore_cluster_list = Resources::StoragePod.search_storage_pods(Regexp.new(datacenter.persistent_datastore_cluster_pattern), datacenter.mob)
+    # param [Resources::Datacenter] datacenter
+    def choose_global_ephemeral_pattern(datacenter)
+      choose_global_datastore_pattern(datacenter, false)
+    end
+
+    # param [Resources::Datacenter] datacenter
+    # param [Boolean] is_persistent
+    def choose_global_datastore_pattern(datacenter, is_persistent)
+      if is_persistent
+        pattern=datacenter.persistent_pattern
+        cluster_pattern=datacenter.persistent_datastore_cluster_pattern
+      else
+        pattern=datacenter.ephemeral_pattern
+        cluster_pattern=datacenter.ephemeral_datastore_cluster_pattern
+      end
+      logger.info("Using global datastore pattern #{pattern} and global datastore cluster pattern #{cluster_pattern} persistent: #{is_persistent}")
+      return pattern unless cluster_pattern && !cluster_pattern.empty?
+
+      datastore_cluster_list = Resources::StoragePod.search_storage_pods(Regexp.new(cluster_pattern), datacenter.mob)
 
       logger.info("clusters: #{datastore_cluster_list}")
       cluster_datastore_names = []
@@ -33,11 +51,11 @@ module VSphereCloud
       end
 
       if cluster_datastore_names.empty?
-        datacenter.persistent_pattern
+        pattern
       else
         ret = "^(#{cluster_datastore_names.map { |name| Regexp.escape(name) }.join('|')})$"
-        if datacenter.persistent_pattern && !datacenter.persistent_pattern.empty?
-          ret += "|"+datacenter.persistent_pattern
+        if pattern && !pattern.empty?
+          ret += "|"+pattern
         end
         ret
       end
@@ -91,7 +109,7 @@ module VSphereCloud
     # 3. Global Storage Policy
     # 4. Global ephemeral DS pattern
     #
-    # if policy is specified used compatible datastores for that policy otherwise
+    # if policy is specified use compatible datastores for that policy otherwise
     # use given datastores and collection of all datastores for sdrs enabled datastore clusters
     # and if no datastores/datastore_clusters are specified, use global ephemeral pattern
     #
@@ -134,7 +152,7 @@ module VSphereCloud
 
       # 4. If nothing else is specified, return global ephemeral pattern.
       logger.info("Using global ephemeral disk datastore pattern: #{vm_type.datacenter.ephemeral_pattern}")
-      return vm_type.datacenter.ephemeral_pattern, nil
+      return choose_global_ephemeral_pattern(vm_type.datacenter), nil
     end
   end
 end

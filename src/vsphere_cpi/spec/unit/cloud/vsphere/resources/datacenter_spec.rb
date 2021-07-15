@@ -14,6 +14,7 @@ describe VSphereCloud::Resources::Datacenter, fake_logger: true do
       cluster_provider: cluster_provider,
       disk_path: 'fake-disk-path',
       ephemeral_pattern: ephemeral_pattern,
+      ephemeral_datastore_cluster_pattern: ephemeral_datastore_cluster_pattern,
       persistent_pattern: persistent_pattern,
       persistent_datastore_cluster_pattern: persistent_datastore_cluster_pattern,
       use_sub_folder: datacenter_use_sub_folder
@@ -78,6 +79,7 @@ describe VSphereCloud::Resources::Datacenter, fake_logger: true do
   let(:cluster_config2) { instance_double('VSphereCloud::ClusterConfig', resource_pool: nil, name: 'second-cluster') }
 
   let(:ephemeral_pattern) {instance_double('Regexp')}
+  let(:ephemeral_datastore_cluster_pattern) { nil }
   let(:persistent_pattern) { 'persistent.*' }
   let(:persistent_datastore_cluster_pattern) { nil }
   let(:cloud_searcher) { instance_double('VSphereCloud::CloudSearcher') }

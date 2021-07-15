@@ -156,6 +156,10 @@ module VSphereCloud
       vcenter_datacenter['datastore_pattern']
     end
 
+    def datacenter_datastore_cluster_pattern
+      vcenter_datacenter['datastore_cluster_pattern']
+    end
+
     def datacenter_persistent_datastore_pattern
       vcenter_datacenter['persistent_datastore_pattern']
     end

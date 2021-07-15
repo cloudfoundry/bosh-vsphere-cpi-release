@@ -7,13 +7,15 @@ module VSphereCloud
     let(:datastore_folder) { instance_double('VSphereCloud::Resources::Folder') }
     let(:datacenter_mob) {instance_double('VimSdk::Vim::Datacenter') }
     let(:datacenter) do
-      double('Datacenter',
+      instance_double(Resources::Datacenter,
              ephemeral_pattern: global_ephemeral_pattern,
+             ephemeral_datastore_cluster_pattern: ephemeral_cluster_pattern, # nil,
              persistent_pattern: global_persistent_pattern,
              persistent_datastore_cluster_pattern: persistent_cluster_pattern, # nil,
              mob: datacenter_mob,
       )
     end
+    let(:ephemeral_cluster_pattern) { nil }
     let(:persistent_cluster_pattern) { nil }
 
     let(:datastore1) {double('Datastore', name: 'sp-1-ds-1')}
@@ -254,13 +256,25 @@ module VSphereCloud
           context 'with NO Global Storage Policy' do
             let(:global_ephemeral_pattern) { 'global-ds-0' }
             let(:global_storage_policy) { nil }
+            before do
+              allow(vm_type).to receive(:datacenter).and_return(datacenter)
+            end
             it 'includes all compatible datastores from global ephemeral pattern' do
-              expect(vm_type).to receive(:datacenter).twice
               expect(vm_type).to receive(:storage_policy_name).once
               expect(vm_type).to receive(:datastore_names).once
               expect(global_config).to receive(:vm_storage_policy_name).once
               expect(vm_type).to_not receive(:storage_policy_datastores)
               expect(subject).to eq([global_ephemeral_pattern, nil])
+            end
+            context 'and a global ephemeral datastore cluster pattern is defined' do
+              let(:global_datastore_clusters) { [sdrs_enabled_datastore_cluster1, sdrs_enabled_datastore_cluster2, sdrs_disabled_datastore_cluster] }
+              let(:ephemeral_cluster_pattern) { 'sp*' }
+              before do
+                allow(Resources::StoragePod).to receive(:search_storage_pods).and_return(global_datastore_clusters)
+              end
+              it 'includes all compatible datastores from global ephemeral datastore cluster pattern' do
+                expect(subject).to eq(['^(sp\-2\-ds\-1)$|global-ds-0', nil])
+              end
             end
           end
         end

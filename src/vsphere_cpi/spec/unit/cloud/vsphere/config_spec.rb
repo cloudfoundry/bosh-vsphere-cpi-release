@@ -12,6 +12,7 @@ module VSphereCloud
     let(:template_folder) { 'template-folder' }
     let(:disk_path) { '/a/path/on/disk' }
     let(:datastore_pattern) { 'fancy-datastore*' }
+    let(:datastore_cluster_pattern) { 'e-d-s-c-*' }
     let(:persistent_datastore_pattern) { 'long-lasting-datastore*' }
     let(:persistent_datastore_cluster_pattern) { 'd-s-c-*' }
     let(:cluster_name) { 'grubby-cluster' }
@@ -25,6 +26,7 @@ module VSphereCloud
          'template_folder' => template_folder,
          'disk_path' => disk_path,
          'datastore_pattern' => datastore_pattern,
+         'datastore_cluster_pattern' => datastore_cluster_pattern,
          'persistent_datastore_pattern' => persistent_datastore_pattern,
          'persistent_datastore_cluster_pattern' => persistent_datastore_cluster_pattern,
          'clusters' => [
@@ -348,6 +350,12 @@ module VSphereCloud
       end
     end
 
+    describe '#datacenter_datastore_cluster_pattern' do
+      it 'returns the datacenter datastore cluster pattern ' do
+        expect(config.datacenter_datastore_cluster_pattern).to eq(datastore_cluster_pattern)
+      end
+    end
+
     describe '#datacenter_persistent_datastore_pattern' do
       it 'returns the datacenter persistent datastore pattern ' do
         expect(config.datacenter_persistent_datastore_pattern).to eq(persistent_datastore_pattern)
@@ -355,7 +363,7 @@ module VSphereCloud
     end
 
     describe '#datacenter_persistent_datastore_cluster_pattern' do
-      it 'returns the datacenter persistent datastore pattern ' do
+      it 'returns the datacenter persistent datastore cluster pattern ' do
         expect(config.datacenter_persistent_datastore_cluster_pattern).to eq(persistent_datastore_cluster_pattern)
       end
     end
