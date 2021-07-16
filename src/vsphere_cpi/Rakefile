@@ -30,7 +30,7 @@ namespace :swagger do
       "-i ./data/nsxt_manager_api/nsxt_manager_api.json",
       "-l ruby",
       "-o ./lib/nsxt_manager_client",
-      "-c ./data/nsxt_manager_api/config.json -t ./data/swagger-nsxt-template"
+      "-c ./data/nsxt_manager_api/config.json -t ./data/swagger-nsxt-manager-template"
     ].join(' ')
   
     #Patch models that have wrong _deserialize method
@@ -107,7 +107,7 @@ namespace :swagger do
       "-i ./data/nsxt_policy_api/nsxt_policy_api.json",
       "-l ruby",
       "-o ./lib/nsxt_policy_client",
-      "-c ./data/nsxt_policy_api/config.json -t ./data/swagger-nsxt-template"
+      "-c ./data/nsxt_policy_api/config.json -t ./data/swagger-nsxt-policy-template"
     ].join(' ')
   
     sh [
@@ -129,6 +129,28 @@ namespace :swagger do
            "-Dmodels=Group"
        ].join(' ')
 
+    # We set the target_id length to 255 to fix 'invalid value for "target_id",
+    # the character length must be smaller than or equal to 64' when
+    # `get_groups_for_vm()` is called. We only do this for
+    # PolicyResourceReferenceForEP; it's the only place we need it.
+    sh [
+          "jq",
+          "'.definitions.ResourceReference.properties.target_id.maxLength = 255'",
+          "<",
+          "./data/nsxt_policy_api/nsxt_policy_api.json",
+          ">",
+          "./data/nsxt_policy_api/nsxt_policy_api_target_id_255.json",
+    ].join(' ')
+
+    sh [
+           "swagger-codegen generate",
+           "-i ./data/nsxt_policy_api/nsxt_policy_api_target_id_255.json",
+           "-l ruby",
+           "-o ./lib/nsxt_policy_client",
+           "-c ./data/nsxt_policy_api/config.json -t ./data/swagger-nsxt-policy-template",
+           "-Dmodels=PolicyResourceReferenceForEP",
+       ].join(' ')
+
     rm_rf (["./lib/nsxt_policy_client/.swagger-codegen-ignore",
       "./lib/nsxt_policy_client/.swagger-codegen",
       "./lib/nsxt_policy_client/README.md",
@@ -140,7 +162,8 @@ namespace :swagger do
       "./lib/nsxt_policy_client/spec",
       "./lib/nsxt_policy_client/nsxt_policy_client.gemspec",
       "./lib/nsxt_policy_client/Rakefile",
-      "./lib/nsxt_policy_client/nsxt_policy_client"
+      "./lib/nsxt_policy_client/nsxt_policy_client",
+      "./data/nsxt_policy_api/nsxt_policy_api_target_id_255.json",
     ])
   
     mv("./lib/nsxt_policy_client/lib/nsxt_policy_client", "./lib/nsxt_policy_client/nsxt_policy_client")

@@ -104,7 +104,7 @@ module NSXTPolicy
     # @return true if the model is valid
     def valid?
       return false if !@target_display_name.nil? && @target_display_name.to_s.length > 255
-      return false if !@target_id.nil? && @target_id.to_s.length > 64
+      return false if !@target_id.nil? && @target_id.to_s.length > 255
       return false if !@target_type.nil? && @target_type.to_s.length > 255
       true
     end
@@ -122,8 +122,8 @@ module NSXTPolicy
     # Custom attribute writer method with validation
     # @param [Object] target_id Value to be assigned
     def target_id=(target_id)
-      if !target_id.nil? && target_id.to_s.length > 64
-        fail ArgumentError, 'invalid value for "target_id", the character length must be smaller than or equal to 64.'
+      if !target_id.nil? && target_id.to_s.length > 255
+        fail ArgumentError, 'invalid value for "target_id", the character length must be smaller than or equal to 255.'
       end
 
       @target_id = target_id
