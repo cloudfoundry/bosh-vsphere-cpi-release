@@ -3,6 +3,7 @@
 source environment/metadata
 export HTTP_PROXY="http://$BOSH_VSPHERE_JUMPER_HOST:80"
 export HTTPS_PROXY="http://$BOSH_VSPHERE_JUMPER_HOST:80"
+export NO_PROXY=.amazonaws.com,rubygems.org,gcr.io
 
 # Be compatible with both BSD and GNU mktemp
 tmpdir="$(mktemp -dt master 2> /dev/null || mktemp -dt master.XXXX)"
