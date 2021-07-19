@@ -61,6 +61,12 @@ module VSphereCloud
         raise "Unsupported default_disk_type '#{default_disk_type}'. vSphere CPI only supports a default_disk_type of 'preallocated' or 'thin'"
       end
 
+      pdp = config['vcenters'].first['datacenters'].first['persistent_datastore_pattern']
+      pdcp = config['vcenters'].first['datacenters'].first['persistent_datastore_cluster_pattern']
+      unless (pdp && !pdp.empty?) || (pdcp && !pdcp.empty?)
+        raise "Either property persistent_datastore_pattern or property persistent_datastore_cluster_pattern must be set on vcenters[0].datacenters[0]"
+      end
+
       validate_schema
       NSXTConfig.validate_schema(config['nsxt'])
 
@@ -271,7 +277,9 @@ module VSphereCloud
               optional('use_sub_folder') => bool,
               'disk_path' => String,
               'datastore_pattern' => String,
-              'persistent_datastore_pattern' => String,
+              optional('datastore_cluster_pattern') => String,
+              optional('persistent_datastore_pattern') => String,
+              optional('persistent_datastore_cluster_pattern') => String,
               optional('allow_mixed_datastores') => bool,
               'clusters' => [enum(String, dict(String, {optional('resource_pool') => String}),
               )]
