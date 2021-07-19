@@ -142,7 +142,7 @@ module NSXT
       if @api_client.config.debugging
         @api_client.config.logger.debug 'Calling API: UpgradeNodeUpgradeApi.get_upgrade_task_status ...'
       end
-      if @api_client.config.client_side_validation && !opts[:'bundle_name'].nil? && opts[:'bundle_name'] !~ Regexp.new(/^[a-zA-Z0-9-.]+$/)
+      if @api_client.config.client_side_validation && !opts[:'bundle_name'].nil? && opts[:'bundle_name'] !~ Regexp.new(/^[a-zA-Z0-9\-.]+$/)
         fail ArgumentError, "invalid value for 'opts[:\"bundle_name\"]' when calling UpgradeNodeUpgradeApi.get_upgrade_task_status, must conform to the pattern /^[a-zA-Z0-9-.]+$/."
       end
 
