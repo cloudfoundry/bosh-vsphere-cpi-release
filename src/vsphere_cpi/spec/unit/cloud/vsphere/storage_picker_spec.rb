@@ -116,13 +116,13 @@ module VSphereCloud
 
         context 'with global persistent clusters defined' do
           let(:persistent_cluster_pattern) { 'sp.' }
-          it 'includes a pattern constructed from datastores from best sdrs enabled global persistent datastore cluster and the global persistent pattern' do
-            expect(subject).to eq('^(sp\-2\-ds\-1)$|global-persistent-ds')
+          it 'includes a pattern constructed from datastores from all SDRS-enabled global persistent datastore cluster and the global persistent pattern' do
+            expect(subject).to eq('^(sp\-1\-ds\-1|sp\-2\-ds\-1)$|global-persistent-ds')
           end
           context 'and no global persistent pattern' do
             let(:global_persistent_pattern) { nil }
             it 'returns a pattern with only the cluster datastores' do
-              expect(subject).to eq('^(sp\-2\-ds\-1)$')
+              expect(subject).to eq('^(sp\-1\-ds\-1|sp\-2\-ds\-1)$')
             end
           end
         end
@@ -273,7 +273,7 @@ module VSphereCloud
                 allow(Resources::StoragePod).to receive(:search_storage_pods).and_return(global_datastore_clusters)
               end
               it 'includes all compatible datastores from global ephemeral datastore cluster pattern' do
-                expect(subject).to eq(['^(sp\-2\-ds\-1)$|global-ds-0', nil])
+                expect(subject).to eq(['^(sp\-1\-ds\-1|sp\-2\-ds\-1)$|global-ds-0', nil])
               end
             end
           end

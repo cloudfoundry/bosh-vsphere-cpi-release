@@ -42,13 +42,10 @@ module VSphereCloud
       datastore_cluster_list = Resources::StoragePod.search_storage_pods(Regexp.new(cluster_pattern), datacenter.mob)
 
       logger.info("clusters: #{datastore_cluster_list}")
-      cluster_datastore_names = []
-      sdrs_enabled_datastore_clusters = datastore_cluster_list.select(&:drs_enabled?)
-      # pick best sdrs enabled datastore cluster and include its datastores in the set to be used for persistent disk
-      if sdrs_enabled_datastore_clusters.any?
-        datastore_cluster = choose_best_from(sdrs_enabled_datastore_clusters)
-        cluster_datastore_names.concat(datastore_cluster.datastores.map(&:name))
-      end
+
+      # pick all SDRS-enabled datastore clusters and include their datastores in the set to be used
+      datastores = datastore_cluster_list.select(&:drs_enabled?).map { |datastore_cluster| datastore_cluster.datastores }.flatten
+      cluster_datastore_names = datastores.map(&:name)
 
       if cluster_datastore_names.empty?
         pattern
