@@ -288,35 +288,8 @@ module VSphereCloud
       let(:pbm) { instance_double(Pbm) }
       let(:vm_type) { VmType.new(datacenter, {}, pbm) }
 
-      context 'with datastore clusters' do
-        before do
-          allow(vm_type).to receive(:datastore_clusters).and_return(datastore_clusters)
-        end
-
-        context 'and sdrs enabled on some' do
-          let(:datastore_clusters) { [sdrs_enabled_datastore_cluster1, sdrs_enabled_datastore_cluster2, sdrs_disabled_datastore_cluster] }
-          context 'along with datastores' do
-            it 'considers all sdrs enabled datastore cluster' do
-              expected_storage_options = [datastore1, sdrs_enabled_datastore_cluster1, sdrs_enabled_datastore_cluster2]
-              expect(described_class).to receive(:choose_best_from).with(expected_storage_options)
-              described_class.choose_ephemeral_storage(target_datastore_name, accessible_datastores, vm_type)
-            end
-
-            it 'should not include nil datastore for unmatched target_datastore_pattern from accessibe_datastores' do
-              expected_storage_options = [sdrs_enabled_datastore_cluster1, sdrs_enabled_datastore_cluster2]
-              expect(described_class).to receive(:choose_best_from).with(expected_storage_options)
-              described_class.choose_ephemeral_storage(target_datastore_name, {}, vm_type)
-            end
-          end
-        end
-
-        context 'and sdrs disabled on all' do
-          let(:datastore_clusters) { [sdrs_disabled_datastore_cluster] }
-          it 'should not consider any datastore cluster' do
-            expect(described_class).to receive(:choose_best_from).with([datastore1])
-            described_class.choose_ephemeral_storage(target_datastore_name, accessible_datastores, vm_type)
-          end
-        end
+      it 'should return the previously selected datastore' do
+        expect(described_class.choose_ephemeral_storage(target_datastore_name, accessible_datastores, vm_type)).to eq(datastore1)
       end
     end
   end

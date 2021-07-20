@@ -87,17 +87,7 @@ module VSphereCloud
     # @param [Hash] accessible_datastores
     # @param [VmType] vm_type
     def choose_ephemeral_storage(target_datastore_name, accessible_datastores, vm_type)
-      #pick datastore set by cluster_picker based on ephemeral_pattern
-      storage_options = [accessible_datastores[target_datastore_name]].compact
-      logger.debug("Initial Storage Options for creating ephemeral disk from pattern: #{storage_options.map(&:name)}")
-
-      if vm_type.datastore_clusters.any?
-        sdrs_enabled_datastore_clusters = vm_type.datastore_clusters.select(&:drs_enabled?)
-        logger.info("None of the datastore clusters have Storage DRS enabled") unless sdrs_enabled_datastore_clusters.any?
-        storage_options.concat(sdrs_enabled_datastore_clusters)
-      end
-      logger.debug("Storage Options for creating ephemeral disk are: #{storage_options.map(&:name)}")
-      choose_best_from(storage_options)
+      accessible_datastores[target_datastore_name]
     end
 
     # Ephemeral Pattern is constructed using following list of priority
