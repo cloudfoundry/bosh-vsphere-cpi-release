@@ -15,6 +15,10 @@ describe 'cpi.json.erb' do
 
   let(:jobs_root) { File.join(File.dirname(__FILE__), '../../../../../../../../', 'jobs') }
   let(:cpi_json_erb) { File.read(File.absolute_path(File.join(jobs_root, 'vsphere_cpi/templates/cpi.json.erb'))) }
+  let(:datastore_pattern) { 'datastore-pattern' }
+  let(:persistent_datastore_pattern) { 'persistent-datastore-pattern' }
+  let(:datastore_cluster_pattern) { 'datastore-cluster-pattern' }
+  let(:persistent_datastore_cluster_pattern) { 'persistent-datastore-cluster-pattern' }
   let(:manifest) do
     {
       'properties' => {
@@ -32,10 +36,10 @@ describe 'cpi.json.erb' do
               'name' => 'datacenter-1',
               'vm_folder' => 'vm-folder',
               'template_folder' => 'template-folder',
-              'datastore_pattern' => 'datastore-pattern',
-              'datastore_cluster_pattern' => 'datastore-cluster-pattern',
-              'persistent_datastore_pattern' => 'persistent-datastore-pattern',
-              'persistent_datastore_cluster_pattern' => nil,
+              'datastore_pattern' => datastore_pattern,
+              'datastore_cluster_pattern' => datastore_cluster_pattern,
+              'persistent_datastore_pattern' => persistent_datastore_pattern,
+              'persistent_datastore_cluster_pattern' => persistent_datastore_cluster_pattern,
               'disk_path' => 'disk-path',
               'clusters' => ['cluster-1']
             }
@@ -88,7 +92,7 @@ describe 'cpi.json.erb' do
                   'datastore_cluster_pattern' => 'datastore-cluster-pattern',
                   'disk_path' => 'disk-path',
                   'name' => 'datacenter-1',
-                  'persistent_datastore_cluster_pattern' => nil,
+                  'persistent_datastore_cluster_pattern' => 'persistent-datastore-cluster-pattern',
                   'persistent_datastore_pattern' => 'persistent-datastore-pattern',
                   'template_folder' => 'template-folder',
                   'vm_folder' => 'vm-folder'
@@ -108,6 +112,27 @@ describe 'cpi.json.erb' do
         }
       }
     })
+  end
+
+  context 'when optional datacenter properties are not set' do
+    let(:datastore_cluster_pattern) { nil }
+    let(:persistent_datastore_pattern) { nil }
+    let(:persistent_datastore_cluster_pattern) { nil }
+
+    it 'does not render the optional properties' do
+      expect(subject['cloud']['properties']['vcenters'].first['datacenters'].first).to eq(
+        {
+          'allow_mixed_datastores' => true,
+          'clusters' => [
+            'cluster-1'
+          ],
+          'datastore_pattern' => 'datastore-pattern',
+          'disk_path' => 'disk-path',
+          'name' => 'datacenter-1',
+          'template_folder' => 'template-folder',
+          'vm_folder' => 'vm-folder'
+        })
+    end
   end
 
   context 'when nsx address is set' do
