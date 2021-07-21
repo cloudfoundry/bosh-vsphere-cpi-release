@@ -81,7 +81,8 @@ context 'when regex matching datastore clusters (vcpi-*)' do
   let(:cpi) do
     options = cpi_options(
       datacenters: [{
-                      datastore_pattern: @datastore_pattern,
+                      datastore_pattern: '',
+                      datastore_cluster_pattern: "^#{Regexp.escape(@ds_cluster_name)}$",
                       persistent_datastore_pattern: '',
                       persistent_datastore_cluster_pattern: "^#{Regexp.escape(@ds_cluster_name)}$",
                     }],
@@ -93,7 +94,7 @@ context 'when regex matching datastore clusters (vcpi-*)' do
     cpi.cleanup
   end
 
-  it 'should place disk into datastores that belong to the datastore cluster' do
+  it 'should place disks into datastores that belong to the datastore cluster' do
     begin
       @vm_id = cpi.create_vm(
         'agent-007',
@@ -105,6 +106,12 @@ context 'when regex matching datastore clusters (vcpi-*)' do
       )
       expect(@vm_id).to_not be_nil
       expect(cpi.has_vm?(@vm_id)).to be(true)
+      vm = cpi.vm_provider.find(@vm_id)
+      ephemeral_disk = vm.ephemeral_disk
+      expect(ephemeral_disk).to_not be_nil
+
+      ephemeral_datastore = ephemeral_disk.backing.datastore
+      expect(ephemeral_datastore.name).to eq(@datastore_in_dc)
 
       @disk_id = cpi.create_disk(2048, {}, nil)
       expect(@disk_id).to_not be_nil
