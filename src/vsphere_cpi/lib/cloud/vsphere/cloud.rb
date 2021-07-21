@@ -199,7 +199,7 @@ module VSphereCloud
             disk_configurations: [
               VSphereCloud::DiskConfig.new(
                 size: stemcell_size,
-                target_datastore_pattern: @datacenter.ephemeral_pattern,
+                target_datastore_pattern: StoragePicker.choose_global_ephemeral_pattern(@datacenter),
                 ephemeral: true
               )
             ],

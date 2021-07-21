@@ -115,6 +115,7 @@ describe 'cpi.json.erb' do
   end
 
   context 'when optional datacenter properties are not set' do
+    let(:datastore_pattern) { nil }
     let(:datastore_cluster_pattern) { nil }
     let(:persistent_datastore_pattern) { nil }
     let(:persistent_datastore_cluster_pattern) { nil }
@@ -126,7 +127,6 @@ describe 'cpi.json.erb' do
           'clusters' => [
             'cluster-1'
           ],
-          'datastore_pattern' => 'datastore-pattern',
           'disk_path' => 'disk-path',
           'name' => 'datacenter-1',
           'template_folder' => 'template-folder',

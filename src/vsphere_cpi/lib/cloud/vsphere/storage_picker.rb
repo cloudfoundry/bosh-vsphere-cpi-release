@@ -85,8 +85,7 @@ module VSphereCloud
 
     # @param [String] target_datastore_name
     # @param [Hash] accessible_datastores
-    # @param [VmType] vm_type
-    def choose_ephemeral_storage(target_datastore_name, accessible_datastores, vm_type)
+    def choose_ephemeral_storage(target_datastore_name, accessible_datastores)
       accessible_datastores[target_datastore_name]
     end
 

@@ -46,10 +46,10 @@
         "vm_folder" => datacenter['vm_folder'] || "BOSH_VMs",
         "template_folder" => datacenter['template_folder'] || "BOSH_Templates",
         "disk_path" => datacenter['disk_path'] || "BOSH_Disks",
-        "datastore_pattern" => datacenter['datastore_pattern'],
         "allow_mixed_datastores" => datacenter.fetch('allow_mixed_datastores', true),
         "clusters" => []
       }
+      datacenter_hash['datastore_pattern'] = datacenter['datastore_pattern'] if datacenter['datastore_pattern']
       datacenter_hash['datastore_cluster_pattern'] = datacenter['datastore_cluster_pattern'] if datacenter['datastore_cluster_pattern']
       datacenter_hash['persistent_datastore_pattern'] = datacenter['persistent_datastore_pattern'] if datacenter['persistent_datastore_pattern']
       datacenter_hash['persistent_datastore_cluster_pattern'] = datacenter['persistent_datastore_cluster_pattern'] if datacenter['persistent_datastore_cluster_pattern']

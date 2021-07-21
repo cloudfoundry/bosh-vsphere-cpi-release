@@ -113,6 +113,25 @@ module VSphereCloud
             expect { config.validate }.to_not raise_exception
           end
         end
+        context 'when only datastore cluster patterns are set' do
+          let(:datacenters) do
+            [{
+               'name' => datacenter_name,
+               'vm_folder' => vm_folder,
+               'template_folder' => template_folder,
+               'disk_path' => disk_path,
+               'datastore_cluster_pattern' => datastore_cluster_pattern,
+               'persistent_datastore_cluster_pattern' => persistent_datastore_cluster_pattern,
+               'clusters' => [
+                 cluster_name => {'resource_pool' => resource_pool},
+                 cluster_name_witout_resource_pool => {},
+               ],
+             }]
+          end
+          it 'does not raise' do
+            expect { config.validate }.to_not raise_exception
+          end
+        end
       end
 
       context 'when already validated' do
@@ -182,6 +201,28 @@ module VSphereCloud
           expect do
             config.validate
           end.to raise_error(RuntimeError, /persistent_datastore_cluster_pattern/)
+        end
+      end
+
+      context 'when neither datastore_pattern nor datastore_cluster_pattern is set' do
+        let(:datacenters) do
+          [{
+             'name' => datacenter_name,
+             'vm_folder' => vm_folder,
+             'template_folder' => template_folder,
+             'disk_path' => disk_path,
+             'persistent_datastore_pattern' => persistent_datastore_pattern,
+             'persistent_datastore_cluster_pattern' => persistent_datastore_cluster_pattern,
+             'clusters' => [
+               cluster_name => {'resource_pool' => resource_pool},
+               cluster_name_witout_resource_pool => {},
+             ],
+           }]
+        end
+        it 'raises an error' do
+          expect do
+            config.validate
+          end.to raise_error(RuntimeError, /datastore_cluster_pattern/)
         end
       end
 

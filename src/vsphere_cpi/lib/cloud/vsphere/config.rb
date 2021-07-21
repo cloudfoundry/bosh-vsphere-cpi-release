@@ -67,6 +67,12 @@ module VSphereCloud
         raise "Either property persistent_datastore_pattern or property persistent_datastore_cluster_pattern must be set on vcenters[0].datacenters[0]"
       end
 
+      dp = config['vcenters'].first['datacenters'].first['datastore_pattern']
+      dcp = config['vcenters'].first['datacenters'].first['datastore_cluster_pattern']
+      unless (dp && !dp.empty?) || (dcp && !dcp.empty?)
+        raise "Either property datastore_pattern or property datastore_cluster_pattern must be set on vcenters[0].datacenters[0]"
+      end
+
       validate_schema
       NSXTConfig.validate_schema(config['nsxt'])
 
@@ -276,7 +282,7 @@ module VSphereCloud
               'template_folder' => String,
               optional('use_sub_folder') => bool,
               'disk_path' => String,
-              'datastore_pattern' => String,
+              optional('datastore_pattern') => String,
               optional('datastore_cluster_pattern') => String,
               optional('persistent_datastore_pattern') => String,
               optional('persistent_datastore_cluster_pattern') => String,

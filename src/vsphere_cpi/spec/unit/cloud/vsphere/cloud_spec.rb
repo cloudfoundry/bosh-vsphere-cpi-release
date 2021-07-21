@@ -407,6 +407,51 @@ module VSphereCloud
       end
     end
 
+    describe '#create_stemcell' do
+      let(:target_datastore_cluster_pattern) { nil }
+      let(:target_datastore_ephemeral_pattern) { 'fake-ephemeral-pattern' }
+      let(:vm_config) { instance_double(VmConfig) }
+      let(:fake_datastore) { instance_double(Resources::Datastore, name: 'fake-datastore') }
+      let(:fake_cluster) { instance_double(VSphereCloud::Resources::Cluster, name: 'fake-cluster') }
+      let(:fake_placement) { instance_double(VmPlacement, cluster: fake_cluster, datastores: [fake_datastore], hosts: nil)}
+      let(:fake_disk_placement) { double('Object', name: 'fake-datastore') }
+      let(:fake_import_result) { double('Object') }
+      let(:fake_find_result) { double('Object') }
+      let(:fake_system_disk) { instance_double(VimSdk::Vim::Vm::Device::VirtualDisk) }
+
+      before do
+        expect(VCPIExtension).to receive(:create_cpi_extension) # .with(config).and_return(cloud_config)
+        allow(VSphereCloud::CpiHttpClient).to receive(:new).with(no_args)
+        allow(vsphere_cloud).to receive(:`).and_return(`true`)
+        allow(vsphere_cloud).to receive(:enable_telemetry)
+        allow(Dir).to receive(:entries).and_return(["foo.ovf"])
+        allow(File).to receive(:size).and_return(1024 * 1024 * 2)
+        expect(StoragePicker).to receive(:choose_global_ephemeral_pattern).and_return(target_datastore_ephemeral_pattern)
+        allow(VmConfig).to receive(:new).and_return(vm_config)
+        expect(vm_config).to receive(:cluster_placements).and_return([fake_placement])
+        expect(fake_placement).to receive(:disk_placement).and_return(fake_disk_placement)
+        allow(datacenter).to receive(:find_datastore).and_return(fake_datastore)
+        allow(datacenter).to receive(:template_folder)
+        allow(fake_cluster).to receive(:mob)
+        allow(fake_datastore).to receive(:mob)
+        allow(fake_cluster).to receive_message_chain(:resource_pool, :mob)
+        allow(vsphere_cloud).to receive(:import_ovf).and_return(fake_import_result)
+        allow(fake_import_result).to receive_message_chain(:import_spec, :config_spec, :device_change, :find).and_return(fake_find_result)
+        allow(fake_find_result).to receive(:device).and_return(fake_system_disk)
+        allow(fake_system_disk).to receive_message_chain(:backing, :thin_provisioned=)
+        allow_any_instance_of(LeaseObtainer).to receive(:obtain)
+        allow(fake_import_result).to receive(:file_item)
+        allow(vsphere_cloud).to receive(:upload_ovf).and_return("foo")
+        allow(cloud_searcher).to receive(:get_property).and_return([])
+        allow(service_content).to receive_message_chain(:extension_manager, :find_extension)
+        allow(vcenter_client).to receive(:reconfig_vm)
+        allow(vcenter_client).to receive(:wait_for_task)
+      end
+      it 'creates the stemcell and returns the VM ID for the stemcell' do
+        expect(vsphere_cloud.create_stemcell('fake_image', nil)).to match(/^sc-[0-9a-f\-]+$/)
+      end
+    end
+
     describe '#create_vm' do
       let(:stemcell_vm) { instance_double(Resources::VM) }
       let(:vm_creator) { instance_double(VmCreator) }

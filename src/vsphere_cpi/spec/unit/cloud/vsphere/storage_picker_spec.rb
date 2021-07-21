@@ -289,7 +289,7 @@ module VSphereCloud
       let(:vm_type) { VmType.new(datacenter, {}, pbm) }
 
       it 'should return the previously selected datastore' do
-        expect(described_class.choose_ephemeral_storage(target_datastore_name, accessible_datastores, vm_type)).to eq(datastore1)
+        expect(described_class.choose_ephemeral_storage(target_datastore_name, accessible_datastores)).to eq(datastore1)
       end
     end
   end
