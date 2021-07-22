@@ -122,8 +122,10 @@ module VSphereCloud
           @service_content.file_manager.delete_file(path, datacenter_mob)
         end
       rescue => e
-        unless e.message =~ /File .* was not found/
+        unless e.message =~ /File .* was not found/ || e.message =~ /Invalid datastore path/
           raise e
+        else
+          logger.warn("Cannot delete file: #{e.message}")
         end
       end
     end
@@ -137,8 +139,10 @@ module VSphereCloud
           )
         end
       rescue => e
-        unless e.message =~ /File .* was not found/
+        unless e.message =~ /File .* was not found/ || e.message =~ /Invalid datastore path/
           raise e
+        else
+          logger.warn("Cannot delete disk: #{e.message}")
         end
       end
     end
@@ -417,7 +421,7 @@ module VSphereCloud
       return false if vm_disk_infos.empty?
 
       true
-    rescue VimSdk::SoapError, FileNotFoundException
+    rescue 
       false
     end
 

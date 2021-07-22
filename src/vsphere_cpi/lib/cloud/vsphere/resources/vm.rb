@@ -308,11 +308,12 @@ module VSphereCloud
         end
       end
 
-      def detach_disks(virtual_disks)
+      def detach_disks(virtual_disks, force_disk_path = nil)
         reload
         check_for_nonpersistent_disk_modes
 
-        disks_to_move = []
+        disks_to_move_current_path = []
+        disks_to_move_old_path = []
         logger.info("Found #{virtual_disks.size} persistent disk(s)")
         config = Vim::Vm::ConfigSpec.new
         config.device_change = []
@@ -322,10 +323,13 @@ module VSphereCloud
           config.device_change << Resources::VM.create_delete_device_spec(virtual_disk)
 
           disk_property = get_vapp_property_by_key(virtual_disk.key)
-          unless disk_property.nil?
+          if disk_property.nil? && ! force_disk_path.nil?
+            logger.info('Persistent disk is BOSH-managed but has no vApp property: moving disk to current location on same datastore')
+            disks_to_move_current_path << virtual_disk
+          else
             if has_persistent_disk_property_mismatch?(virtual_disk) && !@client.disk_path_exists?(@mob, disk_property.value)
               logger.info('Persistent disk was moved: moving disk to expected location')
-              disks_to_move << virtual_disk
+              disks_to_move_old_path << virtual_disk
             end
           end
         end
@@ -333,8 +337,8 @@ module VSphereCloud
         @client.reconfig_vm(@mob, config)
         logger.info("Detached #{virtual_disks.size} persistent disk(s)")
 
-        move_disks_to_old_path(disks_to_move)
-
+        move_disks_to_old_path(disks_to_move_old_path)
+        move_disks_to_current_path(disks_to_move_current_path, force_disk_path)
         logger.info('Finished detaching disk(s)')
 
         virtual_disks.each do |disk|
@@ -345,12 +349,23 @@ module VSphereCloud
       end
 
       def move_disks_to_old_path(disks_to_move)
-        logger.info("Renaming #{disks_to_move.size} persistent disk(s)")
+        logger.info("Renaming #{disks_to_move.size} persistent disk(s) to old path")
         disks_to_move.each do |disk|
           current_datastore = disk.backing.file_name.match(/^\[([^\]]+)\]/)[1]
           original_disk_path = get_old_disk_filepath(disk.key)
           dest_filename = original_disk_path.match(/^\[[^\]]+\] (.*)/)[1]
           dest_path = "[#{current_datastore}] #{dest_filename}"
+
+          @client.move_disk(datacenter_mob, disk.backing.file_name, datacenter_mob, dest_path)
+        end
+      end
+
+      def move_disks_to_current_path(disks_to_move, disk_path)
+        logger.info("Renaming #{disks_to_move.size} persistent disk(s) to current path")
+        disks_to_move.each do |disk|
+          current_datastore = disk.backing.file_name.match(/^\[([^\]]+)\]/)[1]
+          dest_filename = disk.backing.file_name.match(/^\[[^\]]+\] .*\/(.*)/)[1] # use current disk path
+          dest_path = "[#{current_datastore}] #{disk_path}/#{dest_filename}"
 
           @client.move_disk(datacenter_mob, disk.backing.file_name, datacenter_mob, dest_path)
         end

@@ -122,9 +122,26 @@ module VSphereCloud
         end
       end
 
+
+      context 'when file manager raises "Invalid Datastore path" error' do
+        it 'does not raise error' do
+          expect(task_runner).to receive(:run) do |*args, &block|
+            expect(block.call).to eq(task)
+          end.and_raise(RuntimeError.new('Invalid datastore path some/path'))
+
+          expect(file_manager).to receive(:delete_file).
+              with('[some-datastore] some/path', datacenter).
+              and_return(task)
+
+          expect {
+            client.delete_path(datacenter, '[some-datastore] some/path')
+          }.to_not raise_error
+        end
+      end
+
       context 'when file manager raises other error' do
         it 'raises that error' do
-          error = RuntimeError.new('Invalid datastore path some/path')
+          error = RuntimeError.new('Other error some/path')
           expect(task_runner).to receive(:run) do |*args, &block|
             expect(block.call).to eq(task)
           end.and_raise(error)
@@ -177,9 +194,25 @@ module VSphereCloud
         end
       end
 
+
+      context 'when file manager raises "Invalid datastore path" error for the disk' do
+        it 'does not raise error' do
+          expect(task_runner).to receive(:run) do |*args, &block|
+            expect(block.call).to eq(vmdk_task)
+          end.and_raise(RuntimeError.new('Invalid datastore path some/path'))
+
+          expect(virtual_disk_manager).to receive(:delete_virtual_disk).
+              with('[some-datastore] some/path', datacenter).
+              and_return(vmdk_task)
+          expect {
+            client.delete_disk(datacenter, '[some-datastore] some/path')
+          }.to_not raise_error
+        end
+      end
+
       context 'when file manager raises other error' do
         it 'raises that error' do
-          error = RuntimeError.new('Invalid datastore path some/path')
+          error = RuntimeError.new('Other error path some/path')
           expect(task_runner).to receive(:run) do |*args, &block|
             expect(block.call).to eq(vmdk_task)
           end.and_raise(error)
