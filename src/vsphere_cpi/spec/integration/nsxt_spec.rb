@@ -318,6 +318,37 @@ describe 'CPI', nsxt_all: true do
             end
           end
         end
+        context 'when port is not provided' do
+          # Port is an optional parameter.
+          # There are two use cases where port parameter isn't necessary...
+          # 1. Virtual Server listening on the same port as backend instance
+          # 2. Virtual Server listening on a range of ports (eg tcp_router)
+          let(:vm_type) do
+            {
+              'ram' => 512,
+              'disk' => 2048,
+              'cpu' => 1,
+              'nsxt' => {
+                'lb' => {
+                  'server_pools' => [
+                    {
+                      'name' => pool_1.name
+                    }
+                  ]
+                }
+              }
+            }
+          end
+          it 'still adds vm to existing static server pool' do
+            simple_vm_lifecycle(cpi, @nsxt_opaque_vlan_1, vm_type) do |vm_id|
+              vm = cpi.vm_provider.find(vm_id)
+              vm_ip = vm.mob.guest&.ip_address
+              expect(vm_ip).to_not be_nil
+              server_pool_1_members = find_pool_members(server_pool_1, vm_ip, vm_type['nsxt']['lb']['server_pools'].first['port'])
+              expect(server_pool_1_members.count).to eq(1)
+            end
+          end
+        end
         it 'adds vm to all existing static server pools with given name' do
           begin
             server_pool_3 = create_static_server_pool(pool_1.name) #server pool with same name as server_pool_1
@@ -472,7 +503,6 @@ describe 'CPI', nsxt_all: true do
               },
               {
                 'name' => pool_2.name,
-                'port' => 80,
               },
             ],
             }
@@ -485,7 +515,7 @@ describe 'CPI', nsxt_all: true do
           delete_lb_pool(pool_2)
         end
 
-        it 'creates VM in specified server pools and deletes from pools when VM is deleted' do
+        it 'creates VM in specified server pools, regardless of whether port is specified, and deletes from pools when VM is deleted' do
           simple_vm_lifecycle(cpi, '', vm_type, policy_network_spec) do |vm_id|
             vm = @cpi.vm_provider.find(vm_id)
             segment_names = vm.get_nsxt_segment_vif_list.map { |x| x[0] }
@@ -499,7 +529,7 @@ describe 'CPI', nsxt_all: true do
             server_pool_2 = @policy_load_balancer_pools_api.read_lb_pool_0(pool_2.id)
             expect(server_pool_2.members.length).to eq(1)
             expect(server_pool_2.members[0].ip_address).to eq(vm.mob.guest&.ip_address)
-            expect(server_pool_2.members[0].port).to eq("80")
+            expect(server_pool_2.members[0].port).to eq(nil)
           end
 
           server_pool_1 = @policy_load_balancer_pools_api.read_lb_pool_0(pool_1.id)
