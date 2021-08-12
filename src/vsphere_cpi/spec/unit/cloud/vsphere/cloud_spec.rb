@@ -416,6 +416,7 @@ module VSphereCloud
       let(:fake_placement) { instance_double(VmPlacement, cluster: fake_cluster, datastores: [fake_datastore], hosts: nil)}
       let(:fake_disk_placement) { double('Object', name: 'fake-datastore') }
       let(:fake_import_result) { double('Object') }
+      let(:fake_failed_import_result) { double('Object') }
       let(:fake_find_result) { double('Object') }
       let(:fake_system_disk) { instance_double(VimSdk::Vim::Vm::Device::VirtualDisk) }
 
@@ -437,6 +438,8 @@ module VSphereCloud
         allow(fake_cluster).to receive_message_chain(:resource_pool, :mob)
         allow(vsphere_cloud).to receive(:import_ovf).and_return(fake_import_result)
         allow(fake_import_result).to receive_message_chain(:import_spec, :config_spec, :device_change, :find).and_return(fake_find_result)
+        allow(fake_failed_import_result).to receive(:import_spec).and_return(nil)
+        allow(fake_failed_import_result).to receive(:error).and_return(VimSdk::Vim::Fault::OvfXmlFormat.new)
         allow(fake_find_result).to receive(:device).and_return(fake_system_disk)
         allow(fake_system_disk).to receive_message_chain(:backing, :thin_provisioned=)
         allow_any_instance_of(LeaseObtainer).to receive(:obtain)
@@ -449,6 +452,18 @@ module VSphereCloud
       end
       it 'creates the stemcell and returns the VM ID for the stemcell' do
         expect(vsphere_cloud.create_stemcell('fake_image', nil)).to match(/^sc-[0-9a-f\-]+$/)
+      end
+
+      context "when the stemcell contains a poorly formatted ovf file" do
+        before do
+          allow(vsphere_cloud).to receive(:import_ovf).and_return(fake_failed_import_result)
+        end
+        it 'raises an error' do
+          expect {
+            vsphere_cloud.create_stemcell('fake_image', nil)
+          }.to raise_error(/Corrupt image.*OvfXmlFormat/)
+        end
+
       end
     end
 

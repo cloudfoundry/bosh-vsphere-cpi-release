@@ -217,6 +217,7 @@ module VSphereCloud
             logger.info("Deploying to: #{cluster.mob} / #{datastore.mob}")
 
             import_spec_result = import_ovf(name, ovf_file, cluster.resource_pool.mob, datastore.mob)
+            raise "Corrupt image '#{image}', import_ovf_result: #{import_spec_result.error}" if import_spec_result.import_spec.nil?
 
             system_disk = import_spec_result.import_spec.config_spec.device_change.find do |change|
               change.device.kind_of?(Vim::Vm::Device::VirtualDisk)
