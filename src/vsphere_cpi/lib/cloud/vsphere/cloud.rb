@@ -482,6 +482,16 @@ module VSphereCloud
         end
         vm.power_off
 
+        begin
+          if vm.mob.resource_pool.owner.configuration.das_config.enabled && vm.mob.datastore.map { |x| x.summary.type}.include?("vsan")
+            # in HA configurations using vSan, vSphere may issue alarms if we delete VMs too quickly.
+            # The following sleep is a hacky workaround
+            sleep 15
+          end
+        rescue => e
+          logger.warn("failed detecting vSan HA: #{e}")
+        end
+
         persistent_disks = vm.persistent_disks
         unless persistent_disks.empty?
           vm.detach_disks(persistent_disks)

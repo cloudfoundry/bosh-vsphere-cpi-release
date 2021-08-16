@@ -1845,6 +1845,36 @@ module VSphereCloud
           vsphere_cloud.delete_vm('vm-id')
         end
       end
+
+      context 'when HA is enabled and the VM uses a vsan datastore' do
+        let(:datastore) { double('Object')}
+        before do
+          expect(vm_mob).to receive_message_chain(:resource_pool, :owner, :configuration, :das_config, :enabled).and_return(true)
+          expect(vm_mob).to receive(:datastore).and_return([datastore])
+          expect(vm).to receive(:power_off)
+          expect(vm).to receive(:delete)
+        end
+
+        context 'when the VM uses a vsan datastore' do
+          before do
+            expect(datastore).to receive_message_chain(:summary, :type).and_return("vsan")
+          end
+          it 'sleeps before deleting the VM' do
+            expect(vsphere_cloud).to receive(:sleep).with(15)
+            vsphere_cloud.delete_vm('vm-id')
+          end
+        end
+
+        context 'when the VM uses a VMFS datastore' do
+          before do
+            expect(datastore).to receive_message_chain(:summary, :type).and_return("VMFS")
+          end
+          it 'does not sleep before deleting the VM' do
+            expect(vsphere_cloud).to_not receive(:sleep)
+            vsphere_cloud.delete_vm('vm-id')
+          end
+        end
+      end
     end
 
     describe '#detach_disk' do
