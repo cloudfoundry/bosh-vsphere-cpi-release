@@ -1749,6 +1749,7 @@ module VSphereCloud
       let(:fake_cluster) { instance_double('VimSdk::Vim::ClusterComputeResource', configuration_ex: configuration_ex) }
       let(:group) { [] }
       before do
+        allow(vm_mob).to receive_message_chain(:resource_pool, :owner, :configuration, :das_config, :enabled).and_return(false)
         allow(vm).to receive(:persistent_disks).and_return([])
         allow(vm).to receive(:cdrom).and_return(nil)
         allow(vm_mob).to receive_message_chain(:guest, :ip_address).and_return(ip_address)
