@@ -246,7 +246,7 @@ module VSphereCloud
         let(:dvs_index) { { 'fake_pgkey1' => 'fake_network1' } }
 
         it 'generates the network env' do
-          allow(datacenter).to receive_message_chain(:mob, :network, :select).and_return([])
+          allow(datacenter).to receive_message_chain(:mob, :network, :detect).and_return(nil)
           expect(vsphere_cloud.generate_network_env(devices, networks, dvs_index)).to eq(expected_output)
         end
       end

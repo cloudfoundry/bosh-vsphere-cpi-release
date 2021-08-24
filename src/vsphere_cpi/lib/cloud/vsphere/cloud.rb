@@ -732,16 +732,11 @@ module VSphereCloud
         next unless device.kind_of?(Vim::Vm::Device::VirtualEthernetCard)
         v_network_name = case device.backing
           when Vim::Vm::Device::VirtualEthernetCard::DistributedVirtualPortBackingInfo
-            network = @datacenter.mob.network.select do |n|
-              n.is_a?(VimSdk::Vim::Dvs::DistributedVirtualPortgroup)
-            end.select do |n|
-              # respond_to?(backing_type) indirectly checks if the VC SDK version
-              # is 7.0 as #backing_type is introduced in 7.0 SDK
-              n.config.respond_to?(:backing_type) && n.config.backing_type == 'nsx'
-            rescue
-              next  # Skip a network managed object that disappeared on us
-            end.detect do |n|
-              n.key == device.backing.port.portgroup_key
+            network = @datacenter.mob.network.detect do |n|
+              n.is_a?(VimSdk::Vim::Dvs::DistributedVirtualPortgroup) &&
+                n.config.respond_to?(:backing_type) &&
+                n.config.backing_type == 'nsx' &&
+                n.key == device.backing.port.portgroup_key
             rescue
               next  # Skip a network managed object that disappeared on us
             end
