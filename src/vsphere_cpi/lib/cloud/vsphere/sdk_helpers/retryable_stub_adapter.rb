@@ -72,7 +72,7 @@ module VSphereCloud
                 logger.warn(fault_message(method_name, err))
               end
               unless @retry_judge.retryable?(managed_object, method_info.wsdl_name, object)
-                raise err
+                raise err, "#{err}; Running method '#{method_name}'", err.backtrace
               end
             end
           end

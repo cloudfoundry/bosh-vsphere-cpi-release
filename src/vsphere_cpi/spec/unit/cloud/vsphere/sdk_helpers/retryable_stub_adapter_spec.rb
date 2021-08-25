@@ -62,7 +62,7 @@ describe 'RetryableStubAdapter', fake_logger: true do
                                   .and_return([soap_status, soap_result])
         expect {
           retryable_stub_adapter.invoke_method(managed_object, method_info, method_args)
-        }.to raise_error(VimSdk::SoapError, 'Unknown SOAP fault')
+        }.to raise_error(VimSdk::SoapError, /Unknown SOAP fault/)
       end
     end
 
