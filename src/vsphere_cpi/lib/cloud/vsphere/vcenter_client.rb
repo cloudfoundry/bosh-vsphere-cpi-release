@@ -525,9 +525,9 @@ module VSphereCloud
       find_child_by_name(mob.child_entity.find {|c| c.name == child_entity_name }, child_path)
     end
 
-    def dvpg_istype_nsxt?(key:, dc:)
+    def dvpg_istype_nsxt?(key:, dc_mob:)
       logger.info("Checking if #{key} is backed by NSXT")
-      portgroup = dc.mob.network.detect do |network|
+      portgroup = dc_mob.network.detect do |network|
         #network.key is same as network.config.key
         network.is_a?(VimSdk::Vim::Dvs::DistributedVirtualPortgroup) && network.key == key
       end

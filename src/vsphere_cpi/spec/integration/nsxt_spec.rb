@@ -538,6 +538,41 @@ describe 'CPI', nsxt_all: true do
           expect(server_pool_2.members).to be_nil
         end
       end
+
+      context 'with non-nsxt distributed virtual switches' do
+        let(:nsxt_spec) { {} }
+        let(:dvpg_name) { ENV.fetch('BOSH_VSPHERE_CPI_FOLDER_PORTGROUP_ONE') }
+        let(:policy_network_spec) do
+          {
+            'static-bridged' => {
+              'ip' => "169.254.#{rand(1..254)}.#{rand(4..254)}",
+              'netmask' => '255.255.254.0',
+              'cloud_properties' => { 'name' => segment_1.name },
+              'default' => ['dns', 'gateway'],
+              'dns' => ['169.254.1.2'],
+              'gateway' => '169.254.1.3'
+            },
+            'static' => {
+              'ip' => "169.254.#{rand(1..254)}.#{rand(4..254)}",
+              'netmask' => '255.255.254.0',
+              'cloud_properties' => { 'name' => dvpg_name },
+              'default' => ['dns', 'gateway'],
+              'dns' => ['169.254.1.2'],
+              'gateway' => '169.254.1.3'
+            }
+          }
+        end
+        it 'creates a VM without errors' do
+          simple_vm_lifecycle(cpi, '', vm_type, policy_network_spec) do |vm_id|
+            cpi.set_vm_metadata(vm_id, {'id' => 'foo'})
+
+            vm = @cpi.vm_provider.find(vm_id)
+            segment_names = vm.get_nsxt_segment_vif_list.map { |x| x[0] }
+            expect(segment_names.length).to eq(1)
+            expect(segment_names).to include(segment_1.name)
+          end
+        end
+      end
     end
   end
 

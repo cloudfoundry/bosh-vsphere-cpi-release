@@ -651,4 +651,38 @@ describe VSphereCloud::Resources::VM, fake_logger: true do
       end
     end
   end
+
+  describe '#get_nsxt_segment_vif_list' do
+    let (:nic0) { instance_double(VimSdk::Vim::Vm::Device::VirtualEthernetCard) }
+    let(:nic0_device_info) { double(Object) }
+    before(:each) do
+      allow(nic0).to receive_message_chain(:backing, :is_a?).with(VimSdk::Vim::Vm::Device::VirtualEthernetCard::DistributedVirtualPortBackingInfo).and_return(true)
+      allow(nic0).to receive(:device_info).and_return(nic0_device_info)
+      allow(nic0_device_info).to receive(:summary).and_return('blah')
+      allow(nic0).to receive_message_chain(:backing, :port, :portgroup_key).and_return('nic-portgroup-key')
+      allow(subject).to receive(:nics).and_return([nic0])
+    end
+
+    context "when the NIC is an NSX-T DVS NIC" do
+      before do
+        allow(client).to receive(:dvpg_istype_nsxt?).and_return(true)
+        allow(subject).to receive(:get_nsxt_networks_id_name_map).and_return({'nic-portgroup-key' => 'some-segment-name'})
+        allow(nic0).to receive(:external_id).and_return('nic-external-id')
+      end
+      it "is not returned in the list of NSX-T vifs" do
+        expect(subject.get_nsxt_segment_vif_list).to match_array([["some-segment-name", "nic-external-id"]])
+      end
+    end
+
+    context "when the NIC is a DVS NIC but NOT an NSX-T DVS nic" do
+      before do
+        allow(client).to receive(:dvpg_istype_nsxt?).and_return(false)
+        allow(nic0).to receive_message_chain(:backing, :is_a?).with(VimSdk::Vim::Vm::Device::VirtualEthernetCard::OpaqueNetworkBackingInfo).and_return(false)
+      end
+      it "is not returned in the list of NSX-T vifs" do
+        expect(subject.get_nsxt_segment_vif_list).to be_nil
+      end
+    end
+  end
+
 end

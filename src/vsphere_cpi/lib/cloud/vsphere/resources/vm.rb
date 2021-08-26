@@ -421,9 +421,10 @@ module VSphereCloud
 
       def get_nsxt_nics
         nsxt_nics = nics.select do |nic|
-          nic.backing.is_a?(VimSdk::Vim::Vm::Device::VirtualEthernetCard::DistributedVirtualPortBackingInfo) ||
-            ( nic.backing.is_a?(VimSdk::Vim::Vm::Device::VirtualEthernetCard::OpaqueNetworkBackingInfo) &&
-              nic.backing.opaque_network_type == NSXT_LOGICAL_SWITCH )
+          ( nic.backing.is_a?(VimSdk::Vim::Vm::Device::VirtualEthernetCard::DistributedVirtualPortBackingInfo) &&
+            @client.dvpg_istype_nsxt?(key: nic.backing.port.portgroup_key, dc_mob: datacenter_mob) ) ||
+          ( nic.backing.is_a?(VimSdk::Vim::Vm::Device::VirtualEthernetCard::OpaqueNetworkBackingInfo) &&
+            nic.backing.opaque_network_type == NSXT_LOGICAL_SWITCH )
         end
         logger.info("Networks found for VM: #{cid}: #{nics.map(&:device_info).map(&:summary)}")
         nsxt_nics

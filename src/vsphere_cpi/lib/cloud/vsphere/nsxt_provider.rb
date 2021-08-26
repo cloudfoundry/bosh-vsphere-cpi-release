@@ -441,7 +441,7 @@ module VSphereCloud
           logger.info("NIC with device key #{nic.key} is backed by opaque NSXT network")
         when VimSdk::Vim::Vm::Device::VirtualEthernetCard::DistributedVirtualPortBackingInfo
           next unless @vcenter_client.dvpg_istype_nsxt?(
-              key: nic.backing.port.portgroup_key, dc: @datacenter
+              key: nic.backing.port.portgroup_key, dc_mob: @datacenter.mob
           )
           logger.info("NIC with device key #{nic.key} is backed by NSXT DVPG")
         end

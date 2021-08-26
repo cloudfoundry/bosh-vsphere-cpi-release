@@ -764,14 +764,14 @@ module VSphereCloud
         it 'should return false if portgroup is nil' do
           expect(datacenter).to receive_message_chain(:mob, :network, :detect).and_return(nil)
 
-          result = client.dvpg_istype_nsxt?(key: 'dvpg1', dc: datacenter)
+          result = client.dvpg_istype_nsxt?(key: 'dvpg1', dc_mob: datacenter.mob)
           expect(result).to eq(false)
         end
         it 'should return false if portgroup does not have a backing type attribute' do
           expect(datacenter).to receive_message_chain(:mob, :network, :detect).and_return(portgroup)
           expect(portgroup).to receive_message_chain(:config, :respond_to?).and_return(false)
 
-          result = client.dvpg_istype_nsxt?(key: 'dvpg1', dc: datacenter)
+          result = client.dvpg_istype_nsxt?(key: 'dvpg1', dc_mob: datacenter.mob)
           expect(result).to eq(false)
         end
         it 'should print an info log and return true if portgroup backing type is nsxt' do
@@ -781,7 +781,7 @@ module VSphereCloud
           allow(portgroup).to receive_message_chain(:config, :backing_type).and_return('nsx')
           allow(logger).to receive(:info).with("DVPG #{key} is backed by NSXT")
 
-          result = client.dvpg_istype_nsxt?(key: 'dvpg1', dc: datacenter)
+          result = client.dvpg_istype_nsxt?(key: 'dvpg1', dc_mob: datacenter.mob)
           expect(result).to eq(true)
         end
       end
