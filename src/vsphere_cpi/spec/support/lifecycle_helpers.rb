@@ -71,6 +71,7 @@ module LifecycleHelpers
     cluster = cpi.datacenter.find_cluster(cluster_name)
     datastores = matching_datastores_in_cluster(cluster, datastore_pattern)
     fail("Invalid Environment variable '#{env_var_name}': No datastores found matching /#{datastore_pattern}/. #{MISSING_KEY_MESSAGES[env_var_name]}") if (datastores.empty?)
+    datastores.keys.first
   end
 
   def verify_cluster(cpi, cluster_name, env_var_name)

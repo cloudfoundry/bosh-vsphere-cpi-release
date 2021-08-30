@@ -31,17 +31,17 @@ module LifecycleProperties
   end
 
   def fetch_and_verify_datastore(env_var, cluster_name)
-    datastore = fetch_property(env_var)
-    verify_datastore_within_cluster(
+    datastore_pattern = fetch_property(env_var)
+    datastore = verify_datastore_within_cluster(
       @lifecycle_cpi,
       env_var,
-      datastore,
+      datastore_pattern,
       cluster_name
     )
     verify_datastore_pattern_available_to_all_hosts(
       @lifecycle_cpi,
       env_var,
-      datastore,
+      datastore_pattern,
       cluster_name
     )
     datastore

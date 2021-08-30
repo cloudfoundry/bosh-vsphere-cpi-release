@@ -11,9 +11,10 @@ module VSphereCloud
     let(:retryer) { Retryer.new }
     let(:client) { instance_double('VSphereCloud::VCenterClient') }
     let(:datacenter_name) { 'fake-datacenter-name 1' }
+    let(:datastore_name) { 'fake-datastore-name 1' }
     let(:path) { 'fake-path' }
     let(:datastore) {
-      instance_double('VimSdk::Vim::Datastore',name: 'fake-datastore-name 1')
+      instance_double('VimSdk::Vim::Datastore',name: datastore_name)
     }
     let(:host) { instance_double('VimSdk::Vim::HostSystem', name: 'host')}
     let(:host2) { instance_double('VimSdk::Vim::HostSystem', name: 'host')}
@@ -36,7 +37,7 @@ module VSphereCloud
         response = double('response', code: 200, body: response_body)
         expect(http_client).to receive(:get).with(
           'https://host/folder/fake-path?'\
-          'dsName=fake-datastore-name%201',
+          'dsName=fake-datastore-name+1',
           {'Cookie' => "vmware_cgi_ticket=ticket"}
         ).and_return(response)
 
@@ -51,14 +52,14 @@ module VSphereCloud
 
         expect(http_client).to receive(:get).with(
           'https://host/folder/fake-path?'\
-          'dsName=fake-datastore-name%201',
+          'dsName=fake-datastore-name+1',
           {'Cookie' => "vmware_cgi_ticket=ticket"}
         ).exactly(Retryer::MAX_TRIES).times
          .and_return(double('response', code: 401))
 
         expect(http_client).to receive(:get).with(
           'https://fake-vcenter-host/folder/fake-path?'\
-          'dcPath=fake-datacenter-name%201&dsName=fake-datastore-name%201', {}
+          'dcPath=fake-datacenter-name+1&dsName=fake-datastore-name+1', {}
         ).and_return(response)
 
         expect(
@@ -76,12 +77,12 @@ module VSphereCloud
 
           expect(http_client).to_not receive(:get).with(
               'https://host/folder/fake-path?'\
-          'dsName=fake-datastore-name%201',
+          'dsName=fake-datastore-name+1',
               {'Cookie' => "vmware_cgi_ticket=ticket"}
           )
           expect(http_client).to receive(:get).with(
               'https://fake-vcenter-host/folder/fake-path?'\
-          'dcPath=fake-datacenter-name%201&dsName=fake-datastore-name%201', {}
+          'dcPath=fake-datacenter-name+1&dsName=fake-datastore-name+1', {}
           ).and_return(response)
 
           expect(
@@ -96,14 +97,14 @@ module VSphereCloud
 
         expect(http_client).to receive(:get).with(
           'https://host/folder/fake-path?'\
-          'dsName=fake-datastore-name%201',
+          'dsName=fake-datastore-name+1',
           {'Cookie' => "vmware_cgi_ticket=ticket"}
         ).exactly(Retryer::MAX_TRIES).times
          .and_return(double('response', code: 401))
 
         expect(http_client).to receive(:get).with(
           'https://fake-vcenter-host/folder/fake-path?'\
-          'dcPath=fake-datacenter-name%201&dsName=fake-datastore-name%201', {}
+          'dcPath=fake-datacenter-name+1&dsName=fake-datastore-name+1', {}
         ).exactly(Retryer::MAX_TRIES).times
          .and_return(double('response', code: 401))
 
@@ -116,14 +117,14 @@ module VSphereCloud
         it 'returns nil' do
           expect(http_client).to receive(:get).with(
             'https://host/folder/fake-path?'\
-            'dsName=fake-datastore-name%201',
+            'dsName=fake-datastore-name+1',
             {'Cookie' => "vmware_cgi_ticket=ticket"}
           ).exactly(Retryer::MAX_TRIES).times
            .and_return(double('response', code: 404))
 
           expect(http_client).to receive(:get).with(
             'https://fake-vcenter-host/folder/fake-path?'\
-          'dcPath=fake-datacenter-name%201&dsName=fake-datastore-name%201', {}
+          'dcPath=fake-datacenter-name+1&dsName=fake-datastore-name+1', {}
           ).and_return(double('response', code: 404))
 
           expect(
@@ -136,14 +137,14 @@ module VSphereCloud
         it 'retries then raises an error' do
           expect(http_client).to receive(:get).with(
             'https://host/folder/fake-path?'\
-            'dsName=fake-datastore-name%201',
+            'dsName=fake-datastore-name+1',
             {'Cookie' => "vmware_cgi_ticket=ticket"}
           ).exactly(Retryer::MAX_TRIES).times
            .and_return(double('response', code: 500))
 
           expect(http_client).to receive(:get).with(
             'https://fake-vcenter-host/folder/fake-path?'\
-          'dcPath=fake-datacenter-name%201&dsName=fake-datastore-name%201', {}
+          'dcPath=fake-datacenter-name+1&dsName=fake-datastore-name+1', {}
           ).exactly(Retryer::MAX_TRIES).times
            .and_return(double('response', code: 500))
 
@@ -160,7 +161,7 @@ module VSphereCloud
         response = double('response', code: 200, body: nil)
         expect(http_client).to receive(:put).with(
           'https://host/folder/fake-path?'\
-          'dsName=fake-datastore-name%201',
+          'dsName=fake-datastore-name+1',
           upload_contents,
           { 'Content-Type' => 'application/octet-stream', 'Content-Length' => upload_contents.bytesize,
             'Cookie' => "vmware_cgi_ticket=ticket"
@@ -176,7 +177,7 @@ module VSphereCloud
 
         expect(http_client).to receive(:put).with(
           'https://host/folder/fake-path?'\
-          'dsName=fake-datastore-name%201',
+          'dsName=fake-datastore-name+1',
           upload_contents,
           { 'Content-Type' => 'application/octet-stream', 'Content-Length' => upload_contents.bytesize,
             'Cookie' => "vmware_cgi_ticket=ticket",
@@ -186,7 +187,7 @@ module VSphereCloud
 
         expect(http_client).to receive(:put).with(
           'https://fake-vcenter-host/folder/fake-path?'\
-          'dcPath=fake-datacenter-name%201&dsName=fake-datastore-name%201',
+          'dcPath=fake-datacenter-name+1&dsName=fake-datastore-name+1',
           upload_contents,
           { 'Content-Type' => 'application/octet-stream',
             'Content-Length' => upload_contents.bytesize,
@@ -199,7 +200,7 @@ module VSphereCloud
       it 'fails to upload file via host because of Execution Expired error and retries to upload through datacenter and succeeds' do
 
         expect(http_client).to receive(:put).with(
-            'https://host/folder/fake-path?dsName=fake-datastore-name%201',
+            'https://host/folder/fake-path?dsName=fake-datastore-name+1',
             upload_contents,
             { 'Content-Type' => 'application/octet-stream', 'Content-Length' => upload_contents.bytesize,
               'Cookie' => "vmware_cgi_ticket=ticket",
@@ -210,7 +211,7 @@ module VSphereCloud
         response = double('response', code: 200, body: response_body)
 
         expect(http_client).to receive(:put).with(
-            'https://fake-vcenter-host/folder/fake-path?dcPath=fake-datacenter-name%201&dsName=fake-datastore-name%201',
+            'https://fake-vcenter-host/folder/fake-path?dcPath=fake-datacenter-name+1&dsName=fake-datastore-name+1',
             upload_contents,
             { 'Content-Type' => 'application/octet-stream',
               'Content-Length' => upload_contents.bytesize,
@@ -218,6 +219,51 @@ module VSphereCloud
         ).and_return(response)
 
         subject.upload_file_to_datastore(datacenter_name, datastore, path, upload_contents, ds_accessible_hosts)
+      end
+
+      context 'when datastore and datacenter names have ampersands' do
+        let(:datacenter_name) { 'fake-datacenter-name&1' }
+        let(:datastore_name) { 'fake-datastore-name&1' }
+        it 'first tries to upload file to datastore via a host and succeeds' do
+          response = double('response', code: 200, body: nil)
+          expect(http_client).to receive(:put).with(
+            'https://host/folder/fake-path?'\
+          'dsName=fake-datastore-name%261',
+            upload_contents,
+            { 'Content-Type' => 'application/octet-stream', 'Content-Length' => upload_contents.bytesize,
+              'Cookie' => "vmware_cgi_ticket=ticket"
+            }
+          ).and_return(response)
+
+          file_provider.upload_file_to_datastore(datacenter_name, datastore, path, upload_contents, ds_accessible_hosts)
+        end
+
+        it 'fails to upload file via host and retries to upload through datacenter and succeeds' do
+          response_body = double('response_body')
+          response = double('response', code: 200, body: response_body)
+
+          expect(http_client).to receive(:put).with(
+            'https://host/folder/fake-path?'\
+          'dsName=fake-datastore-name%261',
+            upload_contents,
+            { 'Content-Type' => 'application/octet-stream', 'Content-Length' => upload_contents.bytesize,
+              'Cookie' => "vmware_cgi_ticket=ticket",
+            }
+          ).exactly(Retryer::MAX_TRIES).times
+                                              .and_return(double('response', code: 401))
+
+          expect(http_client).to receive(:put).with(
+            'https://fake-vcenter-host/folder/fake-path?'\
+          'dcPath=fake-datacenter-name%261&dsName=fake-datastore-name%261',
+            upload_contents,
+            { 'Content-Type' => 'application/octet-stream',
+              'Content-Length' => upload_contents.bytesize,
+            }
+          ).and_return(response)
+
+          subject.upload_file_to_datastore(datacenter_name, datastore, path, upload_contents, ds_accessible_hosts)
+        end
+
       end
 
       context 'when vsphere fails to issue generic service ticket' do
@@ -230,7 +276,7 @@ module VSphereCloud
 
           expect(http_client).to_not receive(:put).with(
               'https://host/folder/fake-path?'\
-          'dsName=fake-datastore-name%201',
+          'dsName=fake-datastore-name+1',
               upload_contents,
               { 'Content-Type' => 'application/octet-stream', 'Content-Length' => upload_contents.bytesize,
                 'Cookie' => "vmware_cgi_ticket=ticket",
@@ -238,7 +284,7 @@ module VSphereCloud
           )
           expect(http_client).to receive(:put).with(
               'https://fake-vcenter-host/folder/fake-path?'\
-          'dcPath=fake-datacenter-name%201&dsName=fake-datastore-name%201',
+          'dcPath=fake-datacenter-name+1&dsName=fake-datastore-name+1',
               upload_contents,
               { 'Content-Type' => 'application/octet-stream',
                 'Content-Length' => upload_contents.bytesize,
@@ -255,7 +301,7 @@ module VSphereCloud
 
           expect(http_client).to receive(:put).with(
             'https://host/folder/fake-path?'\
-            'dsName=fake-datastore-name%201',
+            'dsName=fake-datastore-name+1',
             upload_contents,
             { 'Content-Type' => 'application/octet-stream',
               'Content-Length' => upload_contents.bytesize,
@@ -265,7 +311,7 @@ module VSphereCloud
 
           expect(http_client).to receive(:put).with(
             'https://fake-vcenter-host/folder/fake-path?'\
-            'dcPath=fake-datacenter-name%201&dsName=fake-datastore-name%201',
+            'dcPath=fake-datacenter-name+1&dsName=fake-datastore-name+1',
             upload_contents,
             { 'Content-Type' => 'application/octet-stream',
               'Content-Length' => upload_contents.bytesize,

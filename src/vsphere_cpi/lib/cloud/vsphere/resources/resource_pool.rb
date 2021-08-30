@@ -28,8 +28,8 @@ module VSphereCloud
         if @cluster_config.resource_pool.nil?
           @mob = @root_resource_pool
         else
-          resource_pool_path_suffix = URI.escape(@cluster_config.resource_pool)
-          datacenter_cluster_path_prefix = "#{URI.escape(@datacenter_name)}/host/#{URI.escape(@cluster_config.name)}/Resources/"
+          resource_pool_path_suffix = @cluster_config.resource_pool
+          datacenter_cluster_path_prefix = "#{@datacenter_name}/host/#{@cluster_config.name}/Resources/"
           full_inventory_path = datacenter_cluster_path_prefix + resource_pool_path_suffix
           # Replace all multiple consecutive / with single /
           full_inventory_path.gsub!(/\/+/, '/').chomp!('/')

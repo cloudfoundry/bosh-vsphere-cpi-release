@@ -174,7 +174,7 @@ describe 'cloud_properties related to clusters' do
   end
   context 'when disk_pool specifies a datastore accessible from cluster defined in vm_type' do
     before (:all) do
-      @datastore_pattern = fetch_and_verify_datastore('BOSH_VSPHERE_CPI_SINGLE_LOCAL_DATASTORE_PATTERN', @cluster_name)
+      @datastore_pattern = fetch_property('BOSH_VSPHERE_CPI_SINGLE_LOCAL_DATASTORE_PATTERN')
       #cluster which has a disjoint datastore (not shared with any other cluster)
       @disjoint_cluster = fetch_and_verify_cluster('BOSH_VSPHERE_CPI_SECOND_CLUSTER')
       @disjoint_datastore = fetch_and_verify_datastore('BOSH_VSPHERE_CPI_SECOND_CLUSTER_DATASTORE', @disjoint_cluster)

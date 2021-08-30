@@ -47,8 +47,8 @@ module VSphereCloud
     private
 
     def fetch_file_from_datastore_via_datacenter(datacenter_name, datastore_name, path)
-      url ="https://#{@vcenter_host}/folder/#{path}?dcPath=#{URI.escape(datacenter_name)}" +
-        "&dsName=#{URI.escape(datastore_name)}"
+      url ="https://#{@vcenter_host}/folder/#{path}?dcPath=#{CGI.escape(datacenter_name)}" +
+        "&dsName=#{CGI.escape(datastore_name)}"
 
       logger.info("Fetching file from #{url}...")
       response = do_request(request_type: 'GET', url: url, allow_not_found: true)
@@ -67,7 +67,7 @@ module VSphereCloud
       raise FileTransferError, "No healthy host available for transfer" if host.nil?
 
       url = "https://#{host.name}/folder/#{path}?" +
-        "dsName=#{URI.escape(datastore.name)}"
+        "dsName=#{CGI.escape(datastore.name)}"
 
       begin
         service_ticket = get_generic_service_ticket(url: url, method: 'httpGet')
@@ -99,8 +99,8 @@ module VSphereCloud
     end
 
     def upload_file_to_datastore_via_datacenter(datacenter_name, datastore_name, path, contents)
-      url = "https://#{@vcenter_host}/folder/#{path}?dcPath=#{URI.escape(datacenter_name)}" +
-        "&dsName=#{URI.escape(datastore_name)}"
+      url = "https://#{@vcenter_host}/folder/#{path}?dcPath=#{CGI.escape(datacenter_name)}" +
+        "&dsName=#{CGI.escape(datastore_name)}"
       logger.info("Uploading file to #{url}...")
 
       do_request(request_type: 'PUT', url: url, body: contents,
@@ -113,7 +113,7 @@ module VSphereCloud
       raise FileTransferError, "No healthy host available for transfer" if host.nil?
 
       url = "https://#{host.name}/folder/#{path}?" +
-        "dsName=#{URI.escape(datastore.name)}"
+        "dsName=#{CGI.escape(datastore.name)}"
 
       begin
         service_ticket = get_generic_service_ticket(url: url, method: 'httpPut')
