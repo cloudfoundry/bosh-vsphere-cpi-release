@@ -5,7 +5,7 @@ describe 'Creating VM with existing persistent disks' do
     @datacenter_name = fetch_and_verify_datacenter('BOSH_VSPHERE_CPI_DATACENTER')
     @cluster_name = fetch_and_verify_cluster('BOSH_VSPHERE_CPI_CLUSTER')
     @datastore_shared_pattern = fetch_and_verify_datastore('BOSH_VSPHERE_CPI_SHARED_DATASTORE', @cluster_name)
-    @cluster_one_datastore = fetch_and_verify_datastore('BOSH_VSPHERE_CPI_DATASTORE_PATTERN', @cluster_name)
+    @cluster_one_datastore_pattern = fetch_property('BOSH_VSPHERE_CPI_DATASTORE_PATTERN')
   end
 
   context 'when there are existing persistent disks that needs to be migrated to new datastore' do
@@ -40,7 +40,7 @@ describe 'Creating VM with existing persistent disks' do
           {
             'name' => @datacenter_name,
             'datastore_pattern' => @datastore_shared_pattern,
-            'persistent_datastore_pattern' => @cluster_one_datastore,
+            'persistent_datastore_pattern' => @cluster_one_datastore_pattern,
             'clusters' => [
               {
                 @cluster_name => {}

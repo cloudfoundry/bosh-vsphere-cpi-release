@@ -4,7 +4,7 @@ describe 'inactive datastore handling' do
   before (:all) do
     @cluster_name = fetch_and_verify_cluster('BOSH_VSPHERE_CPI_CLUSTER')
     @inactive_datastore_pattern = fetch_property('BOSH_VSPHERE_CPI_INACTIVE_DATASTORE_PATTERN')
-    @datastore_pattern = fetch_and_verify_datastore('BOSH_VSPHERE_CPI_DATASTORE_PATTERN', @cluster_name)
+    @datastore_pattern = fetch_property('BOSH_VSPHERE_CPI_DATASTORE_PATTERN')
   end
 
   let(:inactive_cpi) { VSphereCloud::Cloud.new(cpi_options) }

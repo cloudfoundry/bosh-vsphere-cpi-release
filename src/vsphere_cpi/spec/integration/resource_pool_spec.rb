@@ -3,7 +3,6 @@ require 'integration/spec_helper'
 context 'given a CPI configured with vSphere resource pools' do
   before (:all) do
     @cluster_name = fetch_and_verify_cluster('BOSH_VSPHERE_CPI_CLUSTER')
-    @datastore_pattern = fetch_and_verify_datastore('BOSH_VSPHERE_CPI_DATASTORE_PATTERN', @cluster_name)
     @resource_pool_name = fetch_and_verify_resource_pool('BOSH_VSPHERE_CPI_RESOURCE_POOL', @cluster_name)
     @second_resource_pool_name = fetch_and_verify_resource_pool('BOSH_VSPHERE_CPI_SECOND_RESOURCE_POOL', @cluster_name)
 

@@ -3,7 +3,7 @@ require 'integration/spec_helper'
 context 'Replicating stemcells across datastores', external_cpi: false, fake_logger: true do
   before (:all) do
     @cluster_name = fetch_and_verify_cluster('BOSH_VSPHERE_CPI_CLUSTER')
-    @datastore_pattern = fetch_and_verify_datastore('BOSH_VSPHERE_CPI_DATASTORE_PATTERN', @cluster_name)
+    @datastore_pattern = fetch_property('BOSH_VSPHERE_CPI_DATASTORE_PATTERN')
     @second_datastore = fetch_and_verify_datastore('BOSH_VSPHERE_CPI_SECOND_DATASTORE', @cluster_name)
     verify_non_overlapping_datastores(
       cpi_options,

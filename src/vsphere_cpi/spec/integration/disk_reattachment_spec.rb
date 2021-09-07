@@ -5,7 +5,7 @@ describe 're-attaching a persistent disk' do
     @datacenter_name = fetch_and_verify_datacenter('BOSH_VSPHERE_CPI_DATACENTER')
     @cluster_name = fetch_and_verify_cluster('BOSH_VSPHERE_CPI_CLUSTER')
     @second_cluster_name = fetch_and_verify_cluster('BOSH_VSPHERE_CPI_SECOND_CLUSTER')
-    @datastore_pattern = fetch_and_verify_datastore('BOSH_VSPHERE_CPI_DATASTORE_PATTERN', @cluster_name)
+    @datastore = fetch_and_verify_datastore('BOSH_VSPHERE_CPI_DATASTORE_PATTERN', @cluster_name)
     @second_datastore_pattern = fetch_and_verify_datastore('BOSH_VSPHERE_CPI_SECOND_CLUSTER_DATASTORE', @second_cluster_name)
   end
   let(:network_spec) do
@@ -101,7 +101,7 @@ describe 're-attaching a persistent disk' do
             'ram' => 512,
             'disk' => 2048,
             'cpu' => 1,
-            'datastores' => [@datastore_pattern],
+            'datastores' => [@datastore],
             'datacenters' => [
                 {
                     'name' => @datacenter_name,
@@ -206,7 +206,7 @@ describe 're-attaching a persistent disk' do
             'ram' => 512,
             'disk' => 2048,
             'cpu' => 1,
-            'datastores' => [@datastore_pattern],
+            'datastores' => [@datastore],
             'datacenters' => [
                 {
                     'name' => @datacenter_name,

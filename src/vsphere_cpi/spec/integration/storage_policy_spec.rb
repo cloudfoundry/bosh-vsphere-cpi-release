@@ -4,7 +4,7 @@ context 'StoragePolicies' do
   before(:all) do
     @datacenter_name = fetch_and_verify_datacenter('BOSH_VSPHERE_CPI_DATACENTER')
     @cluster_name = fetch_and_verify_cluster('BOSH_VSPHERE_CPI_CLUSTER')
-    @first_datastore_pattern = fetch_and_verify_datastore('BOSH_VSPHERE_CPI_DATASTORE_PATTERN', @cluster_name)
+    @first_datastore_name = fetch_and_verify_datastore('BOSH_VSPHERE_CPI_DATASTORE_PATTERN', @cluster_name)
     @second_datastore_pattern = fetch_and_verify_datastore('BOSH_VSPHERE_CPI_SECOND_DATASTORE', @cluster_name)
     @mac_storage_profile_compliant_db_name = fetch_property('BOSH_VSPHERE_CPI_MAC_STORAGE_PROFILE_COMPLIANT_DS')
   end
@@ -42,7 +42,7 @@ context 'StoragePolicies' do
         ephemeral_disk = vm.ephemeral_disk
         ephemeral_datastore = ephemeral_disk.backing.datastore
         expect(ephemeral_datastore.name).to eq(@datastore)
-        expect(ephemeral_datastore.name).to_not eq(@first_datastore_pattern)
+        expect(ephemeral_datastore.name).to_not eq(@first_datastore_name)
         check_compliance(cpi, storage_policy_name, vm)
       end
     end
@@ -66,7 +66,7 @@ context 'StoragePolicies' do
           ephemeral_disk = vm.ephemeral_disk
           ephemeral_datastore = ephemeral_disk.backing.datastore
           expect(ephemeral_datastore.name).to eq(@datastore)
-          expect(ephemeral_datastore.name).to_not eq(@first_datastore_pattern)
+          expect(ephemeral_datastore.name).to_not eq(@first_datastore_name)
           check_compliance(cpi, storage_policy_name, vm)
         end
       end
@@ -110,7 +110,7 @@ context 'StoragePolicies' do
           ephemeral_disk = vm.ephemeral_disk
           ephemeral_datastore = ephemeral_disk.backing.datastore
           expect(ephemeral_datastore.name).to eq(@datastore)
-          expect(ephemeral_datastore.name).to_not eq(@first_datastore_pattern)
+          expect(ephemeral_datastore.name).to_not eq(@first_datastore_name)
           check_compliance(cpi, storage_policy_name, vm)
           check_non_compliance(cpi, global_storage_policy_name, vm)
         end
@@ -135,7 +135,7 @@ context 'StoragePolicies' do
           ephemeral_disk = vm.ephemeral_disk
           ephemeral_datastore = ephemeral_disk.backing.datastore
           expect(ephemeral_datastore.name).to eq(@mac_storage_profile_compliant_db_name)
-          expect(ephemeral_datastore.name).to_not eq(@first_datastore_pattern)
+          expect(ephemeral_datastore.name).to_not eq(@first_datastore_name)
           check_compliance(cpi, global_storage_policy_name, vm)
         end
       end
