@@ -176,6 +176,41 @@ describe 'DRS rules', drs: true do
             delete_vm(one_cluster_cpi, second_vm_id)
           end
         end
+        it 'should refuse to create more VMs than there are hosts' do
+          begin
+            vm_ids = []
+            first_vm_id = one_cluster_cpi.create_vm(
+              'agent-007',
+              @stemcell_id,
+              vm_type,
+              get_network_spec,
+              [],
+              {'key' => 'value'}
+            )
+            first_vm_mob = one_cluster_cpi.vm_provider.find(first_vm_id).mob
+            cluster = first_vm_mob.resource_pool.parent
+
+            # figure out the number of hosts and try to make that many more,
+            # now that we've already created one.
+            expect {
+              (0...cluster.host.length).each {
+                vm_ids << one_cluster_cpi.create_vm(
+                  'agent-006',
+                  @stemcell_id,
+                  vm_type,
+                  get_network_spec,
+                  [],
+                  { 'key' => 'value' }
+                )
+              }
+            }.to raise_exception(/Could not power on VM/)
+          ensure
+            delete_vm(one_cluster_cpi, first_vm_id)
+            vm_ids.each { |vm_id|
+              delete_vm(one_cluster_cpi, vm_id)
+            }
+          end
+        end
       end
     end
 
