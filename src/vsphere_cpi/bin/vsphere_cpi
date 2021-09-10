@@ -10,7 +10,7 @@ require 'tmpdir'
 require 'bosh/cpi'
 require 'bosh/cpi/cli'
 
-require 'cloud'
+require 'cloud_v2'
 require 'vmodl_version'
 
 cpi_config = YAML.load_file(ARGV.shift)
@@ -23,7 +23,10 @@ Bosh::Clouds::Config.configure(OpenStruct.new(
 # optimization shortcut: fast-path the `info` CPI method
 class BoshCloudsVSphereInfo
   def info
-    {'stemcell_formats' =>  ['vsphere-ovf', 'vsphere-ova']}
+    {
+      'stemcell_formats' =>  ['vsphere-ovf', 'vsphere-ova'],
+      'api_version' => 2
+    }
   end
 end
 
