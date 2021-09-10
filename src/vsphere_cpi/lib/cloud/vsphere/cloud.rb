@@ -6,7 +6,8 @@ require 'cloud'
 require 'cloud/vsphere/cpi_extension'
 
 module VSphereCloud
-  class Cloud < Bosh::Cloud
+  class Cloud
+    include Bosh::CloudV2
     include VimSdk
     include Logger
 
@@ -452,7 +453,7 @@ module VSphereCloud
           raise e
         end
 
-        created_vm.cid
+        [created_vm.cid, networks_spec]
       end
     end
 
@@ -644,6 +645,7 @@ module VSphereCloud
         # Overwrite cid with the director cid
         # Since director sends messages with "director cid" to agent, the agent needs that ID in its env, not the clean_cid
         add_disk_to_agent_env(vm, director_disk_cid, disk_spec.device.unit_number)
+        return disk_spec.device.unit_number
       end
     end
 
