@@ -30,7 +30,7 @@ describe 'vmx_options' do
 
     it 'can set the defined vmx_options as configuration properties' do
       begin
-        vm_id = @cpi.create_vm(
+        vm_id, _ = @cpi.create_vm(
           'agent-007',
           @stemcell_id,
           vm_type,
@@ -61,7 +61,7 @@ describe 'vmx_options' do
 
     it 'can set the defined vmx_options as configuration properties' do
       expect {
-        vm_id = @cpi.create_vm(
+        vm_id, _ = @cpi.create_vm(
           'agent-007',
           @stemcell_id,
           vm_type,

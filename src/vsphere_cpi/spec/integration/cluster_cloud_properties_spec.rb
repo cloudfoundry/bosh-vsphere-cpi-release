@@ -67,7 +67,7 @@ describe 'cloud_properties related to clusters' do
 
     it 'creates vm in cluster defined in `vm_type`' do
       begin
-        vm_id = cpi.create_vm(
+        vm_id, _ = cpi.create_vm(
           'agent-007',
           @stemcell_id,
           vm_type,
@@ -153,7 +153,7 @@ describe 'cloud_properties related to clusters' do
 
     it 'creates vm in the best possible cluster defined in `vm_type`' do
       begin
-        vm_id = cpi.create_vm(
+        vm_id, _ = cpi.create_vm(
           'agent-007',
           @stemcell_id,
           vm_type,
@@ -239,7 +239,7 @@ describe 'cloud_properties related to clusters' do
 
     it 'should be able to create and attach disk to vm' do
       begin
-        vm_id = cpi.create_vm(
+        vm_id, _ = cpi.create_vm(
           'agent-007',
           @stemcell_id,
           vm_type,

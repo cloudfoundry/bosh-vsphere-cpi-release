@@ -104,7 +104,7 @@ describe 'host-local storage patterns', :host_local => true do
 
     it 'places both ephemeral and persistent disks on local DS' do
       begin
-        vm_id = local_disk_cpi.create_vm('agent-007', @stemcell_id, vm_type, network_spec)
+        vm_id, _ = local_disk_cpi.create_vm('agent-007', @stemcell_id, vm_type, network_spec)
         vm = local_disk_cpi.vm_provider.find(vm_id)
         ephemeral_disk = vm.ephemeral_disk
         expect(ephemeral_disk).to_not be_nil
@@ -140,7 +140,7 @@ describe 'host-local storage patterns', :host_local => true do
     context 'when a VM hint is provided' do
       it 'places both ephemeral and persistent disks on local DS' do
         begin
-          vm_id = local_disk_cpi.create_vm('agent-007', @stemcell_id, vm_type, network_spec)
+          vm_id, _ = local_disk_cpi.create_vm('agent-007', @stemcell_id, vm_type, network_spec)
           vm = local_disk_cpi.vm_provider.find(vm_id)
           ephemeral_disk = vm.ephemeral_disk
           expect(ephemeral_disk).to_not be_nil
@@ -166,7 +166,7 @@ describe 'host-local storage patterns', :host_local => true do
     context 'when a VM hint is not provided and the disk is placed elsewhere' do
       it 'moves the persistent disk onto the same datastore as the VM' do
         begin
-          vm_id = local_disk_cpi.create_vm('agent-007', @stemcell_id, vm_type, network_spec)
+          vm_id, _ = local_disk_cpi.create_vm('agent-007', @stemcell_id, vm_type, network_spec)
           vm = local_disk_cpi.vm_provider.find(vm_id)
           ephemeral_disk = vm.ephemeral_disk
           expect(ephemeral_disk).to_not be_nil
@@ -228,7 +228,7 @@ describe 'host-local storage patterns', :host_local => true do
 
         it 'migrates the persistent disk to a host-local datastore in the same cluster as the VM' do
           begin
-            vm_id = local_disk_cpi.create_vm('agent-007', @stemcell_id, vm_type, network_spec)
+            vm_id, _ = local_disk_cpi.create_vm('agent-007', @stemcell_id, vm_type, network_spec)
             vm = local_disk_cpi.vm_provider.find(vm_id)
             ephemeral_disk = vm.ephemeral_disk
             expect(ephemeral_disk).to_not be_nil
@@ -274,7 +274,7 @@ describe 'host-local storage patterns', :host_local => true do
 
     it 'places both disks on the overlapping local DS' do
       begin
-        vm_id = local_disk_cpi.create_vm('agent-007', @stemcell_id, vm_type, network_spec)
+        vm_id, _ = local_disk_cpi.create_vm('agent-007', @stemcell_id, vm_type, network_spec)
         vm = local_disk_cpi.vm_provider.find(vm_id)
         ephemeral_disk = vm.ephemeral_disk
         expect(ephemeral_disk).to_not be_nil

@@ -34,7 +34,7 @@ RSpec.describe '#human readable names' do
 
     it 'create vm with UUID based name' do
       begin
-        test_vm_id = machine_name_cpi.create_vm(
+        test_vm_id, _ = machine_name_cpi.create_vm(
           'agent-007',
           @stemcell_id,
           vm_type,
@@ -64,7 +64,7 @@ RSpec.describe '#human readable names' do
           network_spec,
           [],
           environment
-      )
+      ).first
     end
 
     after do

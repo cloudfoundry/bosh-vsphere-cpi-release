@@ -25,7 +25,7 @@ context 'when vApp Config is disabled' do
 
   it 'can attach a persistent disk' do
     begin
-      vm_id = @cpi.create_vm(
+      vm_id, _ = @cpi.create_vm(
         'agent-007',
         @stemcell_id,
         vm_type,
@@ -58,7 +58,7 @@ context 'when vApp Config is disabled' do
 
   it 'can detach a persistent disk' do
     begin
-      vm_id = @cpi.create_vm(
+      vm_id, _ = @cpi.create_vm(
         'agent-007',
         @stemcell_id,
         vm_type,

@@ -72,7 +72,7 @@ describe 'inactive datastore handling' do
 
     it 'places the VM in the active datastore' do
       begin
-        vm_id = inactive_cpi.create_vm('agent-007', @stemcell_id, vm_type, network_spec)
+        vm_id, _ = inactive_cpi.create_vm('agent-007', @stemcell_id, vm_type, network_spec)
         vm = inactive_cpi.vm_provider.find(vm_id)
         ephemeral_disk = vm.ephemeral_disk
         expect(ephemeral_disk).to_not be_nil

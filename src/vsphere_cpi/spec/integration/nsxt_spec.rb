@@ -448,7 +448,7 @@ describe 'CPI', nsxt_all: true do
 
         it 'creates more than 5 VMs' do
           6.times do |i|
-            vm_id = cpi.create_vm(
+            vm_id, _ = cpi.create_vm(
                 "agent-00#{i}",
                 @stemcell_id,
                 vm_type,

@@ -28,7 +28,7 @@ context 'when regex matching datastores in a datastore cluster (datastore-*)' do
 
   it 'should place disk into datastores that belong to the datastore cluster' do
     begin
-      @vm_id = cpi.create_vm(
+      @vm_id, _ = cpi.create_vm(
         'agent-007',
         @stemcell_id,
         vm_type,
@@ -52,7 +52,7 @@ context 'when regex matching datastores in a datastore cluster (datastore-*)' do
   it 'should raise an error for invalid datastore name' do
     vm_type.merge!({'datastores' => ['non-existent']})
     expect do
-      @vm_id = cpi.create_vm(
+      @vm_id, _ = cpi.create_vm(
         'agent-007',
         @stemcell_id,
         vm_type,
@@ -96,7 +96,7 @@ context 'when regex matching datastore clusters (vcpi-*)' do
 
   it 'should place disks into datastores that belong to the datastore cluster' do
     begin
-      @vm_id = cpi.create_vm(
+      @vm_id, _ = cpi.create_vm(
         'agent-007',
         @stemcell_id,
         vm_type,
@@ -139,7 +139,7 @@ context 'when regex matching datastore clusters (vcpi-*)' do
 
     it 'should place ephemeral disk into datastore cluster datastore' do
       begin
-        @vm_id = cpi.create_vm(
+        @vm_id, _ = cpi.create_vm(
           'agent-007',
           @stemcell_id,
           vm_type,
@@ -201,7 +201,7 @@ context 'when datastore cluster is also defined in vm_type' do
 
     it 'should place the ephemeral disk & persistent disk in datastore belonging to datastore cluster' do
       begin
-        vm_id = cpi.create_vm(
+        vm_id, _ = cpi.create_vm(
           'agent-007',
           @stemcell_id,
           vm_type,
@@ -232,7 +232,7 @@ context 'when datastore cluster is also defined in vm_type' do
         }]
       })
       begin
-        vm_id = cpi.create_vm(
+        vm_id, _ = cpi.create_vm(
           'agent-007',
           @stemcell_id,
           vm_type,
@@ -256,7 +256,7 @@ context 'when datastore cluster is also defined in vm_type' do
       })
 
       begin
-        vm_id = cpi.create_vm(
+        vm_id, _ = cpi.create_vm(
           'agent-007',
           @stemcell_id,
           vm_type,

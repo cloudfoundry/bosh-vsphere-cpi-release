@@ -50,7 +50,7 @@ context 'when datastores are configured in vm_types' do
 
   it 'creates a VM in one of the specified datastores' do
     begin
-      vm_id = second_cluster_cpi.create_vm(
+      vm_id, _ = second_cluster_cpi.create_vm(
         'agent-007',
         @stemcell_id,
         vm_type_with_datastores,
@@ -97,7 +97,7 @@ context 'when datastores are configured in vm_types' do
 
     it 'creates a VM in one of the specified datastores' do
       begin
-        vm_id = second_cluster_cpi.create_vm(
+        vm_id, _ = second_cluster_cpi.create_vm(
           'agent-007',
           @stemcell_id,
           vm_type_with_datastores,
@@ -151,7 +151,7 @@ context 'when datastores are configured in vm_types' do
       begin
         vm_id = nil
         expect {
-          vm_id = two_cluster_cpi.create_vm(
+          vm_id, _ = two_cluster_cpi.create_vm(
             'agent-007',
             @stemcell_id,
             vm_type_with_datastores,
@@ -196,7 +196,7 @@ context 'when datastores are configured in vm_types' do
 
     it 'places the VM on that datastore as long as its cluster can reach it' do
       begin
-        vm_id = cpi.create_vm(
+        vm_id, _ = cpi.create_vm(
           'agent-007',
           @stemcell_id,
           vm_type_with_non_global_datastore,

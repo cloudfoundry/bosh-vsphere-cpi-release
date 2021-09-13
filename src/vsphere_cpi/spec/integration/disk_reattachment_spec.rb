@@ -45,7 +45,7 @@ describe 're-attaching a persistent disk' do
 
     it 're-attaches the disk without locking the cd-rom' do
       begin
-        vm_id = @cpi.create_vm(
+        vm_id, _ = @cpi.create_vm(
             'agent-007',
             @stemcell_id,
             vm_type,
@@ -121,7 +121,7 @@ describe 're-attaching a persistent disk' do
 
       it 'raises error ' do
         begin
-          vm_id = @cpi.create_vm(
+          vm_id, _ = @cpi.create_vm(
               'agent-007',
               @stemcell_id,
               vm_type,
@@ -150,7 +150,7 @@ describe 're-attaching a persistent disk' do
   context 'when vm_type has no disk uuid enabled' do
     it 're-attaches the disk without locking the cd-rom' do
       begin
-        vm_id = @cpi.create_vm(
+        vm_id, _ = @cpi.create_vm(
             'agent-007',
             @stemcell_id,
             vm_type,
@@ -226,7 +226,7 @@ describe 're-attaching a persistent disk' do
 
       it 'raises error ' do
         begin
-          vm_id = @cpi.create_vm(
+          vm_id, _ = @cpi.create_vm(
               'agent-007',
               @stemcell_id,
               vm_type,

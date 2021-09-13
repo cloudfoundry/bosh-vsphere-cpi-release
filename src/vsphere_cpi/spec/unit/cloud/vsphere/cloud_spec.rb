@@ -1475,7 +1475,8 @@ module VSphereCloud
             expect(env_location).to eq(vm_location)
             expect(env['disks']['persistent']['disk-cid']).to eq('some-unit-number')
           end
-          vsphere_cloud.attach_disk('fake-vm-cid', 'disk-cid')
+          disk_hint = vsphere_cloud.attach_disk('fake-vm-cid', 'disk-cid')
+          expect(disk_hint).to match('some-unit-number')
         end
 
         it 'attaches the existing persistent disk with uuid' do

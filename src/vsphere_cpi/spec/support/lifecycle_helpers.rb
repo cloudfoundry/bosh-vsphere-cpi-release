@@ -291,7 +291,7 @@ module LifecycleHelpers
       'cpu' => 1,
     }
 
-    vm_id = cpi.create_vm(
+    vm_id, _ = cpi.create_vm(
       'agent-007',
       @stemcell_id,
       default_vm_type.merge(vm_type),
@@ -307,7 +307,7 @@ module LifecycleHelpers
   end
 
   def vm_lifecycle(cpi, disk_locality, vm_type, network_spec, stemcell_id, env = {'key' => 'value'})
-    vm_id = cpi.create_vm(
+    vm_id, _ = cpi.create_vm(
       'agent-007',
       stemcell_id,
       vm_type,
@@ -361,7 +361,7 @@ module LifecycleHelpers
       network_spec,
       [],
       {}
-    )
+    ).first
   end
 
   def create_vm_with_vm_type(cpi, vm_type, stemcell_id)
@@ -372,7 +372,7 @@ module LifecycleHelpers
       network_spec,
       [],
       {'key' => 'value'}
-    )
+    ).first
   end
 
 

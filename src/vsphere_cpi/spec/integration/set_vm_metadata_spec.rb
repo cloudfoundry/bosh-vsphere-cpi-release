@@ -34,7 +34,7 @@ describe 'set_vm_metadata' do
     end
 
     it 'succeeds' do
-      @vm_cid = cpi.create_vm(
+      @vm_cid, _ = cpi.create_vm(
         'agent-007',
         @stemcell_id,
         vm_type,

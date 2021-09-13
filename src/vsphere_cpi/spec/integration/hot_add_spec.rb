@@ -32,7 +32,7 @@ context 'when having cpu/mem hot add enabled' do
 
   it 'creates a VM with those properties enabled' do
     begin
-      vm_id = @cpi.create_vm(
+      vm_id, _ = @cpi.create_vm(
         'agent-007',
         @stemcell_id,
         vm_type_with_hot_params,

@@ -58,7 +58,7 @@ context 'given a CPI configured with vSphere resource pools' do
     vm_id = nil
 
     before do
-      vm_id = resource_pool_cpi.create_vm(
+      vm_id, _ = resource_pool_cpi.create_vm(
         'agent-007',
         @stemcell_id,
         resource_pool,
@@ -132,7 +132,7 @@ context 'given a CPI configured with vSphere resource pools' do
 
     it 'places vm in the specified resource pool, overriding the globally configured resource pool' do
       begin
-        vm_id = resource_pool_cpi.create_vm(
+        vm_id, _ = resource_pool_cpi.create_vm(
           'agent-007',
           @stemcell_id,
           resource_pool,
@@ -155,7 +155,7 @@ context 'given a CPI configured with vSphere resource pools' do
     context 'when the nested resource pool name is same for two parent pools and we provide relative resource pool path for first nested pool' do
       it 'places vm in the right nested resource pool' do
         begin
-          vm_id = resource_pool_cpi.create_vm(
+          vm_id, _ = resource_pool_cpi.create_vm(
               'agent-007',
               @stemcell_id,
               resource_pool,
@@ -190,7 +190,7 @@ context 'given a CPI configured with vSphere resource pools' do
     context 'when the nested resource pool name is same for two parent pools and we provide relative resource pool path for first nested pool' do
       it 'places vm in the right nested resource pool' do
         begin
-          vm_id = @cpi.create_vm(
+          vm_id, _ = @cpi.create_vm(
               'agent-007',
               @stemcell_id,
               resource_pool,

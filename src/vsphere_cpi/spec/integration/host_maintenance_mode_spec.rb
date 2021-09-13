@@ -46,7 +46,7 @@ describe 'Give a cluster with DRS On ', host_maintenance: true  do
 
     it 'cpi should be able to replicate stemcell (create vm and create ephemeral disk) ' do
       begin
-        @vm_id = cpi.create_vm(
+        @vm_id, _ = cpi.create_vm(
           'agent-007',
           @stemcell_id,
           vm_type,
@@ -116,7 +116,7 @@ describe 'Give a cluster with DRS On ', host_maintenance: true  do
     it 'cpi should fail to replicate stemcell (create vm and create ephemeral disk) on a datastore ' do
       begin
         expect do
-          @vm_id = cpi.create_vm(
+          @vm_id, _ = cpi.create_vm(
             'agent-007',
             @stemcell_id,
             vm_type,
@@ -177,7 +177,7 @@ describe 'Give a cluster with DRS On ', host_maintenance: true  do
     it 'cpi should fail to replicate stemcell (create vm and create ephemeral disk) on a datastore ' do
       begin
         expect do
-          @vm_id = cpi.create_vm(
+          @vm_id, _ = cpi.create_vm(
               'agent-007',
               @stemcell_id,
               vm_type,

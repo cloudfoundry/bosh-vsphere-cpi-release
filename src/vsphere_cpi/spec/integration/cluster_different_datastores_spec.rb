@@ -61,7 +61,7 @@ context 'when a single cluster is defined' do
         ds.summary.free_space
       end.reverse.map(&:name).first
       begin
-        @vm_id = all_datastore_cpi.create_vm(
+        @vm_id, _ = all_datastore_cpi.create_vm(
           'agent-007',
           @stemcell_id,
           vm_type,
@@ -106,7 +106,7 @@ context 'when a single cluster is defined' do
     end
 
     before do
-      @vm_id = first_datastore_cpi.create_vm(
+      @vm_id, _ = first_datastore_cpi.create_vm(
         'agent-007',
         @stemcell_id,
         vm_type,

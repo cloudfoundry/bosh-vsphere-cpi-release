@@ -50,7 +50,7 @@ describe 'cloud_properties related to disks' do
 
   it 'creates an ephemeral disk with the default type' do
     begin
-      vm_id = cpi.create_vm(
+      vm_id, _ = cpi.create_vm(
         'agent-007',
         @stemcell_id,
         vm_type,
@@ -101,7 +101,7 @@ describe 'cloud_properties related to disks' do
 
     it 'creates an ephemeral disk with the specified default type' do
       begin
-        vm_id = cpi.create_vm(
+        vm_id, _ = cpi.create_vm(
           'agent-007',
           @stemcell_id,
           vm_type,
@@ -187,7 +187,7 @@ describe 'cloud_properties related to disks' do
         verify_disk_is_in_datastores(cpi, director_disk_cid.value, persistent_datastores)
         expect(cpi.has_disk?(director_disk_id)).to be(true)
 
-        vm_id = cpi.create_vm(
+        vm_id, _ = cpi.create_vm(
           'agent-007',
           @stemcell_id,
           vm_type,
@@ -210,7 +210,7 @@ describe 'cloud_properties related to disks' do
 
   def yield_persistent_disk_mob(cpi, disk_id)
     # the vSphere API provides little info about disks until they are attached
-    vm_id = cpi.create_vm(
+    vm_id, _ = cpi.create_vm(
       'agent-007',
       @stemcell_id,
       vm_type,

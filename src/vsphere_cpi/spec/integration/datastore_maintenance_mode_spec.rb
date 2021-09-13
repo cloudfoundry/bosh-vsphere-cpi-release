@@ -65,7 +65,7 @@ context 'when regex matching datastores in a datastore cluster (datastore-*)' do
     end
     it 'should place disk into datastores that are not in maintenance mode' do
       begin
-        @vm_id = cpi.create_vm(
+        @vm_id, _ = cpi.create_vm(
           'agent-007',
           @stemcell_id,
           vm_type,

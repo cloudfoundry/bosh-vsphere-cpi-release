@@ -67,7 +67,7 @@ context 'given cpis that are configured to use VSAN datastores', vsan_datastore:
     end
 
     before do
-      @vm_id = non_vsan_cpi.create_vm(
+      @vm_id, _ = non_vsan_cpi.create_vm(
         'agent-007',
         @stemcell_id,
         resource_pool,

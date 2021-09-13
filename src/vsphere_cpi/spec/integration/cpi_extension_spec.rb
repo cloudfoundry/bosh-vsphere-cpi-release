@@ -78,7 +78,7 @@ describe '#add cpi extension' do
 
     it 'adds replicated stemcell and vm to extension' do
       begin
-        @vm_cid = second_cluster_cpi.create_vm(
+        @vm_cid, _ = second_cluster_cpi.create_vm(
           'agent-007',
           @stemcell_id,
           vm_type,
@@ -111,7 +111,7 @@ describe '#add cpi extension' do
     end
 
     it 'does not add VM to the CPI extension' do
-      @vm_cid = cpi.create_vm(
+      @vm_cid, _ = cpi.create_vm(
         'agent-007',
         @stemcell_id,
         vm_type,

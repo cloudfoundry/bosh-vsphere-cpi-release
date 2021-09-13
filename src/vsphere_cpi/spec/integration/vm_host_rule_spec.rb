@@ -117,7 +117,7 @@ describe 'Host Groups in Cluster and VM Host Rules' do
           vm_list = []
           begin
             3.times do
-              vm_id = cpi.create_vm(
+              vm_id, _ = cpi.create_vm(
                   'agent-007',
                   @stemcell_id,
                   vm_type,
@@ -166,7 +166,7 @@ describe 'Host Groups in Cluster and VM Host Rules' do
             vm_list = []
             begin
               3.times do
-                vm_id = cpi.create_vm(
+                vm_id, _ = cpi.create_vm(
                     'agent-007',
                     @stemcell_id,
                     vm_type,
@@ -358,7 +358,7 @@ describe 'Host Groups in Cluster and VM Host Rules' do
             vm_list = []
             begin
               3.times do
-                vm_id = cpi.create_vm(
+                vm_id, _ = cpi.create_vm(
                     'agent-007',
                     @stemcell_id,
                     vm_type,
@@ -496,7 +496,7 @@ describe 'Host Groups in Cluster and VM Host Rules' do
             vm_list = []
             begin
               3.times do
-                vm_id = cpi.create_vm(
+                vm_id, _ = cpi.create_vm(
                     'agent-007',
                     @stemcell_id,
                     vm_type,

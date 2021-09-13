@@ -227,7 +227,7 @@ context 'Replicating stemcells across datastores', external_cpi: false, fake_log
 
       it 'creates a vm from the replicated copy' do
         begin
-          @vm_id = vm_cpi.create_vm(
+          @vm_id, _ = vm_cpi.create_vm(
             'agent-007',
             @orig_stemcell_id,
             vm_type,

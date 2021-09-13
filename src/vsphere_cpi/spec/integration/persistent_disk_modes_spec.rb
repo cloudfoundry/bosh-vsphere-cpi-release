@@ -25,7 +25,7 @@ context 'when a persistent disk is attached' do
   context 'in "persistent" (dependent) mode' do
 
     before do
-      @vm_id = @cpi.create_vm(
+      @vm_id, _ = @cpi.create_vm(
         'agent-007',
         @stemcell_id,
         vm_type,
@@ -76,7 +76,7 @@ context 'when a persistent disk is attached' do
   context 'in "nonpersistent" mode' do
 
     before do
-      @vm_id = @cpi.create_vm(
+      @vm_id, _ = @cpi.create_vm(
         'agent-007',
         @stemcell_id,
         vm_type,

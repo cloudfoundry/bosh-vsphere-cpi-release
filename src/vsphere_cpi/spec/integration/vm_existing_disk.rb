@@ -66,7 +66,7 @@ describe 'Creating VM with existing persistent disks' do
 
     it 'cpi should be able to create a VM' do
       begin
-        vm_id = cpi_different_persistent_pattern.create_vm(
+        vm_id, _ = cpi_different_persistent_pattern.create_vm(
           'agent-007',
           @stemcell_id,
           vm_type,

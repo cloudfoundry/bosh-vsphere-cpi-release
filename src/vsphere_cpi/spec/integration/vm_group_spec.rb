@@ -9,7 +9,7 @@ describe 'VM Groups' do
     get_network_spec,
     [],
     {}
-  )}
+  ).first}
 
   context 'when vm_group is defined' do
     before(:all) do
@@ -41,7 +41,7 @@ describe 'VM Groups' do
           get_network_spec,
           [],
           {}
-        )}
+        ).first}
       before do
         @test_vm_resource = @cpi.vm_provider.find(test_vm)
         @cluster = @cpi.client.cloud_searcher.get_managed_object(VimSdk::Vim::ClusterComputeResource, name: @cluster_name)

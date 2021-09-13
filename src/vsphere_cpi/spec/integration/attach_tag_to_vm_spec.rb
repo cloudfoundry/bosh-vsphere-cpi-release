@@ -42,7 +42,7 @@ module VSphereCloud
       let(:tags) { [ { 'category' => 'category-name-a', 'tag' => 'tag-name-a-1'} ] }
       it 'created a vm with tag attached' do
         begin
-          test_vm_id = @cpi.create_vm(
+          test_vm_id, _ = @cpi.create_vm(
             'agent-007',
             @stemcell_id,
             vm_type,
@@ -69,7 +69,7 @@ module VSphereCloud
       }
       it 'created a vm with tags attached' do
         begin
-          test_vm_id = @cpi.create_vm(
+          test_vm_id, _ = @cpi.create_vm(
             'agent-007',
             @stemcell_id,
             vm_type,
@@ -90,7 +90,7 @@ module VSphereCloud
       let(:tags) { [ { 'category' => 'category-name-b', 'tag' => 'tag-name-b-1'} ] }
       it 'created a vm without tags attached' do
         begin
-          test_vm_id = @cpi.create_vm(
+          test_vm_id, _ = @cpi.create_vm(
             'agent-007',
             @stemcell_id,
             vm_type,
@@ -117,7 +117,7 @@ module VSphereCloud
       }
       it 'created a vm without same-category-single-cardinality tags' do
         begin
-          test_vm_id = @cpi.create_vm(
+          test_vm_id, _ = @cpi.create_vm(
             'agent-007',
             @stemcell_id,
             vm_type,
@@ -143,7 +143,7 @@ module VSphereCloud
       }
       it 'created a vm with correct category tags attached' do
         begin
-          test_vm_id = @cpi.create_vm(
+          test_vm_id, _ = @cpi.create_vm(
             'agent-007',
             @stemcell_id,
             vm_type,
@@ -169,7 +169,7 @@ module VSphereCloud
       }
       it 'created a vm with correct tags attached' do
         begin
-          test_vm_id = @cpi.create_vm(
+          test_vm_id, _ = @cpi.create_vm(
             'agent-007',
             @stemcell_id,
             vm_type,

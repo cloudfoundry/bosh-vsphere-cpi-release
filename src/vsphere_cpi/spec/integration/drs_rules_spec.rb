@@ -87,7 +87,7 @@ describe 'DRS rules', drs: true do
 
         it 'should correctly apply VM Anti-Affinity rules to created VMs' do
           begin
-            first_vm_id = one_cluster_cpi.create_vm(
+            first_vm_id, _ = one_cluster_cpi.create_vm(
               'agent-007',
               @stemcell_id,
               vm_type,
@@ -95,7 +95,7 @@ describe 'DRS rules', drs: true do
               [],
               env
             )
-            second_vm_id = one_cluster_cpi.create_vm(
+            second_vm_id, _ = one_cluster_cpi.create_vm(
               'agent-006',
               @stemcell_id,
               vm_type,
@@ -144,7 +144,7 @@ describe 'DRS rules', drs: true do
 
         it 'should correctly apply VM Anti-Affinity rules to created VMs' do
           begin
-            first_vm_id = one_cluster_cpi.create_vm(
+            first_vm_id, _ = one_cluster_cpi.create_vm(
               'agent-007',
               @stemcell_id,
               vm_type,
@@ -152,7 +152,7 @@ describe 'DRS rules', drs: true do
               [],
               {'key' => 'value'}
             )
-            second_vm_id = one_cluster_cpi.create_vm(
+            second_vm_id, _ = one_cluster_cpi.create_vm(
               'agent-006',
               @stemcell_id,
               vm_type,
@@ -242,7 +242,7 @@ describe 'DRS rules', drs: true do
 
         it 'should create VM without Anti-Affinity rule' do
           begin
-            first_vm_id = one_cluster_cpi.create_vm(
+            first_vm_id, _ = one_cluster_cpi.create_vm(
               'agent-007',
               @stemcell_id,
               vm_type,
@@ -250,7 +250,7 @@ describe 'DRS rules', drs: true do
               [],
               {'key' => 'value'}
             )
-            second_vm_id = one_cluster_cpi.create_vm(
+            second_vm_id, _ = one_cluster_cpi.create_vm(
               'agent-006',
               @stemcell_id,
               vm_type,
@@ -300,7 +300,7 @@ describe 'DRS rules', drs: true do
 
             vms = []
             for i in 1..number_of_hosts
-              vm_id = one_cluster_cpi.create_vm(
+              vm_id, _ = one_cluster_cpi.create_vm(
                 'agent-007',
                 @stemcell_id,
                 vm_type,
@@ -323,7 +323,7 @@ describe 'DRS rules', drs: true do
             expect(vms - drs_vm_names).to be_empty
 
             expect do
-              failed_vm = one_cluster_cpi.create_vm(
+              failed_vm, _ = one_cluster_cpi.create_vm(
                 'agent-006',
                 @stemcell_id,
                 vm_type,
@@ -350,7 +350,7 @@ describe 'DRS rules', drs: true do
 
       it 'can still find persistent disks after and deleting vm' do
         begin
-          vm_id = one_cluster_cpi.create_vm(
+          vm_id, _ = one_cluster_cpi.create_vm(
             'agent-007',
             @stemcell_id,
             vm_type,
@@ -392,7 +392,7 @@ describe 'DRS rules', drs: true do
 
       it 'can still find persistent disk after vMotion and after detaching disk from vm' do
         begin
-          vm_id = one_cluster_cpi.create_vm(
+          vm_id, _ = one_cluster_cpi.create_vm(
             'agent-007',
             @stemcell_id,
             vm_type,
