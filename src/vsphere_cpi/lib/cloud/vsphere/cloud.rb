@@ -645,7 +645,7 @@ module VSphereCloud
         # Overwrite cid with the director cid
         # Since director sends messages with "director cid" to agent, the agent needs that ID in its env, not the clean_cid
         add_disk_to_agent_env(vm, director_disk_cid, disk_spec.device.unit_number)
-        disk_spec.device.unit_number
+        disk_spec.device.unit_number.to_s
       end
     end
 

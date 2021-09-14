@@ -1468,15 +1468,15 @@ module VSphereCloud
           expect(vm).to receive(:disk_uuid_is_enabled?).and_return(false)
           expect(vm).to receive(:attach_disk) do |disk|
             expect(disk.cid).to eq('disk-cid')
-            OpenStruct.new(device: OpenStruct.new(unit_number: 'some-unit-number'))
+            OpenStruct.new(device: OpenStruct.new(unit_number: 2))
           end
           expect(agent_env).to receive(:set_env) do|env_vm, env_location, env|
             expect(env_vm).to eq(vm_mob)
             expect(env_location).to eq(vm_location)
-            expect(env['disks']['persistent']['disk-cid']).to eq('some-unit-number')
+            expect(env['disks']['persistent']['disk-cid']).to eq('2')
           end
           disk_hint = vsphere_cloud.attach_disk('fake-vm-cid', 'disk-cid')
-          expect(disk_hint).to match('some-unit-number')
+          expect(disk_hint).to match('2')
         end
 
         it 'attaches the existing persistent disk with uuid' do
