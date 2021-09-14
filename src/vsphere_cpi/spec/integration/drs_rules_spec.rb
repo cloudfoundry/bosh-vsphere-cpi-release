@@ -179,7 +179,7 @@ describe 'DRS rules', drs: true do
         it 'should refuse to create more VMs than there are hosts' do
           begin
             vm_ids = []
-            first_vm_id = one_cluster_cpi.create_vm(
+            first_vm_id, _ = one_cluster_cpi.create_vm(
               'agent-007',
               @stemcell_id,
               vm_type,
@@ -194,7 +194,7 @@ describe 'DRS rules', drs: true do
             # now that we've already created one.
             expect {
               (0...cluster.host.length).each {
-                vm_ids << one_cluster_cpi.create_vm(
+                vm_id, _ = one_cluster_cpi.create_vm(
                   'agent-006',
                   @stemcell_id,
                   vm_type,
@@ -202,6 +202,7 @@ describe 'DRS rules', drs: true do
                   [],
                   { 'key' => 'value' }
                 )
+                vm_ids << vm_id
               }
             }.to raise_exception(/Could not power on VM/)
           ensure

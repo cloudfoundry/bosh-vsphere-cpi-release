@@ -25,7 +25,7 @@ context 'when drs_disabled is set to true in vm_type' do
       vm_list = []
       2.times do
         thread_list << Thread.new do
-          vm_list << @cpi.create_vm(
+          vm_id, _ @cpi.create_vm(
             'agent-007',
             @stemcell_id,
             vm_type_with_disable_drs,
@@ -33,6 +33,7 @@ context 'when drs_disabled is set to true in vm_type' do
             [],
             {}
           )
+          vm_list << vm_id
         end
       end
       thread_list.each {|thread| thread.join}
