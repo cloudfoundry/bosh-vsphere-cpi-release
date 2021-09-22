@@ -1556,7 +1556,8 @@ module VSphereCloud
             expect(env['disks']['persistent'][disk_cid_with_metadata]).to eq({'id' => 'some-uuid'})
           end
 
-          vsphere_cloud.attach_disk('fake-vm-cid', disk_cid_with_metadata)
+          ret = vsphere_cloud.attach_disk('fake-vm-cid', disk_cid_with_metadata)
+          expect(ret).to eq({'id' => 'some-uuid'})
         end
       end
 

@@ -642,10 +642,32 @@ module VSphereCloud
         end
 
         disk_spec = vm.attach_disk(disk_to_attach)
+
+        # For VMs with multiple SCSI controllers, as is common in Kubernetes workers,
+        # it is mandatory that disk.enableUUID is set in the VMX options / extra config of the VM to ensure
+        # that disk mounting can be performed unambigously.   This is typically set as part of a VM extension.
+        # Using the relative device unit number (see above), which is the traditional vSphere CPI disk identifier,
+        # only presumes a single SCSI controller.   The BOSH agent however does not distinguish SCSI controllers using
+        # this method of volume identification, which can lead to ambiguous mounts, and thus failed agent bootstraps or data loss.
+        # The BOSH agent already supports volume UUID identification, which is used below for unambiguous
+        # BOSH disk association.
+        if vm.disk_uuid_is_enabled?
+          # We have to query the VIM API to learn the freshly attached disk UUID. We must also pick the specific
+          # BOSH-managed independent persistent disk and avoid any non-BOSH peristent disks.  Also due to Linux
+          # filsystem case-sensitivity, ensure that the UUID is downcased as VIM returns it upper case.
+          disk = vm.disk_by_cid(director_disk_cid.value)
+          uuid = disk.backing.uuid.downcase
+          logger.info("adding disk; disk.enableUUID is TRUE, using volume uuid #{uuid} for mounting")
+          disk_hint = {"id" => uuid}
+        else
+          disk_hint = disk_spec.device.unit_number.to_s
+          logger.info("adding disk to env, disk.enableUUID is FALSE, using relative device number #{disk_hint} for mounting")
+        end
+
         # Overwrite cid with the director cid
         # Since director sends messages with "director cid" to agent, the agent needs that ID in its env, not the clean_cid
-        add_disk_to_agent_env(vm, director_disk_cid, disk_spec.device.unit_number)
-        disk_spec.device.unit_number.to_s
+        add_disk_to_agent_env(vm, director_disk_cid, disk_hint)
+        disk_hint
       end
     end
 
@@ -940,32 +962,10 @@ module VSphereCloud
       vm.accessible_datastores[cdrom.backing.datastore.name]
     end
 
-    def add_disk_to_agent_env(vm, director_disk_cid, device_unit_number)
+    def add_disk_to_agent_env(vm, director_disk_cid, disk_hint)
       env = @agent_env.get_current_env(vm.mob, @datacenter.name)
 
-      env['disks']['persistent'][director_disk_cid.raw] = device_unit_number.to_s
-
-      # For VMs with multiple SCSI controllers, as is common in Kubernetes workers, 
-      # it is mandatory that disk.enableUUID is set in the VMX options / extra config of the VM to ensure 
-      # that disk mounting can be performed unambigously.   This is typically set as part of a VM extension.
-      # Using the relative device unit number (see above), which is the traditional vSphere CPI disk identifier, 
-      # only presumes a single SCSI controller.   The BOSH agent however does not distinguish SCSI controllers using
-      # this method of volume identification, which can lead to ambiguous mounts, and thus failed agent bootstraps or data loss.
-      # The BOSH agent already supports volume UUID identification, which is used below for unambiguous
-      # BOSH disk association.   
-
-
-      if vm.disk_uuid_is_enabled?
-        # We have to query the VIM API to learn the freshly attached disk UUID. We must also pick the specific
-        # BOSH-managed independent persistent disk and avoid any non-BOSH peristent disks.  Also due to Linux
-        # filsystem case-sensitivity, ensure that the UUID is downcased as VIM returns it upper case.
-        disk = vm.disk_by_cid(director_disk_cid.value)
-        uuid = disk.backing.uuid.downcase
-        logger.info("adding disk to env, disk.enableUUID is TRUE, using volume uuid #{uuid} for mounting")
-        env['disks']['persistent'][director_disk_cid.raw] = {"id" => uuid}
-      else
-        logger.info("adding disk to env, disk.enableUUID is FALSE, using relative device number #{device_unit_number.to_s} for mounting")
-      end
+      env['disks']['persistent'][director_disk_cid.raw] = disk_hint
 
       location = { datacenter: @datacenter.name, datastore: get_vm_env_datastore(vm), vm: vm.cid }
       @agent_env.set_env(vm.mob, location, env)

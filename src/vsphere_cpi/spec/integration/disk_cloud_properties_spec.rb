@@ -208,6 +208,73 @@ describe 'cloud_properties related to disks' do
     end
   end
 
+  context 'when disk.enableUUID vmx_option is not set' do
+    it 'returns the device id of the disk as a string on attachment' do
+      begin
+        director_disk_id = cpi.create_disk(128, {})
+        VSphereCloud::DirectorDiskCID.new(director_disk_id)
+        expect(cpi.has_disk?(director_disk_id)).to be(true)
+
+        vm_id, _ = cpi.create_vm(
+          'agent-007',
+          @stemcell_id,
+          vm_type,
+          network_spec,
+          [director_disk_id],
+          {}
+        )
+        expect(vm_id).to_not be_nil
+
+        disk_hint = cpi.attach_disk(vm_id, director_disk_id)
+        expect(Integer(disk_hint)).to be > 0
+      ensure
+        detach_disk(cpi, vm_id, director_disk_id)
+        delete_vm(cpi, vm_id)
+        delete_disk(cpi, director_disk_id)
+      end
+    end
+  end
+
+  context 'when disk.enableUUID vmx_option is set' do
+    let(:vm_type) do
+      {
+        'ram' => 512,
+        'disk' => 2048,
+        'cpu' => 1,
+        'vmx_options' => {
+          'disk.enableUUID' => '1'
+        }
+
+      }
+    end
+
+    it 'returns a hash containing the device uuid on attachment' do
+      begin
+        director_disk_id = cpi.create_disk(128, {})
+        VSphereCloud::DirectorDiskCID.new(director_disk_id)
+        expect(cpi.has_disk?(director_disk_id)).to be(true)
+
+        vm_id, _ = cpi.create_vm(
+          'agent-007',
+          @stemcell_id,
+          vm_type,
+          network_spec,
+          [director_disk_id],
+          {}
+        )
+        expect(vm_id).to_not be_nil
+
+        disk_hint = cpi.attach_disk(vm_id, director_disk_id)
+        expect(disk_hint).to have_key('id')
+      ensure
+        detach_disk(cpi, vm_id, director_disk_id)
+        delete_vm(cpi, vm_id)
+        delete_disk(cpi, director_disk_id)
+      end
+    end
+  end
+
+
   def yield_persistent_disk_mob(cpi, disk_id)
     # the vSphere API provides little info about disks until they are attached
     vm_id, _ = cpi.create_vm(
