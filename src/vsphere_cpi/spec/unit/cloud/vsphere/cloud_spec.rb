@@ -1428,7 +1428,6 @@ module VSphereCloud
       before do
         allow(ds_mob).to receive_message_chain('summary.maintenance_mode').and_return("normal")
       end
-      let(:agent_env_hash) { { 'disks' => { 'persistent' => { 'disk-cid' => 'fake-device-number' } } } }
       let(:host_runtime_info) { instance_double(VimSdk::Vim::Host::RuntimeInfo, in_maintenance_mode: false) }
       let(:host_system) {instance_double(VimSdk::Vim::HostSystem, runtime: host_runtime_info)}
       let(:datastore_host_mount) { [instance_double('VimSdk::Vim::Datastore::HostMount', key: host_system)]}
@@ -1452,7 +1451,6 @@ module VSphereCloud
         allow(datacenter).to receive(:persistent_pattern).and_return(/datastore\-.*/)
         allow(datacenter).to receive(:persistent_datastore_cluster_pattern).and_return('')
         allow(vm_provider).to receive(:find).with('fake-vm-cid').and_return(vm)
-        allow(agent_env).to receive(:get_current_env).and_return(agent_env_hash)
         allow(cdrom).to receive_message_chain(:backing, :datastore, :name) { 'datastore-with-disk' }
         allow(vcenter_client).to receive(:get_cdrom_device).with(vm_mob).and_return(cdrom)
       end
@@ -1469,11 +1467,6 @@ module VSphereCloud
           expect(vm).to receive(:attach_disk) do |disk|
             expect(disk.cid).to eq('disk-cid')
             OpenStruct.new(device: OpenStruct.new(unit_number: 2))
-          end
-          expect(agent_env).to receive(:set_env) do|env_vm, env_location, env|
-            expect(env_vm).to eq(vm_mob)
-            expect(env_location).to eq(vm_location)
-            expect(env['disks']['persistent']['disk-cid']).to eq('2')
           end
           disk_hint = vsphere_cloud.attach_disk('fake-vm-cid', 'disk-cid')
           expect(disk_hint).to match('2')
@@ -1494,12 +1487,8 @@ module VSphereCloud
             OpenStruct.new(backing: OpenStruct.new(uuid: 'SOME-UUID'))
           end 
           
-          expect(agent_env).to receive(:set_env) do|env_vm, env_location, env|
-            expect(env_vm).to eq(vm_mob)
-            expect(env_location).to eq(vm_location)
-            expect(env['disks']['persistent']['disk-cid']).to eq({ 'id' => 'some-uuid'})
-          end
-          vsphere_cloud.attach_disk('fake-vm-cid', 'disk-cid')
+          disk_hint = vsphere_cloud.attach_disk('fake-vm-cid', 'disk-cid')
+          expect(disk_hint).to eq({ 'id' => 'some-uuid'})
         end
 
         it 'attaches the existing persistent disk with encoded metadata and without uuid' do
@@ -1519,13 +1508,8 @@ module VSphereCloud
           end
           expect(vm).to receive(:disk_uuid_is_enabled?).and_return(false)
   
-          expect(agent_env).to receive(:set_env) do |env_vm, env_location, env|
-            expect(env_vm).to eq(vm_mob)
-            expect(env_location).to eq(vm_location)
-            expect(env['disks']['persistent'][disk_cid_with_metadata]).to eq('some-unit-number')
-          end
-
-          vsphere_cloud.attach_disk('fake-vm-cid', disk_cid_with_metadata)
+          disk_hint = vsphere_cloud.attach_disk('fake-vm-cid', disk_cid_with_metadata)
+          expect(disk_hint).to eq('some-unit-number')
         end
 
         it 'attaches the existing persistent disk with encoded metadata and with uuid' do
@@ -1550,14 +1534,8 @@ module VSphereCloud
             OpenStruct.new(backing: OpenStruct.new(uuid: 'SOME-UUID'))
           end 
 
-          expect(agent_env).to receive(:set_env) do |env_vm, env_location, env|
-            expect(env_vm).to eq(vm_mob)
-            expect(env_location).to eq(vm_location)
-            expect(env['disks']['persistent'][disk_cid_with_metadata]).to eq({'id' => 'some-uuid'})
-          end
-
-          ret = vsphere_cloud.attach_disk('fake-vm-cid', disk_cid_with_metadata)
-          expect(ret).to eq({'id' => 'some-uuid'})
+          disk_hint = vsphere_cloud.attach_disk('fake-vm-cid', disk_cid_with_metadata)
+          expect(disk_hint).to eq({'id' => 'some-uuid'})
         end
       end
 
@@ -1597,13 +1575,8 @@ module VSphereCloud
           
           expect(vm).to receive(:disk_uuid_is_enabled?).and_return(false)
           
-          expect(agent_env).to receive(:set_env) do|env_vm, env_location, env|
-            expect(env_vm).to eq(vm_mob)
-            expect(env_location).to eq(vm_location)
-            expect(env['disks']['persistent']['disk-cid']).to eq('some-unit-number')
-          end
-
-          vsphere_cloud.attach_disk('fake-vm-cid', 'disk-cid')
+          disk_hint = vsphere_cloud.attach_disk('fake-vm-cid', 'disk-cid')
+          expect(disk_hint).to eq('some-unit-number')
         end
 
         it 'moves the UUID disk to an accessible datastore and attaches it' do
@@ -1622,13 +1595,8 @@ module VSphereCloud
             OpenStruct.new(backing: OpenStruct.new(uuid: 'SOME-UUID'))
           end 
 
-          expect(agent_env).to receive(:set_env) do|env_vm, env_location, env|
-            expect(env_vm).to eq(vm_mob)
-            expect(env_location).to eq(vm_location)
-            expect(env['disks']['persistent']['disk-cid']).to eq({'id' => 'some-uuid'})
-          end
-
-          vsphere_cloud.attach_disk('fake-vm-cid', 'disk-cid')
+          disk_hint = vsphere_cloud.attach_disk('fake-vm-cid', 'disk-cid')
+          expect(disk_hint).to eq({'id' => 'some-uuid'})
         end
       end
 
@@ -1657,13 +1625,8 @@ module VSphereCloud
           
           expect(vm).to receive(:disk_uuid_is_enabled?).and_return(false)
 
-          expect(agent_env).to receive(:set_env) do|env_vm, env_location, env|
-            expect(env_vm).to eq(vm_mob)
-            expect(env_location).to eq(vm_location)
-            expect(env['disks']['persistent']['disk-cid']).to eq('some-unit-number')
-          end
-
-          vsphere_cloud.attach_disk('fake-vm-cid', 'disk-cid')
+          disk_hint = vsphere_cloud.attach_disk('fake-vm-cid', 'disk-cid')
+          expect(disk_hint).to eq('some-unit-number')
         end
 
         it 'moves the UUID disk to a persistent datastore and attaches it' do
@@ -1683,13 +1646,8 @@ module VSphereCloud
             OpenStruct.new(backing: OpenStruct.new(uuid: 'SOME-UUID'))
           end 
 
-          expect(agent_env).to receive(:set_env) do|env_vm, env_location, env|
-            expect(env_vm).to eq(vm_mob)
-            expect(env_location).to eq(vm_location)
-            expect(env['disks']['persistent']['disk-cid']).to eq({'id' => 'some-uuid'})
-          end
-
-          vsphere_cloud.attach_disk('fake-vm-cid', 'disk-cid')
+          disk_hint = vsphere_cloud.attach_disk('fake-vm-cid', 'disk-cid')
+          expect(disk_hint).to eq({'id' => 'some-uuid'})
         end
       end
 
@@ -1892,25 +1850,15 @@ module VSphereCloud
           }
         end
         let(:cdrom) { instance_double(VimSdk::Vim::Vm::Device::VirtualCdrom) }
-        let(:env) do
-          {'disks' => {'persistent' => {'disk-cid' => 'fake-data'}}}
-        end
-
         before do
           allow(datacenter).to receive(:disk_path).and_return("fake-disk-path")
           allow(cdrom).to receive_message_chain(:backing, :datastore, :name) { 'fake-datastore-name' }
           allow(vcenter_client).to receive(:get_cdrom_device).with(vm_mob).and_return(cdrom)
-          allow(agent_env).to receive(:get_current_env).with(vm_mob, 'fake-datacenter').and_return(env)
           allow(vm).to receive(:disk_by_cid).with('disk-cid').and_return(attached_disk)
           allow(vm).to receive(:accessible_datastores).and_return({'fake-datastore-name'=>fake_datastore})
         end
 
         it 'updates VM with new settings' do
-          expect(agent_env).to receive(:set_env).with(
-              vm_mob,
-              vm_location,
-              {'disks' => {'persistent' => {}}}
-            )
           expect(vm).to receive(:detach_disks).with([attached_disk], 'fake-disk-path')
           vsphere_cloud.detach_disk('vm-id', 'disk-cid')
         end
@@ -1938,11 +1886,6 @@ module VSphereCloud
           end
 
           it 'extracts the vSphere cid from the director disk cid and uses it' do
-            expect(agent_env).to receive(:set_env).with(
-              vm_mob,
-              vm_location,
-              {'disks' => {'persistent' => {}}}
-            )
             allow(vm).to receive(:disk_by_cid).and_return(attached_disk)
             allow(vm).to receive(:detach_disks)
 

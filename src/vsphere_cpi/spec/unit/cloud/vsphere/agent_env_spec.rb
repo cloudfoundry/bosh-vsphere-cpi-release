@@ -22,58 +22,6 @@ module VSphereCloud
       }
     end
 
-    describe '#get_current_env' do
-      let(:vm) { instance_double('VimSdk::Vim::VirtualMachine', name: 'fake-vm-name') }
-
-      before do
-        allow(client).to receive(:get_cdrom_device).with(vm).and_return(cdrom_device)
-        allow(subject).to receive(:get_vm_vsphere_cluster_hosts).with(vm).and_return([])
-      end
-
-      let(:cdrom_device) do
-        instance_double(
-          'VimSdk::Vim::Vm::Device::VirtualCdrom',
-          backing: cdrom_backing
-        )
-      end
-
-      before do
-        allow(cdrom_device).to receive(:kind_of?).
-          with(VimSdk::Vim::Vm::Device::VirtualCdrom).and_return(true)
-      end
-
-      let(:cdrom_backing) do
-        instance_double('VimSdk::Vim::Vm::Device::VirtualCdrom::IsoBackingInfo',
-          datastore: cdrom_datastore,
-          file_name: '[fake-datastore-name 1] fake-vm-name/env.iso'
-        )
-      end
-
-      let(:cdrom_datastore) { instance_double('VimSdk::Vim::Datastore', name: 'fake-datastore-name 1') }
-
-      it 'gets current agent environment from fetched file' do
-        expect(file_provider).to receive(:fetch_file_from_datastore).with(
-          'fake-datacenter-name 1',
-          cdrom_datastore,
-          'fake-vm-name/env.json', []
-        ).and_return('{"fake-response-json" : "some-value"}')
-
-        expect(subject.get_current_env(vm, 'fake-datacenter-name 1')).to eq({'fake-response-json' => 'some-value'})
-      end
-
-      it 'raises if env.json is empty' do
-        allow(file_provider).to receive(:fetch_file_from_datastore).with(
-          'fake-datacenter-name 1',
-          cdrom_datastore,
-          'fake-vm-name/env.json', []
-        ).and_return(nil)
-
-        expect {
-          subject.get_current_env(vm, 'fake-datacenter-name 1')
-        }.to raise_error(Bosh::Clouds::CloudError)
-      end
-    end
-
     describe '#clean_env' do
       let(:vm) do
         instance_double('VimSdk::Vim::VirtualMachine',

@@ -10,24 +10,6 @@ module VSphereCloud
       @file_provider = file_provider
     end
 
-    def get_current_env(vm, datacenter_name)
-      logger.info("Getting current agent env from vm '#{vm.name}' in datacenter '#{datacenter_name}'")
-      cdrom = @client.get_cdrom_device(vm)
-      env_iso_folder = env_iso_folder(cdrom)
-      return unless env_iso_folder
-
-      datastore = cdrom.backing.datastore
-      datastore_pattern = Regexp.escape(datastore.name)
-      result = env_iso_folder.match(/\[#{datastore_pattern}\] (.*)/)
-      raise Bosh::Clouds::CloudError.new("Could not find matching datastore name '#{datastore.name}'") unless result
-      env_path = result[1]
-      ds_hosts = get_vm_vsphere_cluster_hosts(vm)
-      contents = @file_provider.fetch_file_from_datastore(datacenter_name, datastore, "#{env_path}/env.json", ds_hosts)
-      raise Bosh::Clouds::CloudError.new("Unable to load env.json from '#{env_path}/env.json'") unless contents
-
-      JSON.load(contents)
-    end
-
     def set_env(vm, location, env)
       logger.info("Updating current agent env from vm '#{vm.name}' in datacenter '#{location[:datacenter]}'")
       env_json = JSON.dump(env)
@@ -35,6 +17,10 @@ module VSphereCloud
       disconnect_cdrom(vm)
       clean_env(vm)
       ds_hosts = get_vm_vsphere_cluster_hosts(vm)
+      # NOTE: env.json used to be used by a 'get_current_env' method to fetch the existing env state of the VM and
+      # update it. We no longer update the agent env, since disk information is passed by CPIv2 `disk_hint` so the
+      # 'get_current_env' method has been removed and 'env.json' is written out purely for consistency & debugging
+      # purposes.
       @file_provider.upload_file_to_datastore(location[:datacenter],
                                               location[:datastore].mob,
                                               "#{location[:vm]}/env.json",
