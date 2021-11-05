@@ -28,14 +28,55 @@ $SRC_DIR/bin/test-unit
 ```
 
 Integration tests:
-Create the lifecycle.env file with the following [environment variables](https://github.com/cloudfoundry-incubator/bosh-vsphere-cpi-release/blob/bc88e607b08cf89bc359d69688567e1def093391/src/vsphere_cpi/spec/support/lifecycle_helpers.rb#L8-L32):
+Create the lifecycle.env file with the following [environment variables](https://github.com/cloudfoundry/bosh-vsphere-cpi-release/blob/bc88e607b08cf89bc359d69688567e1def093391/src/vsphere_cpi/spec/support/lifecycle_helpers.rb#L8-L32):
 
 ```bash
 source lifecycle.env
 $SRC_DIR/bin/test-integration
 ```
 
-## Generating clients
+## CI Pipeline Management (for VMware internal development)
+
+We use vane-provided environments in bosh-vsphere-cpi tests. Vane deploys nimbus testbeds using the **svc.tas-anycloud** service account. These tests are run on the [BOSH Ecosystem CI](https://ci.bosh-ecosystem.cf-app.com/teams/vsphere-cpi/pipelines/vsphere-cpi). 
+
+Vane environments are created by [this pipeline](https://ci.bosh-ecosystem.cf-app.com/teams/vsphere-cpi/pipelines/vcpi-nimbus) and freed up by [this one](https://ci.bosh-ecosystem.cf-app.com/teams/vsphere-cpi/pipelines/vcpi-testbed-cleanup).
+
+This pipeline was set up with [vane CLI](https://gitlab.eng.vmware.com/tas-vcf-vmc-anycloud/vane). We forked the original [vane CLI](https://gitlab.eng.vmware.com/PKS/vane) and broke its re-usability in order to make it work more easily for our use case.
+
+Vane is using a recipe for the environments that is defined in the `Vanefile` and runs a bunch of scripts in the provided directory. We store our recipe and scripts here: [https://gitlab.eng.vmware.com/tas-vcf-vmc-anycloud/vcpi-nimbus](https://gitlab.eng.vmware.com/tas-vcf-vmc-anycloud/vcpi-nimbus)
+
+**To set the vcpi-nimbus (pool management) pipeline** 
+
+- make sure that you have a concourse target that targets the vsphere-cpi team in the bosh-ecosystem concourse
+- in the `vcpi-nimbus` repository:
+  - `vane pipeline --target=vsphere-cpi --pipeline=vcpi-nimbus`
+
+> **Note:** this script relies on `fly targets` to work without specifying a target, so if you are using the clever fly-version wrapper script from @ystros, you will likely have to either undo it, or add a hack to it to pick a default target when none is specified.
+
+**To set the vsphere-cpi test pipeline**
+
+- make sure that you have a concourse target that targets the vsphere-cpi team in the bosh-ecosystem concourse
+- in the `ci` folder of this repository:
+  - `CONCOURSE=vsphere-cpi rake pipeline[vsphere-cpi]`
+
+## To use a pooled testbed for development testing (for VMware internal development)
+
+The pool of testbeds managed by vcpi-nimbus is here: [https://gitlab.eng.vmware.com/tas-vcf-vmc-anycloud/vcpi-pool](https://gitlab.eng.vmware.com/tas-vcf-vmc-anycloud/vcpi-pool)
+
+Get the jumpbox, vcenter and NSX-T manager IPs and access credentials in the pool lock files.
+
+Use sshuttle to bridge into the private network
+```
+$ sshuttle -r vcpi@<BOSH_VSPHERE_JUMPER_HOST> 192.168.111.0/24 30.0.0.0/16 --dns
+Password: vcpi
+```
+
+If trying to install the bosh cpi on a vane jumpbox, you’ll need the following installed
+```
+sudo apt install vim git gcc libcurl4-openssl-dev libc6-dev make libssl-dev ruby
+```
+
+## Generating Ruby client libraries
 
 ### NSX-T manager client
 
@@ -49,3 +90,23 @@ export PATH="/usr/local/opt/swagger-codegen@2/bin:$PATH"
 cd src/vsphere_cpi
 bundle exec rake swagger:nsxt_manager_client
 ```
+
+## Cutting New Releases
+
+The vSphere CPI currently only uses major releases. (Older versions of the CPI had patch or minor release versions, but we no longer support this in our tooling.)
+
+To cut a major release, once everything has passed:
+
+* trigger **[inspect-candidate](https://ci.bosh-ecosystem.cf-app.com/teams/vsphere-cpi/pipelines/vsphere-cpi/jobs/inspect-candidate)** (This reports the version and last commit. It doesn’t change anything until you “promote.”)
+* trigger **[promote-candidate](https://ci.bosh-ecosystem.cf-app.com/teams/vsphere-cpi/pipelines/vsphere-cpi/jobs/promote-candidate)**
+* go to [https://github.com/cloudfoundry/bosh-vsphere-cpi-release/releases](https://github.com/cloudfoundry/bosh-vsphere-cpi-release/releases)
+* click “Draft a New Release”
+  * Tag, e.g. “v61”
+  * Release Title: e.g. v61
+  * Description:
+
+        **[Bug Fix]** Example example example.
+        
+        **[Feature Enhancement]** Example example example.
+        
+        **[Feature]** Example example example.
