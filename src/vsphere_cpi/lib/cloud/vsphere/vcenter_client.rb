@@ -285,7 +285,7 @@ module VSphereCloud
 
       if !dvpg_networks.empty? && opaque_networks.length <= 1
         referent = if !opaque_networks.empty?
-          opaque_networks.first.mob.summary.opaque_network_id
+          opaque_networks.first.summary.opaque_network_id
         end
 
         return dvpg_networks.first if dvpg_networks.all? do |n|

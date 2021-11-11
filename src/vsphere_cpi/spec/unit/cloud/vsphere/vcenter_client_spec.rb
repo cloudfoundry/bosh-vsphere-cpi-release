@@ -547,6 +547,42 @@ module VSphereCloud
       end
     end
 
+    describe '#find_network' do
+      let(:datacenter) { instance_double(VSphereCloud::Resources::Datacenter) }
+      let(:network_name) { 'network_1' }
+
+      context 'when an opaque network and a DVS share the same name' do
+        let(:opaque_network) { instance_double(VimSdk::Vim::OpaqueNetwork, {name: network_name})}
+        let(:dvs_network) { instance_double(VimSdk::Vim::Dvs::DistributedVirtualPortgroup, {name: network_name})}
+        let(:opaque_guid) { 'some_guid'}
+        let(:dvs_guid) { 'some_guid'}
+        before do
+          expect(datacenter).to receive_message_chain(:mob, :network).and_return([opaque_network, dvs_network])
+          allow(opaque_network).to receive_message_chain(:summary, :opaque_network_id).and_return(opaque_guid)
+          allow(dvs_network).to receive_message_chain(:config, :respond_to?).and_return(true)
+          allow(dvs_network).to receive_message_chain(:config, :backing_type).and_return('nsx')
+          allow(dvs_network).to receive_message_chain(:config, :logical_switch_uuid).and_return(dvs_guid)
+          allow(opaque_network).to receive(:is_a?) { |t| t == VimSdk::Vim::OpaqueNetwork }
+          allow(dvs_network).to receive(:is_a?)  { |t| t == VimSdk::Vim::Dvs::DistributedVirtualPortgroup }
+        end
+
+        context 'when the networks match' do
+          it 'returns the dvs network' do
+            network = client.find_network(datacenter, network_name)
+            expect(network).to eq(dvs_network)
+          end
+        end
+        context 'when the networks do not match' do
+          let(:dvs_guid) {'some_other_guid'}
+          it 'returns the dvs network' do
+            expect do
+              client.find_network(datacenter, network_name)
+            end.to raise_error(/^Multiple networks found for #{network_name}\./)
+          end
+        end
+      end
+    end
+
     describe '#find_disk_size_using_browser?' do
       let(:datastore) { instance_double(Resources::Datastore, name: 'fake-datastore') }
       let(:datastore_mob) { instance_double(VimSdk::Vim::Datastore) }
