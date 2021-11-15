@@ -124,8 +124,9 @@ module VSphereCloud
           return disk unless disk.nil?
         end
 
-        logger.debug("Looking for disk #{disk_cid} in datastores matching persistent pattern #{persistent_pattern}")
-        regexp = Regexp.new(persistent_pattern)
+        persistent_datastore_pattern = StoragePicker.choose_global_datastore_pattern(self, true)
+        logger.debug("Looking for disk #{disk_cid} in datastores matching persistent pattern #{persistent_datastore_pattern}")
+        regexp = Regexp.new(persistent_datastore_pattern)
         persistent_datastores = accessible_datastores.select do |name, _|
           name =~ regexp && !hint_datastores.key?(name)
         end

@@ -401,6 +401,19 @@ describe VSphereCloud::Resources::Datacenter, fake_logger: true do
       end
     end
 
+    context 'when persistent_datastore_cluster_pattern is specified and the disk exists in matching datastore' do
+      let(:persistent_pattern) { nil }
+      let(:persistent_datastore_cluster_pattern) { '' }
+
+      it 'returns disk without searching in other datastores' do
+        expect(VSphereCloud::StoragePicker).to receive(:choose_global_datastore_pattern).with(datacenter, true).and_return(/other_datastore_1/)
+
+        expect(client).to receive(:find_disk).with('disk-cid', other_datastore_1, 'fake-disk-path').and_return(disk)
+
+        expect(datacenter.find_disk(director_disk_cid)).to eq(disk)
+      end
+    end
+
     context 'when disk exists in other datastores' do
       it 'returns disk' do
         expect(client).to receive(:find_disk).with('disk-cid', persistent_datastore, 'fake-disk-path').and_return(nil)
