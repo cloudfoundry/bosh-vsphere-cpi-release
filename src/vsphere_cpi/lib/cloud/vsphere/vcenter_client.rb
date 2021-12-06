@@ -251,8 +251,7 @@ module VSphereCloud
         when VimSdk::Vim::Folder
           container.child_entity
         when nil
-          # Call flatten just in case find_by_inventory_path returns more than one object.
-          [ find_by_inventory_path([datacenter.name, 'network', name]) ].flatten
+          datacenter.mob.network
       end
 
       # Find networks that match the network name
