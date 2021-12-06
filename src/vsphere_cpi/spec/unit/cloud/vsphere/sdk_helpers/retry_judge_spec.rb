@@ -38,8 +38,9 @@ describe 'RetryJudge' do
         next
       end
 
+      all_object_methods = ["RetrieveProperties"]
       wsdl_method_names = klass.managed_methods.map { |m| m.wsdl_name }
-      expect(wsdl_method_names).to include(method_name)
+      expect(wsdl_method_names + all_object_methods).to include(method_name)
     end
   end
 end

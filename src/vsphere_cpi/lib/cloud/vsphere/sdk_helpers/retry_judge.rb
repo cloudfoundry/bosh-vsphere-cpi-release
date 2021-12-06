@@ -68,12 +68,17 @@ module VSphereCloud
           entity_class: VimSdk::Vim::ExtensionManager,
         },
         {
-            method_name: 'AcquireGenericServiceTicket',
-            fault_class: VimSdk::Vim::Fault::NoPermission,
+          method_name: 'AcquireGenericServiceTicket',
+          fault_class: VimSdk::Vim::Fault::NoPermission,
         },
         {
-            method_name: 'Logout',
-            fault_class: VimSdk::Vim::Fault::NotAuthenticated,
+          method_name: 'Logout',
+          fault_class: VimSdk::Vim::Fault::NotAuthenticated,
+        },
+        {
+          method_name: 'RetrieveProperties',
+          entity_class: VimSdk::Vim::OpaqueNetwork,
+          fault_class: VimSdk::Vmodl::Fault::ManagedObjectNotFound
         },
       ]
 
