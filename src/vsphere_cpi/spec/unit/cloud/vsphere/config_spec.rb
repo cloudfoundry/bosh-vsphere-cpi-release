@@ -524,6 +524,33 @@ module VSphereCloud
 
     end
 
+    describe '#use_policy_api?' do
+      context 'when `use_policy_api` is not specified in the Global Config' do
+        before do
+          config_hash['vcenters'].first['nsxt'] = {}
+        end
+        it 'should return false' do
+          expect(config.nsxt.use_policy_api?).to be_falsey
+        end
+      end
+      context 'when `use_policy_api` is set to `false` in the Global Config' do
+        before do
+          config_hash['vcenters'].first['nsxt'] = {'use_policy_api' => false}
+        end
+        it 'should return false' do
+          expect(config.nsxt.use_policy_api?).to eq(false)
+        end
+      end
+      context 'when `use_policy_api` is set to `true` in the Global Config' do
+        before do
+          config_hash['vcenters'].first['nsxt'] = {'use_policy_api' => true}
+        end
+        it 'should return true' do
+          expect(config.nsxt.use_policy_api?).to eq(true)
+        end
+      end
+    end
+
     describe '#datacenter_use_sub_folder' do
       context 'when use sub folder is not set' do
         before { datacenters.first.delete('use_sub_folder') }

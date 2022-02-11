@@ -574,6 +574,110 @@ describe 'CPI', nsxt_all: true do
         end
       end
     end
+
+    context 'when specifying both NSX-T Policy API and Manager API at cluster level' do
+      let(:cluster_using_manager_api) { fetch_property('BOSH_VSPHERE_CPI_CLUSTER') }
+      let(:cluster_using_policy_api) { fetch_property('BOSH_VSPHERE_CPI_SECOND_CLUSTER') }
+      # We don't specify `use_policy_api` in the Global Config; we allow it to default to the Manager API
+      let(:cpi) do
+        VSphereCloud::Cloud.new(cpi_options({datacenters: [
+          {
+            clusters: [
+              {cluster_using_manager_api: {}}, # defaults to the Global Config's `use_policy_api`, i.e. the Manager API
+              {cluster_using_policy_api: { use_policy_api: true }},
+            ]
+          }
+        ], nsxt: {
+          host: "@nsxt_host",
+          username: "@nsxt_username",
+          password: "nsxt_password",
+        }}))
+      end
+      let(:vm_type_manager) do
+        {
+          'ram' => 512,
+          'disk' => 2048,
+          'cpu' => 1,
+          'datacenters' => [{
+                              'name' => @datacenter_name,
+                              'clusters' => [cluster_using_manager_api => {}]
+                            }]
+        }
+      end
+      let(:vm_type_policy) do
+        {
+          'ram' => 512,
+          'disk' => 2048,
+          'cpu' => 1,
+          'datacenters' => [{
+                              'name' => @datacenter_name,
+                              'clusters' => [cluster_using_policy_api => {}]
+                            }]
+        }
+      end
+      # We create a Manager Group for the Manager VM, a Policy Group for the Policy VM
+      let(:nsxt_spec_manager) do
+        {
+          'ns_groups' => [nsgroup_name_1],
+        }
+        end
+      let(:nsxt_spec_policy) do
+        {
+          'ns_groups' => [nsgroup_name_2],
+        }
+        end
+      let!(:nsgroup_manager) { create_nsgroup(nsgroup_name_1) }
+      let!(:nsgroup_policy) { create_policy_group(nsgroup_name_2) }
+      before do
+        create_segments([segment_1])
+      end
+      after do
+        delete_nsgroup(nsgroup_1)
+        delete_policy_nsgroup(nsgroup_2)
+        delete_segments(segment_1)
+      end
+
+      it 'creates the object using the API specified at the Global Config (Manager) when not set at the Cluster' do
+        simple_vm_lifecycle(cpi, '', vm_type_manager, network_spec) do |vm_id|
+          verify_ports(vm_id) do |lport|
+            expect(lport).not_to be_nil
+            expect(nsgroup_effective_logical_port_member_ids(nsgroup_manager)).to include(lport.id)
+          end
+        end
+      end
+      it 'creates the object, overriding the API specified at the Global Config (Policy) if set at the Cluster' do
+        simple_vm_lifecycle(cpi, '', vm_type, policy_network_spec) do |vm_id|
+          vm = @cpi.vm_provider.find(vm_id)
+          segment_names = vm.get_nsxt_segment_vif_list.map { |x| x[0] }
+          expect(segment_names.length).to eq(1)
+          expect(segment_names).to include(segment_1.name)
+          retryer do
+            results = @policy_group_members_api.get_group_vm_members_0(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, nsgroup_name_1).results
+            raise StillUpdatingVMsInGroups if results.map(&:display_name).uniq.length < 1
+
+            expect(results.length).to eq(1)
+            expect(results[0].display_name).to eq(vm_id)
+
+            results = @policy_group_members_api.get_group_vm_members_0(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, nsgroup_name_2).results
+            raise StillUpdatingVMsInGroups if results.map(&:display_name).uniq.length < 1
+
+            expect(results.length).to eq(1)
+            expect(results[0].display_name).to eq(vm_id)
+          end
+        end
+
+        retryer do
+          results = @policy_group_members_api.get_group_vm_members_0(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, nsgroup_name_1).results
+          raise StillUpdatingVMsInGroups if results.map(&:display_name).uniq.length > 0
+
+          expect(results.length).to eq(0)
+          results = @policy_group_members_api.get_group_vm_members_0(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, nsgroup_name_2).results
+          raise StillUpdatingVMsInGroups if results.map(&:display_name).uniq.length > 0
+
+          expect(results.length).to eq(0)
+        end
+      end
+    end
   end
 
   describe 'on delete_vm' do
