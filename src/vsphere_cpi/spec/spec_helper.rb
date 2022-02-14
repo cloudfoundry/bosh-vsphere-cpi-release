@@ -51,6 +51,7 @@ RSpec.shared_context 'with fast retries' do
 end
 
 RSpec.configure do |config|
+  config.filter_run focus: true
   config.include Support
 
   config.mock_with :rspec do |mocks|

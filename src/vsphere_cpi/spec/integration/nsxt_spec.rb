@@ -575,7 +575,7 @@ describe 'CPI', nsxt_all: true do
       end
     end
 
-    context 'when specifying both NSX-T Policy API and Manager API at cluster level' do
+    context 'when specifying both NSX-T Policy API and Manager API at cluster level', focus: true do
       let(:cluster_using_manager_api) { fetch_property('BOSH_VSPHERE_CPI_CLUSTER') }
       let(:cluster_using_policy_api) { fetch_property('BOSH_VSPHERE_CPI_SECOND_CLUSTER') }
       # We don't specify `use_policy_api` in the Global Config; we allow it to default to the Manager API
@@ -584,13 +584,15 @@ describe 'CPI', nsxt_all: true do
           {
             clusters: [
               {cluster_using_manager_api: {}}, # defaults to the Global Config's `use_policy_api`, i.e. the Manager API
-              {cluster_using_policy_api: { use_policy_api: true }},
+              {cluster_using_policy_api: {}},
             ]
           }
         ], nsxt: {
           host: "@nsxt_host",
           username: "@nsxt_username",
           password: "nsxt_password",
+          use_policy_api: false,
+          use_policy_api_clusters: ["cluster_using_policy_api"]
         }}))
       end
       let(:vm_type_manager) do
@@ -637,7 +639,7 @@ describe 'CPI', nsxt_all: true do
         delete_segments(segment_1)
       end
 
-      it 'creates the object using the API specified at the Global Config (Manager) when not set at the Cluster' do
+      it 'does not use the Policy API when use_policy_api is false and the cluster is not specified in the use_policy_api_clusters' do
         simple_vm_lifecycle(cpi, '', vm_type_manager, network_spec) do |vm_id|
           verify_ports(vm_id) do |lport|
             expect(lport).not_to be_nil
@@ -645,8 +647,8 @@ describe 'CPI', nsxt_all: true do
           end
         end
       end
-      it 'creates the object, overriding the API specified at the Global Config (Policy) if set at the Cluster' do
-        simple_vm_lifecycle(cpi, '', vm_type, policy_network_spec) do |vm_id|
+      it 'uses the Policy API when use_policy_api is false but the cluster is specified in the use_policy_api_clusters' do
+        simple_vm_lifecycle(cpi, '', vm_type_policy, policy_network_spec) do |vm_id|
           vm = @cpi.vm_provider.find(vm_id)
           segment_names = vm.get_nsxt_segment_vif_list.map { |x| x[0] }
           expect(segment_names.length).to eq(1)

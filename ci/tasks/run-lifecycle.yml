@@ -10,7 +10,7 @@ inputs:
 outputs:
   - name: dummy # dummy output to avoid sending the entire task over the network
 run:
-  path: source-ci/ci/tasks/run-lifecycle.sh
+  path: bosh-cpi-src/ci/tasks/run-lifecycle.sh
 params:
   RSPEC_FLAGS:                             ""
   BOSH_VSPHERE_VERIFY_LIMITED_PERMISSIONS: true
