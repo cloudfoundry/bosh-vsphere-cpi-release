@@ -519,6 +519,23 @@ module VSphereCloud
       end
     end
 
+    def get_custom_field(mob, custom_attribute_name)
+      @fields_manager ||= @service_content.custom_fields_manager
+      name = custom_attribute_name.to_s
+      custom_fields = @fields_manager.field
+      custom_values = mob.custom_value
+      field = custom_fields.find do |field|
+        field.name == name && field.managed_object_type == mob.class
+      end
+      return_value = nil
+      custom_values.each do |custom_value|
+        if field.key == custom_value.key
+          return_value = custom_value.value
+        end
+      end unless field.nil?
+      return return_value
+    end
+
     def find_child_by_name(mob, child_path)
       return mob if child_path.empty?
       child_entity_name = child_path.shift

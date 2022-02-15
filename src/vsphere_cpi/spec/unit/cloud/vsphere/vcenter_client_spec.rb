@@ -864,5 +864,46 @@ module VSphereCloud
         end
       end
     end
+
+    describe '#get_custom_field' do
+      let(:custom_fields_manager) { instance_double(VimSdk::Vim::CustomFieldsManager) }
+      let(:vm_mob) { instance_double(VimSdk::Vim::VirtualMachine, custom_value: [cpi_metadata_attribute]) }
+      let(:cpi_metadata_attribute) {double(key: '2', value: "1")}
+      before do
+        allow(fake_service_content).to receive(:custom_fields_manager).and_return(custom_fields_manager)
+      end
+
+      context 'when called on existing key' do
+        let(:first_field) do
+          instance_double(
+            VimSdk::Vim::CustomFieldsManager::FieldDef,
+            name: 'key', key: '2', managed_object_type: vm_mob.class
+          )
+        end
+
+        let(:custom_fields) { [first_field] }
+        before do
+          allow(custom_fields_manager).to receive(:field).and_return(custom_fields)
+        end
+
+        it 'get the field value for the key' do
+          expect(client.get_custom_field(vm_mob, 'key')).to eq("1")
+
+        end
+      end
+
+      context 'when called on non-existing key' do
+        before do
+          allow(custom_fields_manager).to receive(:field).and_return([])
+        end
+
+        it 'returns null' do
+          expect(custom_fields_manager).to_not receive(:remove_field_definition)
+          expect do
+            client.get_custom_field(vm_mob, 'key2')
+          end.to_not raise_error
+        end
+      end
+    end
   end
 end

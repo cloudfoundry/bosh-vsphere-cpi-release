@@ -369,6 +369,7 @@ module VSphereCloud
             pbm: @pbm,
           )
           created_vm = vm_creator.create(vm_config)
+          @client.set_custom_field(created_vm.mob, "cpi_metadata_version", 1)
         rescue => e
           logger.error("Error in creating vm: #{e}, Backtrace - #{e.backtrace.join("\n")}")
           raise e

@@ -480,7 +480,7 @@ module VSphereCloud
         )
       end
       let(:fake_datastore) { instance_double(Resources::Datastore, name: 'fake-datastore') }
-      let(:fake_vm) { instance_double(Resources::VM, cid: 'fake-cloud-id', mob_id: 'fake-mob-id') }
+      let(:fake_vm) { instance_double(Resources::VM, cid: 'fake-cloud-id', mob_id: 'fake-mob-id', mob: stemcell_vm) }
       let(:vm_type) do
         {
           'cpu' => 1,
@@ -529,6 +529,7 @@ module VSphereCloud
         allow(datacenter).to receive(:persistent_pattern).and_return(target_datastore_pattern)
         allow(datacenter).to receive(:persistent_datastore_cluster_pattern).and_return(target_datastore_cluster_pattern)
         allow(datacenter).to receive(:find_disk).with(director_disk_cid).and_return(fake_disk)
+        allow(vcenter_client).to receive(:set_custom_field)
         allow(VSphereCloud::DirectorDiskCID).to receive(:new).with(encoded_disk_cid).and_return(director_disk_cid)
         allow(DiskConfig).to receive(:new)
           .with(
@@ -585,7 +586,6 @@ module VSphereCloud
             pbm: pbm,
           ).and_return(vm_creator)
         expect(vm_creator).to receive(:create).with(vm_config).and_return(fake_vm)
-
         vsphere_cloud.create_vm(
           'fake-agent-id',
           'fake-stemcell-cid',
@@ -594,6 +594,7 @@ module VSphereCloud
           existing_disk_cids,
           {}
         )
+        expect(vcenter_client).to have_received(:set_custom_field)
       end
 
       it 'creates a new VM with no existing disks and default environment' do
