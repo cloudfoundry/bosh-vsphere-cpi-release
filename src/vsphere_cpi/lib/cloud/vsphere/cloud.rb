@@ -20,6 +20,10 @@ module VSphereCloud
       end
     end
 
+    CPI_METADATA_VERSION = 1
+
+    CPI_METADATA_ATTRIBUTE_NAME = 'cpi_metadata_version'
+
     attr_accessor :client
     attr_reader :config, :datacenter, :heartbeat_thread, :pbm
 
@@ -369,7 +373,7 @@ module VSphereCloud
             pbm: @pbm,
           )
           created_vm = vm_creator.create(vm_config)
-          @client.set_custom_field(created_vm.mob, "cpi_metadata_version", 1)
+          @client.set_custom_field(created_vm.mob, CPI_METADATA_ATTRIBUTE_NAME, CPI_METADATA_VERSION)
         rescue => e
           logger.error("Error in creating vm: #{e}, Backtrace - #{e.backtrace.join("\n")}")
           raise e
@@ -472,7 +476,7 @@ module VSphereCloud
 
         vm = vm_provider.find(vm_cid)
         vm_ip = vm.mob.guest&.ip_address
-
+        vm_cpi_metadata_version = get_metadata_version(vm.mob)
         # find vm_groups vm is part of before deleting it
         cluster = vm.mob.runtime.host&.parent #host can be nil if vm is not running
         if cluster
@@ -522,7 +526,7 @@ module VSphereCloud
               raise e
             end
             begin
-              @nsxt_policy_provider.remove_vm_from_server_pools(vm_ip)
+              @nsxt_policy_provider.remove_vm_from_server_pools(vm_ip, vm_cid, vm_cpi_metadata_version)
             rescue => e
               logger.info("Failed to remove VM from ServerPool: #{e.message}")
             end
@@ -534,7 +538,7 @@ module VSphereCloud
               logger.info("Failed to remove VM from NSGroups: #{e.message}")
             end
             begin
-              @nsxt_provider.remove_vm_from_server_pools(vm_ip)
+              @nsxt_provider.remove_vm_from_server_pools(vm_ip, vm_cid, vm_cpi_metadata_version)
             rescue => e
               logger.info("Failed to remove VM from ServerPool: #{e.message}")
             end
@@ -898,6 +902,15 @@ module VSphereCloud
     end
 
     private
+
+    def get_metadata_version(vm_mob)
+      begin
+        return Integer(@client.get_custom_field(vm_mob, CPI_METADATA_ATTRIBUTE_NAME))
+      rescue
+        logger.warn("Invalid cpi_metadata_version , defaulting to 0")
+        return 0
+      end
+    end
 
     def import_ovf(name, ovf, resource_pool, datastore)
       import_spec_params = Vim::OvfManager::CreateImportSpecParams.new

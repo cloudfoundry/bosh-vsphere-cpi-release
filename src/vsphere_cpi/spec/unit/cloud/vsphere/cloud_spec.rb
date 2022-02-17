@@ -58,6 +58,7 @@ module VSphereCloud
     let(:cluster_provider) { instance_double(VSphereCloud::Resources::ClusterProvider) }
     let(:tag_client) { instance_double(TaggingTag::AttachTagToVm) }
     let(:tagging_tagger) { instance_double(TaggingTag::AttachTagToVm) }
+    let(:cpi_metadata_version){1}
 
     before do |example|
       allow(Config).to receive(:build).with(config).and_return(cloud_config)
@@ -1715,6 +1716,7 @@ module VSphereCloud
         allow(vm).to receive(:cdrom).and_return(nil)
         allow(vm_mob).to receive_message_chain(:guest, :ip_address).and_return(ip_address)
         allow(vm_mob).to receive_message_chain(:runtime, :host, :parent).and_return(fake_cluster)
+        allow(vcenter_client).to receive(:get_custom_field).and_return(cpi_metadata_version)
       end
 
       it 'deletes vm' do
@@ -1766,7 +1768,7 @@ module VSphereCloud
           expect(vm).to receive(:power_off)
           expect(vm).to receive(:delete)
           expect(nsxt_provider).to receive(:remove_vm_from_nsgroups).with(vm)
-          expect(nsxt_provider).to receive(:remove_vm_from_server_pools).with(ip_address)
+          expect(nsxt_provider).to receive(:remove_vm_from_server_pools).with(ip_address, 'vm-id', cpi_metadata_version)
           vsphere_cloud.delete_vm('vm-id')
         end
 
@@ -1777,7 +1779,7 @@ module VSphereCloud
             expect(nsxt_provider).to receive(:remove_vm_from_nsgroups).with(vm).and_raise(
               VIFNotFound.new('vm-id', 'fake-external-id')
             )
-            expect(nsxt_provider).to receive(:remove_vm_from_server_pools).with(ip_address)
+            expect(nsxt_provider).to receive(:remove_vm_from_server_pools).with(ip_address, 'vm-id', cpi_metadata_version)
 
             vsphere_cloud.delete_vm('vm-id')
           end
@@ -1787,7 +1789,7 @@ module VSphereCloud
             expect(vm).to receive(:power_off)
             expect(vm).to receive(:delete)
             expect(nsxt_provider).to receive(:remove_vm_from_nsgroups).with(vm)
-            expect(nsxt_provider).to receive(:remove_vm_from_server_pools).with(ip_address).and_raise(
+            expect(nsxt_provider).to receive(:remove_vm_from_server_pools).with(ip_address, 'vm-id', cpi_metadata_version).and_raise(
               NSXT::ApiCallError.new('NSX=T API error')
             )
             vsphere_cloud.delete_vm('vm-id')

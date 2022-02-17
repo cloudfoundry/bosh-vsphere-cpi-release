@@ -632,7 +632,7 @@ describe VSphereCloud::NSXTProvider, fake_logger: true, fast_retries: true do
       end
 
       it 'adds vm to server_pools with given port' do
-        expect(NSXT::PoolMemberSetting).to receive(:new).with(ip_address: ip_address, port: port_number)
+        expect(NSXT::PoolMemberSetting).to receive(:new).with(ip_address: ip_address, port: port_number, display_name: 'fake-vm-id')
         expect(services_svc).to receive(:perform_pool_member_action).with(serverpool_1.id, an_instance_of(NSXT::PoolMemberSettingList), 'ADD_MEMBERS')
         nsxt_provider.add_vm_to_server_pools(vm, server_pools)
       end
@@ -726,21 +726,31 @@ describe VSphereCloud::NSXTProvider, fake_logger: true, fast_retries: true do
 
   describe '#remove_vm_from_server_pools' do
     let(:vm_ip_address) { '192.168.111.5' }
-    let(:pool_member) { NSXT::PoolMember.new(ip_address: vm_ip_address, port: '80') }
+    let(:pool_member) { NSXT::PoolMember.new(ip_address: vm_ip_address, port: '80', display_name: 'fake-vm-id') }
+    let(:unmanaged_pool_member) { NSXT::PoolMember.new(ip_address: vm_ip_address, port: '80') }
     let(:server_pool_1) do
       NSXT::LbPool.new(id: 'id-1', display_name: 'test-static-serverpool', members: [pool_member])
     end
     let(:server_pool_2) do
       NSXT::LbPool.new(id: 'id-2', display_name: 'test-dynamic-serverpool', members: nil)
     end
+    let(:server_pool_3) do
+      NSXT::LbPool.new(id: 'id-3', display_name: 'test-dynamic-serverpool', members: [unmanaged_pool_member])
+    end
     before do
       allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:services_svc).and_return(services_svc)
-      expect(services_svc).to receive_message_chain(:list_load_balancer_pools, :results).and_return([server_pool_1, server_pool_2])
+      expect(services_svc).to receive_message_chain(:list_load_balancer_pools, :results).and_return([server_pool_1, server_pool_2, server_pool_3])
     end
 
     it 'removes VM from all server pools' do
       expect(services_svc).to receive(:perform_pool_member_action).with(server_pool_1.id,an_instance_of(NSXT::PoolMemberSettingList),'REMOVE_MEMBERS').once
-      nsxt_provider.remove_vm_from_server_pools(vm_ip_address)
+      expect(services_svc).to receive(:perform_pool_member_action).with(server_pool_3.id,an_instance_of(NSXT::PoolMemberSettingList),'REMOVE_MEMBERS').once
+      nsxt_provider.remove_vm_from_server_pools(vm_ip_address, 'fake-vm-id', 0)
+    end
+
+    it 'removes VM from all the bosh server pools when the cpi metadata version is greater than 0' do
+      expect(services_svc).to receive(:perform_pool_member_action).with(server_pool_1.id,an_instance_of(NSXT::PoolMemberSettingList),'REMOVE_MEMBERS').once
+      nsxt_provider.remove_vm_from_server_pools(vm_ip_address, 'fake-vm-id', 1)
     end
   end
 

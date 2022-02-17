@@ -498,7 +498,8 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
       NSXTPolicy::LBPool.new(id: "some-server-pool-id", display_name: "some-server-pool-name")
     end
     let(:updated_nsxt_pool) do
-      NSXTPolicy::LBPool.new(id: "some-server-pool-id", display_name: "some-server-pool-name", members: [NSXTPolicy::LBPoolMember.new(port: 80, ip_address: "9.8.7.6")])
+      NSXTPolicy::LBPool.new(id: "some-server-pool-id", display_name: "some-server-pool-name",
+                             members: [NSXTPolicy::LBPoolMember.new(port: 80, ip_address: "9.8.7.6", display_name: 'some-vm-cid')])
     end
 
     before do
@@ -523,7 +524,7 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
         NSXTPolicy::LBPool.new(id: "some-server-pool-id", display_name: "some-server-pool-name", members: [NSXTPolicy::LBPoolMember.new(ip_address: "5.6.4.3")])
       end
       let(:updated_nsxt_pool) do
-        NSXTPolicy::LBPool.new(id: "some-server-pool-id", display_name: "some-server-pool-name", members: [NSXTPolicy::LBPoolMember.new(ip_address: "5.6.4.3"), NSXTPolicy::LBPoolMember.new(port: 80, ip_address: "9.8.7.6")])
+        NSXTPolicy::LBPool.new(id: "some-server-pool-id", display_name: "some-server-pool-name", members: [NSXTPolicy::LBPoolMember.new(ip_address: "5.6.4.3"), NSXTPolicy::LBPoolMember.new(port: 80, ip_address: "9.8.7.6", display_name: 'some-vm-cid')])
       end
 
       it 'adds vm to the pool' do
@@ -548,7 +549,7 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
         ]
       end
       let(:second_updated_nsxt_pool) do
-        NSXTPolicy::LBPool.new(id: "some-other-server-pool-id", display_name: "some-other-server-pool-name", members: [NSXTPolicy::LBPoolMember.new(port: 8080, ip_address: "9.8.7.6")])
+        NSXTPolicy::LBPool.new(id: "some-other-server-pool-id", display_name: "some-other-server-pool-name", members: [NSXTPolicy::LBPoolMember.new(port: 8080, ip_address: "9.8.7.6", display_name: 'some-vm-cid')])
       end
       let(:original_second_pool) do
         NSXTPolicy::LBPool.new(id: "some-other-server-pool-id", display_name: "some-other-server-pool-name")
@@ -639,22 +640,36 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
 
   describe '#remove_vm_from_server_pools' do
     let(:vm_ip_address) { '192.168.111.5' }
-    let(:pool_member) { NSXTPolicy::LBPoolMember.new(port: 80, ip_address: vm_ip_address) }
+    let(:vm_cid) { 'some-vm-cid' }
+    let(:unmanaged_vm_cid) { 'some-unmanaged-vm-cid' }
+    let(:pool_member) { NSXTPolicy::LBPoolMember.new(port: 80, ip_address: vm_ip_address, display_name: vm_cid) }
+    let(:unmanaged_pool_member) { NSXTPolicy::LBPoolMember.new(port: 80, ip_address: vm_ip_address, display_name: unmanaged_vm_cid) }
     let(:server_pool_1) do
       NSXTPolicy::LBPool.new(id: 'some-server-pool-id', display_name: 'some-server-pool-name',  members: [pool_member])
     end
     let(:server_pool_2) do
       NSXTPolicy::LBPool.new(id: 'some-other-server-pool-id', display_name: 'some-other-server-pool-name', )
     end
+    let(:server_pool_3) do
+      NSXTPolicy::LBPool.new(id: 'some-bosh-unmanaged-server-pool-id', display_name: 'some-other-bosh-unmanaged-server-pool-name', members: [unmanaged_pool_member])
+    end
 
     before do
-      allow(policy_load_balancer_pools_api).to receive_message_chain(:list_lb_pools, :results).and_return([server_pool_1, server_pool_2])
+      allow(policy_load_balancer_pools_api).to receive_message_chain(:list_lb_pools, :results).and_return([server_pool_1, server_pool_2, server_pool_3])
     end
 
     it 'removes VM from all server pools' do
       expected_server_pool = NSXTPolicy::LBPool.new(id: 'some-server-pool-id', display_name: 'some-server-pool-name', members: [])
+      second_expected_server_pool = NSXTPolicy::LBPool.new(id: 'some-bosh-unmanaged-server-pool-id', display_name: 'some-other-bosh-unmanaged-server-pool-name', members: [])
       expect(policy_load_balancer_pools_api).to receive(:update_lb_pool_0).with('some-server-pool-id', expected_server_pool).once
-      nsxt_policy_provider.remove_vm_from_server_pools(vm_ip_address)
+      expect(policy_load_balancer_pools_api).to receive(:update_lb_pool_0).with('some-bosh-unmanaged-server-pool-id', second_expected_server_pool).once
+      nsxt_policy_provider.remove_vm_from_server_pools(vm_ip_address, vm_cid, 0)
+    end
+
+    it 'removes VM from all the bosh managed server pools if metadata is greater than 0' do
+      expected_server_pool = NSXTPolicy::LBPool.new(id: 'some-server-pool-id', display_name: 'some-server-pool-name', members: [])
+      expect(policy_load_balancer_pools_api).to receive(:update_lb_pool_0).with('some-server-pool-id', expected_server_pool).once
+      nsxt_policy_provider.remove_vm_from_server_pools(vm_ip_address, vm_cid,  1)
     end
   end
 

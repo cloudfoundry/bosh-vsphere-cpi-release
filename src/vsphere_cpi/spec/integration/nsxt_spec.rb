@@ -81,6 +81,7 @@ describe 'CPI', nsxt_all: true do
   let(:segment_2) { NameAndID.new }
   let(:pool_1) { NameAndID.new}
   let(:pool_2) { NameAndID.new}
+  let(:unmanaged_pool) { NameAndID.new}
   let(:vm_type) do
     {
       'ram' => 512,
@@ -349,7 +350,7 @@ describe 'CPI', nsxt_all: true do
             end
           end
         end
-        it 'adds vm to all existing static server pools with given name' do
+        it 'adds vm to all existing static server pools with given name and set the pool member display_name to the vm_cid' do
           begin
             server_pool_3 = create_static_server_pool(pool_1.name) #server pool with same name as server_pool_1
             simple_vm_lifecycle(cpi, @nsxt_opaque_vlan_1, vm_type) do |vm_id|
@@ -360,6 +361,8 @@ describe 'CPI', nsxt_all: true do
               expect(server_pool_1_members.count).to eq(1)
               server_pool_3_members = find_pool_members(server_pool_3, vm_ip, port_no)
               expect(server_pool_3_members.count).to eq(1)
+              expect(server_pool_1_members[0].display_name).to eq(vm.cid)
+              expect(server_pool_3_members[0].display_name).to eq(vm.cid)
             end
           ensure
             delete_server_pool(server_pool_3)
@@ -537,6 +540,78 @@ describe 'CPI', nsxt_all: true do
           server_pool_2 = @policy_load_balancer_pools_api.read_lb_pool_0(pool_2.id)
           expect(server_pool_2.members).to be_nil
         end
+
+        context 'when there are bosh managed and unmanaged lb_pools' do
+          let!(:unmanaged_lb_pool) { create_lb_pool(unmanaged_pool) }
+          after do
+            delete_lb_pool(unmanaged_lb_pool)
+          end
+          context 'when cpi_metadata_version is greater than 0' do
+            it 'creates VM in specified server pools, and deletes the vm membership only from the managed lb server pools' do
+              simple_vm_lifecycle(cpi, '', vm_type, policy_network_spec) do |vm_id|
+                vm = @cpi.vm_provider.find(vm_id)
+                segment_names = vm.get_nsxt_segment_vif_list.map { |x| x[0] }
+                expect(segment_names.length).to eq(2)
+                expect(segment_names).to include(segment_1.name)
+                expect(segment_names).to include(segment_2.name)
+                server_pool_1 = @policy_load_balancer_pools_api.read_lb_pool_0(pool_1.id)
+                expect(server_pool_1.members.length).to eq(1)
+                expect(server_pool_1.members[0].display_name).to eq(vm.cid)
+                server_pool_2 = @policy_load_balancer_pools_api.read_lb_pool_0(pool_2.id)
+                expect(server_pool_2.members.length).to eq(1)
+                expect(server_pool_2.members[0].display_name).to eq(vm.cid)
+
+                unmanaged_server_pool = @policy_load_balancer_pools_api.read_lb_pool_0(unmanaged_pool.id)
+                expect(unmanaged_server_pool.members).to be_nil
+                add_vm_to_unmanaged_server_pool_with_policy_api(unmanaged_lb_pool.id, vm.mob.guest&.ip_address, 80)
+                unmanaged_server_pool = @policy_load_balancer_pools_api.read_lb_pool_0(unmanaged_pool.id)
+                expect(unmanaged_server_pool.members.length).to eq(1)
+                expect(unmanaged_server_pool.members[0].display_name).to_not eq(vm.cid)
+              end
+
+              server_pool_1 = @policy_load_balancer_pools_api.read_lb_pool_0(pool_1.id)
+              expect(server_pool_1.members).to be_nil
+              server_pool_2 = @policy_load_balancer_pools_api.read_lb_pool_0(pool_2.id)
+              expect(server_pool_2.members).to be_nil
+              unmanaged_server_pool = @policy_load_balancer_pools_api.read_lb_pool_0(unmanaged_pool.id)
+              expect(unmanaged_server_pool.members.count).to eq(1)
+            end
+          end
+          context 'when cpi_metadata_version is 0' do
+            let(:cpi_metadata_version) {0}
+
+            it 'creates VM in specified server pools, and deletes the vm membership from all the lb server pools' do
+              simple_vm_lifecycle(cpi, '', vm_type, policy_network_spec) do |vm_id|
+                vm = @cpi.vm_provider.find(vm_id)
+                segment_names = vm.get_nsxt_segment_vif_list.map { |x| x[0] }
+                expect(segment_names.length).to eq(2)
+                expect(segment_names).to include(segment_1.name)
+                expect(segment_names).to include(segment_2.name)
+                server_pool_1 = @policy_load_balancer_pools_api.read_lb_pool_0(pool_1.id)
+                expect(server_pool_1.members.length).to eq(1)
+                expect(server_pool_1.members[0].display_name).to eq(vm.cid)
+                server_pool_2 = @policy_load_balancer_pools_api.read_lb_pool_0(pool_2.id)
+                expect(server_pool_2.members.length).to eq(1)
+                expect(server_pool_2.members[0].display_name).to eq(vm.cid)
+
+                set_cpi_metadata_version(cpi, vm.mob, cpi_metadata_version)
+                unmanaged_server_pool = @policy_load_balancer_pools_api.read_lb_pool_0(unmanaged_pool.id)
+                expect(unmanaged_server_pool.members).to be_nil
+                add_vm_to_unmanaged_server_pool_with_policy_api(unmanaged_lb_pool.id, vm.mob.guest&.ip_address, 80)
+                unmanaged_server_pool = @policy_load_balancer_pools_api.read_lb_pool_0(unmanaged_pool.id)
+                expect(unmanaged_server_pool.members.length).to eq(1)
+                expect(unmanaged_server_pool.members[0].display_name).to_not eq(vm.cid)
+              end
+
+              server_pool_1 = @policy_load_balancer_pools_api.read_lb_pool_0(pool_1.id)
+              expect(server_pool_1.members).to be_nil
+              server_pool_2 = @policy_load_balancer_pools_api.read_lb_pool_0(pool_2.id)
+              expect(server_pool_2.members).to be_nil
+              unmanaged_server_pool = @policy_load_balancer_pools_api.read_lb_pool_0(unmanaged_pool.id)
+              expect(unmanaged_server_pool.members).to be_nil
+            end
+          end
+        end
       end
 
       context 'with non-nsxt distributed virtual switches' do
@@ -686,6 +761,70 @@ describe 'CPI', nsxt_all: true do
 
         server_poo1_1_members = services_svc.read_load_balancer_pool(server_pool_1.id).members
         expect(server_poo1_1_members).to be_nil
+      end
+    end
+    context 'when bosh managed and unmanaged server pools exist on nsx' do
+      let(:port_no1) {'80'}
+      let(:nsxt_spec) {
+        {
+          'lb' => {
+            'server_pools' => [
+              {
+                'name' => pool_1.name,
+                'port' => port_no1
+              }
+            ]
+          }
+        }
+      }
+      let!(:nsgroup_1) { create_nsgroup(nsgroup_name_1) }
+      let!(:server_pool_1) { create_static_server_pool(pool_1.name) }
+      let!(:unmanaged_server_pool) { create_static_server_pool(unmanaged_pool.name) }
+      after do
+        delete_server_pool(server_pool_1)
+        delete_server_pool(unmanaged_pool)
+        delete_nsgroup(nsgroup_1)
+      end
+      context 'when cpi_metadata_version is greater than 0' do
+        it 'removes the VM from the bosh managed server pools' do
+          simple_vm_lifecycle(cpi, @nsxt_opaque_vlan_1, vm_type) do |vm_id|
+            vm = cpi.vm_provider.find(vm_id)
+            vm_ip = vm.mob.guest&.ip_address
+            expect(vm_ip).to_not be_nil
+            add_vm_to_unmanaged_server_pool_with_manager_api(unmanaged_server_pool.id, vm_ip, port_no1)
+            server_pool_1_members = find_pool_members(server_pool_1, vm_ip, port_no1)
+            unmanaged_pool_members = find_pool_members(unmanaged_server_pool, vm_ip, port_no1)
+            expect(server_pool_1_members.count).to eq(1)
+            expect(unmanaged_pool_members.count).to eq(1)
+          end
+
+          server_poo1_1_members = services_svc.read_load_balancer_pool(server_pool_1.id).members
+          unmanaged_pool_members = services_svc.read_load_balancer_pool(unmanaged_server_pool.id).members
+          expect(server_poo1_1_members).to be_nil
+          expect(unmanaged_pool_members.count).to eq(1)
+        end
+      end
+      context 'when cpi_metadata_version is 0' do
+        let(:cpi_metadata_version) {0}
+
+        it 'removes the VM from all the server pools' do
+        simple_vm_lifecycle(cpi, @nsxt_opaque_vlan_1, vm_type) do |vm_id|
+          vm = cpi.vm_provider.find(vm_id)
+          vm_ip = vm.mob.guest&.ip_address
+          expect(vm_ip).to_not be_nil
+          set_cpi_metadata_version(cpi, vm.mob, cpi_metadata_version)
+          add_vm_to_unmanaged_server_pool_with_manager_api(unmanaged_server_pool.id, vm_ip, port_no1)
+          server_pool_1_members = find_pool_members(server_pool_1, vm_ip, port_no1)
+          unmanaged_pool_members = find_pool_members(unmanaged_server_pool, vm_ip, port_no1)
+          expect(server_pool_1_members.count).to eq(1)
+          expect(unmanaged_pool_members.count).to eq(1)
+        end
+
+        server_poo1_1_members = services_svc.read_load_balancer_pool(server_pool_1.id).members
+        unmanaged_pool_members = services_svc.read_load_balancer_pool(unmanaged_server_pool.id).members
+        expect(server_poo1_1_members).to be_nil
+        expect(unmanaged_pool_members).to be_nil
+      end
       end
     end
   end
@@ -892,6 +1031,18 @@ describe 'CPI', nsxt_all: true do
     @policy_load_balancer_pools_api.delete_lb_pool_0(pool.id)
   end
 
+  def add_vm_to_unmanaged_server_pool_with_manager_api(server_pool_id, vm_ip, port_no)
+    pool_member = NSXT::PoolMemberSetting.new(ip_address: vm_ip, port: port_no, display_name: 'not-a-vm-cid')
+    pool_member_setting_list = NSXT::PoolMemberSettingList.new(members: [pool_member])
+    services_svc.perform_pool_member_action(server_pool_id, pool_member_setting_list, 'ADD_MEMBERS')
+  end
+
+  def add_vm_to_unmanaged_server_pool_with_policy_api(server_pool_id, vm_ip, port_no)
+    load_balancer_pool = @policy_load_balancer_pools_api.read_lb_pool_0(server_pool_id)
+    (load_balancer_pool.members ||= []).push(NSXTPolicy::LBPoolMember.new(port: port_no, ip_address: vm_ip, display_name: 'not-a-vm-cid'))
+    @policy_load_balancer_pools_api.update_lb_pool_0(server_pool_id, load_balancer_pool)
+  end
+
   def retryer
     Bosh::Retryable.new(
       tries: 300,
@@ -957,5 +1108,9 @@ describe 'CPI', nsxt_all: true do
       end
       true
     end
+  end
+
+  def set_cpi_metadata_version(cpi, vm_mob, cpi_metadata_version)
+    cpi.client.set_custom_field(vm_mob, "cpi_metadata_version", cpi_metadata_version.to_s)
   end
 end

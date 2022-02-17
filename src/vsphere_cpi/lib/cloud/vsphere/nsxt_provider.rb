@@ -256,7 +256,7 @@ module VSphereCloud
         raise VirtualMachineIpNotFound.new(vm) unless vm_ip
         server_pools.each do |server_pool, port_no|
           logger.info("Adding vm: '#{vm.cid}' with ip:#{vm_ip} to ServerPool: #{server_pool.id} on Port: #{port_no} ")
-          pool_member = NSXT::PoolMemberSetting.new(ip_address: vm_ip, port: port_no)
+          pool_member = NSXT::PoolMemberSetting.new(ip_address: vm_ip, port: port_no, display_name: vm.cid)
           pool_member_setting_list = NSXT::PoolMemberSettingList.new(members: [pool_member])
           begin
             services_svc.perform_pool_member_action(server_pool.id, pool_member_setting_list, 'ADD_MEMBERS')
@@ -296,15 +296,17 @@ module VSphereCloud
       [static_server_pools, dynamic_server_pools]
     end
 
-    def remove_vm_from_server_pools(vm_ip)
+    def remove_vm_from_server_pools(vm_ip, vm_cid, cpi_metadata_version)
         services_svc.list_load_balancer_pools.results.each do |server_pool|
         members_found = server_pool.members&.select {|member| member.ip_address == vm_ip}
         next unless members_found&.any?
         members_found.each do |member_found|
-          logger.info("Removing vm with ip: '#{vm_ip}', port_no: #{member_found.port} from ServerPool: #{server_pool.id} ")
-          pool_member = NSXT::PoolMemberSetting.new(ip_address: vm_ip, port: member_found.port)
-          pool_member_setting_list = NSXT::PoolMemberSettingList.new(members: [pool_member])
-          services_svc.perform_pool_member_action(server_pool.id, pool_member_setting_list, 'REMOVE_MEMBERS')
+          if (cpi_metadata_version > 0 && vm_cid == member_found.display_name) || cpi_metadata_version == 0
+            logger.info("Removing vm with ip: '#{vm_ip}', port_no: #{member_found.port} from ServerPool: #{server_pool.id} ")
+            pool_member = NSXT::PoolMemberSetting.new(ip_address: vm_ip, port: member_found.port)
+            pool_member_setting_list = NSXT::PoolMemberSettingList.new(members: [pool_member])
+            services_svc.perform_pool_member_action(server_pool.id, pool_member_setting_list, 'REMOVE_MEMBERS')
+          end
         end
       end
     end

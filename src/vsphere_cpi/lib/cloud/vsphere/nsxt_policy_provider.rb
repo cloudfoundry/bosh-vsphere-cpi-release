@@ -96,7 +96,7 @@ module VSphereCloud
             server_pool_id=server_pool_display_name_to_id(server_pool['name'])
             load_balancer_pool = policy_load_balancer_pools_api.read_lb_pool_0(server_pool_id)
             logger.info("Adding vm: '#{vm.cid}' with ip:#{vm_ip} to ServerPool: #{server_pool['name']} on Port: #{server_pool['port']} ")
-            (load_balancer_pool.members ||= []).push(NSXTPolicy::LBPoolMember.new(port: server_pool['port'], ip_address: vm_ip))
+            (load_balancer_pool.members ||= []).push(NSXTPolicy::LBPoolMember.new(port: server_pool['port'], ip_address: vm_ip, display_name: vm.cid))
             policy_load_balancer_pools_api.update_lb_pool_0(server_pool_id, load_balancer_pool)
           end
         end
@@ -114,11 +114,12 @@ module VSphereCloud
       matches.first.id
     end
 
-    def remove_vm_from_server_pools(vm_ip)
+    # cpi_metadata_version must be an integer
+    def remove_vm_from_server_pools(vm_ip, vm_cid, cpi_metadata_version)
       policy_load_balancer_pools_api.list_lb_pools.results.each do |server_pool|
         original_size = server_pool.members&.length
         server_pool.members&.each do |member|
-          if member.ip_address == vm_ip
+          if member.ip_address == vm_ip && ((cpi_metadata_version > 0 && vm_cid == member.display_name) || cpi_metadata_version == 0)
             logger.info("Removing vm with ip: '#{vm_ip}', port_no: #{member.port} from ServerPool: #{server_pool.id} ")
             server_pool.members&.delete(member)
           end
