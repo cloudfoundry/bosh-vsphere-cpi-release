@@ -288,42 +288,42 @@ resources:
       uri:          git@gitlab.eng.vmware.com:tas-vcf-vmc-anycloud/vcpi-pool.git
       branch:       master
       pool:         v6.5-nsxt25
-      private_key:  ((vcpi-pool_deployment_key))
+      private_key:  ((vcpi-pool_deployment_key.private_key))
   - name: pool-6.7-nsxt25
     type: pool
     source:
       uri:          git@gitlab.eng.vmware.com:tas-vcf-vmc-anycloud/vcpi-pool.git
       branch:       master
       pool:         v6.7-nsxt25
-      private_key:  ((vcpi-pool_deployment_key))
+      private_key:  ((vcpi-pool_deployment_key.private_key))
   - name: pool-7.0-nsxt30
     type: pool
     source:
       uri:          git@gitlab.eng.vmware.com:tas-vcf-vmc-anycloud/vcpi-pool.git
       branch:       master
       pool:         v7.0-nsxt30
-      private_key:  ((vcpi-pool_deployment_key))
+      private_key:  ((vcpi-pool_deployment_key.private_key))
   - name: pool-7.0-nsxt31
     type: pool
     source:
       uri:          git@gitlab.eng.vmware.com:tas-vcf-vmc-anycloud/vcpi-pool.git
       branch:       master
       pool:         v7.0-nsxt31
-      private_key:  ((vcpi-pool_deployment_key))
+      private_key:  ((vcpi-pool_deployment_key.private_key))
   - name: pool-7.0-nsxt31-policy
     type: pool
     source:
       uri:          git@gitlab.eng.vmware.com:tas-vcf-vmc-anycloud/vcpi-pool.git
       branch:       master
       pool:         v7.0-nsxt31-policy
-      private_key:  ((vcpi-pool_deployment_key))
+      private_key:  ((vcpi-pool_deployment_key.private_key))
   - name: pool-7.0-nsxt31-cvds
     type: pool
     source:
       uri:          git@gitlab.eng.vmware.com:tas-vcf-vmc-anycloud/vcpi-pool.git
       branch:       master
       pool:         v7.0-nsxt31-cvds
-      private_key:  ((vcpi-pool_deployment_key))
+      private_key:  ((vcpi-pool_deployment_key.private_key))
   - name: bosh-cpi-artifacts
     type: s3
     source:
@@ -336,14 +336,14 @@ resources:
     source:
       uri:         git@github.com:cloudfoundry-incubator/bosh-vsphere-cpi-release.git
       branch:      {{vcpi_branch}}
-      private_key: ((github_deployment_key__bosh-vsphere-cpi-release))
+      private_key: ((github_deploy_key_bosh-vsphere-cpi-release.private_key))
       paths:       [ci]
   - name: bosh-cpi-src
     type: git
     source:
       uri:         git@github.com:cloudfoundry-incubator/bosh-vsphere-cpi-release.git
       branch:      {{vcpi_branch}}
-      private_key: ((github_deployment_key__bosh-vsphere-cpi-release))
+      private_key: ((github_deploy_key_bosh-vsphere-cpi-release.private_key))
       ignore_paths:
       - ci
       - README.md

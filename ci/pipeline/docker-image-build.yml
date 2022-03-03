@@ -32,7 +32,7 @@ resources:
     branch: master
     paths:
     - ci
-    private_key: ((github_deployment_key__bosh-vsphere-cpi-release))
+    private_key: ((github_deploy_key_bosh-vsphere-cpi-release.private_key))
     uri: git@github.com:cloudfoundry-incubator/bosh-vsphere-cpi-release.git
   type: git
 - name: source-ci-trigger
@@ -40,7 +40,7 @@ resources:
     branch: master
     paths:
     - ci/docker
-    private_key: ((github_deployment_key__bosh-vsphere-cpi-release))
+    private_key: ((github_deploy_key_bosh-vsphere-cpi-release.private_key))
     uri: git@github.com:cloudfoundry-incubator/bosh-vsphere-cpi-release.git
   type: git
   check_every: 1h
@@ -53,6 +53,7 @@ resources:
 - name: vcpi-main-image
   source:
     repository: gcr.io/cf-pas-nx-t-pineapple/vcpi-main
+    tag: latest
     username: _json_key
     password: ((gcr_service_account_key))
   type: registry-image
