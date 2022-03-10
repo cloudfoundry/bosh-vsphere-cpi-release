@@ -1,5 +1,9 @@
 require 'spec_helper'
 require 'ostruct'
+require 'nsxt_manager_client/nsxt_manager_client/models/lb_pool'
+require 'nsxt_manager_client/nsxt_manager_client/api_client'
+require 'nsxt_manager_client/nsxt_manager_client/api_error'
+require 'nsxt_policy_client/nsxt_policy_client/api_client'
 
 module VSphereCloud
   describe Cloud, fake_logger: true do
