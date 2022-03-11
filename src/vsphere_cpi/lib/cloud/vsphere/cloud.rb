@@ -402,12 +402,13 @@ module VSphereCloud
             end
           end
         rescue => e
-          logger.info("Failed to apply NSX properties to VM '#{created_vm.cid}' with error: #{e.message}")
+          logger.info("Failed to apply NSX-T properties to VM '#{created_vm.cid}' with error: #{e.message}")
           begin
             logger.info("Deleting VM '#{created_vm.cid}'...")
             delete_vm(created_vm.cid)
           rescue => ex
             logger.info("Failed to delete VM '#{created_vm.cid}' with message: #{ex.inspect}")
+            raise ex
           end
           raise e
         end

@@ -1226,6 +1226,24 @@ module VSphereCloud
             end.to raise_error(nsxt_error)
           end
 
+          it 're-raises error if an error occurs when calling delete_vm after an error' do
+            nsxt_error = NSXT::ApiCallError.new
+            delete_vm_error = StandardError.new
+            allow(nsxt_provider).to receive(:set_vif_type).and_raise(nsxt_error)
+            allow(vsphere_cloud).to receive(:delete_vm).with(fake_vm.cid).and_raise(delete_vm_error)
+
+            expect do
+              vsphere_cloud.create_vm(
+                'fake-agent-id',
+                'fake-stemcell-cid',
+                vm_type,
+                'fake-networks-hash',
+                [],
+                {}
+              )
+            end.to raise_error(delete_vm_error)
+          end
+
 
           context "when ns_groups are set" do
             let(:nsxt) do
