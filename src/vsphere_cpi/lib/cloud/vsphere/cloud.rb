@@ -386,7 +386,7 @@ module VSphereCloud
               if vm_type.nsxt_server_pools
                 @nsxt_policy_provider.add_vm_to_server_pools(created_vm, vm_type.nsxt_server_pools)
               end
-              @nsxt_policy_provider.add_vm_to_groups(created_vm, ns_groups)
+              @nsxt_policy_provider.add_vm_to_groups(created_vm, ns_groups) unless ns_groups.empty?
             else
               if vm_type.nsxt_server_pools
                 #For static server pools add vm as server pool member

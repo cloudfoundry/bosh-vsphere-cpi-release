@@ -522,6 +522,7 @@ module VSphereCloud
       let(:disk_configurations) { [fake_persistent_disk, fake_ephemeral_disk] }
       before do
         allow(VSphereCloud::NSXTProvider).to receive(:new).with(any_args).and_return(nsxt_provider)
+        allow(VSphereCloud::NSXTPolicyProvider).to receive(:new).with(any_args).and_return(nsxt_policy_provider)
         allow(vsphere_cloud).to receive(:stemcell_vm).with('fake-stemcell-cid').and_return(stemcell_vm)
         allow(cloud_searcher).to receive(:get_property).with(
             stemcell_vm,
@@ -1189,6 +1190,85 @@ module VSphereCloud
           expect(vm_creator).to receive(:create).with(vm_config).and_return(fake_vm)
         end
 
+        context "and the Policy API is used" do
+          before do
+            allow(nsxt_config).to receive(:use_policy_api?).and_return(true)
+          end
+
+          context "when ns_groups are set" do
+            let(:vm_type_nsxt_config) do
+              { 'ns_groups' => ['fake-nsgroup-1', 'fake-nsgroup-2'] }
+            end
+
+            it "calls policy_provider#add_vm_to_nsgroups with the vm and ns_groups values" do
+              expect(nsxt_policy_provider).to receive(:add_vm_to_groups).with(fake_vm, ['fake-nsgroup-1', 'fake-nsgroup-2'])
+
+              vsphere_cloud.create_vm(
+                'fake-agent-id',
+                'fake-stemcell-cid',
+                vm_type,
+                'fake-networks-hash',
+                [],
+                {}
+              )
+            end
+
+            it 'deletes created VM and raises error if an error occurs when calling #add_vm_to_groups' do
+              nsxt_error = NSGroupsNotFound.new('fake-nsgroup-name')
+              allow(nsxt_policy_provider).to receive(:add_vm_to_groups).with(any_args).and_raise(nsxt_error)
+              expect(vsphere_cloud).to receive(:delete_vm).with(fake_vm.cid)
+              expect do
+                vsphere_cloud.create_vm(
+                  'fake-agent-id',
+                  'fake-stemcell-cid',
+                  vm_type,
+                  'fake-networks-hash',
+                  [],
+                  {}
+                )
+              end.to raise_error(nsxt_error)
+            end
+          end
+
+          context 'and server pool(s) are specified in the nsxt configuration' do
+            let(:vm_type_nsxt_config) do
+              { 'ns_groups' => [], 'lb' => { 'server_pools' => server_pools } }
+            end
+            let(:server_pool) { NSXT::LbPool.new(:id => 'id-1', :display_name => 'test-serverpool-1') }
+            let(:server_pools) { [server_pool] }
+
+            it 'adds vm to server pool(s)' do
+              expect(nsxt_policy_provider).to receive(:add_vm_to_server_pools).with(fake_vm, server_pools)
+
+              vsphere_cloud.create_vm(
+                'fake-agent-id',
+                'fake-stemcell-cid',
+                vm_type,
+                'fake-networks-hash',
+                [],
+                {}
+              )
+            end
+
+            it 'deletes created VM and raises error if an error occurs when adding VM to server pools' do
+              nsxt_error = NSXT::ApiCallError.new
+              allow(nsxt_policy_provider).to receive(:add_vm_to_server_pools).and_raise(nsxt_error)
+
+              expect(vsphere_cloud).to receive(:delete_vm).with(fake_vm.cid)
+              expect do
+                vsphere_cloud.create_vm(
+                  'fake-agent-id',
+                  'fake-stemcell-cid',
+                  vm_type,
+                  'fake-networks-hash',
+                  [],
+                  {}
+                )
+              end.to raise_error(nsxt_error)
+            end
+          end
+
+        end
         context "and the Management API is used" do
           let(:vm_type_nsxt_config) { {} }
           before do
