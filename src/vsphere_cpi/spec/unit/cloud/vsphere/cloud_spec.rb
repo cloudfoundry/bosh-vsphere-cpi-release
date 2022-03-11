@@ -1179,7 +1179,7 @@ module VSphereCloud
             'cpu' => 1,
             'ram' => 1024,
             'disk' => 4096,
-            'nsxt' => nsxt
+            'nsxt' => vm_type_nsxt_config
           }
         end
 
@@ -1190,7 +1190,7 @@ module VSphereCloud
         end
 
         context "and the Management API is used" do
-          let(:nsxt) { {} }
+          let(:vm_type_nsxt_config) { {} }
           before do
             allow(nsxt_provider).to receive(:set_vif_type)
           end
@@ -1246,7 +1246,7 @@ module VSphereCloud
 
 
           context "when ns_groups are set" do
-            let(:nsxt) do
+            let(:vm_type_nsxt_config) do
               { 'ns_groups' => ['fake-nsgroup-1', 'fake-nsgroup-2'] }
             end
 
@@ -1281,8 +1281,8 @@ module VSphereCloud
           end
 
           context 'and server pool(s) are specified in the nsxt configuration' do
-            let(:nsxt) do
-              { 'ns_groups' => [], 'vif_type' => 'PARENT', 'lb' => { 'server_pools' => server_pools } }
+            let(:vm_type_nsxt_config) do
+              { 'ns_groups' => [], 'lb' => { 'server_pools' => server_pools } }
             end
             let(:server_pool) { NSXT::LbPool.new(:id => 'id-1', :display_name => 'test-serverpool-1') }
             let(:server_pools) { [server_pool] }
