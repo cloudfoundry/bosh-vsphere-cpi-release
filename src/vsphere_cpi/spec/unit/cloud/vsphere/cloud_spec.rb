@@ -1179,10 +1179,7 @@ module VSphereCloud
             'cpu' => 1,
             'ram' => 1024,
             'disk' => 4096,
-            'nsxt' => {
-              'ns_groups' => %w(fake-nsgroup-1 fake-nsgroup-2),
-              'vif_type' => 'PARENT',
-            }
+            'nsxt' => nsxt
           }
         end
 
@@ -1192,48 +1189,16 @@ module VSphereCloud
           expect(vm_creator).to receive(:create).with(vm_config).and_return(fake_vm)
         end
 
-        it "adds the VM's logical port to NSGroups" do
-          expect(nsxt_provider).to receive(:add_vm_to_nsgroups).with(fake_vm, vm_type['nsxt']['ns_groups'])
-          allow(nsxt_provider).to receive(:set_vif_type)
-
-          vsphere_cloud.create_vm(
-            'fake-agent-id',
-            'fake-stemcell-cid',
-            vm_type,
-            'fake-networks-hash',
-            [],
-            {}
-          )
-        end
-
-        context 'and load balancer(lb) is set' do
-          let(:server_pool) { NSXT::LbPool.new(:id => 'id-1', :display_name => 'test-static-serverpool-1')}
-          let(:server_pools) { [server_pool]}
-          let(:vm_type) do
-            {
-              'cpu' => 1,
-              'ram' => 1024,
-              'disk' => 4096,
-              'nsxt' => {
-                'ns_groups' => %w(fake-nsgroup-1 fake-nsgroup-2),
-                'lb' => {
-                  'server_pools' => [
-                    {
-                      'name' => 'test-serverpool-1',
-                      'port' => 80
-                    }
-                  ]
-                }
-              }
-            }
+        context "and the Management API is used" do
+          let(:nsxt) { {} }
+          before do
+            allow(nsxt_provider).to receive(:set_vif_type)
           end
 
-          it 'adds vm to server pool' do
-            allow(nsxt_provider).to receive(:add_vm_to_nsgroups)
-            allow(nsxt_provider).to receive(:set_vif_type)
+          it "always calls set_vif_type with the vm and nsxt configuration" do
+            #TODO: the provider interface here is a little odd, imo it should take the vm and vif_type vs. the configuration object (which couples the provider to the config)
+            expect(nsxt_provider).to receive(:set_vif_type).with(fake_vm, vm_type['nsxt'])
 
-            expect(nsxt_provider).to receive(:add_vm_to_server_pools).with(fake_vm, server_pools)
-            expect(nsxt_provider).to receive(:retrieve_server_pools).with(vm_type['nsxt']['lb']['server_pools']).and_return([server_pools,nil])
             vsphere_cloud.create_vm(
               'fake-agent-id',
               'fake-stemcell-cid',
@@ -1244,32 +1209,46 @@ module VSphereCloud
             )
           end
 
-          it "adds vm to dynamic server pool's nsgroups" do
-            allow(server_pool).to receive_message_chain(:member_group,:grouping_object, :target_display_name).and_return('test-nsgroup1')
-            expect(nsxt_provider).to receive(:retrieve_server_pools).with(vm_type['nsxt']['lb']['server_pools']).and_return([nil,server_pools])
-            expected_nsgroups =  vm_type['nsxt']['ns_groups'] + ['test-nsgroup1']
-            expect(nsxt_provider).to receive(:add_vm_to_nsgroups).with(fake_vm, expected_nsgroups)
-            allow(nsxt_provider).to receive(:set_vif_type)
+          it 'deletes created VM and raises error if an error occurs when calling provider#set_vif_type' do
+            nsxt_error = NSXT::ApiCallError.new
+            allow(nsxt_provider).to receive(:set_vif_type).and_raise(nsxt_error)
+            expect(vsphere_cloud).to receive(:delete_vm).with(fake_vm.cid)
 
-            vsphere_cloud.create_vm(
-              'fake-agent-id',
-              'fake-stemcell-cid',
-              vm_type,
-              'fake-networks-hash',
-              [],
-              {}
-            )
+            expect do
+              vsphere_cloud.create_vm(
+                'fake-agent-id',
+                'fake-stemcell-cid',
+                vm_type,
+                'fake-networks-hash',
+                [],
+                {}
+              )
+            end.to raise_error(nsxt_error)
           end
-          context 'and an error occurs when adding VM to server pools' do
-            let(:nsxt_error) { NSXT::ApiCallError.new }
-            before do
-              expect(nsxt_provider).to receive(:add_vm_to_server_pools).and_raise(nsxt_error)
-              expect(nsxt_provider).to receive(:retrieve_server_pools).with(vm_type['nsxt']['lb']['server_pools']).and_return([server_pools,nil])
+
+
+          context "when ns_groups are set" do
+            let(:nsxt) do
+              { 'ns_groups' => ['fake-nsgroup-1', 'fake-nsgroup-2'] }
             end
 
-            it 'deletes created VM and raises error' do
-              expect(vsphere_cloud).to receive(:delete_vm).with(fake_vm.cid)
+            it "calls provider#add_vm_to_nsgroups with the vm and ns_groups values" do
+              expect(nsxt_provider).to receive(:add_vm_to_nsgroups).with(fake_vm, ['fake-nsgroup-1', 'fake-nsgroup-2'])
 
+              vsphere_cloud.create_vm(
+                'fake-agent-id',
+                'fake-stemcell-cid',
+                vm_type,
+                'fake-networks-hash',
+                [],
+                {}
+              )
+            end
+
+            it 'deletes created VM and raises error if an error occurs when calling #add_vm_to_nsgroups' do
+              nsxt_error = NSGroupsNotFound.new('fake-nsgroup-name')
+              allow(nsxt_provider).to receive(:add_vm_to_nsgroups).with(any_args).and_raise(nsxt_error)
+              expect(vsphere_cloud).to receive(:delete_vm).with(fake_vm.cid)
               expect do
                 vsphere_cloud.create_vm(
                   'fake-agent-id',
@@ -1282,63 +1261,72 @@ module VSphereCloud
               end.to raise_error(nsxt_error)
             end
           end
-        end
 
-        it "sets the vif_type of the VM's VIF attachment" do
-          allow(nsxt_provider).to receive(:add_vm_to_nsgroups)
-          expect(nsxt_provider).to receive(:set_vif_type).with(fake_vm, vm_type['nsxt'])
+          context 'and server pool(s) are specified in the nsxt configuration' do
+            let(:nsxt) do
+              { 'ns_groups' => [], 'vif_type' => 'PARENT', 'lb' => { 'server_pools' => server_pools } }
+            end
+            let(:server_pool) { NSXT::LbPool.new(:id => 'id-1', :display_name => 'test-serverpool-1') }
+            let(:server_pools) { [server_pool] }
 
-          vsphere_cloud.create_vm(
-            'fake-agent-id',
-            'fake-stemcell-cid',
-            vm_type,
-            'fake-networks-hash',
-            [],
-            {}
-          )
-        end
+            before do
+              allow(nsxt_provider).to receive(:retrieve_server_pools).with(vm_type['nsxt']['lb']['server_pools']).and_return([static_pools, dynamic_pools])
+            end
 
-        context 'and an error occurs when adding VM to NSGroups' do
-          let(:nsxt_error) { NSGroupsNotFound.new('fake-nsgroup-name') }
-          before do
-            expect(nsxt_provider).to receive(:add_vm_to_nsgroups).with(any_args).and_raise(nsxt_error)
-          end
 
-          it 'deletes created VM and raises error' do
-            expect(vsphere_cloud).to receive(:delete_vm).with(fake_vm.cid)
-            expect do
-              vsphere_cloud.create_vm(
-                'fake-agent-id',
-                'fake-stemcell-cid',
-                vm_type,
-                'fake-networks-hash',
-                [],
-                {}
-              )
-            end.to raise_error(nsxt_error)
-          end
-        end
+            context "and the specified server pool is static" do
+              let(:static_pools) { [server_pool] }
+              let(:dynamic_pools) { nil }
 
-        context 'and an error occurs when setting vif_type' do
-          let(:nsxt_error) { NSXT::ApiCallError.new }
-          before do
-            allow(nsxt_provider).to receive(:add_vm_to_nsgroups)
-            expect(nsxt_provider).to receive(:set_vif_type).and_raise(nsxt_error)
-          end
+              it 'adds vm to server pool' do
+                expect(nsxt_provider).to receive(:add_vm_to_server_pools).with(fake_vm, server_pools)
 
-          it 'deletes created VM and raises error' do
-            expect(vsphere_cloud).to receive(:delete_vm).with(fake_vm.cid)
+                vsphere_cloud.create_vm(
+                  'fake-agent-id',
+                  'fake-stemcell-cid',
+                  vm_type,
+                  'fake-networks-hash',
+                  [],
+                  {}
+                )
+              end
 
-            expect do
-              vsphere_cloud.create_vm(
-                'fake-agent-id',
-                'fake-stemcell-cid',
-                vm_type,
-                'fake-networks-hash',
-                [],
-                {}
-              )
-            end.to raise_error(nsxt_error)
+              it 'deletes created VM and raises error if an error occurs when adding VM to server pools' do
+                nsxt_error = NSXT::ApiCallError.new
+                allow(nsxt_provider).to receive(:add_vm_to_server_pools).and_raise(nsxt_error)
+
+                expect(vsphere_cloud).to receive(:delete_vm).with(fake_vm.cid)
+                expect do
+                  vsphere_cloud.create_vm(
+                    'fake-agent-id',
+                    'fake-stemcell-cid',
+                    vm_type,
+                    'fake-networks-hash',
+                    [],
+                    {}
+                  )
+                end.to raise_error(nsxt_error)
+              end
+            end
+
+            context "and the specified server pool is dynamic" do
+              let(:static_pools) { nil }
+              let(:dynamic_pools) { [server_pool]  }
+
+              it "adds vm to dynamic server pool's nsgroups" do
+                allow(server_pool).to receive_message_chain(:member_group,:grouping_object, :target_display_name).and_return('test-nsgroup1')
+                expect(nsxt_provider).to receive(:add_vm_to_nsgroups).with(fake_vm, ['test-nsgroup1'])
+
+                vsphere_cloud.create_vm(
+                  'fake-agent-id',
+                  'fake-stemcell-cid',
+                  vm_type,
+                  'fake-networks-hash',
+                  [],
+                  {}
+                )
+              end
+            end
           end
         end
       end

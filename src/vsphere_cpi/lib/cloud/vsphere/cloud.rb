@@ -397,7 +397,7 @@ module VSphereCloud
                 ns_groups.concat(lb_ns_groups) if lb_ns_groups
                 @nsxt_provider.add_vm_to_server_pools(created_vm, static_server_pools) if static_server_pools
               end
-              @nsxt_provider.add_vm_to_nsgroups(created_vm, ns_groups)
+              @nsxt_provider.add_vm_to_nsgroups(created_vm, ns_groups) unless ns_groups.empty?
               @nsxt_provider.set_vif_type(created_vm, vm_type.nsxt)
             end
           end
