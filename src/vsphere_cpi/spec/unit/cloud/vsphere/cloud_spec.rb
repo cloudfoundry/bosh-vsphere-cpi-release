@@ -4,6 +4,9 @@ require 'nsxt_manager_client/nsxt_manager_client/models/lb_pool'
 require 'nsxt_manager_client/nsxt_manager_client/api_client'
 require 'nsxt_manager_client/nsxt_manager_client/api_error'
 require 'nsxt_policy_client/nsxt_policy_client/api_client'
+require 'nsxt_policy_client/nsxt_policy_client/api_error'
+require 'nsxt_policy_client/nsxt_policy_client/models/lb_pool'
+require 'nsxt_policy_client/nsxt_policy_client/models/lb_pool_member_group'
 
 module VSphereCloud
   describe Cloud, fake_logger: true do
@@ -1232,30 +1235,29 @@ module VSphereCloud
 
           context 'and server pool(s) are specified in the nsxt configuration' do
             let(:vm_type_nsxt_config) do
-              { 'ns_groups' => [], 'lb' => { 'server_pools' => server_pools } }
-            end
-            let(:server_pool) { NSXT::LbPool.new(:id => 'id-1', :display_name => 'test-serverpool-1') }
-            let(:server_pools) { [server_pool] }
-
-            it 'adds vm to server pool(s)' do
-              expect(nsxt_policy_provider).to receive(:add_vm_to_server_pools).with(fake_vm, server_pools)
-
-              vsphere_cloud.create_vm(
-                'fake-agent-id',
-                'fake-stemcell-cid',
-                vm_type,
-                'fake-networks-hash',
-                [],
-                {}
-              )
+              {
+                'ns_groups' => groups,
+                'lb' => {
+                  'server_pools' => server_pools.map { |sp| {"name" => sp.display_name, "port" => "dont-care"} }
+                  }
+                }
             end
 
-            it 'deletes created VM and raises error if an error occurs when adding VM to server pools' do
-              nsxt_error = NSXT::ApiCallError.new
-              allow(nsxt_policy_provider).to receive(:add_vm_to_server_pools).and_raise(nsxt_error)
+            let(:groups) { [] }
 
-              expect(vsphere_cloud).to receive(:delete_vm).with(fake_vm.cid)
-              expect do
+            before do
+              allow(nsxt_policy_provider).to receive(:retrieve_server_pools).with(vm_type_nsxt_config['lb']['server_pools']).and_return([static_pools, dynamic_pools])
+            end
+
+            context 'when the server pool is static' do
+              let(:server_pool) { NSXTPolicy::LBPool.new(:id => 'id-1', :display_name => 'test-serverpool-1', member_group: nil) }
+              let(:server_pools) { [server_pool] }
+              let(:static_pools) { [server_pool, 'dont-care'] }
+              let(:dynamic_pools) { nil }
+
+              it 'adds vm to server pool(s)' do
+                expect(nsxt_policy_provider).to receive(:add_vm_to_server_pools).with(fake_vm, static_pools)
+
                 vsphere_cloud.create_vm(
                   'fake-agent-id',
                   'fake-stemcell-cid',
@@ -1264,7 +1266,70 @@ module VSphereCloud
                   [],
                   {}
                 )
-              end.to raise_error(nsxt_error)
+              end
+
+              it 'deletes created VM and raises error if an error occurs when adding VM to server pools' do
+                nsxt_error = NSXTPolicy::ApiCallError.new
+                allow(nsxt_policy_provider).to receive(:add_vm_to_server_pools).and_raise(nsxt_error)
+
+                expect(vsphere_cloud).to receive(:delete_vm).with(fake_vm.cid)
+                expect do
+                  vsphere_cloud.create_vm(
+                    'fake-agent-id',
+                    'fake-stemcell-cid',
+                    vm_type,
+                    'fake-networks-hash',
+                    [],
+                    {}
+                  )
+                end.to raise_error(nsxt_error)
+              end
+            end
+
+            context 'when the server pool is dynamic' do
+
+              let(:server_pool) { NSXTPolicy::LBPool.new(:id => 'id-1', :display_name => 'test-serverpool-1', member_group: member_group) }
+              let(:group_id) { 'some-group-id'}
+              let(:member_group) { double(NSXTPolicy::LBPoolMemberGroup, group_path: "some/group/path/#{group_id}") }
+
+              let(:server_pools) { [server_pool] }
+              let(:dynamic_pools) { server_pools }
+              let(:static_pools) { nil }
+
+              it 'adds the vm to the group(s) associated with the server pool(s)' do
+                expect(nsxt_policy_provider).to receive(:add_vm_to_groups).with(fake_vm, [group_id])
+
+                vsphere_cloud.create_vm(
+                  'fake-agent-id',
+                  'fake-stemcell-cid',
+                  vm_type,
+                  'fake-networks-hash',
+                  [],
+                  {}
+                )
+              end
+
+              context "when ns_groups is set on the vm_type configuration" do
+                let(:groups) { ["existing-group-id-not-associated-with-server-pool"] }
+
+                it 'adds the vm to the configured groups AND the group(s) associated with the server pool(s)' do
+                  expect(nsxt_policy_provider).to receive(:add_vm_to_groups) do |vm, groups|
+                    expect(vm).to eq(fake_vm)
+                    expect(groups).to contain_exactly("existing-group-id-not-associated-with-server-pool", group_id)
+                  end
+
+
+                  vsphere_cloud.create_vm(
+                    'fake-agent-id',
+                    'fake-stemcell-cid',
+                    vm_type,
+                    'fake-networks-hash',
+                    [],
+                    {}
+                  )
+                end
+              end
+
             end
           end
 
@@ -1362,10 +1427,14 @@ module VSphereCloud
 
           context 'and server pool(s) are specified in the nsxt configuration' do
             let(:vm_type_nsxt_config) do
-              { 'ns_groups' => [], 'lb' => { 'server_pools' => server_pools } }
+              {
+                'ns_groups' => [],
+                'lb' => {
+                  'server_pools' => [server_pool].map { |sp| {"name" => sp.display_name, "port": "dont-care"} }
+                }
+              }
             end
             let(:server_pool) { NSXT::LbPool.new(:id => 'id-1', :display_name => 'test-serverpool-1') }
-            let(:server_pools) { [server_pool] }
 
             before do
               allow(nsxt_provider).to receive(:retrieve_server_pools).with(vm_type['nsxt']['lb']['server_pools']).and_return([static_pools, dynamic_pools])
@@ -1376,8 +1445,9 @@ module VSphereCloud
               let(:static_pools) { [server_pool] }
               let(:dynamic_pools) { nil }
 
+
               it 'adds vm to server pool' do
-                expect(nsxt_provider).to receive(:add_vm_to_server_pools).with(fake_vm, server_pools)
+                expect(nsxt_provider).to receive(:add_vm_to_server_pools).with(fake_vm, [server_pool])
 
                 vsphere_cloud.create_vm(
                   'fake-agent-id',

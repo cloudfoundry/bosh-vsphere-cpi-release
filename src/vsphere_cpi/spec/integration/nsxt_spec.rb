@@ -612,6 +612,69 @@ describe 'CPI', nsxt_all: true do
             end
           end
         end
+
+        context "with dynamic pools" do
+          let(:nsxt_spec) {
+            {
+              'lb'=> { 'server_pools' => [
+                {
+                  'name' => pool_1.name,
+                  'port' => 80,
+                },
+                {
+                  'name' => dynamic_pool.display_name
+                },
+              ],
+              }
+            }
+          }
+
+          let(:dynamic_pool_group) do
+            create_policy_group('dynamic-pool-group')
+          end
+
+          let(:dynamic_pool) do
+            member_group = NSXTPolicy::LBPoolMemberGroup.new(group_path: dynamic_pool_group.path)
+            @policy_load_balancer_pools_api.update_lb_pool_0('pool-id', NSXTPolicy::LBPool.new(id: 'pool-id', display_name: 'dynamic-pool', member_group: member_group))
+          end
+
+          after do
+            delete_lb_pool(dynamic_pool)
+            delete_policy_group(dynamic_pool_group.display_name)
+          end
+
+          it "should add the VM to the group associated with the dynamic server pool and remove on delete" do
+            simple_vm_lifecycle(cpi, '', vm_type, policy_network_spec) do |vm_id|
+              vm = @cpi.vm_provider.find(vm_id)
+              segment_names = vm.get_nsxt_segment_vif_list.map { |x| x[0] }
+              expect(segment_names.length).to eq(2)
+              expect(segment_names).to include(segment_1.name)
+              expect(segment_names).to include(segment_2.name)
+              server_pool_1 = @policy_load_balancer_pools_api.read_lb_pool_0(pool_1.id)
+              expect(server_pool_1.members.length).to eq(1)
+              expect(server_pool_1.members[0].ip_address).to eq(vm.mob.guest&.ip_address)
+              expect(server_pool_1.members[0].port).to eq("80")
+
+              retryer do
+                results = @policy_group_members_api.get_group_vm_members_0(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, dynamic_pool_group.display_name).results
+                raise StillUpdatingVMsInGroups if results.map(&:display_name).uniq.length < 1
+
+                expect(results.length).to eq(1)
+                expect(results[0].display_name).to eq(vm_id)
+              end
+            end
+
+            server_pool_1 = @policy_load_balancer_pools_api.read_lb_pool_0(pool_1.id)
+            expect(server_pool_1.members).to be_nil
+
+            retryer do
+              results = @policy_group_members_api.get_group_vm_members_0(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, dynamic_pool_group.display_name).results
+              raise StillUpdatingVMsInGroups if results.map(&:display_name).uniq.length > 0
+
+              expect(results.length).to eq(0)
+            end
+          end
+        end
       end
 
       context 'with non-nsxt distributed virtual switches' do

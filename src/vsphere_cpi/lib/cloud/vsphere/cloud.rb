@@ -384,7 +384,11 @@ module VSphereCloud
             ns_groups = vm_type.ns_groups || []
             if @config.nsxt.use_policy_api?
               if vm_type.nsxt_server_pools
-                @nsxt_policy_provider.add_vm_to_server_pools(created_vm, vm_type.nsxt_server_pools)
+                static_server_pools, dynamic_server_pools = @nsxt_policy_provider.retrieve_server_pools(vm_type.nsxt_server_pools)
+                lb_ns_group_ids = dynamic_server_pools.map { |server_pool| server_pool.member_group.group_path.split("/").last } if dynamic_server_pools
+                logger.info("Group names corresponding to load balancer's dynamic server pools are: #{lb_ns_group_ids}")
+                ns_groups.concat(lb_ns_group_ids) if lb_ns_group_ids
+                @nsxt_policy_provider.add_vm_to_server_pools(created_vm, static_server_pools) if static_server_pools
               end
               @nsxt_policy_provider.add_vm_to_groups(created_vm, ns_groups) unless ns_groups.empty?
             else

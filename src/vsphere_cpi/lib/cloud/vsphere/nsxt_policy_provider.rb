@@ -83,35 +83,22 @@ module VSphereCloud
     end
 
     def add_vm_to_server_pools(vm, server_pools)
+      return if server_pools.nil? || server_pools.empty?
       Bosh::Retryable.new(
         tries: 50,
         sleep: ->(try_count, retry_exception) { 2 },
         on: [VirtualMachineIpNotFound]
       ).retryer do |i|
-
         vm_ip = vm.mob.guest&.ip_address
         raise VirtualMachineIpNotFound.new(vm) unless vm_ip
-        server_pools.each do |server_pool|
-          retry_on_conflict("while adding vm: #{vm.cid} to group #{server_pool['name']}") do
-            server_pool_id=server_pool_display_name_to_id(server_pool['name'])
-            load_balancer_pool = policy_load_balancer_pools_api.read_lb_pool_0(server_pool_id)
-            logger.info("Adding vm: '#{vm.cid}' with ip:#{vm_ip} to ServerPool: #{server_pool['name']} on Port: #{server_pool['port']} ")
-            (load_balancer_pool.members ||= []).push(NSXTPolicy::LBPoolMember.new(port: server_pool['port'], ip_address: vm_ip, display_name: vm.cid))
-            policy_load_balancer_pools_api.update_lb_pool_0(server_pool_id, load_balancer_pool)
+        server_pools.each do |server_pool, port_no|
+          logger.info("Adding vm: '#{vm.cid}' with ip:#{vm_ip} to ServerPool: #{server_pool.id} on Port: #{port_no} ")
+          (server_pool.members ||= []).push(NSXTPolicy::LBPoolMember.new(port: port_no, ip_address: vm_ip, display_name: vm.cid))
+          retry_on_conflict("while adding vm: #{vm.cid} to group #{server_pool.display_name}") do
+            policy_load_balancer_pools_api.update_lb_pool_0(server_pool.id, server_pool)
           end
         end
       end
-    end
-
-    # vCenter and BOSH use display names; NSX-T uses IDs. This helps translate.
-    def server_pool_display_name_to_id(display_name)
-      @all_lb_pools ||= policy_load_balancer_pools_api.list_lb_pools.results
-      matches = @all_lb_pools.select do |pool|
-        pool.display_name == display_name
-      end
-      raise VSphereCloud::DuplicateLBPoolDisplayName.new(display_name) if matches.size > 1
-      raise VSphereCloud::ServerPoolsNotFound.new(display_name) if matches.empty?
-      matches.first.id
     end
 
     # cpi_metadata_version must be an integer
@@ -185,6 +172,31 @@ module VSphereCloud
           true
         end
       end
+    end
+
+    def retrieve_server_pools(server_pools)
+      return [] if server_pools.nil? || server_pools.empty?
+
+      #Create a hash of server_pools with key as their name and value as list of matching server_pools
+      server_pools_by_name = policy_load_balancer_pools_api.list_lb_pools.results.each_with_object({}) do |server_pool, hash|
+        hash[server_pool.display_name] ? hash[server_pool.display_name] << server_pool : hash[server_pool.display_name] = [server_pool]
+      end
+
+      missing = server_pools.reject do |server_pool|
+        server_pools_by_name.key?(server_pool['name'])
+      end
+      raise ServerPoolsNotFound.new(*missing) unless missing.empty?
+
+      static_server_pools, dynamic_server_pools = [], []
+      server_pools.each do |server_pool|
+        server_pool_name = server_pool['name']
+        server_pool_port = server_pool['port']
+        matching_server_pools = server_pools_by_name[server_pool_name]
+        matching_server_pools.each do |matching_server_pool|
+          matching_server_pool.member_group ? dynamic_server_pools << matching_server_pool : static_server_pools << [matching_server_pool, server_pool_port]
+        end
+      end
+      [static_server_pools, dynamic_server_pools]
     end
 
     before(*instance_methods) { require 'nsxt_policy_client/nsxt_policy_client' }
