@@ -82,7 +82,6 @@ jobs:
             -o certification/shared/assets/ops/remove-hm.yml
             -o bosh-deployment/vsphere/resource-pool.yml
             -o certification/shared/assets/ops/remove-provider-cert.yml
-            -o bosh-deployment/experimental/postgres-9-4.yml
       - do:
           - task: deploy-director
             file: source-ci/ci/tasks/deploy-director.yml
@@ -149,7 +148,6 @@ jobs:
             -o certification/shared/assets/ops/remove-hm.yml
             -o bosh-deployment/vsphere/resource-pool.yml
             -o certification/shared/assets/ops/remove-provider-cert.yml
-            -o bosh-deployment/experimental/postgres-9-4.yml
       - do:
         - task: deploy-director
           file: source-ci/ci/tasks/deploy-director.yml
@@ -216,7 +214,6 @@ jobs:
             -o certification/shared/assets/ops/remove-hm.yml
             -o bosh-deployment/vsphere/resource-pool.yml
             -o certification/shared/assets/ops/remove-provider-cert.yml
-            -o bosh-deployment/experimental/postgres-9-4.yml
       - do:
           - task: deploy-director
             file: source-ci/ci/tasks/deploy-director.yml
