@@ -219,7 +219,7 @@ module VSphereCloud
             datastore = @datacenter.find_datastore(datastore_name)
             #encryption_policy = @pbm.find_policy(@config.vm_encryption_policy_name) if @config.vm_encryption_policy_name
 
-            logger.info("Deploying to: #{cluster.mob} / #{datastore.mob}")
+            logger.info("Deploying to: #{cluster} / #{datastore}")
 
             import_spec_result = import_ovf(name, ovf_file, cluster.resource_pool.mob, datastore.mob)
             raise "Corrupt image '#{image}', import_ovf_result: #{import_spec_result.error}" if import_spec_result.import_spec.nil?

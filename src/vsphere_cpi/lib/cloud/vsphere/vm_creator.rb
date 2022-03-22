@@ -36,8 +36,8 @@ module VSphereCloud
 
         datastore, datastore_cluster = storage.is_a?(Resources::StoragePod) ? [nil, storage] : [storage, nil]
 
-        logger.info("Creating vm: #{vm_config.name} on #{cluster.mob} stored in #{datastore.mob}") if datastore
-        logger.info("Creating vm: #{vm_config.name} on #{cluster.mob} stored in datastore cluster: #{datastore_cluster.name}") if datastore_cluster
+        logger.info("Creating vm: #{vm_config.name} on #{cluster} stored in #{datastore}") if datastore
+        logger.info("Creating vm: #{vm_config.name} on #{cluster} stored in datastore cluster: #{datastore_cluster.name}") if datastore_cluster
 
         # Replicate stemcell stage
         replicated_stemcell_vm_mob = @stemcell.replicate(@datacenter, cluster, datastore, datastore_cluster)
