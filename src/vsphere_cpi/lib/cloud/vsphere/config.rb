@@ -1,5 +1,5 @@
 module VSphereCloud
-  class NSXTConfig < Struct.new(:host, :username, :password, :remote_auth, :auth_certificate, :auth_private_key, :default_vif_type, :use_policy_api)
+  class NSXTConfig < Struct.new(:host, :username, :password, :remote_auth, :auth_certificate, :auth_private_key, :default_vif_type, :use_policy_api, :policy_api_migration_mode)
     def self.validate_schema(config)
       return true if config.nil?
 
@@ -24,6 +24,10 @@ module VSphereCloud
 
     def use_policy_api?
       use_policy_api
+    end
+
+    def policy_api_migration_mode?
+      !!policy_api_migration_mode
     end
   end
 
@@ -220,6 +224,7 @@ module VSphereCloud
         vcenter['nsxt']['auth_private_key'],
         vcenter['nsxt']['default_vif_type'],
         vcenter['nsxt']['use_policy_api'],
+        vcenter['nsxt']['policy_api_migration_mode'],
       )
     end
 

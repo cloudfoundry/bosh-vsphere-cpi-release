@@ -382,35 +382,21 @@ module VSphereCloud
 
         begin
           if @config.nsxt_enabled?
-            ns_groups = vm_type.ns_groups || []
+
+            if @config.nsxt.policy_api_migration_mode?
+              begin
+                add_to_policy_groups_and_server_pools(created_vm, vm_type)
+              rescue => e
+                logger.info("Policy API Migration Mode: Failed to update groups/server pools in Policy API, falling back to Management API only")
+              end
+            end
+
             if @config.nsxt.use_policy_api?
-              if vm_type.nsxt_server_pools
-                static_server_pools, dynamic_server_pools = @nsxt_policy_provider.retrieve_server_pools(vm_type.nsxt_server_pools)
-                lb_ns_group_ids = dynamic_server_pools.map { |server_pool| server_pool.member_group.group_path.split("/").last } if dynamic_server_pools
-                logger.info("Group names corresponding to load balancer's dynamic server pools are: #{lb_ns_group_ids}")
-                load_balancer_groups = @nsxt_policy_provider.retrieve_groups_by_id(lb_ns_group_ids) unless (lb_ns_group_ids || []).empty?
+              add_to_policy_groups_and_server_pools(created_vm, vm_type)
+            end
 
-                @nsxt_policy_provider.add_vm_to_groups(created_vm, load_balancer_groups) unless (load_balancer_groups || []).empty?
-                @nsxt_policy_provider.add_vm_to_server_pools(created_vm, static_server_pools) if static_server_pools
-              end
-              groups = []
-              groups = @nsxt_policy_provider.retrieve_groups_by_name(ns_groups) unless ns_groups.empty?
-              if (ns_groups.count > groups.count)
-                raise MissingNSXTGroups.new("Expected to find #{ns_groups.count} groups with names #{ns_groups}, only found #{groups.count}: #{groups.map(&:display_name)}")
-              end
-
-              @nsxt_policy_provider.add_vm_to_groups(created_vm, groups) unless groups.empty?
-            else
-              if vm_type.nsxt_server_pools
-                #For static server pools add vm as server pool member
-                #For dynamic server pools add vm to the corresponding nsgroup
-                static_server_pools, dynamic_server_pools = @nsxt_provider.retrieve_server_pools(vm_type.nsxt_server_pools)
-                lb_ns_groups = dynamic_server_pools.map { |server_pool| server_pool.member_group.grouping_object.target_display_name } if dynamic_server_pools
-                logger.info("NSGroup names corresponding to load balancer's dynamic server pools are: #{lb_ns_groups}")
-                ns_groups.concat(lb_ns_groups) if lb_ns_groups
-                @nsxt_provider.add_vm_to_server_pools(created_vm, static_server_pools) if static_server_pools
-              end
-              @nsxt_provider.add_vm_to_nsgroups(created_vm, ns_groups) unless ns_groups.empty?
+            if !@config.nsxt.use_policy_api? #runs in policy_api_migration_mode && !use_policy_api
+              add_to_management_groups_and_server_pools(created_vm, vm_type)
               @nsxt_provider.set_vif_type(created_vm, vm_type.nsxt)
             end
           end
@@ -529,7 +515,20 @@ module VSphereCloud
         if @config.nsxt_enabled?
           # POLICY API
           # @TA : TODO : Verify if we can delete logical ports that are still attached to VM.
-          if @config.nsxt.use_policy_api?
+          if @config.nsxt.policy_api_migration_mode?
+            begin
+              @nsxt_provider.remove_vm_from_nsgroups(vm)
+              #@nsxt_policy_provider.remove_vm_from_groups(vm)
+            rescue => e
+              logger.info("Failed to remove VM from NSGroups: #{e.message}")
+            end
+            begin
+              @nsxt_provider.remove_vm_from_server_pools(vm_ip, vm_cid, vm_cpi_metadata_version)
+              @nsxt_policy_provider.remove_vm_from_server_pools(vm_ip, vm_cid, vm_cpi_metadata_version)
+            rescue => e
+              logger.info("Failed to remove VM from ServerPool: #{e.message}")
+            end
+          elsif @config.nsxt.use_policy_api?
             # TA: TODO : Should this be rescued? We should fail if we do not delete membership
             # NSX-T group might not work properly if junk is left behind.
             # Rescuing because we rescued earlier too in manager API
@@ -601,7 +600,14 @@ module VSphereCloud
           client.set_custom_field(vm.mob, name, value)
         end
         if @config.nsxt_enabled?
-          if @config.nsxt.use_policy_api?
+          if @config.nsxt.policy_api_migration_mode?
+            begin
+              @nsxt_policy_provider.update_vm_metadata_on_segment_ports(vm, metadata)
+            rescue VSphereCloud::SegmentPortNotFound => e
+              logger.info("No Segment Ports found for #{vm_cid}, skipping (#{e})")
+            end
+            @nsxt_provider.update_vm_metadata_on_logical_ports(vm, metadata)
+          elsif @config.nsxt.use_policy_api?
             @nsxt_policy_provider.update_vm_metadata_on_segment_ports(vm, metadata)
           else
             @nsxt_provider.update_vm_metadata_on_logical_ports(vm, metadata)
@@ -916,6 +922,39 @@ module VSphereCloud
     end
 
     private
+
+    def add_to_policy_groups_and_server_pools(created_vm, vm_type)
+      ns_groups = vm_type.ns_groups || []
+      if vm_type.nsxt_server_pools
+        static_server_pools, dynamic_server_pools = @nsxt_policy_provider.retrieve_server_pools(vm_type.nsxt_server_pools)
+        lb_ns_group_ids = dynamic_server_pools.map { |server_pool| server_pool.member_group.group_path.split("/").last } if dynamic_server_pools
+        logger.info("Group names corresponding to load balancer's dynamic server pools are: #{lb_ns_group_ids}")
+        load_balancer_groups = @nsxt_policy_provider.retrieve_groups_by_id(lb_ns_group_ids) unless (lb_ns_group_ids || []).empty?
+        @nsxt_policy_provider.add_vm_to_groups(created_vm, load_balancer_groups) unless (load_balancer_groups || []).empty?
+        @nsxt_policy_provider.add_vm_to_server_pools(created_vm, static_server_pools) if static_server_pools
+      end
+      groups = []
+      groups = @nsxt_policy_provider.retrieve_groups_by_name(ns_groups) unless ns_groups.empty?
+      if (ns_groups.count > groups.count)
+        raise MissingNSXTGroups.new("Expected to find #{ns_groups.count} groups with names #{ns_groups}, only found #{groups.count}: #{groups.map(&:display_name)}")
+      end
+
+      @nsxt_policy_provider.add_vm_to_groups(created_vm, groups) unless groups.empty?
+    end
+
+    def add_to_management_groups_and_server_pools(created_vm, vm_type)
+      ns_groups = vm_type.ns_groups || []
+      if vm_type.nsxt_server_pools
+        #For static server pools add vm as server pool member
+        #For dynamic server pools add vm to the corresponding nsgroup
+        static_server_pools, dynamic_server_pools = @nsxt_provider.retrieve_server_pools(vm_type.nsxt_server_pools)
+        lb_ns_groups = dynamic_server_pools.map { |server_pool| server_pool.member_group.grouping_object.target_display_name } if dynamic_server_pools
+        logger.info("NSGroup names corresponding to load balancer's dynamic server pools are: #{lb_ns_groups}")
+        ns_groups.concat(lb_ns_groups) if lb_ns_groups
+        @nsxt_provider.add_vm_to_server_pools(created_vm, static_server_pools) if static_server_pools
+      end
+      @nsxt_provider.add_vm_to_nsgroups(created_vm, ns_groups) unless ns_groups.empty?
+    end
 
     def get_metadata_version(vm_mob)
       begin

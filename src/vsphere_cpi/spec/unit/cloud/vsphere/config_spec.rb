@@ -264,7 +264,7 @@ module VSphereCloud
 
       context 'when a valid nsxt is passed in config' do
         before do
-          config_hash.merge! 'nsxt' => {
+          config_hash['vcenters'].first.merge! 'nsxt' => {
             'host' => 'fake-host',
             'username' => 'fake-username',
             'password' => 'fake-password',
@@ -278,7 +278,41 @@ module VSphereCloud
             config.validate
           end.to_not raise_error
         end
+
       end
+
+      context '#nsxt.policy_api_migration_mode' do
+        context 'when not set' do
+          before do
+            config_hash['vcenters'].first.merge! 'nsxt' => {
+              'host' => 'fake-host',
+              'username' => 'fake-username',
+              'password' => 'fake-password',
+              'certificate' => nil,
+              'private_key' => nil,
+            }
+          end
+          it 'returns false by default' do
+            expect(config.nsxt.policy_api_migration_mode?).to be(false)
+          end
+        end
+
+      context 'when set' do
+        before do
+          config_hash['vcenters'].first.merge! 'nsxt' => {
+            'host' => 'fake-host',
+            'username' => 'fake-username',
+            'password' => 'fake-password',
+            'certificate' => nil,
+            'private_key' => nil,
+            'policy_api_migration_mode' => true
+          }
+        end
+        it 'returns true' do
+          expect(config.nsxt.policy_api_migration_mode?).to be(true)
+        end
+      end
+    end
 
       context 'when a valid nsxt with remote auth is passed in config' do
         before do

@@ -1,6 +1,7 @@
 require 'spec_helper'
 require 'ostruct'
 require 'nsxt_manager_client/nsxt_manager_client/models/lb_pool'
+require 'nsxt_manager_client/nsxt_manager_client/models/ns_group'
 require 'nsxt_manager_client/nsxt_manager_client/api_client'
 require 'nsxt_manager_client/nsxt_manager_client/api_error'
 require 'nsxt_policy_client/nsxt_policy_client/api_client'
@@ -1192,6 +1193,144 @@ module VSphereCloud
           allow(VmConfig).to receive(:new).and_return(vm_config)
           expect(VmCreator).to receive(:new).and_return(vm_creator)
           expect(vm_creator).to receive(:create).with(vm_config).and_return(fake_vm)
+        end
+
+        context "in Policy API Migration Mode" do
+          before do
+            allow(nsxt_config).to receive(:use_policy_api?).and_return(false)
+            allow(nsxt_config).to receive(:policy_api_migration_mode?).and_return(true)
+            allow(nsxt_provider).to receive(:set_vif_type)
+          end
+
+          context "regardless of resources set in nsxt_config pools/groups" do
+            let(:vm_type_nsxt_config) { {} }
+            it "always sets vif_type in management mode" do
+              expect(nsxt_provider).to receive(:set_vif_type).with(fake_vm, {})
+              vsphere_cloud.create_vm(
+                'fake-agent-id',
+                'fake-stemcell-cid',
+                vm_type,
+                'fake-networks-hash',
+                [],
+                {}
+              )
+            end
+          end
+
+          context "when ns_groups are set" do
+            let(:group_1) { double(NSXTPolicy::Group, id: 'fake-nsgroup-1-id', display_name: "fake nsgroup 1") }
+            let(:group_2) { double(NSXTPolicy::Group, id: 'fake-nsgroup-2-id', display_name: "fake nsgroup 2") }
+            let(:vm_type_nsxt_config) do
+              { 'ns_groups' => [group_1.display_name, group_2.display_name] }
+            end
+
+            before do
+              allow(nsxt_policy_provider).to receive(:retrieve_groups_by_name).with(["fake nsgroup 1", "fake nsgroup 2"]).and_return([group_1, group_2])
+            end
+
+            it "calls policy_provider#add_vm_to_groups AND provider#add_vm_to_nsgroups with the vm and ns_groups values" do
+              expect(nsxt_policy_provider).to receive(:add_vm_to_groups).with(fake_vm, [group_1, group_2])
+              expect(nsxt_provider).to receive(:add_vm_to_nsgroups).with(fake_vm, [group_1.display_name, group_2.display_name])
+
+
+              vsphere_cloud.create_vm(
+                'fake-agent-id',
+                'fake-stemcell-cid',
+                vm_type,
+                'fake-networks-hash',
+                [],
+                {}
+              )
+            end
+
+            it 'deletes created VM and raises error if an error occurs when calling #add_vm_to_groups on the management side' do
+              nsxt_error = NSGroupsNotFound.new('fake-nsgroup-name')
+              allow(nsxt_policy_provider).to receive(:add_vm_to_groups).with(fake_vm, [group_1, group_2])
+              allow(nsxt_provider).to receive(:add_vm_to_nsgroups).with(any_args).and_raise(nsxt_error)
+              expect(vsphere_cloud).to receive(:delete_vm).with(fake_vm.cid)
+              expect do
+                vsphere_cloud.create_vm(
+                  'fake-agent-id',
+                  'fake-stemcell-cid',
+                  vm_type,
+                  'fake-networks-hash',
+                  [],
+                  {}
+                )
+              end.to raise_error(nsxt_error)
+            end
+          end
+
+          context 'and server pool(s) are specified in the nsxt configuration' do
+            let(:vm_type_nsxt_config) do
+              { 'ns_groups' => [], 'lb' => { 'server_pools' => [server_pool.display_name] } }
+            end
+            let(:server_pool) { NSXT::LbPool.new(:id => 'id-1', :display_name => 'test-serverpool-1') }
+            let(:server_pools) { [server_pool] }
+
+            it 'adds vm to both Management AND Policy server pool(s)' do
+              expect(nsxt_policy_provider).to receive(:retrieve_server_pools).with([server_pool.display_name]).and_return([server_pools, []])
+              expect(nsxt_policy_provider).to receive(:add_vm_to_server_pools).with(fake_vm, server_pools)
+              expect(nsxt_provider).to receive(:retrieve_server_pools).with([server_pool.display_name]).and_return([server_pools, []])
+              expect(nsxt_provider).to receive(:add_vm_to_server_pools).with(fake_vm, server_pools)
+
+              vsphere_cloud.create_vm(
+                'fake-agent-id',
+                'fake-stemcell-cid',
+                vm_type,
+                'fake-networks-hash',
+                [],
+                {}
+              )
+            end
+
+            context 'when the server pool is dynamic' do
+
+              let(:dynamic_policy_pool) { NSXTPolicy::LBPool.new(:id => 'id-1', :display_name => 'test-serverpool-1', member_group: member_group) }
+              let(:dynamic_management_pool) { NSXT::LbPool.new(:id => 'id-1', :display_name => 'test-serverpool-1', member_group: double("", grouping_object: double("", target_display_name: management_group_1.display_name))) }
+              let(:policy_group_1) { double(NSXTPolicy::Group, id: 'fake-nsgroup-1-id', display_name: "fake nsgroup 1") }
+              let(:management_group_1) { double(NSXT::NSGroup, id: 'fake-nsgroup-1-id', display_name: "fake nsgroup 1") }
+              let(:member_group) { double(NSXTPolicy::LBPoolMemberGroup, group_path: "some/group/path/#{policy_group_1.id}") }
+
+              it 'adds the vm to the group(s) associated with the server pool(s) on both the Policy and Management side' do
+                allow(nsxt_policy_provider).to receive(:retrieve_server_pools).with([server_pool.display_name]).and_return([nil, [dynamic_policy_pool]])
+                allow(nsxt_policy_provider).to receive(:retrieve_groups_by_id).with([policy_group_1.id]).and_return([policy_group_1])
+                allow(nsxt_provider).to receive(:retrieve_server_pools).with([server_pool.display_name]).and_return([nil, [dynamic_management_pool]])
+                expect(nsxt_policy_provider).to receive(:add_vm_to_groups).with(fake_vm, [policy_group_1])
+                expect(nsxt_provider).to receive(:add_vm_to_nsgroups).with(fake_vm, [management_group_1.display_name])
+
+                vsphere_cloud.create_vm(
+                  'fake-agent-id',
+                  'fake-stemcell-cid',
+                  vm_type,
+                  'fake-networks-hash',
+                  [],
+                  {}
+                )
+              end
+            end
+
+            it 'deletes created VM and raises error if an error occurs when adding VM to server pools on the management side' do
+              nsxt_error = NSXT::ApiCallError.new
+              allow(nsxt_policy_provider).to receive(:retrieve_server_pools).with([server_pool.display_name]).and_return([server_pools, []])
+              allow(nsxt_policy_provider).to receive(:add_vm_to_server_pools).with(fake_vm, server_pools)
+              allow(nsxt_provider).to receive(:retrieve_server_pools).with([server_pool.display_name]).and_return([server_pools, []])
+              allow(nsxt_provider).to receive(:add_vm_to_server_pools).and_raise(nsxt_error)
+
+              expect(vsphere_cloud).to receive(:delete_vm).with(fake_vm.cid)
+              expect do
+                vsphere_cloud.create_vm(
+                  'fake-agent-id',
+                  'fake-stemcell-cid',
+                  vm_type,
+                  'fake-networks-hash',
+                  [],
+                  {}
+                )
+              end.to raise_error(nsxt_error)
+            end
+          end
+
         end
 
         context "and the Policy API is used" do

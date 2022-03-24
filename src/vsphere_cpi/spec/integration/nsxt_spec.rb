@@ -714,6 +714,508 @@ describe 'CPI', nsxt_all: true do
     end
   end
 
+  describe 'when policy_api_migration_mode is set', nsxt_policy: true do
+
+    let(:migration_cpi) do
+      VSphereCloud::Cloud.new(cpi_options(nsxt: {
+        host: @nsxt_host,
+        username: @nsxt_username,
+        password: @nsxt_password,
+        policy_api_migration_mode: true,
+      }))
+    end
+
+    let(:port_no1) {'80'}
+    let(:port_no2) {'443'}
+
+    let(:bosh_id) { SecureRandom.uuid }
+
+    before do
+      @nsgroup_1 = create_nsgroup(nsgroup_name_1)
+      @server_pool_1 = create_static_server_pool(pool_1.name)
+      @server_pool_2 = create_dynamic_server_pool(pool_2.name, @nsgroup_1)
+      create_lb_pool(pool_1)
+      create_lb_pool(pool_2)
+
+      create_policy_group(nsgroup_name_1)
+      create_segments([segment_1, segment_2])
+    end
+
+    after do
+      delete_policy_group(nsgroup_name_1)
+      delete_segments([segment_1, segment_2])
+      delete_server_pool(@server_pool_1)
+      delete_server_pool(@server_pool_2)
+      delete_lb_pool(pool_1)
+      delete_lb_pool(pool_2)
+      delete_nsgroup(@nsgroup_1)
+    end
+
+    context "when expected groups/server pools do no exist on the policy side" do
+
+      let(:cpi) { migration_cpi }
+
+      it "should create VMs only on the management side" do
+      management_only_group = create_nsgroup('management-only-group')
+      management_only_pool = create_static_server_pool('management-only-pool')
+
+      vm_type_with_management_only_groups = {
+        'ram' => 512,
+        'disk' => 2048,
+        'cpu' => 1,
+        'nsxt' => {
+          'ns_groups' => [management_only_group.display_name],
+          'lb' => {
+            'server_pools' => []
+          }
+        }
+      }
+
+      vm_type_with_management_only_server_pools = {
+        'ram' => 512,
+        'disk' => 2048,
+        'cpu' => 1,
+        'nsxt' => {
+          'lb' => {
+            'server_pools' => [
+              {
+                'name' => management_only_pool.display_name,
+                'port' => port_no1
+              },
+            ]
+          }
+        }
+        }
+
+        simple_vm_lifecycle(migration_cpi, '', vm_type_with_management_only_groups, network_spec) do |vm_id|
+          lport_ids = []
+          #validate nsxt creation behavior occurred correctly for VMs created via management api.
+          verify_ports(vm_id) do |lport|
+            expect(lport).not_to be_nil
+            lport_ids << lport.id
+          end
+          expect(lport_ids.length).to eq(2)
+
+          lport_ids.each do |id|
+            grouping_object_svc = NSXT::ManagementPlaneApiGroupingObjectsNsGroupsApi.new(@manager_client)
+            nsgroups = grouping_object_svc.list_ns_groups.results.select do |nsgroup|
+              next unless nsgroup.members
+              nsgroup.members.find do |member|
+                member.target_type == 'LogicalPort' && member.target_property == 'id' && member.value == id
+              end
+            end
+            expect(nsgroups.map(&:display_name)).to include('management-only-group')
+          end
+        end
+
+        simple_vm_lifecycle(migration_cpi, '', vm_type_with_management_only_server_pools, network_spec) do |vm_id|
+          #check that the VM was made a member of the static server pool (no group)
+          server_pool_1_members = services_svc.read_load_balancer_pool(management_only_pool.id).members
+          expect(server_pool_1_members).to contain_exactly(an_object_having_attributes(display_name: vm_id))
+        end
+
+      end
+    end
+
+    context "with VMs created via the management API" do
+
+      let(:management_cpi) do
+        VSphereCloud::Cloud.new(cpi_options(nsxt: {
+          host: @nsxt_host,
+          auth_certificate: @certificate.to_s,
+          auth_private_key: @private_key.to_s
+        }))
+      end
+      let(:cpi) { management_cpi } #the cpi variable is used to cleanup created VMs.
+
+      context "and the ports are connected to a policy-api created segment/network switch" do
+        let(:network_spec) { policy_network_spec }
+        it "can successfully set metadata + remove" do
+          vm_type = {
+            'ram' => 512,
+            'disk' => 2048,
+            'cpu' => 1,
+            'nsxt' => {
+              'lb' => {
+                'server_pools' => [
+                  {
+                    'name' => pool_1.name,
+                    'port' => port_no1
+                  },
+                  {
+                    'name' => pool_2.name,
+                    'port' => port_no2
+                  }
+                ]
+              }
+            }
+          }
+          #we use the policy network spec here so that the ports are accessible via segments on the policy side.
+
+          vm_id, _ = management_cpi.create_vm(
+            'vm-created-via-management-api',
+            @stemcell_id,
+            vm_type,
+            network_spec
+          )
+          begin
+            expect(vm_id).to_not be_nil
+            expect(migration_cpi.has_vm?(vm_id)).to be(true)
+
+            lport_ids = []
+            #validate nsxt creation behavior occurred correctly for VMs created via management api.
+            verify_ports(vm_id) do |lport|
+              expect(lport).not_to be_nil
+              lport_ids << lport.id
+            end
+            expect(lport_ids.length).to eq(2)
+
+            #check that the VM was made a member of the group (via the dynamic server pool)
+            lport_ids.each do |id|
+              grouping_object_svc = NSXT::ManagementPlaneApiGroupingObjectsNsGroupsApi.new(@manager_client)
+              nsgroups = grouping_object_svc.list_ns_groups.results.select do |nsgroup|
+                next unless nsgroup.members
+                nsgroup.members.find do |member|
+                  member.target_type == 'LogicalPort' && member.target_property == 'id' && member.value == id
+                end
+              end
+              expect(nsgroups.map(&:display_name)).to include(@nsgroup_1.display_name)
+            end
+
+            #check that the VM was made a member of the static server pool (no group)
+            server_pool_1_members = services_svc.read_load_balancer_pool(@server_pool_1.id).members
+            expect(server_pool_1_members.count).to eq(1)
+
+            #tags logical ports with metadata for management-created-vms (and doesn't fail when trying to tag segments that don't exist... )
+            #NOTE: management side will ONLY add the metadata `id` value as a tag (with the scope of bosh/id)
+            migration_cpi.set_vm_metadata(vm_id, {
+              'id' => bosh_id,
+              'test-tag-1-key' => 'test-tag-1-value',
+              'test-tag-2-key' => 'test-tag-2-value',
+            })
+
+            verify_ports(vm_id) do |logical_port|
+              expect(logical_port.tags).to contain_exactly(
+                  an_object_having_attributes(scope: 'bosh/id', tag: Digest::SHA1.hexdigest(bosh_id)),
+                  an_object_having_attributes(scope: 'bosh/test-tag-1-key', tag: 'test-tag-1-value'),
+                  an_object_having_attributes(scope: 'bosh/test-tag-2-key', tag: 'test-tag-2-value')
+              )
+            end
+
+            verify_policy_ports([segment_1, segment_2]) do |ports|
+              expect(ports.length).to eq(1)
+              ports.each do |port|
+                expect(port.tags).to contain_exactly(
+                  an_object_having_attributes(scope: 'bosh/id', tag: Digest::SHA1.hexdigest(bosh_id)),
+                  an_object_having_attributes(scope: 'bosh/test-tag-1-key', tag: 'test-tag-1-value'),
+                  an_object_having_attributes(scope: 'bosh/test-tag-2-key', tag: 'test-tag-2-value')
+                )
+              end
+            end
+
+          ensure
+            delete_vm(migration_cpi, vm_id)
+          end
+
+          #PLEASE NOTE: with NSXT 3.1, group membership (in both management/policy groups) is automatically revoked on deletion for VMs created within the policy API.
+          #TODO: do we see the same behavior with prior NSX-T versions.
+          #check that delete removed the VM from the nsxt groups (that it was added to for the dynamic server pool)
+          lport_ids.each do |id|
+            grouping_object_svc = NSXT::ManagementPlaneApiGroupingObjectsNsGroupsApi.new(@manager_client)
+            nsgroups = grouping_object_svc.list_ns_groups.results.select do |nsgroup|
+              next unless nsgroup.members
+              nsgroup.members.find do |member|
+                member.target_type == 'LogicalPort' && member.target_property == 'id' && member.value == id
+              end
+            end
+
+            expect(nsgroups.map(&:display_name)).not_to include(@nsgroup_1.display_name)
+          end
+
+          #check that delete removed the VM from the nsxt server pool that it was directly added to (via the static pool).
+          server_pool_1_members = services_svc.read_load_balancer_pool(@server_pool_1.id).members
+          expect(server_pool_1_members).to be_nil
+        end
+      end
+
+      context "and the ports are NOT connected to a policy-api created segment/network switch" do
+
+        it "can successfully set metadata" do
+          vm_type = {
+            'ram' => 512,
+            'disk' => 2048,
+            'cpu' => 1,
+            'nsxt' => {} }
+          #we use the policy network spec here so that the ports are accessible via segments on the policy side.
+
+          vm_id, _ = management_cpi.create_vm(
+            'vm-created-via-management-api',
+            @stemcell_id,
+            vm_type,
+            network_spec
+          )
+          begin
+            expect(vm_id).to_not be_nil
+            expect(migration_cpi.has_vm?(vm_id)).to be(true)
+
+            #tags logical ports with metadata for management-created-vms (and doesn't fail when trying to tag segments that don't exist... )
+            #NOTE: management side will ONLY add the metadata `id` value as a tag (with the scope of bosh/id)
+            migration_cpi.set_vm_metadata(vm_id, {
+              'id' => bosh_id,
+              'test-tag-1-key' => 'test-tag-1-value',
+              'test-tag-2-key' => 'test-tag-2-value',
+            })
+
+            verify_ports(vm_id) do |logical_port|
+              expect(logical_port.tags).to contain_exactly(
+                an_object_having_attributes(scope: 'bosh/id', tag: Digest::SHA1.hexdigest(bosh_id)),
+              )
+            end
+
+          ensure
+            delete_vm(migration_cpi, vm_id)
+          end
+
+        end
+      end
+    end
+
+    context "with VMs created via the policy API" do
+      let(:policy_cpi) do
+        VSphereCloud::Cloud.new(cpi_options(nsxt: {
+          host: @nsxt_host,
+          username: @nsxt_username,
+          password: @nsxt_password,
+          use_policy_api: true,
+        }))
+      end
+
+      let(:cpi) { policy_cpi } #the cpi variable is used to cleanup created VMs.
+      it "can successfully set metadata + remove" do
+
+        #server pools cannot be dynamic, so just test one in this case.
+        #must manually specify ns_groups since they aren't added via dynamic server pools.
+        vm_type = {
+          'ram' => 512,
+          'disk' => 2048,
+          'cpu' => 1,
+          'nsxt' => {
+            'ns_groups' => [nsgroup_name_1],
+            'lb' => {
+              'server_pools' => [
+                {
+                  'name' => pool_1.name,
+                  'port' => port_no1
+                },
+              ]
+            }
+          }
+        }
+
+        #create vm via policy api.
+        vm_id, _ = policy_cpi.create_vm(
+          'vm-created-via-policy-api',
+          @stemcell_id,
+          vm_type,
+          policy_network_spec
+        )
+
+        logical_port_ids = []
+        begin
+          expect(vm_id).to_not be_nil
+          expect(migration_cpi.has_vm?(vm_id)).to be(true)
+
+          #verify segment names were attached correctly.
+          vm = policy_cpi.vm_provider.find(vm_id)
+          segment_names = vm.get_nsxt_segment_vif_list.map { |x| x[0] }
+          expect(segment_names).to contain_exactly(segment_1.name, segment_2.name)
+
+          #verify vm is a member of the nsgroup_1
+          retryer do
+            results = @policy_group_members_api.get_group_vm_members_0(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, nsgroup_name_1).results
+            raise StillUpdatingVMsInGroups if results.map(&:display_name).uniq.length < 1
+            expect(results).to contain_exactly(an_object_having_attributes(display_name: vm_id))
+          end
+
+          #check that the VM was made a member of the server pool (no group)
+          server_pool_1 = @policy_load_balancer_pools_api.read_lb_pool_0(pool_1.id)
+          expect(server_pool_1.members).to contain_exactly(an_object_having_attributes(port: "80", ip_address: vm.mob.guest&.ip_address))
+
+          #tags both logical (management) and segment (policy) ports with metadata for policy-created-vms.
+          migration_cpi.set_vm_metadata(vm_id, {
+            'id' => bosh_id,
+            'test-tag-1-key' => 'test-tag-1-value',
+            'test-tag-2-key' => 'test-tag-2-value',
+          })
+
+          verify_policy_ports([segment_1, segment_2]) do |ports|
+            expect(ports.length).to eq(1)
+            ports.each do |port|
+              expect(port.tags).to contain_exactly(
+                an_object_having_attributes(scope: 'bosh/id', tag: Digest::SHA1.hexdigest(bosh_id)),
+                an_object_having_attributes(scope: 'bosh/test-tag-1-key', tag: 'test-tag-1-value'),
+                an_object_having_attributes(scope: 'bosh/test-tag-2-key', tag: 'test-tag-2-value')
+              )
+            end
+          end
+
+          verify_ports(vm_id) do |logical_port|
+            logical_port_ids << logical_port.id
+            expect(logical_port.tags).to contain_exactly(
+              an_object_having_attributes(scope: 'bosh/id', tag: Digest::SHA1.hexdigest(bosh_id)),
+              an_object_having_attributes(scope: 'bosh/test-tag-1-key', tag: 'test-tag-1-value'),
+              an_object_having_attributes(scope: 'bosh/test-tag-2-key', tag: 'test-tag-2-value')
+            )
+          end
+
+        ensure
+          #delete vm created via the policy api.
+          delete_vm(migration_cpi, vm_id)
+        end
+
+        #check that the management API side does not have orphan group memberships for this VM
+        logical_port_ids.each do |id|
+          grouping_object_svc = NSXT::ManagementPlaneApiGroupingObjectsNsGroupsApi.new(@manager_client)
+          nsgroups = grouping_object_svc.list_ns_groups.results.select do |nsgroup|
+            next unless nsgroup.members
+            nsgroup.members.find do |member|
+              member.target_type == 'LogicalPort' && member.target_property == 'id' && member.value == id
+            end
+          end
+
+          expect(nsgroups.map(&:display_name)).not_to include(@nsgroup_1.display_name)
+        end
+
+        #check that the policy-created VM was removed from groups on the Policy side.
+        retryer do
+          results = @policy_group_members_api.get_group_vm_members_0(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, nsgroup_name_1).results
+          raise StillUpdatingVMsInGroups if results.map(&:display_name).uniq.length > 0
+
+          expect(results.map(&:display_name)).not_to include(@nsgroup_1.display_name)
+        end
+
+        #check that the VM was removed from the server pool
+        server_pool_1 = @policy_load_balancer_pools_api.read_lb_pool_0(pool_1.id)
+        expect(server_pool_1.members).to be_nil
+
+        policy_cpi.cleanup
+      end
+    end
+
+    context "with VMs created via the migration API" do
+
+      let(:cpi) { migration_cpi } #the cpi variable is used to cleanup created VMs.
+      it "can successfully set metadata + remove" do
+
+        vm_type = {
+          'ram' => 512,
+          'disk' => 2048,
+          'cpu' => 1,
+          'nsxt' => {
+            'ns_groups' => [nsgroup_name_1],
+            'lb' => {
+              'server_pools' => [
+                {
+                  'name' => pool_1.name,
+                  'port' => port_no1
+                },
+              ]
+            }
+          }
+        }
+
+        #create vm via migration api.
+        vm_id, _ = migration_cpi.create_vm(
+          'vm-created-via-policy-api',
+          @stemcell_id,
+          vm_type,
+          policy_network_spec
+        )
+
+        logical_port_ids = []
+        begin
+          expect(vm_id).to_not be_nil
+          expect(migration_cpi.has_vm?(vm_id)).to be(true)
+
+          #verify segment names were attached correctly.
+          vm = migration_cpi.vm_provider.find(vm_id)
+          segment_names = vm.get_nsxt_segment_vif_list.map { |x| x[0] }
+          expect(segment_names).to contain_exactly(segment_1.name, segment_2.name)
+
+          #verify vm is a member of the nsgroup_1
+          retryer do
+            results = @policy_group_members_api.get_group_vm_members_0(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, nsgroup_name_1).results
+            raise StillUpdatingVMsInGroups if results.map(&:display_name).uniq.length < 1
+            expect(results).to contain_exactly(an_object_having_attributes(display_name: vm_id))
+          end
+
+          #check that the VM was made a member of the server pool (no group)
+          server_pool_1 = @policy_load_balancer_pools_api.read_lb_pool_0(pool_1.id)
+          expect(server_pool_1.members).to contain_exactly(an_object_having_attributes(port: "80", ip_address: vm.mob.guest&.ip_address))
+
+          #tags both logical (management) and segment (policy) ports with metadata for policy-created-vms.
+          migration_cpi.set_vm_metadata(vm_id, {
+            'id' => bosh_id,
+            'test-tag-1-key' => 'test-tag-1-value',
+            'test-tag-2-key' => 'test-tag-2-value',
+          })
+
+          verify_policy_ports([segment_1, segment_2]) do |ports|
+            expect(ports.length).to eq(1)
+            ports.each do |port|
+              expect(port.tags).to contain_exactly(
+                an_object_having_attributes(scope: 'bosh/id', tag: Digest::SHA1.hexdigest(bosh_id)),
+                an_object_having_attributes(scope: 'bosh/test-tag-1-key', tag: 'test-tag-1-value'),
+                an_object_having_attributes(scope: 'bosh/test-tag-2-key', tag: 'test-tag-2-value')
+              )
+            end
+          end
+
+          verify_ports(vm_id) do |logical_port|
+            logical_port_ids << logical_port.id
+            expect(logical_port.tags).to contain_exactly(
+              an_object_having_attributes(scope: 'bosh/id', tag: Digest::SHA1.hexdigest(bosh_id)),
+              an_object_having_attributes(scope: 'bosh/test-tag-1-key', tag: 'test-tag-1-value'),
+              an_object_having_attributes(scope: 'bosh/test-tag-2-key', tag: 'test-tag-2-value')
+            )
+          end
+
+        ensure
+          #delete vm created via the migration api.
+          delete_vm(migration_cpi, vm_id)
+        end
+
+        #check that the management API side does not have orphan group memberships for this VM
+        logical_port_ids.each do |id|
+          grouping_object_svc = NSXT::ManagementPlaneApiGroupingObjectsNsGroupsApi.new(@manager_client)
+          nsgroups = grouping_object_svc.list_ns_groups.results.select do |nsgroup|
+            next unless nsgroup.members
+            nsgroup.members.find do |member|
+              member.target_type == 'LogicalPort' && member.target_property == 'id' && member.value == id
+            end
+          end
+
+          expect(nsgroups.map(&:display_name)).not_to include(@nsgroup_1.display_name)
+        end
+
+        #check that the policy-created VM was removed from groups on the Policy side.
+        retryer do
+          results = @policy_group_members_api.get_group_vm_members_0(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, nsgroup_name_1).results
+          raise StillUpdatingVMsInGroups if results.map(&:display_name).uniq.length > 0
+
+          expect(results.map(&:display_name)).not_to include(@nsgroup_1.display_name)
+        end
+
+        #check that the VM was removed from the server pool
+        server_pool_1 = @policy_load_balancer_pools_api.read_lb_pool_0(pool_1.id)
+        expect(server_pool_1.members).to be_nil
+
+        migration_cpi.cleanup
+      end
+    end
+
+  end
+
   describe 'on delete_vm' do
     let(:vm_type) do
       {
@@ -920,10 +1422,9 @@ describe 'CPI', nsxt_all: true do
             verify_policy_ports([segment_1, segment_2]) do |ports|
               expect(ports.length).to eq(1)
               ports.each do |port|
-                expect(port.tags.length).to eq(3)
-                expect(port.tags).to include( an_object_having_attributes(scope: 'bosh/id', tag: Digest::SHA1.hexdigest(bosh_id)) )
-                expect(port.tags).to include( an_object_having_attributes(scope: 'bosh/test-tag-1-key', tag: 'test-tag-1-value') )
-                expect(port.tags).to include( an_object_having_attributes(scope: 'bosh/test-tag-2-key', tag: 'test-tag-2-value') )
+                expect(port.tags).to contain_exactly(an_object_having_attributes(scope: 'bosh/id', tag: Digest::SHA1.hexdigest(bosh_id)),
+                                                     an_object_having_attributes(scope: 'bosh/test-tag-1-key', tag: 'test-tag-1-value'),
+                                                     an_object_having_attributes(scope: 'bosh/test-tag-2-key', tag: 'test-tag-2-value'))
               end
             end
           end
@@ -935,8 +1436,7 @@ describe 'CPI', nsxt_all: true do
           simple_vm_lifecycle(cpi, '', vm_type, network_spec) do |vm_id|
             cpi.set_vm_metadata(vm_id, 'id' => bosh_id)
             verify_ports(vm_id) do |logical_port|
-              expect(logical_port.tags.first.scope).to eq('bosh/id')
-              expect(logical_port.tags.first.tag).to eq(Digest::SHA1.hexdigest(bosh_id))
+                expect(logical_port.tags).to contain_exactly( an_object_having_attributes(scope: 'bosh/id', tag: Digest::SHA1.hexdigest(bosh_id)) )
             end
           end
         end
