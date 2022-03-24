@@ -61,64 +61,47 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
   }
 
   describe '#add_vm_to_groups' do
-    let(:groups) { ['some-group-1', 'some-group-2'] }
-    before do
-      allow(policy_group_api).to receive(:read_group_for_domain).
-          with(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, "some-group-1").and_return(group1)
-      allow(policy_group_api).to receive(:read_group_for_domain).
-          with(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, "some-group-2").and_return(group2)
-    end
+    let(:group_1) { double(NSXTPolicy::Group, id: 'fake-nsgroup-1-id', display_name: "fake nsgroup 1", expression: []) }
+    let(:group_2) { double(NSXTPolicy::Group, id: 'fake-nsgroup-2-id', display_name: "fake nsgroup 2", expression: []) }
+    let(:groups) { [group_1, group_2] }
 
-    context 'when groups are empty' do
+    context 'when groups do not have any existing members' do
       it 'adds vm to groups' do
+        expected_expression = NSXTPolicy::ExternalIDExpression.new(resource_type: 'ExternalIDExpression', member_type: 'VirtualMachine', external_ids: ['some-vm-external-id'])
         expect(policy_group_api).to receive(:update_group_for_domain).
-            with(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN,
-                 'some-group-1',
-                 group1)
+          with(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, group_1.id, group_1) do |domain, group_id, group|
+            expect(group.expression).to eq([expected_expression])
+          end
+
         expect(policy_group_api).to receive(:update_group_for_domain).
-            with(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN,
-                 'some-group-2',
-                 group2)
+          with( VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, group_2.id, group_2) do |domain, group_id, group|
+            expect(group.expression).to eq([expected_expression])
+          end
+
         nsxt_policy_provider.add_vm_to_groups(vm, groups)
-        expect(group1.expression).to match_array([NSXTPolicy::ExternalIDExpression.new(resource_type: 'ExternalIDExpression',
-                                                                                       member_type: 'VirtualMachine',
-                                                                                       external_ids: ['some-vm-external-id'])])
-        expect(group2.expression).to match_array([NSXTPolicy::ExternalIDExpression.new(resource_type: 'ExternalIDExpression',
-                                                                                       member_type: 'VirtualMachine',
-                                                                                       external_ids: ['some-vm-external-id'])])
       end
     end
 
-    context 'when groups are not empty' do
-      let(:group1) { instance_double(NSXTPolicy::Group,
-                                     id: 'some-group-1',
-                                     expression: [NSXTPolicy::ExternalIDExpression.new(resource_type: 'ExternalIDExpression',
-                                                                                       member_type: 'VirtualMachine',
-                                                                                       external_ids: ['existing-vm-external-id'])],
-                                     )}
-      let(:group2) { instance_double(NSXTPolicy::Group,
-                                     id: 'some-group-2',
-                                     expression: [NSXTPolicy::ExternalIDExpression.new(resource_type: 'ExternalIDExpression',
-                                                                                       member_type: 'VirtualMachine',
-                                                                                       external_ids: ['existing-vm-external-id'])],
-                                     )}
+    context 'when groups have existing members expressed as an ExternalIDExpression' do
+      before do
+        allow(group_1).to receive(:expression).and_return([NSXTPolicy::ExternalIDExpression.new(resource_type: 'ExternalIDExpression', member_type: 'VirtualMachine', external_ids: ['existing-vm-external-id'])])
+        #this expression must be a diff obj than above, as the above gets mutated in the test to include the vm id.
+        allow(group_2).to receive(:expression).and_return([NSXTPolicy::ExternalIDExpression.new(resource_type: 'ExternalIDExpression', member_type: 'VirtualMachine', external_ids: ['existing-vm-external-id'])])
+      end
 
-      it 'adds vm to groups' do
+      it 'adds vm to existing members' do
+        expected_expression = NSXTPolicy::ExternalIDExpression.new(resource_type: 'ExternalIDExpression', member_type: 'VirtualMachine', external_ids: ['existing-vm-external-id', 'some-vm-external-id'])
         expect(policy_group_api).to receive(:update_group_for_domain).
-            with(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN,
-                 'some-group-1',
-                 group1)
+          with(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, group_1.id, group_1) do |domain, group_id, group|
+            expect(group.expression).to eq([expected_expression])
+          end
+
         expect(policy_group_api).to receive(:update_group_for_domain).
-            with(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN,
-                 'some-group-2',
-                 group2)
+          with( VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, group_2.id, group_2) do |domain, group_id, group|
+            expect(group.expression).to eq([expected_expression])
+          end
+
         nsxt_policy_provider.add_vm_to_groups(vm, groups)
-        expect(group1.expression).to match_array([NSXTPolicy::ExternalIDExpression.new(resource_type: 'ExternalIDExpression',
-                                                                                       member_type: 'VirtualMachine',
-                                                                                       external_ids: ['existing-vm-external-id', 'some-vm-external-id'])])
-        expect(group2.expression).to match_array([NSXTPolicy::ExternalIDExpression.new(resource_type: 'ExternalIDExpression',
-                                                                                       member_type: 'VirtualMachine',
-                                                                                       external_ids: ['existing-vm-external-id', 'some-vm-external-id'])])
       end
     end
 
@@ -130,30 +113,25 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
         end
         external_ids
       end
-      let(:group1) { instance_double(NSXTPolicy::Group,
-                                     id: 'some-group-1',
-                                     expression: [NSXTPolicy::ExternalIDExpression.new(resource_type: 'ExternalIDExpression',
-                                                                                       member_type: 'VirtualMachine',
-                                                                                       external_ids: existing_external_ids)],
-                                     )}
+      let(:first_500_vms) do
+        NSXTPolicy::ExternalIDExpression.new(resource_type: 'ExternalIDExpression', member_type: 'VirtualMachine', external_ids: existing_external_ids)
+      end
 
-      it 'makes a new criteria for external ids with conjunction operator' do
+      before do
+        allow(group_1).to receive(:expression).and_return([first_500_vms])
+      end
+
+      it 'makes a new criteria for the ids of additional VMs past 500 external ids with conjunction operator' do
+        additional_vm = NSXTPolicy::ExternalIDExpression.new(resource_type: 'ExternalIDExpression', member_type: 'VirtualMachine', external_ids: ['some-vm-external-id'])
         expect(policy_group_api).to receive(:update_group_for_domain).
-            with(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN,
-                 'some-group-1',
-                 group1)
-        nsxt_policy_provider.add_vm_to_groups(vm, ['some-group-1'])
-        expect(group1.expression).to match_array([NSXTPolicy::ExternalIDExpression.new(resource_type: 'ExternalIDExpression',
-                                                                                       member_type: 'VirtualMachine',
-                                                                                       external_ids: existing_external_ids),
-                                                  conjunction_expression,
-                                                  NSXTPolicy::ExternalIDExpression.new(resource_type: 'ExternalIDExpression',
-                                                                                       member_type: 'VirtualMachine',
-                                                                                       external_ids: ['some-vm-external-id'])])
+          with(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, group_1.id, group_1) do |domain, group_id, group|
+            expect(group.expression).to eq([first_500_vms, conjunction_expression, additional_vm])
+          end
+        nsxt_policy_provider.add_vm_to_groups(vm, [group_1])
       end
     end
 
-    context 'when one of the criterias in a group has 500 vms' do
+    context 'when there are criterias w/ 500 and 200 vms respectively' do
       let(:existing_external_ids_500) do
         external_ids = []
         500.times do |i|
@@ -164,37 +142,28 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
       let(:existing_external_ids_200) do
         external_ids = []
         200.times do |i|
-          external_ids << "some-external-id-#{i}"
+          external_ids << "some-external-id-two-#{i}"
         end
         external_ids
       end
-      let(:existing_expression_500) do
-        NSXTPolicy::ExternalIDExpression.new(resource_type: 'ExternalIDExpression',
-                                             member_type: 'VirtualMachine',
-                                             external_ids: existing_external_ids_500)
+      let(:first_500_vms) do
+        NSXTPolicy::ExternalIDExpression.new(resource_type: 'ExternalIDExpression', member_type: 'VirtualMachine', external_ids: existing_external_ids_500)
       end
-      let(:group1) do
-        instance_double(NSXTPolicy::Group,
-                        id: 'some-group-1',
-                        expression: [existing_expression_500,
-                                     conjunction_expression,
-                                     NSXTPolicy::ExternalIDExpression.new(resource_type: 'ExternalIDExpression',
-                                                                          member_type: 'VirtualMachine',
-                                                                          external_ids: existing_external_ids_200)],
-        )
+      let(:next_200_vms) do
+        NSXTPolicy::ExternalIDExpression.new(resource_type: 'ExternalIDExpression', member_type: 'VirtualMachine', external_ids: existing_external_ids_200)
+      end
+
+      before do
+        allow(group_1).to receive(:expression).and_return([first_500_vms, conjunction_expression, next_200_vms])
       end
 
       it 'adds vm to the expression with less than 500 vms' do
+        next_201_vms = NSXTPolicy::ExternalIDExpression.new(resource_type: 'ExternalIDExpression', member_type: 'VirtualMachine', external_ids: existing_external_ids_200.dup.append('some-vm-external-id'))
         expect(policy_group_api).to receive(:update_group_for_domain).
-            with(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN,
-                 'some-group-1',
-                 group1)
-        nsxt_policy_provider.add_vm_to_groups(vm, ['some-group-1'])
-        expect(group1.expression).to match_array([existing_expression_500,
-                                                  conjunction_expression,
-                                                  NSXTPolicy::ExternalIDExpression.new(resource_type: 'ExternalIDExpression',
-                                                                                      member_type: 'VirtualMachine',
-                                                                                      external_ids: existing_external_ids_200.append('some-vm-external-id'))])
+          with(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, group_1.id, group_1) do |domain, group_id, group|
+            expect(group.expression).to eq([first_500_vms, conjunction_expression, next_201_vms])
+          end
+        nsxt_policy_provider.add_vm_to_groups(vm, [group_1])
       end
     end
 
@@ -202,51 +171,41 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
       let(:existing_external_ids_500_1) do
         external_ids = []
         500.times do |i|
-          external_ids << "some-external-id-#{i}-1"
+          external_ids << "some-external-id-#{i}"
         end
         external_ids
       end
       let(:existing_external_ids_500_2) do
         external_ids = []
         500.times do |i|
-          external_ids << "some-external-id-#{i}-2"
+          external_ids << "some-external-id-two-#{i}"
         end
         external_ids
       end
 
-      let(:existing_expression_500_1) do
-        NSXTPolicy::ExternalIDExpression.new(resource_type: 'ExternalIDExpression',
-                                             member_type: 'VirtualMachine',
-                                             external_ids: existing_external_ids_500_1)
+      let(:first_500_vms) do
+        NSXTPolicy::ExternalIDExpression.new(resource_type: 'ExternalIDExpression', member_type: 'VirtualMachine', external_ids: existing_external_ids_500_1)
       end
-      let(:existing_expression_500_2) do
-        NSXTPolicy::ExternalIDExpression.new(resource_type: 'ExternalIDExpression',
-                                             member_type: 'VirtualMachine',
-                                             external_ids: existing_external_ids_500_2)
+      let(:next_500_vms) do
+        NSXTPolicy::ExternalIDExpression.new(resource_type: 'ExternalIDExpression', member_type: 'VirtualMachine', external_ids: existing_external_ids_500_2)
       end
-      let(:group1) { instance_double(NSXTPolicy::Group,
-                                     expression: [existing_external_ids_500_1, conjunction_expression, existing_external_ids_500_2],
-                                     id: 'some-group-1')}
 
-      it 'generates unique conjunction expression' do
+      before do
+        allow(group_1).to receive(:expression).and_return([first_500_vms, conjunction_expression, next_500_vms])
+      end
+
+      it 'generates unique conjunction expression and places vm in third expression group' do
+        conjunction_with_vm = NSXTPolicy::ConjunctionOperator.new(resource_type: 'ConjunctionOperator', conjunction_operator: 'OR', id: 'conjunction-some-vm-cid-1')
+        new_vm_member =  NSXTPolicy::ExternalIDExpression.new(resource_type: 'ExternalIDExpression', member_type: 'VirtualMachine', external_ids: ['some-vm-external-id'])
         expect(policy_group_api).to receive(:update_group_for_domain).
-            with(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN,
-                 'some-group-1',
-                 group1)
-        nsxt_policy_provider.add_vm_to_groups(vm, ['some-group-1'])
-        expect(group1.expression).to match_array([existing_external_ids_500_1,
-                                                  conjunction_expression,
-                                                  existing_external_ids_500_2,
-                                                  NSXTPolicy::ConjunctionOperator.new(resource_type: 'ConjunctionOperator',
-                                                                                      conjunction_operator: 'OR',
-                                                                                      id: 'conjunction-some-vm-cid-1'),
-                                                  NSXTPolicy::ExternalIDExpression.new(resource_type: 'ExternalIDExpression',
-                                                                                       member_type: 'VirtualMachine',
-                                                                                       external_ids: ['some-vm-external-id'])])
+          with(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, group_1.id, group_1) do |domain, group_id, group|
+            expect(group.expression).to eq([first_500_vms, conjunction_expression, next_500_vms, conjunction_with_vm, new_vm_member])
+          end
+        nsxt_policy_provider.add_vm_to_groups(vm, [group_1])
       end
     end
 
-    context 'when groups have other criterias' do
+    context 'when existing expressions are not of type ExternalIDExpression' do
       let(:existing_expression) {
         NSXTPolicy::Condition.new(resource_type: 'Condition',
                                   key: 'Name',
@@ -255,39 +214,25 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
                                   value: 'existing-vm-criteria')
       }
 
-      let(:group1) { instance_double(NSXTPolicy::Group,
-                                     expression: [existing_expression],
-                                     id: 'some-group-1')}
-      let(:group2) { instance_double(NSXTPolicy::Group,
-                                     expression: [existing_expression],
-                                     id: 'some-group-2')}
+      before do
+        allow(group_1).to receive(:expression).and_return([existing_expression])
+      end
 
 
       it 'adds vm to groups with conjunction operator' do
-        expect(policy_group_api).to receive(:update_group_for_domain).
-            with(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN,
-                 'some-group-1',
-                 group1)
-        expect(policy_group_api).to receive(:update_group_for_domain).
-            with(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN,
-                 'some-group-2',
-                 group2)
-        nsxt_policy_provider.add_vm_to_groups(vm, groups)
-        new_expression = NSXTPolicy::ExternalIDExpression.new(resource_type: 'ExternalIDExpression',
+        new_vm_expression = NSXTPolicy::ExternalIDExpression.new(resource_type: 'ExternalIDExpression',
                                                                member_type: 'VirtualMachine',
                                                                external_ids: ['some-vm-external-id'])
-        expect(group1.expression).to match_array([existing_expression,
-                                                  conjunction_expression,
-                                                  new_expression,
-                                                 ])
-        expect(group2.expression).to match_array([existing_expression,
-                                                  conjunction_expression,
-                                                  new_expression,
-                                                 ])
+        expect(policy_group_api).to receive(:update_group_for_domain).
+          with(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, group_1.id, group_1) do |domain, group_id, group|
+            expect(group.expression).to eq([existing_expression, conjunction_expression, new_vm_expression])
+          end
+        nsxt_policy_provider.add_vm_to_groups(vm, [group_1])
+
       end
     end
 
-    context 'when vm is already in one of the criterias in a group' do
+    context 'when vm is already in one of the existing ExternalIDExpressions in a group' do
       let(:existing_expression_1) {
         NSXTPolicy::ExternalIDExpression.new(resource_type: 'ExternalIDExpression',
                                              member_type: 'VirtualMachine',
@@ -299,13 +244,13 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
                                              external_ids: ['some-vm-external-id'])
       }
 
-      let(:group1) { instance_double(NSXTPolicy::Group,
-                                     expression: [existing_expression_1, conjunction_expression, existing_expression_2],
-                                     id: 'some-group-1')}
+      before do
+        allow(group_1).to receive(:expression).and_return([existing_expression_1, conjunction_expression, existing_expression_2])
+      end
 
       it 'does not add it' do
         expect(policy_group_api).to_not receive(:update_group_for_domain)
-        nsxt_policy_provider.add_vm_to_groups(vm, ['some-group-1'])
+        nsxt_policy_provider.add_vm_to_groups(vm, [group_1])
       end
     end
   end
@@ -860,6 +805,70 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
         expect do
           nsxt_policy_provider.retrieve_server_pools(server_pools_to_find)
         end.to raise_error(VSphereCloud::ServerPoolsNotFound)
+      end
+    end
+
+  end
+
+  describe "#retrieve_groups_by_name" do
+    let(:group_1_attributes) { { id: 'fake-nsgroup-1-id', display_name: "fake nsgroup 1", expression: [] } }
+    let(:group_2_attributes) { { id: 'fake-nsgroup-2-id', display_name: "fake nsgroup 2", expression: [] } }
+    let(:group_1) { NSXTPolicy::Group.new(group_1_attributes) }
+    let(:group_2) { NSXTPolicy::Group.new(group_2_attributes) }
+
+    before do
+        allow(search_api).to receive(:query_search).with("resource_type:Group AND display_name:(fake nsgroup 1 OR fake nsgroup 2)").
+          and_return(double(NSXTPolicy::SearchResponse, results: results) )
+    end
+
+    context "when all groups are found" do
+      let(:results) { [group_1_attributes, group_2_attributes] }
+      it "returns all groups" do
+        expect(nsxt_policy_provider.retrieve_groups_by_name([group_1.display_name, group_2.display_name])).to contain_exactly(group_1, group_2)
+      end
+    end
+    context "when some groups are found" do
+      let(:results) { [group_1_attributes] }
+      it "returns found groups" do
+        expect(nsxt_policy_provider.retrieve_groups_by_name([group_1.display_name, group_2.display_name])).to contain_exactly(group_1)
+      end
+    end
+    context "when no groups are found" do
+      let(:results) { [] }
+      it "returns found groups" do
+        expect(nsxt_policy_provider.retrieve_groups_by_name([group_1.display_name, group_2.display_name])).to eq([])
+      end
+    end
+
+  end
+
+  describe "#retrieve_groups_by_id" do
+    let(:group_1_attributes) { { id: 'fake-nsgroup-1-id', display_name: "fake nsgroup 1", expression: [] } }
+    let(:group_2_attributes) { { id: 'fake-nsgroup-2-id', display_name: "fake nsgroup 2", expression: [] } }
+    let(:group_1) { NSXTPolicy::Group.new(group_1_attributes) }
+    let(:group_2) { NSXTPolicy::Group.new(group_2_attributes) }
+
+    before do
+        allow(search_api).to receive(:query_search).with("resource_type:Group AND id:(fake-nsgroup-1-id OR fake-nsgroup-2-id)").
+          and_return(double(NSXTPolicy::SearchResponse, results: results) )
+    end
+
+    context "when all groups are found" do
+      let(:results) { [group_1_attributes, group_2_attributes] }
+      it "returns all groups" do
+        expect(nsxt_policy_provider.retrieve_groups_by_id([group_1.id, group_2.id])).to contain_exactly(group_1, group_2)
+      end
+    end
+    context "when some groups are found" do
+      let(:results) { [group_1_attributes] }
+      it "returns found groups" do
+        expect(nsxt_policy_provider.retrieve_groups_by_id([group_1.id, group_2.id])).to contain_exactly(group_1)
+      end
+    end
+    context "when no groups are found" do
+      let(:results) { [] }
+      it "returns found groups" do
+        expect(nsxt_policy_provider.retrieve_groups_by_id([group_1.id, group_2.id])).to eq([])
       end
     end
 

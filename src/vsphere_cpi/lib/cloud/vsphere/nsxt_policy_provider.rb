@@ -55,15 +55,12 @@ module VSphereCloud
     end
 
     def add_vm_to_groups(vm, groups)
-      logger.info("Adding vm: #{vm.cid} to groups: #{groups}")
-
       return if groups.nil? || groups.empty?
+      logger.info("Adding vm: #{vm.cid} to groups: #{groups.map(&:display_name)}")
 
-      # All port paths above need to be added to the all the groups. So,
-      groups.each do |grp|
-        retry_on_conflict("while adding vm: #{vm.cid} to group #{grp}") do
-          group_obj = retrieve_group(group_id: grp)
-          add_vm_to_group(group_obj, vm.cid)
+      groups.each do |group|
+        retry_on_conflict("while adding vm: #{vm.cid} to group #{group.display_name}") do
+          add_vm_to_group(group, vm.cid)
         end
       end
     end
@@ -172,6 +169,20 @@ module VSphereCloud
           true
         end
       end
+    end
+
+    #We don't page here but extremely unlikely to hit the pagination limit.
+    def retrieve_groups_by_name(group_display_names)
+      logger.info("Searching for Policy Groups with group display names: #{group_display_names}")
+      query = "resource_type:Group AND display_name:(#{group_display_names.join(" OR ")})"
+      search_api.query_search(query).results.map { |group_attrs| NSXTPolicy::Group.new(group_attrs) }
+    end
+
+    #We don't page here but extremely unlikely to hit the pagination limit.
+    def retrieve_groups_by_id(group_ids)
+      logger.info("Searching for Policy Groups with group ids: #{group_ids}")
+      query = "resource_type:Group AND id:(#{group_ids.join(" OR ")})"
+      search_api.query_search(query).results.map { |group_attrs| NSXTPolicy::Group.new(group_attrs) }
     end
 
     def retrieve_server_pools(server_pools)
