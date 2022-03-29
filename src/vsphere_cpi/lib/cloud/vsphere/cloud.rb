@@ -382,20 +382,19 @@ module VSphereCloud
 
         begin
           if @config.nsxt_enabled?
-
             if @config.nsxt.policy_api_migration_mode?
+              #in migration mode, try to create associations in Policy API, always create associations in Manager API.
               begin
                 add_to_policy_groups_and_server_pools(created_vm, vm_type)
+                #TODO: should we narrow the targeting here (such that, e.g. we don't fail to add something to Policy API if it's possible just because of a network error
               rescue => e
-                logger.info("Policy API Migration Mode: Failed to update groups/server pools in Policy API, falling back to Management API only")
+                logger.info("Policy API Migration Mode: Failed to update groups/server pools in Policy API, falling back to Management API only:\n #{e.full_message}")
               end
-            end
-
-            if @config.nsxt.use_policy_api?
+              add_to_management_groups_and_server_pools(created_vm, vm_type)
+              @nsxt_provider.set_vif_type(created_vm, vm_type.nsxt)
+            elsif @config.nsxt.use_policy_api?
               add_to_policy_groups_and_server_pools(created_vm, vm_type)
-            end
-
-            if !@config.nsxt.use_policy_api? #runs in policy_api_migration_mode && !use_policy_api
+            else #management mode
               add_to_management_groups_and_server_pools(created_vm, vm_type)
               @nsxt_provider.set_vif_type(created_vm, vm_type.nsxt)
             end
@@ -518,15 +517,26 @@ module VSphereCloud
           if @config.nsxt.policy_api_migration_mode?
             begin
               @nsxt_provider.remove_vm_from_nsgroups(vm)
-              #@nsxt_policy_provider.remove_vm_from_groups(vm)
             rescue => e
-              logger.info("Failed to remove VM from NSGroups: #{e.message}")
+              logger.info("Failed to remove VM from NSGroups via Management API: #{e.message}")
+            end
+            begin
+              #Our integration tests have demonstrated that this deletion is not strictly necessary
+              #The Policy API appears to observe the deletion of VMs and automatically remove it from groups.
+              #We have seen that this may leave orphaned data in the UI, so are leaving it in.
+              @nsxt_policy_provider.remove_vm_from_groups(vm)
+            rescue => e
+              logger.info("Failed to remove VM from Groups via Policy API: #{e.message}")
             end
             begin
               @nsxt_provider.remove_vm_from_server_pools(vm_ip, vm_cid, vm_cpi_metadata_version)
+            rescue => e
+              logger.info("Failed to remove VM from ServerPool via Management API: #{e.message}")
+            end
+            begin
               @nsxt_policy_provider.remove_vm_from_server_pools(vm_ip, vm_cid, vm_cpi_metadata_version)
             rescue => e
-              logger.info("Failed to remove VM from ServerPool: #{e.message}")
+              logger.info("Failed to remove VM from ServerPool via Policy API: #{e.message}")
             end
           elsif @config.nsxt.use_policy_api?
             # TA: TODO : Should this be rescued? We should fail if we do not delete membership
@@ -604,7 +614,7 @@ module VSphereCloud
             begin
               @nsxt_policy_provider.update_vm_metadata_on_segment_ports(vm, metadata)
             rescue VSphereCloud::SegmentPortNotFound => e
-              logger.info("No Segment Ports found for #{vm_cid}, skipping (#{e})")
+              logger.info("Policy API Migration mode: No Segment Ports found for #{vm_cid} in Policy API, falling back to Manager mode:\n #{e.full_message}")
             end
             @nsxt_provider.update_vm_metadata_on_logical_ports(vm, metadata)
           elsif @config.nsxt.use_policy_api?
