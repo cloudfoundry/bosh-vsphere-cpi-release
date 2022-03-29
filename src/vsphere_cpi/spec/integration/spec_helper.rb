@@ -47,7 +47,7 @@ RSpec.configure do |rspec_config|
     setup_global_config
     fetch_global_properties
 
-    if ENV.fetch('BOSH_VSPHERE_STEMCELL_ID', '').empty?
+    if ENV.fetch('BOSH_VSPHERE_STEMCELL_ID', '').empty? && ENV.fetch('SKIP_STEMCELL_DELETION', '').empty?
       delete_stemcell(@lifecycle_cpi, stemcell_id)
     end
     @lifecycle_cpi.cleanup
