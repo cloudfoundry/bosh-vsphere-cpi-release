@@ -806,6 +806,13 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
           nsxt_policy_provider.retrieve_server_pools(server_pools_to_find)
         end.to raise_error(VSphereCloud::ServerPoolsNotFound)
       end
+
+      it 'does not raise an error around missing server pools if "true" is passed as the second argument' do
+        expect(logger).to receive(:info).with("Not all server pools found, missing test-dynamic-serverpool. The VM will still be added to found server pools.")
+        static_pools, dynamic_pools = nsxt_policy_provider.retrieve_server_pools(server_pools_to_find, true)
+        expect(static_pools).to contain_exactly([server_pool_1, 80])
+        expect(dynamic_pools).to eq([])
+      end
     end
 
   end

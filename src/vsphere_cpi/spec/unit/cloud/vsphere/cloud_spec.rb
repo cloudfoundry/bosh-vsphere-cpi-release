@@ -1243,6 +1243,22 @@ module VSphereCloud
               )
             end
 
+            it "adds _just_ to found groups if not all groups are found." do
+              allow(nsxt_policy_provider).to receive(:retrieve_groups_by_name).with(["fake nsgroup 1", "fake nsgroup 2"]).and_return([group_1])
+              expect(logger).to receive(:info).with("Not all specified groups found, missing fake nsgroup 2. VM will still be added to found groups (fake nsgroup 1)")
+              expect(nsxt_policy_provider).to receive(:add_vm_to_groups).with(fake_vm, [group_1])
+              expect(nsxt_provider).to receive(:add_vm_to_nsgroups).with(fake_vm, [group_1.display_name, group_2.display_name])
+
+              vsphere_cloud.create_vm(
+                'fake-agent-id',
+                'fake-stemcell-cid',
+                vm_type,
+                'fake-networks-hash',
+                [],
+                {}
+              )
+            end
+
             it 'deletes created VM and raises error if an error occurs when calling #add_vm_to_groups on the management side' do
               nsxt_error = NSGroupsNotFound.new('fake-nsgroup-name')
               allow(nsxt_policy_provider).to receive(:add_vm_to_groups).with(fake_vm, [group_1, group_2])
@@ -1269,7 +1285,7 @@ module VSphereCloud
             let(:server_pools) { [server_pool] }
 
             it 'adds vm to both Management AND Policy server pool(s)' do
-              expect(nsxt_policy_provider).to receive(:retrieve_server_pools).with([server_pool.display_name]).and_return([server_pools, []])
+              expect(nsxt_policy_provider).to receive(:retrieve_server_pools).with([server_pool.display_name], true).and_return([server_pools, []])
               expect(nsxt_policy_provider).to receive(:add_vm_to_server_pools).with(fake_vm, server_pools)
               expect(nsxt_provider).to receive(:retrieve_server_pools).with([server_pool.display_name]).and_return([server_pools, []])
               expect(nsxt_provider).to receive(:add_vm_to_server_pools).with(fake_vm, server_pools)
@@ -1293,7 +1309,7 @@ module VSphereCloud
               let(:member_group) { double(NSXTPolicy::LBPoolMemberGroup, group_path: "some/group/path/#{policy_group_1.id}") }
 
               it 'adds the vm to the group(s) associated with the server pool(s) on both the Policy and Management side' do
-                allow(nsxt_policy_provider).to receive(:retrieve_server_pools).with([server_pool.display_name]).and_return([nil, [dynamic_policy_pool]])
+                allow(nsxt_policy_provider).to receive(:retrieve_server_pools).with([server_pool.display_name], true).and_return([nil, [dynamic_policy_pool]])
                 allow(nsxt_policy_provider).to receive(:retrieve_groups_by_id).with([policy_group_1.id]).and_return([policy_group_1])
                 allow(nsxt_provider).to receive(:retrieve_server_pools).with([server_pool.display_name]).and_return([nil, [dynamic_management_pool]])
                 expect(nsxt_policy_provider).to receive(:add_vm_to_groups).with(fake_vm, [policy_group_1])
@@ -1312,7 +1328,7 @@ module VSphereCloud
 
             it 'deletes created VM and raises error if an error occurs when adding VM to server pools on the management side' do
               nsxt_error = NSXT::ApiCallError.new
-              allow(nsxt_policy_provider).to receive(:retrieve_server_pools).with([server_pool.display_name]).and_return([server_pools, []])
+              allow(nsxt_policy_provider).to receive(:retrieve_server_pools).with([server_pool.display_name], true).and_return([server_pools, []])
               allow(nsxt_policy_provider).to receive(:add_vm_to_server_pools).with(fake_vm, server_pools)
               allow(nsxt_provider).to receive(:retrieve_server_pools).with([server_pool.display_name]).and_return([server_pools, []])
               allow(nsxt_provider).to receive(:add_vm_to_server_pools).and_raise(nsxt_error)
@@ -1410,7 +1426,7 @@ module VSphereCloud
             let(:groups) { [] }
 
             before do
-              allow(nsxt_policy_provider).to receive(:retrieve_server_pools).with(vm_type_nsxt_config['lb']['server_pools']).and_return([static_pools, dynamic_pools])
+              allow(nsxt_policy_provider).to receive(:retrieve_server_pools).with(vm_type_nsxt_config['lb']['server_pools'], false).and_return([static_pools, dynamic_pools])
             end
 
             context 'when the server pool is static' do

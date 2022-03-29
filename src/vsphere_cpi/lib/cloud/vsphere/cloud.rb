@@ -383,13 +383,8 @@ module VSphereCloud
         begin
           if @config.nsxt_enabled?
             if @config.nsxt.policy_api_migration_mode?
-              #in migration mode, try to create associations in Policy API, always create associations in Manager API.
-              begin
-                add_to_policy_groups_and_server_pools(created_vm, vm_type)
-                #TODO: should we narrow the targeting here (such that, e.g. we don't fail to add something to Policy API if it's possible just because of a network error
-              rescue => e
-                logger.info("Policy API Migration Mode: Failed to update groups/server pools in Policy API, falling back to Management API only:\n #{e.full_message}")
-              end
+              #in migration mode, try to create associations in Policy API, always create associations in Manager API (i.e. fail if cannot be created).
+              add_to_policy_groups_and_server_pools(created_vm, vm_type, true)
               add_to_management_groups_and_server_pools(created_vm, vm_type)
               @nsxt_provider.set_vif_type(created_vm, vm_type.nsxt)
             elsif @config.nsxt.use_policy_api?
@@ -400,7 +395,7 @@ module VSphereCloud
             end
           end
         rescue => e
-          logger.info("Failed to apply NSX-T properties to VM '#{created_vm.cid}' with error: #{e.message}")
+          logger.info("Failed to apply NSX-T properties to VM '#{created_vm.cid}' with error: #{e.full_message}")
           begin
             logger.info("Deleting VM '#{created_vm.cid}'...")
             delete_vm(created_vm.cid)
@@ -933,10 +928,10 @@ module VSphereCloud
 
     private
 
-    def add_to_policy_groups_and_server_pools(created_vm, vm_type)
+    def add_to_policy_groups_and_server_pools(created_vm, vm_type, allow_missing_resources = false)
       ns_groups = vm_type.ns_groups || []
       if vm_type.nsxt_server_pools
-        static_server_pools, dynamic_server_pools = @nsxt_policy_provider.retrieve_server_pools(vm_type.nsxt_server_pools)
+        static_server_pools, dynamic_server_pools = @nsxt_policy_provider.retrieve_server_pools(vm_type.nsxt_server_pools, allow_missing_resources)
         lb_ns_group_ids = dynamic_server_pools.map { |server_pool| server_pool.member_group.group_path.split("/").last } if dynamic_server_pools
         logger.info("Group names corresponding to load balancer's dynamic server pools are: #{lb_ns_group_ids}")
         load_balancer_groups = @nsxt_policy_provider.retrieve_groups_by_id(lb_ns_group_ids) unless (lb_ns_group_ids || []).empty?
@@ -946,7 +941,11 @@ module VSphereCloud
       groups = []
       groups = @nsxt_policy_provider.retrieve_groups_by_name(ns_groups) unless ns_groups.empty?
       if (ns_groups.count > groups.count)
-        raise MissingNSXTGroups.new("Expected to find #{ns_groups.count} groups with names #{ns_groups}, only found #{groups.count}: #{groups.map(&:display_name)}")
+        if allow_missing_resources
+          logger.info("Not all specified groups found, missing #{(ns_groups - groups.map(&:display_name)).join(",")}. VM will still be added to found groups (#{groups.map(&:display_name).join(",")})")
+        else
+          raise MissingNSXTGroups.new("Expected to find #{ns_groups.count} groups with names #{ns_groups}, only found #{groups.count}: #{groups.map(&:display_name)}")
+        end
       end
 
       @nsxt_policy_provider.add_vm_to_groups(created_vm, groups) unless groups.empty?

@@ -185,7 +185,7 @@ module VSphereCloud
       search_api.query_search(query).results.map { |group_attrs| NSXTPolicy::Group.new(group_attrs) }
     end
 
-    def retrieve_server_pools(server_pools)
+    def retrieve_server_pools(server_pools, allow_missing_pools=false)
       return [] if server_pools.nil? || server_pools.empty?
 
       #Create a hash of server_pools with key as their name and value as list of matching server_pools
@@ -196,13 +196,21 @@ module VSphereCloud
       missing = server_pools.reject do |server_pool|
         server_pools_by_name.key?(server_pool['name'])
       end
-      raise ServerPoolsNotFound.new(*missing) unless missing.empty?
+
+      if !missing.empty?
+        if allow_missing_pools
+          logger.info("Not all server pools found, missing #{missing.map {|p| p['name'] }.join(",")}. The VM will still be added to found server pools.")
+        else
+          raise ServerPoolsNotFound.new(*missing)
+        end
+      end
 
       static_server_pools, dynamic_server_pools = [], []
       server_pools.each do |server_pool|
         server_pool_name = server_pool['name']
         server_pool_port = server_pool['port']
         matching_server_pools = server_pools_by_name[server_pool_name]
+        next unless matching_server_pools
         matching_server_pools.each do |matching_server_pool|
           matching_server_pool.member_group ? dynamic_server_pools << matching_server_pool : static_server_pools << [matching_server_pool, server_pool_port]
         end
