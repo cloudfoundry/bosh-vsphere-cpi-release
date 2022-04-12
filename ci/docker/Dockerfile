@@ -2,6 +2,7 @@
 
 # docker build -t bosh/vsphere-vcpi .
 # docker push bosh/vsphere-vcpi
+# docker run -it --rm bosh/vsphere-vcpi
 
 FROM harbor-repo.vmware.com/dockerhub-proxy-cache/library/ubuntu:20.04
 
@@ -31,10 +32,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 ENV RUBY_VERSION=2.6.5 GOLANG_VERSION=1.18
 
-COPY ruby-install /work/ruby-install/
+RUN wget -O ruby-install-0.8.3.tar.gz https://github.com/postmodern/ruby-install/archive/v0.8.3.tar.gz && \
+  tar -xzvf ruby-install-0.8.3.tar.gz && \
+  cd ruby-install-0.8.3/ && \
+  make install && \
+  rm -rf ruby-install-0.8.3*
 
 RUN apt-get update && \
-  /work/ruby-install/bin/ruby-install \
+  /usr/local/bin/ruby-install \
   -c --system ruby $RUBY_VERSION -- --disable-install-doc && \
   rm -rf /var/lib/apt/lists/* && \
   gem install bundler --no-document
