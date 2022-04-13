@@ -4,7 +4,7 @@
 # docker push bosh/vsphere-vcpi
 # docker run -it --rm bosh/vsphere-vcpi
 
-FROM harbor-repo.vmware.com/dockerhub-proxy-cache/library/ubuntu:20.04
+FROM harbor-repo.vmware.com/dockerhub-proxy-cache/library/ubuntu:18.04
 
 LABEL org.opencontainers.image.authors="bosh-ecosystem@groups.vmware.com"
 
