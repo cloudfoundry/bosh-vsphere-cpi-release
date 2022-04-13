@@ -13,6 +13,6 @@ SCRIPTPATH="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 
 pushd "${SCRIPTPATH}/.."
 
-  docker run -it $@ -v $PWD:/source-ci -v $PWD:/bosh-cpi-src -v $PWD/environment:/environment -v $PWD/stemcell:/stemcell gcr.io/cf-pas-nx-t-pineapple/vcpi-main source-ci/ci/tasks/run-lifecycle.sh
+  docker run -it $@ -v $PWD:/source-ci -v $PWD:/bosh-cpi-src -v $PWD/environment:/environment -v $PWD/stemcell:/stemcell harbor-repo.vmware.com/dockerhub-proxy-cache/bosh/vsphere-vcpi source-ci/ci/tasks/run-lifecycle.sh
 
 popd
