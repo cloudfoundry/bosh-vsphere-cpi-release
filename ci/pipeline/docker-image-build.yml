@@ -52,7 +52,7 @@ resources:
   check_every: 1h
 - name: vcpi-main-image
   source:
-    repository: gcr.io/cf-pas-nx-t-pineapple/vcpi-main
+    repository: harbor-repo.vmware.com/dockerhub-proxy-cache/bosh/vsphere-vcpi
     tag: latest
     username: _json_key
     password: ((gcr_service_account_key))
