@@ -77,10 +77,6 @@ RUN mkdir ~/workspace; \
   echo 'alias z='fasd_cd -d'     # cd, same functionality as j in autojump' >> ~/.zshrc \
   EOF
 
-# Luan's nvim config
-RUN mkdir ~/.config; \
-  git clone https://github.com/luan/nvim ~/.config/nvim
-
 # Oh My zsh, which is awesome
 RUN  echo "" | SHELL=/usr/bin/zsh zsh -c "$(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"; \
   sed -i 's/robbyrussell/agnoster/' ~/.zshrc; \
