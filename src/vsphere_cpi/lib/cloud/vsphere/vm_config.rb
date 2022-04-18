@@ -28,7 +28,7 @@ module VSphereCloud
         return @vm_cid
       end
       @vm_cid = generate_human_readable_name(human_readable_name_info.inst_grp, human_readable_name_info.deployment)
-      if @vm_cid != "#{URI.escape(@vm_cid)}"
+      if @vm_cid != "#{Addressable::URI.encode(@vm_cid)}"
         logger.info("Metadata contains non ASCII characters, using UUID based naming.")
         @vm_cid = "vm-#{SecureRandom.uuid}"
       end

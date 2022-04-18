@@ -1,0 +1,4 @@
+---
+BUNDLE_CACHE_ALL: "false"
+BUNDLE_NO_INSTALL: "true"
+BUNDLE_WITHOUT: "development:test"
