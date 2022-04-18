@@ -34,7 +34,7 @@ module VSphereCloud
       raise ArgumentError, 'No gather block provided' unless block_given?
 
       @object = object
-      @gather = Proc.new
+      @gather = Proc.new{yield}
 
       self.class.filter_list.each do |filter|
         with_filter(*filter[:args], &filter[:block])
@@ -57,22 +57,22 @@ module VSphereCloud
       result
     end
 
-    def each
+    def each(&block)
       return enum_for(:each) unless block_given?
 
       logger.info("Initiating #{inspect}")
 
       gather.select do |placement|
         accept?(placement)
-      end.sort(&compare_placements).each(&Proc.new)
+      end.sort(&compare_placements).each(&Proc.new{|placement| block.call(placement)})
     end
 
-    def with_filter(*args)
+    def with_filter(*args, &block)
       if block_given?
         unless args.empty?
           raise ArgumentError, "wrong number of arguments (given #{args.length}, expected 0)"
         end
-        filter_list << Proc.new
+        filter_list << block
       else
         raise ArgumentError, "0 arguments passed, expected atleast 1 arg or a block if no args provided" if args.empty?
         filter_list.concat(args)
@@ -80,12 +80,12 @@ module VSphereCloud
       self
     end
 
-    def with_scorer(*args)
+    def with_scorer(*args, &block)
       if block_given?
         unless args.empty?
           raise ArgumentError, "wrong number of arguments (given #{args.length}, expected 0)"
         end
-        scorer_list << Proc.new
+        scorer_list << block
       else
         raise ArgumentError, "0 arguments passed, expected at least 1 arg or a block if no args provided" if args.empty?
         scorer_list.concat(args)

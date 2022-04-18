@@ -152,7 +152,7 @@ module Support
             end
 
             run lambda { |env| [200, { 'Content-Type' => 'text/plain'}, ['success']] }
-          }, server_config)
+          }, **server_config)
         end
 
         Timeout.timeout(5) { @thread.join(0.1) until responsive? }
