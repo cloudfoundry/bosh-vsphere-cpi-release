@@ -498,7 +498,7 @@ module VSphereCloud
         end
 
         # Delete env.iso and VM specific files managed by the director
-        if vm.cdrom 
+        if vm.cdrom
           begin
             @agent_env.clean_env(vm.mob)
           rescue => e
@@ -821,7 +821,7 @@ module VSphereCloud
         logger.info("Using ephemeral disk UUID #{ephemeral_disk.backing.uuid.downcase}")
         {
           'system' => system_disk.unit_number.to_s,
-          'ephemeral' => { 'id' => ephemeral_disk.backing.uuid.downcase }, 
+          'ephemeral' => { 'id' => ephemeral_disk.backing.uuid.downcase },
           'persistent' => {}
         }
       else
