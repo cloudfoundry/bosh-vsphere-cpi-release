@@ -384,8 +384,8 @@ module VSphereCloud
           if @config.nsxt_enabled?
             if @config.nsxt.policy_api_migration_mode?
               #in migration mode, try to create associations in Policy API, always create associations in Manager API (i.e. fail if cannot be created).
-              add_to_policy_groups_and_server_pools(created_vm, vm_type, true)
               add_to_management_groups_and_server_pools(created_vm, vm_type)
+              add_to_policy_groups_and_server_pools(created_vm, vm_type, true)
               @nsxt_provider.set_vif_type(created_vm, vm_type.nsxt)
             elsif @config.nsxt.use_policy_api?
               add_to_policy_groups_and_server_pools(created_vm, vm_type)
