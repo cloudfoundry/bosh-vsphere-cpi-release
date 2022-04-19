@@ -929,7 +929,7 @@ module VSphereCloud
     private
 
     def add_to_policy_groups_and_server_pools(created_vm, vm_type, allow_missing_resources = false)
-      ns_groups = vm_type.ns_groups || []
+      ns_groups = vm_type.ns_groups.dup || []
       if vm_type.nsxt_server_pools
         static_server_pools, dynamic_server_pools = @nsxt_policy_provider.retrieve_server_pools(vm_type.nsxt_server_pools, allow_missing_resources)
         lb_ns_group_ids = dynamic_server_pools.map { |server_pool| server_pool.member_group.group_path.split("/").last } if dynamic_server_pools
@@ -952,7 +952,7 @@ module VSphereCloud
     end
 
     def add_to_management_groups_and_server_pools(created_vm, vm_type)
-      ns_groups = vm_type.ns_groups || []
+      ns_groups = vm_type.ns_groups.dup || []
       if vm_type.nsxt_server_pools
         #For static server pools add vm as server pool member
         #For dynamic server pools add vm to the corresponding nsgroup
