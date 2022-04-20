@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-
+set -e
 # DO NOT REMOVE!!!
 #
 # Proxy environment variables refer to squid proxy on Nimbus testbed jumpbox. We
