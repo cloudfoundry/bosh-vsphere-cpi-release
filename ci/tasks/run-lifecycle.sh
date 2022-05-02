@@ -1,9 +1,10 @@
 #! /bin/bash
-
-set -e
+set -eu -o pipefail
 
 source bosh-cpi-src/.envrc
 source environment/metadata
+
+set -x
 
 # get the tun device; we need it to establish OpenVPN
 mkdir -p /mnt/dev
