@@ -30,7 +30,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   && \
   rm -rf /var/lib/apt/lists/*
 
-ENV RUBY_VERSION=2.6.5 GOLANG_VERSION=1.18
+ENV RUBY_VERSION=3.1.2 GOLANG_VERSION=1.18
 
 RUN wget -O ruby-install-0.8.3.tar.gz https://github.com/postmodern/ruby-install/archive/v0.8.3.tar.gz && \
   tar -xzvf ruby-install-0.8.3.tar.gz && \
