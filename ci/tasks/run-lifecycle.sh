@@ -31,9 +31,10 @@ openvpn --cd /etc/openvpn --config /etc/openvpn/client.ovpn &
 sleep 6 # OpenVPN needs ~3 secs to establish its connection
 
 if [ "$BOSH_VSPHERE_CPI_NSXT_HOST" != "null" ]; then
-  export BOSH_NSXT_CA_CERT_FILE=$(realpath $PWD/nsxt-manager-cert.pem)
+  export BOSH_NSXT_CA_CERT_FILE
+  BOSH_NSXT_CA_CERT_FILE="$(realpath "${PWD}/nsxt-manager-cert.pem")"
   # To get the cert from nsxt-manager, we run openssl on the jump box, and then pipe that result into a local openssl command that reformats it into PEM
-  openssl s_client -showcerts -connect $BOSH_VSPHERE_CPI_NSXT_HOST:443 </dev/null 2>/dev/null | openssl x509 -outform PEM > $BOSH_NSXT_CA_CERT_FILE
+  openssl s_client -showcerts -connect "${BOSH_VSPHERE_CPI_NSXT_HOST}":443 </dev/null 2>/dev/null | openssl x509 -outform PEM > $BOSH_NSXT_CA_CERT_FILE
   # The certificate's subject name is nsxt-manager so SSL validation fails when using the IP address
   echo "${BOSH_VSPHERE_CPI_NSXT_HOST} nsxt-manager" >> /etc/hosts
   export BOSH_VSPHERE_CPI_NSXT_HOST="https://nsxt-manager"
@@ -42,14 +43,8 @@ fi
 stemcell_dir="$( cd stemcell && pwd )"
 export BOSH_VSPHERE_STEMCELL=${stemcell_dir}/stemcell.tgz
 
-: ${RSPEC_FLAGS:=""}
-: ${BOSH_VSPHERE_STEMCELL:=""}
-
-# allow user to pass paths to spec files relative to src/vsphere_cpi
-# e.g. ./run-lifecycle.sh spec/integration/core_spec.rb
-if [ "$#" -ne 0 ]; then
-  RSPEC_ARGS="$@"
-fi
+RSPEC_FLAGS=${RSPEC_FLAGS:-''}
+BOSH_VSPHERE_STEMCELL=${BOSH_VSPHERE_STEMCELL:-''}
 
 install_iso9660wrap() {
   pushd bosh-cpi-src
@@ -69,16 +64,14 @@ cleanup() {
   umount -l /mnt/dev
   set -e
 }
+trap cleanup EXIT
 
 install_iso9660wrap
 
 pushd bosh-cpi-src/src/vsphere_cpi
   bundle install
-  set +e # do NOT prematurely exit if rspec fails—we want to tear down OpenVPN before we exit
-  bundle exec rspec ${RSPEC_FLAGS} --require ./spec/support/verbose_formatter.rb --format VerboseFormatter spec/integration
-  RSPEC_EXIT_CODE=$?
-  set -e
+  bundle exec rspec \
+    ${RSPEC_FLAGS} \
+    --require ./spec/support/verbose_formatter.rb \
+    --format VerboseFormatter spec/integration
 popd
-
-cleanup
-exit $RSPEC_EXIT_CODE
