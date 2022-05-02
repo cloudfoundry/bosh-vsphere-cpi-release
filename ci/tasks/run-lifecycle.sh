@@ -61,8 +61,9 @@ install_iso9660wrap() {
 
 cleanup() {
   set +e # if you hit an error, continue; we're trying to clean up as much we can
+  echo "Killing OpenVPN..."
   kill %openvpn
-  fg %openvpn # make sure OpenVPN shutdown has completed
+  fg %openvpn > /dev/null 2>&1 # make sure OpenVPN shutdown has completed
   rm /dev/net
   umount -l /mnt/dev
   set -e
