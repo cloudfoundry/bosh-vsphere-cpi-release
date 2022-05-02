@@ -5,16 +5,19 @@ BREW_PREFIX="$(brew --prefix)"
 [ -f "${BREW_PREFIX}/share/chruby/chruby.sh" ] || brew install chruby
 source "${BREW_PREFIX}/share/chruby/chruby.sh"
 
-if ! chruby $PROJECT_RUBY_VERSION; then
-  echo "Ruby $PROJECT_RUBY_VERSION not found. Installing ..." 1>&2
+project_root_dir="$( cd $(dirname $0) && cd ../../../ && pwd )"
+project_ruby_version="$(cat $project_root_dir/.ruby-version)"
+
+if ! chruby $project_ruby_version; then
+  echo "Ruby $project_ruby_version not found. Installing ..." 1>&2
 
   command -v ruby-install > /dev/null 2>&1 || brew install ruby-install
 
-  ruby-install ruby $PROJECT_RUBY_VERSION
+  ruby-install ruby $project_ruby_version
   source "${BREW_PREFIX}/share/chruby/chruby.sh"
-  chruby $PROJECT_RUBY_VERSION
+  chruby $project_ruby_version
 
-  echo "Ruby $PROJECT_RUBY_VERSION successfully installed" 1>&2
+  echo "Ruby $project_ruby_version successfully installed" 1>&2
 fi
 
 command -v bundle > /dev/null 2>&1 || gem install bundler

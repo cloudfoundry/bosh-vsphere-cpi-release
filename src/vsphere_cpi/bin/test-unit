@@ -6,4 +6,5 @@ source bin/check-ruby-version
 
 echo "Running unit tests with Ruby version $RUBY_VERSION ..." 1>&2
 bundle install --quiet
+# to see rspec coverage: export COVERAGE=true
 bundle exec rspec "${@:-spec/unit/}"

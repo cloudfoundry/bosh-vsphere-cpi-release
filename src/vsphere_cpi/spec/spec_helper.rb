@@ -1,8 +1,9 @@
 $LOAD_PATH.unshift File.expand_path('../../lib', __FILE__)
+project_root = File.expand_path('../../../..', __FILE__)
+project_ruby_version = File.read(File.join(project_root, '.ruby-version')).strip
 
 if ENV['COVERAGE']
   require 'simplecov'
-  project_root = File.expand_path('../../../..', __FILE__)
   SimpleCov.coverage_dir(File.join(project_root, 'coverage'))
   SimpleCov.start do
     add_filter '/nsxt_manager_client/'
@@ -10,8 +11,6 @@ if ENV['COVERAGE']
     add_filter '/spec/'
   end
 end
-
-PROJECT_RUBY_VERSION = ENV.fetch('PROJECT_RUBY_VERSION', '2.6.5')
 
 require 'fakefs/spec_helpers'
 
@@ -59,7 +58,7 @@ RSpec.configure do |config|
   end
 
   config.before do
-    expect(RUBY_VERSION).to eq(PROJECT_RUBY_VERSION)
+    expect(RUBY_VERSION).to eq(project_ruby_version)
   end
 
   config.include_context 'with a fake logger', fake_logger: true
