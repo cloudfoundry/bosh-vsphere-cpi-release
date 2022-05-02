@@ -48,7 +48,7 @@ namespace :swagger do
            "-Dmodels=Configuration"
        ].join(' ')
   
-    rm_rf (["./lib/nsxt_manager_client/.swagger-codegen-ignore",
+    rm_rf(["./lib/nsxt_manager_client/.swagger-codegen-ignore",
       "./lib/nsxt_manager_client/.swagger-codegen",
       "./lib/nsxt_manager_client/README.md",
       "./lib/nsxt_manager_client/.rspec",
@@ -135,7 +135,7 @@ namespace :swagger do
            "-Dmodels=PolicyResourceReferenceForEP",
        ].join(' ')
 
-    rm_rf (["./lib/nsxt_policy_client/.swagger-codegen-ignore",
+    rm_rf(["./lib/nsxt_policy_client/.swagger-codegen-ignore",
       "./lib/nsxt_policy_client/.swagger-codegen",
       "./lib/nsxt_policy_client/README.md",
       "./lib/nsxt_policy_client/.rspec",
