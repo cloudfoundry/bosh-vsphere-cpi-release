@@ -1,17 +1,17 @@
 #! /bin/bash
 set -eu -o pipefail
 
+set -x
+
 source bosh-cpi-src/.envrc
 source environment/metadata
-
-set -x
 
 # get the tun device; we need it to establish OpenVPN
 mkdir -p /mnt/dev
 mount -t devtmpfs devtmpfs /mnt/dev
 ln -s /mnt/dev/net /dev/net
 
-# configure passwordless and sshpass-less ssh to VCPI jumpbox
+# configure password-less and sshpass-less ssh to VCPI jumpbox
 mkdir -p ~/.ssh
 ssh-keygen -t ed25519 -f ~/.ssh/vcpi -N ""
 cat > ~/.ssh/config <<EOF
@@ -40,20 +40,8 @@ if [ "$BOSH_VSPHERE_CPI_NSXT_HOST" != "null" ]; then
   export BOSH_VSPHERE_CPI_NSXT_HOST="https://nsxt-manager"
 fi
 
-stemcell_dir="$( cd stemcell && pwd )"
-export BOSH_VSPHERE_STEMCELL=${stemcell_dir}/stemcell.tgz
-
-RSPEC_FLAGS=${RSPEC_FLAGS:-''}
-BOSH_VSPHERE_STEMCELL=${BOSH_VSPHERE_STEMCELL:-''}
-
-install_iso9660wrap() {
-  pushd bosh-cpi-src
-    pushd src/iso9660wrap
-      go build ./...
-      export PATH="$PATH:$PWD"
-    popd
-  popd
-}
+BOSH_VSPHERE_STEMCELL="$(pwd)/stemcell/stemcell.tgz"
+export BOSH_VSPHERE_STEMCELL
 
 cleanup() {
   set +e # if you hit an error, continue; we're trying to clean up as much we can
@@ -66,12 +54,20 @@ cleanup() {
 }
 trap cleanup EXIT
 
+install_iso9660wrap() {
+  pushd bosh-cpi-src
+    pushd src/iso9660wrap
+      go build ./...
+      export PATH="$PATH:$PWD"
+    popd
+  popd
+}
 install_iso9660wrap
 
 pushd bosh-cpi-src/src/vsphere_cpi
   bundle install
   bundle exec rspec \
-    ${RSPEC_FLAGS} \
+    ${RSPEC_FLAGS:-''} \
     --require ./spec/support/verbose_formatter.rb \
     --format VerboseFormatter spec/integration
 popd
