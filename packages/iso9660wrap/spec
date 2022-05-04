@@ -1,8 +1,8 @@
 ---
 name: iso9660wrap
 dependencies:
-- golang-1.16-linux
-- golang-1.16-darwin
+- golang-1-linux
+- golang-1-darwin
 files:
 - iso9660wrap/*.go
 - iso9660wrap/*.mod
