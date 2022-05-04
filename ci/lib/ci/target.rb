@@ -14,6 +14,12 @@ class Target
   attr_reader :expiry
 
   def initialize(name, url, team, expiry)
-    @name, @url, @team, @expiry = name, url, team, Time.rfc2822(expiry)
+    expire_time = begin
+      Time.rfc2822(expiry)
+    rescue
+      #if expire time is found (e.g., `n/a: invalid token`) just pass a likely expired time
+      Time.now - 60
+    end
+    @name, @url, @team, @expiry = name, url, team, expire_time
   end
 end
