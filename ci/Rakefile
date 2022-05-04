@@ -1,6 +1,4 @@
-$LOAD_PATH.unshift(File.join(File.dirname(__FILE__), 'lib'))
-
-require 'ci/rake'
+$LOAD_PATH.unshift(File.join(__dir__, 'lib'))
 
 require 'open3'
 require 'time'
