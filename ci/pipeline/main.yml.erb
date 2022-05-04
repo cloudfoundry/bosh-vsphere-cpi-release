@@ -283,9 +283,11 @@ jobs:
     - in_parallel:
       - get: bosh-cpi-src
       - get: golang-release
+      - get: bosh-golang-release-docker-image
       - get: weekly
         trigger: true
     - task: bump-deps
+      image: bosh-golang-release-docker-image
       file: golang-release/ci/tasks/shared/bump-deps.yml
       input_mapping:
         input_repo: bosh-cpi-src
