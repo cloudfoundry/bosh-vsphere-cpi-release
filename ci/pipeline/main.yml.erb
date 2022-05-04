@@ -304,7 +304,9 @@ jobs:
       - get: bosh-cpi-src
       - get: golang-release
         trigger: true
+      - get: bosh-golang-release-docker-image
     - task: bump-golang-packages
+      image: bosh-golang-release-docker-image
       file: golang-release/ci/tasks/shared/bump-golang-package.yml
       input_mapping:
         input_repo: bosh-cpi-src
@@ -445,4 +447,9 @@ resources:
       start: 3:00 -0700
       stop: 4:30 -0700
       days: [ Saturday ]
-
+  - name: bosh-golang-release-docker-image
+    type: registry-image
+    source:
+      repository: bosh/golang-release
+      username: ((docker.username))
+      password: ((docker.password))
