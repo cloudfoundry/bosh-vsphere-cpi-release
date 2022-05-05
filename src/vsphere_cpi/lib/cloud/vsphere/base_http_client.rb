@@ -22,6 +22,10 @@ module VSphereCloud
         @backing_client.ssl_config.verify_mode = OpenSSL::SSL::VERIFY_NONE
       end
 
+      if OpenSSL::SSL.const_defined?(:OP_IGNORE_UNEXPECTED_EOF, false)
+        @backing_client.ssl_config.options |= OpenSSL::SSL::OP_IGNORE_UNEXPECTED_EOF
+      end
+
       case http_log
         when String
           log_file = File.open(http_log, 'w')

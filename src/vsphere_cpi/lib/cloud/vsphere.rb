@@ -2,6 +2,9 @@ require 'forwardable'
 require 'securerandom'
 require 'common/thread_pool'
 require 'common/thread_formatter'
+
+require 'monkey_patches/open_ssl/ssl/ssl_context_monkey_patch' if ['6.7', '6.5'].include?($vc_version)
+
 require 'ruby_vim_sdk'
 
 require 'cloud/vsphere/helpers/xml'

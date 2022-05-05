@@ -22,10 +22,30 @@ module VSphereCloud
         expect(backing_client.tcp_keepalive).to be(true)
       end
 
-      context 'when `skip_ssl_verify` is false' do
-        subject(:http_client) { BaseHttpClient.new(skip_ssl_verify: false) }
-        it 'creates an HTTPClient that verifies SSL' do
-          expect(backing_client.ssl_config.verify_mode).to eq(OpenSSL::SSL::VERIFY_PEER | OpenSSL::SSL::VERIFY_FAIL_IF_NO_PEER_CERT)
+    end
+
+    describe "connecting to old vSphere versions w/ modern versions of OpenSSL" do
+      let(:fake_ssl_op_ignore_unexpected_flag) { 10000000000 }
+      let(:default_httpclient_ssl_options) { HTTPClient.new.ssl_config.options }
+
+      context "when OpenSSL::SSL::OP_IGNORE_UNEXPECTED_EOF is defined (as in OpenSSL v3)" do
+        before do
+          stub_const("OpenSSL::SSL::OP_IGNORE_UNEXPECTED_EOF", fake_ssl_op_ignore_unexpected_flag)
+        end
+
+        it "should add OP_IGNORE_UNEXPECTED_EOF to the ssl config bitmask" do
+          expect(backing_client.ssl_config.options).to eq(default_httpclient_ssl_options | fake_ssl_op_ignore_unexpected_flag)
+        end
+      end
+
+      context "when OpenSSL::SSL::OP_IGNORE_UNEXPECTED_EOF is not defined" do
+        before do
+          allow(OpenSSL::SSL).to receive(:const_defined?).with(:OP_IGNORE_UNEXPECTED_EOF, false).
+            and_return(nil)
+        end
+
+        it "should not change the ssl_config.options" do
+          expect(backing_client.ssl_config.options).to eq(default_httpclient_ssl_options)
         end
       end
     end
