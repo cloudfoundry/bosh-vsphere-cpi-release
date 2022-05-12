@@ -35,6 +35,7 @@ export no_proxy="<%= no_proxy %>"
 export PATH=$BOSH_PACKAGES_DIR/ruby-3.1.2-r0.91.0/bin:$BOSH_PACKAGES_DIR/iso9660wrap/bin:$PATH
 export HOME=~
 
+export BUNDLE_DEPLOYMENT="true"
 export BUNDLE_GEMFILE=$BOSH_PACKAGES_DIR/vsphere_cpi/Gemfile
 bundle_cmd="${BOSH_PACKAGES_DIR}/ruby-3.1.2-r0.91.0/bin/bundle"
 
