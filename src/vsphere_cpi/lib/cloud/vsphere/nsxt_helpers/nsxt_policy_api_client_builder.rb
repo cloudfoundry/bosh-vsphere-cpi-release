@@ -10,14 +10,25 @@ module VSphereCloud
 
       configuration = NSXTPolicy::Configuration.new
       configuration.host = @config.host
-      configuration.username = @config.username
-      configuration.password = @config.password
       configuration.logger = @logger
       configuration.client_side_validation = false
       configuration.debugging = false
+
+      # Configure auth key/cert or user/paswords
+      if @config.auth_private_key
+        configuration.key_file = @config.auth_private_key
+        configuration.cert_file = @config.auth_certificate
+      else
+        configuration.username = @config.username
+        configuration.password = @config.password
+      end
+
+      # Root CA Cert
       if ENV['BOSH_NSXT_CA_CERT_FILE']
         configuration.ssl_ca_cert = ENV['BOSH_NSXT_CA_CERT_FILE']
       end
+
+      # SKIP SSL VALIDATION?
       if ENV['NSXT_SKIP_SSL_VERIFY']
         configuration.verify_ssl = false
         configuration.verify_ssl_host = false

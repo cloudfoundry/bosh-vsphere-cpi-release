@@ -401,6 +401,43 @@ describe 'CPI', nsxt_all: true do
         delete_segments([segment_1, segment_2])
       end
 
+      context 'using principle identity auth' do
+        let(:cpi) do
+          VSphereCloud::Cloud.new(cpi_options(nsxt: {
+              host: @nsxt_host,
+              auth_certificate: @certificate.to_s,
+              auth_private_key: @private_key.to_s,
+              use_policy_api: true,
+          }))
+        end
+        let(:nsxt_spec) {
+          {
+            'ns_groups' => [nsgroup_name_1],
+          }
+        }
+        let!(:nsgroup_1) { create_policy_group(nsgroup_name_1) }
+
+        after do
+          delete_policy_group(nsgroup_name_1)
+        end
+
+        it 'authenticates successfully and creates VM in specified ns groups', focus: true do
+          # This test exists primarily to exercise principal identity (cert-based) authentication with
+          # the policy API. To do this, we need to add the VM to at least one group to force the CPI
+          # to interact with the policy API.
+          simple_vm_lifecycle(cpi, '', vm_type, policy_network_spec) do |vm_id|
+            vm = @cpi.vm_provider.find(vm_id)
+            retryer do
+              results = @policy_group_members_api.get_group_vm_members_0(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, nsgroup_name_1).results
+              raise StillUpdatingVMsInGroups if results.map(&:display_name).uniq.length < 1
+
+              expect(results.length).to eq(1)
+              expect(results[0].display_name).to eq(vm_id)
+            end
+          end
+        end
+      end
+
       context 'with ns groups' do
         let(:nsxt_spec) {
           {
