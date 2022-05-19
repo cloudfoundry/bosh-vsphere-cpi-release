@@ -85,6 +85,9 @@ describe VSphereCloud::Resources::Datastore do
       context 'when all hosts are in maintenance mode' do
         let(:maintenance_mode) { true }
         let(:is_included) { true }
+        before do
+          allow(host_mount).to receive_message_chain(:mount_info, :accessible).and_return(true)
+        end
         it 'is false' do
           expect(subject).to_not be_accessible_from(cluster)
         end
@@ -92,6 +95,7 @@ describe VSphereCloud::Resources::Datastore do
 
       context 'when at least one of the hosts is not in maintenance mode' do
         before do
+          allow(host_mount).to receive_message_chain(:mount_info, :accessible).and_return(true)
           expect(cluster).to receive_message_chain(:host, :include?).with(host_mob).and_return(is_included)
         end
         let(:maintenance_mode) { false }
@@ -106,6 +110,25 @@ describe VSphereCloud::Resources::Datastore do
           let(:is_included) { true }
           it 'is true' do
             expect(subject).to be_accessible_from(cluster)
+          end
+        end
+      end
+
+      context 'datastore-host accessibility' do
+        let(:maintenance_mode) { false }
+        before do
+          expect(host_mount).to receive_message_chain(:mount_info, :accessible).and_return(is_accessible)
+        end
+        context "when the host can access the datastore" do
+          let(:is_accessible) { true }
+          it 'is true' do
+            expect(subject).to be_accessible_from(cluster)
+          end
+        end
+        context "when the host can't access the datastore" do
+          let(:is_accessible) { false }
+          it 'is false' do
+            expect(subject).to_not be_accessible_from(cluster)
           end
         end
       end

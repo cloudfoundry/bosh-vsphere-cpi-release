@@ -153,7 +153,7 @@ module VSphereCloud
         @accessible_datastores ||= Datastore.build_from_client(
           @client,
           properties['datastore']
-        ).select { |datastore| datastore.accessible }
+        ).select { |datastore| datastore.accessible_from?(@mob) }
         .inject({}) do |acc, datastore|
           acc[datastore.name] = datastore
           acc
