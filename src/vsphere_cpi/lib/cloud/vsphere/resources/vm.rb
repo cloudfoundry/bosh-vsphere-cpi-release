@@ -30,6 +30,11 @@ module VSphereCloud
         cluster['name']
       end
 
+      def cluster_mob
+        cluster = cloud_searcher.get_properties(host_properties['parent'], Vim::ClusterComputeResource, 'name', ensure_all: true)
+        cluster[:obj]
+      end
+
       def resource_pool
         properties['resourcePool'].name
       end
@@ -41,7 +46,7 @@ module VSphereCloud
             ensure_all: true
         ).select(&:accessible)
             .inject({}) do |acc, datastore|
-          acc[datastore.name] = datastore
+          acc[datastore.name] = datastore if datastore.accessible_from?(cluster_mob)
           acc
         end
       end
