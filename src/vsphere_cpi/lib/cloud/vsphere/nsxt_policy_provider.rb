@@ -60,6 +60,7 @@ module VSphereCloud
 
       groups.each do |group|
         retry_on_conflict("while adding vm: #{vm.cid} to group #{group.display_name}") do
+          group = retrieve_group(group_id: group.id)
           add_vm_to_group(group, vm.cid)
         end
       end
