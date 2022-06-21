@@ -65,6 +65,29 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
     let(:group_2) { double(NSXTPolicy::Group, id: 'fake-nsgroup-2-id', display_name: "fake nsgroup 2", expression: []) }
     let(:groups) { [group_1, group_2] }
 
+    before do
+      allow(policy_group_api).to receive(:read_group_for_domain).
+          with(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, "fake-nsgroup-1-id").and_return(group_1)
+      allow(policy_group_api).to receive(:read_group_for_domain).
+          with(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, "fake-nsgroup-2-id").and_return(group_2)
+    end
+
+    context "when the add fails due to a versioning conflict (or other issues)" do
+      it "should reload the group to ensure it has the latest revision" do
+        #throw some kind of conlfict error
+        call_count = 0
+        allow(policy_group_api).to receive(:update_group_for_domain).
+          with(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, group_1.id, group_1) do
+          call_count += 1
+          conflict_response = NSXTPolicy::ApiCallError.new(code: 409, response_body: 'The object was modified by somebody else')
+          raise conflict_response if call_count == 1
+        end
+        nsxt_policy_provider.add_vm_to_groups(vm, [group_1])
+        expect(policy_group_api).to have_received(:read_group_for_domain).
+          with(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, "fake-nsgroup-1-id").twice
+      end
+    end
+
     context 'when groups do not have any existing members' do
       it 'adds vm to groups' do
         expected_expression = NSXTPolicy::ExternalIDExpression.new(resource_type: 'ExternalIDExpression', member_type: 'VirtualMachine', external_ids: ['some-vm-external-id'])
