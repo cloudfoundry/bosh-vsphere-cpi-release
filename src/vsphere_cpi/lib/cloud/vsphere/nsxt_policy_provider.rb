@@ -90,10 +90,12 @@ module VSphereCloud
         vm_ip = vm.mob.guest&.ip_address
         raise VirtualMachineIpNotFound.new(vm) unless vm_ip
         server_pools.each do |server_pool, port_no|
-          logger.info("Adding vm: '#{vm.cid}' with ip:#{vm_ip} to ServerPool: #{server_pool.id} on Port: #{port_no} ")
-          (server_pool.members ||= []).push(NSXTPolicy::LBPoolMember.new(port: port_no, ip_address: vm_ip, display_name: vm.cid))
           retry_on_conflict("while adding vm: #{vm.cid} to group #{server_pool.display_name}") do
-            policy_load_balancer_pools_api.update_lb_pool_0(server_pool.id, server_pool)
+            logger.info("Adding vm: '#{vm.cid}' with ip:#{vm_ip} to ServerPool: #{server_pool.id} on Port: #{port_no} ")
+            lb_pool = policy_load_balancer_pools_api.read_lb_pool_0(server_pool.id)
+            (lb_pool.members ||= []).push(NSXTPolicy::LBPoolMember.new(port: port_no, ip_address: vm_ip, display_name: vm.cid))
+
+            policy_load_balancer_pools_api.update_lb_pool_0(lb_pool.id, lb_pool)
           end
         end
       end

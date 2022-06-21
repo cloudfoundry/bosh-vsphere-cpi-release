@@ -465,6 +465,7 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
     }
 
     before do
+      allow(policy_load_balancer_pools_api).to receive(:read_lb_pool_0).with(server_pool_1.id).and_return(server_pool_1)
       allow(vm).to receive_message_chain(:mob, :guest, :ip_address).and_return("9.8.7.6")
     end
 
@@ -497,16 +498,18 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
     end
 
     context 'when there are many pools' do
-    let(:server_pools) do
-      [
-       [server_pool_1, 80],
-       [server_pool_2, 8080]
-      ]
-    end
+      let(:server_pools) do
+        [
+          [server_pool_1, 80],
+          [server_pool_2, 8080]
+        ]
+      end
       let(:server_pool_2) {
         NSXTPolicy::LBPool.new(id: "some-server-pool-id-2", display_name: "some-server-pool-name-2")
       }
-
+      before do
+        allow(policy_load_balancer_pools_api).to receive(:read_lb_pool_0).with(server_pool_2.id).and_return(server_pool_2)
+      end
       it 'adds vm to all pools' do
         expect(policy_load_balancer_pools_api).to receive(:update_lb_pool_0) do |server_pool_id, server_pool|
           expect(server_pool_id).to eq(server_pool_1.id)
@@ -526,22 +529,24 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
     end
 
     context 'when there is a conflict' do
-      it 'retries' do
+      it 'reloads the server_pool and retries' do
         conflict_response = NSXTPolicy::ApiCallError.new(code: 409, response_body: 'The object was modified by somebody else')
         expect(policy_load_balancer_pools_api).to receive(:update_lb_pool_0).with(any_args).and_raise(conflict_response).twice
         expect(policy_load_balancer_pools_api).to receive(:update_lb_pool_0).with(any_args)
 
         nsxt_policy_provider.add_vm_to_server_pools(vm, server_pools)
+        expect(policy_load_balancer_pools_api).to have_received(:read_lb_pool_0).thrice
       end
     end
 
     context 'when there is a precondition that failed' do
-      it 'the request is retried' do
+      it 'reloads the server_pool and the request is retried' do
         conflict_response = NSXTPolicy::ApiCallError.new(code: 412, response_body: 'PreconditionFailed')
         expect(policy_load_balancer_pools_api).to receive(:update_lb_pool_0).with(any_args).and_raise(conflict_response).twice
         expect(policy_load_balancer_pools_api).to receive(:update_lb_pool_0).with(any_args)
 
         nsxt_policy_provider.add_vm_to_server_pools(vm, server_pools)
+        expect(policy_load_balancer_pools_api).to have_received(:read_lb_pool_0).thrice
       end
     end
 
