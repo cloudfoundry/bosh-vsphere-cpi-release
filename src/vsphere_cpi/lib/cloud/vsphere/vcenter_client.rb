@@ -251,7 +251,10 @@ module VSphereCloud
         when VimSdk::Vim::Folder
           container.child_entity
         when nil
-          datacenter.mob.network
+          network = @cloud_searcher.find_resources_by_property_path(datacenter.mob, 'Network', 'name') do |network_name|
+            network_name == name
+          end
+          [network].flatten
       end
 
       # Find networks that match the network name
