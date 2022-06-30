@@ -549,6 +549,7 @@ module VSphereCloud
 
     describe '#find_network' do
       let(:datacenter) { instance_double(VSphereCloud::Resources::Datacenter) }
+      let(:datacenter_mob) { instance_double(Resources::Datacenter, mob: 'fake-mob') }
       let(:network_name) { 'network_1' }
 
       context 'when an opaque network and a DVS share the same name' do
@@ -557,7 +558,8 @@ module VSphereCloud
         let(:opaque_guid) { 'some_guid'}
         let(:dvs_guid) { 'some_guid'}
         before do
-          expect(datacenter).to receive_message_chain(:mob, :network).and_return([opaque_network, dvs_network])
+          expect(cloud_searcher).to receive(:find_resources_by_property_path).and_return([opaque_network, dvs_network])
+          expect(datacenter).to receive(:mob).and_return(datacenter_mob)
           allow(opaque_network).to receive_message_chain(:summary, :opaque_network_id).and_return(opaque_guid)
           allow(dvs_network).to receive_message_chain(:config, :respond_to?).and_return(true)
           allow(dvs_network).to receive_message_chain(:config, :backing_type).and_return('nsx')
