@@ -230,8 +230,9 @@ module VSphereCloud
         raise "Failed to get utilization for resource pool '#{resource_pool}'" if properties.nil?
 
         runtime_info = properties["summary"].runtime
+        quick_stats = properties["summary"].quick_stats
         memory = runtime_info.memory
-        return (memory.max_usage - memory.overall_usage) / BYTES_IN_MB
+        return (memory.max_usage - (quick_stats.host_memory_usage) * 1024) / BYTES_IN_MB
       end
     end
   end

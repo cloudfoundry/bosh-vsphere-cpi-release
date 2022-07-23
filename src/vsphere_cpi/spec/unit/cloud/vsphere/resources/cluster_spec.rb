@@ -80,6 +80,12 @@ module VSphereCloud::Resources
       )
     end
 
+    let(:fake_quick_stats) do
+      instance_double(
+        'VimSdk::Vim::ResourcePool::Summary::QuickStats',
+      )
+    end
+
     before do
       allow(ResourcePool).to receive(:new).with(
         client, cluster_config, fake_resource_pool_mob, datacenter_name
@@ -92,7 +98,7 @@ module VSphereCloud::Resources
       allow(cloud_searcher).to receive(:get_properties).with(
         fake_resource_pool_mob, VimSdk::Vim::ResourcePool, "summary"
       ).and_return({
-        'summary' => instance_double('VimSdk::Vim::ResourcePool::Summary', runtime: fake_runtime_info)
+        'summary' => instance_double('VimSdk::Vim::ResourcePool::Summary', runtime: fake_runtime_info, quick_stats: fake_quick_stats)
       })
     end
 
@@ -144,8 +150,14 @@ module VSphereCloud::Resources
                 memory: instance_double(
                   'VimSdk::Vim::ResourcePool::ResourceUsage',
                   max_usage: 1024 * 1024 * 100,
-                  overall_usage: 1024 * 1024 * 75,
                 )
+              )
+            end
+
+            let(:fake_quick_stats) do
+              instance_double(
+                'VimSdk::Vim::ResourcePool::Summary::QuickStats',
+                host_memory_usage: 1024 * 75
               )
             end
 
@@ -351,8 +363,14 @@ module VSphereCloud::Resources
           memory: instance_double(
             'VimSdk::Vim::ResourcePool::ResourceUsage',
             max_usage: 1024 * 1024 * 100,
-            overall_usage: 1024 * 1024 * 75,
           )
+        )
+      end
+
+      let(:fake_quick_stats) do
+        instance_double(
+          'VimSdk::Vim::ResourcePool::Summary::QuickStats',
+          host_memory_usage: 1024 * 75
         )
       end
 
