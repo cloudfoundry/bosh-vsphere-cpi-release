@@ -66,7 +66,7 @@ jobs:
           - {get: environment,              trigger: true,  passed: [lock-bats-policy], resource: pool-7.0-nsxt31-policy}
           - {get: cpi-release,              trigger: false, resource: bosh-cpi-artifacts, passed: [lock-bats-policy]}
           - {get: bosh-release,             trigger: false, resource: old-bosh-release}
-          - {get: stemcell,                 trigger: false, version: {version: "621.125"}, resource: stemcell}
+          - {get: stemcell,                 trigger: false}
           - {get: certification,            trigger: false}
           - {get: bosh-deployment,          trigger: false}
           - {get: bats,                     trigger: false}
@@ -91,7 +91,7 @@ jobs:
               BAT_INFRASTRUCTURE: vsphere
               BAT_NETWORKING:     manual
               BAT_RSPEC_FLAGS:    "--tag ~dns --tag ~vip_networking --tag ~dynamic_networking --tag ~root_partition --tag ~raw_ephemeral_storage"
-              STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-xenial-go_agent
+              STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-jammy-go_agent
         on_failure:
           in_parallel:
           - put: pool-7.0-nsxt31-policy
@@ -133,7 +133,7 @@ jobs:
         - {get: cpi-release,              trigger: false, resource: bosh-cpi-artifacts, passed: [lock-bats]}
         - {get: environment,              trigger: true,  passed: [lock-bats], resource: pool-6.5-nsxt25}
         - {get: bosh-release,             trigger: false, resource: old-bosh-release}
-        - {get: stemcell,                 trigger: false, version: {version: "621.125"}, resource: stemcell}
+        - {get: stemcell,                 trigger: false, resource: stemcell}
         - {get: certification,            trigger: false}
         - {get: bosh-deployment,          trigger: false}
         - {get: bats,                     trigger: false}
@@ -157,7 +157,7 @@ jobs:
             BAT_INFRASTRUCTURE: vsphere
             BAT_NETWORKING:     manual
             BAT_RSPEC_FLAGS:    "--tag ~dns --tag ~vip_networking --tag ~dynamic_networking --tag ~root_partition --tag ~raw_ephemeral_storage"
-            STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-xenial-go_agent
+            STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-jammy-go_agent
         on_failure:
           in_parallel:
           - put: pool-6.5-nsxt25
@@ -199,7 +199,7 @@ jobs:
           - {get: cpi-release,              trigger: false, resource: bosh-cpi-artifacts, passed: [lock-bats-70-cvds]}
           - {get: environment,              trigger: true,  passed: [lock-bats-70-cvds], resource: pool-7.0-nsxt31-cvds}
           - {get: bosh-release,             trigger: false, resource: old-bosh-release}
-          - {get: stemcell,                 trigger: false, version: {version: "621.125"}, resource: stemcell}
+          - {get: stemcell,                 trigger: false}
           - {get: certification,            trigger: false}
           - {get: bosh-deployment,          trigger: false}
           - {get: bats,                     trigger: false}
@@ -223,7 +223,7 @@ jobs:
               BAT_INFRASTRUCTURE: vsphere
               BAT_NETWORKING:     manual
               BAT_RSPEC_FLAGS:    "--tag ~dns --tag ~vip_networking --tag ~dynamic_networking --tag ~root_partition --tag ~raw_ephemeral_storage"
-              STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-xenial-go_agent
+              STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-jammy-go_agent
         on_failure:
           in_parallel:
             - put: pool-7.0-nsxt31-cvds
@@ -412,7 +412,7 @@ resources:
   - name: stemcell
     type: bosh-io-stemcell
     source:
-      name: bosh-vsphere-esxi-ubuntu-xenial-go_agent
+      name: bosh-vsphere-esxi-ubuntu-jammy-go_agent
   - name: bosh-deployment
     type: git
     source:
