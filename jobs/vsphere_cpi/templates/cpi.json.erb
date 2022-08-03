@@ -114,6 +114,10 @@
     if_p('vcenter.nsxt.use_policy_api') do
       vcenter['nsxt']['use_policy_api'] = p('vcenter.nsxt.use_policy_api')
     end
+
+    if_p('vcenter.nsxt.policy_api_migration_mode') do
+      vcenter['nsxt']['policy_api_migration_mode'] = p('vcenter.nsxt.policy_api_migration_mode')
+    end
   end
 
   if_p('blobstore') do
