@@ -49,7 +49,9 @@ module NSXT
     #   the data deserialized from response body (could be nil), response status code and response headers.
     def call_api(http_method, path, opts = {})
       request = build_request(http_method, path, opts)
-      response = request.run
+      response = with_exponential_backoff do
+        request.run
+      end
 
       if @config.debugging
         @config.logger.debug "HTTP response body ~BEGIN~\n#{response.body}\n~END~\n"
@@ -79,6 +81,20 @@ module NSXT
         data = nil
       end
       return data, response.code, response.headers
+    end
+
+    def with_exponential_backoff(&block)
+      response = yield
+      4.times do |count|
+        if !response.success? && response.code == 429 # We're being throttled--try again
+          @config.logger.debug "Sleeping for #{2 ** count} seconds before retrying because NSX returned 429"
+          sleep 2 ** count
+          response = yield
+        else
+          break
+        end
+      end
+      response
     end
 
     # Builds the HTTP request
