@@ -99,11 +99,11 @@ module VSphereCloud
 
       # @return [String] debug datastore information.
       def inspect
-        "<Datastore: / #@name>"
+        "<Datastore: / #{name}>"
       end
 
       def debug_info
-        "#{name} / #@mob / (#{free_space}MB free of #{total_space}MB capacity)"
+        "#{name} / #{@mob} / (#{free_space}MB free of #{total_space}MB capacity)"
       end
     end
   end
