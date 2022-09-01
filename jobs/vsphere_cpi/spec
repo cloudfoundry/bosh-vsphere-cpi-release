@@ -6,10 +6,10 @@ templates:
   cpi.json.erb: config/cpi.json
   nsx_cacert.pem.erb: config/nsx_cacert.pem
   nsxt_cacert.pem.erb: config/nsxt_cacert.pem
-  
+
 packages:
 - iso9660wrap
-- ruby-3.1.2-r0.91.0
+- ruby-2.7
 - vsphere_cpi
 
 properties:

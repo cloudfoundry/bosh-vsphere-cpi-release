@@ -32,10 +32,10 @@ export no_proxy="<%= no_proxy %>"
   export NSXT_SKIP_SSL_VERIFY=true
 <% end %>
 
-export PATH=$BOSH_PACKAGES_DIR/ruby-3.1.2-r0.91.0/bin:$BOSH_PACKAGES_DIR/iso9660wrap/bin:$PATH
+export PATH=$BOSH_PACKAGES_DIR/ruby-2.7/bin:$BOSH_PACKAGES_DIR/iso9660wrap/bin:$PATH
 
 export BUNDLE_GEMFILE=$BOSH_PACKAGES_DIR/vsphere_cpi/Gemfile
-bundle_cmd="${BOSH_PACKAGES_DIR}/ruby-3.1.2-r0.91.0/bin/bundle"
+bundle_cmd="${BOSH_PACKAGES_DIR}/ruby-2.7/bin/bundle"
 
 exec $bundle_cmd exec $BOSH_PACKAGES_DIR/vsphere_cpi/bin/vsphere_cpi \
   $BOSH_JOBS_DIR/vsphere_cpi/config/cpi.json
