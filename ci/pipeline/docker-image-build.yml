@@ -33,7 +33,7 @@ resources:
     paths:
     - ci
     private_key: ((github_deploy_key_bosh-vsphere-cpi-release.private_key))
-    uri: git@github.com:cloudfoundry-incubator/bosh-vsphere-cpi-release.git
+    uri: git@github.com:cloudfoundry/bosh-vsphere-cpi-release.git
   type: git
 - name: source-ci-trigger
   source:
@@ -41,7 +41,7 @@ resources:
     paths:
     - ci/docker
     private_key: ((github_deploy_key_bosh-vsphere-cpi-release.private_key))
-    uri: git@github.com:cloudfoundry-incubator/bosh-vsphere-cpi-release.git
+    uri: git@github.com:cloudfoundry/bosh-vsphere-cpi-release.git
   type: git
   check_every: 1h
 - name: ubuntu-base-image

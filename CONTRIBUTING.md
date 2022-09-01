@@ -1,7 +1,7 @@
 # Contributing to BOSH vSphere-CPI
 
 When contributing a pull request, be sure to submit your pull request against
-the [**master**](https://github.com/cloudfoundry-incubator/bosh-vsphere-cpi-release/tree/master) branch. 
+the [**master**](https://github.com/cloudfoundry/bosh-vsphere-cpi-release/tree/master) branch. 
 
 ## Contributor License Agreement
 
