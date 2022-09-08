@@ -52,8 +52,10 @@ class Bosh::Cpi::Cli
 
     ruby_method = RPC_METHOD_TO_RUBY_METHOD[method] || method
 
+    result = ["no-vm"]
+
     profile = StackProf.run(mode: :wall, raw: true) do
-      result = ["no-vm"]
+
     begin
 
       start_time = Time.now.utc
