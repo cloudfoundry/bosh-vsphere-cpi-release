@@ -10,6 +10,83 @@ require 'tmpdir'
 require 'bosh/cpi'
 require 'bosh/cpi/cli'
 
+require 'stackprof'
+
+class Bosh::Cpi::Cli
+
+  def run(json)
+    begin
+      request = JSON.load(json)
+    rescue JSON::ParserError => e
+      return error_response(INVALID_CALL_ERROR_TYPE, "Request cannot be deserialized, details: #{e.message}", false, e.backtrace)
+    end
+
+    method = request['method']
+    unless method.is_a?(String)
+      return error_response(INVALID_CALL_ERROR_TYPE, "Method must be a String, got: '#{method.inspect}'", false)
+    end
+
+    unless KNOWN_RPC_METHODS.include?(method)
+      return error_response(Bosh::Clouds::NotImplemented.name, "Method is not known, got: '#{method}'", false)
+    end
+
+    arguments = request['arguments']
+    unless arguments.is_a?(Array)
+      return error_response(INVALID_CALL_ERROR_TYPE, "Arguments must be an Array", false)
+    end
+
+    cpi_api_version = request['api_version']
+    if request.has_key?('api_version') && !cpi_api_version.is_a?(Integer)
+      return error_response(INVALID_CALL_ERROR_TYPE, "CPI api_version requested must be an Integer", false)
+    end
+
+    context = request['context']
+    unless context.is_a?(Hash) && context['director_uuid'].is_a?(String)
+      return error_response(INVALID_CALL_ERROR_TYPE, "Request should include context with director uuid", false)
+    end
+
+    req_id = context['request_id']
+    @logger.set_request_id(req_id)
+
+    configure_director(context['director_uuid'])
+
+    ruby_method = RPC_METHOD_TO_RUBY_METHOD[method] || method
+
+    profile = StackProf.run(mode: :wall, raw: true) do
+      result = ["no-vm"]
+    begin
+
+      start_time = Time.now.utc
+      @logger.info("Starting #{method}...")
+
+      cpi = @cpi.call(context, cpi_api_version)
+
+      result = cpi.public_send(ruby_method, *arguments)
+    rescue Bosh::Clouds::RetriableCloudError => e
+      return error_response(error_name(e), e.message, e.ok_to_retry, e.backtrace)
+    rescue Bosh::Clouds::CloudError, Bosh::Clouds::CpiError => e
+      return error_response(error_name(e), e.message, false, e.backtrace)
+    rescue ArgumentError => e
+      return error_response(INVALID_CALL_ERROR_TYPE, "Arguments are not correct, details: '#{e.message}'", false, e.backtrace)
+    rescue Exception => e
+      return error_response(UNKNOWN_ERROR_TYPE, e.message, false, e.backtrace)
+    ensure
+      end_time = Time.now.utc
+      @logger.info("Finished #{method} in #{(end_time - start_time).round(2)} seconds")
+      end
+
+      result_response(result)
+    end
+
+    if ruby_method == "create_vm"
+      created_vm_id = result.first
+      File.write(File.join("/tmp", "#{created_vm_id}-stackprof.json"), JSON.generate(profile))
+      nil
+    end
+
+  end
+end
+
 require 'cloud_v2'
 require 'vmodl_version'
 
@@ -36,6 +113,7 @@ cpi_rpc_api_request_raw = ARGF.read
 
 #cpi_lambda now requires 2 arguments context, cpi_api_version
 cpi_lambda = lambda do |context, _|
+
   unless cpi_config.has_key?('cloud') && cpi_config['cloud'].has_key?('properties')
     raise "Could not find cloud properties in the configuration"
   end
