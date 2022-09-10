@@ -1,3 +1,3 @@
 module iso9660wrap
 
-go 1.18
+go 1.19
