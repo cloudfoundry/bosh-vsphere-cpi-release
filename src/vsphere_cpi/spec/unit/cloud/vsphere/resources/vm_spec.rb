@@ -34,50 +34,20 @@ describe VSphereCloud::Resources::VM, fake_logger: true do
 
   context 'accessible datastores' do
     let(:bytes_in_mb) {1024 * 1024}
-    let(:cluster_mob) { instance_double('VimSdk::Vim::ClusterComputeResource') }
     let(:accessible_datastore_properties) { {'name' => 'datastore-name',  'summary.accessible' => true, 'summary.freeSpace' => 20000 * bytes_in_mb, 'summary.capacity' => 40000 * bytes_in_mb} }
     let(:inaccessible_datastore_properties) { {'name' => 'inaccessible-datastore-name', 'summary.accessible' => false} }
-    let(:vertically_inaccessible_datastore_properties) { {'name' => 'vertically-inaccessible-datastore-name', 'summary.accessible' => true} }
     let(:datastore_mob) { instance_double('VimSdk::Vim::Datastore') }
     let(:inaccessible_datastore_mob) { instance_double('VimSdk::Vim::Datastore') }
-    let(:vertically_inaccessible_datastore_mob) { instance_double('VimSdk::Vim::Datastore') }
     let(:datastore_properties) do
       {
           instance_double('VimSdk::Vim::Datastore') => accessible_datastore_properties,
-          instance_double('VimSdk::Vim::Datastore') => inaccessible_datastore_properties,
-          instance_double('VimSdk::Vim::Datastore') => vertically_inaccessible_datastore_properties
+          instance_double('VimSdk::Vim::Datastore') => inaccessible_datastore_properties
       }
     end
-
     before do
-      accessible_ds = instance_double(VSphereCloud::Resources::Datastore,
-        name: "datastore-name",
-        maintenance_mode?: false,
-        accessible_from?: true,
-        accessible: true
-      )
-      inaccessible_ds = instance_double(VSphereCloud::Resources::Datastore,
-        name: "inaccessible-datastore-name",
-        maintenance_mode?: false,
-        accessible_from?: true,
-        accessible: false
-      )
-      vert_inaccessible_ds = instance_double(VSphereCloud::Resources::Datastore,
-        name: "inaccessible-datastore-name",
-        maintenance_mode?: false,
-        accessible_from?: false,
-        accessible: true
-      )
-
       host_properties = {
-        'datastore' => [datastore_mob, inaccessible_datastore_mob, vertically_inaccessible_datastore_mob]
+          'datastore' => [datastore_mob, inaccessible_datastore_mob]
       }
-      allow(cloud_searcher).to receive(:get_properties).with(
-        host_properties['parent'],
-        VimSdk::Vim::ClusterComputeResource,
-        "name",
-        ensure_all: true,
-      ).and_return({obj: cluster_mob})
       allow(cloud_searcher).to receive(:get_properties).with(
           'vm-host',
           VimSdk::Vim::HostSystem,
@@ -90,11 +60,11 @@ describe VSphereCloud::Resources::VM, fake_logger: true do
           VSphereCloud::Resources::Datastore::PROPERTIES,
           ensure_all: true,
       ).and_return(datastore_properties)
-      expect(VSphereCloud::Resources::Datastore).to receive(:build_from_client).and_return([accessible_ds,inaccessible_ds,vert_inaccessible_ds])
     end
     describe '#accessible_datastores' do
       it 'returns list of accessible datastores' do
         expect(vm.accessible_datastores.keys).to match_array(['datastore-name'])
+        expect(vm.accessible_datastores['datastore-name']).to be_a(VSphereCloud::Resources::Datastore)
       end
     end
     describe '#accessible_datastore_names' do

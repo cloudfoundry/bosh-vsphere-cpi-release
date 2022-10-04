@@ -89,11 +89,10 @@ module VSphereCloud
       # maintenance mode and is part of the very same cluster that datastore
       # can access
       #
-      def accessible_from?(cluster_mob)
+      def accessible_from?(cluster)
         @mob.host.any? do |host_mount|
           next if host_mount.key.runtime.in_maintenance_mode
-          next unless host_mount.mount_info.accessible
-          cluster_mob.host.include?(host_mount.key)
+          cluster.host.include?(host_mount.key)
         end
       end
 
