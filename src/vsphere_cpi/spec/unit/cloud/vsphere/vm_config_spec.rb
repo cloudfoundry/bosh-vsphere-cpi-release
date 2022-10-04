@@ -388,9 +388,8 @@ module VSphereCloud
         end
         let(:global_clusters) { [cluster_1, cluster_2] }
         let(:host_runtime_info) { instance_double(VimSdk::Vim::Host::RuntimeInfo, in_maintenance_mode: false) }
-        let(:host_mount_info) { instance_double(VimSdk::Vim::Host::MountInfo, accessible: true) }
         let(:host_system) {instance_double(VimSdk::Vim::HostSystem, runtime: host_runtime_info)}
-        let(:datastore_host_mount) { [instance_double('VimSdk::Vim::Datastore::HostMount', key: host_system, mount_info: host_mount_info)]}
+        let(:datastore_host_mount) { [instance_double('VimSdk::Vim::Datastore::HostMount', key: host_system)]}
         let(:smaller_datastore_mob) { instance_double('VimSdk::Vim::Datastore', host: datastore_host_mount) }
         let(:larger_datastore_mob) { instance_double('VimSdk::Vim::Datastore', host: datastore_host_mount) }
         let(:smaller_ds) { fake_datastore( 'smaller-ds', 512, smaller_datastore_mob) }
