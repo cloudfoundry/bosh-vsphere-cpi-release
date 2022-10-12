@@ -231,9 +231,25 @@ module VSphereCloud
             end
           end
 
-          # Power on VM
-          logger.info("Powering on VM: #{created_vm}")
-          created_vm.power_on
+          begin
+            # Power on VM
+            logger.info("Powering on VM: #{created_vm}")
+            created_vm.power_on
+          rescue VSphereCloud::VMPowerOnError => e
+            logger.info("Failed to power on vm '#{vm_config.name}' with message:  #{e.inspect}")
+            begin
+              @cpi.delete_vm(created_vm.cid) if created_vm
+            rescue => ex
+              logger.info("Failed to delete vm '#{vm_config.name}' with message:  #{ex.inspect}")
+            end
+
+            if cluster_placement.equal? vm_config.cluster_placements.last
+              raise e
+            else
+              next # Try the next cluster
+            end
+          end
+
           # Pin this VM to the host by disabling DRS actions for the VM
           # if pin vm is enabled in cloud configuration for the VM.
           disable_drs(created_vm, cluster) if vm_config.vm_type.disable_drs

@@ -636,6 +636,21 @@ module LifecycleHelpers
     reconfigure_cluster(cpi, cluster, config_spec)
   end
 
+  def update_resource_pool_memory_reservation(cpi, cluster_name, resource_pool_name, memory_reservation, expandable_reservation)
+    cluster = cpi.client.cloud_searcher.get_managed_object(VimSdk::Vim::ClusterComputeResource, name: cluster_name)
+    datacenter_cluster_path_prefix = "#{cpi.datacenter.name}/host/#{cluster_name}/Resources/"
+    full_inventory_path = datacenter_cluster_path_prefix + resource_pool_name
+    resource_pool = cpi.client.service_content.search_index.find_by_inventory_path(full_inventory_path)
+
+    resource_spec = VimSdk::Vim::ResourceConfigSpec.new
+    resource_spec.cpu_allocation = resource_pool.config.cpu_allocation
+    resource_spec.memory_allocation = resource_pool.config.memory_allocation
+    resource_spec.memory_allocation.reservation = memory_reservation
+    resource_spec.memory_allocation.expandable_reservation = expandable_reservation
+
+    resource_pool.update_config(resource_pool_name, resource_spec)
+  end  
+
   private
 
   def is_disk_in_datastores(cpi, disk_id, accessible_datastores)
