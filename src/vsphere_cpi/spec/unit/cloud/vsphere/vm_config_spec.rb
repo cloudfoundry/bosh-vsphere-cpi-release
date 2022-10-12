@@ -576,6 +576,26 @@ module VSphereCloud
         end
       end
 
+      context 'when memory_reservation_locked_to_max is false' do
+        let(:cloud_properties) { { 'memory_reservation_locked_to_max' => false } }
+        let(:input) { { vm_type: vm_type } }
+        let(:output) { {} }
+
+        it 'does not set any value in the config spec params' do
+          expect(vm_config.config_spec_params).to eq(output)
+        end
+      end
+
+      context 'when memory_reservation_locked_to_max is true' do
+        let(:cloud_properties) { { 'memory_reservation_locked_to_max' => true } }
+        let(:input) { { vm_type: vm_type } }
+        let(:output) { { memory_reservation_locked_to_max: true } }
+
+        it 'sets it to true' do
+          expect(vm_config.config_spec_params).to eq(output)
+        end
+      end            
+
       context 'when cpu_hot_add_enabled is true' do
         let(:cloud_properties) { { 'cpu_hot_add_enabled' => true } }
         let(:input) { { vm_type: vm_type } }

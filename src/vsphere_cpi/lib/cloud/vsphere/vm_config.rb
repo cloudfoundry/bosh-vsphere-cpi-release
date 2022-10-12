@@ -122,6 +122,7 @@ module VSphereCloud
       params = {}
       params[:num_cpus] = vm_type.cpu
       params[:memory_mb] = vm_type.ram
+      params[:memory_reservation_locked_to_max] = true if vm_type.memory_reservation_locked_to_max
       params[:nested_hv_enabled] = true if vm_type.nested_hardware_virtualization
       params[:cpu_hot_add_enabled] = true if vm_type.cpu_hot_add_enabled
       params[:memory_hot_add_enabled] = true if vm_type.memory_hot_add_enabled

@@ -15,7 +15,7 @@ module VSphereCloud
     end
 
     %w[cpu ram disk cpu_hot_add_enabled memory_hot_add_enabled nsx vmx_options
-       nsxt nested_hardware_virtualization upgrade_hw_version datacenters vm_group disable_drs storage_policy tags].each do |name|
+       nsxt memory_reservation_locked_to_max nested_hardware_virtualization upgrade_hw_version datacenters vm_group disable_drs storage_policy tags].each do |name|
       define_method(name) { @cloud_properties[name] }
     end
 
