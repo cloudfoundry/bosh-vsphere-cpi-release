@@ -99,7 +99,7 @@ context 'given 2 clusters with a datastore and a resource pool' do
       update_resource_pool_memory_reservation(cpi, @first_cluster_name, @first_rp, 1, true)
       update_resource_pool_memory_reservation(cpi, @second_cluster_name, @second_rp, 1, true)
     end
-    it 'should create a VM on the first cluster' do
+    it 'should create a VM on the second cluster' do
       begin
         @vm_id, _ = cpi.create_vm(
           'agent-007',
