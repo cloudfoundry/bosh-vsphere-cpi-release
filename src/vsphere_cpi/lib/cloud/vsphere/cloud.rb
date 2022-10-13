@@ -939,10 +939,10 @@ module VSphereCloud
         @nsxt_policy_provider.add_vm_to_server_pools(created_vm, static_server_pools) if static_server_pools
       end
       groups = []
-      groups = @nsxt_policy_provider.retrieve_groups_by_name(ns_groups) unless ns_groups.empty?
+      groups = @nsxt_policy_provider.retrieve_groups_by_id(ns_groups) unless ns_groups.empty?
       if (ns_groups.count > groups.count)
         if allow_missing_resources
-          logger.info("Not all specified groups found, missing #{(ns_groups - groups.map(&:display_name)).join(",")}. VM will still be added to found groups (#{groups.map(&:display_name).join(",")})")
+          logger.info("Not all specified groups found, missing groups with ID(s) #{(ns_groups - groups.map(&:id)).join(",")}. VM will still be added to found groups (#{groups.map(&:id).join(",")})")
         else
           raise MissingNSXTGroups.new("Expected to find #{ns_groups.count} groups with names #{ns_groups}, only found #{groups.count}: #{groups.map(&:display_name)}")
         end
