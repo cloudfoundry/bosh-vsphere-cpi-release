@@ -235,7 +235,7 @@ module VSphereCloud
             # Power on VM
             logger.info("Powering on VM: #{created_vm}")
             created_vm.power_on
-          rescue VSphereCloud::VMPowerOnError => e
+          rescue VSphereCloud::VMPowerOnError, VSphereCloud::VCenterClient::TaskException => e
             logger.info("Failed to power on vm '#{vm_config.name}' with message:  #{e.inspect}")
             begin
               @cpi.delete_vm(created_vm.cid) if created_vm
