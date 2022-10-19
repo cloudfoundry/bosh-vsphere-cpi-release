@@ -547,10 +547,14 @@ module VSphereCloud
 
     def dvpg_istype_nsxt?(key:, dc_mob:)
       logger.info("Checking if #{key} is backed by NSXT")
-      portgroup = dc_mob.network.detect do |network|
-        #network.key is same as network.config.key
-        network.is_a?(VimSdk::Vim::Dvs::DistributedVirtualPortgroup) && network.key == key
+
+      # This replaces an Enumerable.detect. Because the function we're calling might return multiple items, let's
+      # try our best to mimic that behavior by returning the first item returned.
+      portgroup = @cloud_searcher.find_resources_by_property_path(dc_mob, 'DistributedVirtualPortgroup', 'key') do |portgroup_key|
+        portgroup_key == key
       end
+      portgroup = [portgroup].flatten()[0]
+
       return false if portgroup.nil?
       return false unless portgroup.config.respond_to?(:backing_type)
       logger.info("DVPG #{key} is backed by NSXT") if portgroup.config.backing_type == 'nsx'
