@@ -649,6 +649,11 @@ module LifecycleHelpers
     resource_spec.memory_allocation.expandable_reservation = expandable_reservation
 
     resource_pool.update_config(resource_pool_name, resource_spec)
+
+    if ($vc_version == "6.5")
+      cpi.logger.info("Running against v6.5, sleeping 60 seconds to ensure resource pool setting propagates.")
+      sleep(3)
+    end
   end
 
   private
