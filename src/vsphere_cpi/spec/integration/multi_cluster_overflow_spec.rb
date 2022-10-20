@@ -11,7 +11,7 @@ context 'given 2 clusters with a datastore and a resource pool' do
 
   let(:vm_type) do
     {
-      'ram' => 512,
+      'ram' => 1024,
       'disk' => 2048,
       'cpu' => 1,
       'memory_reservation_locked_to_max' => true,
@@ -36,8 +36,8 @@ context 'given 2 clusters with a datastore and a resource pool' do
 
   context 'when no cluster has enough reservable memory' do
     before do
-      update_resource_pool_memory_reservation(cpi, @first_cluster_name, @first_rp, 100, false)
-      update_resource_pool_memory_reservation(cpi, @second_cluster_name, @second_rp, 100, false)
+      update_resource_pool_memory_reservation(cpi, @first_cluster_name, @first_rp, 700, false)
+      update_resource_pool_memory_reservation(cpi, @second_cluster_name, @second_rp, 700, false)
     end
     after do
       update_resource_pool_memory_reservation(cpi, @first_cluster_name, @first_rp, 1, true)
@@ -61,8 +61,8 @@ context 'given 2 clusters with a datastore and a resource pool' do
 
   context 'when the first cluster has enough reservable memory' do
     before do
-      update_resource_pool_memory_reservation(cpi, @first_cluster_name, @first_rp, 1024, false)
-      update_resource_pool_memory_reservation(cpi, @second_cluster_name, @second_rp, 100, false)
+      update_resource_pool_memory_reservation(cpi, @first_cluster_name, @first_rp, 2048, false)
+      update_resource_pool_memory_reservation(cpi, @second_cluster_name, @second_rp, 700, false)
     end
     after do
       update_resource_pool_memory_reservation(cpi, @first_cluster_name, @first_rp, 1, true)
@@ -92,8 +92,8 @@ context 'given 2 clusters with a datastore and a resource pool' do
 
   context 'when the second cluster has enough reservable memory' do
     before do
-      update_resource_pool_memory_reservation(cpi, @first_cluster_name, @first_rp, 100, false)
-      update_resource_pool_memory_reservation(cpi, @second_cluster_name, @second_rp, 1024, false)
+      update_resource_pool_memory_reservation(cpi, @first_cluster_name, @first_rp, 700, false)
+      update_resource_pool_memory_reservation(cpi, @second_cluster_name, @second_rp, 2048, false)
     end
     after do
       update_resource_pool_memory_reservation(cpi, @first_cluster_name, @first_rp, 1, true)
