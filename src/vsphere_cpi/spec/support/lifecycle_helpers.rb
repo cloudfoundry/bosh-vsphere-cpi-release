@@ -652,7 +652,7 @@ module LifecycleHelpers
 
     if ($vc_version == "6.5")
       cpi.logger.info("Running against v6.5, sleeping 60 seconds to ensure resource pool setting propagates.")
-      sleep(60)
+      sleep(3)
     end
   end
 
