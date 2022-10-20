@@ -650,13 +650,9 @@ module LifecycleHelpers
 
     resource_pool.update_config(resource_pool_name, resource_spec)
 
-    #refetch resource_pool to ensure config has been updated -- may fix a race condition we see with vSphere 6.5
-    refresh_attempts = 0
-    while refresh_attempts < 5 do
-      resource_pool = cpi.client.service_content.search_index.find_by_inventory_path(full_inventory_path)
-      break if resource_pool.config.memory_allocation.reservation == memory_reservation && resource_pool.config.memory_allocation.expandable_reservation == expandable_reservation
-      refresh_attempts += 1
-      sleep 2
+    if ($vc_version == "6.5")
+      cpi.logger.info("Running against v6.5, sleeping 60 seconds to ensure resource pool setting propagates.")
+      sleep(60)
     end
   end
 
