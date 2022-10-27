@@ -486,6 +486,37 @@ describe 'CPI', nsxt_all: true do
           end
         end
 
+
+        context "when a mixture of display_names and IDs are passed in the configuration" do
+          let(:nsgroup_3_name) { "BOSH-CPI-test-#{SecureRandom.uuid}" }
+          let!(:nsgroup_3) { create_policy_nsgroup(nsgroup_3_name) }
+
+          after do
+            delete_policy_group(nsgroup_name_3)
+          end
+
+          let(:vm_type) do
+            {
+              'ram' => 512,
+              'disk' => 2048,
+              'cpu' => 1,
+              'nsxt' => { 'ns_groups' => [nsgroup_1.display_name, nsgroup_2.display_name, nsgroup_3.id] }
+            }
+          end
+
+          it 'adds all the logical ports of the VM to all given NSGroups' do
+            simple_vm_lifecycle(cpi, '', vm_type, network_spec) do |vm_id|
+              verify_ports(vm_id) do |lport|
+                expect(lport).not_to be_nil
+                expect(nsgroup_effective_logical_port_member_ids(nsgroup_1)).to include(lport.id)
+                expect(nsgroup_effective_logical_port_member_ids(nsgroup_2)).to include(lport.id)
+                expect(nsgroup_effective_logical_port_member_ids(nsgroup_3)).to include(lport.id)
+              end
+            end
+          end
+
+        end
+
         it 'creates more than 5 VMs' do
           6.times do |i|
             vm_id, _ = cpi.create_vm(
