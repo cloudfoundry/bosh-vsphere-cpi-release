@@ -845,6 +845,37 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
 
   end
 
+  describe "#retrieve_groups_by_name" do
+    let(:group_1_attributes) { { id: 'fake-nsgroup-1-id', display_name: "fake nsgroup 1", expression: [] } }
+    let(:group_2_attributes) { { id: 'fake-nsgroup-2-id', display_name: "fake nsgroup 2", expression: [] } }
+    let(:group_1) { NSXTPolicy::Group.new(group_1_attributes) }
+    let(:group_2) { NSXTPolicy::Group.new(group_2_attributes) }
+
+    before do
+        allow(search_api).to receive(:query_search).with("resource_type:Group AND display_name:(fake nsgroup 1 OR fake nsgroup 2)").
+          and_return(double(NSXTPolicy::SearchResponse, results: results) )
+    end
+
+    context "when all groups are found" do
+      let(:results) { [group_1_attributes, group_2_attributes] }
+      it "returns all groups" do
+        expect(nsxt_policy_provider.retrieve_groups_by_name([group_1.display_name, group_2.display_name])).to contain_exactly(group_1, group_2)
+      end
+    end
+    context "when some groups are found" do
+      let(:results) { [group_1_attributes] }
+      it "returns found groups" do
+        expect(nsxt_policy_provider.retrieve_groups_by_name([group_1.display_name, group_2.display_name])).to contain_exactly(group_1)
+      end
+    end
+    context "when no groups are found" do
+      let(:results) { [] }
+      it "returns found groups" do
+        expect(nsxt_policy_provider.retrieve_groups_by_name([group_1.display_name, group_2.display_name])).to eq([])
+      end
+    end
+
+  end
 
   describe "#retrieve_groups_by_id" do
     let(:group_1_attributes) { { id: 'fake-nsgroup-1-id', display_name: "fake nsgroup 1", expression: [] } }

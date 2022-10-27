@@ -1221,16 +1221,16 @@ module VSphereCloud
             let(:group_1) { double(NSXTPolicy::Group, id: 'fake-nsgroup-1-id', display_name: "fake nsgroup 1") }
             let(:group_2) { double(NSXTPolicy::Group, id: 'fake-nsgroup-2-id', display_name: "fake nsgroup 2") }
             let(:vm_type_nsxt_config) do
-              { 'ns_groups' => [group_1.id, group_2.id] }
+              { 'ns_groups' => [group_1.display_name, group_2.display_name] }
             end
 
             before do
-              allow(nsxt_policy_provider).to receive(:retrieve_groups_by_id).with(["fake-nsgroup-1-id", "fake-nsgroup-2-id"]).and_return([group_1, group_2])
+              allow(nsxt_policy_provider).to receive(:retrieve_groups_by_name).with(["fake nsgroup 1", "fake nsgroup 2"]).and_return([group_1, group_2])
             end
 
             it "calls policy_provider#add_vm_to_groups AND provider#add_vm_to_nsgroups with the vm and ns_groups values" do
               expect(nsxt_policy_provider).to receive(:add_vm_to_groups).with(fake_vm, [group_1, group_2])
-              expect(nsxt_provider).to receive(:add_vm_to_nsgroups).with(fake_vm, [group_1.id, group_2.id])
+              expect(nsxt_provider).to receive(:add_vm_to_nsgroups).with(fake_vm, [group_1.display_name, group_2.display_name])
 
 
               vsphere_cloud.create_vm(
@@ -1244,10 +1244,10 @@ module VSphereCloud
             end
 
             it "adds _just_ to found groups if not all groups are found." do
-              allow(nsxt_policy_provider).to receive(:retrieve_groups_by_id).with(["fake-nsgroup-1-id", "fake-nsgroup-2-id"]).and_return([group_1])
-              expect(logger).to receive(:info).with("Not all specified groups found, missing groups with ID(s) fake-nsgroup-2-id. VM will still be added to found groups (fake-nsgroup-1-id)")
+              allow(nsxt_policy_provider).to receive(:retrieve_groups_by_name).with(["fake nsgroup 1", "fake nsgroup 2"]).and_return([group_1])
+              expect(logger).to receive(:info).with("Not all specified groups found, missing fake nsgroup 2. VM will still be added to found groups (fake nsgroup 1)")
               expect(nsxt_policy_provider).to receive(:add_vm_to_groups).with(fake_vm, [group_1])
-              expect(nsxt_provider).to receive(:add_vm_to_nsgroups).with(fake_vm, [group_1.id, group_2.id])
+              expect(nsxt_provider).to receive(:add_vm_to_nsgroups).with(fake_vm, [group_1.display_name, group_2.display_name])
 
               vsphere_cloud.create_vm(
                 'fake-agent-id',
@@ -1358,11 +1358,11 @@ module VSphereCloud
             let(:group_1) { double(NSXTPolicy::Group, id: 'fake-nsgroup-1-id', display_name: "fake nsgroup 1") }
             let(:group_2) { double(NSXTPolicy::Group, id: 'fake-nsgroup-2-id', display_name: "fake nsgroup 2") }
             let(:vm_type_nsxt_config) do
-              { 'ns_groups' => [group_1.id, group_2.id] }
+              { 'ns_groups' => ['fake nsgroup 1', 'fake nsgroup 2'] }
             end
 
             before do
-              allow(nsxt_policy_provider).to receive(:retrieve_groups_by_id).with(["fake-nsgroup-1-id", "fake-nsgroup-2-id"]).and_return([group_1, group_2])
+              allow(nsxt_policy_provider).to receive(:retrieve_groups_by_name).with(["fake nsgroup 1", "fake nsgroup 2"]).and_return([group_1, group_2])
             end
 
             it "calls policy_provider#add_vm_to_nsgroups with the vm and ns_groups values" do
@@ -1379,7 +1379,7 @@ module VSphereCloud
 
             context "when not all groups specified in ns_groups can be found" do
               it "rolls back vm creation" do
-                allow(nsxt_policy_provider).to receive(:retrieve_groups_by_id).with(["fake-nsgroup-1-id", "fake-nsgroup-2-id"]).and_return([group_1])
+                allow(nsxt_policy_provider).to receive(:retrieve_groups_by_name).with(["fake nsgroup 1", "fake nsgroup 2"]).and_return([group_1])
                 expect(nsxt_policy_provider).not_to receive(:add_vm_to_groups)
                 expect(vsphere_cloud).to receive(:delete_vm).with(fake_vm.cid)
 

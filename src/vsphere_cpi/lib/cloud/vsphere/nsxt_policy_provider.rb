@@ -175,6 +175,13 @@ module VSphereCloud
     end
 
     #We don't page here but extremely unlikely to hit the pagination limit.
+    def retrieve_groups_by_name(group_display_names)
+      logger.info("Searching for Policy Groups with group display names: #{group_display_names}")
+      query = "resource_type:Group AND display_name:(#{group_display_names.join(" OR ")})"
+      search_api.query_search(query).results.map { |group_attrs| NSXTPolicy::Group.new(group_attrs) }
+    end
+
+    #We don't page here but extremely unlikely to hit the pagination limit.
     def retrieve_groups_by_id(group_ids)
       logger.info("Searching for Policy Groups with group ids: #{group_ids}")
       query = "resource_type:Group AND id:(#{group_ids.join(" OR ")})"
