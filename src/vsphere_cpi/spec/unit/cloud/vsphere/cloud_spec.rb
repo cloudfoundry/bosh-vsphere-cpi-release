@@ -258,7 +258,33 @@ module VSphereCloud
         let(:dvs_index) { { 'fake_pgkey1' => 'fake_network1' } }
 
         it 'generates the network env' do
+          
           allow(datacenter).to receive_message_chain(:mob, :network, :detect).and_return(nil)
+          allow(cloud_searcher).to receive(:find_resources_by_property_path).and_return([]) 
+          expect(vsphere_cloud.generate_network_env(devices, networks, dvs_index)).to eq(expected_output)
+        end
+      end
+
+      context 'using a NSX on a distributed switch' do
+        let(:opaque_network_id) { 'some_id' }
+        let(:backing) do
+          backing_info = VimSdk::Vim::Vm::Device::VirtualEthernetCard::DistributedVirtualPortBackingInfo.new
+          backing_info.port = double(:port, portgroup_key: 'fake_pgkey1')
+          backing_info
+        end
+        let(:dvpg) do
+          VimSdk::Vim::Dvs::DistributedVirtualPortgroup.new(
+            name: "fake_network1", config: dvpg_config)
+
+        end
+        let(:dvpg_config) { double(:config, backing_type: "nsx", logical_switch_uuid: opaque_network_id) }
+
+        let(:dvs_index) { { opaque_network_id => 'fake_network1' } }
+
+        it 'generates the network env' do
+          allow(datacenter).to receive(:mob)
+          allow(cloud_searcher).to receive(:find_resources_by_property_path).and_return([dvpg]) 
+          allow(dvpg).to receive(:config).and_return(dvpg_config)
           expect(vsphere_cloud.generate_network_env(devices, networks, dvs_index)).to eq(expected_output)
         end
       end
