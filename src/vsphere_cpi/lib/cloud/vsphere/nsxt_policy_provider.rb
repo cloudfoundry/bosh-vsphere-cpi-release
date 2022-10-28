@@ -179,6 +179,7 @@ module VSphereCloud
       logger.info("Searching for Policy Groups with group display names: #{group_display_names}")
       query = "resource_type:Group AND display_name:(#{group_display_names.join(" OR ")})"
       groups_by_display_name = search_api.query_search(query).results.map { |group_attrs| NSXTPolicy::Group.new(group_attrs) }
+      groups_by_id = []
       if (groups_by_display_name.count < group_display_names.count)
         logger.info("Not all groups in #{group_display_names} found when searching by display name. Attempting to find by ID")
         groups_by_id = retrieve_groups_by_id(group_display_names)

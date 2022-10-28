@@ -854,6 +854,8 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
     before do
         allow(search_api).to receive(:query_search).with("resource_type:Group AND display_name:(fake nsgroup 1 OR fake nsgroup 2)").
           and_return(double(NSXTPolicy::SearchResponse, results: results) )
+        allow(search_api).to receive(:query_search).with("resource_type:Group AND id:(fake nsgroup 1 OR fake nsgroup 2)").
+          and_return(double(NSXTPolicy::SearchResponse, results: []) )
     end
 
     context "when all groups are found" do
