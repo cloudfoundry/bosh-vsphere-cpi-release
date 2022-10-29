@@ -489,10 +489,10 @@ describe 'CPI', nsxt_all: true do
 
         context "when a mixture of display_names and IDs are passed in the configuration" do
           let(:nsgroup_3_name) { "BOSH-CPI-test-#{SecureRandom.uuid}" }
-          let!(:nsgroup_3) { create_policy_nsgroup(nsgroup_3_name) }
+          let!(:nsgroup_3) { create_policy_group(nsgroup_3_name) }
 
           after do
-            delete_policy_group(nsgroup_name_3)
+            delete_policy_group(nsgroup_3_name)
           end
 
           let(:vm_type) do
