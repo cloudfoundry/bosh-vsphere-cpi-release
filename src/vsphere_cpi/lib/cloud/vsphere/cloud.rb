@@ -317,9 +317,9 @@ module VSphereCloud
       end
     end
 
-    def create_vm(agent_id, stemcell_cid, vm_type, networks_spec, existing_disk_cids = [], environment = nil)
+    def create_vm(agent_id, stemcell_cid, cloud_properties, networks_spec, existing_disk_cids = [], environment = nil)
       with_thread_name("create_vm(#{agent_id}, ...)") do
-        verify_props('VM', [ 'cpu', 'ram', 'disk' ], vm_type)
+        verify_props('VM', [ 'cpu', 'ram', 'disk' ], cloud_properties)
 
         stemcell_vm = stemcell_vm(stemcell_cid)
         raise "Could not find VM for stemcell '#{stemcell_cid}'" if stemcell_vm.nil?
@@ -331,8 +331,9 @@ module VSphereCloud
             ensure_all: true
           )
           stemcell_size /= 1024 * 1024
+          cloud_properties = {"memory_reservation_locked_to_max" => config.memory_reservation_locked_to_max}.merge(cloud_properties)
 
-          vm_type = VmType.new(@datacenter, vm_type, @pbm)
+          vm_type = VmType.new(@datacenter, cloud_properties, @pbm)
           disk_configs, policy_name = disk_configurations(vm_type, existing_disk_cids)
           manifest_params = {
             vm_type: vm_type,

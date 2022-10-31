@@ -240,6 +240,10 @@ module VSphereCloud
       vcenter['vm_storage_policy_name']
     end
 
+    def memory_reservation_locked_to_max
+      vcenter['memory_reservation_locked_to_max']
+    end
+
     private
 
     attr_reader :config
@@ -270,6 +274,7 @@ module VSphereCloud
             optional('http_logging') => bool,
             optional('enable_auto_anti_affinity_drs_rules') => bool,
             optional('upgrade_hw_version') => bool,
+            optional('memory_reservation_locked_to_max') => bool,
             optional('vm_storage_policy_name') => String,
             optional('nsxt') => {
               optional('host') => String,

@@ -21,6 +21,7 @@ module VSphereCloud
       instance_double(
         'VSphereCloud::Config',
         logger: logger,
+        memory_reservation_locked_to_max: memory_reservation_locked_to_max,
         vcenter_host: vcenter_host,
         vcenter_api_uri: vcenter_api_uri,
         vcenter_user: 'fake-user',
@@ -54,6 +55,7 @@ module VSphereCloud
     let(:virtual_disk_manager) { instance_double('VimSdk::Vim::VirtualDiskManager') }
     let(:option_manager) { instance_double('VimSdk::Vim::Option::OptionManager') }
     let(:agent_env) { instance_double('VSphereCloud::AgentEnv') }
+    let(:memory_reservation_locked_to_max) { nil }
     let(:vcenter_host) { 'fake-host' }
     let(:vcenter_api_uri) { URI.parse("https://#{vcenter_host}") }
     let(:cloud_searcher) { instance_double('VSphereCloud::CloudSearcher') }
@@ -1656,6 +1658,68 @@ module VSphereCloud
                 )
               end
             end
+          end
+        end
+      end
+
+      context 'when memory_reservation_locked_to_max is specified at the cpi config level' do
+        let(:memory_reservation_locked_to_max) { true }
+        before do
+          expect(VmCreator).to receive(:new)
+                                 .with(
+                                   client: vcenter_client,
+                                   cloud_searcher: cloud_searcher,
+                                   cpi: vsphere_cloud,
+                                   datacenter: datacenter,
+                                   agent_env: agent_env,
+                                   tagging_tagger: tagging_tagger,
+                                   default_disk_type: 'preallocated',
+                                   enable_auto_anti_affinity_drs_rules: false,
+                                   upgrade_hw_version: true,
+                                   stemcell: stemcell,
+                                   pbm: pbm,
+                                 )
+                                 .and_return(vm_creator)
+          expect(vm_creator).to receive(:create)
+                                  .with(vm_config)
+                                  .and_return(fake_vm)
+        end
+
+        it 'creates the VM with the configured memory_reservation_locked_to_max' do
+          expect(VmConfig).to receive(:new) do |options|
+            expect(options[:manifest_params][:vm_type].memory_reservation_locked_to_max).to be_truthy
+            vm_config
+          end
+
+          vsphere_cloud.create_vm(
+            'fake-agent-id',
+            'fake-stemcell-cid',
+            vm_type,
+            'fake-networks-hash',
+            existing_disk_cids,
+            {}
+          )
+        end
+
+        context 'when memory_reservation_locked_to_max is also specified in the cloud properties' do
+          before do
+            vm_type['memory_reservation_locked_to_max'] = false
+          end
+
+          it 'creates the VM using the cloud_properties memory_reservation_locked_to_max value' do
+            expect(VmConfig).to receive(:new) do |options|
+              expect(options[:manifest_params][:vm_type].memory_reservation_locked_to_max).to be_falsey
+              vm_config
+            end
+
+            vsphere_cloud.create_vm(
+              'fake-agent-id',
+              'fake-stemcell-cid',
+              vm_type,
+              'fake-networks-hash',
+              existing_disk_cids,
+              {}
+            )
           end
         end
       end
