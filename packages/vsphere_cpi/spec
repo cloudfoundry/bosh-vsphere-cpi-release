@@ -1,7 +1,7 @@
 ---
 name: vsphere_cpi
 dependencies:
-- ruby-3.1.2-r0.91.0
+- ruby-3.1
 files:
 - vsphere_cpi/Gemfile
 - vsphere_cpi/Gemfile.lock
