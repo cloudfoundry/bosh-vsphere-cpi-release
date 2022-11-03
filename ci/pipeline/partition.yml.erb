@@ -1,31 +1,18 @@
-  - name: <%= e "lock-#{pool}" %>
-    plan:
-    - in_parallel:
-      - get: source-ci
-      - get: bosh-cpi-src
-        trigger: true
-        passed: [unit-test]
-    - do:
-      - put: environment
-        resource: <%= e "pool-#{pool}" %>
-        params: { acquire: true }
-        on_failure:
-          put: <%= e "pool-#{pool}" %>
-          params : { release: environment }
-      attempts: 4
-
   - name: <%= e "lifecycle-#{pool}" %>
     serial: true
     plan:
     - in_parallel:
       - get: source-ci
       - get: bosh-cpi-src
-        passed: [<%= e "lock-#{pool}" %>]
-      - get: environment
-        resource: <%= e "pool-#{pool}" %>
         trigger: true
-        passed: [<%= e "lock-#{pool}" %>]
+        passed: [unit-test]
       - get: stemcell
+      - put: environment
+        resource: <%= e "pool-#{pool}" %>
+        params: { acquire: true }
+        on_failure:
+          put: <%= e "pool-#{pool}" %>
+          params : { release: environment }
     - task: test
       file: source-ci/ci/tasks/run-lifecycle.yml
       privileged: true
@@ -36,11 +23,6 @@
       on_failure:
         put: <%= e "pool-#{pool}" %>
         params : { remove: environment }
-
-  - name: <%= e "unlock-#{pool}" %>
-    plan:
-    - get: <%= e "pool-#{pool}" %>
-      trigger: true
-      passed: [<%= e "lifecycle-#{pool}" %>]
-    - put: <%= e "pool-#{pool}" %>
-      params : { release: <%= e "pool-#{pool}" %> }
+      on_success:
+        put: <%= e "pool-#{pool}" %>
+        params : { release: <%= e "pool-#{pool}" %> }

@@ -39,32 +39,12 @@ jobs:
       params:
         file: 'dev-artifacts/*.tgz'
 
-  - name: lock-bats-policy
-    plan:
-      - in_parallel:
-          - get: source-ci
-          - get: bosh-cpi-src
-            passed: [build-candidate]
-            trigger: true
-          - get: bosh-cpi-artifacts
-            trigger: true
-            passed: [build-candidate]
-      - do:
-          - put: environment
-            resource: pool-7.0-nsxt31-policy
-            params: {acquire: true}
-            on_failure:
-              put: pool-7.0-nsxt31-policy
-              params : {release: environment}
-        attempts: 4
-
   - name: bats-policy
     serial: true
     plan:
       - in_parallel:
           - get: source-ci
-          - {get: environment,              trigger: true,  passed: [lock-bats-policy], resource: pool-7.0-nsxt31-policy}
-          - {get: cpi-release,              trigger: false, resource: bosh-cpi-artifacts, passed: [lock-bats-policy]}
+          - {get: cpi-release,              trigger: true, resource: bosh-cpi-artifacts, passed: [build-candidate]}
           - {get: bosh-release,             trigger: false, resource: old-bosh-release}
           - {get: stemcell,                 trigger: false}
           - {get: certification,            trigger: false}
@@ -72,8 +52,14 @@ jobs:
           - {get: bats,                     trigger: false}
           - {get: bosh-cli,                 trigger: false}
           - get: bosh-cpi-src
-            passed:
-              - lock-bats-policy
+            passed: [build-candidate]
+            trigger: true
+          - put: environment
+            resource: pool-7.0-nsxt31-policy
+            params: {acquire: true}
+            on_failure:
+              put: pool-7.0-nsxt31-policy
+              params : {release: environment}
 
       - task: prepare-director-policy
         file: source-ci/ci/tasks/prepare-director-policy.yml
@@ -96,42 +82,20 @@ jobs:
           in_parallel:
           - put: pool-7.0-nsxt31-policy
             params : {remove: environment}
+        on_success:
+          put: pool-7.0-nsxt31-policy
+          params : {release: pool-7.0-nsxt31-policy}
         ensure:
           do:
             - task: teardown
               file: source-ci/ci/tasks/teardown.yml
-
-  - name: unlock-bats-policy
-    plan:
-      - {trigger: true, passed: [bats-policy], get: pool-7.0-nsxt31-policy}
-      - put: pool-7.0-nsxt31-policy
-        params : {release: pool-7.0-nsxt31-policy}
-
-  - name: lock-bats
-    plan:
-      - in_parallel:
-        - get: source-ci
-        - get: bosh-cpi-src
-          passed: [build-candidate]
-        - get: bosh-cpi-artifacts
-          trigger: true
-          passed: [build-candidate]
-      - do:
-        - put: environment
-          resource: pool-6.5-nsxt25
-          params: {acquire: true}
-          on_failure:
-            put: pool-6.5-nsxt25
-            params : {release: environment}
-        attempts: 4
 
   - name: bats
     serial: true
     plan:
       - in_parallel:
         - get: source-ci
-        - {get: cpi-release,              trigger: false, resource: bosh-cpi-artifacts, passed: [lock-bats]}
-        - {get: environment,              trigger: true,  passed: [lock-bats], resource: pool-6.5-nsxt25}
+        - {get: cpi-release,              trigger: true, resource: bosh-cpi-artifacts, passed: [build-candidate]}
         - {get: bosh-release,             trigger: false, resource: old-bosh-release}
         - {get: stemcell,                 trigger: false, resource: stemcell}
         - {get: certification,            trigger: false}
@@ -139,8 +103,13 @@ jobs:
         - {get: bats,                     trigger: false}
         - {get: bosh-cli,                 trigger: false}
         - get: bosh-cpi-src
-          passed:
-          - lock-bats
+          passed: [build-candidate]
+        - put: environment
+          resource: pool-6.5-nsxt25
+          params: {acquire: true}
+          on_failure:
+            put: pool-6.5-nsxt25
+            params : {release: environment}
       - task: prepare-director
         file: source-ci/ci/tasks/prepare-director.yml
         params:
@@ -162,42 +131,20 @@ jobs:
           in_parallel:
           - put: pool-6.5-nsxt25
             params : {remove: environment}
+        on_success:
+          put: pool-6.5-nsxt25
+          params : {release: pool-6.5-nsxt25}
         ensure:
           do:
             - task: teardown
               file: source-ci/ci/tasks/teardown.yml
-
-  - name: unlock-bats
-    plan:
-      - {trigger: true, passed: [bats], get: pool-6.5-nsxt25}
-      - put: pool-6.5-nsxt25
-        params : {release: pool-6.5-nsxt25}
-
-  - name: lock-bats-70-cvds
-    plan:
-      - in_parallel:
-          - get: source-ci
-          - get: bosh-cpi-src
-            passed: [build-candidate]
-          - get: bosh-cpi-artifacts
-            trigger: true
-            passed: [build-candidate]
-      - do:
-          - put: environment
-            resource: pool-7.0-nsxt31-cvds
-            params: {acquire: true}
-            on_failure:
-              put: pool-7.0-nsxt31-cvds
-              params : {release: environment}
-        attempts: 4
 
   - name: bats-70-cvds
     serial: true
     plan:
       - in_parallel:
           - get: source-ci
-          - {get: cpi-release,              trigger: false, resource: bosh-cpi-artifacts, passed: [lock-bats-70-cvds]}
-          - {get: environment,              trigger: true,  passed: [lock-bats-70-cvds], resource: pool-7.0-nsxt31-cvds}
+          - {get: cpi-release,              trigger: true, resource: bosh-cpi-artifacts, passed: [build-candidate]}
           - {get: bosh-release,             trigger: false, resource: old-bosh-release}
           - {get: stemcell,                 trigger: false}
           - {get: certification,            trigger: false}
@@ -205,8 +152,13 @@ jobs:
           - {get: bats,                     trigger: false}
           - {get: bosh-cli,                 trigger: false}
           - get: bosh-cpi-src
-            passed:
-              - lock-bats-70-cvds
+            passed: [build-candidate]
+          - put: environment
+            resource: pool-7.0-nsxt31-cvds
+            params: {acquire: true}
+            on_failure:
+              put: pool-7.0-nsxt31-cvds
+              params : {release: environment}
       - task: prepare-director
         file: source-ci/ci/tasks/prepare-director.yml
         params:
@@ -228,16 +180,13 @@ jobs:
           in_parallel:
             - put: pool-7.0-nsxt31-cvds
               params : {remove: environment}
+        on_success:
+          put: pool-7.0-nsxt31-cvds
+          params : {release: pool-7.0-nsxt31-cvds}
         ensure:
           do:
             - task: teardown
               file: source-ci/ci/tasks/teardown.yml
-
-  - name: unlock-bats-70-cvds
-    plan:
-      - {trigger: true, passed: [bats-70-cvds], get: pool-7.0-nsxt31-cvds}
-      - put: pool-7.0-nsxt31-cvds
-        params : {release: pool-7.0-nsxt31-cvds}
 
   - name: inspect-candidate
     serial: true
