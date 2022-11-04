@@ -84,7 +84,7 @@ jobs:
             params : {remove: environment}
         on_success:
           put: pool-7.0-nsxt31-policy
-          params : {release: pool-7.0-nsxt31-policy}
+          params : {release: environment}
         ensure:
           do:
             - task: teardown
@@ -133,7 +133,7 @@ jobs:
             params : {remove: environment}
         on_success:
           put: pool-6.5-nsxt25
-          params : {release: pool-6.5-nsxt25}
+          params : {release: environment}
         ensure:
           do:
             - task: teardown
@@ -182,7 +182,7 @@ jobs:
               params : {remove: environment}
         on_success:
           put: pool-7.0-nsxt31-cvds
-          params : {release: pool-7.0-nsxt31-cvds}
+          params : {release: environment}
         ensure:
           do:
             - task: teardown

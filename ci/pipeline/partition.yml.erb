@@ -25,4 +25,4 @@
         params : { remove: environment }
       on_success:
         put: <%= e "pool-#{pool}" %>
-        params : { release: <%= e "pool-#{pool}" %> }
+        params : { release: environment }
