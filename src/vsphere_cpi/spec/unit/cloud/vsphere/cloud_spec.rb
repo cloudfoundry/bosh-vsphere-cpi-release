@@ -2438,7 +2438,56 @@ module VSphereCloud
           expect(disk_cid).to eq('fake-disk-cid')
         end
       end
-
+      context 'when global vmx_options are set' do
+        let(:vm_config) { instance_double(VmConfig) }
+        let(:system_disk_unit_number) { 1 }
+        let(:system_disk) do
+          instance_double(VimSdk::Vim::Vm::Device::VirtualDisk, unit_number: system_disk_unit_number)
+        end
+        let(:ephemeral_disk_unit_number) { 2 }
+        let(:ephemeral_uuid) { 'TESTGENERATEDISKENV' }
+        let(:ephemeral_backing) do
+          instance_double(VimSdk::Vim::Vm::Device::VirtualDisk::FlatVer2BackingInfo, uuid: ephemeral_uuid)
+        end
+        let(:ephemeral_disk) do
+          instance_double(VimSdk::Vim::Vm::Device::VirtualDisk,
+                          backing: ephemeral_backing,
+                          unit_number: ephemeral_disk_unit_number
+          )
+        end
+        let(:vm_vmx_options) do
+          {
+            'disk.enableUUID' => 0
+          }
+        end
+        context 'when no config was provided on vm level nor global' do
+          it 'uses the global value' do
+            allow(cloud_config).to receive(:disk_enable_uuid).and_return(nil)
+            allow(vm_config).to receive(:vmx_options).and_return({})
+            disk_env = subject.generate_disk_env(system_disk, ephemeral_disk, vm_config)
+            expect(disk_env['ephemeral']).to eq(ephemeral_disk_unit_number.to_s)
+            expect(disk_env['system']).to eq(system_disk_unit_number.to_s)
+          end
+        end
+        context 'when no config was provided on vm level' do
+          it 'uses the global value' do
+            allow(cloud_config).to receive(:disk_enable_uuid).and_return(1)
+            allow(vm_config).to receive(:vmx_options).and_return({})
+            disk_env = subject.generate_disk_env(system_disk, ephemeral_disk, vm_config)
+            expect(disk_env['ephemeral']). to eq({'id' => ephemeral_uuid.downcase})
+            expect(disk_env['system']).to eq(system_disk_unit_number.to_s)
+          end
+        end
+        context 'when vm_options override global vmx_options' do
+          it 'uses the vm_options value' do
+            allow(cloud_config).to receive(:disk_enable_uuid).and_return(1)
+            allow(vm_config).to receive(:vmx_options).and_return(vm_vmx_options)
+            disk_env = subject.generate_disk_env(system_disk, ephemeral_disk, vm_config)
+            expect(disk_env['ephemeral']).to eq(ephemeral_disk_unit_number.to_s)
+            expect(disk_env['system']).to eq(system_disk_unit_number.to_s)
+          end
+        end
+      end
       context 'when both global default_disk_type is set and disk_pool type is set' do
         let(:default_disk_type) { 'fake-global-type' }
         it 'create disk with the specified disk_pool type' do

@@ -114,7 +114,39 @@ describe 'cpi.json.erb' do
       }
     })
   end
+  context 'when vcenter.vmx_options.disk.enableUUID is set globally' do
+    let(:datastore_pattern) { nil }
+    let(:datastore_cluster_pattern) { nil }
+    let(:persistent_datastore_pattern) { nil }
+    let(:persistent_datastore_cluster_pattern) { nil }
+    before(:each) do
 
+      manifest['properties']['vcenter']['vmx_options'] = { 'disk' => { 'enableUUID' => 1 } }
+    end
+
+    it 'renders the property' do
+      subject['cloud']['properties']['vcenters'].each do |vcenter|
+        expect(vcenter['vmx_options']).to eq(
+          { 'disk' => { 'enableUUID' => 1 } }
+        )
+      end
+    end
+
+    it 'does not render the optional properties' do
+      expect(subject['cloud']['properties']['vcenters'].first['datacenters'].first).to eq(
+        {
+          'allow_mixed_datastores' => true,
+          'clusters' => [
+            'cluster-1'
+          ],
+          'disk_path' => 'disk-path',
+          'name' => 'datacenter-1',
+          'template_folder' => 'template-folder',
+          'vm_folder' => 'vm-folder'
+        }
+      )
+    end
+  end
   context 'when optional datacenter properties are not set' do
     let(:datastore_pattern) { nil }
     let(:datastore_cluster_pattern) { nil }
