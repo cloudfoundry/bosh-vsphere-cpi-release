@@ -846,7 +846,8 @@ module VSphereCloud
       # When disk.enableUUID is true on the vmx options, consistent volume IDs are requested, and we can use them
       # to ensure the precise ephemeral volume is mounted.   This is mandatory for
       # cases where multiple SCSI controllers are present on the VM, as is common with Kubernetes VMs.
-      if vm_config.vmx_options['disk.enableUUID'] == "1"
+      enableUUID = vm_config.vmx_options['disk.enableUUID'] || @config.disk_enable_uuid || 0
+      if enableUUID == "1" || enableUUID == 1
         logger.info("Using ephemeral disk UUID #{ephemeral_disk.backing.uuid.downcase}")
         {
           'system' => system_disk.unit_number.to_s,

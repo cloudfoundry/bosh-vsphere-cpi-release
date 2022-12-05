@@ -244,6 +244,10 @@ module VSphereCloud
       vcenter['memory_reservation_locked_to_max']
     end
 
+    def disk_enable_uuid
+      vcenter['disk']['enableUUID']
+    end
+
     private
 
     attr_reader :config
@@ -276,6 +280,11 @@ module VSphereCloud
             optional('upgrade_hw_version') => bool,
             optional('memory_reservation_locked_to_max') => bool,
             optional('vm_storage_policy_name') => String,
+            optional('vmx_options') => {
+              optional('disk') => {
+                optional('enableUUID') => Integer
+              }
+            },
             optional('nsxt') => {
               optional('host') => String,
               optional('username') => String,
