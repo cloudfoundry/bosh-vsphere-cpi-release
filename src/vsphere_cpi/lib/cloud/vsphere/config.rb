@@ -245,7 +245,7 @@ module VSphereCloud
     end
 
     def disk_enable_uuid
-      vcenter['disk']['enableUUID']
+      vcenter.dig(:disk, :enableUUID)
     end
 
     private
