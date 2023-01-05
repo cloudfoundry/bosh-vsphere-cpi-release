@@ -7,47 +7,54 @@ namespace :swagger do
   task :nsxt_manager_client do
   
     rm_rf(["./lib/nsxt_manager_client/*"])
-  
+
+    #Patch NSX-T's OpenAPI to use a properly-escaped regex
+    sh [
+      "sed",
+      "'s~\\[a-zA-Z0-9-.\\]~[a-zA-Z0-9.-]~g'",
+      "< ./data/nsxt_manager_api/nsxt_manager_api.json",
+      "> ./data/nsxt_manager_api/nsxt_manager_api_escaped_regex.json"
+    ].join(' ')
     #generate all models
     sh [
       "swagger-codegen generate",
-      "-i ./data/nsxt_manager_api/nsxt_manager_api.json",
+      "-i ./data/nsxt_manager_api/nsxt_manager_api_escaped_regex.json",
       "-l ruby",
       "-o ./lib/nsxt_manager_client",
       "-c ./data/nsxt_manager_api/config.json -t ./data/swagger-nsxt-manager-template"
     ].join(' ')
-  
+
     #Patch models that have wrong _deserialize method
     #TODO: Patch both LogicalRouterPortListResult and LogicalPortAttachment in 1 call
     sh [
-       "swagger-codegen generate",
-       "-i ./data/nsxt_manager_api/nsxt_manager_api.json",
-       "-l ruby",
-       "-o ./lib/nsxt_manager_client",
-       "-c ./data/nsxt_manager_api/config.json -t ./data/swagger-nsxt-template-deserialization",
-       "-Dmodels=LogicalRouterPortListResult"
-     ].join(' ')
-  
+      "swagger-codegen generate",
+      "-i ./data/nsxt_manager_api/nsxt_manager_api_escaped_regex.json",
+      "-l ruby",
+      "-o ./lib/nsxt_manager_client",
+      "-c ./data/nsxt_manager_api/config.json -t ./data/swagger-nsxt-template-deserialization",
+      "-Dmodels=LogicalRouterPortListResult"
+    ].join(' ')
+
     #Patch LogicalPortAttachment which also has wrong _deserialize method
     sh [
-       "swagger-codegen generate",
-       "-i ./data/nsxt_manager_api/nsxt_manager_api.json",
-       "-l ruby",
-       "-o ./lib/nsxt_manager_client",
-       "-c ./data/nsxt_manager_api/config.json -t ./data/swagger-nsxt-template-deserialization",
-       "-Dmodels=LogicalPortAttachment"
-     ].join(' ')
+      "swagger-codegen generate",
+      "-i ./data/nsxt_manager_api/nsxt_manager_api_escaped_regex.json",
+      "-l ruby",
+      "-o ./lib/nsxt_manager_client",
+      "-c ./data/nsxt_manager_api/config.json -t ./data/swagger-nsxt-template-deserialization",
+      "-Dmodels=LogicalPortAttachment"
+    ].join(' ')
 
     #Patch Configuration which also has wrong _deserialize method
     sh [
-           "swagger-codegen generate",
-           "-i ./data/nsxt_manager_api/nsxt_manager_api.json",
-           "-l ruby",
-           "-o ./lib/nsxt_manager_client",
-           "-c ./data/nsxt_manager_api/config.json -t ./data/swagger-nsxt-template-deserialization",
-           "-Dmodels=Configuration"
-       ].join(' ')
-  
+      "swagger-codegen generate",
+      "-i ./data/nsxt_manager_api/nsxt_manager_api_escaped_regex.json",
+      "-l ruby",
+      "-o ./lib/nsxt_manager_client",
+      "-c ./data/nsxt_manager_api/config.json -t ./data/swagger-nsxt-template-deserialization",
+      "-Dmodels=Configuration"
+    ].join(' ')
+
     rm_rf(["./lib/nsxt_manager_client/.swagger-codegen-ignore",
       "./lib/nsxt_manager_client/.swagger-codegen",
       "./lib/nsxt_manager_client/README.md",
@@ -59,7 +66,8 @@ namespace :swagger do
       "./lib/nsxt_manager_client/spec",
       "./lib/nsxt_manager_client/nsxt_manager_client.gemspec",
       "./lib/nsxt_manager_client/Rakefile",
-      "./lib/nsxt_manager_client/nsxt_manager_client"
+      "./lib/nsxt_manager_client/nsxt_manager_client",
+      "./data/nsxt_manager_api/nsxt_manager_api_escaped_regex.json"
     ])
   
     mv("./lib/nsxt_manager_client/lib/nsxt_manager_client", "./lib/nsxt_manager_client/nsxt_manager_client")
