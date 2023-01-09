@@ -34,8 +34,7 @@ module NSXTPolicy
       @user_agent = "Swagger-Codegen/#{VERSION}/ruby"
       @default_headers = {
         'Content-Type' => 'application/json',
-        'User-Agent' => @user_agent,
-        'X-Allow-Overwrite' => true
+        'User-Agent' => @user_agent
       }
     end
 

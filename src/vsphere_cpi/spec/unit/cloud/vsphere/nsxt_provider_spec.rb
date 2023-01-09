@@ -4,7 +4,7 @@ require 'nsxt_manager_client/nsxt_manager_client'
 
 describe VSphereCloud::NSXTProvider, fake_logger: true, fast_retries: true do
   let(:vcenter_client) { instance_double('VSphereCloud::VCenterClient') }
-  let(:datacenter) {instance_double('VSphereCloud::Resources::Datacenter') }
+  let(:datacenter) { instance_double('VSphereCloud::Resources::Datacenter') }
   let(:client) { instance_double(NSXT::ApiClient) }
   let(:nsxt_config) { VSphereCloud::NSXTConfig.new('fake-host', 'fake-username', 'fake-password') }
   let(:opaque_nsxt) do
@@ -163,10 +163,10 @@ describe VSphereCloud::NSXTProvider, fake_logger: true, fast_retries: true do
     context 'when nsgroups are specified' do
       let(:ns_groups) { %w(test-nsgroup-1 test-nsgroup-2) }
       let(:nsgroup_1) do
-        NSXT::NSGroup.new(:id => 'id-1', :display_name => 'test-nsgroup-1')
+        NSXT::NSGroup.new(:id => 'id-1', :display_name => 'test-nsgroup-1', _protection: "NOT_PROTECTED")
       end
       let(:nsgroup_2) do
-        NSXT::NSGroup.new(:id => 'id-2', :display_name => 'test-nsgroup-2')
+        NSXT::NSGroup.new(:id => 'id-2', :display_name => 'test-nsgroup-2', _protection: "NOT_PROTECTED")
       end
 
       before do
@@ -180,6 +180,20 @@ describe VSphereCloud::NSXTProvider, fake_logger: true, fast_retries: true do
         it 'should no-op' do
           # No call to client should be made
           nsxt_provider.add_vm_to_nsgroups(vm, ns_groups)
+        end
+      end
+
+      context "if some of the nsgroups are created via the Policy API (i.e. have the PROTECTED flag set)" do
+        it "should not try to mutate PROTECTED groups" do
+          policy_api_created_nsgroup = NSXT::NSGroup.new(id: 'id-3', display_name: 'policy-created-group', _protection: 'PROTECTED')
+          allow(nsxt_provider).to receive(:nsxt_nics).with(vm).and_return(nsxt_nic_array)
+          expect(nsxt_provider).to receive(:logical_ports).with(vm).and_return([logical_port_1, logical_port_2])
+          expect(nsxt_provider).to receive(:retrieve_all_ns_groups_with_pagination).and_return([nsgroup_1, nsgroup_2, policy_api_created_nsgroup])
+          expect(grouping_obj_svc).to receive(:add_or_remove_ns_group_expression).with('id-1', any_args).and_return(true)
+          expect(grouping_obj_svc).to receive(:add_or_remove_ns_group_expression).with('id-2', any_args).and_return(true)
+          expect(grouping_obj_svc).to_not receive(:add_or_remove_ns_group_expression).with('id-3', any_args)
+
+          nsxt_provider.add_vm_to_nsgroups(vm, [nsgroup_1, nsgroup_2, policy_api_created_nsgroup].map(&:display_name))
         end
       end
 
@@ -200,7 +214,7 @@ describe VSphereCloud::NSXTProvider, fake_logger: true, fast_retries: true do
         before do
           allow(nsxt_provider).to receive(:nsxt_nics).with(vm).and_return(nsxt_nic_array)
           expect(nsxt_provider).to receive(:logical_ports).with(vm)
-                                     .and_return([logical_port_1, logical_port_2])
+                                                          .and_return([logical_port_1, logical_port_2])
           expect(nsxt_provider).to receive(:retrieve_nsgroups).with(ns_groups).and_return([nsgroup_1, nsgroup_2])
         end
 
@@ -253,37 +267,37 @@ describe VSphereCloud::NSXTProvider, fake_logger: true, fast_retries: true do
       NSXT::NSGroupTagExpression.new(:scope => 'Tenant', :scope_op => 'EQUALS', :tag => 'my-tag', :tag_op => 'EQUALS', :target_type => 'LogicalPort')
     end
     let(:nsgroup_1) do
-      NSXT::NSGroup.new(:id => 'id-1', :display_name => 'test-nsgroup-1', :members => [simple_member, tag_member])
+      NSXT::NSGroup.new(:id => 'id-1', :display_name => 'test-nsgroup-1', :members => [simple_member, tag_member], :_protection => "NOT_PROTECTED")
     end
     let(:nsgroup_2) do
-      NSXT::NSGroup.new(:id => 'id-2', :display_name => 'test-nsgroup-2', :members => [simple_member])
+      NSXT::NSGroup.new(:id => 'id-2', :display_name => 'test-nsgroup-2', :members => [simple_member], :_protection => "NOT_PROTECTED")
     end
     let(:nsgroup_3) do
-      NSXT::NSGroup.new(:is => 'id-2', :display_name => 'test-nsgroup-2', :members => [])
+      NSXT::NSGroup.new(:is => 'id-2', :display_name => 'test-nsgroup-2', :members => [], :_protection => "NOT_PROTECTED")
     end
 
     before do
       allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:grouping_obj_svc).and_return(grouping_obj_svc)
       allow(nsxt_provider).to receive(
-        :retrieve_all_ns_groups_with_pagination
-      ).and_return([nsgroup_1, nsgroup_2])
+                                :retrieve_all_ns_groups_with_pagination
+                              ).and_return([nsgroup_1, nsgroup_2])
       allow(nsxt_provider).to receive(:logical_ports).with(vm)
-        .and_return([logical_port_1, logical_port_2])
+                                                     .and_return([logical_port_1, logical_port_2])
     end
 
     it "removes VM's logical ports from all NSGroups" do
       allow(nsxt_provider).to receive(:nsxt_nics).with(vm).and_return(nsxt_nic_array)
       expect(grouping_obj_svc).to receive(
-        :add_or_remove_ns_group_expression
-      ).with(any_args).and_return(true).twice
+                                    :add_or_remove_ns_group_expression
+                                  ).with(any_args).and_return(true).twice
       nsxt_provider.remove_vm_from_nsgroups(vm)
     end
 
     it "raises an error if there's an error removing the VM from the NSgroup" do
       allow(nsxt_provider).to receive(:nsxt_nics).with(vm).and_return(nsxt_nic_array)
       expect(grouping_obj_svc).to receive(
-        :add_or_remove_ns_group_expression
-      ).with(any_args).and_raise(NSXT::ApiCallError.new(code: 400))
+                                    :add_or_remove_ns_group_expression
+                                  ).with(any_args).and_raise(NSXT::ApiCallError.new(code: 400))
 
       expect do
         nsxt_provider.remove_vm_from_nsgroups(vm)
@@ -293,12 +307,12 @@ describe VSphereCloud::NSXTProvider, fake_logger: true, fast_retries: true do
     it "retries when there's a conflict in removing the VM from the NSgroup" do
       allow(nsxt_provider).to receive(:nsxt_nics).with(vm).and_return(nsxt_nic_array)
       expect(grouping_obj_svc).to receive(
-        :add_or_remove_ns_group_expression
-      ).with(any_args).and_raise(NSXT::ApiCallError.new(code: 409))
+                                    :add_or_remove_ns_group_expression
+                                  ).with(any_args).and_raise(NSXT::ApiCallError.new(code: 409))
 
       expect(grouping_obj_svc).to receive(
-        :add_or_remove_ns_group_expression
-      ).with(any_args).and_return(true).twice
+                                    :add_or_remove_ns_group_expression
+                                  ).with(any_args).and_return(true).twice
 
       nsxt_provider.remove_vm_from_nsgroups(vm)
     end
@@ -306,14 +320,14 @@ describe VSphereCloud::NSXTProvider, fake_logger: true, fast_retries: true do
     it "retries on a PreconditionFailed in removing the VM from the NSgroup" do
       allow(nsxt_provider).to receive(:nsxt_nics).with(vm).and_return(nsxt_nic_array)
       expect(grouping_obj_svc).to receive(
-        :add_or_remove_ns_group_expression
-      ).with(any_args).and_raise(
+                                    :add_or_remove_ns_group_expression
+                                  ).with(any_args).and_raise(
         NSXT::ApiCallError.new(code: 412)
       ).exactly(4).times
 
       expect(grouping_obj_svc).to receive(
-        :add_or_remove_ns_group_expression
-      ).with(any_args).and_return(true).twice
+                                    :add_or_remove_ns_group_expression
+                                  ).with(any_args).and_return(true).twice
 
       nsxt_provider.remove_vm_from_nsgroups(vm)
     end
@@ -321,14 +335,30 @@ describe VSphereCloud::NSXTProvider, fake_logger: true, fast_retries: true do
     it "should retry 50 times when there is a conflict or precondition failed while removing vm from nsgroup" do
       allow(nsxt_provider).to receive(:nsxt_nics).with(vm).and_return(nsxt_nic_array)
       expect(grouping_obj_svc).to receive(
-        :add_or_remove_ns_group_expression
-      ).with(any_args).and_raise(
+                                    :add_or_remove_ns_group_expression
+                                  ).with(any_args).and_raise(
         NSXT::ApiCallError.new(code: 409)
       ).at_most(50).times
 
       expect do
         nsxt_provider.remove_vm_from_nsgroups(vm)
       end.to raise_error(VSphereCloud::NSXTOptimisticUpdateError)
+    end
+
+    context "when the group is on the Policy side" do
+      it "does not try to remove VMs from groups that are on the policy side (i.e., _protection != 'NOT_PROTECTED')" do
+        policy_api_created_nsgroup = NSXT::NSGroup.new(id: 'id-3', display_name: 'policy-created-group', :members => [simple_member], _protection: 'PROTECTED')
+        allow(nsxt_provider).to receive(:nsxt_nics).with(vm).and_return(nsxt_nic_array)
+        expect(nsxt_provider).to receive(:logical_ports).with(vm).and_return([logical_port_1, logical_port_2])
+        expect(nsxt_provider).to receive(:retrieve_all_ns_groups_with_pagination).and_return([nsgroup_1, nsgroup_2, policy_api_created_nsgroup])
+        expect(grouping_obj_svc).to receive(:add_or_remove_ns_group_expression).with('id-1', any_args).and_return(true)
+        expect(grouping_obj_svc).to receive(:add_or_remove_ns_group_expression).with('id-2', any_args).and_return(true)
+        expect(grouping_obj_svc).to_not receive(:add_or_remove_ns_group_expression).with('id-3', any_args)
+
+        nsxt_provider.remove_vm_from_nsgroups(vm)
+
+      end
+
     end
 
     context "when the VM doesn't have any NSX-T opaque networks" do
@@ -361,7 +391,7 @@ describe VSphereCloud::NSXTProvider, fake_logger: true, fast_retries: true do
         expect(logical_port_1).to receive(:tags).and_return(existing_tags)
         allow(logical_port_2).to receive(:tags).and_return(existing_tags)
         expect(nsxt_provider).to receive(:logical_ports).with(vm)
-                                   .and_return([logical_port_1, logical_port_2])
+                                                        .and_return([logical_port_1, logical_port_2])
         allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:logical_switching_svc).and_return(logical_switching_svc)
       end
 
@@ -468,10 +498,10 @@ describe VSphereCloud::NSXTProvider, fake_logger: true, fast_retries: true do
     before :all do
       # to supress warning while running unit tests.
       if VSphereCloud::NSXTProvider.const_defined?('NSXT_MULTI_VM_COPY_RETRY')
-        VSphereCloud::NSXTProvider.send(:remove_const,'NSXT_MULTI_VM_COPY_RETRY')
+        VSphereCloud::NSXTProvider.send(:remove_const, 'NSXT_MULTI_VM_COPY_RETRY')
       end
       if VSphereCloud::NSXTProvider.const_defined?('NSXT_MIN_SLEEP')
-        VSphereCloud::NSXTProvider.send(:remove_const,'NSXT_MIN_SLEEP')
+        VSphereCloud::NSXTProvider.send(:remove_const, 'NSXT_MIN_SLEEP')
       end
       VSphereCloud::NSXTProvider::NSXT_MULTI_VM_COPY_RETRY = 1
       VSphereCloud::NSXTProvider::NSXT_MIN_SLEEP = 0.0
@@ -484,20 +514,20 @@ describe VSphereCloud::NSXTProvider, fake_logger: true, fast_retries: true do
         allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:vif_fabric_svc).and_return(vif_fabric_svc)
         allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:logical_switching_svc).and_return(logical_switching_svc)
         expect(vm_fabric_svc).to receive(:list_virtual_machines).with(display_name: vm.cid)
-                                .and_return(NSXT::VirtualMachineListResult.new(:results => []),
-                                            NSXT::VirtualMachineListResult.new(:results => [virtual_machine]),
-                                            NSXT::VirtualMachineListResult.new(:results => [virtual_machine]),
-                                            NSXT::VirtualMachineListResult.new(:results => [virtual_machine]))
+                                                                .and_return(NSXT::VirtualMachineListResult.new(:results => []),
+                                                                            NSXT::VirtualMachineListResult.new(:results => [virtual_machine]),
+                                                                            NSXT::VirtualMachineListResult.new(:results => [virtual_machine]),
+                                                                            NSXT::VirtualMachineListResult.new(:results => [virtual_machine]))
 
         expect(vif_fabric_svc).to receive(:list_vifs).with(owner_vm_id: virtual_machine.external_id)
-                                .and_return(NSXT::VirtualNetworkInterfaceListResult.new(:results => [vif_without_lport_attachment]),
-                                            NSXT::VirtualNetworkInterfaceListResult.new(:results => [vif, vif_without_lport_attachment]),
-                                            NSXT::VirtualNetworkInterfaceListResult.new(:results => [vif, vif_without_lport_attachment]))
+                                                     .and_return(NSXT::VirtualNetworkInterfaceListResult.new(:results => [vif_without_lport_attachment]),
+                                                                 NSXT::VirtualNetworkInterfaceListResult.new(:results => [vif, vif_without_lport_attachment]),
+                                                                 NSXT::VirtualNetworkInterfaceListResult.new(:results => [vif, vif_without_lport_attachment]))
 
         expect(logical_switching_svc).to receive(:list_logical_ports).with(attachment_id: vif.lport_attachment_id).once
-                                           .and_return(NSXT::LogicalPortListResult.new(:results => []))
+                                                                     .and_return(NSXT::LogicalPortListResult.new(:results => []))
         expect(logical_switching_svc).to receive(:list_logical_ports).with(attachment_id: vif.lport_attachment_id).once
-                                           .and_return(NSXT::LogicalPortListResult.new(:results => [logical_port_1]))
+                                                                     .and_return(NSXT::LogicalPortListResult.new(:results => [logical_port_1]))
       end
 
       it 'VirtualMachineNotFound, VIFNotFound or LogicalPortNotFound exception is raised' do
@@ -516,7 +546,7 @@ describe VSphereCloud::NSXTProvider, fake_logger: true, fast_retries: true do
           allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:vm_fabric_svc).and_return(vm_fabric_svc)
           allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:vif_fabric_svc).and_return(vif_fabric_svc)
           expect(vm_fabric_svc).to receive(:list_virtual_machines).with(display_name: vm.cid)
-                                  .and_return(NSXT::VirtualMachineListResult.new(:results => []))
+                                                                  .and_return(NSXT::VirtualMachineListResult.new(:results => []))
         end
 
         it 'raises an error' do
@@ -531,7 +561,7 @@ describe VSphereCloud::NSXTProvider, fake_logger: true, fast_retries: true do
           allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:vm_fabric_svc).and_return(vm_fabric_svc)
           allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:vif_fabric_svc).and_return(vif_fabric_svc)
           expect(vm_fabric_svc).to receive(:list_virtual_machines).with(display_name: vm.cid)
-                                  .and_return(NSXT::VirtualMachineListResult.new(:results => [virtual_machine, virtual_machine_diff_ext_id]))
+                                                                  .and_return(NSXT::VirtualMachineListResult.new(:results => [virtual_machine, virtual_machine_diff_ext_id]))
         end
         it 'raises an error if vms do not have same external id' do
           expect do
@@ -546,9 +576,9 @@ describe VSphereCloud::NSXTProvider, fake_logger: true, fast_retries: true do
           allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:vif_fabric_svc).and_return(vif_fabric_svc)
           allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:logical_switching_svc).and_return(logical_switching_svc)
           expect(vm_fabric_svc).to receive(:list_virtual_machines).with(display_name: vm.cid)
-                                  .and_return(NSXT::VirtualMachineListResult.new(:results => [virtual_machine]))
+                                                                  .and_return(NSXT::VirtualMachineListResult.new(:results => [virtual_machine]))
           expect(vif_fabric_svc).to receive(:list_vifs).with(owner_vm_id: virtual_machine.external_id)
-                                  .and_return(NSXT::VirtualNetworkInterfaceListResult.new(:results => [vif_without_lport_attachment]))
+                                                       .and_return(NSXT::VirtualNetworkInterfaceListResult.new(:results => [vif_without_lport_attachment]))
 
         end
 
@@ -565,11 +595,11 @@ describe VSphereCloud::NSXTProvider, fake_logger: true, fast_retries: true do
           allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:vif_fabric_svc).and_return(vif_fabric_svc)
           allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:logical_switching_svc).and_return(logical_switching_svc)
           expect(vm_fabric_svc).to receive(:list_virtual_machines).with(display_name: vm.cid)
-                                  .and_return(NSXT::VirtualMachineListResult.new(:results => [virtual_machine]))
+                                                                  .and_return(NSXT::VirtualMachineListResult.new(:results => [virtual_machine]))
           expect(vif_fabric_svc).to receive(:list_vifs).with(owner_vm_id: virtual_machine.external_id)
-                                  .and_return(NSXT::VirtualNetworkInterfaceListResult.new(:results => [vif]))
+                                                       .and_return(NSXT::VirtualNetworkInterfaceListResult.new(:results => [vif]))
           expect(logical_switching_svc).to receive(:list_logical_ports).with(attachment_id: vif.lport_attachment_id)
-                                             .and_return(NSXT::LogicalPortListResult.new(:results => []))
+                                                                       .and_return(NSXT::LogicalPortListResult.new(:results => []))
         end
 
         it 'raises an error' do
@@ -584,7 +614,7 @@ describe VSphereCloud::NSXTProvider, fake_logger: true, fast_retries: true do
       before do
         # to supress warning
         if VSphereCloud::NSXTProvider.const_defined?('NSXT_MULTI_VM_COPY_RETRY')
-          VSphereCloud::NSXTProvider.send(:remove_const,'NSXT_MULTI_VM_COPY_RETRY')
+          VSphereCloud::NSXTProvider.send(:remove_const, 'NSXT_MULTI_VM_COPY_RETRY')
         end
         VSphereCloud::NSXTProvider.const_set('NSXT_MULTI_VM_COPY_RETRY', 3)
       end
@@ -596,11 +626,11 @@ describe VSphereCloud::NSXTProvider, fake_logger: true, fast_retries: true do
         allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:vif_fabric_svc).and_return(vif_fabric_svc)
         allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:logical_switching_svc).and_return(logical_switching_svc)
         expect(vm_fabric_svc).to receive(:list_virtual_machines).with(display_name: vm.cid)
-                                  .and_return(multi_diff_vm_nsxt_list, multi_diff_vm_nsxt_list, multi_same_vm_nsxt_list)
+                                                                .and_return(multi_diff_vm_nsxt_list, multi_diff_vm_nsxt_list, multi_same_vm_nsxt_list)
         expect(vif_fabric_svc).to receive(:list_vifs).with(owner_vm_id: virtual_machine.external_id)
-                                  .and_return(NSXT::VirtualNetworkInterfaceListResult.new(:results => [vif, vif_without_lport_attachment]))
+                                                     .and_return(NSXT::VirtualNetworkInterfaceListResult.new(:results => [vif, vif_without_lport_attachment]))
         expect(logical_switching_svc).to receive(:list_logical_ports).with(attachment_id: vif.lport_attachment_id)
-                                             .and_return(NSXT::LogicalPortListResult.new(:results => [logical_port_1]))
+                                                                     .and_return(NSXT::LogicalPortListResult.new(:results => [logical_port_1]))
 
         expect(nsxt_provider.send(:logical_ports, vm)).to eq([logical_port_1])
       end
@@ -664,7 +694,7 @@ describe VSphereCloud::NSXTProvider, fake_logger: true, fast_retries: true do
       retryable = Bosh::Retryable.new(tries: 1, sleep: 0)
 
       allow(Bosh::Retryable).to receive(:new)
-        .with(hash_including(tries: 50)).and_return(retryable)
+                                  .with(hash_including(tries: 50)).and_return(retryable)
 
       expect do
         nsxt_provider.add_vm_to_server_pools(vm, server_pools)
@@ -680,18 +710,43 @@ describe VSphereCloud::NSXTProvider, fake_logger: true, fast_retries: true do
       nsxt_provider.retrieve_server_pools([])
       nsxt_provider.retrieve_server_pools(nil)
     end
+    context 'when  Policy API pools are present as indicated by `_protection` of "REQUIRE_OVERRIDE"' do
+      let(:server_pool_mgmt) do
+        NSXT::LbPool.new(id: 'id-1', display_name: 'hybrid-static-serverpool', _protection: 'NOT_PROTECTED')
+      end
+      let(:server_pool_policy) do
+        NSXT::LbPool.new(id: 'id-2', display_name: 'hybrid-static-serverpool', _protection: 'REQUIRE_OVERRIDE')
+      end
+      let(:server_pools) do
+        [
+          {
+            'name' => 'hybrid-static-serverpool',
+            'port' => 5432
+          }
+        ]
+      end
+
+      it 'only retrieves the Management pools' do
+        expect(services_svc).to receive_message_chain(:list_load_balancer_pools, :results).and_return([server_pool_mgmt, server_pool_policy])
+        # allow(server_pool_mgmt).to receive(:member_group).and_return('test-nsgroup1')
+        # allow(server_pool_policy).to receive(:member_group).and_return('test-nsgroup2')
+        static_server_pools, _ = nsxt_provider.retrieve_server_pools(server_pools)
+        expect(static_server_pools).to include([server_pool_mgmt, 5432])
+        expect(static_server_pools).to_not include([server_pool_policy, 5432])
+      end
+    end
     context 'when server_pools are present' do
       let(:server_pool_1) do
-        NSXT::LbPool.new(id: 'id-1', display_name: 'test-static-serverpool')
+        NSXT::LbPool.new(id: 'id-1', display_name: 'test-static-serverpool', _protection: 'NOT_PROTECTED')
       end
       let(:server_pool_2) do
-        NSXT::LbPool.new(id: 'id-2', display_name: 'test-static-serverpool')
+        NSXT::LbPool.new(id: 'id-2', display_name: 'test-static-serverpool', _protection: 'NOT_PROTECTED')
       end
       let(:server_pool_3) do
-        NSXT::LbPool.new(id: 'id-2', display_name: 'test-dynamic-serverpool')
+        NSXT::LbPool.new(id: 'id-2', display_name: 'test-dynamic-serverpool', _protection: 'NOT_PROTECTED')
       end
       let(:server_pool_4) do
-        NSXT::LbPool.new(id: 'id-2', display_name: 'test-dynamic-serverpool')
+        NSXT::LbPool.new(id: 'id-2', display_name: 'test-dynamic-serverpool', _protection: 'NOT_PROTECTED')
       end
 
       let(:server_pools) do
@@ -743,13 +798,13 @@ describe VSphereCloud::NSXTProvider, fake_logger: true, fast_retries: true do
     end
 
     it 'removes VM from all server pools' do
-      expect(services_svc).to receive(:perform_pool_member_action).with(server_pool_1.id,an_instance_of(NSXT::PoolMemberSettingList),'REMOVE_MEMBERS').once
-      expect(services_svc).to receive(:perform_pool_member_action).with(server_pool_3.id,an_instance_of(NSXT::PoolMemberSettingList),'REMOVE_MEMBERS').once
+      expect(services_svc).to receive(:perform_pool_member_action).with(server_pool_1.id, an_instance_of(NSXT::PoolMemberSettingList), 'REMOVE_MEMBERS').once
+      expect(services_svc).to receive(:perform_pool_member_action).with(server_pool_3.id, an_instance_of(NSXT::PoolMemberSettingList), 'REMOVE_MEMBERS').once
       nsxt_provider.remove_vm_from_server_pools(vm_ip_address, 'fake-vm-id', 0)
     end
 
     it 'removes VM from all the bosh server pools when the cpi metadata version is greater than 0' do
-      expect(services_svc).to receive(:perform_pool_member_action).with(server_pool_1.id,an_instance_of(NSXT::PoolMemberSettingList),'REMOVE_MEMBERS').once
+      expect(services_svc).to receive(:perform_pool_member_action).with(server_pool_1.id, an_instance_of(NSXT::PoolMemberSettingList), 'REMOVE_MEMBERS').once
       nsxt_provider.remove_vm_from_server_pools(vm_ip_address, 'fake-vm-id', 1)
     end
   end
@@ -791,7 +846,7 @@ describe VSphereCloud::NSXTProvider, fake_logger: true, fast_retries: true do
     context 'when there are two pages' do
       let(:result_list_1) { double(Object, results: [nsgroup_1, nsgroup_2], cursor: 1) }
       let(:result_list_2) { double(Object, results: [nsgroup_3, nsgroup_4], cursor: nil) }
-      let(:result_list_1_cursor) { "fake-result-list-1-cursor"}
+      let(:result_list_1_cursor) { "fake-result-list-1-cursor" }
       it 'returns all NS Groups in the two pages' do
         allow_any_instance_of(VSphereCloud::NSXTProvider).to receive(:grouping_obj_svc).and_return(grouping_obj_svc)
         allow(grouping_obj_svc).to receive(:list_ns_groups).and_return(result_list_1)

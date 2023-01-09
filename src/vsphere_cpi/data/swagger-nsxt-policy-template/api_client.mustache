@@ -26,8 +26,7 @@ module {{moduleName}}
       @user_agent = "{{#httpUserAgent}}{{{.}}}{{/httpUserAgent}}{{^httpUserAgent}}Swagger-Codegen/#{VERSION}/ruby{{/httpUserAgent}}"
       @default_headers = {
         'Content-Type' => 'application/json',
-        'User-Agent' => @user_agent,
-        'X-Allow-Overwrite' => true
+        'User-Agent' => @user_agent
       }
     end
 
@@ -280,7 +279,7 @@ module {{moduleName}}
     def build_request_url(path)
       # Add leading and trailing slashes to path
       path = "/#{path}".gsub(/\/+/, '/')
-      URI.encode(@config.base_url) + URI.encode(path).gsub("[","%5B").gsub("]","%5D")
+      Addressable::URI.encode(@config.base_url) + Addressable::URI.encode(path).gsub("[","%5B").gsub("]","%5D")
     end
 
     # Builds the HTTP request body
