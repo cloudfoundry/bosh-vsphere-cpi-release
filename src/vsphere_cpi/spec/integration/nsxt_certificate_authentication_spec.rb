@@ -62,23 +62,6 @@ describe 'NSXT certificate authentication', nsxt_all: true do
         delete_principal(@principal2_id) unless @principal2_id.nil?
         delete_test_certificate(@cert2_id) unless @cert2_id.nil?
       end
-
-      it 'can change other principal data' do
-        #NSXT needs some time to make cert available for cert auth
-        sleep(30)
-
-        router = NSXT::LogicalRouter.new(router_type: 'TIER1')
-        router = router_api.create_logical_router(router)
-        @router_id = router.id
-        expect(@router_id).not_to be_nil
-
-        router = router_api2.read_logical_router(@router_id)
-        expect(router._protection).to eq('REQUIRE_OVERRIDE')
-        router.display_name = 'new-name';
-
-        router = router_api2.update_logical_router(@router_id, router)
-        expect(router.display_name).to eq('new-name')
-      end
     end
   end
 

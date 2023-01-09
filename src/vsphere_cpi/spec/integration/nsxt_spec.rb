@@ -30,6 +30,8 @@ describe 'CPI', nsxt_all: true do
       configuration.verify_ssl_host = false
     end
     @manager_client= NSXT::ApiClient.new(configuration)
+    @manager_client_with_overwrite = NSXT::ApiClient.new(configuration)
+    @manager_client_with_overwrite.x_allow_overwrite
 
     # Add cert and key
     @nsx_component_api = NSXT::ManagementPlaneApiNsxComponentAdministrationTrustManagementCertificateApi.new(@manager_client)
@@ -1568,7 +1570,7 @@ describe 'CPI', nsxt_all: true do
   end
 
   def delete_nsgroup(nsgroup)
-    grouping_object_svc = NSXT::ManagementPlaneApiGroupingObjectsNsGroupsApi.new(@manager_client)
+    grouping_object_svc = NSXT::ManagementPlaneApiGroupingObjectsNsGroupsApi.new(@manager_client_with_overwrite)
     grouping_object_svc.delete_ns_group(nsgroup.id)
   end
 

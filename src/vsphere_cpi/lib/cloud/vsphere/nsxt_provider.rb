@@ -169,6 +169,7 @@ module VSphereCloud
         end
       end
       nsgroups.each do |nsgroup|
+        next if nsgroup._protection != "NOT_PROTECTED"
         logger.info("Removing LogicalPorts: #{lport_ids} to NSGroup '#{nsgroup.id}'")
         Bosh::Retryable.new(
             tries: 50,
@@ -276,7 +277,9 @@ module VSphereCloud
 
       #Create a hash of server_pools with key as their name and value as list of matching server_pools
       server_pools_by_name = services_svc.list_load_balancer_pools.results.each_with_object({}) do |server_pool, hash|
-        hash[server_pool.display_name] ? hash[server_pool.display_name] << server_pool : hash[server_pool.display_name] = [server_pool]
+        if server_pool._protection == 'NOT_PROTECTED' # only return the pools we're allowed to modify, not the Policy API's pools
+          hash[server_pool.display_name] ? hash[server_pool.display_name] << server_pool : hash[server_pool.display_name] = [server_pool]
+        end
       end
 
       missing = server_pools.reject do |server_pool|
@@ -355,8 +358,10 @@ module VSphereCloud
       raise NSGroupsNotFound.new(*missing) unless missing.empty?
 
       found_nsgroups = nsgroup_names.map do |nsgroup_name|
-        nsgroups_by_name[nsgroup_name]
-      end
+        ns_group = nsgroups_by_name[nsgroup_name]
+        next if ns_group._protection != 'NOT_PROTECTED'
+        ns_group
+      end.compact
       logger.info("Found NSGroups with ids: #{found_nsgroups.map(&:id)}")
 
       found_nsgroups

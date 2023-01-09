@@ -34,8 +34,7 @@ module NSXT
       @user_agent = "Swagger-Codegen/#{VERSION}/ruby"
       @default_headers = {
         'Content-Type' => 'application/json',
-        'User-Agent' => @user_agent,
-        'X-Allow-Overwrite' => true
+        'User-Agent' => @user_agent
       }
     end
 
@@ -95,6 +94,12 @@ module NSXT
         end
       end
       response
+    end
+
+    # Enables the deletion of test artifacts such as NS Groups and Logical Routers
+    # Don't enable in production code; it enables Management API to modify Policy objects
+    def x_allow_overwrite(value = true)
+      @default_headers['X-Allow-Overwrite'] = value
     end
 
     # Builds the HTTP request
