@@ -30,7 +30,7 @@ if [ $current_cpi_version -lt $new_user_cpi_version ]; then
 fi
 
 # To get the cert from nsxt-manager, we run openssl on the jump box, and then pipe that result into a local openssl command that reformats it into PEM
-sshpass -p "vcpi" ssh -o StrictHostKeyChecking=no "vcpi@${BOSH_VSPHERE_JUMPER_HOST}" -C "openssl s_client -showcerts -connect $BOSH_VSPHERE_CPI_NSXT_HOST:443 </dev/null 2>/dev/null" | openssl x509 -outform PEM > nsxt-manager-cert.pem
+sshpass -p $BOSH_VSPHERE_JUMPER_PASSWORD ssh -o StrictHostKeyChecking=no "vcpi@${BOSH_VSPHERE_JUMPER_HOST}" -C "openssl s_client -showcerts -connect $BOSH_VSPHERE_CPI_NSXT_HOST:443 </dev/null 2>/dev/null" | openssl x509 -outform PEM > nsxt-manager-cert.pem
 
 # Bosh is give internal ip of 192.168.111.152
 # This is because on Nimbus

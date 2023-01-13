@@ -17,7 +17,7 @@ sockpath="$tmpdir/master.sock"
 # -C : compresses data before sending
 # -N : tells SSH that no command will be sent once the tunnel is up
 # -4 : force SSH to use IPv4 to avoid the dreaded `bind: Cannot assign requested address` error
-sshpass -p 'vcpi' ssh -o StrictHostKeyChecking=no -M -S "$sockpath" -4 -D 5000 -fNC $jumpbox_remote
+sshpass -p $BOSH_VSPHERE_JUMPER_PASSWORD ssh -o StrictHostKeyChecking=no -M -S "$sockpath" -4 -D 5000 -fNC $jumpbox_remote
 
 # Ensure tmpdir and control socket are cleaned up on exit
 master_exit() {

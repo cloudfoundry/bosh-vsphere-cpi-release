@@ -22,7 +22,7 @@ Host jumpbox
         StrictHostKeyChecking no
 EOF
 chmod -R go-rwx ~/.ssh
-sshpass -p vcpi scp ~/.ssh/vcpi.pub jumpbox:.ssh/authorized_keys
+sshpass -p $BOSH_VSPHERE_JUMPER_PASSWORD scp ~/.ssh/vcpi.pub jumpbox:.ssh/authorized_keys
 
 # grab OpenVPN client configuration & update it with VCPI jumpbox IP
 scp jumpbox:client.ovpn /etc/openvpn/
