@@ -21,7 +21,7 @@ group :development, :test do
   gem 'parallel_tests'
   gem 'pry'
   gem 'pry-byebug'
-  gem 'rack',      '~> 2.2.3'
+  gem 'rack',      '~> 2.2.6'
   gem 'rake',      '~> 13.0'
   gem 'rspec',     '~> 3.11.0'
   gem 'rspec-its'
