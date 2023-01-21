@@ -5,177 +5,477 @@ require 'fileutils'
 namespace :swagger do
   desc 'Create swagger manager client from swagger spec'
   task :nsxt_manager_client do
-  
-    rm_rf(["./lib/nsxt_manager_client/*"])
+    rm_rf(['./lib/nsxt_manager_client/*'])
 
-    #Patch NSX-T's OpenAPI to use a properly-escaped regex
+    # Trim unneeded endpoints; NSX-T 2.5.1 has 872, we only need 24
     sh [
-      "sed",
+      'jq',
+      '\'.paths |= {
+        "/fabric/vifs",
+        "/fabric/virtual-machines",
+        "/loadbalancer/pools",
+        "/loadbalancer/pools/{pool-id}",
+        "/logical-ports",
+        "/logical-ports/{lport-id}",
+        "/logical-routers",
+        "/logical-routers/{logical-router-id}",
+        "/ns-groups",
+        "/ns-groups/unassociated-virtual-machines",
+        "/ns-groups/{ns-group-id}",
+        "/ns-groups/{ns-group-id}/effective-directory-group-members",
+        "/ns-groups/{ns-group-id}/effective-ip-address-members",
+        "/ns-groups/{ns-group-id}/effective-ipset-members",
+        "/ns-groups/{ns-group-id}/effective-logical-port-members",
+        "/ns-groups/{ns-group-id}/effective-logical-switch-members",
+        "/ns-groups/{ns-group-id}/effective-transport-node-members",
+        "/ns-groups/{ns-group-id}/effective-vif-members",
+        "/ns-groups/{ns-group-id}/effective-virtual-machine-members",
+        "/ns-groups/{ns-group-id}/member-types",
+        "/ns-groups/{nsgroup-id}/service-associations",
+        "/trust-management/certificates",
+        "/trust-management/certificates/{cert-id}",
+        "/trust-management/certificates?action=import",
+        "/trust-management/principal-identities",
+        "/trust-management/principal-identities/{principal-identity-id}",
+      }\'',
+      '< ./data/nsxt_manager_api/nsxt_manager_api.json',
+      '> ./data/nsxt_manager_api/nsxt_manager_api_trimmed_endpoints.json'
+    ].join(' ')
+
+    # Trim unneeded models/objects/definitions; NSX-T 2.5.1 has 1260; we only need 146
+    # Dependencies are indented. Dependencies only appear once.
+    sh [
+      'jq',
+      '\'.definitions |= {
+        "ALGTypeNSService",
+        "ApiError",
+        "AssignedByDhcp",
+        "AttachmentContext",
+        "BaseHostSwitchProfile",
+        "BaseSwitchingProfile",
+        "BfdHealthMonitoringProfile",
+        "BpduFilter",
+        "Certificate",
+        "CertificateList",
+        "CpuCoreConfigForEnhancedNetworkingStackSwitch",
+        "DSRule",
+        "DSService",
+        "DhcpFilter",
+        "DirectoryGroup",
+        "DiscoveredResource",
+        "Dscp",
+        "DuplicateIPDetection",
+        "EdgeClusterMemberAllocationPool",
+        "EdgeClusterMemberAllocationProfile",
+        "EffectiveIPAddressMemberListResult",
+        "EffectiveMemberResourceListResult",
+        "EffectiveMemberTypeListResult",
+        "EgressRateShaper",
+        "EmbeddedResource",
+        "EtherTypeNSService",
+        "ExtraConfig",
+        "ExtraConfigHostSwitchProfile",
+        "FireWallServiceAssociationListResult",
+        "FirewallRule",
+        "FirewallService",
+        "GuestInfo",
+        "HaVipConfig",
+        "HostInfraTrafficType",
+        "HostSwitch",
+        "HostSwitchProfileTypeIdEntry",
+        "HostSwitchSpec",
+        "ICMPTypeNSService",
+        "IGMPTypeNSService",
+        "IPProtocolNSService",
+        "IPSet",
+        "IPv6Profiles",
+        "IngressBroadcastRateShaper",
+        "IngressRateShaper",
+        "IpAddressInfo",
+        "IpAssignmentSpec",
+        "IpDiscoverySwitchingProfile",
+        "IpMacPair",
+        "IpPool",
+        "IpPoolRange",
+        "IpPoolSubnet",
+        "IpfixConfig",
+        "IpfixDfwConfig",
+        "IpfixDfwTemplateParameters",
+        "IpfixServiceAssociationListResult",
+        "IpfixSwitchConfig",
+        "KeyValuePair",
+        "L4PortSetNSService",
+        "Lag",
+        "LbPool",
+        "LbPoolListResult",
+        "LbSnatAutoMap",
+        "LbSnatIpElement",
+        "LbSnatIpPool",
+        "LbSnatTranslation",
+        "ListResult",
+        "LldpHostSwitchProfile",
+        "LoadBalancerAllocationPool",
+        "LogicalPort",
+        "LogicalPortAttachment",
+        "LogicalPortListResult",
+        "LogicalRouter",
+        "LogicalRouterConfig",
+        "LogicalRouterListResult",
+        "LogicalSwitch",
+        "MACSet",
+        "MacLearningSpec",
+        "MacManagementSwitchingProfile",
+        "MacPool",
+        "MacRange",
+        "ManagedResource",
+        "NSGroup",
+        "NSGroupComplexExpression",
+        "NSGroupExpression",
+        "NSGroupExpressionList",
+        "NSGroupListResult",
+        "NSGroupSimpleExpression",
+        "NSGroupTagExpression",
+        "NSServiceElement",
+        "NamedTeamingPolicy",
+        "NiocProfile",
+        "Node",
+        "NodeIdServicesMap",
+        "OwnerResourceLink",
+        "PacketAddressClassifier",
+        "Pnic",
+        "PoolMember",
+        "PoolMemberGroup",
+        "PoolMemberSetting",
+        "PoolMemberSettingList",
+        "PoolUsage",
+        "PortMirroringSwitchingProfile",
+        "PreconfiguredEndpoint",
+        "PreconfiguredHostSwitch",
+        "PreconfiguredHostSwitchSpec",
+        "PrincipalIdentity",
+        "PrincipalIdentityList",
+        "QosBaseRateShaper",
+        "QosSwitchingProfile",
+        "RateLimits",
+        "RelatedApiError",
+        "Resource",
+        "ResourceAllocation",
+        "ResourceLink",
+        "ResourceReference",
+        "RevisionedResource",
+        "SelfResourceLink",
+        "ServiceAssociationListResult",
+        "SpoofGuardSwitchingProfile",
+        "StandardHostSwitch",
+        "StandardHostSwitchSpec",
+        "StaticIpListSpec",
+        "StaticIpMacListSpec",
+        "StaticIpPoolSpec",
+        "SwitchSecuritySwitchingProfile",
+        "SwitchingProfileTypeIdEntry",
+        "Tag",
+        "TeamingPolicy",
+        "TransportNode",
+        "TransportZoneEndPoint",
+        "TransportZoneProfile",
+        "TransportZoneProfileTypeIdEntry",
+        "TrunkVlanRange",
+        "TrustObjectData",
+        "UnassociatedVMListResult",
+        "Uplink",
+        "UplinkHostSwitchProfile",
+        "VIPSubnet",
+        "VifAttachmentContext",
+        "VirtualMachine",
+        "VirtualMachineListResult",
+        "VirtualNetworkInterface",
+        "VirtualNetworkInterfaceListResult",
+        "VlanTrunkSpec",
+        "VmknicNetwork",
+        "X509Certificate",
+      }\'',
+      '< ./data/nsxt_manager_api/nsxt_manager_api_trimmed_endpoints.json',
+      '> ./data/nsxt_manager_api/nsxt_manager_api_trimmed.json'
+    ].join(' ')
+
+    # Patch NSX-T's OpenAPI to use a properly-escaped regex
+    sh [
+      'sed',
       "'s~\\[a-zA-Z0-9-.\\]~[a-zA-Z0-9.-]~g'",
-      "< ./data/nsxt_manager_api/nsxt_manager_api.json",
-      "> ./data/nsxt_manager_api/nsxt_manager_api_escaped_regex.json"
+      '< ./data/nsxt_manager_api/nsxt_manager_api_trimmed.json',
+      '> ./data/nsxt_manager_api/nsxt_manager_api_escaped_regex.json'
     ].join(' ')
-    #generate all models
+    # generate all models
     sh [
-      "swagger-codegen generate",
-      "-i ./data/nsxt_manager_api/nsxt_manager_api_escaped_regex.json",
-      "-l ruby",
-      "-o ./lib/nsxt_manager_client",
-      "-c ./data/nsxt_manager_api/config.json -t ./data/swagger-nsxt-manager-template"
+      'swagger-codegen generate',
+      '-i ./data/nsxt_manager_api/nsxt_manager_api_escaped_regex.json',
+      '-l ruby',
+      '-o ./lib/nsxt_manager_client',
+      '-c ./data/nsxt_manager_api/config.json -t ./data/swagger-nsxt-manager-template'
     ].join(' ')
 
-    #Patch models that have wrong _deserialize method
-    #TODO: Patch both LogicalRouterPortListResult and LogicalPortAttachment in 1 call
+    # Patch models that have wrong _deserialize method
+    # TODO: Patch both LogicalRouterPortListResult and LogicalPortAttachment in 1 call
     sh [
-      "swagger-codegen generate",
-      "-i ./data/nsxt_manager_api/nsxt_manager_api_escaped_regex.json",
-      "-l ruby",
-      "-o ./lib/nsxt_manager_client",
-      "-c ./data/nsxt_manager_api/config.json -t ./data/swagger-nsxt-template-deserialization",
-      "-Dmodels=LogicalRouterPortListResult"
+      'swagger-codegen generate',
+      '-i ./data/nsxt_manager_api/nsxt_manager_api_escaped_regex.json',
+      '-l ruby',
+      '-o ./lib/nsxt_manager_client',
+      '-c ./data/nsxt_manager_api/config.json -t ./data/swagger-nsxt-template-deserialization',
+      '-Dmodels=LogicalRouterPortListResult'
     ].join(' ')
 
-    #Patch LogicalPortAttachment which also has wrong _deserialize method
+    # Patch LogicalPortAttachment which also has wrong _deserialize method
     sh [
-      "swagger-codegen generate",
-      "-i ./data/nsxt_manager_api/nsxt_manager_api_escaped_regex.json",
-      "-l ruby",
-      "-o ./lib/nsxt_manager_client",
-      "-c ./data/nsxt_manager_api/config.json -t ./data/swagger-nsxt-template-deserialization",
-      "-Dmodels=LogicalPortAttachment"
+      'swagger-codegen generate',
+      '-i ./data/nsxt_manager_api/nsxt_manager_api_escaped_regex.json',
+      '-l ruby',
+      '-o ./lib/nsxt_manager_client',
+      '-c ./data/nsxt_manager_api/config.json -t ./data/swagger-nsxt-template-deserialization',
+      '-Dmodels=LogicalPortAttachment'
     ].join(' ')
 
-    #Patch Configuration which also has wrong _deserialize method
+    # Patch Configuration which also has wrong _deserialize method
     sh [
-      "swagger-codegen generate",
-      "-i ./data/nsxt_manager_api/nsxt_manager_api_escaped_regex.json",
-      "-l ruby",
-      "-o ./lib/nsxt_manager_client",
-      "-c ./data/nsxt_manager_api/config.json -t ./data/swagger-nsxt-template-deserialization",
-      "-Dmodels=Configuration"
+      'swagger-codegen generate',
+      '-i ./data/nsxt_manager_api/nsxt_manager_api_escaped_regex.json',
+      '-l ruby',
+      '-o ./lib/nsxt_manager_client',
+      '-c ./data/nsxt_manager_api/config.json -t ./data/swagger-nsxt-template-deserialization',
+      '-Dmodels=Configuration'
     ].join(' ')
 
-    rm_rf(["./lib/nsxt_manager_client/.swagger-codegen-ignore",
-      "./lib/nsxt_manager_client/.swagger-codegen",
-      "./lib/nsxt_manager_client/README.md",
-      "./lib/nsxt_manager_client/.rspec",
-      "./lib/nsxt_manager_client/.gitignore",
-      "./lib/nsxt_manager_client/Gemfile",
-      "./lib/nsxt_manager_client/git_push.sh",
-      "./lib/nsxt_manager_client/docs",
-      "./lib/nsxt_manager_client/spec",
-      "./lib/nsxt_manager_client/nsxt_manager_client.gemspec",
-      "./lib/nsxt_manager_client/Rakefile",
-      "./lib/nsxt_manager_client/nsxt_manager_client",
-      "./data/nsxt_manager_api/nsxt_manager_api_escaped_regex.json"
+    rm_rf([
+      './lib/nsxt_manager_client/.swagger-codegen-ignore',
+      './lib/nsxt_manager_client/.swagger-codegen',
+      './lib/nsxt_manager_client/README.md',
+      './lib/nsxt_manager_client/.rspec',
+      './lib/nsxt_manager_client/.gitignore',
+      './lib/nsxt_manager_client/Gemfile',
+      './lib/nsxt_manager_client/git_push.sh',
+      './lib/nsxt_manager_client/docs',
+      './lib/nsxt_manager_client/spec',
+      './lib/nsxt_manager_client/nsxt_manager_client.gemspec',
+      './lib/nsxt_manager_client/Rakefile',
+      './lib/nsxt_manager_client/nsxt_manager_client',
+      './data/nsxt_manager_api/nsxt_manager_api_trimmed.json',
+      './data/nsxt_manager_api/nsxt_manager_api_trimmed_endpoints.json',
+      './data/nsxt_manager_api/nsxt_manager_api_escaped_regex.json'
     ])
-  
-    mv("./lib/nsxt_manager_client/lib/nsxt_manager_client", "./lib/nsxt_manager_client/nsxt_manager_client")
-  
-    mv("./lib/nsxt_manager_client/lib/nsxt_manager_client.rb", "./lib/nsxt_manager_client/nsxt_manager_client.rb")
-  
-    rm_rf(["./lib/nsxt_manager_client/lib"])
-  
+
+    mv('./lib/nsxt_manager_client/lib/nsxt_manager_client', './lib/nsxt_manager_client/nsxt_manager_client')
+
+    mv('./lib/nsxt_manager_client/lib/nsxt_manager_client.rb', './lib/nsxt_manager_client/nsxt_manager_client.rb')
+
+    rm_rf(['./lib/nsxt_manager_client/lib'])
+
     # Prepend load.unshift line
     # read the file
-    f = File.open("lib/nsxt_manager_client/nsxt_manager_client.rb", "r+")
+    f = File.open('lib/nsxt_manager_client/nsxt_manager_client.rb', 'r+')
     lines = f.readlines
     f.close
     # Add line
     str = "$LOAD_PATH.unshift(File.join(File.dirname(__FILE__), '..', 'nsxt_manager_client'))\n"
     lines = [str] + lines
-    output = File.new("lib/nsxt_manager_client/nsxt_manager_client.rb", "w")
+    output = File.new('lib/nsxt_manager_client/nsxt_manager_client.rb', 'w')
     lines.each { |line| output.write line }
     output.close
   end
   desc 'Create swagger policy client from swagger spec'
   task :nsxt_policy_client do
-  
-    rm_rf(["./lib/nsxt_policy_client/*"])
-  
-    #generate all models
+    rm_rf(['./lib/nsxt_policy_client/*'])
+
+    # Trim unneeded endpoints; NSX-T 3.1.0 has 1299; we only need 12
     sh [
-      "swagger-codegen generate",
-      "-i ./data/nsxt_policy_api/nsxt_policy_api.json",
-      "-l ruby",
-      "-o ./lib/nsxt_policy_client",
-      "-c ./data/nsxt_policy_api/config.json -t ./data/swagger-nsxt-policy-template"
+      'jq',
+      '\'.paths |= {
+        "/infra/domains/{domain-id}/groups/{group-id}",
+        "/infra/domains/{domain-id}/groups/{group-id}/members/virtual-machines",
+        "/infra/lb-pools",
+        "/infra/lb-pools/{lb-pool-id}",
+        "/infra/realized-state/enforcement-points/{enforcement-point-name}/virtual-machines",
+        "/infra/segments/{segment-id}",
+        "/infra/segments/{segment-id}/ports",
+        "/infra/segments/{segment-id}/ports/{port-id}",
+        "/infra/sites/{site-id}/enforcement-points/{enforcementpoint-id}/transport-zones",
+        "/infra/tier-1s/{tier-1-id}/segments/{segment-id}/ports/{port-id}",
+        "/infra/virtual-machine-group-associations",
+        "/search/query",
+      }\'',
+      '< ./data/nsxt_policy_api/nsxt_policy_api.json',
+      '> ./data/nsxt_policy_api/nsxt_policy_api_trimmed_endpoints.json'
     ].join(' ')
-  
+
+    # Trim unneeded models/objects/definitions; NSX-T 3.1.0 has 1344; we only need 75
+    # Dependencies are indented. Dependencies only appear once.
     sh [
-       "swagger-codegen generate",
-       "-i ./data/nsxt_policy_api/nsxt_policy_api.json",
-       "-l ruby",
-       "-o ./lib/nsxt_policy_client",
-       "-c ./data/nsxt_policy_api/config.json -t ./data/nsxt_policy_api/virtual_machine_patch",
-       "-Dmodels=RealizedVirtualMachine"
+      'jq',
+      '\'.definitions |= {
+        "ApiError",
+        "AttachedInterfaceEntry",
+        "BridgeProfileConfig",
+        "ChildPolicyConfigResource",
+        "ClasslessStaticRoute",
+        "CloudNativeServiceInstance",
+        "Condition",
+        "ConjunctionOperator",
+        "ConnectivityAdvancedConfig",
+        "DhcpOption121",
+        "DhcpV4Options",
+        "DiscoveredResource",
+        "Expression",
+        "ExternalIDExpression",
+        "FederationConnectivityConfig",
+        "GenericDhcpOption",
+        "Group",
+        "GuestInfo",
+        "IPAddressExpression",
+        "IdentityGroupExpression",
+        "IdentityGroupInfo",
+        "IpAddressInfo",
+        "L2Extension",
+        "LBPool",
+        "LBPoolListResult",
+        "LBPoolMember",
+        "LBPoolMemberGroup",
+        "LBSnatAutoMap",
+        "LBSnatDisabled",
+        "LBSnatIpElement",
+        "LBSnatIpPool",
+        "LBSnatTranslation",
+        "ListResult",
+        "LocalEgress",
+        "LocalEgressRoutingEntry",
+        "MACAddressExpression",
+        "ManagedResource",
+        "NestedExpression",
+        "PathExpression",
+        "PolicyAlarmResource",
+        "PolicyApiError",
+        "PolicyConfigResource",
+        "PolicyRealizedResource",
+        "PolicyRelatedApiError",
+        "PolicyResource",
+        "PolicyResourceReference",
+        "PolicyResourceReferenceForEP",
+        "PolicyResourceReferenceForEPListResult",
+        "PolicyTransportZone",
+        "PolicyTransportZoneListResult",
+        "PoolMemberSetting",
+        "PortAddressBindingEntry",
+        "PortAttachment",
+        "RealizedVirtualMachine",
+        "RealizedVirtualMachineListResult",
+        "RelatedApiError",
+        "Resource",
+        "ResourceLink",
+        "ResourceReference",
+        "RevisionedResource",
+        "SearchResponse",
+        "Segment",
+        "SegmentAdvancedConfig",
+        "SegmentDhcpConfig",
+        "SegmentDhcpV4Config",
+        "SegmentDhcpV6Config",
+        "SegmentExtraConfig",
+        "SegmentPort",
+        "SegmentPortListResult",
+        "SegmentSubnet",
+        "SelfResourceLink",
+        "Tag",
+        "UnboundedKeyValuePair",
+        "VirtualMachine",
+        "VirtualNetworkInterface",
+      }\'',
+      '< ./data/nsxt_policy_api/nsxt_policy_api_trimmed_endpoints.json',
+      '> ./data/nsxt_policy_api/nsxt_policy_api_trimmed.json'
+    ].join(' ')
+
+    sh [
+      'swagger-codegen generate',
+      '-i ./data/nsxt_policy_api/nsxt_policy_api_trimmed.json',
+      '-l ruby',
+      '-o ./lib/nsxt_policy_client',
+      '-c ./data/nsxt_policy_api/config.json -t ./data/swagger-nsxt-policy-template'
+    ].join(' ')
+
+    sh [
+       'swagger-codegen generate',
+       '-i ./data/nsxt_policy_api/nsxt_policy_api_trimmed.json',
+       '-l ruby',
+       '-o ./lib/nsxt_policy_client',
+       '-c ./data/nsxt_policy_api/config.json -t ./data/nsxt_policy_api/virtual_machine_patch',
+       '-Dmodels=RealizedVirtualMachine'
      ].join(' ')
 
-    #Patch Group which has wrong _deserialize method
+    # Patch Group which has wrong _deserialize method
     sh [
-           "swagger-codegen generate",
-           "-i ./data/nsxt_policy_api/nsxt_policy_api.json",
-           "-l ruby",
-           "-o ./lib/nsxt_policy_client",
-           "-c ./data/nsxt_policy_api/config.json -t ./data/swagger-nsxt-template-deserialization",
-           "-Dmodels=Group"
-       ].join(' ')
+     'swagger-codegen generate',
+     '-i ./data/nsxt_policy_api/nsxt_policy_api_trimmed.json',
+     '-l ruby',
+     '-o ./lib/nsxt_policy_client',
+     '-c ./data/nsxt_policy_api/config.json -t ./data/swagger-nsxt-template-deserialization',
+     '-Dmodels=Group'
+     ].join(' ')
 
     # We set the target_id length to 255 to fix 'invalid value for "target_id",
     # the character length must be smaller than or equal to 64' when
     # `get_groups_for_vm()` is called. We only do this for
     # PolicyResourceReferenceForEP; it's the only place we need it.
     sh [
-          "jq",
-          "'.definitions.ResourceReference.properties.target_id.maxLength = 255'",
-          "<",
-          "./data/nsxt_policy_api/nsxt_policy_api.json",
-          ">",
-          "./data/nsxt_policy_api/nsxt_policy_api_target_id_255.json",
+      'jq',
+      "'.definitions.ResourceReference.properties.target_id.maxLength = 255'",
+      '<',
+      './data/nsxt_policy_api/nsxt_policy_api_trimmed.json',
+      '>',
+      './data/nsxt_policy_api/nsxt_policy_api_target_id_255.json'
     ].join(' ')
 
     sh [
-           "swagger-codegen generate",
-           "-i ./data/nsxt_policy_api/nsxt_policy_api_target_id_255.json",
-           "-l ruby",
-           "-o ./lib/nsxt_policy_client",
-           "-c ./data/nsxt_policy_api/config.json -t ./data/swagger-nsxt-policy-template",
-           "-Dmodels=PolicyResourceReferenceForEP",
-       ].join(' ')
+      'swagger-codegen generate',
+      '-i ./data/nsxt_policy_api/nsxt_policy_api_target_id_255.json',
+      '-l ruby',
+      '-o ./lib/nsxt_policy_client',
+      '-c ./data/nsxt_policy_api/config.json -t ./data/swagger-nsxt-policy-template',
+      '-Dmodels=PolicyResourceReferenceForEP',
+     ].join(' ')
 
-    rm_rf(["./lib/nsxt_policy_client/.swagger-codegen-ignore",
-      "./lib/nsxt_policy_client/.swagger-codegen",
-      "./lib/nsxt_policy_client/README.md",
-      "./lib/nsxt_policy_client/.rspec",
-      "./lib/nsxt_policy_client/.gitignore",
-      "./lib/nsxt_policy_client/Gemfile",
-      "./lib/nsxt_policy_client/git_push.sh",
-      "./lib/nsxt_policy_client/docs",
-      "./lib/nsxt_policy_client/spec",
-      "./lib/nsxt_policy_client/nsxt_policy_client.gemspec",
-      "./lib/nsxt_policy_client/Rakefile",
-      "./lib/nsxt_policy_client/nsxt_policy_client",
-      "./data/nsxt_policy_api/nsxt_policy_api_target_id_255.json",
+    rm_rf([
+      './lib/nsxt_policy_client/.swagger-codegen-ignore',
+      './lib/nsxt_policy_client/.swagger-codegen',
+      './lib/nsxt_policy_client/README.md',
+      './lib/nsxt_policy_client/.rspec',
+      './lib/nsxt_policy_client/.gitignore',
+      './lib/nsxt_policy_client/Gemfile',
+      './lib/nsxt_policy_client/git_push.sh',
+      './lib/nsxt_policy_client/docs',
+      './lib/nsxt_policy_client/spec',
+      './lib/nsxt_policy_client/nsxt_policy_client.gemspec',
+      './lib/nsxt_policy_client/Rakefile',
+      './lib/nsxt_policy_client/nsxt_policy_client',
+      './data/nsxt_policy_api/nsxt_policy_api_target_id_255.json',
+      './data/nsxt_policy_api/nsxt_policy_api_trimmed.json',
+      './data/nsxt_policy_api/nsxt_policy_api_trimmed_endpoints.json',
     ])
-  
-    mv("./lib/nsxt_policy_client/lib/nsxt_policy_client", "./lib/nsxt_policy_client/nsxt_policy_client")
-  
-    mv("./lib/nsxt_policy_client/lib/nsxt_policy_client.rb", "./lib/nsxt_policy_client/nsxt_policy_client.rb")
-  
-    rm_rf(["./lib/nsxt_policy_client/lib"])
-  
+
+    mv('./lib/nsxt_policy_client/lib/nsxt_policy_client', './lib/nsxt_policy_client/nsxt_policy_client')
+
+    mv('./lib/nsxt_policy_client/lib/nsxt_policy_client.rb', './lib/nsxt_policy_client/nsxt_policy_client.rb')
+
+    rm_rf(['./lib/nsxt_policy_client/lib'])
+
     # Prepend load.unshift line
     # read the file
-    f = File.open("lib/nsxt_policy_client/nsxt_policy_client.rb", "r+")
+    f = File.open('lib/nsxt_policy_client/nsxt_policy_client.rb', 'r+')
     lines = f.readlines
     f.close
     # Add line
     str = "$LOAD_PATH.unshift(File.join(File.dirname(__FILE__), '..', 'nsxt_policy_client'))\n"
     lines = [str] + lines
-    output = File.new("lib/nsxt_policy_client/nsxt_policy_client.rb", "w")
+    output = File.new('lib/nsxt_policy_client/nsxt_policy_client.rb', 'w')
     lines.each { |line| output.write line }
     output.close
   end
 end
 
-task default: "swagger:nsxt_manager_client"
+task default: 'swagger:nsxt_manager_client'

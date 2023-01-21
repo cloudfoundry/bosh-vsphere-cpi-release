@@ -465,13 +465,13 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
     }
 
     before do
-      allow(policy_load_balancer_pools_api).to receive(:read_lb_pool_0).with(server_pool_1.id).and_return(server_pool_1)
+      allow(policy_load_balancer_pools_api).to receive(:read_lb_pool).with(server_pool_1.id).and_return(server_pool_1)
       allow(vm).to receive_message_chain(:mob, :guest, :ip_address).and_return("9.8.7.6")
     end
 
     context 'when pool is empty' do
       it 'adds vm to pool' do
-        expect(policy_load_balancer_pools_api).to receive(:update_lb_pool_0) do |server_pool_id, server_pool|
+        expect(policy_load_balancer_pools_api).to receive(:update_lb_pool) do |server_pool_id, server_pool|
           expect(server_pool_id).to eq(server_pool_1.id)
           expect(server_pool.members).to contain_exactly(an_object_having_attributes(ip_address: "9.8.7.6", port: 80, display_name: "some-vm-cid"))
         end
@@ -485,7 +485,7 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
       end
 
       it 'adds vm to the pool' do
-        expect(policy_load_balancer_pools_api).to receive(:update_lb_pool_0) do |server_pool_id, server_pool|
+        expect(policy_load_balancer_pools_api).to receive(:update_lb_pool) do |server_pool_id, server_pool|
           expect(server_pool_id).to eq(server_pool_1.id)
           expect(server_pool.members).to contain_exactly(
             an_object_having_attributes(ip_address: "9.8.7.6", port: 80, display_name: "some-vm-cid"),
@@ -508,16 +508,16 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
         NSXTPolicy::LBPool.new(id: "some-server-pool-id-2", display_name: "some-server-pool-name-2")
       }
       before do
-        allow(policy_load_balancer_pools_api).to receive(:read_lb_pool_0).with(server_pool_2.id).and_return(server_pool_2)
+        allow(policy_load_balancer_pools_api).to receive(:read_lb_pool).with(server_pool_2.id).and_return(server_pool_2)
       end
       it 'adds vm to all pools' do
-        expect(policy_load_balancer_pools_api).to receive(:update_lb_pool_0) do |server_pool_id, server_pool|
+        expect(policy_load_balancer_pools_api).to receive(:update_lb_pool) do |server_pool_id, server_pool|
           expect(server_pool_id).to eq(server_pool_1.id)
           expect(server_pool.members).to contain_exactly(
             an_object_having_attributes(ip_address: "9.8.7.6", port: 80, display_name: "some-vm-cid"),
           )
         end
-        expect(policy_load_balancer_pools_api).to receive(:update_lb_pool_0) do |server_pool_id, server_pool|
+        expect(policy_load_balancer_pools_api).to receive(:update_lb_pool) do |server_pool_id, server_pool|
           expect(server_pool_id).to eq(server_pool_2.id)
           expect(server_pool.members).to contain_exactly(
             an_object_having_attributes(ip_address: "9.8.7.6", port: 8080, display_name: "some-vm-cid"),
@@ -531,22 +531,22 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
     context 'when there is a conflict' do
       it 'reloads the server_pool and retries' do
         conflict_response = NSXTPolicy::ApiCallError.new(code: 409, response_body: 'The object was modified by somebody else')
-        expect(policy_load_balancer_pools_api).to receive(:update_lb_pool_0).with(any_args).and_raise(conflict_response).twice
-        expect(policy_load_balancer_pools_api).to receive(:update_lb_pool_0).with(any_args)
+        expect(policy_load_balancer_pools_api).to receive(:update_lb_pool).with(any_args).and_raise(conflict_response).twice
+        expect(policy_load_balancer_pools_api).to receive(:update_lb_pool).with(any_args)
 
         nsxt_policy_provider.add_vm_to_server_pools(vm, server_pools)
-        expect(policy_load_balancer_pools_api).to have_received(:read_lb_pool_0).thrice
+        expect(policy_load_balancer_pools_api).to have_received(:read_lb_pool).thrice
       end
     end
 
     context 'when there is a precondition that failed' do
       it 'reloads the server_pool and the request is retried' do
         conflict_response = NSXTPolicy::ApiCallError.new(code: 412, response_body: 'PreconditionFailed')
-        expect(policy_load_balancer_pools_api).to receive(:update_lb_pool_0).with(any_args).and_raise(conflict_response).twice
-        expect(policy_load_balancer_pools_api).to receive(:update_lb_pool_0).with(any_args)
+        expect(policy_load_balancer_pools_api).to receive(:update_lb_pool).with(any_args).and_raise(conflict_response).twice
+        expect(policy_load_balancer_pools_api).to receive(:update_lb_pool).with(any_args)
 
         nsxt_policy_provider.add_vm_to_server_pools(vm, server_pools)
-        expect(policy_load_balancer_pools_api).to have_received(:read_lb_pool_0).thrice
+        expect(policy_load_balancer_pools_api).to have_received(:read_lb_pool).thrice
       end
     end
 
@@ -575,14 +575,14 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
     it 'removes VM from all server pools' do
       expected_server_pool = NSXTPolicy::LBPool.new(id: 'some-server-pool-id', display_name: 'some-server-pool-name', members: [])
       second_expected_server_pool = NSXTPolicy::LBPool.new(id: 'some-bosh-unmanaged-server-pool-id', display_name: 'some-other-bosh-unmanaged-server-pool-name', members: [])
-      expect(policy_load_balancer_pools_api).to receive(:update_lb_pool_0).with('some-server-pool-id', expected_server_pool).once
-      expect(policy_load_balancer_pools_api).to receive(:update_lb_pool_0).with('some-bosh-unmanaged-server-pool-id', second_expected_server_pool).once
+      expect(policy_load_balancer_pools_api).to receive(:update_lb_pool).with('some-server-pool-id', expected_server_pool).once
+      expect(policy_load_balancer_pools_api).to receive(:update_lb_pool).with('some-bosh-unmanaged-server-pool-id', second_expected_server_pool).once
       nsxt_policy_provider.remove_vm_from_server_pools(vm_ip_address, vm_cid, 0)
     end
 
     it 'removes VM from all the bosh managed server pools if metadata is greater than 0' do
       expected_server_pool = NSXTPolicy::LBPool.new(id: 'some-server-pool-id', display_name: 'some-server-pool-name', members: [])
-      expect(policy_load_balancer_pools_api).to receive(:update_lb_pool_0).with('some-server-pool-id', expected_server_pool).once
+      expect(policy_load_balancer_pools_api).to receive(:update_lb_pool).with('some-server-pool-id', expected_server_pool).once
       nsxt_policy_provider.remove_vm_from_server_pools(vm_ip_address, vm_cid,  1)
     end
   end
@@ -747,18 +747,18 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
       ] }
 
       before do
-        allow(policy_segment_ports_api).to receive(:get_tier1_segment_port_0).with('tier-1-name-1', 'segment-id-1', 'segment-port-id-1').and_return(segment_port1)
-        allow(policy_segment_ports_api).to receive(:get_tier1_segment_port_0).with('tier-1-name-2', 'segment-id-2', 'segment-port-id-2').and_return(segment_port2)
+        allow(policy_segment_ports_api).to receive(:get_tier1_segment_port).with('tier-1-name-1', 'segment-id-1', 'segment-port-id-1').and_return(segment_port1)
+        allow(policy_segment_ports_api).to receive(:get_tier1_segment_port).with('tier-1-name-2', 'segment-id-2', 'segment-port-id-2').and_return(segment_port2)
       end
 
       it 'adds the id tag' do
-        expect(policy_segment_ports_api).to receive(:patch_tier1_segment_port_0).once.ordered do |tier1_name, segment_id, port_id, segment_port|
+        expect(policy_segment_ports_api).to receive(:patch_tier1_segment_port).once.ordered do |tier1_name, segment_id, port_id, segment_port|
           expect(tier1_name).to eq('tier-1-name-1')
           expect(segment_id).to eq('segment-id-1')
           expect(port_id).to eq('segment-port-id-1')
           expect(segment_port.tags).to eq(new_tags)
         end
-        expect(policy_segment_ports_api).to receive(:patch_tier1_segment_port_0).once.ordered do |tier1_name, segment_id, port_id, segment_port|
+        expect(policy_segment_ports_api).to receive(:patch_tier1_segment_port).once.ordered do |tier1_name, segment_id, port_id, segment_port|
           expect(tier1_name).to eq('tier-1-name-2')
           expect(segment_id).to eq('segment-id-2')
           expect(port_id).to eq('segment-port-id-2')
