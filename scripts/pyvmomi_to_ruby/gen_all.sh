@@ -17,9 +17,12 @@ vmware_pyvmimu_url="https://raw.githubusercontent.com/vmware/pyvmomi"
 # Datatype definition for following objects was added manually in ServerObjects.rb file
 # Pbm.Profile.EntityAssociations, Pbm.Capability.AssociatedPolicyCapabilities, Pbm.Profile.PmemPolicyInfo
 
-files_to_download="{ServerObjects.py,CoreTypes.py,QueryTypes.py,PbmObjects.py,SmsObjects.py}"
+files_to_download="{_typeinfo_vim.py,_typeinfo_core.py,_typeinfo_query.py,_typeinfo_pbm.py,_typeinfo_sms.py}"
 
 curl --remote-name "${vmware_pyvmimu_url}/${version_tag}/pyVmomi/${files_to_download}"
 
-./gen_server_objects.py > "${ruby_vim_sdk_path}/server_objects_70.rb"
-./gen_core_types.py > "${ruby_vim_sdk_path}/core_types_70.rb"
+sed -i '' 's/from .VmomiSupport/from pyVmomi.VmomiSupport/g' _typeinfo_vim.py
+sed -i '' 's/from .VmomiSupport/from pyVmomi.VmomiSupport/g' _typeinfo_pbm.py
+
+./gen_server_objects.py > "${ruby_vim_sdk_path}/server_objects_80.rb"
+./gen_core_types.py > "${ruby_vim_sdk_path}/core_types_80.rb"

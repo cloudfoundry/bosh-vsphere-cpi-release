@@ -17,6 +17,7 @@ describe 'NSXT certificate authentication', nsxt_all: true do
     client = NSXT::ApiClient.new(configuration)
     @nsx_component_api = NSXT::ManagementPlaneApiNsxComponentAdministrationTrustManagementCertificateApi.new(client)
     @nsx_component_pricipal_id_api = NSXT::ManagementPlaneApiNsxComponentAdministrationTrustManagementPrincipalIdentityApi.new(client)
+    @vsphere_version = fetch_optional_property('BOSH_VSPHERE_VERSION')
   end
 
   let(:client) { create_client_cert_auth_client(@private_key, @certificate) }
@@ -97,7 +98,7 @@ describe 'NSXT certificate authentication', nsxt_all: true do
         #NSXT needs some time to make cert available for cert auth
         sleep(30)
         nsx_component_api.get_certificates
-      }.to raise_error(/SSL connect error/)
+      }.to raise_error(/[Ee]rror/)
     end
   end
 
@@ -113,7 +114,7 @@ describe 'NSXT certificate authentication', nsxt_all: true do
 
   def attach_cert_to_principal(cert_id, pi_name = 'testprincipal-3', node_id = 'node-5')
     pi = NSXT::PrincipalIdentity.new(name: pi_name, node_id: node_id,
-                                     certificate_id: cert_id, permission_group: 'superusers')
+                                     certificate_id: cert_id, role: 'enterprise_admin')
     @nsx_component_pricipal_id_api.register_principal_identity(pi).id
   end
 

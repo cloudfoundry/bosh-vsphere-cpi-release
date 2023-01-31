@@ -27,6 +27,7 @@ jobs:
         - lifecycle-7.0-nsxt30
         - lifecycle-7.0-nsxt31
         - lifecycle-7.0-nsxt31-cvds
+        - lifecycle-8.0-nsxt40-cvds
       - get: version-semver
         trigger: false
         params: { bump: patch }
@@ -188,6 +189,55 @@ jobs:
             - task: teardown
               file: source-ci/ci/tasks/teardown.yml
 
+  - name: bats-80-cvds
+    serial: true
+    plan:
+      - in_parallel:
+          - get: source-ci
+          - {get: cpi-release,              trigger: true, resource: bosh-cpi-artifacts, passed: [build-candidate]}
+          - {get: bosh-release,             trigger: false, resource: old-bosh-release}
+          - {get: stemcell,                 trigger: false}
+          - {get: certification,            trigger: false}
+          - {get: bosh-deployment,          trigger: false}
+          - {get: bats,                     trigger: false}
+          - {get: bosh-cli,                 trigger: false}
+          - get: bosh-cpi-src
+            passed: [build-candidate]
+          - put: environment
+            resource: pool-8.0-nsxt40-cvds
+            params: {acquire: true}
+            on_failure:
+              put: pool-8.0-nsxt40-cvds
+              params : {release: environment}
+      - task: prepare-director
+        file: source-ci/ci/tasks/prepare-director.yml
+        params:
+          OPTIONAL_OPS_FILE:  |
+            -o certification/shared/assets/ops/remove-hm.yml
+            -o bosh-deployment/vsphere/resource-pool.yml
+            -o certification/shared/assets/ops/remove-provider-cert.yml
+      - do:
+          - task: deploy-director
+            file: source-ci/ci/tasks/deploy-director.yml
+          - task: run-bats
+            file: source-ci/ci/tasks/run-bats-cvds.yml
+            params:
+              BAT_INFRASTRUCTURE: vsphere
+              BAT_NETWORKING:     manual
+              BAT_RSPEC_FLAGS:    "--tag ~dns --tag ~vip_networking --tag ~dynamic_networking --tag ~root_partition --tag ~raw_ephemeral_storage"
+              STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-jammy-go_agent
+        on_failure:
+          in_parallel:
+            - put: pool-8.0-nsxt40-cvds
+              params : {remove: environment}
+        on_success:
+          put: pool-8.0-nsxt40-cvds
+          params : {release: environment}
+        ensure:
+          do:
+            - task: teardown
+              file: source-ci/ci/tasks/teardown.yml
+
   - name: inspect-candidate
     serial: true
     plan:
@@ -318,6 +368,13 @@ resources:
       uri:          git@gitlab.eng.vmware.com:tas-vcf-vmc-anycloud/vcpi-pool.git
       branch:       master
       pool:         v7.0-nsxt31-cvds
+      private_key:  ((vcpi-pool_deployment_key.private_key))
+  - name: pool-8.0-nsxt40-cvds
+    type: pool
+    source:
+      uri:          git@gitlab.eng.vmware.com:tas-vcf-vmc-anycloud/vcpi-pool.git
+      branch:       master
+      pool:         v8.0-nsxt40-cvds
       private_key:  ((vcpi-pool_deployment_key.private_key))
   - name: bosh-cpi-artifacts
     type: s3

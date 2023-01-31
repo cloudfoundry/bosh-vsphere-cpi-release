@@ -269,14 +269,18 @@ module VimSdk
       end
     end
     require "ruby_vim_sdk/missing_types"
-    unless $vc_version == "7.0"
-      require "ruby_vim_sdk/core_types"
-      require "ruby_vim_sdk/server_objects"
-      logger.info('Loaded vSphere 6.5 SDK')
-    else
+    if $vc_version == "7.0"
       require "ruby_vim_sdk/core_types_70"
       require "ruby_vim_sdk/server_objects_70"
       logger.info('Loaded vSphere 7.0 SDK')
+    elsif $vc_version == "8.0"
+        require "ruby_vim_sdk/core_types_80"
+        require "ruby_vim_sdk/server_objects_80"
+        logger.info('Loaded vSphere 8.0 SDK')
+    else
+      require "ruby_vim_sdk/core_types"
+      require "ruby_vim_sdk/server_objects"
+      logger.info('Loaded vSphere 6.5 SDK')
     end
     load_types
   end

@@ -15,6 +15,7 @@ class VersionsStub(object):
         pass
 
 newestVersions = VersionsStub()
+ltsVersions = VersionsStub()
 stableVersions = VersionsStub()
 publicVersions = VersionsStub()
 oldestVersions = VersionsStub()
@@ -67,3 +68,6 @@ def AddVersion(a, b, c, d, e, out=sys.stdout):
 
 def AddVersionParent(a, b, out=sys.stdout):
     out.write('    add_version_parent("{0}", "{1}")\n'.format(a, b))
+
+def AddBreakingChangesInfo():
+    return true

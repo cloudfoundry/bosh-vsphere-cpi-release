@@ -44,6 +44,7 @@ module VmodlVersionDiscriminant
   def self.extract_vmodl_version(document)
     sequence = extract_vmodl_version_sequence(document)
     return '6.5' if sequence.nil?
+    return '8.0' if (sequence[0 .. 1] <=> [8, 0]) >= 0
     return '7.0' if (sequence[0 .. 1] <=> [7, 0]) >= 0
     return '6.7' if (sequence[0 .. 1] <=> [6, 7]) >= 0
     '6.5'

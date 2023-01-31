@@ -6,8 +6,8 @@ module VimSdk
   module VmomiSupport
 """)
 
-import CoreTypes
-import QueryTypes
+import _typeinfo_core
+import _typeinfo_query
 
 print("""  end
 end

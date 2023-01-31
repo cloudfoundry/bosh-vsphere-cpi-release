@@ -6,9 +6,9 @@ module VimSdk
   module VmomiSupport
 """)
 
-import ServerObjects
-import PbmObjects
-import SmsObjects
+import _typeinfo_vim
+import _typeinfo_pbm
+import _typeinfo_sms
 
 print("""  end
 end

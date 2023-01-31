@@ -932,7 +932,7 @@ describe 'CPI', nsxt_all: true do
             })
 
             verify_ports(vm_id) do |logical_port|
-              expect(logical_port.tags).to contain_exactly(
+              expect(logical_port.tags).to include(
                   an_object_having_attributes(scope: 'bosh/id', tag: Digest::SHA1.hexdigest(bosh_id)),
                   an_object_having_attributes(scope: 'bosh/test-tag-1-key', tag: 'test-tag-1-value'),
                   an_object_having_attributes(scope: 'bosh/test-tag-2-key', tag: 'test-tag-2-value')
@@ -942,7 +942,7 @@ describe 'CPI', nsxt_all: true do
             verify_policy_ports([segment_1, segment_2]) do |ports|
               expect(ports.length).to eq(1)
               ports.each do |port|
-                expect(port.tags).to contain_exactly(
+                expect(port.tags).to include(
                   an_object_having_attributes(scope: 'bosh/id', tag: Digest::SHA1.hexdigest(bosh_id)),
                   an_object_having_attributes(scope: 'bosh/test-tag-1-key', tag: 'test-tag-1-value'),
                   an_object_having_attributes(scope: 'bosh/test-tag-2-key', tag: 'test-tag-2-value')
@@ -1088,7 +1088,7 @@ describe 'CPI', nsxt_all: true do
           verify_policy_ports([segment_1, segment_2]) do |ports|
             expect(ports.length).to eq(1)
             ports.each do |port|
-              expect(port.tags).to contain_exactly(
+              expect(port.tags).to include(
                 an_object_having_attributes(scope: 'bosh/id', tag: Digest::SHA1.hexdigest(bosh_id)),
                 an_object_having_attributes(scope: 'bosh/test-tag-1-key', tag: 'test-tag-1-value'),
                 an_object_having_attributes(scope: 'bosh/test-tag-2-key', tag: 'test-tag-2-value')
@@ -1098,7 +1098,7 @@ describe 'CPI', nsxt_all: true do
 
           verify_ports(vm_id) do |logical_port|
             logical_port_ids << logical_port.id
-            expect(logical_port.tags).to contain_exactly(
+            expect(logical_port.tags).to include(
               an_object_having_attributes(scope: 'bosh/id', tag: Digest::SHA1.hexdigest(bosh_id)),
               an_object_having_attributes(scope: 'bosh/test-tag-1-key', tag: 'test-tag-1-value'),
               an_object_having_attributes(scope: 'bosh/test-tag-2-key', tag: 'test-tag-2-value')
@@ -1200,7 +1200,7 @@ describe 'CPI', nsxt_all: true do
           verify_policy_ports([segment_1, segment_2]) do |ports|
             expect(ports.length).to eq(1)
             ports.each do |port|
-              expect(port.tags).to contain_exactly(
+              expect(port.tags).to include(
                 an_object_having_attributes(scope: 'bosh/id', tag: Digest::SHA1.hexdigest(bosh_id)),
                 an_object_having_attributes(scope: 'bosh/test-tag-1-key', tag: 'test-tag-1-value'),
                 an_object_having_attributes(scope: 'bosh/test-tag-2-key', tag: 'test-tag-2-value')
@@ -1210,7 +1210,7 @@ describe 'CPI', nsxt_all: true do
 
           verify_ports(vm_id) do |logical_port|
             logical_port_ids << logical_port.id
-            expect(logical_port.tags).to contain_exactly(
+            expect(logical_port.tags).to include(
               an_object_having_attributes(scope: 'bosh/id', tag: Digest::SHA1.hexdigest(bosh_id)),
               an_object_having_attributes(scope: 'bosh/test-tag-1-key', tag: 'test-tag-1-value'),
               an_object_having_attributes(scope: 'bosh/test-tag-2-key', tag: 'test-tag-2-value')
@@ -1672,7 +1672,7 @@ describe 'CPI', nsxt_all: true do
 
   def attach_cert_to_principal(cert_id, pi_name = 'testprincipal-nsxt-spec-8', node_id = 'node-nsxt-spec-4')
     pi = NSXT::PrincipalIdentity.new(name: pi_name, node_id: node_id,
-                                     certificate_id: cert_id, permission_group: 'superusers')
+                                     certificate_id: cert_id, role: 'enterprise_admin')
     @nsx_component_trust_mgmt_api.register_principal_identity(pi).id
   end
 
