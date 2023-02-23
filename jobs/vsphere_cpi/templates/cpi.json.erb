@@ -122,6 +122,10 @@
       vcenter['nsxt']['use_policy_api'] = p('vcenter.nsxt.use_policy_api')
     end
 
+    if_p('vcenter.nsxt.allow_overwrite') do
+      vcenter['nsxt']['allow_overwrite'] = p('vcenter.nsxt.allow_overwrite')
+    end
+
     if_p('vcenter.nsxt.policy_api_migration_mode') do
       vcenter['nsxt']['policy_api_migration_mode'] = p('vcenter.nsxt.policy_api_migration_mode')
     end

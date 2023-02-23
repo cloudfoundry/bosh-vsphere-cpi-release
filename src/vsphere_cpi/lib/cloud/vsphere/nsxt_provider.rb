@@ -34,7 +34,7 @@ module VSphereCloud
   end
 
   class VIFNotFound < StandardError
-    def initialize(vm_id=nil, external_id=nil, vif_id=nil)
+    def initialize(vm_id = nil, external_id = nil, vif_id = nil)
       @vm_id = vm_id
       @external_id = external_id
       @vif_id = vif_id
@@ -51,7 +51,7 @@ module VSphereCloud
   end
 
   class LogicalPortNotFound < StandardError
-    def initialize(vm_id=nil, external_id=nil, vif_id=nil)
+    def initialize(vm_id = nil, external_id = nil, vif_id = nil)
       @vm_id = vm_id
       @external_id = external_id
       @vif_id = vif_id
@@ -104,7 +104,7 @@ module VSphereCloud
     include Logger
     extend Hooks
 
-    def initialize(client_builder , default_vif_type, vcenter_client, datacenter)
+    def initialize(client_builder, default_vif_type, vcenter_client, datacenter)
       @client_builder = client_builder
       @max_tries = MAX_TRIES
       @sleep_time = DEFAULT_SLEEP_TIME
@@ -140,10 +140,13 @@ module VSphereCloud
       logger.info("Adding vm '#{vm.cid}' to NSGroups: #{ns_groups}")
       nsgroups = retrieve_nsgroups(ns_groups)
       nsgroups.each do |nsgroup|
+        if nsgroup._protection == 'PROTECTED'
+          logger.error("Attempting to modify #{nsgroup.display_name} (#{nsgroup.id}) but it is a \"PROTECTED\" resource. The CPI configuration may be incorrect.")
+        end
         logger.info("Adding LogicalPorts: #{lports.map(&:id)} to NSGroup '#{nsgroup.id}'")
         Bosh::Retryable.new(
-            tries: 50,
-            on: [NSXTOptimisticUpdateError]
+          tries: 50,
+          on: [NSXTOptimisticUpdateError]
         ).retryer do |i|
           grouping_obj_svc.add_or_remove_ns_group_expression(
             nsgroup.id,
@@ -169,11 +172,13 @@ module VSphereCloud
         end
       end
       nsgroups.each do |nsgroup|
-        next if nsgroup._protection != "NOT_PROTECTED"
         logger.info("Removing LogicalPorts: #{lport_ids} to NSGroup '#{nsgroup.id}'")
+        if nsgroup._protection == 'PROTECTED'
+          logger.error("Attempting to modify #{nsgroup.display_name} (#{nsgroup.id}) but it is a \"PROTECTED\" resource. The CPI configuration may be incorrect.")
+        end
         Bosh::Retryable.new(
-            tries: 50,
-            on: [NSXTOptimisticUpdateError]
+          tries: 50,
+          on: [NSXTOptimisticUpdateError]
         ).retryer do |i|
           grouping_obj_svc.add_or_remove_ns_group_expression(
             nsgroup.id,
@@ -256,6 +261,9 @@ module VSphereCloud
         vm_ip = vm.mob.guest&.ip_address
         raise VirtualMachineIpNotFound.new(vm) unless vm_ip
         server_pools.each do |server_pool, port_no|
+          if server_pool._protection == 'PROTECTED'
+            logger.error("Attempting to modify #{server_pool.display_name} (#{server_pool.id}) but it is a \"PROTECTED\" resource. The CPI configuration may be incorrect.")
+          end
           logger.info("Adding vm: '#{vm.cid}' with ip:#{vm_ip} to ServerPool: #{server_pool.id} on Port: #{port_no} ")
           pool_member = NSXT::PoolMemberSetting.new(ip_address: vm_ip, port: port_no, display_name: vm.cid)
           pool_member_setting_list = NSXT::PoolMemberSettingList.new(members: [pool_member])
@@ -277,9 +285,7 @@ module VSphereCloud
 
       #Create a hash of server_pools with key as their name and value as list of matching server_pools
       server_pools_by_name = services_svc.list_load_balancer_pools.results.each_with_object({}) do |server_pool, hash|
-        if server_pool._protection == 'NOT_PROTECTED' # only return the pools we're allowed to modify, not the Policy API's pools
-          hash[server_pool.display_name] ? hash[server_pool.display_name] << server_pool : hash[server_pool.display_name] = [server_pool]
-        end
+        hash[server_pool.display_name] ? hash[server_pool.display_name] << server_pool : hash[server_pool.display_name] = [server_pool]
       end
 
       missing = server_pools.reject do |server_pool|
@@ -300,8 +306,8 @@ module VSphereCloud
     end
 
     def remove_vm_from_server_pools(vm_ip, vm_cid, cpi_metadata_version)
-        services_svc.list_load_balancer_pools.results.each do |server_pool|
-        members_found = server_pool.members&.select {|member| member.ip_address == vm_ip}
+      services_svc.list_load_balancer_pools.results.each do |server_pool|
+        members_found = server_pool.members&.select { |member| member.ip_address == vm_ip }
         next unless members_found&.any?
         members_found.each do |member_found|
           if (cpi_metadata_version > 0 && vm_cid == member_found.display_name) || cpi_metadata_version == 0
@@ -358,9 +364,7 @@ module VSphereCloud
       raise NSGroupsNotFound.new(*missing) unless missing.empty?
 
       found_nsgroups = nsgroup_names.map do |nsgroup_name|
-        ns_group = nsgroups_by_name[nsgroup_name]
-        next if ns_group._protection != 'NOT_PROTECTED'
-        ns_group
+        nsgroups_by_name[nsgroup_name]
       end.compact
       logger.info("Found NSGroups with ids: #{found_nsgroups.map(&:id)}")
 
@@ -369,9 +373,9 @@ module VSphereCloud
 
     def logical_port_display_name_from_vif_id(vif_id:)
       Bosh::Retryable.new(
-          tries: @max_tries,
-          sleep: ->(try_count, retry_exception) { @sleep_time },
-          on: [VIFNotFound, LogicalPortNotFound]
+        tries: @max_tries,
+        sleep: ->(try_count, retry_exception) { @sleep_time },
+        on: [VIFNotFound, LogicalPortNotFound]
       ).retryer do |_|
         logger.info("Searching LogicalPorts with attachment_id: #{vif_id}")
         lport = logical_switching_svc.list_logical_ports(attachment_id: vif_id).results&.first
@@ -448,7 +452,7 @@ module VSphereCloud
           logger.info("NIC with device key #{nic.key} is backed by opaque NSXT network")
         when VimSdk::Vim::Vm::Device::VirtualEthernetCard::DistributedVirtualPortBackingInfo
           next unless @vcenter_client.dvpg_istype_nsxt?(
-              key: nic.backing.port.portgroup_key, dc_mob: @datacenter.mob
+            key: nic.backing.port.portgroup_key, dc_mob: @datacenter.mob
           )
           logger.info("NIC with device key #{nic.key} is backed by NSXT DVPG")
         end

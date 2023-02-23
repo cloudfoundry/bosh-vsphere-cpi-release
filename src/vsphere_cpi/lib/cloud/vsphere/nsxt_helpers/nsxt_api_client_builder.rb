@@ -41,6 +41,11 @@ module VSphereCloud
         configuration.verify_ssl_host = false
       end
       @client = NSXT::ApiClient.new(configuration)
+      #Design here isn't ideal but allows us to keep "x-allow-overwrite" switching logic out of Swagger generated code.
+      if @config.allow_overwrite?
+        @client.x_allow_overwrite(true)
+      end
+      @client
     end
   end
 end
