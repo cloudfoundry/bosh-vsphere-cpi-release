@@ -183,18 +183,18 @@ describe VSphereCloud::NSXTProvider, fake_logger: true, fast_retries: true do
         end
       end
 
-      context "if some of the nsgroups are created via the Policy API (i.e. have the PROTECTED flag set)" do
-        it "should not try to mutate PROTECTED groups" do
-          policy_api_created_nsgroup = NSXT::NSGroup.new(id: 'id-3', display_name: 'policy-created-group', _protection: 'PROTECTED')
-          allow(nsxt_provider).to receive(:nsxt_nics).with(vm).and_return(nsxt_nic_array)
-          expect(nsxt_provider).to receive(:logical_ports).with(vm).and_return([logical_port_1, logical_port_2])
-          expect(nsxt_provider).to receive(:retrieve_all_ns_groups_with_pagination).and_return([nsgroup_1, nsgroup_2, policy_api_created_nsgroup])
-          expect(grouping_obj_svc).to receive(:add_or_remove_ns_group_expression).with('id-1', any_args).and_return(true)
-          expect(grouping_obj_svc).to receive(:add_or_remove_ns_group_expression).with('id-2', any_args).and_return(true)
-          expect(grouping_obj_svc).to_not receive(:add_or_remove_ns_group_expression).with('id-3', any_args)
+      it "logs a warning when encountering PROTECTED groups" do
+        policy_api_created_nsgroup = NSXT::NSGroup.new(id: 'id-3', display_name: 'policy-created-group', _protection: 'PROTECTED')
+        allow(nsxt_provider).to receive(:nsxt_nics).with(vm).and_return(nsxt_nic_array)
+        allow(nsxt_provider).to receive(:logical_ports).with(vm).and_return([logical_port_1, logical_port_2])
+        allow(nsxt_provider).to receive(:retrieve_all_ns_groups_with_pagination).and_return([nsgroup_1, nsgroup_2, policy_api_created_nsgroup])
 
-          nsxt_provider.add_vm_to_nsgroups(vm, [nsgroup_1, nsgroup_2, policy_api_created_nsgroup].map(&:display_name))
-        end
+        expect(grouping_obj_svc).to receive(:add_or_remove_ns_group_expression).with('id-1', any_args).and_return(true)
+        expect(grouping_obj_svc).to receive(:add_or_remove_ns_group_expression).with('id-2', any_args).and_return(true)
+        expect(grouping_obj_svc).to receive(:add_or_remove_ns_group_expression).with('id-3', any_args).and_return(true)
+        expect(logger).to receive(:error).with('Attempting to modify policy-created-group (id-3) but it is a "PROTECTED" resource. The CPI configuration may be incorrect.')
+
+        nsxt_provider.add_vm_to_nsgroups(vm, [nsgroup_1, nsgroup_2, policy_api_created_nsgroup].map(&:display_name))
       end
 
       context 'if any of the nsgroups cannot be found in NSXT' do
@@ -345,20 +345,19 @@ describe VSphereCloud::NSXTProvider, fake_logger: true, fast_retries: true do
       end.to raise_error(VSphereCloud::NSXTOptimisticUpdateError)
     end
 
-    context "when the group is on the Policy side" do
-      it "does not try to remove VMs from groups that are on the policy side (i.e., _protection != 'NOT_PROTECTED')" do
-        policy_api_created_nsgroup = NSXT::NSGroup.new(id: 'id-3', display_name: 'policy-created-group', :members => [simple_member], _protection: 'PROTECTED')
-        allow(nsxt_provider).to receive(:nsxt_nics).with(vm).and_return(nsxt_nic_array)
-        expect(nsxt_provider).to receive(:logical_ports).with(vm).and_return([logical_port_1, logical_port_2])
-        expect(nsxt_provider).to receive(:retrieve_all_ns_groups_with_pagination).and_return([nsgroup_1, nsgroup_2, policy_api_created_nsgroup])
-        expect(grouping_obj_svc).to receive(:add_or_remove_ns_group_expression).with('id-1', any_args).and_return(true)
-        expect(grouping_obj_svc).to receive(:add_or_remove_ns_group_expression).with('id-2', any_args).and_return(true)
-        expect(grouping_obj_svc).to_not receive(:add_or_remove_ns_group_expression).with('id-3', any_args)
+    it "logs a warning when encountering PROTECTED groups" do
+      policy_api_created_nsgroup = NSXT::NSGroup.new(id: 'id-3', display_name: 'policy-created-group', :members => [simple_member], _protection: 'PROTECTED')
 
-        nsxt_provider.remove_vm_from_nsgroups(vm)
+      allow(nsxt_provider).to receive(:nsxt_nics).with(vm).and_return(nsxt_nic_array)
+      allow(nsxt_provider).to receive(:logical_ports).with(vm).and_return([logical_port_1, logical_port_2])
+      allow(nsxt_provider).to receive(:retrieve_all_ns_groups_with_pagination).and_return([nsgroup_1, nsgroup_2, policy_api_created_nsgroup])
 
-      end
+      expect(grouping_obj_svc).to receive(:add_or_remove_ns_group_expression).with('id-1', any_args).and_return(true)
+      expect(grouping_obj_svc).to receive(:add_or_remove_ns_group_expression).with('id-2', any_args).and_return(true)
+      expect(grouping_obj_svc).to receive(:add_or_remove_ns_group_expression).with('id-3', any_args).and_return(true)
+      expect(logger).to receive(:error).with('Attempting to modify policy-created-group (id-3) but it is a "PROTECTED" resource. The CPI configuration may be incorrect.')
 
+      nsxt_provider.remove_vm_from_nsgroups(vm)
     end
 
     context "when the VM doesn't have any NSX-T opaque networks" do
@@ -640,7 +639,7 @@ describe VSphereCloud::NSXTProvider, fake_logger: true, fast_retries: true do
 
   describe 'add_vm_to_server_pools' do
     let(:serverpool_1) do
-      NSXT::LbPool.new(id: 'id-1', display_name: 'test-static-serverpool-1')
+      NSXT::LbPool.new(id: 'id-1', display_name: 'test-static-serverpool-1', _protection: 'NOT_PROTECTED')
     end
     let(:ip_address) { '192.168.111.1' }
     let(:port_number) { 443 }
@@ -665,6 +664,14 @@ describe VSphereCloud::NSXTProvider, fake_logger: true, fast_retries: true do
         expect(NSXT::PoolMemberSetting).to receive(:new).with(ip_address: ip_address, port: port_number, display_name: 'fake-vm-id')
         expect(services_svc).to receive(:perform_pool_member_action).with(serverpool_1.id, an_instance_of(NSXT::PoolMemberSettingList), 'ADD_MEMBERS')
         nsxt_provider.add_vm_to_server_pools(vm, server_pools)
+      end
+
+      it 'logs when attempting to modify a PROTECTED resource' do
+        protected_server_pool = NSXT::LbPool.new(id: 'id-1', display_name: 'test-static-serverpool-1', _protection: 'PROTECTED')
+        expect(NSXT::PoolMemberSetting).to receive(:new).with(ip_address: ip_address, port: port_number, display_name: 'fake-vm-id')
+        expect(services_svc).to receive(:perform_pool_member_action).with(protected_server_pool.id, an_instance_of(NSXT::PoolMemberSettingList), 'ADD_MEMBERS')
+        expect(logger).to receive(:error).with('Attempting to modify test-static-serverpool-1 (id-1) but it is a "PROTECTED" resource. The CPI configuration may be incorrect.')
+        nsxt_provider.add_vm_to_server_pools(vm, [[protected_server_pool, port_number]])
       end
 
       it 'should raise an error if there is error adding vm to the server pool' do
@@ -710,31 +717,7 @@ describe VSphereCloud::NSXTProvider, fake_logger: true, fast_retries: true do
       nsxt_provider.retrieve_server_pools([])
       nsxt_provider.retrieve_server_pools(nil)
     end
-    context 'when  Policy API pools are present as indicated by `_protection` of "REQUIRE_OVERRIDE"' do
-      let(:server_pool_mgmt) do
-        NSXT::LbPool.new(id: 'id-1', display_name: 'hybrid-static-serverpool', _protection: 'NOT_PROTECTED')
-      end
-      let(:server_pool_policy) do
-        NSXT::LbPool.new(id: 'id-2', display_name: 'hybrid-static-serverpool', _protection: 'REQUIRE_OVERRIDE')
-      end
-      let(:server_pools) do
-        [
-          {
-            'name' => 'hybrid-static-serverpool',
-            'port' => 5432
-          }
-        ]
-      end
 
-      it 'only retrieves the Management pools' do
-        expect(services_svc).to receive_message_chain(:list_load_balancer_pools, :results).and_return([server_pool_mgmt, server_pool_policy])
-        # allow(server_pool_mgmt).to receive(:member_group).and_return('test-nsgroup1')
-        # allow(server_pool_policy).to receive(:member_group).and_return('test-nsgroup2')
-        static_server_pools, _ = nsxt_provider.retrieve_server_pools(server_pools)
-        expect(static_server_pools).to include([server_pool_mgmt, 5432])
-        expect(static_server_pools).to_not include([server_pool_policy, 5432])
-      end
-    end
     context 'when server_pools are present' do
       let(:server_pool_1) do
         NSXT::LbPool.new(id: 'id-1', display_name: 'test-static-serverpool', _protection: 'NOT_PROTECTED')

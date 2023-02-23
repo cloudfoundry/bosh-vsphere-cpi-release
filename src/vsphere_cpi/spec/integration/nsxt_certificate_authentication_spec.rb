@@ -43,9 +43,8 @@ describe 'NSXT certificate authentication', nsxt_all: true do
       expect(certs).not_to be_nil
     end
 
-    context 'when another principal exists' do
-      let(:client2) { create_client_cert_auth_client(@private_key2, @certificate2) }
-      let(:nsx_component_api2) { NSXT::NsxComponentAdministrationApi.new(client2) }
+    context 'when another principal exists and x_allow_overwrite is on' do
+      let(:client2) { create_client_cert_auth_client(@private_key2, @certificate2, true) }
 
       let(:router_api) { NSXT::ManagementPlaneApiLogicalRoutingAndServicesLogicalRoutersApi.new(client) }
       let(:router_api2) { NSXT::ManagementPlaneApiLogicalRoutingAndServicesLogicalRoutersApi.new(client2) }
@@ -61,6 +60,61 @@ describe 'NSXT certificate authentication', nsxt_all: true do
         router_api.delete_logical_router(@router_id) unless @router_id.nil?
         delete_principal(@principal2_id) unless @principal2_id.nil?
         delete_test_certificate(@cert2_id) unless @cert2_id.nil?
+      end
+
+      it 'can change other principal data' do
+        #NSXT needs some time to make cert available for cert auth
+        sleep(30)
+
+        router = NSXT::LogicalRouter.new(router_type: 'TIER1')
+        router = router_api.create_logical_router(router)
+        @router_id = router.id
+        expect(@router_id).not_to be_nil
+
+        router = router_api2.read_logical_router(@router_id)
+        expect(router._protection).to eq('REQUIRE_OVERRIDE')
+        router.display_name = 'new-name';
+
+        router = router_api2.update_logical_router(@router_id, router)
+        expect(router.display_name).to eq('new-name')
+      end
+    end
+
+    context 'when another principal exists and x_allow_overwrite is off' do
+      let(:client2) { create_client_cert_auth_client(@private_key2, @certificate2, false) }
+
+      let(:router_api) { NSXT::ManagementPlaneApiLogicalRoutingAndServicesLogicalRoutersApi.new(client) }
+      let(:router_api2) { NSXT::ManagementPlaneApiLogicalRoutingAndServicesLogicalRoutersApi.new(client2) }
+
+      before do
+        @private_key2 = generate_private_key
+        @certificate2 = generate_certificate(@private_key2)
+        @cert2_id = submit_cert_to_nsxt(@certificate2)
+        @principal2_id = attach_cert_to_principal(@cert2_id, 'testprincipal2', 'node-2')
+      end
+
+      after do
+        router_api.delete_logical_router(@router_id) unless @router_id.nil?
+        delete_principal(@principal2_id) unless @principal2_id.nil?
+        delete_test_certificate(@cert2_id) unless @cert2_id.nil?
+      end
+
+      it 'cannot change other principal data' do
+        #NSXT needs some time to make cert available for cert auth
+        sleep(30)
+
+        router = NSXT::LogicalRouter.new(router_type: 'TIER1')
+        router = router_api.create_logical_router(router)
+        @router_id = router.id
+        expect(@router_id).not_to be_nil
+
+        router = router_api2.read_logical_router(@router_id)
+        expect(router._protection).to eq('REQUIRE_OVERRIDE')
+        router.display_name = 'new-name';
+
+        expect {
+        router = router_api2.update_logical_router(@router_id, router)
+        }.to raise_error(NSXT::ApiCallError)
       end
     end
   end
@@ -122,7 +176,7 @@ describe 'NSXT certificate authentication', nsxt_all: true do
     cert
   end
 
-  def create_client_cert_auth_client(private_key, certificate)
+  def create_client_cert_auth_client(private_key, certificate, x_allow_overwrite = false)
     tempfile = Tempfile.new('bosh-test.key')
     tempfile.write(private_key)
     tempfile.close
@@ -135,12 +189,19 @@ describe 'NSXT certificate authentication', nsxt_all: true do
 
     configuration = NSXT::Configuration.new
     configuration.host = @nsxt_host
-    configuration.key_file  = private_key_file
+    configuration.key_file = private_key_file
     configuration.cert_file = cert_file
     configuration.client_side_validation = false
     configuration.verify_ssl = false
     configuration.verify_ssl_host = false
 
-    NSXT::ApiClient.new(configuration)
+    client = NSXT::ApiClient.new(configuration)
+    #this is probably more interesting to test via the defaults set in NsxtApiClientBuilder
+    #but that is a much larger change. That we default to "true" (as of this comment writing) is implicitly tested
+    #by many integration tests.
+    if x_allow_overwrite
+      client.x_allow_overwrite
+    end
+    client
   end
 end

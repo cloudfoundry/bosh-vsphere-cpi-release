@@ -1,5 +1,5 @@
 module VSphereCloud
-  class NSXTConfig < Struct.new(:host, :username, :password, :remote_auth, :auth_certificate, :auth_private_key, :default_vif_type, :use_policy_api, :policy_api_migration_mode)
+  class NSXTConfig < Struct.new(:host, :username, :password, :remote_auth, :auth_certificate, :auth_private_key, :default_vif_type, :use_policy_api, :policy_api_migration_mode, :allow_overwrite)
     def self.validate_schema(config)
       return true if config.nil?
 
@@ -28,6 +28,11 @@ module VSphereCloud
 
     def policy_api_migration_mode?
       !!policy_api_migration_mode
+    end
+
+    def allow_overwrite?
+      return true if allow_overwrite.nil?
+      allow_overwrite
     end
   end
 
@@ -225,6 +230,7 @@ module VSphereCloud
         vcenter['nsxt']['default_vif_type'],
         vcenter['nsxt']['use_policy_api'],
         vcenter['nsxt']['policy_api_migration_mode'],
+        vcenter['nsxt']['allow_overwrite'],
       )
     end
 

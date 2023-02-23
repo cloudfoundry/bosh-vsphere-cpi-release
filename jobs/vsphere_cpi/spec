@@ -88,6 +88,9 @@ properties:
   vcenter.nsxt.policy_api_migration_mode:
      description: "When enabled, the CPI attempts to associate VMs in both the Policy API and the Manager API. The VM is associated with groups and server pools in the Policy API, and with NSGroups and server pools in the Manager API. It will return an error if the Manager API objects do not exist, but not if the Policy API objects do not exist. This option is only intended to be used in conjunction with scripts to help migrate NSX-T entities from the Manager API to the Policy API."
      default: false
+  vcenter.nsxt.allow_overwrite:
+     description: "When enabled, the CPI sets the X-Allow-Overwrite header to 'true' when making NSX-T API requests. This value currently defaults to true for backwards compatibility."
+     default: true
   vcenter.http_logging:
     description: Enables HTTP level logging. Each HTTP request to vcenter will be logged
     default: false

@@ -316,6 +316,39 @@ module VSphereCloud
       end
     end
 
+      context '#nsxt.allow_overwrite' do
+        context 'when not set' do
+          before do
+            config_hash['vcenters'].first.merge! 'nsxt' => {
+              'host' => 'fake-host',
+              'username' => 'fake-username',
+              'password' => 'fake-password',
+              'certificate' => nil,
+              'private_key' => nil,
+            }
+          end
+          it 'returns true by default' do
+            expect(config.nsxt.allow_overwrite?).to be(true)
+          end
+        end
+
+      context 'when set' do
+        before do
+          config_hash['vcenters'].first.merge! 'nsxt' => {
+            'host' => 'fake-host',
+            'username' => 'fake-username',
+            'password' => 'fake-password',
+            'certificate' => nil,
+            'private_key' => nil,
+            'allow_overwrite' => false
+          }
+        end
+        it 'returns set value if false' do
+          expect(config.nsxt.allow_overwrite?).to be(false)
+        end
+      end
+    end
+
       context 'when a valid nsxt with remote auth is passed in config' do
         before do
           config_hash.merge! 'nsxt' => {
