@@ -109,6 +109,7 @@ module VSphereCloud
 
     context 'with alternative placements' do
       before do
+        allow_any_instance_of(Cloud).to receive(:at_exit)
         allow(Config).to receive(:build).and_return(cloud_config)
         allow(CpiHttpClient).to receive(:new)
           .and_return(http_client)
@@ -162,13 +163,14 @@ module VSphereCloud
         allow(vm_config).to receive(:upgrade_hw_version?).and_return(false)
         allow_any_instance_of(Resources::VM).to receive(:power_on).and_raise(VSphereCloud::VCenterClient::GenericVmConfigFault)
         allow(cpi).to receive(:delete_vm)
-        #allow_any_instance_of(Resources::VM).to receive(:power_on).and_return(cloned_vm)
 
       end
 
       it 'retries creating a vm on another viable datastore if the first attempt to power on fails with a GenericVmConfigFault and there are alternative placements' do
+        # because of the setup we will still fail with the same error on the 2nd attempt, but we know there is a 2nd attempt..
+        expect(logger).to receive(:debug).with("VM start failed with datastore issues, retrying on next ds").at_least(1)
         expect(logger).to receive(:debug).with("Retrying to create vm on ds-2")
-        vm = subject.create(vm_config)
+        expect{subject.create(vm_config)}.to raise_error(VSphereCloud::VCenterClient::GenericVmConfigFault)
       end
 
       context 'when there are alternative placements but the error is not GenericVmConfigFault' do 
@@ -205,10 +207,9 @@ module VSphereCloud
                                          )
         }
         it 'still fails if there are no viable fallback_disk_placements' do
+          expect(logger).not_to receive(:debug).with("VM start failed with datastore issues, retrying on next ds")
           expect(logger).not_to receive(:debug).with("Retrying to create vm on ds-2")
-
           expect{subject.create(vm_config)}.to raise_error(VSphereCloud::VCenterClient::GenericVmConfigFault)
-
         end
       end
     end

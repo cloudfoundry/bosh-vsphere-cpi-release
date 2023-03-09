@@ -233,7 +233,8 @@ module VSphereCloud
               if vm_config.upgrade_hw_version?(vm_config.vm_type.upgrade_hw_version, @upgrade_hw_version)
                 created_vm.upgrade_vm_virtual_hardware
               end
-              rescue VSphereCloud::VCenterClient::AlreadyUpgraded
+            rescue VSphereCloud::VCenterClient::AlreadyUpgraded
+              logger.debug('VM already upgraded')
             end
             # Attach Tags to VM
             if vm_config.vm_type.tags && !vm_config.vm_type.tags.empty?
@@ -258,7 +259,7 @@ module VSphereCloud
               begin
                 @cpi.delete_vm(created_vm.cid) if created_vm
               rescue => ex
-                logger.info("Failed to delete vm '#{vm_config.name}' with message:  #{ex.inspect}")
+                logger.info("Failed to delete vm '#{vm_config.name}' with message: #{ex.inspect}")
               end
               raise e if cluster_placement.equal?(vm_config.cluster_placements.last) && index == ordered_ephemeral_ds_options.length - 1
               next
@@ -272,7 +273,7 @@ module VSphereCloud
             begin
               @cpi.delete_vm(created_vm.cid) if created_vm
             rescue => ex
-              logger.info("Failed to delete vm '#{vm_config.name}' with message:  #{ex.inspect}")
+              logger.info("Failed to delete vm '#{vm_config.name}' with message: #{ex.inspect}")
             end
             raise e
           end
