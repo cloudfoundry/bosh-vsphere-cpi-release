@@ -33,7 +33,7 @@ module VSphereCloud
 
       def retryable?
         entity = task_info['info.entity']
-        method_name = task_info['info.name']
+        method_name = task_info['info.name'] || task_info['info.descriptionId']
         fault = task_info['info.error']
         @retry_judge.retryable?(entity, method_name, fault)
       end

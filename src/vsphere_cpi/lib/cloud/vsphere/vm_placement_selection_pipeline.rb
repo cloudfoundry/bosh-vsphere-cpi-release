@@ -3,7 +3,7 @@ module VSphereCloud
     attr_reader :cluster, :hosts, :datastores,
       :balance_score_set
 
-    attr_accessor :migration_size, :disk_placement
+    attr_accessor :migration_size, :disk_placement, :fallback_disk_placements
 
     def initialize(cluster:, hosts:, datastores:)
       @cluster = cluster
@@ -126,9 +126,9 @@ module VSphereCloud
 
         logger.debug("Found #{result.inspect} for #{disk.inspect}")
         vm_placement.disk_placement = result unless disk.existing_datastore_name
-
+        vm_placement.fallback_disk_placements =  pipeline.each.to_a.drop(1) if disk.ephemeral?
+        logger.debug("Found alternative disk placements: #{vm_placement.fallback_disk_placements}") if disk.ephemeral?
         result.free_space -= disk.size
-
         vm_placement.balance_score_set << result
         vm_placement.migration_size += disk.size if disk.existing_datastore_name
       end

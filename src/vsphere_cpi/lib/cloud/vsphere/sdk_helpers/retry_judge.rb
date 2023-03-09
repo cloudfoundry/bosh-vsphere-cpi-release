@@ -68,6 +68,12 @@ module VSphereCloud
           entity_class: VimSdk::Vim::ExtensionManager,
         },
         {
+          # when a datastore was filled by creating another VM in another thread and there is not enough space to create the VM that returned this error, we see the below
+          method_name: 'Drm.ExecuteVmPowerOnLRO',
+          entity_class: VimSdk::Vim::VirtualMachine,
+          fault_class: VimSdk::Vim::Fault::GenericVmConfigFault
+        },
+        {
           method_name: 'AcquireGenericServiceTicket',
           fault_class: VimSdk::Vim::Fault::NoPermission,
         },

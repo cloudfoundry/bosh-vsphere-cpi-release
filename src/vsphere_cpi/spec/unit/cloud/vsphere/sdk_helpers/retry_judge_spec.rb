@@ -38,7 +38,7 @@ describe 'RetryJudge' do
         next
       end
 
-      all_object_methods = ["RetrieveProperties"]
+      all_object_methods = ["RetrieveProperties", "Drm.ExecuteVmPowerOnLRO"]
       wsdl_method_names = klass.managed_methods.map { |m| m.wsdl_name }
       expect(wsdl_method_names + all_object_methods).to include(method_name)
     end

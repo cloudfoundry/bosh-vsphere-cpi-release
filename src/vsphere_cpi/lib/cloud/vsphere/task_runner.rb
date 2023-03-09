@@ -86,6 +86,7 @@ module VSphereCloud
         VimSdk::Vim::Fault::AlreadyUpgraded => VCenterClient::AlreadyUpgraded,
         VimSdk::Vim::Fault::FileAlreadyExists => VCenterClient::FileAlreadyExists,
         VimSdk::Vim::Fault::InvalidPowerState => VCenterClient::InvalidPowerState,
+        VimSdk::Vim::Fault::GenericVmConfigFault => VCenterClient::GenericVmConfigFault
       }
       exceptions_by_fault.fetch(fault.class, VCenterClient::TaskException).new(fault.msg)
     end
