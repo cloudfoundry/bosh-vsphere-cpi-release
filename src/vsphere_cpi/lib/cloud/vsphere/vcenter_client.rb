@@ -14,6 +14,7 @@ module VSphereCloud
     class AlreadyLoggedInException < StandardError; end
     class NotLoggedInException < StandardError; end
     class NetworkNotFoundError < StandardError; end
+    class GenericVmConfigFault < StandardError; end
 
     attr_reader :cloud_searcher, :service_content, :service_instance, :soap_stub
 
