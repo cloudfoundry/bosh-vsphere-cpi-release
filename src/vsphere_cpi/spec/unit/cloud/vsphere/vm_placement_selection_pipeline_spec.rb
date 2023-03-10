@@ -132,5 +132,22 @@ describe VSphereCloud::VmPlacementSelectionPipeline do
         end
       end
     end
+    context 'when there alternative datastores available' do
+      before do
+        allow_any_instance_of(VSphereCloud::Resources::Datastore).to receive(:maintenance_mode?).and_return(false)
+        allow_any_instance_of(VSphereCloud::Resources::Datastore).to receive(:accessible_from?).with(anything).and_return(true)
+        allow(cluster_1).to receive(:free_memory).and_return(VSphereCloud::Resources::Cluster::FreeMemory.new(2048, 1024))
+        allow(cluster_2).to receive(:free_memory).and_return(VSphereCloud::Resources::Cluster::FreeMemory.new(1024, 1024))
+      end
+
+      let(:disk_config_1) { VSphereCloud::DiskConfig.new(size: 10, ephemeral: true, target_datastore_pattern: 'fake-ds-cl1-.*') }
+      let(:disk_config) { [disk_config_1] }
+
+      it 'it sets them on the VmPlacement object' do
+        primary_placement = subject.each.first
+        fallback = primary_placement.disk_placement == ds_cl1_1 ? ds_cl1_2 : ds_cl1_1
+        expect(primary_placement.fallback_disk_placements).to contain_exactly(fallback)
+      end
+    end
   end
 end
