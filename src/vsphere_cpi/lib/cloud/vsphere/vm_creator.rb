@@ -279,6 +279,7 @@ module VSphereCloud
           end
           break
         end
+        break
       end
       created_vm
     end
