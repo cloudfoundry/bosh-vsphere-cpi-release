@@ -22,7 +22,6 @@ module VSphereCloud
     end
 
     def create(vm_config)
-      created_vm = nil
       vm_config.cluster_placements.each do |cluster_placement|
         # Get the  cluster from the placement
         cluster = cluster_placement.cluster
@@ -277,11 +276,9 @@ module VSphereCloud
             end
             raise e
           end
-          break
+          return created_vm # we have successfully created & powered-on a VM
         end
-        break
       end
-      created_vm
     end
 
     private
