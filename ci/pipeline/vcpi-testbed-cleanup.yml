@@ -30,7 +30,9 @@ jobs:
                 export USER=svc.tas-anycloud
 
                 for DATACENTER in sc wdc; do
+                  set +e # nimbus-ctl is quick to throw an error, but usually it's not fatal for our purposes, e.g. "Command 'list' does not finish within 600 seconds on sc2-04-vc17"
                   NIMBUS_LOCATION=$DATACENTER nimbus-ctl --testbed list > $TESTBED_FILE-$DATACENTER
+                  set -e
                   sort -k 2 < $TESTBED_FILE-$DATACENTER | # sort by testbed name
                     grep -v "^ " | # remove the VMs, keep only the testbed info
                     grep -v "svc.tas" | # don't kill the MaaS testbeds
