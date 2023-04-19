@@ -136,7 +136,7 @@ module NSXT
       @base_path = '/api/v1'
       @api_key = {}
       @api_key_prefix = {}
-      @timeout = 0
+      @timeout = 600
       @client_side_validation = true
       @verify_ssl = true
       @verify_ssl_host = true
