@@ -131,46 +131,6 @@
     end
   end
 
-  if_p('blobstore') do
-    if p('blobstore.provider') == "s3"
-      options = {
-        "bucket_name" => p('blobstore.bucket_name'),
-        "access_key_id" => p(['agent.blobstore.access_key_id', 'blobstore.access_key_id']),
-        "secret_access_key" => p(['agent.blobstore.secret_access_key', 'blobstore.secret_access_key'])
-      }
-
-      def update_blobstore_options(options, manifest_key, rendered_key=manifest_key)
-        value = p(["agent.blobstore.#{manifest_key}", "blobstore.#{manifest_key}"], nil)
-        options[rendered_key] = value unless value.nil?
-      end
-
-      update_blobstore_options(options, 'use_ssl')
-      update_blobstore_options(options, 's3_port', 'port')
-      update_blobstore_options(options, 'host')
-      update_blobstore_options(options, 's3_force_path_style')
-      update_blobstore_options(options, 'ssl_verify_peer')
-      update_blobstore_options(options, 's3_multipart_threshold')
-      update_blobstore_options(options, 's3_signature_version', 'signature_version')
-      update_blobstore_options(options, 's3_region', 'region')
-
-    elsif p('blobstore.provider') == 'local'
-      options = {
-        "blobstore_path" => p('blobstore.path')
-      }
-    else
-      options = {
-        "endpoint" => "http://#{p(['agent.blobstore.address', 'blobstore.address'])}:#{p('blobstore.port')}",
-        "user" => p('blobstore.agent.user'),
-        "password" => p('blobstore.agent.password')
-      }
-    end
-
-    params["cloud"]["properties"]["agent"]["blobstore"] = {
-      "provider" => p('blobstore.provider'),
-      "options" => options
-    }
-  end
-
   if_p('agent.mbus') do |mbus|
     params["cloud"]["properties"]["agent"]["mbus"] = mbus
   end.else_if_p('nats') do

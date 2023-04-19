@@ -45,13 +45,6 @@ describe 'cpi.json.erb' do
             }
           ]
         },
-        'blobstore' => {
-          'address' => 'blobstore_address.example.com',
-          'agent' => {
-            'user' => 'agent',
-            'password' => 'agent-password'
-          }
-        },
         'nats' => {
           'address' => 'nats_address.example.com',
           'password' => 'nats-password'
@@ -66,14 +59,6 @@ describe 'cpi.json.erb' do
         'plugin' => 'vsphere',
         'properties' => {
           'agent' => {
-            'blobstore' => {
-              'options' => {
-                'endpoint' => 'http://blobstore_address.example.com:25250',
-                'password' => 'agent-password',
-                'user' => 'agent'
-              },
-              'provider' => 'dav'
-            },
             'mbus' => 'nats://nats:nats-password@nats_address.example.com:4222',
             'ntp' => [
               '0.pool.ntp.org',
@@ -210,153 +195,6 @@ describe 'cpi.json.erb' do
     before(:each) { manifest['properties']['vcenter']['default_disk_type'] = 'thin' }
     it 'renders the default_disk_type properly' do
       expect(subject['cloud']['properties']['vcenters'].first['default_disk_type']).to eq('thin')
-    end
-  end
-
-  context 'when using an s3 blobstore' do
-    let(:rendered_blobstore) { subject['cloud']['properties']['agent']['blobstore'] }
-
-    context 'when provided a minimal configuration' do
-      before do
-        manifest['properties']['blobstore'].merge!({
-          'provider' => 's3',
-          'bucket_name' => 'my_bucket',
-          'access_key_id' => 'blobstore-access-key-id',
-          'secret_access_key' => 'blobstore-secret-access-key',
-        })
-      end
-
-      it 'renders the s3 provider section with the correct defaults' do
-        expect(rendered_blobstore).to eq(
-          {
-            'provider' => 's3',
-            'options' => {
-              'bucket_name' => 'my_bucket',
-              'access_key_id' => 'blobstore-access-key-id',
-              'secret_access_key' => 'blobstore-secret-access-key',
-              'use_ssl' => true,
-              'port' => 443,
-              's3_force_path_style' => false,
-            }
-          }
-        )
-      end
-    end
-
-    context 'when provided a maximal configuration' do
-      before do
-        manifest['properties']['blobstore'].merge!({
-          'provider' => 's3',
-          'bucket_name' => 'my_bucket',
-          'access_key_id' => 'blobstore-access-key-id',
-          'secret_access_key' => 'blobstore-secret-access-key',
-          's3_region' => 'blobstore-region',
-          'use_ssl' => false,
-          's3_port' => 21,
-          'host' => 'blobstore-host',
-          's3_force_path_style' => true,
-          'ssl_verify_peer' => true,
-          's3_multipart_threshold' => 123,
-          's3_signature_version' => '11'
-        })
-      end
-
-      it 'renders the s3 provider section correctly' do
-        expect(rendered_blobstore).to eq(
-          {
-            'provider' => 's3',
-            'options' => {
-              'bucket_name' => 'my_bucket',
-              'access_key_id' => 'blobstore-access-key-id',
-              'secret_access_key' => 'blobstore-secret-access-key',
-              'region' => 'blobstore-region',
-              'use_ssl' => false,
-              'host' => 'blobstore-host',
-              'port' => 21,
-              's3_force_path_style' => true,
-              'ssl_verify_peer' => true,
-              's3_multipart_threshold' => 123,
-              'signature_version' => '11',
-            }
-          }
-        )
-      end
-
-      it 'prefers the agent properties when they are both included' do
-        manifest['properties']['agent'] = {
-          'blobstore' => {
-            'access_key_id' => 'agent_access_key_id',
-            'secret_access_key' => 'agent_secret_access_key',
-            's3_region' => 'agent-region',
-            'use_ssl' => true,
-            's3_port' => 42,
-            'host' => 'agent-host',
-            's3_force_path_style' => true,
-            'ssl_verify_peer' => true,
-            's3_multipart_threshold' => 33,
-            's3_signature_version' => '99',
-          }
-        }
-
-        manifest['properties']['blobstore'].merge!({
-          'access_key_id' => 'blobstore_access_key_id',
-          'secret_access_key' => 'blobstore_secret_access_key',
-          's3_region' => 'blobstore-region',
-          'use_ssl' => false,
-          's3_port' => 21,
-          'host' => 'blobstore-host',
-          's3_force_path_style' => false,
-          'ssl_verify_peer' => false,
-          's3_multipart_threshold' => 22,
-          's3_signature_version' => '11',
-        })
-
-        expect(rendered_blobstore['options']['access_key_id']).to eq('agent_access_key_id')
-        expect(rendered_blobstore['options']['secret_access_key']).to eq('agent_secret_access_key')
-        expect(rendered_blobstore['options']['region']).to eq('agent-region')
-        expect(rendered_blobstore['options']['use_ssl']).to be true
-        expect(rendered_blobstore['options']['port']).to eq(42)
-        expect(rendered_blobstore['options']['host']).to eq('agent-host')
-        expect(rendered_blobstore['options']['s3_force_path_style']).to be true
-        expect(rendered_blobstore['options']['ssl_verify_peer']).to be true
-        expect(rendered_blobstore['options']['s3_multipart_threshold']).to eq(33)
-        expect(rendered_blobstore['options']['signature_version']).to eq('99')
-      end
-    end
-  end
-
-  context 'when using a local blobstore' do
-    let(:rendered_blobstore) { subject['cloud']['properties']['agent']['blobstore'] }
-
-    context 'when provided a minimal configuration' do
-      before do
-        manifest['properties']['blobstore'].merge!({
-          'provider' => 'local',
-          'path' => '/fake/path',
-        })
-      end
-
-      it 'renders the local provider section with the correct defaults' do
-        expect(rendered_blobstore).to eq(
-          {
-            'provider' => 'local',
-            'options' => {
-              'blobstore_path' => '/fake/path',
-            }
-          }
-        )
-      end
-    end
-    context 'when provided an incomplete configuration' do
-      before do
-        manifest['properties']['blobstore'].merge!({
-          'provider' => 'local',
-        })
-      end
-
-      it 'raises an error' do
-        expect { rendered_blobstore }.to raise_error(/Can't find property 'blobstore.path'/)
-      end
     end
   end
 
