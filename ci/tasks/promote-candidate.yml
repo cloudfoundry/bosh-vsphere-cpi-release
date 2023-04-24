@@ -1,7 +1,7 @@
 ---
 platform: linux
 image_resource:
-  { type: docker-image, source: { repository: harbor-repo.vmware.com/dockerhub-proxy-cache/bosh/vsphere-vcpi } }
+  { type: registry-image, source: { repository: harbor-repo.vmware.com/dockerhub-proxy-cache/bosh/vsphere-vcpi } }
 
 inputs:
   - name: source-ci

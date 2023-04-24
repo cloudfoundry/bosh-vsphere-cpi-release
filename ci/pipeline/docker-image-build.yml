@@ -10,7 +10,7 @@ jobs:
       image_resource:
         name: ""
         source:
-          repository: harbor-repo.vmware.com/dockerhub-proxy-cache/vito/oci-build-task
+          repository: harbor-repo.vmware.com/dockerhub-proxy-cache/concourse/oci-build-task
         type: registry-image
       inputs:
       - name: source-ci
@@ -18,13 +18,14 @@ jobs:
       - name: image
       params:
         CONTEXT: source-ci/ci/docker
+        IMAGE_PLATFORM: linux/arm64,linux/amd64
+        OUTPUT_OCI: true
       platform: linux
       run:
         path: build
-    privileged: true
     task: build
   - params:
-      image: image/image.tar
+      image: image/image
     put: vcpi-main-image
 resources:
 - name: source-ci
@@ -58,4 +59,3 @@ resources:
     password: ((docker.password))
   type: registry-image
   check_every: never
-
