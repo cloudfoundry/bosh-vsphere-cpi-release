@@ -6,6 +6,7 @@ source bosh-cpi-src/.envrc
 
 : ${AWS_ACCESS_KEY_ID:?}
 : ${AWS_SECRET_ACCESS_KEY:?}
+: ${AWS_ASSUME_ROLE_ARN:?}
 
 
 artifacts_dir=$(realpath bosh-cpi-artifacts)
@@ -27,6 +28,7 @@ blobstore:
   options:
     access_key_id: $AWS_ACCESS_KEY_ID
     secret_access_key: $AWS_SECRET_ACCESS_KEY
+    assume_role_arn: $AWS_ASSUME_ROLE_ARN
 EOF
 
   echo "finalizing CPI release..."
