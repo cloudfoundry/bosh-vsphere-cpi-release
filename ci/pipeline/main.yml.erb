@@ -283,11 +283,11 @@ jobs:
     - in_parallel:
       - get: bosh-cpi-src
       - get: golang-release
-      - get: bosh-golang-release-docker-image
+      - get: bosh-golang-release-registry-image
       - get: weekly
         trigger: true
     - task: bump-deps
-      image: bosh-golang-release-docker-image
+      image: bosh-golang-release-registry-image
       file: golang-release/ci/tasks/shared/bump-deps.yml
       input_mapping:
         input_repo: bosh-cpi-src
@@ -306,9 +306,9 @@ jobs:
       - get: bosh-cpi-src
       - get: golang-release
         trigger: true
-      - get: bosh-golang-release-docker-image
+      - get: bosh-golang-release-registry-image
     - task: bump-golang-packages
-      image: bosh-golang-release-docker-image
+      image: bosh-golang-release-registry-image
       file: golang-release/ci/tasks/shared/bump-golang-package.yml
       input_mapping:
         input_repo: bosh-cpi-src
@@ -458,7 +458,7 @@ resources:
       start: 3:00 -0700
       stop: 4:30 -0700
       days: [ Saturday ]
-  - name: bosh-golang-release-docker-image
+  - name: bosh-golang-release-registry-image
     type: registry-image
     source:
       repository: bosh/golang-release

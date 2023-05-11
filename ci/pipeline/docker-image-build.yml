@@ -1,3 +1,4 @@
+# fly -t bosh-vsphere sp -p docker-image-build -c ci/pipeline/docker-image-build.yml
 jobs:
 - name: build-vcpi-main-image
   plan:
@@ -8,7 +9,6 @@ jobs:
     trigger: true
   - config:
       image_resource:
-        name: ""
         source:
           repository: harbor-repo.vmware.com/dockerhub-proxy-cache/concourse/oci-build-task
         type: registry-image
@@ -48,7 +48,7 @@ resources:
 - name: ubuntu-base-image
   source:
     repository: harbor-repo.vmware.com/dockerhub-proxy-cache/library/ubuntu
-    tag: 18.04
+    tag: 22.04
   type: registry-image
   check_every: 1h
 - name: vcpi-main-image
