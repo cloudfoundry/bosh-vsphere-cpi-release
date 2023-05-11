@@ -23,6 +23,7 @@ jobs:
       platform: linux
       run:
         path: build
+    privileged: true
     task: build
   - params:
       image: image/image
