@@ -7,7 +7,6 @@ dev_releases
 .blobs
 blobs
 *.nix
-vendor
 .bundle
 .dev_builds
 .idea
