@@ -299,14 +299,16 @@ jobs:
       params:
         repository: bosh-cpi-src
         rebase: true
-
-  - name: bump-golang-packages
+  - name: bump-bosh-packages
     plan:
     - in_parallel:
       - get: bosh-cpi-src
       - get: golang-release
         trigger: true
+      - get: ruby-release
+        trigger: true
       - get: bosh-golang-release-registry-image
+      - get: bosh-ecosystem-concourse-image
     - task: bump-golang-packages
       image: bosh-golang-release-registry-image
       file: golang-release/ci/tasks/shared/bump-golang-package.yml
@@ -316,6 +318,24 @@ jobs:
         output_repo: bosh-cpi-src
       params:
         PACKAGES: [golang-1-linux, golang-1-darwin]
+        PRIVATE_YML: |
+          blobstore:
+            provider: s3
+            options:
+              access_key_id:     ((s3_vsphere_cpi_blobwriter_assume_aws_access_key.username))
+              secret_access_key: ((s3_vsphere_cpi_blobwriter_assume_aws_access_key.password))
+              assume_role_arn: ((s3_vsphere_cpi_blobwriter_assume_aws_access_key.role_arn))
+    - task: bump-ruby-package
+      image: bosh-ecosystem-concourse-image
+      file: ruby-release/ci/tasks/shared/bump-ruby-package.yml
+      input_mapping:
+        bosh-release: bosh-cpi-src
+      output_mapping:
+        bosh-release: bosh-cpi-src
+      params:
+        GIT_USER_NAME: CI Bot
+        GIT_USER_EMAIL: cf-bosh-eng@pivotal.io
+        PACKAGE: ruby-3.1
         PRIVATE_YML: |
           blobstore:
             provider: s3
@@ -454,6 +474,10 @@ resources:
     type: git
     source:
       uri: https://github.com/bosh-packages/golang-release.git
+  - name: ruby-release
+    type: git
+    source:
+      uri: https://github.com/bosh-packages/ruby-release.git
   - name: weekly
     type: time
     source:
@@ -464,6 +488,12 @@ resources:
     type: registry-image
     source:
       repository: bosh/golang-release
+      username: ((docker.username))
+      password: ((docker.password))
+  - name: bosh-ecosystem-concourse-image
+    type: registry-image
+    source:
+      repository: bosh/bosh-ecosystem-concourse
       username: ((docker.username))
       password: ((docker.password))
 
