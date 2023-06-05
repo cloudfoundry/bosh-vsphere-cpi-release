@@ -1,6 +1,5 @@
 $LOAD_PATH.unshift File.expand_path('../../lib', __FILE__)
 project_root = File.expand_path('../../../..', __FILE__)
-project_ruby_version = File.read(File.join(project_root, '.ruby-version')).strip
 
 if ENV['COVERAGE']
   require 'simplecov'
@@ -55,10 +54,6 @@ RSpec.configure do |config|
   config.mock_with :rspec do |mocks|
     mocks.verify_doubled_constant_names = true
     mocks.allow_message_expectations_on_nil = true
-  end
-
-  config.before do
-    expect(RUBY_VERSION).to eq(project_ruby_version)
   end
 
   config.include_context 'with a fake logger', fake_logger: true
