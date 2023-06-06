@@ -113,7 +113,7 @@ module VSphereCloud
       ENV['PATH'].split(File::PATH_SEPARATOR).each do |path|
         programs.each do |bin|
           exe = File.join(path, bin)
-          return exe if File.exists?(exe)
+          return exe if File.exist?(exe)
         end
       end
       programs.first

@@ -209,8 +209,8 @@ module VSphereCloud
       context 'when genisoimage is found' do
         before do
           stub_const('ENV', {'PATH' => '/bin'})
-          allow(File).to receive(:exists?).and_call_original
-          allow(File).to receive(:exists?).with('/bin/genisoimage').and_return(true)
+          allow(File).to receive(:exist?).and_call_original
+          allow(File).to receive(:exist?).with('/bin/genisoimage').and_return(true)
         end
 
         it 'uses genisoimage' do
@@ -228,8 +228,8 @@ module VSphereCloud
       context 'when genisoimage is not found' do
         before do
           stub_const('ENV', { 'PATH' => '/bin' })
-          allow(File).to receive(:exists?).and_call_original
-          allow(File).to receive(:exists?).with('/bin/iso9660wrap').and_return(true)
+          allow(File).to receive(:exist?).and_call_original
+          allow(File).to receive(:exist?).with('/bin/iso9660wrap').and_return(true)
         end
 
         it 'uses iso9660wrap' do

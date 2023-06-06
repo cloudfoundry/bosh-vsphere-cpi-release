@@ -165,7 +165,7 @@ module LifecycleHelpers
   end
 
   def stemcell_image(stemcell_path, destination_dir)
-    raise "Invalid Environment variable 'BOSH_VSPHERE_STEMCELL': File not found: '#{stemcell_path}'" unless File.exists?(stemcell_path)
+    raise "Invalid Environment variable 'BOSH_VSPHERE_STEMCELL': File not found: '#{stemcell_path}'" unless File.exist?(stemcell_path)
     output = `tar -C #{destination_dir} -xzf #{stemcell_path} 2>&1`
     fail "Corrupt image, tar exit status: #{$?.exitstatus} output: #{output}" if $?.exitstatus != 0
     "#{destination_dir}/image"
