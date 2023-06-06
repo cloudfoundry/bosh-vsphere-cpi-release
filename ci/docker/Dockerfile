@@ -11,10 +11,11 @@ ENV BOSH_VERSION=7.2.3
 ENV GOLANG_VERSION=1.20.4
 ENV LANG=C.UTF-8
 ENV RUBY_INSTALL_VERSION=0.9.0
-ENV RUBY_VERSION=3.1.4
 
 # TARGETARCH is a "magic" ARG that can be either amd64 or arm64
 ARG TARGETARCH
+
+ADD .ruby-version /tmp/.ruby-version
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
   ca-certificates \
@@ -44,7 +45,7 @@ RUN wget -O ruby-install-${RUBY_INSTALL_VERSION}.tar.gz https://github.com/postm
 
 RUN apt-get update && \
   /usr/local/bin/ruby-install \
-  -c --system ruby ${RUBY_VERSION} -- --disable-install-doc && \
+  -c --system ruby "$(cat /tmp/.ruby-version)" -- --disable-install-doc && \
   rm -rf /var/lib/apt/lists/* && \
   gem install bundler --no-document
 
