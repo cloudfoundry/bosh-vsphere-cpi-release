@@ -343,6 +343,7 @@ jobs:
               access_key_id:     ((s3_vsphere_cpi_blobwriter_assume_aws_access_key.username))
               secret_access_key: ((s3_vsphere_cpi_blobwriter_assume_aws_access_key.password))
               assume_role_arn: ((s3_vsphere_cpi_blobwriter_assume_aws_access_key.role_arn))
+        RUBY_VERSION_PATH: .ruby-version
     - put: bosh-cpi-src
       params:
         repository: bosh-cpi-src
