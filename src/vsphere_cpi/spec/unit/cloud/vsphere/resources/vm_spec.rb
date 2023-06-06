@@ -16,7 +16,7 @@ describe VSphereCloud::Resources::VM, fake_logger: true do
       vm_mob,
       VimSdk::Vim::VirtualMachine,
       ['runtime.powerState', 'runtime.question', 'config.hardware.device', 'name', 'runtime', 'resourcePool', 'config.extraConfig'],
-      ensure: ['config.hardware.device', 'runtime', 'config.extraConfig']
+      { ensure: ['config.hardware.device', 'runtime', 'config.extraConfig'] },
     ).and_return(vm_properties)
 
     allow(client).to receive(:find_parent)
@@ -52,13 +52,13 @@ describe VSphereCloud::Resources::VM, fake_logger: true do
           'vm-host',
           VimSdk::Vim::HostSystem,
           ['datastore', 'parent'],
-          ensure_all: true,
+          { ensure_all: true },
       ).and_return(host_properties)
       allow(cloud_searcher).to receive(:get_properties).with(
           host_properties['datastore'],
           VimSdk::Vim::Datastore,
           VSphereCloud::Resources::Datastore::PROPERTIES,
-          ensure_all: true,
+          { ensure_all: true },
       ).and_return(datastore_properties)
     end
     describe '#accessible_datastores' do
@@ -247,7 +247,7 @@ describe VSphereCloud::Resources::VM, fake_logger: true do
           vm_mob,
           VimSdk::Vim::VirtualMachine,
           ['runtime.powerState', 'runtime.question', 'config.hardware.device', 'name', 'runtime', 'resourcePool', 'config.extraConfig'],
-          ensure: ['config.hardware.device', 'runtime', 'config.extraConfig']
+          { ensure: ['config.hardware.device', 'runtime', 'config.extraConfig'] },
         ).and_return({'runtime.question' => question, 'config.hardware.device' => vm_devices})
         allow(cloud_searcher).to receive(:get_property).with(
           vm_mob,
