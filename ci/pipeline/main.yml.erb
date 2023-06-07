@@ -281,12 +281,15 @@ jobs:
   - name: bump-deps
     plan:
     - in_parallel:
+      - get: source-ci
       - get: bosh-cpi-src
       - get: golang-release
+      - get: ruby-release
       - get: bosh-golang-release-registry-image
+      - get: bosh-ruby-release-registry-image
       - get: weekly
         trigger: true
-    - task: bump-deps
+    - task: bump-golang-deps
       image: bosh-golang-release-registry-image
       file: golang-release/ci/tasks/shared/bump-deps.yml
       input_mapping:
@@ -294,11 +297,32 @@ jobs:
       output_mapping:
         output_repo: bosh-cpi-src
       params:
+        GIT_USER_NAME: CI Bot
+        GIT_USER_EMAIL: bots@cloudfoundry.org
         SOURCE_PATH: src/iso9660wrap
+    - task: bump-gems
+      image: bosh-ruby-release-registry-image
+      file: ruby-release/ci/tasks/shared/bump-gems.yml
+      input_mapping:
+        input-repo: bosh-cpi-src
+      output_mapping:
+        output-repo: bosh-cpi-src
+      params:
+        GEM_DIRS: src/vsphere_cpi
+        GIT_USER_NAME: CI Bot
+        GIT_USER_EMAIL: bots@cloudfoundry.org
+        PACKAGE: ruby-3.1
+        VENDOR: true
+    - in_parallel:
+      - task: test-pyvmomi_to_ruby
+        file: source-ci/ci/tasks/test-pyvmomi_to_ruby.yml
+      - task: unit-test
+        file: source-ci/ci/tasks/unit-test.yml
     - put: bosh-cpi-src
       params:
         repository: bosh-cpi-src
         rebase: true
+
   - name: bump-bosh-packages
     plan:
     - in_parallel:
@@ -489,6 +513,12 @@ resources:
     type: registry-image
     source:
       repository: bosh/golang-release
+      username: ((docker.username))
+      password: ((docker.password))
+  - name: bosh-ruby-release-registry-image
+    type: registry-image
+    source:
+      repository: bosh/ruby-release
       username: ((docker.username))
       password: ((docker.password))
   - name: bosh-ecosystem-concourse-image
