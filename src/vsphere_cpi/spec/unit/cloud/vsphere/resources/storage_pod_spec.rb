@@ -91,43 +91,6 @@ describe VSphereCloud::Resources::StoragePod do
     end
   end
 
-  describe '.find' do
-    let(:datacenter) { double('VimSdk::Vim::Datacenter')}
-    let(:datastore_folder) { double('datastore_folder')}
-    let(:client) { double('VSphereCloud::VCenterClient') }
-    let(:storage_pod_name) {'cpi-sp1'}
-    let(:storage_pod) {instance_double('VimSdk::Vim::StoragePod', name: storage_pod_name)}
-    context 'with non-existent datacenter' do
-      it 'raises an error' do
-        allow(client).to receive(:find_by_inventory_path).with('dc1').and_return(nil)
-        expect {
-          described_class.find(storage_pod_name, 'dc1', client)
-        }.to raise_error /Datacenter 'dc1' not found/
-      end
-    end
-
-    context 'with valid datacenter' do
-      before do
-        expect(client).to receive(:find_by_inventory_path).with('dc1').and_return(datacenter)
-        allow(datacenter).to receive(:datastore_folder).and_return(datastore_folder)
-      end
-
-      it 'raises an error if storage_pod is not found' do
-        expect(datastore_folder).to receive(:child_entity).and_return([])
-        expect {
-          described_class.find(storage_pod_name, 'dc1', client)
-        }.to raise_error /Datastore Cluster with name: 'cpi-sp1' not found/
-      end
-
-      it 'returns an instance of Resources::StoragePod when storage_pod if found' do
-        expect(datastore_folder).to receive(:child_entity).and_return([storage_pod])
-        allow(storage_pod).to receive(:class).and_return(VimSdk::Vim::StoragePod)
-        storage_pod = described_class.find(storage_pod_name, 'dc1', client)
-        expect(storage_pod).to be_a(VSphereCloud::Resources::StoragePod)
-      end
-    end
-  end
-
   describe '.find_storage_pod' do
     let(:datacenter) { double('VimSdk::Vim::Datacenter')}
     let(:datastore_folder) { double('datastore_folder')}
