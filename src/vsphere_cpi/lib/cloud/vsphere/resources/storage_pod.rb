@@ -37,12 +37,6 @@ module VSphereCloud
         mob.pod_storage_drs_entry.storage_drs_config.pod_config.enabled
       end
 
-      def self.find(name, datacenter_name, client)
-        datacenter_mob = client.find_by_inventory_path(datacenter_name)
-        raise "Datacenter '#{datacenter_name}' not found." unless datacenter_mob
-        self.find_storage_pod(name, datacenter_mob)
-      end
-
       def self.find_storage_pod(name, datacenter_mob)
         datastore_clusters =  datacenter_mob.datastore_folder.child_entity.select {|ce| ce.class == VimSdk::Vim::StoragePod}
         datastore_cluster = datastore_clusters.select { |sp| sp.name == name }.first
