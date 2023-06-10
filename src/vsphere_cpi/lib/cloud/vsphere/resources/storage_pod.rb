@@ -38,20 +38,32 @@ module VSphereCloud
       end
 
       def self.find_storage_pod(name, datacenter_mob)
-        datastore_clusters =  datacenter_mob.datastore_folder.child_entity.select {|ce| ce.class == VimSdk::Vim::StoragePod}
-        datastore_cluster = datastore_clusters.select { |sp| sp.name == name }.first
+        path_segments = name.split('/')
+        current_folder = datacenter_mob.datastore_folder
+        while path_segments.length > 1
+          current_segment = path_segments.shift
+          current_folder = current_folder.child_entity.find { |child| child.class == VimSdk::Vim::Folder && child.name == current_segment }
+          raise "Datastore Cluster with name: '#{name}' not found." unless current_folder
+        end
+        pod_name = path_segments.shift
+        datastore_cluster = current_folder.child_entity.find { |child| child.class == VimSdk::Vim::StoragePod && child.name == pod_name }
         raise "Datastore Cluster with name: '#{name}' not found." unless datastore_cluster
         new(datastore_cluster)
       end
 
       def self.search_storage_pods(name_pattern, datacenter_mob)
-        datastore_clusters =  datacenter_mob.datastore_folder.child_entity.select {|ce| ce.class == VimSdk::Vim::StoragePod}
-        datastore_cluster_subset = datastore_clusters.select { |sp| sp.name =~ name_pattern }
-        datastore_cluster_subset.map do |cluster|
+        path_segments = name_pattern.split('/')
+        current_folders = [datacenter_mob.datastore_folder]
+        while path_segments.length > 1
+          current_segment = Regexp.new("^#{path_segments.shift}$")
+          current_folders = current_folders.map { |current_folder| current_folder.child_entity.select { |child| child.class == VimSdk::Vim::Folder && child.name =~ current_segment } }.flatten
+        end
+        pod_name = Regexp.new("^#{path_segments.shift}$")
+        datastore_clusters = current_folders.map { |current_folder| current_folder.child_entity.select { |child| child.class == VimSdk::Vim::StoragePod && child.name =~ pod_name } }.flatten
+        datastore_clusters.map do |cluster|
           new(cluster)
         end
       end
-
 
       def datastores
         mob.child_entity

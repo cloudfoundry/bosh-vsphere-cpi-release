@@ -297,3 +297,55 @@ context 'when datastore cluster is also defined in vm_type' do
     end
   end
 end
+
+context 'when datastore cluster is in a folder' do
+  before(:all) do
+    @cluster_name = fetch_and_verify_cluster('BOSH_VSPHERE_CPI_CLUSTER')
+    @expected_datastore = fetch_and_verify_datastore('BOSH_VSPHERE_CPI_DATASTORE_CLUSTER_IN_FOLDER_DATASTORE', @cluster_name)
+    @datastore_pattern = fetch_property('BOSH_VSPHERE_CPI_DATASTORE_CLUSTER_IN_FOLDER')
+  end
+  let(:cloud_properties) do
+    {
+      'ram' => 512,
+      'disk' => 2048,
+      'cpu' => 1
+    }
+  end
+  let(:cpi) do
+    options = cpi_options({
+      'datacenters' => [
+        {
+          'datastore_pattern' => '',
+          'datastore_cluster_pattern' => @datastore_pattern
+        }
+      ]
+    })
+    VSphereCloud::Cloud.new(options)
+  end
+
+  after do
+    cpi.cleanup
+  end
+
+  it 'should place disks into datastores that belong to the datastore cluster' do
+    begin
+      vm_id, _ = cpi.create_vm(
+        'agent-007',
+        @stemcell_id,
+        cloud_properties,
+        get_network_spec,
+        [],
+        {}
+      )
+      expect(vm_id).to_not be_nil
+      vm = cpi.vm_provider.find(vm_id)
+      ephemeral_disk = vm.ephemeral_disk
+      expect(ephemeral_disk).to_not be_nil
+
+      ephemeral_datastore = ephemeral_disk.backing.datastore
+      expect(ephemeral_datastore.name).to eq(@expected_datastore)
+    ensure
+      delete_vm(cpi, vm_id)
+    end
+  end
+end
