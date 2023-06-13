@@ -52,18 +52,30 @@ module VSphereCloud
       end
 
       def self.search_storage_pods(name_pattern, datacenter_mob)
-        path_segments = name_pattern.split('/')
-        current_folders = [datacenter_mob.datastore_folder]
-        while path_segments.length > 1
-          current_segment = Regexp.new("^#{path_segments.shift}$")
-          current_folders = current_folders.map { |current_folder| current_folder.child_entity.select { |child| child.class == VimSdk::Vim::Folder && child.name =~ current_segment } }.flatten
-        end
-        pod_name = Regexp.new("^#{path_segments.shift}$")
-        datastore_clusters = current_folders.map { |current_folder| current_folder.child_entity.select { |child| child.class == VimSdk::Vim::StoragePod && child.name =~ pod_name } }.flatten
-        datastore_clusters.map do |cluster|
-          new(cluster)
-        end
+        storage_pods = search_in_subfolders(datacenter_mob.datastore_folder)
+
+        # Remove the leading datastore folder name from the paths
+        storage_pods.transform_keys! { |key| key.sub("/#{datacenter_mob.datastore_folder.name}/", '') }
+
+        matching_storage_pods = storage_pods.select { |path, _| path =~ name_pattern }
+        matching_storage_pods.values.map { |storage_pod| new(storage_pod) }
       end
+
+      def self.search_in_subfolders(child_entity, path_prefix = '')
+        path_prefix = path_prefix + '/'
+        if child_entity.class == VimSdk::Vim::Folder
+          paths = {}
+          child_entity.child_entity.each do |grandchild|
+            paths.merge!(search_in_subfolders(grandchild, path_prefix + child_entity.name ))
+          end
+          return paths
+        end
+        if child_entity.class == VimSdk::Vim::StoragePod
+          return { path_prefix + child_entity.name => child_entity }
+        end
+        {}
+      end
+      private_class_method :search_in_subfolders
 
       def datastores
         mob.child_entity

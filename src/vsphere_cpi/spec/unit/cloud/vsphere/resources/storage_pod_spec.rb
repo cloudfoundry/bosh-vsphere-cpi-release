@@ -131,7 +131,7 @@ describe VSphereCloud::Resources::StoragePod do
 
   describe '.search_storage_pods' do
     let(:datacenter) { double('VimSdk::Vim::Datacenter', datastore_folder: datastore_folder)}
-    let(:datastore_folder) { double('datastore_folder', child_entity: [storage_pod1, storage_pod2])}
+    let(:datastore_folder) { double('datastore_folder', name: 'datastore', child_entity: [storage_pod1, storage_pod2], class: VimSdk::Vim::Folder)}
     let(:storage_pod_name1) {'cpi-sp1'}
     let(:storage_pod_name2) {'cpi-sp2'}
     let(:storage_pod1) {instance_double('VimSdk::Vim::StoragePod', name: storage_pod_name1, class: VimSdk::Vim::StoragePod)}
@@ -155,7 +155,7 @@ describe VSphereCloud::Resources::StoragePod do
 
     context 'when storage_pod is nested in folders' do
       let(:top_level_pod) {instance_double(VimSdk::Vim::StoragePod, name: 'the_pod', class: VimSdk::Vim::StoragePod)}
-      let(:other_folder) { instance_double(VimSdk::Vim::Folder, name: 'other-top-level-folder', class: VimSdk::Vim::Folder) }
+      let(:other_folder) { instance_double(VimSdk::Vim::Folder, name: 'other-top-level-folder', child_entity: [], class: VimSdk::Vim::Folder) }
       let(:folder) { instance_double(VimSdk::Vim::Folder, name: 'top-level-folder', child_entity: [nested_folder, other_nested_folder], class: VimSdk::Vim::Folder) }
       let(:nested_folder) { instance_double(VimSdk::Vim::Folder, name: 'nested-folder', child_entity: [nested_pod1, nested_pod2, nested_pod3], class: VimSdk::Vim::Folder) }
       let(:other_nested_folder) { instance_double(VimSdk::Vim::Folder, name: 'other-nested-folder', child_entity: [nested_pod4], class: VimSdk::Vim::Folder) }
@@ -163,12 +163,24 @@ describe VSphereCloud::Resources::StoragePod do
       let(:nested_pod2) {instance_double(VimSdk::Vim::StoragePod, name: 'the_pod_two', class: VimSdk::Vim::StoragePod)}
       let(:nested_pod3) {instance_double(VimSdk::Vim::StoragePod, name: 'something_else', class: VimSdk::Vim::StoragePod)}
       let(:nested_pod4) {instance_double(VimSdk::Vim::StoragePod, name: 'the_pod_four', class: VimSdk::Vim::StoragePod)}
-      let(:datastore_folder) { instance_double(VimSdk::Vim::Folder, child_entity: [top_level_pod, other_folder, folder], class: VimSdk::Vim::Folder)}
+      let(:datastore_folder) { instance_double(VimSdk::Vim::Folder, name: 'datastore', child_entity: [top_level_pod, other_folder, folder], class: VimSdk::Vim::Folder)}
 
-      it 'returns all matching storage pods' do
-        pods = described_class.search_storage_pods('top-level-folder/(other-)?nested-folder/the_pod.*', datacenter)
+      it 'returns matching storage pods' do
+        pods = described_class.search_storage_pods(/top-level-folder\/(other-)?nested-folder\/the_pod.*/, datacenter)
         mobs = pods.collect &:mob
         expect(mobs).to eq([nested_pod1, nested_pod2, nested_pod4])
+      end
+
+      it 'returns matching storage pods when using a regex with a pipe' do
+        pods = described_class.search_storage_pods(/top-level-folder\/nested-folder\/the_pod_one|top-level-folder\/nested-folder\/the_pod_two/, datacenter)
+        mobs = pods.collect &:mob
+        expect(mobs).to eq([nested_pod1, nested_pod2])
+      end
+
+      it 'returns matching storage pods when using start/end anchors' do
+        pods = described_class.search_storage_pods(/^the_pod$/, datacenter)
+        mobs = pods.collect &:mob
+        expect(mobs).to eq([top_level_pod])
       end
     end
   end
