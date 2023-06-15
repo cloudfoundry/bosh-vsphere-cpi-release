@@ -21,6 +21,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   ca-certificates \
   curl \
   git \
+  git-lfs \
   jq \
   make \
   neovim \
