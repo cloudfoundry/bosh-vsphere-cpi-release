@@ -48,7 +48,7 @@ module VSphereCloud
 
       client = VSphereCloud::VCenterClient.new(
           vcenter_api_uri: URI.parse("https://#{host}/sdk/vimService"),
-          http_client: VSphereCloud::CpiHttpClient.new(logger)
+          http_client: VSphereCloud::CpiHttpClient.new(connection_options: {}, http_log: logger)
       )
       client.login(user, password, 'en')
 

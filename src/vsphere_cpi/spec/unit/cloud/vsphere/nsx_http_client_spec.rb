@@ -18,7 +18,7 @@ module VSphereCloud
     end
 
     describe 'SSL validation' do
-      it 'configures SSL when BOSH_CA_CERT_FILE has been set in the environment' do
+      it 'configures SSL when BOSH_NSX_CA_CERT_FILE has been set in the environment' do
         cert = certificate(:success)
         ENV["BOSH_NSX_CA_CERT_FILE"] = cert.path
         expect(backing_client.ssl_config.verify_mode).to eq(OpenSSL::SSL::VERIFY_PEER | OpenSSL::SSL::VERIFY_FAIL_IF_NO_PEER_CERT)

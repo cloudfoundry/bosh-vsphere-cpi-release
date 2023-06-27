@@ -14,9 +14,9 @@ module VmodlVersionDiscriminant
   # @param [String] the hostname of the vCenter server
   # @return [String] the usable vSphere management API version as one of "7.0",
   #   "6.7", or "6.5"
-  def self.retrieve_vmodl_version(host, logger = nil)
+  def self.retrieve_vmodl_version(host, connection_options, logger = nil)
     logger.info('Fetching vSphere version to locate SDK') unless logger.nil?
-    http_client = VSphereCloud::CpiHttpClient.new
+    http_client = VSphereCloud::CpiHttpClient.new(connection_options: connection_options)
     url = "https://#{host}/sdk/vimServiceVersions.xml"
 
     body = Bosh::Retryable.new(tries: 3, on: [StandardError]).retryer do

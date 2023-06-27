@@ -7,6 +7,7 @@ describe VmodlVersionDiscriminant do
       expect(VSphereCloud::CpiHttpClient).to receive(:new).and_return(client)
       client
     end
+    let(:connection_options) { {} }
 
     let(:failure) { HTTP::Message.new_response(nil).tap { |m| m.status = 400 } }
     let(:success) do
@@ -24,26 +25,26 @@ describe VmodlVersionDiscriminant do
 
     it 'logs an informational message unless the logger is absent' do
       expect(logger).to receive(:info).with(/vSphere version/)
-      described_class.retrieve_vmodl_version("test-host", logger)
+      described_class.retrieve_vmodl_version("test-host", connection_options, logger)
     end
 
     it "sends a GET request to a vimServiceVersions.xml file on the host" do
       url = "https://test-host/sdk/vimServiceVersions.xml"
       expect(client).to receive(:get).with(url).and_return(success)
-      described_class.retrieve_vmodl_version("test-host")
+      described_class.retrieve_vmodl_version("test-host", connection_options)
     end
 
     it 'retries the GET request to vimServiceVersions.xml on failure' do
       url = "https://test-host/sdk/vimServiceVersions.xml"
       expect(client).to receive(:get).with(url).and_return(failure, success)
-      described_class.retrieve_vmodl_version("test-host")
+      described_class.retrieve_vmodl_version("test-host", connection_options)
     end
 
     it 'logs each failure unless the logger is absent' do
       expect(client).to receive(:get).and_return(failure, success)
 
       expect(logger).to receive(:warn).with(/Couldn't GET.*test-host.*400/)
-      described_class.retrieve_vmodl_version("test-host", logger)
+      described_class.retrieve_vmodl_version("test-host", connection_options, logger)
     end
 
     it 'returns the result of .extract_vmodl_version on the XML document' do
@@ -51,7 +52,7 @@ describe VmodlVersionDiscriminant do
 
       expect(described_class).to receive(:extract_vmodl_version).with(
         an_instance_of(Nokogiri::XML::Document)).and_return(:stub)
-      expect(described_class.retrieve_vmodl_version("test-host")).to eq(:stub)
+      expect(described_class.retrieve_vmodl_version("test-host", connection_options)).to eq(:stub)
     end
 
     it 'returns 6.5 and warns if any nonretryable error occurs' do
@@ -60,7 +61,7 @@ describe VmodlVersionDiscriminant do
       expect(described_class).to receive(:extract_vmodl_version).and_raise(
         StandardError, "test message")
       expect(logger).to receive(:warn).with(/test message.*6.5/)
-      result = described_class.retrieve_vmodl_version("test-host", logger)
+      result = described_class.retrieve_vmodl_version("test-host", connection_options, logger)
 
       expect(result).to eq('6.5')
     end
