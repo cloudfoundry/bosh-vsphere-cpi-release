@@ -20,7 +20,7 @@ require 'cloud'
 proc {
   host = ENV["BOSH_VSPHERE_CPI_HOST"]
   logger = Logger.new(STDERR)
-  $vc_version = VmodlVersionDiscriminant.retrieve_vmodl_version(host, logger)
+  $vc_version = VmodlVersionDiscriminant.retrieve_vmodl_version(host, {}, logger)
 }.call if ENV["BOSH_VSPHERE_CPI_HOST"]
 
 # set $vc_version for unit tests

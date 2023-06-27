@@ -29,7 +29,7 @@ module VSphereCloud
     attr_reader :config, :datacenter, :heartbeat_thread, :pbm
 
     def enable_telemetry
-      http_client = VSphereCloud::CpiHttpClient.new
+      http_client = VSphereCloud::CpiHttpClient.new(connection_options: @config.vcenter_connection_options)
       other_client = VCenterClient.new(
         vcenter_api_uri: @config.vcenter_api_uri,
         http_client: http_client
@@ -76,7 +76,7 @@ module VSphereCloud
         Logger.logger.set_request_id(request_id)
       end
 
-      @http_client = VSphereCloud::CpiHttpClient.new(@config.soap_log)
+      @http_client = VSphereCloud::CpiHttpClient.new(connection_options: @config.vcenter_connection_options, http_log: @config.soap_log)
 
       @client = VCenterClient.new(
         vcenter_api_uri: @config.vcenter_api_uri,

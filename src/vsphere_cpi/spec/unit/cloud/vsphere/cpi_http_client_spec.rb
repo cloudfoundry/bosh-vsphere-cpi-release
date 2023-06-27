@@ -2,7 +2,8 @@ require 'spec_helper'
 
 module VSphereCloud
   describe CpiHttpClient do
-    subject(:http_client) { CpiHttpClient.new }
+    subject(:http_client) { CpiHttpClient.new(connection_options: { "ca_cert_file" => ca_cert_file }) }
+    let(:ca_cert_file) { nil }
     let(:backing_client) { http_client.backing_client }
 
     before(:all) do
@@ -13,29 +14,29 @@ module VSphereCloud
       stop_server
     end
 
-    after(:each) do
-      ENV.delete("BOSH_CA_CERT_FILE")
-    end
-
     describe 'SSL validation' do
-      it 'configures SSL when BOSH_CA_CERT_FILE has been set in the environment' do
-        cert = certificate(:success)
-        ENV["BOSH_CA_CERT_FILE"] = cert.path
-        expect(backing_client.ssl_config.verify_mode).to eq(OpenSSL::SSL::VERIFY_PEER | OpenSSL::SSL::VERIFY_FAIL_IF_NO_PEER_CERT)
-        expect(backing_client.ssl_config.cert_store_items).to include(cert.path)
-      end
+      context 'when the CA cert file provided signs the vCenter cert' do
+        let(:ca_cert_file) { certificate(:success).path }
 
-      it 'succeeds when the SSL cert returned from the server is signed with a CA included in the provided bundle' do
-        ENV["BOSH_CA_CERT_FILE"] = certificate(:success).path
-        response = http_client.get("https://localhost:#{@server.port}")
-        expect(response.body).to eq('success')
-      end
+        it 'validates the vCenter certificate when connecting' do
+          expect(backing_client.ssl_config.verify_mode).to eq(OpenSSL::SSL::VERIFY_PEER | OpenSSL::SSL::VERIFY_FAIL_IF_NO_PEER_CERT)
+          expect(backing_client.ssl_config.cert_store_items).to include(ca_cert_file)
+        end
 
-      it 'fails when the SSL cert returned from the server is not signed with a CA included in the provided bundle' do
-        ENV["BOSH_CA_CERT_FILE"] = certificate(:failure).path
-        expect {
+        it 'succeeds when connecting' do
           response = http_client.get("https://localhost:#{@server.port}")
-        }.to raise_error(/vcenter.connection_options.ca_cert/)
+          expect(response.body).to eq('success')
+        end
+      end
+
+      context 'when the CA cert file does NOT sign the vCenter cert' do
+        let(:ca_cert_file) { certificate(:failure).path }
+
+        it 'raises a TLS verification error' do
+          expect {
+            response = http_client.get("https://localhost:#{@server.port}")
+          }.to raise_error(/does not have a valid SSL certificate.*vcenter.connection_options.ca_cert/)
+        end
       end
 
       it 'succeeds when a bundle is not provided' do

@@ -27,6 +27,7 @@ module VSphereCloud
         vcenter_user: 'fake-user',
         vcenter_password: 'fake-password',
         vcenter_default_disk_type: default_disk_type,
+        vcenter_connection_options: 'fake-connection-options',
         soap_log: 'fake-log-file',
         vcenter_enable_auto_anti_affinity_drs_rules: false,
         upgrade_hw_version: true,
@@ -75,7 +76,7 @@ module VSphereCloud
       allow(Config).to receive(:build).with(config).and_return(cloud_config)
       unless example.metadata[:skip_before]
         allow(CpiHttpClient).to receive(:new)
-          .with('fake-log-file')
+          .with(connection_options: 'fake-connection-options', http_log: 'fake-log-file')
           .and_return(http_client)
         allow(VCenterClient).to receive(:new)
                                   .with(
@@ -258,9 +259,9 @@ module VSphereCloud
         let(:dvs_index) { { 'fake_pgkey1' => 'fake_network1' } }
 
         it 'generates the network env' do
-          
+
           allow(datacenter).to receive_message_chain(:mob, :network, :detect).and_return(nil)
-          allow(cloud_searcher).to receive(:find_resources_by_property_path).and_return([]) 
+          allow(cloud_searcher).to receive(:find_resources_by_property_path).and_return([])
           expect(vsphere_cloud.generate_network_env(devices, networks, dvs_index)).to eq(expected_output)
         end
       end
@@ -283,7 +284,7 @@ module VSphereCloud
 
         it 'generates the network env' do
           allow(datacenter).to receive(:mob)
-          allow(cloud_searcher).to receive(:find_resources_by_property_path).and_return([dvpg]) 
+          allow(cloud_searcher).to receive(:find_resources_by_property_path).and_return([dvpg])
           allow(dvpg).to receive(:config).and_return(dvpg_config)
           expect(vsphere_cloud.generate_network_env(devices, networks, dvs_index)).to eq(expected_output)
         end
@@ -460,7 +461,6 @@ module VSphereCloud
 
       before do
         expect(VCPIExtension).to receive(:create_cpi_extension) # .with(config).and_return(cloud_config)
-        allow(VSphereCloud::CpiHttpClient).to receive(:new).with(no_args)
         allow(vsphere_cloud).to receive(:`).and_return(`true`)
         allow(vsphere_cloud).to receive(:enable_telemetry)
         allow(Dir).to receive(:entries).and_return(["foo.ovf"])
@@ -870,6 +870,7 @@ module VSphereCloud
             vcenter_user: 'fake-user',
             vcenter_password: 'fake-password',
             vcenter_default_disk_type: default_disk_type,
+            vcenter_connection_options: 'fake-connection-options',
             soap_log: 'fake-log-file',
             nsx_user: 'fake-nsx-user',
             nsx_password: 'fake-nsx-password',
@@ -1203,6 +1204,7 @@ module VSphereCloud
             vcenter_user: 'fake-user',
             vcenter_password: 'fake-password',
             vcenter_default_disk_type: default_disk_type,
+            vcenter_connection_options: 'fake-connection-options',
             soap_log: 'fake-log-file',
             nsxt_enabled?: true,
             nsxt: nsxt_config

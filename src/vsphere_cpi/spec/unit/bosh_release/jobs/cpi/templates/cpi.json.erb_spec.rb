@@ -86,6 +86,7 @@ describe 'cpi.json.erb' do
               'host' => 'vcenter-address',
               'password' => 'vcenter-password',
               'user' => 'vcenter-user',
+              'connection_options' => { 'ca_cert' => nil },
               'default_disk_type' => 'preallocated',
               'enable_auto_anti_affinity_drs_rules' => true,
               'enable_human_readable_name' => true,

@@ -238,7 +238,7 @@ module VSphereCloud
     context 'when we have an SSL certificate verification error' do
       context 'and it can be remedied by setting a property' do
         subject(:http_client) { BaseHttpClient.new(trusted_ca_file: certificate(:failure).path, ca_cert_manifest_key: 'vcenter.nsx.ca_cert') }
-        it 'should raise a generic error message without a remedy suggestion' do
+        it 'should raise a generic error message with a remedy suggestion' do
           expect {
             http_client.get("https://localhost:#{@server.port}")
           }.to raise_error(/vcenter.nsx.ca_cert/)

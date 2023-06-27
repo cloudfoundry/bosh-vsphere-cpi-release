@@ -157,6 +157,10 @@ module VSphereCloud
       vcenter['enable_auto_anti_affinity_drs_rules']
     end
 
+    def vcenter_connection_options
+      vcenter['connection_options'] || {}
+    end
+
     def datacenter_name
       vcenter_datacenter['name']
     end
