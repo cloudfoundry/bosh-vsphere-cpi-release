@@ -2,7 +2,8 @@ require 'spec_helper'
 
 module VSphereCloud
   describe NsxHttpClient do
-    subject(:http_client) { NsxHttpClient.new('username', 'password') }
+    subject(:http_client) { NsxHttpClient.new('username', 'password', ca_cert_file) }
+    let(:ca_cert_file) { nil }
     let(:backing_client) { http_client.backing_client }
 
     before(:all) do
@@ -13,29 +14,29 @@ module VSphereCloud
       stop_server
     end
 
-    after(:each) do
-      ENV.delete("BOSH_NSX_CA_CERT_FILE")
-    end
-
     describe 'SSL validation' do
-      it 'configures SSL when BOSH_NSX_CA_CERT_FILE has been set in the environment' do
-        cert = certificate(:success)
-        ENV["BOSH_NSX_CA_CERT_FILE"] = cert.path
-        expect(backing_client.ssl_config.verify_mode).to eq(OpenSSL::SSL::VERIFY_PEER | OpenSSL::SSL::VERIFY_FAIL_IF_NO_PEER_CERT)
-        expect(backing_client.ssl_config.cert_store_items).to include(cert.path)
+      context 'when the CA cert file provided signs the NSX cert' do
+        let(:ca_cert_file) { certificate(:success).path }
+
+        it 'validates the NSX certificate when connecting' do
+          expect(backing_client.ssl_config.verify_mode).to eq(OpenSSL::SSL::VERIFY_PEER | OpenSSL::SSL::VERIFY_FAIL_IF_NO_PEER_CERT)
+          expect(backing_client.ssl_config.cert_store_items).to include(ca_cert_file)
+        end
+
+        it 'succeeds when connecting' do
+          response = http_client.get("https://localhost:#{@server.port}")
+          expect(response.body).to eq('success')
+        end
       end
 
-      it 'succeeds when the SSL cert returned from the server is signed with a CA included in the provided bundle' do
-        ENV["BOSH_NSX_CA_CERT_FILE"] = certificate(:success).path
-        response = http_client.get("https://localhost:#{@server.port}")
-        expect(response.body).to eq('success')
-      end
+      context 'when the CA cert file does NOT sign the NSX cert' do
+        let(:ca_cert_file) { certificate(:failure).path }
 
-      it 'fails when the SSL cert returned from the server is not signed with a CA included in the provided bundle' do
-        ENV["BOSH_NSX_CA_CERT_FILE"] = certificate(:failure).path
-        expect {
-          http_client.get("https://localhost:#{@server.port}")
-        }.to raise_error(/vcenter.nsx.ca_cert/)
+        it 'raises a TLS verification error' do
+          expect {
+            http_client.get("https://localhost:#{@server.port}")
+          }.to raise_error(/does not have a valid SSL certificate.*vcenter.nsx.ca_cert/)
+        end
       end
 
       it 'fails when a CA bundle is not provided' do

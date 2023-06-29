@@ -928,6 +928,7 @@ module VSphereCloud
       nsx_http_client = NsxHttpClient.new(
         @config.nsx_user,
         @config.nsx_password,
+        @config.nsx_ca_cert_file,
         @config.soap_log,
       )
       @nsx = NSX.new(@config.nsx_url, nsx_http_client)
