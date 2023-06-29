@@ -874,6 +874,7 @@ module VSphereCloud
             soap_log: 'fake-log-file',
             nsx_user: 'fake-nsx-user',
             nsx_password: 'fake-nsx-password',
+            nsx_ca_cert_file: 'fake-nsx-ca-cert-file',
             nsxt_enabled?: false
           ).as_null_object
         end
@@ -909,7 +910,7 @@ module VSphereCloud
         it 'should create the security tags and attach them to the VM' do
           allow(VmConfig).to receive(:new).and_return(vm_config)
           allow(NsxHttpClient).to receive(:new)
-                            .with('fake-nsx-user', 'fake-nsx-password', 'fake-log-file')
+                            .with('fake-nsx-user', 'fake-nsx-password', 'fake-nsx-ca-cert-file', 'fake-log-file')
                             .and_return(http_basic_auth_client)
           allow(NSX).to receive(:new).and_return(nsx)
 
@@ -970,7 +971,7 @@ module VSphereCloud
           it 'should de-duplicate the security tags and attach them to the VM' do
             allow(VmConfig).to receive(:new).and_return(vm_config)
             allow(NsxHttpClient).to receive(:new)
-              .with('fake-nsx-user', 'fake-nsx-password', 'fake-log-file')
+              .with('fake-nsx-user', 'fake-nsx-password', 'fake-nsx-ca-cert-file', 'fake-log-file')
               .and_return(http_basic_auth_client)
             allow(NSX).to receive(:new).and_return(nsx)
 
@@ -1028,7 +1029,7 @@ module VSphereCloud
           it 'should de-duplicate the security tags and attach them to the VM' do
             allow(VmConfig).to receive(:new).and_return(vm_config)
             allow(NsxHttpClient).to receive(:new)
-              .with('fake-nsx-user', 'fake-nsx-password', 'fake-log-file')
+              .with('fake-nsx-user', 'fake-nsx-password', 'fake-nsx-ca-cert-file', 'fake-log-file')
               .and_return(http_basic_auth_client)
             allow(NSX).to receive(:new).and_return(nsx)
 
@@ -1083,7 +1084,7 @@ module VSphereCloud
           it 'should de-duplicate the security tags and attach them to the VM' do
             allow(VmConfig).to receive(:new).and_return(vm_config)
             allow(NsxHttpClient).to receive(:new)
-              .with('fake-nsx-user', 'fake-nsx-password', 'fake-log-file')
+              .with('fake-nsx-user', 'fake-nsx-password', 'fake-nsx-ca-cert-file', 'fake-log-file')
               .and_return(http_basic_auth_client)
             allow(NSX).to receive(:new).and_return(nsx)
 
@@ -1133,7 +1134,7 @@ module VSphereCloud
           it 'should de-duplicate the security tags and attach them to the VM' do
             allow(VmConfig).to receive(:new).and_return(vm_config)
             allow(NsxHttpClient).to receive(:new)
-              .with('fake-nsx-user', 'fake-nsx-password', 'fake-log-file')
+              .with('fake-nsx-user', 'fake-nsx-password', 'fake-nsx-ca-cert-file', 'fake-log-file')
               .and_return(http_basic_auth_client)
             allow(NSX).to receive(:new).and_return(nsx)
 
@@ -1174,7 +1175,7 @@ module VSphereCloud
           it 'should not call add_vm_to_security_group VM' do
             allow(VmConfig).to receive(:new).and_return(vm_config)
             allow(NsxHttpClient).to receive(:new)
-              .with('fake-nsx-user', 'fake-nsx-password', 'fake-log-file')
+              .with('fake-nsx-user', 'fake-nsx-password', 'fake-nsx-ca-cert-file', 'fake-log-file')
               .and_return(http_basic_auth_client)
             allow(NSX).to receive(:new).and_return(nsx)
 

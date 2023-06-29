@@ -218,6 +218,10 @@ module VSphereCloud
       vcenter['nsx']['password']
     end
 
+    def nsx_ca_cert_file
+      vcenter['nsx']['ca_cert_file']
+    end
+
     def upgrade_hw_version
       vcenter['upgrade_hw_version']
     end
