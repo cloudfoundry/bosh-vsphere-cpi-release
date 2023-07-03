@@ -73,7 +73,8 @@ describe 'CPI', nsxt_all: true do
     VSphereCloud::Cloud.new(cpi_options(nsxt: {
       host: @nsxt_host,
       auth_certificate: @certificate.to_s,
-      auth_private_key: @private_key.to_s
+      auth_private_key: @private_key.to_s,
+      ca_cert_file: ENV['BOSH_NSXT_CA_CERT_FILE']
     }))
   end
 
@@ -155,6 +156,7 @@ describe 'CPI', nsxt_all: true do
           host: @nsxt_host,
           auth_certificate: @certificate.to_s,
           auth_private_key: @private_key.to_s,
+          ca_cert_file: ENV['BOSH_NSXT_CA_CERT_FILE'],
           default_vif_type: 'PARENT'
         }))
       end
@@ -379,6 +381,7 @@ describe 'CPI', nsxt_all: true do
             host: @nsxt_host,
             username: @nsxt_username,
             password: @nsxt_password,
+            ca_cert_file: ENV['BOSH_NSXT_CA_CERT_FILE'],
             use_policy_api: true,
         }))
       end
@@ -409,6 +412,7 @@ describe 'CPI', nsxt_all: true do
               host: @nsxt_host,
               auth_certificate: @certificate.to_s,
               auth_private_key: @private_key.to_s,
+              ca_cert_file: ENV['BOSH_NSXT_CA_CERT_FILE'],
               use_policy_api: true,
           }))
         end
@@ -760,6 +764,7 @@ describe 'CPI', nsxt_all: true do
         host: @nsxt_host,
         username: @nsxt_username,
         password: @nsxt_password,
+        ca_cert_file: ENV['BOSH_NSXT_CA_CERT_FILE'],
         policy_api_migration_mode: true,
       }))
     end
@@ -862,7 +867,8 @@ describe 'CPI', nsxt_all: true do
         VSphereCloud::Cloud.new(cpi_options(nsxt: {
           host: @nsxt_host,
           auth_certificate: @certificate.to_s,
-          auth_private_key: @private_key.to_s
+          auth_private_key: @private_key.to_s,
+          ca_cert_file: ENV['BOSH_NSXT_CA_CERT_FILE']
         }))
       end
       let(:cpi) { management_cpi } #the cpi variable is used to cleanup created VMs.
@@ -1025,6 +1031,7 @@ describe 'CPI', nsxt_all: true do
           host: @nsxt_host,
           username: @nsxt_username,
           password: @nsxt_password,
+          ca_cert_file: ENV['BOSH_NSXT_CA_CERT_FILE'],
           use_policy_api: true,
         }))
       end
@@ -1443,6 +1450,7 @@ describe 'CPI', nsxt_all: true do
               host: @nsxt_host,
               username: @nsxt_username,
               password: @nsxt_password,
+              ca_cert_file: ENV['BOSH_NSXT_CA_CERT_FILE'],
               use_policy_api: true,
           }))
         end
