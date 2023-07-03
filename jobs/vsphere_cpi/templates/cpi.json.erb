@@ -108,6 +108,9 @@
     if_p('vcenter.nsxt.remote_auth') do
      vcenter['nsxt']['remote_auth'] = p('vcenter.nsxt.remote_auth')
     end
+    if_p('vcenter.nsxt.ca_cert') do
+      vcenter['nsxt']['ca_cert'] = p('vcenter.nsxt.ca_cert')
+    end
 
     if_p('vcenter.nsxt.auth_certificate') do
       vcenter['nsxt']['auth_certificate'] = p('vcenter.nsxt.auth_certificate')

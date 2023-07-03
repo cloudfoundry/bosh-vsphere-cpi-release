@@ -2898,7 +2898,7 @@ module VSphereCloud
     describe '#replace_certs_keys_with_temp_files' do
       let(:nsxt_config) do
         VSphereCloud::NSXTConfig.new(
-          'host', 'user', 'password', 'true', 'cert', 'key', 'BARE_METAL'
+          'host', 'user', 'password', 'ca-cert', 'true', 'cert', 'key', 'BARE_METAL'
         )
       end
       it 'replaces certs and keys with their tempfile locations' do
@@ -2912,7 +2912,7 @@ module VSphereCloud
       context 'when auth key is not provided' do
         let(:nsxt_config) do
           VSphereCloud::NSXTConfig.new(
-              'host', 'user', 'password', 'true', 'cert', nil, 'BARE_METAL'
+              'host', 'user', 'password', 'ca-cert', 'true', 'cert', nil, 'BARE_METAL'
           )
         end
         it 'does not do anything on passed nsxt config' do

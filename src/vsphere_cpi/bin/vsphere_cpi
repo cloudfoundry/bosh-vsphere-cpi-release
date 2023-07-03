@@ -69,6 +69,15 @@ cpi_lambda = lambda do |context, _|
     cloud_properties['vcenters'][0]['nsx']['ca_cert_file'] = temp.path
   end
 
+  if cloud_properties['vcenters'][0].fetch('nsxt', {}).fetch('ca_cert', nil)
+    temp = Tempfile.create('vsphere-cpi-nsxt-ca') do |f|
+      f.write(cloud_properties['vcenters'][0]['nsxt']['ca_cert'])
+    end
+
+    temp_certificate_files_to_clean_up << temp
+    cloud_properties['vcenters'][0]['nsxt']['ca_cert_file'] = temp.path
+  end
+
   host = cloud_properties['vcenters'][0]['host']
   connection_options = cloud_properties['vcenters'][0]['connection_options']
   $vc_version = VmodlVersionDiscriminant.retrieve_vmodl_version(

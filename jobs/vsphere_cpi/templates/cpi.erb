@@ -20,9 +20,7 @@ export NO_PROXY="<%= no_proxy %>"
 export no_proxy="<%= no_proxy %>"
 <% end %>
 
-<% if p('vcenter.nsxt.ca_cert', false) %>
-  export BOSH_NSXT_CA_CERT_FILE=$BOSH_JOBS_DIR/vsphere_cpi/config/nsxt_cacert.pem
-<% else %>
+<% if !p('vcenter.nsxt.ca_cert', false) %>
   export NSXT_SKIP_SSL_VERIFY=true
 <% end %>
 

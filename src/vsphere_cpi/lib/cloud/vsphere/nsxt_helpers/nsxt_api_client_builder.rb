@@ -31,9 +31,7 @@ module VSphereCloud
       end
 
       # Root CA Cert
-      if ENV['BOSH_NSXT_CA_CERT_FILE']
-        configuration.ssl_ca_cert = ENV['BOSH_NSXT_CA_CERT_FILE']
-      end
+      configuration.ssl_ca_cert = @config.ca_cert_file
 
       # SKIP SSL VALIDATION?
       if ENV['NSXT_SKIP_SSL_VERIFY']
