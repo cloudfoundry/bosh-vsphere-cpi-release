@@ -76,6 +76,10 @@ module VSphereCloud
       @manifest_params[:storage_policy]
     end
 
+    def vgpus
+      vm_type.vgpus || []
+    end
+
     def human_readable_name_enabled?
       @manifest_params[:enable_human_readable_name]
     end
@@ -122,7 +126,7 @@ module VSphereCloud
       params = {}
       params[:num_cpus] = vm_type.cpu
       params[:memory_mb] = vm_type.ram
-      params[:memory_reservation_locked_to_max] = true if vm_type.memory_reservation_locked_to_max
+      params[:memory_reservation_locked_to_max] = true if memory_reservation_locked_to_max?
       params[:nested_hv_enabled] = true if vm_type.nested_hardware_virtualization
       params[:cpu_hot_add_enabled] = true if vm_type.cpu_hot_add_enabled
       params[:memory_hot_add_enabled] = true if vm_type.memory_hot_add_enabled
@@ -221,6 +225,16 @@ module VSphereCloud
       raise Bosh::Clouds::CloudError,
         'No valid placement found for VM compute and storage requirement' if @cluster_placement.first.nil?
       @cluster_placement
+    end
+
+    def memory_reservation_locked_to_max?
+      if vm_type.memory_reservation_locked_to_max
+        return true
+      end
+      if vgpus.size > 0
+        return true
+      end
+      false
     end
   end
 end

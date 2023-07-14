@@ -84,16 +84,71 @@ module VSphereCloud
     let(:client) { instance_double('VSphereCloud::VCenterClient', login: nil, service_content: service_content, soap_stub: soap_stub ) }
     let(:virtual_disk_manager) { instance_double('VimSdk::Vim::VirtualDiskManager') }
 
+    before do
+      allow_any_instance_of(Cloud).to receive(:at_exit)
+      allow(Config).to receive(:build).and_return(cloud_config)
+      allow(CpiHttpClient).to receive(:new)
+                                .and_return(http_client)
+      allow(VCenterClient).to receive(:new).with(
+        vcenter_api_uri: vcenter_api_uri,
+        http_client: http_client
+      ).and_return(client)
+      allow(Pbm).to receive(:new).and_return(pbm)
+      allow(TaggingTag::AttachTagToVm).to receive(:new).with(any_args).and_return(tagging_tagger)
+      allow(TaggingTag::AttachTagToVm).to receive(:InitializeConnection).with(any_args).and_return(tag_client)
+      allow(stemcell).to receive(:replicate).and_return(stemcell_vm)
+      allow(cloud_searcher).to receive(:get_properties).with(
+        stemcell_vm,
+        VimSdk::Vim::VirtualMachine,
+        ["snapshot", "datastore"],
+        ensure_all: true
+      ).and_return({'snapshot'=> 'value'})
+      allow(cloud_searcher).to receive(:get_properties).with(
+        stemcell_vm,
+        VimSdk::Vim::VirtualMachine,
+        :ensure=>["config.hardware.device", "runtime", "config.extraConfig"]
+      ).and_return(cloned_vm)
+      allow(client).to receive(:cloud_searcher).and_return(cloud_searcher)
+      allow_any_instance_of(Resources::EphemeralDisk).to receive(:create_disk_attachment_spec).and_return([])
+      allow_any_instance_of(Resources::VM).to receive_message_chain(:system_disk, :controller_key).and_return(1)
+      allow(service_content).to receive_message_chain(:extension_manager, :find_extension).and_return(false)
+      allow(vm_config).to receive(:vsphere_networks).and_return([])
+      allow_any_instance_of(Resources::VM).to receive(:nics).and_return([])
+      allow_any_instance_of(Resources::VM).to receive(:vgpus).and_return([])
+      allow_any_instance_of(Resources::VM).to receive(:fix_device_unit_numbers).and_return(nil)
+      allow_any_instance_of(Resources::VM).to receive(:fix_device_key).and_return(nil)
+      allow(client).to receive(:wait_for_task).and_return(cloned_vm_mob)
+
+      allow(cloud_searcher).to receive(:get_properties).with(
+        cloned_vm_mob,
+        VimSdk::Vim::VirtualMachine,
+        ["runtime.powerState", "runtime.question", "config.hardware.device", "name", "runtime", "resourcePool", "config.extraConfig"],
+        :ensure=>["config.hardware.device", "runtime", "config.extraConfig"]
+      )
+      allow_any_instance_of(Resources::VM).to receive(:devices).and_return([])
+      allow_any_instance_of(Resources::VM).to receive(:fix_device_key).and_return(nil)
+      allow(cpi).to receive(:generate_network_env).and_return({})
+      allow(cpi).to receive(:generate_disk_env).and_return({})
+      allow(cpi).to receive(:generate_agent_env).and_return({})
+      allow(client).to receive(:find_by_inventory_path).with("dc-1").and_return(datacenter)
+      allow(client).to receive(:find_vm_by_name).and_return(cloned_vm)
+      allow(agent_env).to receive(:set_env)
+      allow(subject).to receive(:create_drs_rules).and_return(nil)
+      allow(subject).to receive(:add_vm_to_vm_group).and_return(nil)
+      allow(subject).to receive(:apply_storage_policy).and_return(nil)
+      allow(vm_config).to receive(:upgrade_hw_version?).and_return(false)
+    end
     let(:vm_config) { instance_double(VmConfig,
                                       name: 'norbo',
                                       agent_id: 'meow',
                                       agent_env: {},
                                       vmx_options: {},
                                       drs_rule: nil,
-                                      vm_type: instance_double(VmType, vm_group: {}, upgrade_hw_version: false, tags: {} ),
+                                      vm_type: instance_double(VmType, vm_group: {}, upgrade_hw_version: false, tags: {}, disable_drs: false ),
                                       config_spec_params: {},
                                       networks_spec: {},
                                       ephemeral_disk_size: 1024,
+                                      vgpus: [],
 
                                       cluster_placements: [
                                         instance_double(VmPlacement,
@@ -106,64 +161,26 @@ module VSphereCloud
 
                                      )
     }
+    context 'with vGPU devices' do
+      before do
+        allow(vm_config).to receive(:validate_drs_rules).and_return(true)
+        allow(vm_config).to receive(:vgpus).and_return(['grid_t4-16q'])
+        allow_any_instance_of(Resources::VM).to receive(:power_on)
+      end
+      it 'upgrades the vm hardware and reconfigures the VM with the vGPU device' do
+        expect(Resources::PCIPassthrough).to receive(:create_vgpu)
+                                               .with('grid_t4-16q').and_return(nil)
+        expect(client).to receive(:upgrade_vm_virtual_hardware).with(cloned_vm_mob)
+        expect(client).to receive(:reconfig_vm).with(cloned_vm_mob, anything)
+        subject.create(vm_config)
+      end
+    end
 
     context 'with alternative placements' do
       before do
-        allow_any_instance_of(Cloud).to receive(:at_exit)
-        allow(Config).to receive(:build).and_return(cloud_config)
-        allow(CpiHttpClient).to receive(:new)
-          .and_return(http_client)
-        allow(VCenterClient).to receive(:new).with(
-          vcenter_api_uri: vcenter_api_uri,
-          http_client: http_client
-        ).and_return(client)
-        allow(Pbm).to receive(:new).and_return(pbm)
-        allow(TaggingTag::AttachTagToVm).to receive(:new).with(any_args).and_return(tagging_tagger)
-        allow(TaggingTag::AttachTagToVm).to receive(:InitializeConnection).with(any_args).and_return(tag_client)
-        allow(vm_config).to receive(:validate_drs_rules).and_return(false)
-        allow(stemcell).to receive(:replicate).and_return(stemcell_vm)
-        allow(cloud_searcher).to receive(:get_properties).with(
-            stemcell_vm,
-            VimSdk::Vim::VirtualMachine,
-            ["snapshot", "datastore"],
-            ensure_all: true
-          ).and_return({'snapshot'=> 'value'})
-        allow(cloud_searcher).to receive(:get_properties).with(
-            stemcell_vm,
-            VimSdk::Vim::VirtualMachine,
-            :ensure=>["config.hardware.device", "runtime", "config.extraConfig"]
-          ).and_return(cloned_vm)
-        allow(client).to receive(:cloud_searcher).and_return(cloud_searcher)
-        allow_any_instance_of(Resources::EphemeralDisk).to receive(:create_disk_attachment_spec).and_return([])
-        allow_any_instance_of(Resources::VM).to receive_message_chain(:system_disk, :controller_key).and_return(1)
-        allow(service_content).to receive_message_chain(:extension_manager, :find_extension).and_return(false)
-        allow(vm_config).to receive(:vsphere_networks).and_return([])
-        allow_any_instance_of(Resources::VM).to receive(:nics).and_return([])
-        allow_any_instance_of(Resources::VM).to receive(:fix_device_unit_numbers).and_return(nil)
-        allow_any_instance_of(Resources::VM).to receive(:fix_device_key).and_return(nil)
-        allow(client).to receive(:wait_for_task).and_return(cloned_vm_mob)
-
-        allow(cloud_searcher).to receive(:get_properties).with(
-            cloned_vm_mob,
-            VimSdk::Vim::VirtualMachine,
-            ["runtime.powerState", "runtime.question", "config.hardware.device", "name", "runtime", "resourcePool", "config.extraConfig"],
-            :ensure=>["config.hardware.device", "runtime", "config.extraConfig"]
-          )
-        allow_any_instance_of(Resources::VM).to receive(:devices).and_return([])
-        allow_any_instance_of(Resources::VM).to receive(:fix_device_key).and_return(nil)
-        allow(cpi).to receive(:generate_network_env).and_return({})
-        allow(cpi).to receive(:generate_disk_env).and_return({})
-        allow(cpi).to receive(:generate_agent_env).and_return({})
-        allow(client).to receive(:find_by_inventory_path).with("dc-1").and_return(datacenter)
-        allow(client).to receive(:find_vm_by_name).and_return(cloned_vm)
-        allow(agent_env).to receive(:set_env)
-        allow(subject).to receive(:create_drs_rules).and_return(nil)
-        allow(subject).to receive(:add_vm_to_vm_group).and_return(nil)
-        allow(subject).to receive(:apply_storage_policy).and_return(nil)
-        allow(vm_config).to receive(:upgrade_hw_version?).and_return(false)
         allow_any_instance_of(Resources::VM).to receive(:power_on).and_raise(VSphereCloud::VCenterClient::GenericVmConfigFault)
         allow(cpi).to receive(:delete_vm)
-
+        allow(vm_config).to receive(:validate_drs_rules).and_return(false)
       end
 
       it 'retries creating a vm on another viable datastore if the first attempt to power on fails with a GenericVmConfigFault and there are alternative placements' do
@@ -194,6 +211,7 @@ module VSphereCloud
                                           config_spec_params: {},
                                           networks_spec: {},
                                           ephemeral_disk_size: 1024,
+                                          vgpus: [],
 
                                           cluster_placements: [
                                             instance_double(VmPlacement,

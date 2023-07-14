@@ -65,5 +65,26 @@ module VSphereCloud
         end
       end
     end
+
+
+    describe '#vgpus' do
+      let(:cloud_properties) {
+        {
+          'vgpus' => vgpus
+        }
+      }
+      context 'with vgpus' do
+        let(:vgpus) { ['fake-vgpu1', 'fake-vgpu2'] }
+        it 'returns list of vgpus' do
+          expect(vm_type.vgpus).to eq(vgpus)
+        end
+      end
+      context 'with no vgpus' do
+        let(:vgpus) { [] }
+        it 'returns an empty array' do
+          expect(vm_type.vgpus).to eq(vgpus)
+        end
+      end
+    end
   end
 end

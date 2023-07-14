@@ -211,6 +211,33 @@ module VSphereCloud
 
             @agent_env.set_env(created_vm.mob, location, env)
 
+            begin
+              # Upgrade to latest virtual hardware version
+              # We decide to upgrade hardware version on basis of three params
+              # 1. vm_type specification of upgrade hardware flag and
+              # 2. Global upgrade hardware flag @upgrade_hw_version
+              # 3. vm_type of vgpus has entries (>1 vgpu requires upgraded hw)
+              if vm_config.upgrade_hw_version?(vm_config.vm_type.upgrade_hw_version, @upgrade_hw_version)
+                created_vm.upgrade_vm_virtual_hardware
+              end
+              unless vm_config.vgpus.empty?
+                created_vm.upgrade_vm_virtual_hardware
+              end
+            rescue VSphereCloud::VCenterClient::AlreadyUpgraded
+              logger.debug('VM already upgraded')
+            end
+            # Add vGPU devices after hardware version has been upgraded
+            # Jammy stemcell at hardware version 13 only allows 1 vGPU; we want to be able to add more
+            unless vm_config.vgpus.empty?
+              config_spec = VimSdk::Vim::Vm::ConfigSpec.new
+              config_spec.device_change = []
+              vm_config.vgpus.each do |vgpu|
+                vgpu = Resources::PCIPassthrough.create_vgpu(vgpu)
+                vgpu_config = Resources::VM.create_add_device_spec(vgpu)
+                config_spec.device_change << vgpu_config
+              end
+              @client.reconfig_vm(created_vm_mob, config_spec)
+            end
             # DRS Rules
             create_drs_rules(vm_config, created_vm.mob, cluster)
 
@@ -224,17 +251,6 @@ module VSphereCloud
             end
             # Apply storage policy
             apply_storage_policy(vm_config, created_vm)
-            begin
-              # Upgrade to latest virtual hardware version
-              # We decide to upgrade hardware version on basis of two params
-              # 1. vm_type specification of upgrade hardware flag and
-              # 2. Global upgrade hardware flag @upgrade_hw_version
-              if vm_config.upgrade_hw_version?(vm_config.vm_type.upgrade_hw_version, @upgrade_hw_version)
-                created_vm.upgrade_vm_virtual_hardware
-              end
-            rescue VSphereCloud::VCenterClient::AlreadyUpgraded
-              logger.debug('VM already upgraded')
-            end
             # Attach Tags to VM
             if vm_config.vm_type.tags && !vm_config.vm_type.tags.empty?
               logger.info("Tags found in config file. Attaching tags to vm '#{vm_config.name}'.")
