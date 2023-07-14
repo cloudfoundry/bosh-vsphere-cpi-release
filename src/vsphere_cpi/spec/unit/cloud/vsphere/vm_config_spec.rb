@@ -583,6 +583,20 @@ module VSphereCloud
         it 'does not set any value in the config spec params' do
           expect(vm_config.config_spec_params).to eq(output)
         end
+
+        context 'but the VM has vgpus' do
+          let(:cloud_properties) do
+            {
+              'memory_reservation_locked_to_max' => false,
+              'vgpus' => ['grid_t4-1q'],
+            }
+          end
+          let(:output) { { memory_reservation_locked_to_max: true } }
+
+          it 'overrides memory_reservation_locked_to_max, setting it to true' do
+            expect(vm_config.config_spec_params).to eq(output)
+          end
+        end
       end
 
       context 'when memory_reservation_locked_to_max is true' do
@@ -593,7 +607,7 @@ module VSphereCloud
         it 'sets it to true' do
           expect(vm_config.config_spec_params).to eq(output)
         end
-      end            
+      end
 
       context 'when cpu_hot_add_enabled is true' do
         let(:cloud_properties) { { 'cpu_hot_add_enabled' => true } }
@@ -759,6 +773,31 @@ module VSphereCloud
         end
       end
 
+    end
+
+    describe '#vpgus' do
+      context 'vgpus are specified' do
+        let(:vgpus) { ['fake-vgpu1', 'fake-vgpu2'] }
+        let(:cloud_properties){
+          {
+            'vgpus' => vgpus
+          }
+        }
+        let(:input) { { vm_type: vm_type } }
+
+        it 'should return the vgpus' do
+          expect(vm_config.vgpus).to eq(vgpus)
+        end
+      end
+
+      context 'vgpus are NOT specified' do
+        let(:cloud_properties){ {} }
+        let(:input) { { vm_type: vm_type } }
+
+        it 'should return an empty array' do
+          expect(vm_config.vgpus).to eq([])
+        end
+      end
     end
   end
 end
