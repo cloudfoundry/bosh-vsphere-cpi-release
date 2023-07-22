@@ -27,7 +27,7 @@ GEM
       multi_json (>= 1.8.4)
     membrane (1.1.0)
     method_source (1.0.0)
-    mini_portile2 (2.8.2)
+    mini_portile2 (2.8.4)
     mono_logger (1.1.2)
     multi_json (1.15.0)
     netaddr (2.0.6)
