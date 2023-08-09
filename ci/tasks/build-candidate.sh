@@ -2,7 +2,7 @@
 
 set -e
 
-semver=$(cat version-semver/number)
+semver=$(cat version-semver/version)
 
 echo Creating BOSH vSphere CPI release ... 1>&2
 bosh create-release \

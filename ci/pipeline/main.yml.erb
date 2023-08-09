@@ -41,7 +41,7 @@ jobs:
     - put: version-semver
       tags: [nimbus]
       params:
-        file: version-semver/number
+        file: version-semver/version
     - task: build
       tags: [nimbus]
       file: source-ci/ci/tasks/build-candidate.yml
@@ -338,7 +338,7 @@ jobs:
         tag: integer-version/tag-file
     - put: release-version-semver
       tags: [nimbus]
-      params: { file: release-version-semver/number }
+      params: { file: release-version-semver/version }
 
   - name: bump-deps
     plan:
