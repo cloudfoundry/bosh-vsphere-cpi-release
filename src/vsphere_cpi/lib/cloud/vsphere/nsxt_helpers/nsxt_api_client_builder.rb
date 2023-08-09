@@ -34,10 +34,9 @@ module VSphereCloud
       configuration.ssl_ca_cert = @config.ca_cert_file
 
       # SKIP SSL VALIDATION?
-      if ENV['NSXT_SKIP_SSL_VERIFY']
-        configuration.verify_ssl = false
-        configuration.verify_ssl_host = false
-      end
+      configuration.verify_ssl = !@config.ca_cert_file.nil?
+      configuration.verify_ssl_host = !@config.ca_cert_file.nil?
+
       @client = NSXT::ApiClient.new(configuration)
       #Design here isn't ideal but allows us to keep "x-allow-overwrite" switching logic out of Swagger generated code.
       if @config.allow_overwrite?
