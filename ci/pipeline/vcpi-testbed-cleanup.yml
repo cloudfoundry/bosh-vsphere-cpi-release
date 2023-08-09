@@ -2,6 +2,7 @@
 resources:
   - name: every-day
     type: time
+    tags: [nimbus]
     icon: clock-outline
     source:
       start: "1:00 AM"
@@ -15,7 +16,9 @@ jobs:
     plan:
       - get: every-day
         trigger: true
+        tags: [nimbus]
       - task: cleanup
+        tags: [nimbus]
         config:
           platform: linux
           image_resource:

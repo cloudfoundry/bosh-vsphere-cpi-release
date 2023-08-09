@@ -3,17 +3,22 @@
     plan:
     - in_parallel:
       - get: source-ci
+        tags: [nimbus]
       - get: bosh-cpi-src
+        tags: [nimbus]
         trigger: true
         passed: [unit-test]
       - get: stemcell
+        tags: [nimbus]
       - put: environment
+        tags: [nimbus]
         resource: <%= e "pool-#{pool}" %>
         params: { acquire: true }
         on_failure:
           put: <%= e "pool-#{pool}" %>
           params : { release: environment }
     - task: test
+      tags: [nimbus]
       file: source-ci/ci/tasks/run-lifecycle.yml
       privileged: true
       params:
@@ -22,7 +27,9 @@
 <% end -%>
       on_failure:
         put: <%= e "pool-#{pool}" %>
+        tags: [nimbus]
         params : { remove: environment }
       on_success:
         put: <%= e "pool-#{pool}" %>
+        tags: [nimbus]
         params : { release: environment }

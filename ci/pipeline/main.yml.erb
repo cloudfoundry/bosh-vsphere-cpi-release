@@ -3,12 +3,16 @@ jobs:
     plan:
     - in_parallel:
       - get: source-ci
+        tags: [nimbus]
       - get: bosh-cpi-src
+        tags: [nimbus]
         trigger: true
     - in_parallel:
       - task: test-pyvmomi_to_ruby
+        tags: [nimbus]
         file: source-ci/ci/tasks/test-pyvmomi_to_ruby.yml
       - task: unit-test
+        tags: [nimbus]
         file: source-ci/ci/tasks/unit-test.yml
 
 <% each_pool do |pool| -%>
@@ -19,7 +23,9 @@ jobs:
     plan:
     - in_parallel:
       - get: source-ci
+        tags: [nimbus]
       - get: bosh-cpi-src
+        tags: [nimbus]
         trigger: true
         passed:
         - lifecycle-6.5-nsxt25
@@ -29,14 +35,18 @@ jobs:
         - lifecycle-7.0-nsxt31-cvds
         - lifecycle-8.0-nsxt40-cvds
       - get: version-semver
+        tags: [nimbus]
         trigger: false
         params: { bump: patch }
     - put: version-semver
+      tags: [nimbus]
       params:
         file: version-semver/number
     - task: build
+      tags: [nimbus]
       file: source-ci/ci/tasks/build-candidate.yml
     - put: bosh-cpi-artifacts
+      tags: [nimbus]
       params:
         file: 'dev-artifacts/*.tgz'
 
@@ -45,24 +55,29 @@ jobs:
     plan:
       - in_parallel:
           - get: source-ci
-          - {get: cpi-release,              trigger: true, resource: bosh-cpi-artifacts, passed: [build-candidate]}
-          - {get: bosh-release,             trigger: false, resource: old-bosh-release}
-          - {get: stemcell,                 trigger: false}
-          - {get: certification,            trigger: false}
-          - {get: bosh-deployment,          trigger: false}
-          - {get: bats,                     trigger: false}
-          - {get: bosh-cli,                 trigger: false}
+            tags: [nimbus]
+          - {get: cpi-release,              trigger: true, tags: [nimbus], resource: bosh-cpi-artifacts, passed: [build-candidate]}
+          - {get: bosh-release,             trigger: false, tags: [nimbus], resource: old-bosh-release}
+          - {get: stemcell,                 trigger: false, tags: [nimbus]}
+          - {get: certification,            trigger: false, tags: [nimbus]}
+          - {get: bosh-deployment,          trigger: false, tags: [nimbus]}
+          - {get: bats,                     trigger: false, tags: [nimbus]}
+          - {get: bosh-cli,                 trigger: false, tags: [nimbus]}
           - get: bosh-cpi-src
+            tags: [nimbus]
             passed: [build-candidate]
             trigger: true
           - put: environment
+            tags: [nimbus]
             resource: pool-7.0-nsxt31-policy
             params: {acquire: true}
             on_failure:
               put: pool-7.0-nsxt31-policy
+              tags: [nimbus]
               params : {release: environment}
 
       - task: prepare-director-policy
+        tags: [nimbus]
         file: source-ci/ci/tasks/prepare-director-policy.yml
         params:
           OPTIONAL_OPS_FILE:  |
@@ -71,8 +86,10 @@ jobs:
             -o certification/shared/assets/ops/remove-provider-cert.yml
       - do:
           - task: deploy-director
+            tags: [nimbus]
             file: source-ci/ci/tasks/deploy-director.yml
           - task: run-bats
+            tags: [nimbus]
             file: source-ci/ci/tasks/run-bats-policy.yml
             params:
               BAT_INFRASTRUCTURE: vsphere
@@ -82,13 +99,16 @@ jobs:
         on_failure:
           in_parallel:
           - put: pool-7.0-nsxt31-policy
+            tags: [nimbus]
             params : {remove: environment}
         on_success:
           put: pool-7.0-nsxt31-policy
+          tags: [nimbus]
           params : {release: environment}
         ensure:
           do:
             - task: teardown
+              tags: [nimbus]
               file: source-ci/ci/tasks/teardown.yml
 
   - name: bats
@@ -96,22 +116,27 @@ jobs:
     plan:
       - in_parallel:
         - get: source-ci
-        - {get: cpi-release,              trigger: true, resource: bosh-cpi-artifacts, passed: [build-candidate]}
-        - {get: bosh-release,             trigger: false, resource: old-bosh-release}
-        - {get: stemcell,                 trigger: false, resource: stemcell}
-        - {get: certification,            trigger: false}
-        - {get: bosh-deployment,          trigger: false}
-        - {get: bats,                     trigger: false}
-        - {get: bosh-cli,                 trigger: false}
+          tags: [nimbus]
+        - {get: cpi-release,              trigger: true, tags: [nimbus], resource: bosh-cpi-artifacts, passed: [build-candidate]}
+        - {get: bosh-release,             trigger: false, tags: [nimbus], resource: old-bosh-release}
+        - {get: stemcell,                 trigger: false, tags: [nimbus], resource: stemcell}
+        - {get: certification,            trigger: false, tags: [nimbus]}
+        - {get: bosh-deployment,          trigger: false, tags: [nimbus]}
+        - {get: bats,                     trigger: false, tags: [nimbus]}
+        - {get: bosh-cli,                 trigger: false, tags: [nimbus]}
         - get: bosh-cpi-src
+          tags: [nimbus]
           passed: [build-candidate]
         - put: environment
+          tags: [nimbus]
           resource: pool-6.5-nsxt25
           params: {acquire: true}
           on_failure:
             put: pool-6.5-nsxt25
+            tags: [nimbus]
             params : {release: environment}
       - task: prepare-director
+        tags: [nimbus]
         file: source-ci/ci/tasks/prepare-director.yml
         params:
           OPTIONAL_OPS_FILE:  |
@@ -120,8 +145,10 @@ jobs:
             -o certification/shared/assets/ops/remove-provider-cert.yml
       - do:
         - task: deploy-director
+          tags: [nimbus]
           file: source-ci/ci/tasks/deploy-director.yml
         - task: run-bats
+          tags: [nimbus]
           file: source-ci/ci/tasks/run-bats.yml
           params:
             BAT_INFRASTRUCTURE: vsphere
@@ -131,13 +158,16 @@ jobs:
         on_failure:
           in_parallel:
           - put: pool-6.5-nsxt25
+            tags: [nimbus]
             params : {remove: environment}
         on_success:
           put: pool-6.5-nsxt25
+          tags: [nimbus]
           params : {release: environment}
         ensure:
           do:
             - task: teardown
+              tags: [nimbus]
               file: source-ci/ci/tasks/teardown.yml
 
   - name: bats-70-cvds
@@ -145,22 +175,27 @@ jobs:
     plan:
       - in_parallel:
           - get: source-ci
-          - {get: cpi-release,              trigger: true, resource: bosh-cpi-artifacts, passed: [build-candidate]}
-          - {get: bosh-release,             trigger: false, resource: old-bosh-release}
-          - {get: stemcell,                 trigger: false}
-          - {get: certification,            trigger: false}
-          - {get: bosh-deployment,          trigger: false}
-          - {get: bats,                     trigger: false}
-          - {get: bosh-cli,                 trigger: false}
+            tags: [nimbus]
+          - {get: cpi-release,              trigger: true, tags: [nimbus], resource: bosh-cpi-artifacts, passed: [build-candidate]}
+          - {get: bosh-release,             trigger: false, tags: [nimbus], resource: old-bosh-release}
+          - {get: stemcell,                 trigger: false, tags: [nimbus]}
+          - {get: certification,            trigger: false, tags: [nimbus]}
+          - {get: bosh-deployment,          trigger: false, tags: [nimbus]}
+          - {get: bats,                     trigger: false, tags: [nimbus]}
+          - {get: bosh-cli,                 trigger: false, tags: [nimbus]}
           - get: bosh-cpi-src
+            tags: [nimbus]
             passed: [build-candidate]
           - put: environment
+            tags: [nimbus]
             resource: pool-7.0-nsxt31-cvds
             params: {acquire: true}
             on_failure:
               put: pool-7.0-nsxt31-cvds
+              tags: [nimbus]
               params : {release: environment}
       - task: prepare-director
+        tags: [nimbus]
         file: source-ci/ci/tasks/prepare-director.yml
         params:
           OPTIONAL_OPS_FILE:  |
@@ -169,8 +204,10 @@ jobs:
             -o certification/shared/assets/ops/remove-provider-cert.yml
       - do:
           - task: deploy-director
+            tags: [nimbus]
             file: source-ci/ci/tasks/deploy-director.yml
           - task: run-bats
+            tags: [nimbus]
             file: source-ci/ci/tasks/run-bats-cvds.yml
             params:
               BAT_INFRASTRUCTURE: vsphere
@@ -180,13 +217,16 @@ jobs:
         on_failure:
           in_parallel:
             - put: pool-7.0-nsxt31-cvds
+              tags: [nimbus]
               params : {remove: environment}
         on_success:
           put: pool-7.0-nsxt31-cvds
+          tags: [nimbus]
           params : {release: environment}
         ensure:
           do:
             - task: teardown
+              tags: [nimbus]
               file: source-ci/ci/tasks/teardown.yml
 
   - name: bats-80-cvds
@@ -194,22 +234,27 @@ jobs:
     plan:
       - in_parallel:
           - get: source-ci
-          - {get: cpi-release,              trigger: true, resource: bosh-cpi-artifacts, passed: [build-candidate]}
-          - {get: bosh-release,             trigger: false, resource: old-bosh-release}
-          - {get: stemcell,                 trigger: false}
-          - {get: certification,            trigger: false}
-          - {get: bosh-deployment,          trigger: false}
-          - {get: bats,                     trigger: false}
-          - {get: bosh-cli,                 trigger: false}
+            tags: [nimbus]
+          - {get: cpi-release,              trigger: true, tags: [nimbus], resource: bosh-cpi-artifacts, passed: [build-candidate]}
+          - {get: bosh-release,             trigger: false, tags: [nimbus], resource: old-bosh-release}
+          - {get: stemcell,                 trigger: false, tags: [nimbus]}
+          - {get: certification,            trigger: false, tags: [nimbus]}
+          - {get: bosh-deployment,          trigger: false, tags: [nimbus]}
+          - {get: bats,                     trigger: false, tags: [nimbus]}
+          - {get: bosh-cli,                 trigger: false, tags: [nimbus]}
           - get: bosh-cpi-src
+            tags: [nimbus]
             passed: [build-candidate]
           - put: environment
+            tags: [nimbus]
             resource: pool-8.0-nsxt40-cvds
             params: {acquire: true}
             on_failure:
               put: pool-8.0-nsxt40-cvds
+              tags: [nimbus]
               params : {release: environment}
       - task: prepare-director
+        tags: [nimbus]
         file: source-ci/ci/tasks/prepare-director.yml
         params:
           OPTIONAL_OPS_FILE:  |
@@ -218,8 +263,10 @@ jobs:
             -o certification/shared/assets/ops/remove-provider-cert.yml
       - do:
           - task: deploy-director
+            tags: [nimbus]
             file: source-ci/ci/tasks/deploy-director.yml
           - task: run-bats
+            tags: [nimbus]
             file: source-ci/ci/tasks/run-bats-cvds.yml
             params:
               BAT_INFRASTRUCTURE: vsphere
@@ -229,13 +276,16 @@ jobs:
         on_failure:
           in_parallel:
             - put: pool-8.0-nsxt40-cvds
+              tags: [nimbus]
               params : {remove: environment}
         on_success:
           put: pool-8.0-nsxt40-cvds
+          tags: [nimbus]
           params : {release: environment}
         ensure:
           do:
             - task: teardown
+              tags: [nimbus]
               file: source-ci/ci/tasks/teardown.yml
 
   - name: inspect-candidate
@@ -243,13 +293,18 @@ jobs:
     plan:
     - in_parallel:
       - get: source-ci
+        tags: [nimbus]
       - get: bosh-cpi-artifacts
+        tags: [nimbus]
         passed: [bats, bats-policy, bats-70-cvds]
       - get: bosh-cpi-src
+        tags: [nimbus]
         passed: [bats, bats-policy, bats-70-cvds]
       - get: release-version-semver
+        tags: [nimbus]
         params: { bump: major }
     - task: inspect
+      tags: [nimbus]
       file: source-ci/ci/tasks/inspect-candidate.yml
 
   - name: promote-candidate
@@ -257,39 +312,54 @@ jobs:
     plan:
     - in_parallel:
       - get: source-ci
+        tags: [nimbus]
       - get: bosh-cpi-artifacts
+        tags: [nimbus]
         passed: [inspect-candidate]
       - get: bosh-cpi-src
+        tags: [nimbus]
         passed: [inspect-candidate]
       - get: release-version-semver
+        tags: [nimbus]
         params: { bump: major }
     - task: promote
+      tags: [nimbus]
       file: source-ci/ci/tasks/promote-candidate.yml
       params:
         AWS_ACCESS_KEY_ID:     ((s3_vsphere_cpi_blobwriter_assume_aws_access_key.username))
         AWS_SECRET_ACCESS_KEY: ((s3_vsphere_cpi_blobwriter_assume_aws_access_key.password))
         AWS_ASSUME_ROLE_ARN: ((s3_vsphere_cpi_blobwriter_assume_aws_access_key.role_arn))
     - put: bosh-cpi-src
+      tags: [nimbus]
       params:
         repository: updated-repo/
         rebase: true
         tag_prefix: v
         tag: integer-version/tag-file
     - put: release-version-semver
+      tags: [nimbus]
       params: { file: release-version-semver/number }
 
   - name: bump-deps
     plan:
     - in_parallel:
       - get: source-ci
+        tags: [nimbus]
       - get: bosh-cpi-src
+        tags: [nimbus]
       - get: golang-release
+        tags: [nimbus]
       - get: ruby-release
+        tags: [nimbus]
       - get: bosh-golang-release-registry-image
+        tags: [nimbus]
       - get: bosh-ruby-release-registry-image
+        tags: [nimbus]
       - get: weekly
+        tags: [nimbus]
         trigger: true
     - task: bump-golang-deps
+      tags: [nimbus]
       image: bosh-golang-release-registry-image
       file: golang-release/ci/tasks/shared/bump-deps.yml
       input_mapping:
@@ -301,6 +371,7 @@ jobs:
         GIT_USER_EMAIL: bots@cloudfoundry.org
         SOURCE_PATH: src/iso9660wrap
     - task: bump-gems
+      tags: [nimbus]
       image: bosh-ruby-release-registry-image
       file: ruby-release/ci/tasks/shared/bump-gems.yml
       input_mapping:
@@ -315,10 +386,13 @@ jobs:
         VENDOR: true
     - in_parallel:
       - task: test-pyvmomi_to_ruby
+        tags: [nimbus]
         file: source-ci/ci/tasks/test-pyvmomi_to_ruby.yml
       - task: unit-test
+        tags: [nimbus]
         file: source-ci/ci/tasks/unit-test.yml
     - put: bosh-cpi-src
+      tags: [nimbus]
       params:
         repository: bosh-cpi-src
         rebase: true
@@ -327,13 +401,19 @@ jobs:
     plan:
     - in_parallel:
       - get: bosh-cpi-src
+        tags: [nimbus]
       - get: golang-release
+        tags: [nimbus]
         trigger: true
       - get: ruby-release
+        tags: [nimbus]
         trigger: true
       - get: bosh-golang-release-registry-image
+        tags: [nimbus]
       - get: bosh-ecosystem-concourse-image
+        tags: [nimbus]
     - task: bump-golang-packages
+      tags: [nimbus]
       image: bosh-golang-release-registry-image
       file: golang-release/ci/tasks/shared/bump-golang-package.yml
       input_mapping:
@@ -350,6 +430,7 @@ jobs:
               secret_access_key: ((s3_vsphere_cpi_blobwriter_assume_aws_access_key.password))
               assume_role_arn: ((s3_vsphere_cpi_blobwriter_assume_aws_access_key.role_arn))
     - task: bump-ruby-package
+      tags: [nimbus]
       image: bosh-ecosystem-concourse-image
       file: ruby-release/ci/tasks/shared/bump-ruby-package.yml
       input_mapping:
@@ -369,12 +450,14 @@ jobs:
               assume_role_arn: ((s3_vsphere_cpi_blobwriter_assume_aws_access_key.role_arn))
         RUBY_VERSION_PATH: .ruby-version
     - put: bosh-cpi-src
+      tags: [nimbus]
       params:
         repository: bosh-cpi-src
         rebase: true
 
 resources:
   - name: pool-6.5-nsxt25
+    tags: [nimbus]
     type: pool
     source:
       uri:          git@gitlab.eng.vmware.com:tas-vcf-vmc-anycloud/vcpi-pool.git
@@ -382,6 +465,7 @@ resources:
       pool:         v6.5-nsxt25
       private_key:  ((vcpi-pool_deployment_key.private_key))
   - name: pool-6.7-nsxt25
+    tags: [nimbus]
     type: pool
     source:
       uri:          git@gitlab.eng.vmware.com:tas-vcf-vmc-anycloud/vcpi-pool.git
@@ -389,6 +473,7 @@ resources:
       pool:         v6.7-nsxt25
       private_key:  ((vcpi-pool_deployment_key.private_key))
   - name: pool-7.0-nsxt30
+    tags: [nimbus]
     type: pool
     source:
       uri:          git@gitlab.eng.vmware.com:tas-vcf-vmc-anycloud/vcpi-pool.git
@@ -396,6 +481,7 @@ resources:
       pool:         v7.0-nsxt30
       private_key:  ((vcpi-pool_deployment_key.private_key))
   - name: pool-7.0-nsxt31
+    tags: [nimbus]
     type: pool
     source:
       uri:          git@gitlab.eng.vmware.com:tas-vcf-vmc-anycloud/vcpi-pool.git
@@ -403,6 +489,7 @@ resources:
       pool:         v7.0-nsxt31
       private_key:  ((vcpi-pool_deployment_key.private_key))
   - name: pool-7.0-nsxt31-policy
+    tags: [nimbus]
     type: pool
     source:
       uri:          git@gitlab.eng.vmware.com:tas-vcf-vmc-anycloud/vcpi-pool.git
@@ -410,6 +497,7 @@ resources:
       pool:         v7.0-nsxt31-policy
       private_key:  ((vcpi-pool_deployment_key.private_key))
   - name: pool-7.0-nsxt31-cvds
+    tags: [nimbus]
     type: pool
     source:
       uri:          git@gitlab.eng.vmware.com:tas-vcf-vmc-anycloud/vcpi-pool.git
@@ -417,6 +505,7 @@ resources:
       pool:         v7.0-nsxt31-cvds
       private_key:  ((vcpi-pool_deployment_key.private_key))
   - name: pool-8.0-nsxt40-cvds
+    tags: [nimbus]
     type: pool
     source:
       uri:          git@gitlab.eng.vmware.com:tas-vcf-vmc-anycloud/vcpi-pool.git
@@ -424,6 +513,7 @@ resources:
       pool:         v8.0-nsxt40-cvds
       private_key:  ((vcpi-pool_deployment_key.private_key))
   - name: bosh-cpi-artifacts
+    tags: [nimbus]
     type: s3
     source:
       regexp:            bosh-vsphere-cpi-([\d\.]+)\.tgz
@@ -432,6 +522,7 @@ resources:
       secret_access_key: ((s3_vsphere_cpi_blobwriter_assume_aws_access_key.password))
       aws_role_arn:      ((s3_vsphere_cpi_blobwriter_assume_aws_access_key.role_arn))
   - name: source-ci
+    tags: [nimbus]
     type: git
     source:
       uri:         git@github.com:cloudfoundry/bosh-vsphere-cpi-release.git
@@ -439,6 +530,7 @@ resources:
       private_key: ((github_deploy_key_bosh-vsphere-cpi-release.private_key))
       paths:       [ci]
   - name: bosh-cpi-src
+    tags: [nimbus]
     type: git
     source:
       uri:         git@github.com:cloudfoundry/bosh-vsphere-cpi-release.git
@@ -450,6 +542,7 @@ resources:
       - .github
       - CONTRIBUTING.md
   - name: version-semver
+    tags: [nimbus]
     type: semver
     source:
       key:               current-version
@@ -458,6 +551,7 @@ resources:
       secret_access_key: ((s3_vsphere_cpi_blobwriter_assume_aws_access_key.password))
       assume_role_arn:   ((s3_vsphere_cpi_blobwriter_assume_aws_access_key.role_arn))
   - name: release-version-semver
+    tags: [nimbus]
     type: semver
     source:
       key:               release-current-version
@@ -466,62 +560,74 @@ resources:
       secret_access_key: ((s3_vsphere_cpi_blobwriter_assume_aws_access_key.password))
       assume_role_arn:   ((s3_vsphere_cpi_blobwriter_assume_aws_access_key.role_arn))
   - name: stemcell
+    tags: [nimbus]
     type: bosh-io-stemcell
     source:
       name: bosh-vsphere-esxi-ubuntu-jammy-go_agent
   - name: bosh-deployment
+    tags: [nimbus]
     type: git
     source:
       uri: https://github.com/cloudfoundry/bosh-deployment
       branch: master
   - name: certification
+    tags: [nimbus]
     type: git
     source:
       uri: https://github.com/cloudfoundry/bosh-cpi-certification
       branch: master
   - name: old-bosh-release
+    tags: [nimbus]
     type: bosh-io-release
     source:
       version: "271.7.0"
       repository: cloudfoundry/bosh
   - name: bosh-cli
+    tags: [nimbus]
     type: s3
     source:
       regexp: bosh-cli-([0-9.]+)-linux-amd64
       bucket: bosh-cli-artifacts
       region_name: us-east-1
   - name: bats
+    tags: [nimbus]
     type: git
     source:
       uri: https://github.com/cloudfoundry/bosh-acceptance-tests.git
       branch: master
   - name: golang-release
+    tags: [nimbus]
     type: git
     source:
       uri: https://github.com/cloudfoundry/bosh-package-golang-release.git
   - name: ruby-release
+    tags: [nimbus]
     type: git
     source:
       uri: https://github.com/cloudfoundry/bosh-package-ruby-release.git
   - name: weekly
+    tags: [nimbus]
     type: time
     source:
       start: 3:00 -0700
       stop: 4:30 -0700
       days: [ Saturday ]
   - name: bosh-golang-release-registry-image
+    tags: [nimbus]
     type: registry-image
     source:
       repository: bosh/golang-release
       username: ((docker.username))
       password: ((docker.password))
   - name: bosh-ruby-release-registry-image
+    tags: [nimbus]
     type: registry-image
     source:
       repository: bosh/ruby-release
       username: ((docker.username))
       password: ((docker.password))
   - name: bosh-ecosystem-concourse-image
+    tags: [nimbus]
     type: registry-image
     source:
       repository: bosh/bosh-ecosystem-concourse
@@ -530,6 +636,7 @@ resources:
 
 resource_types:
 - name: semver
+  tags: [nimbus]
   type: docker-image
   source:
     repository: concourse/semver-resource
