@@ -12,7 +12,7 @@ GIT=(git -C bosh-cpi-src)
 
 # Create an integer version number from the semantic version format. May be
 # changed when we decide to fully use semantic versions for releases.
-integer_version="$(cut -d . -f1 release-version-semver/number)"
+integer_version="$(cut -d . -f1 release-version-semver/version)"
 
 printf '\e[32;01m=== BOSH vSphere CPI release %s ===\e[0m\n' $integer_version
 

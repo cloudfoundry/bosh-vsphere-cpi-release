@@ -13,7 +13,7 @@ artifacts_dir=$(realpath bosh-cpi-artifacts)
 
 # Creates an integer version number from the semantic version format
 # May be changed when we decide to fully use semantic versions for releases
-integer_version="$(cut -d "." -f1 release-version-semver/number)"
+integer_version="$(cut -d "." -f1 release-version-semver/version)"
 echo $integer_version > integer-version/tag-file
 
 # copy the input release repository into its output location
