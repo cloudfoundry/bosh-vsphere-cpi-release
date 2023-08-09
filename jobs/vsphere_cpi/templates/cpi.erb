@@ -20,10 +20,6 @@ export NO_PROXY="<%= no_proxy %>"
 export no_proxy="<%= no_proxy %>"
 <% end %>
 
-<% if !p('vcenter.nsxt.ca_cert', false) %>
-  export NSXT_SKIP_SSL_VERIFY=true
-<% end %>
-
 export PATH=$BOSH_PACKAGES_DIR/ruby-3.1/bin:$BOSH_PACKAGES_DIR/iso9660wrap/bin:$PATH
 
 export BUNDLE_GEMFILE=$BOSH_PACKAGES_DIR/vsphere_cpi/Gemfile

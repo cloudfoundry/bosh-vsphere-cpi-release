@@ -1,17 +1,17 @@
 module VSphereCloud
   class NsxHttpClient < BaseHttpClient
     def initialize(user, password, ca_cert_file, http_log = nil)
-      unless ENV['NSXT_SKIP_SSL_VERIFY'] then
+      if ca_cert_file.nil?
+        super(
+          http_log: http_log,
+          skip_ssl_verify: true
+        )
+      else
         super(
           http_log: http_log,
           trusted_ca_file: ca_cert_file,
           ca_cert_manifest_key: 'vcenter.nsx.ca_cert',
           skip_ssl_verify: false
-        )
-      else
-        super(
-          http_log: http_log,
-          skip_ssl_verify: true
         )
       end
 

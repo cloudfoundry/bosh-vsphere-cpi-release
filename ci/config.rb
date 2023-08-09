@@ -7,7 +7,6 @@ $pipeline.pool('6.5-nsxt25') do |pool|
       '--tag ~host_maintenance',
       '--tag ~nsxt_policy',
     ].join(' '),
-    NSXT_SKIP_SSL_VERIFY: "true"
   }
 end
 
@@ -19,7 +18,6 @@ $pipeline.pool('6.7-nsxt25') do |pool|
       '--tag ~host_maintenance',
       '--tag ~nsxt_policy',
     ].join(' '),
-    NSXT_SKIP_SSL_VERIFY: "true"
   }
 end
 
@@ -51,7 +49,6 @@ $pipeline.pool('7.0-nsxt31-cvds') do |pool|
       '--tag nsxt_all',
       '--tag vsphere_networking',
     ].join(' '),
-    NSXT_SKIP_SSL_VERIFY: "true",
   }
 end
 

@@ -24,8 +24,7 @@ describe 'CPI', nsxt_all: true do
 
     if ENV['BOSH_NSXT_CA_CERT_FILE']
       configuration.ssl_ca_cert = ENV['BOSH_NSXT_CA_CERT_FILE']
-    end
-    if ENV['NSXT_SKIP_SSL_VERIFY']
+    else
       configuration.verify_ssl = false
       configuration.verify_ssl_host = false
     end
@@ -48,8 +47,7 @@ describe 'CPI', nsxt_all: true do
     policy_configuration.client_side_validation = false
     if ENV['BOSH_NSXT_CA_CERT_FILE']
       policy_configuration.ssl_ca_cert = ENV['BOSH_NSXT_CA_CERT_FILE']
-    end
-    if ENV['NSXT_SKIP_SSL_VERIFY']
+    else
       policy_configuration.verify_ssl = false
       policy_configuration.verify_ssl_host = false
     end
