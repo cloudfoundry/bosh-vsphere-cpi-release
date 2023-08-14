@@ -24,7 +24,7 @@ proc {
 }.call if ENV["BOSH_VSPHERE_CPI_HOST"]
 
 # set $vc_version for unit tests
-$vc_version = '6.5' if $vc_version.nil?
+$vc_version = '7.0' if $vc_version.nil?
 
 require 'cloud/vsphere'
 require 'base64'

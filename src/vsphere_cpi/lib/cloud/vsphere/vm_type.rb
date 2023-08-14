@@ -14,10 +14,29 @@ module VSphereCloud
       @pbm = pbm
     end
 
-    %w[cpu ram disk cpu_hot_add_enabled memory_hot_add_enabled nsx vmx_options vgpus
-       nsxt memory_reservation_locked_to_max nested_hardware_virtualization
-       upgrade_hw_version datacenters vm_group disable_drs storage_policy tags].each do |name|
-      define_method(name) { @cloud_properties[name] }
+    CLOUD_PROPERTIES_HASH_PROXY_METHODS = %w[
+      cpu
+      cpu_hot_add_enabled
+      datacenters
+      disable_drs
+      disk
+      memory_hot_add_enabled
+      memory_reservation_locked_to_max
+      nested_hardware_virtualization
+      nsx
+      nsxt
+      pci_passthroughs
+      ram
+      storage_policy
+      tags
+      upgrade_hw_version
+      vgpus
+      vm_group
+      vmx_options
+    ]
+
+    CLOUD_PROPERTIES_HASH_PROXY_METHODS.each do |method_name|
+      define_method(method_name) { @cloud_properties[method_name] }
     end
 
     def storage_list
