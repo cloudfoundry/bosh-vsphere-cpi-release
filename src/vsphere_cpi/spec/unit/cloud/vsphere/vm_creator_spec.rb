@@ -114,6 +114,7 @@ module VSphereCloud
       allow(service_content).to receive_message_chain(:extension_manager, :find_extension).and_return(false)
       allow(vm_config).to receive(:vsphere_networks).and_return([])
       allow_any_instance_of(Resources::VM).to receive(:nics).and_return([])
+      allow_any_instance_of(Resources::VM).to receive(:pci_passthroughs).and_return([])
       allow_any_instance_of(Resources::VM).to receive(:vgpus).and_return([])
       allow_any_instance_of(Resources::VM).to receive(:fix_device_unit_numbers).and_return(nil)
       allow_any_instance_of(Resources::VM).to receive(:fix_device_key).and_return(nil)
@@ -137,6 +138,8 @@ module VSphereCloud
       allow(subject).to receive(:add_vm_to_vm_group).and_return(nil)
       allow(subject).to receive(:apply_storage_policy).and_return(nil)
       allow(vm_config).to receive(:upgrade_hw_version?).and_return(false)
+      allow_any_instance_of(Resources::VM).to receive(:power_on).and_raise(VSphereCloud::VCenterClient::GenericVmConfigFault)
+      allow(cpi).to receive(:delete_vm)
     end
     let(:vm_config) { instance_double(VmConfig,
                                       name: 'norbo',
@@ -148,6 +151,7 @@ module VSphereCloud
                                       config_spec_params: {},
                                       networks_spec: {},
                                       ephemeral_disk_size: 1024,
+                                      pci_passthroughs: [],
                                       vgpus: [],
 
                                       cluster_placements: [
@@ -161,6 +165,7 @@ module VSphereCloud
 
                                      )
     }
+
     context 'with vGPU devices' do
       before do
         allow(vm_config).to receive(:validate_drs_rules).and_return(true)
@@ -173,6 +178,26 @@ module VSphereCloud
         expect(client).to receive(:upgrade_vm_virtual_hardware).with(cloned_vm_mob)
         expect(client).to receive(:reconfig_vm).with(cloned_vm_mob, anything)
         subject.create(vm_config)
+      end
+    end
+
+    context 'with PCI passthrough devices' do
+      before do
+        allow(vm_config).to receive(:validate_drs_rules).and_return(true)
+        allow(vm_config).to receive(:pci_passthroughs).and_return([{
+          'vendor_id' => '1234',
+          'device_id' => 'abcd',
+        }])
+        allow_any_instance_of(Resources::VM).to receive(:power_on)
+      end
+      it 'reconfigures the VM with the PCI passthrough device' do
+        # because of the setup we will still fail with the same error on the 2nd attempt, but we know there is a 2nd attempt..
+        expect(Resources::PCIPassthrough).to receive(:create_pci_passthrough)
+                                                      .with(vendor_id: '1234', device_id: 'abcd').and_return(nil)
+        expect(client).to receive(:upgrade_vm_virtual_hardware).with(cloned_vm_mob)
+        expect(client).to receive(:reconfig_vm).with(cloned_vm_mob, anything)
+        subject.create(vm_config)
+        # expect{subject.create(vm_config)}.not_to raise_exception
       end
     end
 
@@ -211,6 +236,7 @@ module VSphereCloud
                                           config_spec_params: {},
                                           networks_spec: {},
                                           ephemeral_disk_size: 1024,
+                                          pci_passthroughs: [],
                                           vgpus: [],
 
                                           cluster_placements: [

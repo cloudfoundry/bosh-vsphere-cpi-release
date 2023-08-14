@@ -72,6 +72,10 @@ module VSphereCloud
       @manifest_params[:agent_env]
     end
 
+    def pci_passthroughs
+      vm_type.pci_passthroughs || []
+    end
+
     def storage_policy_name
       @manifest_params[:storage_policy]
     end

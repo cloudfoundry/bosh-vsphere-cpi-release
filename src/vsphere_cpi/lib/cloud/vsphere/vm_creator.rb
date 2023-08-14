@@ -213,14 +213,18 @@ module VSphereCloud
 
             begin
               # Upgrade to latest virtual hardware version
-              # We decide to upgrade hardware version on basis of three params
+              # We decide to upgrade hardware version on basis of four params
               # 1. vm_type specification of upgrade hardware flag and
               # 2. Global upgrade hardware flag @upgrade_hw_version
-              # 3. vm_type of vgpus has entries (>1 vgpu requires upgraded hw)
+              # 3. vm_config of vgpus has entries (>1 vgpu requires upgraded hw)
+              # 4. vm_config of pci_passthroughs has entries
               if vm_config.upgrade_hw_version?(vm_config.vm_type.upgrade_hw_version, @upgrade_hw_version)
                 created_vm.upgrade_vm_virtual_hardware
               end
               unless vm_config.vgpus.empty?
+                created_vm.upgrade_vm_virtual_hardware
+              end
+              unless vm_config.pci_passthroughs.empty?
                 created_vm.upgrade_vm_virtual_hardware
               end
             rescue VSphereCloud::VCenterClient::AlreadyUpgraded
@@ -235,6 +239,18 @@ module VSphereCloud
                 vgpu = Resources::PCIPassthrough.create_vgpu(vgpu)
                 vgpu_config = Resources::VM.create_add_device_spec(vgpu)
                 config_spec.device_change << vgpu_config
+              end
+              @client.reconfig_vm(created_vm_mob, config_spec)
+            end
+            unless vm_config.pci_passthroughs.empty?
+              config_spec = VimSdk::Vim::Vm::ConfigSpec.new
+              config_spec.device_change = []
+              vm_config.pci_passthroughs.each do |pci_passthrough|
+                virtual_pci_passthrough = Resources::PCIPassthrough.create_pci_passthrough(
+                  vendor_id: pci_passthrough['vendor_id'],
+                  device_id: pci_passthrough['device_id'],
+                )
+                config_spec.device_change << Resources::VM.create_add_device_spec(virtual_pci_passthrough)
               end
               @client.reconfig_vm(created_vm_mob, config_spec)
             end

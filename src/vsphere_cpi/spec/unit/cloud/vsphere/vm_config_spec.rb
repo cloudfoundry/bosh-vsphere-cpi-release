@@ -304,6 +304,18 @@ module VSphereCloud
       end
     end
 
+    describe '#pci_passthroughs' do
+      let(:cloud_properties) { { 'pci_passthroughs' => [
+        { 'vendor_id' => '0x10de',
+          'device_id' => '0x1eb8',
+        }
+      ] } }
+      let(:input) { { vm_type: vm_type } }
+      it 'returns the provided PCI passthroughs' do
+        expect(vm_config.pci_passthroughs).to eq([{'device_id'=>'0x1eb8', 'vendor_id'=>'0x10de'}])
+      end
+    end
+
     describe '#cluster_placements' do
       let(:datastore_mob) { instance_double('VimSdk::Vim::Datastore') }
       let(:cluster_provider) { instance_double(VSphereCloud::Resources::ClusterProvider) }
