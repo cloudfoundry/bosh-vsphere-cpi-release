@@ -11,10 +11,8 @@ source bosh-cpi-src/.envrc
 
 artifacts_dir=$(realpath bosh-cpi-artifacts)
 
-# Creates an integer version number from the semantic version format
-# May be changed when we decide to fully use semantic versions for releases
-integer_version="$(cut -d "." -f1 release-version-semver/version)"
-echo $integer_version > integer-version/tag-file
+version="$(cat release-version-semver/version)"
+echo "v${version}" > final-release-tag/tag
 
 # copy the input release repository into its output location
 cp -a bosh-cpi-src/. updated-repo/
@@ -32,7 +30,7 @@ blobstore:
 EOF
 
   echo "finalizing CPI release..."
-  bosh finalize-release ${artifacts_dir}/*.tgz --version $integer_version
+  bosh finalize-release ${artifacts_dir}/*.tgz --version $version
 
   rm config/private.yml
 
@@ -41,5 +39,5 @@ EOF
 
   git config --global user.email cf-bosh-eng@pivotal.io
   git config --global user.name CI
-  git commit -m ":airplane: New final release v $integer_version"
+  git commit -m ":airplane: New final release v $version"
 popd

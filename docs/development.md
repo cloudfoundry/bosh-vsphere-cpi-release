@@ -93,20 +93,10 @@ bundle exec rake swagger:nsxt_manager_client
 
 ## Cutting New Releases
 
-The vSphere CPI currently only uses major releases. (Older versions of the CPI had patch or minor release versions, but we no longer support this in our tooling.)
+To cut a new release, once everything has passed the `pre-release-fan-in` job:
 
-To cut a major release, once everything has passed:
-
-* trigger **[inspect-candidate](https://ci.bosh-ecosystem.cf-app.com/teams/vsphere-cpi/pipelines/vsphere-cpi/jobs/inspect-candidate)** (This reports the version and last commit. It doesn’t change anything until you “promote.”)
-* trigger **[promote-candidate](https://ci.bosh-ecosystem.cf-app.com/teams/vsphere-cpi/pipelines/vsphere-cpi/jobs/promote-candidate)**
-* go to [https://github.com/cloudfoundry/bosh-vsphere-cpi-release/releases](https://github.com/cloudfoundry/bosh-vsphere-cpi-release/releases)
-* click “Draft a New Release”
-  * Tag, e.g. “v61”
-  * Release Title: e.g. v61
-  * Description:
-
-        **[Bug Fix]** Example example example.
-        
-        **[Feature Enhancement]** Example example example.
-        
-        **[Feature]** Example example example.
+* Decide whether to cut a major, minor, or patch release depending on the changes.
+* Trigger the corresponding `release-new-<VERSION>` job to bump the version. For example, for major jobs, trigger **[release-new-major](https://ci.bosh-ecosystem.cf-app.com/teams/vsphere-cpi/pipelines/vsphere-cpi/jobs/release-new-major)**.
+* The **[promote-candidate](https://ci.bosh-ecosystem.cf-app.com/teams/vsphere-cpi/pipelines/vsphere-cpi/jobs/promote-candidate)** job will automatically trigger based on the new version. This will finalize the release and publish a release on GitHub.
+* Go to [https://github.com/cloudfoundry/bosh-vsphere-cpi-release/releases](https://github.com/cloudfoundry/bosh-vsphere-cpi-release/releases)
+* Edit the automatically generated release to add any details not included in the auto-generated release notes.

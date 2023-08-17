@@ -11,7 +11,7 @@ inputs:
 
 outputs:
   - name: updated-repo
-  - name: integer-version
+  - name: final-release-tag
 
 run:
   path: source-ci/ci/tasks/promote-candidate.sh
