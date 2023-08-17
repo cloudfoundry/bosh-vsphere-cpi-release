@@ -154,7 +154,7 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
       end
     end
 
-    context 'when there are criterias w/ 500 and 200 vms respectively' do
+    context 'when there are criteria w/ 500 and 200 vms respectively' do
       let(:existing_external_ids_500) do
         external_ids = []
         500.times do |i|
@@ -190,7 +190,7 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
       end
     end
 
-    context 'when two of the criterias in a group has 500 vms' do
+    context 'when two of the criteria in a group has 500 vms' do
       let(:existing_external_ids_500_1) do
         external_ids = []
         500.times do |i|
@@ -274,6 +274,24 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
       it 'does not add it' do
         expect(policy_group_api).to_not receive(:update_group_for_domain)
         nsxt_policy_provider.add_vm_to_groups(vm, [group_1])
+      end
+    end
+
+    context "when finding the VM by external id fails because NSXT does not yet see it" do
+      before do
+        allow(policy_infra_realized_state_api).to receive(:list_virtual_machines_on_enforcement_point).and_return(
+          instance_double(NSXTPolicy::SearchResponse, results: []),
+          instance_double(NSXTPolicy::SearchResponse, results: []),
+          instance_double(NSXTPolicy::SearchResponse, results: [{external_id: 'some-vm-external-id'}])
+        )
+      end
+
+      it "should retry the find" do
+        allow(policy_group_api).to receive(:update_group_for_domain)
+
+        nsxt_policy_provider.add_vm_to_groups(vm, [group_1])
+
+        expect(policy_group_api).to have_received(:update_group_for_domain)
       end
     end
   end

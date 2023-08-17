@@ -342,13 +342,21 @@ module VSphereCloud
     end
 
     def get_vm_external_id(vm_cid)
-      search_results = policy_infra_realized_state_api.list_virtual_machines_on_enforcement_point(DEFAULT_NSXT_POLICY_DOMAIN, {query: "display_name:#{vm_cid}"}).results
-      # API can return several results of the VM with the same external_id and different power_state
+      search_results = []
+      Bosh::Retryable.new(
+        tries: 10,
+        sleep: ->(_, _) { 1 }
+      ).retryer do |_|
+        search_results = policy_infra_realized_state_api.list_virtual_machines_on_enforcement_point(DEFAULT_NSXT_POLICY_DOMAIN, {query: "display_name:#{vm_cid}"}).results
+        search_results.length > 0
+      end
+
       if search_results.length < 1
         err_msg = "Failed to find vm in realized state with cid: #{vm_cid}"
         logger.info(err_msg)
         raise err_msg
       end
+      # API can return several results of the VM with the same external_id and different power_state
       search_results[0][:external_id]
     end
 
