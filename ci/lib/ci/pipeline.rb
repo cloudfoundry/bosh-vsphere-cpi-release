@@ -34,7 +34,7 @@ class Pipeline
   def render(name = 'main', **kwargs)
     require 'erb'
     file = File.join('pipeline', "#{name}.yml.erb")
-    erb = ERB.new(File.read(file), nil, '-')
+    erb = ERB.new(File.read(file), trim_mode: '-')
     erb.filename = file.to_s
     erb.result(binding.tap do |b|
       kwargs.each { |k, v| b.local_variable_set(k, v) }
