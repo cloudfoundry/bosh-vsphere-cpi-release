@@ -53,7 +53,7 @@ cpi_lambda = lambda do |context, _|
   cloud_properties['soap_log'] = soap_log
 
   if cloud_properties['vcenters'][0].fetch('connection_options', {}).fetch('ca_cert', nil)
-    temp = Tempfile.create('vsphere-cpi-vcenter-ca')
+    temp = Tempfile.new('vsphere-cpi-vcenter-ca')
     temp.write(cloud_properties['vcenters'][0]['connection_options']['ca_cert'])
 
     temp_certificate_files_to_clean_up << temp
@@ -61,7 +61,7 @@ cpi_lambda = lambda do |context, _|
   end
 
   if cloud_properties['vcenters'][0].fetch('nsx', {}).fetch('ca_cert', nil)
-    temp = Tempfile.create('vsphere-cpi-nsx-ca')
+    temp = Tempfile.new('vsphere-cpi-nsx-ca')
     temp.write(cloud_properties['vcenters'][0]['nsx']['ca_cert'])
 
     temp_certificate_files_to_clean_up << temp
@@ -69,7 +69,7 @@ cpi_lambda = lambda do |context, _|
   end
 
   if cloud_properties['vcenters'][0].fetch('nsxt', {}).fetch('ca_cert', nil)
-    temp = Tempfile.create('vsphere-cpi-nsxt-ca')
+    temp = Tempfile.new('vsphere-cpi-nsxt-ca')
     temp.write(cloud_properties['vcenters'][0]['nsxt']['ca_cert'])
 
     temp_certificate_files_to_clean_up << temp
