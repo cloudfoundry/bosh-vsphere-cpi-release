@@ -34,14 +34,13 @@ end
 soap_log = StringIO.new
 
 cpi_rpc_api_request_raw = ARGF.read
+temp_certificate_files_to_clean_up = []
 
 #cpi_lambda now requires 2 arguments context, cpi_api_version
 cpi_lambda = lambda do |context, _|
   unless cpi_config.has_key?('cloud') && cpi_config['cloud'].has_key?('properties')
     raise "Could not find cloud properties in the configuration"
   end
-
-  temp_certificate_files_to_clean_up = []
 
   cloud_properties = cpi_config['cloud']['properties']
 
@@ -92,13 +91,15 @@ cpi_lambda = lambda do |context, _|
   rescue JSON::ParserError
     require 'cloud/vsphere'
     Bosh::Clouds::VSphere.new(cloud_properties)
-  ensure
-    temp_certificate_files_to_clean_up.each do |temp_file|
-      temp_file.unlink
-    end
   end
 end
 
-cli = Bosh::Cpi::Cli.new(cpi_lambda, soap_log, STDOUT)
+begin
+  cli = Bosh::Cpi::Cli.new(cpi_lambda, soap_log, STDOUT)
 
-cli.run(cpi_rpc_api_request_raw)
+  cli.run(cpi_rpc_api_request_raw)
+ensure
+  temp_certificate_files_to_clean_up.each do |temp_file|
+    temp_file.unlink
+  end
+end
