@@ -31,7 +31,7 @@ jobs:
         tags: [nimbus]
         file: source-ci/ci/tasks/build-candidate.yml
         output_mapping:
-          cpi-release: dev-artifacts
+          dev-artifacts: cpi-release
       - task: prepare-director-policy
         tags: [nimbus]
         file: source-ci/ci/tasks/prepare-director-policy.yml

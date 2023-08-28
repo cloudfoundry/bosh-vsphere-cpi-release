@@ -10,3 +10,5 @@ bosh create-release \
   --name bosh-vsphere-cpi \
   --version "$semver" \
   --tarball "dev-artifacts/bosh-vsphere-cpi-$semver.tgz"
+
+echo "$semver" > dev-artifacts/version
