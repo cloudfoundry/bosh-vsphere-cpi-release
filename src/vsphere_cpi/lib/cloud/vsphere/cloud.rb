@@ -76,6 +76,8 @@ module VSphereCloud
         Logger.logger.set_request_id(request_id)
       end
 
+      logger.info(JSON.dump(options))
+
       @http_client = VSphereCloud::CpiHttpClient.new(connection_options: @config.vcenter_connection_options, http_log: @config.soap_log)
 
       @client = VCenterClient.new(

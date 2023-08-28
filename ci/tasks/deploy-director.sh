@@ -23,6 +23,7 @@ cp stemcell/*.tgz director-state/stemcell/
 cp bosh-release/*.tgz director-state/bosh-release/
 cp cpi-release/*.tgz director-state/cpi-release/
 
+export BOSH_LOG_LEVEL=debug
 export BOSH_LOG_PATH="$(mktemp /tmp/bosh-cli-log.XXXXXX)"
 
 finish() {
