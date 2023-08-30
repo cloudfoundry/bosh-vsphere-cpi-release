@@ -3,12 +3,11 @@
 # docker buildx build --platform=linux/arm64,linux/amd64 --load -t bosh/vsphere-vcpi .
 # docker run -it --rm bosh/vsphere-vcpi
 
-FROM harbor-repo.vmware.com/dockerhub-proxy-cache/library/ubuntu:22.04
+FROM harbor-repo.vmware.com/dockerhub-proxy-cache/bosh/golang-release
 
 LABEL org.opencontainers.image.authors="bosh-ecosystem@groups.vmware.com"
 
 ENV BOSH_VERSION=7.2.3
-ENV GOLANG_VERSION=1.20.4
 ENV LANG=C.UTF-8
 ENV RUBY_INSTALL_VERSION=0.9.0
 
@@ -49,20 +48,6 @@ RUN apt-get update && \
   -c --system ruby "$(cat /tmp/.ruby-version)" -- --disable-install-doc && \
   rm -rf /var/lib/apt/lists/* && \
   gem install bundler --no-document
-
-# Golang
-RUN cd /tmp && \
-  wget -nv https://storage.googleapis.com/golang/go${GOLANG_VERSION}.linux-${TARGETARCH}.tar.gz && \
-  ( \
-  echo "$(wget -O- https://storage.googleapis.com/golang/go${GOLANG_VERSION}.linux-${TARGETARCH}.tar.gz.sha256) go${GOLANG_VERSION}.linux-${TARGETARCH}.tar.gz" | \
-  sha256sum -c - \
-  ) && \
-  tar -C /usr/local -xzf go*.tar.gz && \
-  rm go*.tar.gz
-
-RUN mkdir -p /opt/go
-ENV GOPATH /opt/go
-ENV PATH /usr/local/go/bin:/opt/go/bin:$PATH
 
 # BOSH CLI
 RUN cd /tmp && \

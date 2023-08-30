@@ -7,10 +7,12 @@ jobs:
   - get: source-ci-trigger
     tags: [nimbus]
     trigger: true
-  - get: ubuntu-base-image
+  - get: bosh-golang-release-image
     tags: [nimbus]
     trigger: true
-  - config:
+  - task: build
+    tags: [nimbus]
+    config:
       image_resource:
         source:
           repository: harbor-repo.vmware.com/dockerhub-proxy-cache/concourse/oci-build-task
@@ -28,12 +30,10 @@ jobs:
       run:
         path: build
     privileged: true
-    task: build
+  - put: vcpi-main-image
     tags: [nimbus]
-  - params:
+    params:
       image: image/image
-    put: vcpi-main-image
-    tags: [nimbus]
 resources:
 - name: source-ci
   tags: [nimbus]
@@ -54,13 +54,6 @@ resources:
     uri: git@github.com:cloudfoundry/bosh-vsphere-cpi-release.git
   type: git
   check_every: 1h
-- name: ubuntu-base-image
-  tags: [nimbus]
-  source:
-    repository: harbor-repo.vmware.com/dockerhub-proxy-cache/library/ubuntu
-    tag: 22.04
-  type: registry-image
-  check_every: 1h
 - name: vcpi-main-image
   tags: [nimbus]
   source:
@@ -70,3 +63,8 @@ resources:
     password: ((docker.password))
   type: registry-image
   check_every: never
+- name: bosh-golang-release-image
+  tags: [nimbus]
+  type: registry-image
+  source:
+    repository: harbor-repo.vmware.com/dockerhub-proxy-cache/bosh/golang-release
