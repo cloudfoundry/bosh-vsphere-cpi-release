@@ -60,10 +60,5 @@ RUN  echo "" | SHELL=/usr/bin/zsh zsh -c "$(curl -fsSL https://raw.github.com/oh
   sed -i 's/robbyrussell/agnoster/' ~/.zshrc; \
   echo 'export EDITOR=nvim' >> ~/.zshrc
 
-RUN GOBIN=/usr/local/go/bin \
-  /usr/local/go/bin/go install github.com/onsi/ginkgo/v2/ginkgo@latest; \
-  /usr/local/go/bin/go install github.com/onsi/ginkgo/v2@latest; \
-  /usr/local/go/bin/go install github.com/onsi/gomega/...@latest
-
 # `zsh` is the hot new shell
 CMD [ "/usr/bin/zsh" ]

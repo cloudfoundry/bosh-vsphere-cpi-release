@@ -24,7 +24,7 @@ jobs:
       params:
         CONTEXT: source-ci/
         DOCKERFILE: source-ci/ci/docker/Dockerfile
-        IMAGE_PLATFORM: linux/arm64,linux/amd64
+        IMAGE_PLATFORM: linux/amd64
         OUTPUT_OCI: true
       platform: linux
       run:
