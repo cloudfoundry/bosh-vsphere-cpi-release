@@ -67,4 +67,6 @@ resources:
   tags: [nimbus]
   type: registry-image
   source:
-    repository: harbor-repo.vmware.com/dockerhub-proxy-cache/bosh/golang-release
+    repository: bosh/golang-release
+    username: ((docker.username))
+    password: ((docker.password))
