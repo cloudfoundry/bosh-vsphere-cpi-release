@@ -8,6 +8,8 @@
         tags: [nimbus]
         trigger: true
         passed: [unit-test]
+      - get: vcpi-main-image
+        tags: [nimbus]
       - get: stemcell
         tags: [nimbus]
       - put: environment
@@ -20,6 +22,7 @@
     - task: test
       tags: [nimbus]
       file: source-ci/ci/tasks/run-lifecycle.yml
+      image: vcpi-main-image
       privileged: true
       params:
 <% pool.params.each do |k, v| -%>

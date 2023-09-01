@@ -793,7 +793,14 @@ resources:
       owner: cloudfoundry
       repository: bosh-vsphere-cpi-release
       access_token: ((github_public_repo_token))
-
+  - name: vcpi-main-image
+    tags: [nimbus]
+    source:
+      repository: bosh/vsphere-vcpi
+      tag: latest
+      username: ((docker.username))
+      password: ((docker.password))
+    type: registry-image
 
 
 resource_types:
