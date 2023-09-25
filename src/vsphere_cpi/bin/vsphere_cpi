@@ -102,7 +102,5 @@ begin
 
   cli.run(cpi_rpc_api_request_raw)
 ensure
-  temp_certificate_files_to_clean_up.each do |temp_file|
-    temp_file.unlink
-  end
+  temp_certificate_files_to_clean_up.each(&:unlink)
 end
