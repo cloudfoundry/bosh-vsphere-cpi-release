@@ -13,6 +13,7 @@ module VSphereCloud
       @backing_client.receive_timeout = 14400
       @backing_client.connect_timeout = 60
       @backing_client.tcp_keepalive = true
+      @backing_client.transparent_gzip_decompression = true #The 'httpclient' gem doesn't handle gzip-compressed responses by default.
       @ca_cert_manifest_key = ca_cert_manifest_key
       @log_filter = VSphereCloud::SdkHelpers::LogFilter.new
 

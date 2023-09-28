@@ -18,7 +18,6 @@ module VimSdk
       def invoke_method(managed_object, method_info, arguments, outer_stub = nil)
         outer_stub = self if outer_stub.nil?
         headers = {'SOAPAction' => @version_id,
-                   'Accept-Encoding' => 'gzip, deflate',
                    'Content-Type' => "text/xml; charset=#{XML_ENCODING}"}
 
         request = serialize_request(managed_object, method_info, arguments)
