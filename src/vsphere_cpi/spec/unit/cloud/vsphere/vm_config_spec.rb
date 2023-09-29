@@ -596,7 +596,7 @@ module VSphereCloud
           expect(vm_config.config_spec_params).to eq(output)
         end
 
-        context 'but the VM has vgpus' do
+        context 'the VM has vgpus' do
           let(:cloud_properties) do
             {
               'memory_reservation_locked_to_max' => false,
@@ -609,6 +609,21 @@ module VSphereCloud
             expect(vm_config.config_spec_params).to eq(output)
           end
         end
+
+        context 'the VM has pci_passthroughs' do
+          let(:cloud_properties) do
+            {
+              'memory_reservation_locked_to_max' => false,
+              'pci_passthroughs' => [{'vendor_id' => 0x1, 'device_id' => 0x2}],
+            }
+          end
+          let(:output) { { memory_reservation_locked_to_max: true } }
+
+          it 'overrides memory_reservation_locked_to_max, setting it to true' do
+            expect(vm_config.config_spec_params).to eq(output)
+          end
+        end
+
       end
 
       context 'when memory_reservation_locked_to_max is true' do
