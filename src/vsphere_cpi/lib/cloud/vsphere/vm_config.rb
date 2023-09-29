@@ -238,6 +238,9 @@ module VSphereCloud
       if vgpus.size > 0
         return true
       end
+      if pci_passthroughs.size > 0
+        return true
+      end
       false
     end
   end
