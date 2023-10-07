@@ -19,7 +19,7 @@ GEM
     ethon (0.16.0)
       ffi (>= 1.15.0)
     fakefs (2.5.0)
-    ffi (1.16.2)
+    ffi (1.16.3)
     httpclient (2.8.3)
     little-plugger (1.1.4)
     logging (1.8.2)
