@@ -34,6 +34,8 @@ jobs:
         - lifecycle-7.0-nsxt31
         - lifecycle-7.0-nsxt31-cvds
         - lifecycle-8.0-nsxt40-cvds
+        - lifecycle-8.0-nsxt41-cvds
+        - lifecycle-8.pre-release-nsxt41-cvds
       - get: version-semver
         tags: [nimbus]
         trigger: false
@@ -650,6 +652,22 @@ resources:
       uri:          git@gitlab.eng.vmware.com:tas-vcf-vmc-anycloud/vcpi-pool.git
       branch:       master
       pool:         v8.0-nsxt40-cvds
+      private_key:  ((vcpi-pool_deployment_key.private_key))
+  - name: pool-8.0-nsxt41-cvds
+    tags: [nimbus]
+    type: pool
+    source:
+      uri:          git@gitlab.eng.vmware.com:tas-vcf-vmc-anycloud/vcpi-pool.git
+      branch:       master
+      pool:         v8.0-nsxt41-cvds
+      private_key:  ((vcpi-pool_deployment_key.private_key))
+  - name: pool-8.pre-release-nsxt41-cvds
+    tags: [nimbus]
+    type: pool
+    source:
+      uri:          git@gitlab.eng.vmware.com:tas-vcf-vmc-anycloud/vcpi-pool.git
+      branch:       master
+      pool:         v8.pre-release-nsxt41-cvds
       private_key:  ((vcpi-pool_deployment_key.private_key))
   - name: bosh-cpi-artifacts
     tags: [nimbus]
