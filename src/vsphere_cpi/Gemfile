@@ -21,10 +21,10 @@ group :development, :test do
   gem 'parallel_tests'
   gem 'pry'
   gem 'pry-byebug'
-  gem 'rack',      '~> 2.2.3'
-  gem 'rake',      '~> 13.0'
+  gem 'rack'
+  gem 'rake'
   gem 'rspec'
   gem 'rspec-its'
   gem 'simplecov', require: false
-  gem 'timecop',   '~>0.9.1'
+  gem 'timecop'
 end
