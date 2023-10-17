@@ -1,4 +1,4 @@
-require 'rack'
+require 'rackup'
 require 'webrick'
 require 'webrick/https'
 
