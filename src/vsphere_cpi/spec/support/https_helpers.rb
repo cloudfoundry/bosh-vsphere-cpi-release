@@ -101,7 +101,7 @@ module Support
             SSLCertificate: OpenSSL::X509::Certificate.new(File.open(cert_chain.path).read),
           }
 
-          Rack::Handler::WEBrick.run(Rack::Builder.new {
+          Rackup::Handler::WEBrick.run(Rack::Builder.new {
             map '/download' do
               run lambda { |env|
                 response = Rack::Response.new
