@@ -54,10 +54,7 @@ GEM
       pry (>= 0.13, < 0.15)
     public_suffix (5.0.3)
     racc (1.7.1)
-    rack (3.0.8)
-    rackup (2.1.0)
-      rack (>= 3)
-      webrick (~> 1.8)
+    rack (2.2.8)
     rake (13.0.6)
     rspec (3.12.0)
       rspec-core (~> 3.12.0)
@@ -116,7 +113,7 @@ DEPENDENCIES
   parallel_tests
   pry
   pry-byebug
-  rackup
+  rack (< 3.0)
   rake
   rspec
   rspec-its

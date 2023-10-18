@@ -1,4 +1,4 @@
-require 'rackup'
+require 'rack'
 require 'webrick'
 require 'webrick/https'
 
@@ -101,7 +101,7 @@ module Support
             SSLCertificate: OpenSSL::X509::Certificate.new(File.open(cert_chain.path).read),
           }
 
-          Rackup::Handler::WEBrick.run(Rack::Builder.new {
+          Rack::Handler::WEBrick.run(Rack::Builder.new {
             map '/download' do
               run lambda { |env|
                 response = Rack::Response.new
