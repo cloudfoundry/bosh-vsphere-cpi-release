@@ -212,7 +212,7 @@ module VSphereCloud
         raise "Failed to get utilization for cluster'#{self.mob.name}'" if properties.nil?
 
         compute_resource_summary = properties["summary"]
-        return compute_resource_summary.effective_memory
+        return compute_resource_summary.effective_memory - compute_resource_summary.usage_summary.mem_demand_mb
       end
 
       # Fetches the resource pool utilization from vSphere.
