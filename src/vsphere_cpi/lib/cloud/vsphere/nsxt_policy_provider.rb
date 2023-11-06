@@ -69,6 +69,7 @@ module VSphereCloud
     def remove_vm_from_groups(vm)
       logger.info("Removing vm: #{vm.cid} from all Policy Groups it is part of")
       vm_external_id = get_vm_external_id(vm.cid)
+      return if vm_external_id.nil? # If VM external ID is nil, then it's not connected to NSX: return immediately
       vm_groups = retrieve_vm_groups(vm_external_id)
 
       # For all the groups
@@ -273,6 +274,7 @@ module VSphereCloud
       group_obj.expression = [] if group_obj.expression.nil?
 
       vm_external_id = get_vm_external_id(vm_cid)
+      raise VirtualMachineNotFound.new(vm_cid) if vm_external_id.nil?
 
       external_id_expressions = group_obj.expression.select { |expr| expr.is_a?(NSXTPolicy::ExternalIDExpression) && expr.member_type == 'VirtualMachine' }
       if external_id_expressions.size < 1
@@ -343,18 +345,22 @@ module VSphereCloud
 
     def get_vm_external_id(vm_cid)
       search_results = []
-      Bosh::Retryable.new(
-        tries: 10,
-        sleep: ->(_, _) { 1 }
-      ).retryer do |_|
-        search_results = policy_infra_realized_state_api.list_virtual_machines_on_enforcement_point(DEFAULT_NSXT_POLICY_DOMAIN, {query: "display_name:#{vm_cid}"}).results
-        search_results.length > 0
+      begin
+        Bosh::Retryable.new(
+          tries: 10,
+          sleep: ->(_, _) { 1 },
+        ).retryer do |_|
+          search_results = policy_infra_realized_state_api.list_virtual_machines_on_enforcement_point(DEFAULT_NSXT_POLICY_DOMAIN, { query: "display_name:#{vm_cid}" }).results
+          search_results.length > 0
+        end
+      rescue => e
+        raise unless e.kind_of?(Bosh::Common::RetryCountExceeded)
       end
 
       if search_results.length < 1
-        err_msg = "Failed to find vm in realized state with cid: #{vm_cid}"
+        err_msg = "Failed to find vm in realized state with cid: #{vm_cid}, assuming vm is not attached to an NSX segment"
         logger.info(err_msg)
-        raise err_msg
+        return nil
       end
       # API can return several results of the VM with the same external_id and different power_state
       search_results[0][:external_id]
