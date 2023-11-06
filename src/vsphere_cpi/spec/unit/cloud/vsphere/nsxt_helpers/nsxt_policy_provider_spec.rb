@@ -277,6 +277,18 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
       end
     end
 
+    context "when finding the VM by external id fails" do
+      before do
+        allow(policy_infra_realized_state_api).to receive(:list_virtual_machines_on_enforcement_point).and_return(
+          instance_double(NSXTPolicy::SearchResponse, results: []),
+        )
+      end
+
+      it "should raise an error" do
+        expect { nsxt_policy_provider.add_vm_to_groups(vm, [group_1]) }.to raise_error(VSphereCloud::VirtualMachineNotFound)
+      end
+    end
+
     context "when finding the VM by external id fails because NSXT does not yet see it" do
       before do
         allow(policy_infra_realized_state_api).to receive(:list_virtual_machines_on_enforcement_point).and_return(
@@ -384,6 +396,24 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
         expect(group2.expression).to eq([NSXTPolicy::ExternalIDExpression.new(resource_type: 'ExternalIDExpression',
                                                                               member_type: 'VirtualMachine',
                                                                               external_ids: ['another-vm-external-id'])])
+      end
+    end
+
+    context "when finding the VM by external id fails because it's connected to a VDS port group and not an NSX segment" do
+      before do
+        allow(policy_infra_realized_state_api).to receive(:list_virtual_machines_on_enforcement_point).and_return(
+          instance_double(NSXTPolicy::SearchResponse, results: []),
+        )
+      end
+
+      it "should not raise an error" do
+        expect { nsxt_policy_provider.remove_vm_from_groups(vm) }.to_not raise_error
+      end
+
+      it "should not attempt to find the VM groups to which the VM belongs" do
+        expect(policy_group_members_api).to_not receive(:get_groups_for_vm)
+
+        nsxt_policy_provider.remove_vm_from_groups(vm)
       end
     end
 
