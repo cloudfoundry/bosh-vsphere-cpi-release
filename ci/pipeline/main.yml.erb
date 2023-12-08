@@ -95,7 +95,6 @@ jobs:
             file: source-ci/ci/tasks/run-bats-policy.yml
             params:
               BAT_INFRASTRUCTURE: vsphere
-              BAT_NETWORKING:     manual
               BAT_RSPEC_FLAGS:    "--tag ~dns --tag ~vip_networking --tag ~dynamic_networking --tag ~root_partition --tag ~raw_ephemeral_storage"
               STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-jammy-go_agent
         on_failure:
@@ -154,7 +153,6 @@ jobs:
           file: source-ci/ci/tasks/run-bats.yml
           params:
             BAT_INFRASTRUCTURE: vsphere
-            BAT_NETWORKING:     manual
             BAT_RSPEC_FLAGS:    "--tag ~dns --tag ~vip_networking --tag ~dynamic_networking --tag ~root_partition --tag ~raw_ephemeral_storage"
             STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-jammy-go_agent
         on_failure:
@@ -213,7 +211,6 @@ jobs:
             file: source-ci/ci/tasks/run-bats-cvds.yml
             params:
               BAT_INFRASTRUCTURE: vsphere
-              BAT_NETWORKING:     manual
               BAT_RSPEC_FLAGS:    "--tag ~dns --tag ~vip_networking --tag ~dynamic_networking --tag ~root_partition --tag ~raw_ephemeral_storage"
               STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-jammy-go_agent
         on_failure:
@@ -272,7 +269,6 @@ jobs:
             file: source-ci/ci/tasks/run-bats-cvds.yml
             params:
               BAT_INFRASTRUCTURE: vsphere
-              BAT_NETWORKING:     manual
               BAT_RSPEC_FLAGS:    "--tag ~dns --tag ~vip_networking --tag ~dynamic_networking --tag ~root_partition --tag ~raw_ephemeral_storage"
               STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-jammy-go_agent
         on_failure:

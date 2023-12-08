@@ -35,7 +35,6 @@ shared:
     file: source-ci/ci/tasks/run-bats.yml
     params: &run-bats-params
       BAT_INFRASTRUCTURE: vsphere
-      BAT_NETWORKING:     manual
       BAT_RSPEC_FLAGS:    "--tag ~dns --tag ~vip_networking --tag ~dynamic_networking --tag ~root_partition --tag ~raw_ephemeral_storage"
   - &test-stemcell-ipv4
     task: test-stemcell
