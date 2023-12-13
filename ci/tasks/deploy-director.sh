@@ -35,7 +35,6 @@ finish() {
   rm -f "$BOSH_LOG_PATH"
 
   cp -r ~/.bosh director-state
-  master_exit
 }
 trap finish EXIT
 

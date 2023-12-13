@@ -29,7 +29,6 @@ function finish {
   echo "=========================================="
 
   cp -r $HOME/.bosh ${output_dir}
-  master_exit
 }
 trap finish EXIT
 
