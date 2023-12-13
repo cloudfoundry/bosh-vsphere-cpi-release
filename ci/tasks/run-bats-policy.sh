@@ -25,6 +25,8 @@ bosh int source-ci/ci/shared/bats-spec.yml \
   -v network2-reservedRange="['30.0.0.0-30.0.2.255']" \
   -v network2-vCenterGateway=30.0.0.1 \
   -v network2-vCenterVLAN="vcpi-segment" \
+  -v jumpbox_host="${BOSH_VSPHERE_JUMPER_HOST}" \
+  -v gateway_private_key="${JUMPBOX_PRIVATE_KEY}" \
   -v ssh_private_key="$(bosh int director-state/creds.yml --path=/jumpbox_ssh/private_key)" \
   -v ssh_public_key="$(bosh int director-state/creds.yml --path=/jumpbox_ssh/public_key)" > bats-config/bats-config.yml
 

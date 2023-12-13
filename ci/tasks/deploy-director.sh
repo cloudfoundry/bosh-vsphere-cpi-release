@@ -59,6 +59,9 @@ export BOSH_ENVIRONMENT=$(printf %q "$BOSH_ENVIRONMENT")
 export BOSH_CLIENT=$(printf %q "$BOSH_CLIENT")
 export BOSH_CLIENT_SECRET=$(printf %q "$BOSH_CLIENT_SECRET")
 export BOSH_CA_CERT=$(printf %q "$BOSH_CA_CERT")
-export BOSH_GW_HOST="\$BOSH_ENVIRONMENT"
-export BOSH_GW_USER=jumpbox
+
+private_key_path=\$(mktemp)
+echo -e "${JUMPBOX_PRIVATE_KEY}" > \${private_key_path}
+
+export BOSH_ALL_PROXY="ssh+socks5://vcpi@${BOSH_VSPHERE_JUMPER_HOST}:22?private-key=\${private_key_path}"
 EOF
