@@ -68,6 +68,10 @@ module VSphereCloud
             end
 
             if err
+              # Don't trouble the user with "Error running method 'AddCustomFieldDef'. Failed with message 'The name 'created_at' already exists.'."
+              if method_name == 'AddCustomFieldDef' && object.kind_of?(VimSdk::Vim::Fault::DuplicateName)
+                  break
+              end
               unless SILENT_ERROR_METHOD.include?(method_name)
                 logger.warn(fault_message(method_name, err))
               end
@@ -97,7 +101,7 @@ module VSphereCloud
 
       def fault_message(method_name, err)
         msg = "Error running method '#{method_name}'. Failed with message '#{err.message}'"
-        if err.fault && err.fault.fault_cause
+        if err.fault&.fault_cause
           msg += " and cause '#{err.fault.fault_cause}'"
         end
         msg << '.'
