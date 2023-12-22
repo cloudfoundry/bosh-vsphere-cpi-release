@@ -139,6 +139,32 @@ describe 'RetryableStubAdapter', fake_logger: true do
           expect(retryable_stub_adapter.logger.instance_variable_get(:@logdev).dev.string).to eql("")
         end
       end
+
+      context 'when the CPI decides whether to log "AddCustomFieldDef" messages' do
+        let(:method_info) { double('some-method-info', wsdl_name: 'AddCustomFieldDef') }
+        context 'when the error is the expected "DuplicateName"' do
+          anxiety_inducing_log_message = "Error running method 'AddCustomFieldDef'. Failed with message 'The name 'created_at' already exists.'."
+          it "does not log '#{anxiety_inducing_log_message}'" do
+            expect(stub_adapter).to receive(:invoke_method)
+                                      .with(managed_object, method_info, method_args, retryable_stub_adapter)
+                                      .and_return([500, VimSdk::Vim::Fault::DuplicateName.new])
+            retryable_stub_adapter.invoke_method(managed_object, method_info, method_args)
+            expect(retryable_stub_adapter.logger.instance_variable_get(:@logdev).dev.string).not_to include("Error running method")
+          end
+        end
+        context "but when it's an error that should be logged, such as 'InvalidPowerState'" do
+          it "logs the error" do
+            expect(stub_adapter).to receive(:invoke_method)
+                                      .with(managed_object, method_info, method_args, retryable_stub_adapter)
+                                      .and_return([500, VimSdk::Vim::Fault::InvalidPowerState.new]).exactly(8).times
+            expect(retryer).to receive(:sleep).with(any_args).exactly(7).times
+            expect {
+              retryable_stub_adapter.invoke_method(managed_object, method_info, method_args)
+            }.to raise_error(VimSdk::SoapError)
+            expect(retryable_stub_adapter.logger.instance_variable_get(:@logdev).dev.string).to include("Error running method")
+          end
+        end
+      end
     end
   end
 
