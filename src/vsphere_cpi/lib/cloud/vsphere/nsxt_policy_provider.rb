@@ -84,7 +84,7 @@ module VSphereCloud
     def add_vm_to_server_pools(vm, server_pools)
       return if server_pools.nil? || server_pools.empty?
       Bosh::Retryable.new(
-        tries: 50,
+        tries: 150,
         sleep: ->(try_count, retry_exception) { 2 },
         on: [VirtualMachineIpNotFound]
       ).retryer do |i|
