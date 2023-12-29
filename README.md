@@ -7,7 +7,6 @@ The `vsphere` CPI can be used with [VMware vSphere](https://www.vmware.com/produ
 * Release: [cloudfoundry/bosh-vsphere-cpi-release](https://github.com/cloudfoundry/bosh-vsphere-cpi-release)
 * Issues: [GitHub Issues](https://github.com/cloudfoundry/bosh-vsphere-cpi-release/issues)
 * Mailing list: [cf-bosh](https://lists.cloudfoundry.org/pipermail/cf-bosh)
-* Roadmap: [Pivotal Tracker](https://www.pivotaltracker.com/n/projects/2110693)
 
 This is a BOSH release for the vSphere CPI.
 
@@ -35,6 +34,7 @@ NSX Support:
   * [NSX-T 3.0](https://docs.vmware.com/en/VMware-NSX-T-Data-Center/3.0/rn/VMware-NSX-T-Data-Center-303-Release-Notes.html)
   * [NSX-T 3.1](https://docs.vmware.com/en/VMware-NSX-T-Data-Center/3.1/rn/VMware-NSX-T-Data-Center-3121-Release-Notes.html)
   * [NSX-T 4](https://docs.vmware.com/en/VMware-NSX/4.0.1.1/rn/vmware-nsx-4011-release-notes/index.html)
+  * [NSX-T 4.1](https://docs.vmware.com/en/VMware-NSX/4.1.2.1/rn/vmware-nsx-4121-release-notes/index.html)
 
 ## Concepts
 

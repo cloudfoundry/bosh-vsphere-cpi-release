@@ -43,15 +43,7 @@ Vane environments are created by [this pipeline](https://ci.bosh-ecosystem.cf-ap
 
 This pipeline was set up with [vane CLI](https://gitlab.eng.vmware.com/tas-vcf-vmc-anycloud/vane). We forked the original [vane CLI](https://gitlab.eng.vmware.com/PKS/vane) and broke its re-usability in order to make it work more easily for our use case.
 
-Vane is using a recipe for the environments that is defined in the `Vanefile` and runs a bunch of scripts in the provided directory. We store our recipe and scripts here: [https://gitlab.eng.vmware.com/tas-vcf-vmc-anycloud/vcpi-nimbus](https://gitlab.eng.vmware.com/tas-vcf-vmc-anycloud/vcpi-nimbus)
-
-**To set the vcpi-nimbus (pool management) pipeline** 
-
-- make sure that you have a concourse target that targets the vsphere-cpi team in the bosh-ecosystem concourse
-- in the `vcpi-nimbus` repository:
-  - `vane pipeline --target=vsphere-cpi --pipeline=vcpi-nimbus`
-
-> **Note:** this script relies on `fly targets` to work without specifying a target, so if you are using the clever fly-version wrapper script from @ystros, you will likely have to either undo it, or add a hack to it to pick a default target when none is specified.
+Vane is using a recipe for the environments that is defined in the `Vanefile` and runs a bunch of scripts in the provided directory. We store our recipe and scripts here: [https://gitlab.eng.vmware.com/tas-vcf-vmc-anycloud/vcpi-nimbus](https://gitlab.eng.vmware.com/tas-vcf-vmc-anycloud/vcpi-nimbus). View the [README](https://gitlab.eng.vmware.com/tas-vcf-vmc-anycloud/vcpi-nimbus#setting-the-concourse-pipeline) for instructions to set the pipeline.
 
 **To set the vsphere-cpi test pipeline**
 
@@ -89,6 +81,7 @@ export PATH="/usr/local/opt/swagger-codegen@2/bin:$PATH"
 
 cd src/vsphere_cpi
 bundle exec rake swagger:nsxt_manager_client
+bundle exec rake swagger:nsxt_policy_client
 ```
 
 ## Cutting New Releases
