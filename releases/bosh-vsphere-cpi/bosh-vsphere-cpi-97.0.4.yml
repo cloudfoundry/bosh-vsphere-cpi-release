@@ -1,0 +1,46 @@
+name: bosh-vsphere-cpi
+version: 97.0.4
+commit_hash: 5c00e16e
+uncommitted_changes: false
+jobs:
+- name: vsphere_cpi
+  version: 206c9765754759c4d3ddbf8be95c0a18583767b1ac7782d8bc57042afa6bb6f9
+  fingerprint: 206c9765754759c4d3ddbf8be95c0a18583767b1ac7782d8bc57042afa6bb6f9
+  sha1: sha256:38b3a92159f870081b4ddf3975e2b7849ef7b0a0b6502a2c3cce7e442bec5e5e
+  packages:
+  - iso9660wrap
+  - ruby-3.1
+  - vsphere_cpi
+packages:
+- name: golang-1-darwin
+  version: 51ee113ed9c7defb58b786d223139e2a196d0f80a9c9631923b10d1f368d2345
+  fingerprint: 51ee113ed9c7defb58b786d223139e2a196d0f80a9c9631923b10d1f368d2345
+  sha1: sha256:d9587c465b337f6c2a424b64cc5dd01b3f4b40c90f27604ec2fcf6582ea1ab47
+  dependencies: []
+- name: golang-1-linux
+  version: a53d60ed79d278964faa9bc17836ed3bc5f084c0f3d41110c8a6e0b2de5f2dc0
+  fingerprint: a53d60ed79d278964faa9bc17836ed3bc5f084c0f3d41110c8a6e0b2de5f2dc0
+  sha1: sha256:7e0fc0e87c06d8aabcb0f84c83fa15fb8f0565e60afbb7f0236050412cb8628e
+  dependencies: []
+- name: iso9660wrap
+  version: b351c796826a0a3a57e13bad036c12a3958c38f9370bbb50540e782582baaf79
+  fingerprint: b351c796826a0a3a57e13bad036c12a3958c38f9370bbb50540e782582baaf79
+  sha1: sha256:571d9402b09202d8f51d17601e1511b511988aeb038cfcce79ad960ca3c1fef5
+  dependencies:
+  - golang-1-linux
+  - golang-1-darwin
+- name: ruby-3.1
+  version: 8b225e7cc2608305a7b784b5828b2b4b7c7adc3eb14af46e313d64a9e14a3ad6
+  fingerprint: 8b225e7cc2608305a7b784b5828b2b4b7c7adc3eb14af46e313d64a9e14a3ad6
+  sha1: sha256:fbbc5a8697f8798045546bab84d2d5cd7f8967898d51e7e5acee104b3c7649c8
+  dependencies: []
+- name: vsphere_cpi
+  version: 726335ea982b715ef6f00f671aaf01afcf18bd95f95abb609f629e2ee32f4dd1
+  fingerprint: 726335ea982b715ef6f00f671aaf01afcf18bd95f95abb609f629e2ee32f4dd1
+  sha1: sha256:01fb569e1f049428fed81333196a2735e1967226c89bc53e07a14269fd4c5292
+  dependencies:
+  - ruby-3.1
+license:
+  version: 6904efc3d7f9a0daee5862166c3e7a4481a96c351e1615ccbcc79ff4b7e8826e
+  fingerprint: 6904efc3d7f9a0daee5862166c3e7a4481a96c351e1615ccbcc79ff4b7e8826e
+  sha1: sha256:ca21075d0ebb278829dc840fbd2ef013059ff68a0835427a42760554319d1e5a
