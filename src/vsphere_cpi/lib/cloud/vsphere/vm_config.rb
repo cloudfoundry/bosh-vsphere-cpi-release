@@ -76,6 +76,10 @@ module VSphereCloud
       vm_type.pci_passthroughs || []
     end
 
+    def root_disk_size_gb
+      vm_type.root_disk_size_gb.to_i
+    end
+
     def storage_policy_name
       @manifest_params[:storage_policy]
     end
