@@ -27,6 +27,7 @@ module VSphereCloud
       nsxt
       pci_passthroughs
       ram
+      root_disk_size_gb
       storage_policy
       tags
       upgrade_hw_version

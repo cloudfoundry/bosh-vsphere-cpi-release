@@ -21,7 +21,15 @@ module VSphereCloud
       )
     }
     let(:agent_env) { instance_double('VSphereCloud::AgentEnv')  }
-    let(:config) {  [ 'default_disk_type'=> default_disk_type, 'resource_pool' => 'test',  'datacenters'=> [ datacenter ],'host' => 'localhost', 'user' => 'admin', 'password' => 'password' ] }
+    let(:config) {
+      [
+        default_disk_type: default_disk_type,
+        resource_pool: 'test',
+        datacenters: [datacenter],
+        host: 'localhost',
+        user: 'admin',
+        password: 'password'
+      ] }
     let(:cpi_config) do
       instance_double(
         'VSphereCloud::Config',
@@ -36,6 +44,13 @@ module VSphereCloud
     let(:custom_fields_manager) { instance_double('VimSdk::Vim::CustomFieldsManager') }
     let(:datacenter) { {  mob: datacenter_mob , name: 'dc-1', 'name' => 'dc-1', 'persistent_datastore_pattern' => 'ds-ps-*', 'datastore_pattern'=> 'ds-*', 'vm_folder'=> 'bosh_vms', 'template_folder'=> 'stemcells', 'disk_path' => 'disks', 'clusters' => [] } }
     let(:datacenter_mob) { instance_double('VimSdk::Vim::Datacenter', name: 'dc-1') }
+    let(:cluster) { instance_double(Resources::Cluster, mob: cluster_mob,
+                                    resource_pool: resource_pool, host_group: nil, accessible_datastores: { "ds-1": {}, "ds-2": {} }) }
+    let(:cluster_mob) { instance_double('VimSdk::Vim::ClusterComputeResource') }
+    let(:resource_pool) { instance_double(Resources::ResourcePool, mob: resource_pool_mob) }
+    let(:resource_pool_mob) { instance_double(VimSdk::Vim::ResourcePool) }
+    let(:datastore) { instance_double(Resources::Datastore, name: 'ds-1', mob: datastore_mob) }
+    let(:datastore_mob) { instance_double(VimSdk::Vim::Datastore) }
     let(:default_disk_type) { 'preallocated' }
     let(:ip_conflict_detector) { instance_double(IPConflictDetector, ensure_no_conflicts: nil) }
     let(:ensure_no_ip_conflicts) { true }
@@ -162,13 +177,13 @@ module VSphereCloud
 
                                       cluster_placements: [
                                         instance_double(VmPlacement,
-                                                                                 cluster: instance_double(Resources::Cluster, host_group: nil, mob: nil,  accessible_datastores: {"ds-1": {}, "ds-2": {}}),
-                                                        fallback_disk_placements: [instance_double(Resources::Datastore, name: "ds-2")],
-                                                        disk_placement: instance_double(Resources::Datastore, name: "ds-1")
+                                                        cluster: cluster,
+                                                        disk_placement: datastore,
+                                                        fallback_disk_placements: [instance_double(Resources::Datastore, name: "ds-2")]
                                                        )
                                       ],
-                                      stemcell_cid: 'here-stemcell-cid'
-
+                                      stemcell_cid: 'here-stemcell-cid',
+                                      root_disk_size_gb: 0
                                      )
     }
 
@@ -199,7 +214,21 @@ module VSphereCloud
         expect(client).to receive(:upgrade_vm_virtual_hardware).with(cloned_vm_mob)
         expect(client).to receive(:reconfig_vm).with(cloned_vm_mob, anything)
         subject.create(vm_config)
-        # expect{subject.create(vm_config)}.not_to raise_exception
+      end
+    end
+
+    context 'with root_disk_size_gb set to 15 GiB' do
+      let(:system_disk) { instance_double('VimSdk::Vim::Vm::Device::VirtualDisk') }
+      let(:device_spec) { instance_double(VimSdk::Vim::Vm::Device::VirtualDeviceSpec, device: system_disk) }
+      let(:new_disk_size_gb) { 15 }
+      before do
+        allow(vm_config).to receive(:root_disk_size_gb).and_return(new_disk_size_gb)
+        allow(Resources::VM).to receive(:create_edit_device_spec).and_return(device_spec)
+      end
+      it "reconfigures the VM with a larger root disk and we don't check linked clones because the mocking is already too much" do
+        expect(system_disk).to receive(:capacity_in_kb=).with(new_disk_size_gb * 2 ** 20) # convert kiB → GiB
+        expect(client).to receive(:reconfig_vm).with(cloned_vm_mob, anything)
+        subject.create(vm_config)
       end
     end
 
@@ -243,13 +272,13 @@ module VSphereCloud
 
                                           cluster_placements: [
                                             instance_double(VmPlacement,
-                                                            cluster: instance_double(Resources::Cluster, host_group: nil, mob: nil,  accessible_datastores: {"ds-1": {}, "ds-2": {}}),
+                                                            cluster: cluster,
                                                             fallback_disk_placements: [],
                                                             disk_placement: instance_double(Resources::Datastore, name: "ds-1")
                                                            )
                                           ],
-                                          stemcell_cid: 'here-stemcell-cid'
-
+                                          stemcell_cid: 'here-stemcell-cid',
+                                          root_disk_size_gb: 0
                                          )
         }
         it 'still fails if there are no viable fallback_disk_placements' do

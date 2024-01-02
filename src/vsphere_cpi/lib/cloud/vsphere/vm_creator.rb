@@ -183,6 +183,8 @@ module VSphereCloud
 
           # Clone VM
           logger.info("Cloning vm: #{replicated_stemcell_vm} to #{vm_config.name}")
+          # Don't link clone if expanding root disk, otherwise "Invalid operation for device '0'. Disks with parents cannot be expanded."
+          linked = vm_config.root_disk_size_gb > 0 ? false : true
           created_vm_mob = @client.wait_for_task do
             @cpi.clone_vm(
               replicated_stemcell_vm.mob,
@@ -191,7 +193,7 @@ module VSphereCloud
               cluster.resource_pool.mob,
               datastore: datastore.mob,
               host:,
-              linked: true,
+              linked: linked,
               snapshot: snapshot.current_snapshot,
               config: config_spec,
               datastore_cluster:
@@ -251,7 +253,6 @@ module VSphereCloud
             # Jammy stemcell at hardware version 13 only allows 1 vGPU; we want to be able to add more
             unless vm_config.vgpus.empty?
               config_spec = VimSdk::Vim::Vm::ConfigSpec.new
-              config_spec.device_change = []
               vm_config.vgpus.each do |vgpu|
                 vgpu = Resources::PCIPassthrough.create_vgpu(vgpu)
                 vgpu_config = Resources::VM.create_add_device_spec(vgpu)
@@ -261,7 +262,6 @@ module VSphereCloud
             end
             unless vm_config.pci_passthroughs.empty?
               config_spec = VimSdk::Vim::Vm::ConfigSpec.new
-              config_spec.device_change = []
               vm_config.pci_passthroughs.each do |pci_passthrough|
                 virtual_pci_passthrough = Resources::PCIPassthrough.create_pci_passthrough(
                   vendor_id: pci_passthrough['vendor_id'],
@@ -271,6 +271,15 @@ module VSphereCloud
               end
               @client.reconfig_vm(created_vm_mob, config_spec)
             end
+
+            if vm_config.root_disk_size_gb > 0
+              device_spec = Resources::VM.create_edit_device_spec(created_vm.system_disk)
+              device_spec.device.capacity_in_kb = vm_config.root_disk_size_gb * 2 ** 20 # GiB → kiB
+              config_spec = VimSdk::Vim::Vm::ConfigSpec.new
+              config_spec.device_change << device_spec
+              @client.reconfig_vm(created_vm_mob, config_spec)
+            end
+
             # DRS Rules
             create_drs_rules(vm_config, created_vm.mob, cluster)
 
