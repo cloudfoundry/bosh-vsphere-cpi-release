@@ -68,13 +68,7 @@ module VSphereCloud
             end
 
             if err
-              # Don't trouble the user with "Error running method 'AddCustomFieldDef'. Failed with message 'The name 'created_at' already exists.'."
-              if method_name == 'AddCustomFieldDef' && object.kind_of?(VimSdk::Vim::Fault::DuplicateName)
-                  break
-              end
-              unless SILENT_ERROR_METHOD.include?(method_name)
-                logger.warn(fault_message(method_name, err))
-              end
+              logger.warn(fault_message(method_name, err)) if should_log?(method_name, object)
               unless @retry_judge.retryable?(managed_object, method_info.wsdl_name, object)
                 raise err, "#{err}; Running method '#{method_name}'", err.backtrace
               end
@@ -98,6 +92,13 @@ module VSphereCloud
       end
 
       private
+
+      def should_log?(method_name, object)
+        return false if SILENT_ERROR_METHOD.include?(method_name)
+        # Don't trouble the user with "Error running method 'AddCustomFieldDef'. Failed with message 'The name 'created_at' already exists.'."
+        return false if (method_name == 'AddCustomFieldDef' && object.kind_of?(VimSdk::Vim::Fault::DuplicateName))
+        true
+      end
 
       def fault_message(method_name, err)
         msg = "Error running method '#{method_name}'. Failed with message '#{err.message}'"

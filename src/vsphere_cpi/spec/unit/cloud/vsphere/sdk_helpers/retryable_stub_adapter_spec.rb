@@ -148,7 +148,9 @@ describe 'RetryableStubAdapter', fake_logger: true do
             expect(stub_adapter).to receive(:invoke_method)
                                       .with(managed_object, method_info, method_args, retryable_stub_adapter)
                                       .and_return([500, VimSdk::Vim::Fault::DuplicateName.new])
-            retryable_stub_adapter.invoke_method(managed_object, method_info, method_args)
+            expect {
+              retryable_stub_adapter.invoke_method(managed_object, method_info, method_args)
+            }.to raise_error(VimSdk::SoapError)
             expect(retryable_stub_adapter.logger.instance_variable_get(:@logdev).dev.string).not_to include("Error running method")
           end
         end
