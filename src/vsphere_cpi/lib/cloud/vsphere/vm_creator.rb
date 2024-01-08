@@ -6,19 +6,32 @@ module VSphereCloud
   class VmCreator
     include Logger
 
-    def initialize(client:, cloud_searcher:, cpi:, datacenter:, agent_env:, tagging_tagger:, default_disk_type:,
-                   enable_auto_anti_affinity_drs_rules:, stemcell:, upgrade_hw_version:, pbm:)
+    def initialize(agent_env:,
+                   client:,
+                   cloud_searcher:,
+                   cpi:,
+                   datacenter:,
+                   default_disk_type:,
+                   enable_auto_anti_affinity_drs_rules:,
+                   ensure_no_ip_conflicts:,
+                   ip_conflict_detector:,
+                   pbm:,
+                   stemcell:,
+                   tagging_tagger:,
+                   upgrade_hw_version:)
+      @agent_env = agent_env
       @client = client
       @cloud_searcher = cloud_searcher
       @cpi = cpi
       @datacenter = datacenter
-      @agent_env = agent_env
-      @tagging_tagger = tagging_tagger
       @default_disk_type = default_disk_type
       @enable_auto_anti_affinity_drs_rules = enable_auto_anti_affinity_drs_rules
-      @stemcell = stemcell
-      @upgrade_hw_version = upgrade_hw_version
+      @ensure_no_ip_conflicts = ensure_no_ip_conflicts
+      @ip_conflict_detector = ip_conflict_detector
       @pbm = pbm
+      @stemcell = stemcell
+      @tagging_tagger = tagging_tagger
+      @upgrade_hw_version = upgrade_hw_version
     end
 
     def create(vm_config)
@@ -39,6 +52,10 @@ module VSphereCloud
             cluster.accessible_datastores
           )
           datastore, datastore_cluster = storage.is_a?(Resources::StoragePod) ? [nil, storage] : [storage, nil]
+
+          if @ensure_no_ip_conflicts
+            @ip_conflict_detector.ensure_no_conflicts(vm_config.vsphere_networks)
+          end
 
           logger.info("Creating vm: #{vm_config.name} on #{cluster} stored in #{datastore}") if datastore
           logger.info("Creating vm: #{vm_config.name} on #{cluster} stored in datastore cluster: #{datastore_cluster.name}") if datastore_cluster

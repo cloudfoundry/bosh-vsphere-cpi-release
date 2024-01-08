@@ -57,6 +57,7 @@ module VSphereCloud
           'vm_storage_policy_name' => vm_storage_policy_name,
           'memory_reservation_locked_to_max' => memory_reservation_locked_to_max,
           'enable_human_readable_name' => false,
+          'ensure_no_ip_conflicts' => true,
           'datacenters' => datacenters,
           'nsx' => {
             'address' => nsx_url,
@@ -469,6 +470,12 @@ module VSphereCloud
         it 'returns value from config' do
           expect(config.vcenter_default_disk_type).to eq('thin')
         end
+      end
+    end
+
+    describe '#vcenter_ensure_no_ip_conflicts' do
+      it 'returns value from config' do
+        expect(config.vcenter_ensure_no_ip_conflicts).to eq(true)
       end
     end
 

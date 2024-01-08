@@ -91,6 +91,9 @@ properties:
   vcenter.http_logging:
     description: Enables HTTP level logging. Each HTTP request to vcenter will be logged
     default: false
+  vcenter.ensure_no_ip_conflicts:
+    description: When creating a VM, ensure that no other VMs exist in the same port group with the same IP address.  The creation will fail if there is a conflict.  Conflict detection is done by querying the vCenter, so VMs with a conflicting IP address without VMware tools running will not be detected.
+    default: true
   ntp:
     description: List of ntp server IPs. pool.ntp.org attempts to return IPs closest to your location, but you can still specify if needed.
     default:

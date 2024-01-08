@@ -15,7 +15,9 @@ module VSphereCloud
         enable_auto_anti_affinity_drs_rules: false,
         stemcell:,
         upgrade_hw_version: false,
-        pbm:
+        pbm:,
+        ip_conflict_detector: ip_conflict_detector,
+        ensure_no_ip_conflicts: ensure_no_ip_conflicts,
       )
     }
     let(:agent_env) { instance_double('VSphereCloud::AgentEnv')  }
@@ -35,7 +37,8 @@ module VSphereCloud
     let(:datacenter) { {  mob: datacenter_mob , name: 'dc-1', 'name' => 'dc-1', 'persistent_datastore_pattern' => 'ds-ps-*', 'datastore_pattern'=> 'ds-*', 'vm_folder'=> 'bosh_vms', 'template_folder'=> 'stemcells', 'disk_path' => 'disks', 'clusters' => [] } }
     let(:datacenter_mob) { instance_double('VimSdk::Vim::Datacenter', name: 'dc-1') }
     let(:default_disk_type) { 'preallocated' }
-
+    let(:ip_conflict_detector) { instance_double(IPConflictDetector, ensure_no_conflicts: nil) }
+    let(:ensure_no_ip_conflicts) { true }
     let(:fake_ephemeral_disk) {
       instance_double(VSphereCloud::DiskConfig,
         size: 4096,
@@ -140,6 +143,9 @@ module VSphereCloud
       allow(vm_config).to receive(:upgrade_hw_version?).and_return(false)
       allow_any_instance_of(Resources::VM).to receive(:power_on).and_raise(VSphereCloud::VCenterClient::GenericVmConfigFault)
       allow(cpi).to receive(:delete_vm)
+
+      allow(vm_config).to receive(:validate_drs_rules).and_return(true)
+      allow_any_instance_of(Resources::VM).to receive(:power_on)
     end
     let(:vm_config) { instance_double(VmConfig,
                                       name: 'norbo',
@@ -168,9 +174,7 @@ module VSphereCloud
 
     context 'with vGPU devices' do
       before do
-        allow(vm_config).to receive(:validate_drs_rules).and_return(true)
         allow(vm_config).to receive(:vgpus).and_return(['grid_t4-16q'])
-        allow_any_instance_of(Resources::VM).to receive(:power_on)
       end
       it 'upgrades the vm hardware and reconfigures the VM with the vGPU device' do
         expect(Resources::PCIPassthrough).to receive(:create_vgpu)
@@ -183,12 +187,10 @@ module VSphereCloud
 
     context 'with PCI passthrough devices' do
       before do
-        allow(vm_config).to receive(:validate_drs_rules).and_return(true)
         allow(vm_config).to receive(:pci_passthroughs).and_return([{
           'vendor_id' => '1234',
           'device_id' => 'abcd',
         }])
-        allow_any_instance_of(Resources::VM).to receive(:power_on)
       end
       it 'reconfigures the VM with the PCI passthrough device' do
         # because of the setup we will still fail with the same error on the 2nd attempt, but we know there is a 2nd attempt..
@@ -254,6 +256,39 @@ module VSphereCloud
           expect(logger).not_to receive(:debug).with("VM start failed with datastore issues, retrying on next ds")
           expect(logger).not_to receive(:debug).with("Retrying to create vm on ds-2")
           expect{subject.create(vm_config)}.to raise_error(VSphereCloud::VCenterClient::GenericVmConfigFault)
+        end
+      end
+    end
+
+    context 'ip conflict detection' do
+      context 'activated' do
+        context 'no conflicts' do
+          it 'does not raise' do
+            expect {
+              subject.create(vm_config)
+            }.not_to raise_error
+          end
+        end
+
+        context 'conflicts exist' do
+          before do
+            allow(ip_conflict_detector).to receive(:ensure_no_conflicts).and_raise('Hey')
+          end
+
+          it 'raises' do
+            expect {
+              subject.create(vm_config)
+            }.to raise_error(/Hey/)
+          end
+        end
+      end
+
+      context 'deactivated' do
+        let(:ensure_no_ip_conflicts) { false }
+
+        it 'does not check' do
+          expect(ip_conflict_detector).not_to receive(:ensure_no_conflicts)
+          subject.create(vm_config)
         end
       end
     end

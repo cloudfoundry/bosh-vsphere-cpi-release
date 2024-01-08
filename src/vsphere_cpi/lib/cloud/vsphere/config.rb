@@ -161,6 +161,10 @@ module VSphereCloud
       vcenter['connection_options'] || {}
     end
 
+    def vcenter_ensure_no_ip_conflicts
+      vcenter['ensure_no_ip_conflicts']
+    end
+
     def datacenter_name
       vcenter_datacenter['name']
     end
@@ -286,6 +290,7 @@ module VSphereCloud
           'agent' => dict(String, Object), # passthrough to the agent
           optional('cpi_log') => enum(String, Object),
           optional('soap_log') => enum(String, Object),
+          optional('perform_ip_conflict_detection') => bool,
           'vcenters' => [{
             'host' => String,
             'user' => String,
