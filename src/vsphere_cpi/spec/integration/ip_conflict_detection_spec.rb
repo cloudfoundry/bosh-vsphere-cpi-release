@@ -29,7 +29,7 @@ describe 'ip conflict detection' do
 
     it 'raises an error in create_vm if the ip address is in use' do
       begin
-        test_vm_id = @cpi.create_vm(
+        test_vm_id, _ = @cpi.create_vm(
           'agent-007',
           @stemcell_id,
           vm_type,
@@ -42,7 +42,7 @@ describe 'ip conflict detection' do
 
         duplicate_ip_vm_id = nil
         expect {
-          duplicate_ip_vm_id = @cpi.create_vm(
+          duplicate_ip_vm_id, _ = @cpi.create_vm(
             'agent-elba',
             @stemcell_id,
             vm_type,
@@ -97,7 +97,7 @@ describe 'ip conflict detection' do
 
       it 'should create the VM' do
         begin
-          test_vm_id = @cpi.create_vm(
+          test_vm_id, _ = @cpi.create_vm(
             'agent-007',
             @stemcell_id,
             vm_type,
@@ -110,7 +110,7 @@ describe 'ip conflict detection' do
 
           duplicate_ip_vm_id = nil
           expect {
-            duplicate_ip_vm_id = @cpi.create_vm(
+            duplicate_ip_vm_id, _ = @cpi.create_vm(
               'agent-elba',
               @stemcell_id,
               vm_type,
@@ -137,7 +137,7 @@ describe 'ip conflict detection' do
       let(:vlan) { ENV.fetch('BOSH_VSPHERE_CPI_PORTGROUP_FOLDER_STANDARD') }
       it 'should raise an error' do
         begin
-          test_vm_id = @cpi.create_vm(
+          test_vm_id, _ = @cpi.create_vm(
             'agent-007',
             @stemcell_id,
             vm_type,
@@ -150,7 +150,7 @@ describe 'ip conflict detection' do
 
           duplicate_ip_vm_id = nil
           expect {
-            duplicate_ip_vm_id = @cpi.create_vm(
+            duplicate_ip_vm_id, _ = @cpi.create_vm(
               'agent-elba',
               @stemcell_id,
               vm_type,
