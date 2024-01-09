@@ -696,12 +696,12 @@ describe VSphereCloud::NSXTProvider, fake_logger: true, fast_retries: true do
       end
     end
 
-    it "retries 50 times before erroring when the VM's primary IP is missing" do
+    it "retries 150 times before erroring when the VM's primary IP is missing" do
       allow(vm).to receive_message_chain(:mob, :guest, :ip_address).and_return(nil)
       retryable = Bosh::Retryable.new(tries: 1, sleep: 0)
 
       allow(Bosh::Retryable).to receive(:new)
-                                  .with(hash_including(tries: 50)).and_return(retryable)
+                                  .with(hash_including(tries: 150)).and_return(retryable)
 
       expect do
         nsxt_provider.add_vm_to_server_pools(vm, server_pools)
