@@ -76,6 +76,22 @@ module VSphereCloud
       end
     end
 
+    describe '#find_vm_by_ip' do
+      let(:ip) { '10.9.9.31' }
+      it 'passes the ip to a SearchIndex object' do
+        expect(fake_search_index).to receive(:find_by_ip).with(nil, ip, true)
+        client.find_vm_by_ip(ip)
+      end
+    end
+
+    describe '#find_all_vms_by_ip' do
+      let(:ip) { '10.9.9.31' }
+      it 'passes the ip to a SearchIndex object' do
+        expect(fake_search_index).to receive(:find_all_by_ip).with(nil, ip, true)
+        client.find_all_vms_by_ip(ip)
+      end
+    end
+
     describe '#create_folder' do
       it 'calls create folder on service content root folder' do
         expect(fake_service_content.root_folder).to receive(:create_folder).with('fake-folder-name')

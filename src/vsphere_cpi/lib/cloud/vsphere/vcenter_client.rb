@@ -185,6 +185,10 @@ module VSphereCloud
       @service_content.search_index.find_by_ip(nil, ip, true)
     end
 
+    def find_all_vms_by_ip(ip)
+      @service_content.search_index.find_all_by_ip(nil, ip, true)
+    end
+
     def find_vm_by_name(datacenter_mob, vm_name)
       @cloud_searcher.find_resource_by_property_path(datacenter_mob, 'VirtualMachine', 'name') do |name|
         name == vm_name
