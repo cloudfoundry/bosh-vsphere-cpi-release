@@ -103,6 +103,7 @@ module LifecycleProperties
       'datacenters' => [datacenter_config],
       'http_logging' => true,
       'request_id' => nil,
+      'ensure_no_ip_conflicts' => fetch_property('BOSH_VSPHERE_CPI_ENSURE_NO_IP_CONFLICTS'),
     }, overrides)
 
     opts = {
