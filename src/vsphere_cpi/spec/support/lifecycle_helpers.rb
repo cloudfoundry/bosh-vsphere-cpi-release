@@ -1,5 +1,6 @@
 require 'oga'
 require 'bosh/cpi'
+require 'securerandom'
 
 module LifecycleHelpers
   PRIVILEGES_INPUT_FILE = 'docs/required_vcenter_privileges.md'
@@ -180,7 +181,7 @@ module LifecycleHelpers
   def get_network_spec
   network_spec = {
     'static' => {
-      'ip' => "169.254.#{rand(1..254)}.#{rand(4..254)}",
+      'ip' => "169.254.#{(SecureRandom.random_number * 255).ceil}.#{(SecureRandom.random_number * 250).ceil+3}",
       'netmask' => '255.255.254.0',
       'cloud_properties' => {'name' => @vlan},
       'default' => ['dns', 'gateway'],
