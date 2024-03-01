@@ -1,3 +1,4 @@
+# fly -t bosh sp --team=vsphere-cpi -p vcpi-testbed-cleanup -c vcpi-testbed-cleanup.yml
 ---
 resources:
   - name: every-day
