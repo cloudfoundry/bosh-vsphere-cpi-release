@@ -9,7 +9,7 @@ LABEL org.opencontainers.image.authors="bosh-ecosystem@groups.vmware.com"
 
 ENV BOSH_VERSION=7.2.3
 ENV LANG=C.UTF-8
-ENV RUBY_INSTALL_VERSION=0.9.0
+ENV RUBY_INSTALL_VERSION=0.9.3
 
 # TARGETARCH is a "magic" ARG that can be either amd64 or arm64
 ARG TARGETARCH
