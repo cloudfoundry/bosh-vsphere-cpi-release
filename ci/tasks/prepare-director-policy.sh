@@ -38,7 +38,6 @@ sshpass -p $BOSH_VSPHERE_JUMPER_PASSWORD ssh -o StrictHostKeyChecking=no "vcpi@$
 # Nimbus never uses DHCP to assign these IPs to any of the testbed component.
 bosh int \
   -o bosh-deployment/vsphere/cpi.yml \
-  -o bosh-deployment/misc/powerdns.yml \
   -o bosh-deployment/jumpbox-user.yml \
   -o source-ci/ci/shared/ops/proxy.yml \
   -o source-ci/ci/shared/ops/ntp.yml \
@@ -65,7 +64,6 @@ bosh int \
   -v vcenter_disks=bosh-disk \
   -v vcenter_cluster="$BOSH_VSPHERE_CPI_CLUSTER" \
   -v vcenter_rp="$BOSH_VSPHERE_CPI_RESOURCE_POOL" \
-  -v dns_recursor_ip="192.168.111.1" \
   -v http_proxy="http://$BOSH_VSPHERE_JUMPER_HOST:80" \
   -v https_proxy="http://$BOSH_VSPHERE_JUMPER_HOST:80" \
   -v no_proxy="localhost,127.0.0.1,30.0.1.1" \
