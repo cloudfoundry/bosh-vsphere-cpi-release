@@ -7,7 +7,7 @@ FROM harbor-repo.vmware.com/dockerhub-proxy-cache/bosh/golang-release
 
 LABEL org.opencontainers.image.authors="bosh-ecosystem@groups.vmware.com"
 
-ENV BOSH_VERSION=7.5.5
+ENV BOSH_VERSION=7.5.2
 ENV LANG=C.UTF-8
 ENV RUBY_INSTALL_VERSION=0.9.3
 
