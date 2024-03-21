@@ -53,7 +53,7 @@ module VimSdk
     @wsdl_names[Class] = [XMLNS_XSD, "TypeName"]
     @wsdl_names[FalseClass] = [XMLNS_XSD, "boolean"]
     @wsdl_names[TrueClass] = [XMLNS_XSD, "boolean"]
-    @wsdl_names[Fixnum] = [XMLNS_XSD, "int"]
+    @wsdl_names[Integer] = [XMLNS_XSD, "int"]
     @wsdl_names[Float] = [XMLNS_XSD, "float"]
 
     @types = {

@@ -453,7 +453,7 @@ jobs:
       params:
         GIT_USER_NAME: CI Bot
         GIT_USER_EMAIL: cf-bosh-eng@pivotal.io
-        PACKAGE: ruby-3.1
+        PACKAGE: ruby-3.3
         PRIVATE_YML: |
           blobstore:
             provider: s3
@@ -461,7 +461,6 @@ jobs:
               access_key_id:     ((s3_vsphere_cpi_blobwriter_assume_aws_access_key.username))
               secret_access_key: ((s3_vsphere_cpi_blobwriter_assume_aws_access_key.password))
               assume_role_arn: ((s3_vsphere_cpi_blobwriter_assume_aws_access_key.role_arn))
-        RUBY_VERSION_PATH: .ruby-version
     - put: bosh-cpi-src
       tags: [nimbus]
       params:
