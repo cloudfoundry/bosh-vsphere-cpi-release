@@ -100,7 +100,7 @@ PLATFORMS
   x86_64-linux
 
 DEPENDENCIES
-  addressable (~> 2.8.0)
+  addressable
   bosh_common (= 1.3262.24.0)
   bosh_cpi (= 2.5.0)
   builder (~> 3.2.3)
