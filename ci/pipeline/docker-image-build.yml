@@ -2,21 +2,20 @@
 jobs:
 - name: build-vcpi-main-image
   plan:
-  - get: source-ci
-    tags: [nimbus]
-  - get: source-ci-trigger
-    tags: [nimbus]
-    trigger: true
-  - get: bosh-golang-release-image
-    tags: [nimbus]
-    trigger: true
+  - in_parallel:
+    - get: source-ci
+      tags: [nimbus]
+    - get: source-ci-trigger
+      tags: [nimbus]
+      trigger: true
+    - get: bosh-golang-release-image
+      tags: [nimbus]
+      trigger: true
+    - get: oci-build-task-registry-image
   - task: build
     tags: [nimbus]
+    image: oci-build-task-registry-image
     config:
-      image_resource:
-        source:
-          repository: harbor-repo.vmware.com/dockerhub-proxy-cache/concourse/oci-build-task
-        type: registry-image
       inputs:
       - name: source-ci
       outputs:
@@ -68,5 +67,11 @@ resources:
   type: registry-image
   source:
     repository: bosh/golang-release
+    username: ((docker.username))
+    password: ((docker.password))
+- name: oci-build-task-registry-image
+  type: registry-image
+  source:
+    repository: concourse/oci-build-task
     username: ((docker.username))
     password: ((docker.password))
