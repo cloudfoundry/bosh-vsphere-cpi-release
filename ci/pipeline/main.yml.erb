@@ -384,9 +384,7 @@ jobs:
       - get: ruby-release
         tags: [nimbus]
       - get: bosh-golang-release-registry-image
-        tags: [nimbus]
       - get: bosh-ruby-release-registry-image
-        tags: [nimbus]
       - get: weekly
         tags: [nimbus]
         trigger: true
@@ -444,9 +442,7 @@ jobs:
         tags: [nimbus]
         trigger: true
       - get: bosh-golang-release-registry-image
-        tags: [nimbus]
       - get: bosh-ecosystem-concourse-image
-        tags: [nimbus]
     - task: bump-golang-packages
       tags: [nimbus]
       image: bosh-golang-release-registry-image
@@ -562,9 +558,7 @@ jobs:
         params:
           bump: patch
       - get: bosh-ecosystem-concourse-image
-        tags: [nimbus]
       - get: bosh-golang-release-security-scanner-registry-image
-        tags: [nimbus]
     - try:
         task: check-for-updated-golang-package
         tags: [nimbus]
@@ -789,28 +783,24 @@ resources:
       stop: 4:30 -0700
       days: [ Saturday ]
   - name: bosh-golang-release-registry-image
-    tags: [nimbus]
     type: registry-image
     source:
       repository: bosh/golang-release
       username: ((docker.username))
       password: ((docker.password))
   - name: bosh-golang-release-security-scanner-registry-image
-    tags: [nimbus]
     type: registry-image
     source:
       repository: bosh/golang-release-security-scanner
       username: ((docker.username))
       password: ((docker.password))
   - name: bosh-ruby-release-registry-image
-    tags: [nimbus]
     type: registry-image
     source:
       repository: bosh/ruby-release
       username: ((docker.username))
       password: ((docker.password))
   - name: bosh-ecosystem-concourse-image
-    tags: [nimbus]
     type: registry-image
     source:
       repository: bosh/bosh-ecosystem-concourse
