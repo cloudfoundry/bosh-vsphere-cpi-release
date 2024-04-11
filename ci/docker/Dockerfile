@@ -3,7 +3,7 @@
 # docker buildx build --platform=linux/arm64,linux/amd64 --load -t bosh/vsphere-vcpi .
 # docker run -it --rm bosh/vsphere-vcpi
 
-FROM harbor-repo.vmware.com/dockerhub-proxy-cache/bosh/golang-release
+FROM bosh/golang-release
 
 LABEL org.opencontainers.image.authors="bosh-ecosystem@groups.vmware.com"
 

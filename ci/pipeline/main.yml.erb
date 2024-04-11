@@ -7,6 +7,7 @@ jobs:
       - get: bosh-cpi-src
         tags: [nimbus]
         trigger: true
+      - get: vcpi-main-image
     - in_parallel:
       - task: test-pyvmomi_to_ruby
         tags: [nimbus]
@@ -14,6 +15,7 @@ jobs:
       - task: unit-test
         tags: [nimbus]
         file: source-ci/ci/tasks/unit-test.yml
+        image: vcpi-main-image
 
 <% each_pool do |pool| -%>
 <%= render('partition', pool: pool) %>
@@ -23,9 +25,7 @@ jobs:
     plan:
     - in_parallel:
       - get: source-ci
-        tags: [nimbus]
       - get: bosh-cpi-src
-        tags: [nimbus]
         trigger: true
         passed:
         - lifecycle-6.5-nsxt25
@@ -36,19 +36,17 @@ jobs:
         - lifecycle-8.0-nsxt40-cvds
         - lifecycle-8.0-nsxt41-cvds
         - lifecycle-8.pre-release-nsxt41-cvds
+      - get: vcpi-main-image
       - get: version-semver
-        tags: [nimbus]
         trigger: false
         params: { bump: patch }
     - put: version-semver
-      tags: [nimbus]
       params:
         file: version-semver/version
     - task: build
-      tags: [nimbus]
       file: source-ci/ci/tasks/build-candidate.yml
+      image: vcpi-main-image
     - put: bosh-cpi-artifacts
-      tags: [nimbus]
       params:
         file: 'dev-artifacts/*.tgz'
 
@@ -65,6 +63,7 @@ jobs:
           - {get: bosh-deployment,          trigger: false, tags: [nimbus]}
           - {get: bats,                     trigger: false, tags: [nimbus]}
           - {get: bosh-cli,                 trigger: false, tags: [nimbus]}
+          - get: vcpi-main-image
           - get: bosh-cpi-src
             tags: [nimbus]
             passed: [build-candidate]
@@ -81,6 +80,7 @@ jobs:
       - task: prepare-director-policy
         tags: [nimbus]
         file: source-ci/ci/tasks/prepare-director-policy.yml
+        image: vcpi-main-image
         params:
           OPTIONAL_OPS_FILE:  |
             -o certification/shared/assets/ops/remove-hm.yml
@@ -90,9 +90,11 @@ jobs:
           - task: deploy-director
             tags: [nimbus]
             file: source-ci/ci/tasks/deploy-director.yml
+            image: vcpi-main-image
           - task: run-bats
             tags: [nimbus]
             file: source-ci/ci/tasks/run-bats-policy.yml
+            image: vcpi-main-image
             params:
               BAT_INFRASTRUCTURE: vsphere
               BAT_RSPEC_FLAGS:    "--tag ~dns --tag ~vip_networking --tag ~dynamic_networking --tag ~root_partition --tag ~raw_ephemeral_storage"
@@ -111,6 +113,7 @@ jobs:
             - task: teardown
               tags: [nimbus]
               file: source-ci/ci/tasks/teardown.yml
+              image: vcpi-main-image
 
   - name: bats
     serial: true
@@ -125,6 +128,7 @@ jobs:
         - {get: bosh-deployment,          trigger: false, tags: [nimbus]}
         - {get: bats,                     trigger: false, tags: [nimbus]}
         - {get: bosh-cli,                 trigger: false, tags: [nimbus]}
+        - get: vcpi-main-image
         - get: bosh-cpi-src
           tags: [nimbus]
           passed: [build-candidate]
@@ -139,6 +143,7 @@ jobs:
       - task: prepare-director
         tags: [nimbus]
         file: source-ci/ci/tasks/prepare-director.yml
+        image: vcpi-main-image
         params:
           OPTIONAL_OPS_FILE:  |
             -o certification/shared/assets/ops/remove-hm.yml
@@ -148,9 +153,11 @@ jobs:
         - task: deploy-director
           tags: [nimbus]
           file: source-ci/ci/tasks/deploy-director.yml
+          image: vcpi-main-image
         - task: run-bats
           tags: [nimbus]
           file: source-ci/ci/tasks/run-bats.yml
+          image: vcpi-main-image
           params:
             BAT_INFRASTRUCTURE: vsphere
             BAT_RSPEC_FLAGS:    "--tag ~dns --tag ~vip_networking --tag ~dynamic_networking --tag ~root_partition --tag ~raw_ephemeral_storage"
@@ -169,6 +176,7 @@ jobs:
             - task: teardown
               tags: [nimbus]
               file: source-ci/ci/tasks/teardown.yml
+              image: vcpi-main-image
 
   - name: bats-70-cvds
     serial: true
@@ -183,6 +191,7 @@ jobs:
           - {get: bosh-deployment,          trigger: false, tags: [nimbus]}
           - {get: bats,                     trigger: false, tags: [nimbus]}
           - {get: bosh-cli,                 trigger: false, tags: [nimbus]}
+          - get: vcpi-main-image
           - get: bosh-cpi-src
             tags: [nimbus]
             passed: [build-candidate]
@@ -197,6 +206,7 @@ jobs:
       - task: prepare-director
         tags: [nimbus]
         file: source-ci/ci/tasks/prepare-director.yml
+        image: vcpi-main-image
         params:
           OPTIONAL_OPS_FILE:  |
             -o certification/shared/assets/ops/remove-hm.yml
@@ -206,9 +216,11 @@ jobs:
           - task: deploy-director
             tags: [nimbus]
             file: source-ci/ci/tasks/deploy-director.yml
+            image: vcpi-main-image
           - task: run-bats
             tags: [nimbus]
             file: source-ci/ci/tasks/run-bats-cvds.yml
+            image: vcpi-main-image
             params:
               BAT_INFRASTRUCTURE: vsphere
               BAT_RSPEC_FLAGS:    "--tag ~dns --tag ~vip_networking --tag ~dynamic_networking --tag ~root_partition --tag ~raw_ephemeral_storage"
@@ -227,6 +239,7 @@ jobs:
             - task: teardown
               tags: [nimbus]
               file: source-ci/ci/tasks/teardown.yml
+              image: vcpi-main-image
 
   - name: bats-80-cvds
     serial: true
@@ -241,6 +254,7 @@ jobs:
           - {get: bosh-deployment,          trigger: false, tags: [nimbus]}
           - {get: bats,                     trigger: false, tags: [nimbus]}
           - {get: bosh-cli,                 trigger: false, tags: [nimbus]}
+          - get: vcpi-main-image
           - get: bosh-cpi-src
             tags: [nimbus]
             passed: [build-candidate]
@@ -255,6 +269,7 @@ jobs:
       - task: prepare-director
         tags: [nimbus]
         file: source-ci/ci/tasks/prepare-director.yml
+        image: vcpi-main-image
         params:
           OPTIONAL_OPS_FILE:  |
             -o certification/shared/assets/ops/remove-hm.yml
@@ -264,9 +279,11 @@ jobs:
           - task: deploy-director
             tags: [nimbus]
             file: source-ci/ci/tasks/deploy-director.yml
+            image: vcpi-main-image
           - task: run-bats
             tags: [nimbus]
             file: source-ci/ci/tasks/run-bats-cvds.yml
+            image: vcpi-main-image
             params:
               BAT_INFRASTRUCTURE: vsphere
               BAT_RSPEC_FLAGS:    "--tag ~dns --tag ~vip_networking --tag ~dynamic_networking --tag ~root_partition --tag ~raw_ephemeral_storage"
@@ -285,6 +302,7 @@ jobs:
             - task: teardown
               tags: [nimbus]
               file: source-ci/ci/tasks/teardown.yml
+              image: vcpi-main-image
 
   - name: pre-release-fan-in
     serial: true
@@ -318,9 +336,11 @@ jobs:
         trigger: true
       - get: release-notes
         tags: [nimbus]
+      - get: vcpi-main-image
     - task: promote
       tags: [nimbus]
       file: source-ci/ci/tasks/promote-candidate.yml
+      image: vcpi-main-image
       params:
         AWS_ACCESS_KEY_ID:     ((s3_vsphere_cpi_blobwriter_assume_aws_access_key.username))
         AWS_SECRET_ACCESS_KEY: ((s3_vsphere_cpi_blobwriter_assume_aws_access_key.password))
@@ -370,6 +390,7 @@ jobs:
       - get: weekly
         tags: [nimbus]
         trigger: true
+      - get: vcpi-main-image
     - task: bump-golang-deps
       tags: [nimbus]
       image: bosh-golang-release-registry-image
@@ -404,6 +425,7 @@ jobs:
       - task: unit-test
         tags: [nimbus]
         file: source-ci/ci/tasks/unit-test.yml
+        image: vcpi-main-image
     - put: bosh-cpi-src
       tags: [nimbus]
       params:
@@ -809,7 +831,6 @@ resources:
       repository: bosh-vsphere-cpi-release
       access_token: ((github_public_repo_token))
   - name: vcpi-main-image
-    tags: [nimbus]
     source:
       repository: bosh/vsphere-vcpi
       tag: latest

@@ -1,6 +1,4 @@
 platform: linux
-image_resource:
-  { type: registry-image, source: { repository: harbor-repo.vmware.com/dockerhub-proxy-cache/bosh/vsphere-vcpi } }
 inputs:
 - name: source-ci
 - name: bosh-cpi-src

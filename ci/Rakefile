@@ -8,22 +8,6 @@ require 'ci/pipeline'
 require 'ci/pool'
 require 'ci/target'
 
-DOCKER_NAME = ENV.fetch('DOCKER_NAME', 'harbor-repo.vmware.com/dockerhub-proxy-cache/bosh/vsphere-vcpi')
-
-namespace :docker do
-  desc 'Build a docker image from the Dockerfile'
-  task(:make) { sh 'docker', 'build', '-t', DOCKER_NAME, 'docker' }
-
-  desc "Push the docker image to '#{DOCKER_NAME}'"
-  task(:push) { sh 'docker', 'push', DOCKER_NAME }
-
-  desc "Pull the docker image from '#{DOCKER_NAME}'"
-  task(:pull) { sh 'docker', 'pull', DOCKER_NAME }
-end
-
-desc "Pull, build, and push the docker image '#{DOCKER_NAME}'"
-task docker: %w[docker:pull docker:make docker:push]
-
 file 'pipeline.yml' => FileList['pipeline/*.yml.erb', 'config.rb'] do |t|
   $pipeline = Pipeline.new
   load 'config.rb'

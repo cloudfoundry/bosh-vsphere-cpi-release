@@ -4,16 +4,12 @@ jobs:
   plan:
   - in_parallel:
     - get: source-ci
-      tags: [nimbus]
     - get: source-ci-trigger
-      tags: [nimbus]
       trigger: true
     - get: bosh-golang-release-image
-      tags: [nimbus]
       trigger: true
     - get: oci-build-task-registry-image
   - task: build
-    tags: [nimbus]
     image: oci-build-task-registry-image
     config:
       inputs:
@@ -30,12 +26,10 @@ jobs:
         path: build
     privileged: true
   - put: vcpi-main-image
-    tags: [nimbus]
     params:
       image: image/image
 resources:
 - name: source-ci
-  tags: [nimbus]
   source:
     branch: master
     paths:
@@ -44,7 +38,6 @@ resources:
     uri: git@github.com:cloudfoundry/bosh-vsphere-cpi-release.git
   type: git
 - name: source-ci-trigger
-  tags: [nimbus]
   source:
     branch: master
     paths:
@@ -54,7 +47,6 @@ resources:
   type: git
   check_every: 1h
 - name: vcpi-main-image
-  tags: [nimbus]
   source:
     repository: bosh/vsphere-vcpi
     tag: latest
@@ -63,7 +55,6 @@ resources:
   type: registry-image
   check_every: never
 - name: bosh-golang-release-image
-  tags: [nimbus]
   type: registry-image
   source:
     repository: bosh/golang-release
