@@ -9,15 +9,37 @@ jobs:
     - get: bosh-golang-release-image
       trigger: true
     - get: oci-build-task-registry-image
+  - task: generate-docker-config
+    image: oci-build-task-registry-image
+    config:
+      platform: linux
+      outputs:
+        - name: docker-config
+      run:
+        path: /bin/sh
+        args:
+          - -c
+          - |-
+            cat <<EOF > docker-config/config.json
+            {
+              "auths": {
+                "https://registry-1.docker.io/v2/": {
+                  "auth": "$(echo -n '((docker.username)):((docker.password))' | base64)"
+                }
+              }
+            }
+            EOF
   - task: build
     image: oci-build-task-registry-image
     config:
       inputs:
       - name: source-ci
+      - name: docker-config
       outputs:
       - name: image
       params:
         CONTEXT: source-ci/
+        DOCKER_CONFIG: docker-config
         DOCKERFILE: source-ci/ci/docker/Dockerfile
         IMAGE_PLATFORM: linux/amd64
         OUTPUT_OCI: true
