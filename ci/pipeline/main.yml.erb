@@ -28,8 +28,6 @@ jobs:
       - get: bosh-cpi-src
         trigger: true
         passed:
-        - lifecycle-6.5-nsxt25
-        - lifecycle-6.7-nsxt25
         - lifecycle-7.0-nsxt30
         - lifecycle-7.0-nsxt31
         - lifecycle-7.0-nsxt31-cvds
@@ -134,10 +132,10 @@ jobs:
           passed: [build-candidate]
         - put: environment
           tags: [nimbus]
-          resource: pool-6.5-nsxt25
+          resource: pool-7.0-nsxt31
           params: {acquire: true}
           on_failure:
-            put: pool-6.5-nsxt25
+            put: pool-7.0-nsxt31
             tags: [nimbus]
             params : {release: environment}
       - task: prepare-director
@@ -164,11 +162,11 @@ jobs:
             STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-jammy-go_agent
         on_failure:
           in_parallel:
-          - put: pool-6.5-nsxt25
+          - put: pool-7.0-nsxt31
             tags: [nimbus]
             params : {remove: environment}
         on_success:
-          put: pool-6.5-nsxt25
+          put: pool-7.0-nsxt31
           tags: [nimbus]
           params : {release: environment}
         ensure:
@@ -610,22 +608,6 @@ jobs:
           Since the previous step is wrapped in a "try", this task checks that the previous step fully executed.
 
 resources:
-  - name: pool-6.5-nsxt25
-    tags: [nimbus]
-    type: pool
-    source:
-      uri:          git@gitlab.eng.vmware.com:tas-vcf-vmc-anycloud/vcpi-pool.git
-      branch:       master
-      pool:         v6.5-nsxt25
-      private_key:  ((vcpi-pool_deployment_key.private_key))
-  - name: pool-6.7-nsxt25
-    tags: [nimbus]
-    type: pool
-    source:
-      uri:          git@gitlab.eng.vmware.com:tas-vcf-vmc-anycloud/vcpi-pool.git
-      branch:       master
-      pool:         v6.7-nsxt25
-      private_key:  ((vcpi-pool_deployment_key.private_key))
   - name: pool-7.0-nsxt30
     tags: [nimbus]
     type: pool
