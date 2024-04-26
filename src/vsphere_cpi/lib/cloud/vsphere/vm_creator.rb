@@ -261,15 +261,16 @@ module VSphereCloud
               @client.reconfig_vm(created_vm_mob, config_spec)
             end
             unless vm_config.pci_passthroughs.empty?
-              config_spec = VimSdk::Vim::Vm::ConfigSpec.new
               vm_config.pci_passthroughs.each do |pci_passthrough|
                 virtual_pci_passthrough = Resources::PCIPassthrough.create_pci_passthrough(
                   vendor_id: pci_passthrough['vendor_id'],
                   device_id: pci_passthrough['device_id'],
                 )
+                config_spec = VimSdk::Vim::Vm::ConfigSpec.new
                 config_spec.device_change << Resources::VM.create_add_device_spec(virtual_pci_passthrough)
+                # add 1 GPU per task, allow multiple GPUs with same deviceId to be added
+                @client.reconfig_vm(created_vm_mob, config_spec)
               end
-              @client.reconfig_vm(created_vm_mob, config_spec)
             end
 
             if vm_config.root_disk_size_gb > 0
