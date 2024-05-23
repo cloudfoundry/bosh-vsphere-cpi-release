@@ -41,9 +41,9 @@ We use vane-provided environments in bosh-vsphere-cpi tests. Vane deploys nimbus
 
 Vane environments are created by [this pipeline](https://ci.bosh-ecosystem.cf-app.com/teams/vsphere-cpi/pipelines/vcpi-nimbus) and freed up by [this one](https://ci.bosh-ecosystem.cf-app.com/teams/vsphere-cpi/pipelines/vcpi-testbed-cleanup).
 
-This pipeline was set up with [vane CLI](https://gitlab.eng.vmware.com/tas-vcf-vmc-anycloud/vane). We forked the original [vane CLI](https://gitlab.eng.vmware.com/PKS/vane) and broke its re-usability in order to make it work more easily for our use case.
+This pipeline was set up with [vane CLI](https://github.com/pivotal-cf/vane). We forked the original [vane CLI](https://gitlab.eng.vmware.com/PKS/vane) and broke its re-usability in order to make it work more easily for our use case.
 
-Vane is using a recipe for the environments that is defined in the `Vanefile` and runs a bunch of scripts in the provided directory. We store our recipe and scripts here: [https://gitlab.eng.vmware.com/tas-vcf-vmc-anycloud/vcpi-nimbus](https://gitlab.eng.vmware.com/tas-vcf-vmc-anycloud/vcpi-nimbus). View the [README](https://gitlab.eng.vmware.com/tas-vcf-vmc-anycloud/vcpi-nimbus#setting-the-concourse-pipeline) for instructions to set the pipeline.
+Vane is using a recipe for the environments that is defined in the `Vanefile` and runs a bunch of scripts in the provided directory. We store our recipe and scripts here: [https://github.com/pivotal-cf/vcpi-nimbus](https://github.com/pivotal-cf/vcpi-nimbus). View the [README](https://github.com/pivotal-cf/vcpi-nimbus#setting-the-concourse-pipeline) for instructions to set the pipeline.
 
 **To set the vsphere-cpi test pipeline**
 
@@ -53,7 +53,7 @@ Vane is using a recipe for the environments that is defined in the `Vanefile` an
 
 ## To use a pooled testbed for development testing (for VMware internal development)
 
-The pool of testbeds managed by vcpi-nimbus is here: [https://gitlab.eng.vmware.com/tas-vcf-vmc-anycloud/vcpi-pool](https://gitlab.eng.vmware.com/tas-vcf-vmc-anycloud/vcpi-pool)
+The pool of testbeds managed by vcpi-nimbus is here: [https://github.com/pivotal-cf/vcpi-pool](https://github.com/pivotal-cf/vcpi-pool)
 
 Get the jumpbox, vcenter and NSX-T manager IPs and access credentials in the pool lock files.
 
