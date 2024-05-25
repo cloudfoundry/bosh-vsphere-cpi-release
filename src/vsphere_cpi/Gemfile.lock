@@ -53,7 +53,7 @@ GEM
       byebug (~> 11.0)
       pry (>= 0.13, < 0.15)
     public_suffix (5.0.5)
-    racc (1.7.3)
+    racc (1.8.0)
     rack (2.2.9)
     rake (13.2.1)
     rspec (3.13.0)
