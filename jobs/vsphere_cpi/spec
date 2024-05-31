@@ -88,6 +88,9 @@ properties:
   vcenter.nsxt.allow_overwrite:
      description: "When enabled, the CPI sets the X-Allow-Overwrite header to 'true' when making NSX-T API requests. This value currently defaults to true for backwards compatibility."
      default: true
+  vcenter.nsxt.tag_nsx_vm_objects:
+     description: "When enabled, tag NSX VM objects with the same set of tags as vsphere VM objects"
+     default: false
   vcenter.http_logging:
     description: Enables HTTP level logging. Each HTTP request to vcenter will be logged
     default: false

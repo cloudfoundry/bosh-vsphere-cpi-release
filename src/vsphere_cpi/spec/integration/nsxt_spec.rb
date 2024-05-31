@@ -1486,6 +1486,168 @@ describe 'CPI', nsxt_all: true do
           end
         end
       end
+
+      context 'tagging nsx VM objects' do
+        let(:cpi) do
+          VSphereCloud::Cloud.new(cpi_options(nsxt: {
+            host: @nsxt_host,
+            username: @nsxt_username,
+            password: @nsxt_password,
+            ca_cert_file: ENV['BOSH_NSXT_CA_CERT_FILE'],
+            tag_nsx_vm_objects: tag_nsx_vm_objects,
+          }))
+        end
+
+        context 'when tag_nsx_vm_objects? is true' do
+          let(:tag_nsx_vm_objects) { true }
+
+          it 'tags the object with the same tags as the vsphere VM' do
+            simple_vm_lifecycle(cpi, '', vm_type, network_spec) do |vm_id|
+              cpi.set_vm_metadata(vm_id, {
+                'id' => bosh_id,
+                'nxst-tag-1-key' => 'nsxt-tag-1-value',
+              })
+              nxst_provider = cpi.instance_variable_get(:@nsxt_provider)
+              svc = nxst_provider.send(:vm_fabric_svc)
+              nsx_raw_tags = svc.list_virtual_machines(display_name: vm_id).results.first.tags || []
+              nsx_vm_tags = nsx_raw_tags.map do |nsx_tag|
+                { "scope" => nsx_tag.scope, "tag" => nsx_tag.tag}
+              end
+
+              vm = cpi.vm_provider.find(vm_id)
+              vsphere_custom_values = vm.mob.custom_value
+              field_defs = cpi.client.service_content.custom_fields_manager.field
+              vsphere_vm_tags = []
+              vsphere_custom_values.each do |custom_value|
+                matching_field_def = field_defs.find do |field_def|
+                  field_def.key == custom_value.key
+                end
+                if matching_field_def.name == "cpi_metadata_version"
+                  next
+                end
+                tag_value = ""
+                if matching_field_def.name == "id"
+                  tag_value = Digest::SHA1.hexdigest(custom_value.value)
+                else
+                  tag_value = custom_value.value
+                end
+
+                vsphere_vm_tags << { "scope" => "bosh/#{matching_field_def.name}", "tag" => tag_value }
+              end
+
+              expect(nsx_vm_tags).to include(*vsphere_vm_tags)
+            end
+          end
+
+          context 'when the nsx VM has existing tags' do
+            it 'does not overwrite existing tags' do
+              simple_vm_lifecycle(cpi, '', vm_type, network_spec) do |vm_id|
+                cpi.set_vm_metadata(vm_id, {
+                  'id' => bosh_id,
+                  'tag-1-key' => 'tag-1-value',
+                })
+
+                cpi.set_vm_metadata(vm_id, {
+                  'id' => bosh_id,
+                  'tag-2-key' => 'tag-2-value',
+                })
+
+                nxst_provider = cpi.instance_variable_get(:@nsxt_provider)
+                svc = nxst_provider.send(:vm_fabric_svc)
+                nsx_raw_tags = svc.list_virtual_machines(display_name: vm_id).results.first.tags || []
+                nsx_vm_tags = nsx_raw_tags.map do |nsx_tag|
+                  { "scope" => nsx_tag.scope, "tag" => nsx_tag.tag}
+                end
+                expected_tags = [
+                  {"scope" => "bosh/id", "tag" => Digest::SHA1.hexdigest(bosh_id)},
+                  {"scope" => "bosh/tag-1-key", "tag" => "tag-1-value"},
+                  {"scope" => "bosh/tag-2-key", "tag" => "tag-2-value"},
+                ]
+
+                expect(nsx_vm_tags).to match_array(expected_tags)
+              end
+            end
+          end
+        end
+
+        context 'when tag_nsx_vm_objects? is false' do
+          let(:tag_nsx_vm_objects) { false }
+
+          it 'does not tag' do
+            simple_vm_lifecycle(cpi, '', vm_type, network_spec) do |vm_id|
+              cpi.set_vm_metadata(vm_id, {
+                'id' => bosh_id,
+                'nxst-tag-1-key' => 'nsxt-tag-1-value',
+              })
+              nxst_provider = cpi.instance_variable_get(:@nsxt_provider)
+              svc = nxst_provider.send(:vm_fabric_svc)
+              nsx_raw_tags = svc.list_virtual_machines(display_name: vm_id).results.first.tags || []
+              expect(nsx_raw_tags.length).to eq(0)
+
+              vm = cpi.vm_provider.find(vm_id)
+              vsphere_custom_values = vm.mob.custom_value
+              ## There's an extra 'cpi_metadata_version' "tag" that gets automatically added to vSphere VM objects.
+              ## So, this is one larger than one would expect.
+              expect(vsphere_custom_values.length).to eq(3)
+            end
+          end
+
+          context 'when the nsx VM has existing tags' do
+            it 'does not overwrite existing tags' do
+              simple_vm_lifecycle(cpi, '', vm_type, network_spec) do |vm_id|
+                # first create a nsx vm w/ tags
+                tagging_cpi_client = VSphereCloud::Cloud.new(cpi_options(nsxt: {
+                  host: @nsxt_host,
+                  username: @nsxt_username,
+                  password: @nsxt_password,
+                  ca_cert_file: ENV['BOSH_NSXT_CA_CERT_FILE'],
+                  tag_nsx_vm_objects: true
+                }))
+                tagging_cpi_client.set_vm_metadata(vm_id, {
+                  'id' => bosh_id,
+                  'existing-tag' => 'existing-value',
+                })
+
+                # Then update the tags with the non-tagging CPI to ensure that we don't blow away existing tags
+                cpi.set_vm_metadata(vm_id, {
+                  'id' => bosh_id,
+                  'new-tag' => 'new-value',
+                })
+                nxst_provider = cpi.instance_variable_get(:@nsxt_provider)
+                svc = nxst_provider.send(:vm_fabric_svc)
+                nsx_raw_tags = svc.list_virtual_machines(display_name: vm_id).results.first.tags || []
+                nsx_vm_tags = nsx_raw_tags.map do |nsx_tag|
+                  { "scope" => nsx_tag.scope, "tag" => nsx_tag.tag}
+                end
+                expected_tags = [
+                  {"scope" => "bosh/id", "tag" => Digest::SHA1.hexdigest(bosh_id)},
+                  {"scope" => "bosh/existing-tag", "tag" => "existing-value"},
+                ]
+                expect(nsx_vm_tags).to match_array(expected_tags)
+
+                # Then make sure that the CPI code will preserve the existing tags when adding new ones.
+                tagging_cpi_client.set_vm_metadata(vm_id, {
+                  'id' => bosh_id,
+                  'yet-another-existing-tag' => 'existing-value',
+                })
+
+                nxst_provider = cpi.instance_variable_get(:@nsxt_provider)
+                svc = nxst_provider.send(:vm_fabric_svc)
+                nsx_raw_tags = svc.list_virtual_machines(display_name: vm_id).results.first.tags || []
+                nsx_vm_tags = nsx_raw_tags.map do |nsx_tag|
+                  { "scope" => nsx_tag.scope, "tag" => nsx_tag.tag}
+                end
+                expected_tags = [
+                  {"scope" => "bosh/id", "tag" => Digest::SHA1.hexdigest(bosh_id)},
+                  {"scope" => "bosh/existing-tag", "tag" => "existing-value"},
+                  {"scope" => "bosh/yet-another-existing-tag", "tag" => "existing-value"},
+                ]
+                expect(nsx_vm_tags).to match_array(expected_tags)
+              end
+            end
+          end
+        end
+      end
     end
   end
 

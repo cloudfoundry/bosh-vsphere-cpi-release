@@ -2644,6 +2644,80 @@ module VSphereCloud
         vsphere_cloud.set_vm_metadata(vm.cid, {'key' => 'value'})
         vsphere_cloud.set_vm_metadata(vm.cid, {'key' => 'other-value', 'other-key' => 'value'})
       end
+
+      context 'when nxst is enabled' do
+        let(:nsxt_provider) { instance_double(VSphereCloud::NSXTProvider) }
+        let(:nsxt_policy_provider) { instance_double(VSphereCloud::NSXTPolicyProvider) }
+        let(:nsxt_config) { VSphereCloud::NSXTConfig.new('fake-host', 'fake-username', 'fake-password' ) }
+        let(:metadata) { {'key' => 'value'} }
+
+        before do
+          allow(vcenter_client).to receive(:set_custom_field)
+          allow(nsxt_provider).to receive(:update_vm_metadata_on_logical_ports)
+          allow(nsxt_provider).to receive(:update_vm_metadata_on_vm_objects)
+          allow(nsxt_policy_provider).to receive(:update_vm_metadata_on_segment_ports)
+          allow(cloud_config).to receive(:nsxt_enabled?).and_return(true)
+          allow(cloud_config).to receive(:nsxt).and_return(nsxt_config)
+          expect(VSphereCloud::NSXTProvider).to receive(:new).with(any_args).and_return(nsxt_provider)
+          allow(VSphereCloud::NSXTPolicyProvider).to receive(:new).with(any_args).and_return(nsxt_policy_provider)
+        end
+
+        context 'when tag_nsx_vm_objects is true' do
+          before do
+            nsxt_config.tag_nsx_vm_objects = true
+          end
+
+          it 'updates metadata on the vm' do
+            expect(nsxt_provider).to receive(:update_vm_metadata_on_vm_objects).with(vm, metadata)
+
+            vsphere_cloud.set_vm_metadata(vm.cid, metadata)
+          end
+        end
+
+        context 'when tag_nsx_vm_objects is false' do
+          before do
+            nsxt_config.tag_nsx_vm_objects = false
+          end
+
+          it 'does not update metadata on the vm' do
+            expect(nsxt_provider).to_not receive(:update_vm_metadata_on_vm_objects)
+
+            vsphere_cloud.set_vm_metadata(vm.cid, metadata)
+          end
+        end
+
+        context 'when policy_api_migration_mode is true' do
+          before do
+            nsxt_config.policy_api_migration_mode = true
+          end
+
+          it 'updates vm metadata on segment ports and logical ports' do
+            expect(nsxt_policy_provider).to receive(:update_vm_metadata_on_segment_ports).with(vm, metadata)
+            expect(nsxt_provider).to receive(:update_vm_metadata_on_logical_ports).with(vm, metadata)
+
+            vsphere_cloud.set_vm_metadata(vm.cid, metadata)
+          end
+        end
+
+        context 'when use_policy_api is true' do
+          before do
+            nsxt_config.use_policy_api = true
+          end
+          it 'updates vm metadata on segment ports' do
+            expect(nsxt_policy_provider).to receive(:update_vm_metadata_on_segment_ports).with(vm, metadata)
+
+            vsphere_cloud.set_vm_metadata(vm.cid, metadata)
+          end
+        end
+
+        context 'when management api is used' do
+          it 'updates vm metadata on logical ports' do
+            expect(nsxt_provider).to receive(:update_vm_metadata_on_logical_ports).with(vm, metadata)
+
+            vsphere_cloud.set_vm_metadata(vm.cid, metadata)
+          end
+        end
+      end
     end
 
     describe '#set_disk_metadata' do

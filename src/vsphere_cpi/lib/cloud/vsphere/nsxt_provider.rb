@@ -223,6 +223,26 @@ module VSphereCloud
       end
     end
 
+    def update_vm_metadata_on_vm_objects(vm, metadata)
+      return unless metadata.has_key?('id')
+      return if nsxt_nics(vm).empty?
+      tags = vm_fabric_svc.list_virtual_machines(display_name: vm.cid).results.first.tags || []
+
+      # update_virtual_machine_tags_update_tags_with_http_info
+      metadata.each do |metadata_key, metadata_value|
+        metadata_key = "bosh/" + metadata_key
+        if metadata_key == "bosh/id"
+          metadata_value = Digest::SHA1.hexdigest(metadata_value)
+        end
+        bosh_tag = NSXT::Tag.new('scope' => metadata_key, 'tag' => metadata_value)
+        # bosh_tag = {'scope' => metadata_key, 'tag' => metadata_value}
+        # tags.delete_if { |tag| tag.scope == metadata_key }
+        tags << bosh_tag
+      end
+      external_id = vm_fabric_svc.list_virtual_machines(display_name: vm.cid).results.first.external_id
+      vm_fabric_svc.update_virtual_machine_tags_update_tags_with_http_info({"external_id" => external_id, "tags" => tags.map(&:to_hash)})
+    end
+
     def set_vif_type(vm, vm_type_nsxt)
       vif_type = (vm_type_nsxt || {}).has_key?('vif_type') ? vm_type_nsxt['vif_type'] : @default_vif_type
       return if vif_type.nil?

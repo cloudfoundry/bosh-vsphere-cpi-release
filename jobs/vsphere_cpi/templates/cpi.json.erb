@@ -135,6 +135,10 @@
     if_p('vcenter.nsxt.policy_api_migration_mode') do
       vcenter['nsxt']['policy_api_migration_mode'] = p('vcenter.nsxt.policy_api_migration_mode')
     end
+
+    if_p('vcenter.nsxt.tag_nsx_vm_objects') do
+      vcenter['nsxt']['tag_nsx_vm_objects'] = p('vcenter.nsxt.tag_nsx_vm_objects')
+    end
   end
 
   if_p('agent.mbus') do |mbus|
