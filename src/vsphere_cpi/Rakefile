@@ -13,6 +13,7 @@ namespace :swagger do
       '\'.paths |= {
         "/fabric/vifs",
         "/fabric/virtual-machines",
+        "/fabric/virtual-machines?action=update_tags",
         "/loadbalancer/pools",
         "/loadbalancer/pools/{pool-id}",
         "/logical-ports",

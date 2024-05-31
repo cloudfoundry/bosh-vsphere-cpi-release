@@ -350,6 +350,56 @@ module VSphereCloud
       end
     end
 
+      context '#nsxt.tag_nsx_vm_objects' do
+        context 'when not set' do
+          before do
+            config_hash['vcenters'].first.merge! 'nsxt' => {
+              'host' => 'fake-host',
+              'username' => 'fake-username',
+              'password' => 'fake-password',
+              'certificate' => nil,
+              'private_key' => nil,
+            }
+          end
+
+          it 'returns false by default' do
+            expect(config.nsxt.tag_nsx_vm_objects?).to be(false)
+          end
+        end
+        context 'when it is set to true' do
+          before do
+            config_hash['vcenters'].first.merge! 'nsxt' => {
+              'host' => 'fake-host',
+              'username' => 'fake-username',
+              'password' => 'fake-password',
+              'certificate' => nil,
+              'private_key' => nil,
+              'tag_nsx_vm_objects' => true
+            }
+          end
+
+          it 'returns true' do
+            expect(config.nsxt.tag_nsx_vm_objects?).to be(true)
+          end
+        end
+
+        context 'when it is set to false' do
+          before do
+            config_hash['vcenters'].first.merge! 'nsxt' => {
+              'host' => 'fake-host',
+              'username' => 'fake-username',
+              'password' => 'fake-password',
+              'certificate' => nil,
+              'private_key' => nil,
+              'tag_nsx_vm_objects' => false
+            }
+          end
+
+          it 'returns false' do
+            expect(config.nsxt.tag_nsx_vm_objects?).to be(false)
+          end
+        end
+      end
       context 'when a valid nsxt with remote auth is passed in config' do
         before do
           config_hash.merge! 'nsxt' => {

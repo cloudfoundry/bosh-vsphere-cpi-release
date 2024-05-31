@@ -620,6 +620,10 @@ module VSphereCloud
           else
             @nsxt_provider.update_vm_metadata_on_logical_ports(vm, metadata)
           end
+
+          if @config.nsxt.tag_nsx_vm_objects?
+            @nsxt_provider.update_vm_metadata_on_vm_objects(vm, metadata)
+          end
        end
       end
     end

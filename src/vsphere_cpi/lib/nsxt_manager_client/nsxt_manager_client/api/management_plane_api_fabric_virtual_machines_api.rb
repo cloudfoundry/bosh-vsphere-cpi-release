@@ -99,5 +99,58 @@ module NSXT
       end
       return data, status_code, headers
     end
+    # Update tags applied to a virtual machine
+    # Update tags applied to the virtual machine. External id of the virtual machine will be specified in the request body. Request body should contain all the tags to be applied. To clear all tags, provide an empty list. User can apply maximum 25 tags on a virtual machine. The remaining 5 are reserved for system defined tags.
+    # @param virtual_machine_tag_update 
+    # @param [Hash] opts the optional parameters
+    # @return [nil]
+    def update_virtual_machine_tags_update_tags(virtual_machine_tag_update, opts = {})
+      update_virtual_machine_tags_update_tags_with_http_info(virtual_machine_tag_update, opts)
+      nil
+    end
+
+    # Update tags applied to a virtual machine
+    # Update tags applied to the virtual machine. External id of the virtual machine will be specified in the request body. Request body should contain all the tags to be applied. To clear all tags, provide an empty list. User can apply maximum 25 tags on a virtual machine. The remaining 5 are reserved for system defined tags.
+    # @param virtual_machine_tag_update 
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(nil, Fixnum, Hash)>] nil, response status code and response headers
+    def update_virtual_machine_tags_update_tags_with_http_info(virtual_machine_tag_update, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: ManagementPlaneApiFabricVirtualMachinesApi.update_virtual_machine_tags_update_tags ...'
+      end
+      # verify the required parameter 'virtual_machine_tag_update' is set
+      if @api_client.config.client_side_validation && virtual_machine_tag_update.nil?
+        fail ArgumentError, "Missing the required parameter 'virtual_machine_tag_update' when calling ManagementPlaneApiFabricVirtualMachinesApi.update_virtual_machine_tags_update_tags"
+      end
+      # resource path
+      local_var_path = '/fabric/virtual-machines?action=update_tags'
+
+      # query parameters
+      query_params = {}
+
+      # header parameters
+      header_params = {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json'])
+      # HTTP header 'Content-Type'
+      header_params['Content-Type'] = @api_client.select_header_content_type(['application/json'])
+
+      # form parameters
+      form_params = {}
+
+      # http body (model)
+      post_body = @api_client.object_to_http_body(virtual_machine_tag_update)
+      auth_names = ['BasicAuth']
+      data, status_code, headers = @api_client.call_api(:POST, local_var_path,
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: ManagementPlaneApiFabricVirtualMachinesApi#update_virtual_machine_tags_update_tags\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
   end
 end
