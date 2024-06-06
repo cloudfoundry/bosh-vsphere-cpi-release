@@ -1,0 +1,51 @@
+name: bosh-vsphere-cpi
+version: 97.0.13
+commit_hash: 9ffdadc3
+uncommitted_changes: false
+jobs:
+- name: vsphere_cpi
+  version: 38e4fc538e96ded2f145dfd508e5cbc8f18e0226d0a3fd7176c016c654b81743
+  fingerprint: 38e4fc538e96ded2f145dfd508e5cbc8f18e0226d0a3fd7176c016c654b81743
+  sha1: sha256:7548ccc691d52df3a061b0b0a78df37908840edd0814aef522db4b18ef7a52d4
+  packages:
+  - iso9660wrap
+  - ruby-3.1
+  - vsphere_cpi
+packages:
+- name: golang-1-darwin
+  version: 6f5377fb4e2cd53709c80cf6b2ca4b97da14aa571539e97d7411b482fde4e134
+  fingerprint: 6f5377fb4e2cd53709c80cf6b2ca4b97da14aa571539e97d7411b482fde4e134
+  sha1: sha256:f21bde52f0646ad535ccd54feba6c7d67974ac7ba865ccc597fdda0a4fc902f4
+  dependencies: []
+- name: golang-1-linux
+  version: 9b1c8ec9041b82347748668b3d274d8183fcb3cb25dd99e8a3a367094836d743
+  fingerprint: 9b1c8ec9041b82347748668b3d274d8183fcb3cb25dd99e8a3a367094836d743
+  sha1: sha256:acf4c2947a5581b8afa925d1bfbbdb35accc46034345576fcbab9ae4c082c44e
+  dependencies: []
+- name: iso9660wrap
+  version: d692d8958a95d9e53ba8a671c6255a7e2483501dcdd2aaf7ac8df676f5744ec9
+  fingerprint: d692d8958a95d9e53ba8a671c6255a7e2483501dcdd2aaf7ac8df676f5744ec9
+  sha1: sha256:857ac9d53cbf6c8ea3e92a6d6c7c6fc14d84b7affe498e5281bc631c3d7b51ed
+  dependencies:
+  - golang-1-linux
+  - golang-1-darwin
+- name: ruby-3.1
+  version: 0819e682a5d6016fbd752f989c809498dd4beb03871b1993f739e93143b45614
+  fingerprint: 0819e682a5d6016fbd752f989c809498dd4beb03871b1993f739e93143b45614
+  sha1: sha256:3daef11526ee550155a85233601eaf3a18b1e29de6f280d9a336979c5a08a70e
+  dependencies: []
+- name: ruby-3.3
+  version: 3130cd0785411e8649ce6bb7c2bf820a9e6ae2dab04b9de78803df0d846691a2
+  fingerprint: 3130cd0785411e8649ce6bb7c2bf820a9e6ae2dab04b9de78803df0d846691a2
+  sha1: sha256:450025aaa0f5ee282882ffaa97fbe27776e14d679a5d6458b7ac2803f0460aa1
+  dependencies: []
+- name: vsphere_cpi
+  version: 4e58af956b7c788bc5b722aa09aaa26d4713a964cd2edac1d8401ee53c202a8e
+  fingerprint: 4e58af956b7c788bc5b722aa09aaa26d4713a964cd2edac1d8401ee53c202a8e
+  sha1: sha256:88dc42921c15b9a5b3c31fc837205867a3c558acb648b182715769d57f6d2598
+  dependencies:
+  - ruby-3.1
+license:
+  version: 6904efc3d7f9a0daee5862166c3e7a4481a96c351e1615ccbcc79ff4b7e8826e
+  fingerprint: 6904efc3d7f9a0daee5862166c3e7a4481a96c351e1615ccbcc79ff4b7e8826e
+  sha1: sha256:ca21075d0ebb278829dc840fbd2ef013059ff68a0835427a42760554319d1e5a
