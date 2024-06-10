@@ -4,6 +4,7 @@ require 'membrane'
 require 'tempfile'
 require 'cloud_v2'
 require 'cloud/vsphere/cpi_extension'
+require 'cpi_plugin/registry'
 
 module VSphereCloud
   class Cloud
@@ -68,6 +69,9 @@ module VSphereCloud
     end
 
     def initialize(options)
+      plugins = options.fetch('plugins', {}).keys
+      @plugin_registry = VSphereCloud::CpiPlugin::Registry.new(plugins)
+
       @config = Config.build(options)
 
       Logger.logger = config.logger
@@ -163,26 +167,33 @@ module VSphereCloud
     end
 
     def has_vm?(vm_cid)
+      @plugin_registry.run_pre_hooks(__method__, self)
       vm_provider.find(vm_cid)
+      @plugin_registry.run_post_hooks(__method__, self)
       true
     rescue Bosh::Clouds::VMNotFound
+      @plugin_registry.run_post_hooks(__method__, self)
       false
     end
 
     def has_disk?(raw_director_disk_cid)
+      @plugin_registry.run_pre_hooks(__method__, self)
       director_disk_cid = DirectorDiskCID.new(raw_director_disk_cid)
       @datacenter.find_disk(director_disk_cid)
+      @plugin_registry.run_post_hooks(__method__, self)
       true
     rescue Bosh::Clouds::DiskNotFound
+      @plugin_registry.run_post_hooks(__method__, self)
       false
     end
 
     def create_stemcell(image, _)
+      @plugin_registry.run_pre_hooks(__method__, self)
+      result = nil
       with_thread_name("create_stemcell(#{image}, _)") do
         # Add cpi telemetry advanced config to vc in a separate thread
         telemetry_thread = Thread.new { enable_telemetry }
         VCPIExtension.create_cpi_extension(client)
-        result = nil
         Dir.mktmpdir do |temp_dir|
           logger.info("Extracting stemcell to: #{temp_dir}")
           output = `tar -C #{temp_dir} -xzf #{image} 2>&1`
@@ -284,11 +295,13 @@ module VSphereCloud
           end
         end
         telemetry_thread.join #Join back the thread created to enable telemetry
-        result
       end
+      @plugin_registry.run_post_hooks(__method__, self)
+      result
     end
 
     def delete_stemcell(stemcell)
+      @plugin_registry.run_pre_hooks(__method__, self)
       with_thread_name("delete_stemcell(#{stemcell})") do
         Bosh::ThreadPool.new(max_threads: 32, logger: logger).wrap do |pool|
           logger.info("Looking for stemcell replicas in: #{@datacenter.name}")
@@ -306,6 +319,7 @@ module VSphereCloud
 
         end
       end
+      @plugin_registry.run_post_hooks(__method__, self)
     end
 
     def stemcell_vm(name)
@@ -318,6 +332,11 @@ module VSphereCloud
     end
 
     def create_vm(agent_id, stemcell_cid, cloud_properties, networks_spec, existing_disk_cids = [], environment = nil)
+      @plugin_registry.run_pre_hooks(__method__, self, {:cloud_properties => cloud_properties})
+
+      vm_and_networks_spec = nil
+      vm_config = nil
+      created_vm = nil
       with_thread_name("create_vm(#{agent_id}, ...)") do
         verify_props('VM', [ 'cpu', 'ram', 'disk' ], cloud_properties)
 
@@ -455,19 +474,26 @@ module VSphereCloud
           raise e
         end
 
-        [created_vm.cid, networks_spec]
+        vm_and_networks_spec = [created_vm.cid, networks_spec]
       end
+      @plugin_registry.run_post_hooks(__method__, self, {:vm_config => vm_config, :cloud_properties => cloud_properties, :vm_cid => created_vm.cid})
+      return vm_and_networks_spec
     end
 
     def calculate_vm_cloud_properties(vm_properties)
+      @plugin_registry.run_pre_hooks(__method__, self)
       required_properties = ['ram', 'cpu', 'ephemeral_disk_size']
       missing_properties = required_properties.reject { |name| vm_properties.has_key?(name) }
+      # TODO: post hooks before raise?
       raise "Missing VM cloud properties: #{missing_properties.map{ |sym| "'#{sym}'"}.join(', ')}" unless missing_properties.empty?
       vm_properties['disk'] = vm_properties.delete 'ephemeral_disk_size'
+      @plugin_registry.run_post_hooks(__method__, self)
       vm_properties
     end
 
     def delete_vm(vm_cid)
+      @plugin_registry.run_pre_hooks(__method__, self, {:vm_cid => vm_cid})
+      vm_ip = nil
       with_thread_name("delete_vm(#{vm_cid})") do
         logger.info("Deleting vm: #{vm_cid}")
 
@@ -575,9 +601,11 @@ module VSphereCloud
           vm_group.delete_vm_groups(vm_group_names)
         end
       end
+      @plugin_registry.run_post_hooks(__method__, self, {:vm_ip => vm_ip, :vm_cid => vm_cid})
     end
 
     def reboot_vm(vm_cid)
+      @plugin_registry.run_pre_hooks(__method__, self)
       with_thread_name("reboot_vm(#{vm_cid})") do
         vm = vm_provider.find(vm_cid)
 
@@ -599,9 +627,11 @@ module VSphereCloud
           vm.power_on
         end
       end
+      @plugin_registry.run_post_hooks(__method__, self)
     end
 
     def set_vm_metadata(vm_cid, metadata)
+      @plugin_registry.run_pre_hooks(__method__, self)
       with_thread_name("set_vm_metadata(#{vm_cid}, ...)") do
         vm = vm_provider.find(vm_cid)
         metadata.each do |name, value|
@@ -626,21 +656,30 @@ module VSphereCloud
           end
        end
       end
+      @plugin_registry.run_post_hooks(__method__, self)
     end
 
     def set_disk_metadata(disk_id, metadata)
+      @plugin_registry.run_pre_hooks(__method__, self)
       # not implemented
+      @plugin_registry.run_post_hooks(__method__, self)
     end
 
     def resize_disk(disk_id, new_size)
+      # @plugin_registry.run_pre_hooks(__method__, self)
       raise Bosh::Clouds::NotImplemented, 'resize_disk has not been implemented'
+      # @plugin_registry.run_post_hooks(__method__, self)
     end
 
     def configure_networks(vm_cid, networks)
+      # @plugin_registry.run_pre_hooks(__method__, self)
       raise Bosh::Clouds::NotSupported, 'configure_networks is no longer supported'
+      # @plugin_registry.run_post_hooks(__method__, self)
     end
 
     def attach_disk(vm_cid, raw_director_disk_cid)
+      @plugin_registry.run_pre_hooks(__method__, self)
+      disk_hint = nil
       with_thread_name("attach_disk(#{vm_cid}, #{raw_director_disk_cid})") do
         director_disk_cid = DirectorDiskCID.new(raw_director_disk_cid)
         vm = vm_provider.find(vm_cid)
@@ -700,11 +739,13 @@ module VSphereCloud
           disk_hint = disk_spec.device.unit_number.to_s
           logger.info("adding disk to env, disk.enableUUID is FALSE, using relative device number #{disk_hint} for mounting")
         end
-        disk_hint
       end
+      @plugin_registry.run_post_hooks(__method__, self)
+      disk_hint
     end
 
     def detach_disk(vm_cid, raw_director_disk_cid)
+      @plugin_registry.run_pre_hooks(__method__, self)
       with_thread_name("detach_disk(#{vm_cid}, #{raw_director_disk_cid})") do
         director_disk_cid = DirectorDiskCID.new(raw_director_disk_cid)
 
@@ -712,13 +753,16 @@ module VSphereCloud
 
         vm = vm_provider.find(vm_cid)
         disk = vm.disk_by_cid(director_disk_cid.value)
+        # TODO: Run post hooks before raise?
         raise Bosh::Clouds::DiskNotAttached.new(true), "Disk '#{director_disk_cid.value}' is not attached to VM '#{vm_cid}'" if disk.nil?
 
         vm.detach_disks([disk], @datacenter.disk_path)
       end
+      @plugin_registry.run_post_hooks(__method__, self)
     end
 
     def create_disk(size_in_mb, cloud_properties, vm_cid = nil)
+      @plugin_registry.run_pre_hooks(__method__, self)
       with_thread_name("create_disk(#{size_in_mb}, _)") do
         logger.info("Cloud properties given : #{cloud_properties}")
         logger.info("Creating disk with size: #{size_in_mb}")
@@ -759,14 +803,17 @@ module VSphereCloud
 
           logger.info("Created disk: #{disk.inspect}")
           raw_director_disk_cid = disk_pool.storage_list.any? ? DirectorDiskCID.encode(disk.cid, target_datastore_pattern: target_datastore_pattern) : disk.cid
+          @plugin_registry.run_post_hooks(__method__, self)
           # Return disk cid for the created disk.
           return raw_director_disk_cid
         end
+        # TODO: Run post hooks before raise?
         raise "Unable to create disk on any storage entity provided. Possible errors can be no free space, datastore in maintenance mode or datastores are not accessible by any host"
       end
     end
 
     def delete_disk(raw_director_disk_cid)
+      @plugin_registry.run_pre_hooks(__method__, self)
       with_thread_name("delete_disk(#{raw_director_disk_cid})") do
         director_disk_cid = DirectorDiskCID.new(raw_director_disk_cid)
         logger.info("Deleting disk: #{director_disk_cid.value}")
@@ -775,6 +822,7 @@ module VSphereCloud
 
         logger.info('Finished deleting disk')
       end
+      @plugin_registry.run_post_hooks(__method__, self)
     end
 
     def generate_network_env(devices, networks, dvs_index)
@@ -947,20 +995,27 @@ module VSphereCloud
     end
 
     def create_network(network_definition)
+      @plugin_registry.run_pre_hooks(__method__, self)
+      # TODO: post hooks before raise?
       raise 'NSXT must be enabled in CPI to use create_network' unless @config.nsxt_enabled?
       raise Bosh::Clouds::NotSupported, 'create_network is not supported for the NSXT Policy API' if @config.nsxt.use_policy_api?
 
       network_model = NetworkDefinition.new(network_definition)
       network = Network.new(@switch_provider, @router_provider, @ip_block_provider)
-      network.create(network_model)
+      network_out = network.create(network_model)
+      @plugin_registry.run_post_hooks(__method__, self)
+      return network_out
     end
 
     def delete_network(switch_id)
+      # TODO: post hooks before raise?
+      @plugin_registry.run_pre_hooks(__method__, self)
       raise 'NSXT must be enabled in CPI to use delete_network' unless @config.nsxt_enabled?
       raise Bosh::Clouds::NotSupported, 'delete_network is not supported for the NSXT Policy API' if @config.nsxt.use_policy_api?
 
       network = Network.new(@switch_provider, @router_provider, @ip_block_provider)
       network.destroy(switch_id)
+      @plugin_registry.run_post_hooks(__method__, self)
     end
 
     private

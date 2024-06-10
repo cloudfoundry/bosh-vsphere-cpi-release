@@ -1,0 +1,13 @@
+---
+name: example
+
+templates:
+  configuration.yml.erb: config/configuration.yml
+
+packages: []
+
+properties:
+  plugins:
+    description: |
+      hashes. Just configuration hashes.
+    example:

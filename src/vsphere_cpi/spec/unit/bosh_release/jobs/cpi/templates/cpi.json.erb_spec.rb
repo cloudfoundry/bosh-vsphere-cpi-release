@@ -98,6 +98,7 @@ describe 'cpi.json.erb' do
               'vm_storage_policy_name' => 'VM Storage Policy'
             }
           ],
+          'plugins' => {}
         }
       }
     })
@@ -168,6 +169,22 @@ describe 'cpi.json.erb' do
       expect(subject['cloud']['properties']['vcenters'].first['nsx']['address']).to eq('my-nsx-manager')
       expect(subject['cloud']['properties']['vcenters'].first['nsx']['user']).to eq('my-nsx-user')
       expect(subject['cloud']['properties']['vcenters'].first['nsx']['password']).to eq('fake')
+    end
+  end
+
+  context 'When plugin properties are set' do
+    before(:each) {
+      manifest['properties']['plugins'] = {"key" => "value"}
+    }
+
+    it 'renders the passed-in properties' do
+      expect(subject['cloud']['properties']['plugins']).to eq({"key" => "value"})
+    end
+  end
+
+  context 'When plugin properties are not set' do
+    it 'renders the plugin property as the empty hash' do
+      expect(subject['cloud']['properties']['plugins']).to eq({})
     end
   end
 

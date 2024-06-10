@@ -472,6 +472,28 @@ module VSphereCloud
           end.to raise_error(Membrane::SchemaValidationError)
         end
       end
+
+      context 'when a valid plugins key is passed in config' do
+        before do
+          config_hash.merge! 'plugins' => {"some key" => "some key value", "some_other_key" => { "some other value" => true}}
+        end
+
+        it 'does not raise' do
+          expect { config.validate }.to_not raise_exception
+        end
+      end
+
+      context 'when an invalid plugins key is passed in config' do
+        before do
+          config_hash.merge! 'plugins' => "Definitely not a Hash, as the schema demands it should be."
+        end
+
+        it 'raises a schema validation error' do
+          expect do
+            config.validate
+          end.to raise_error(Membrane::SchemaValidationError)
+        end
+      end
     end
 
     describe '#logger' do
