@@ -1,0 +1,15 @@
+<%=
+require 'yaml'
+
+config = {
+  "config" => "Example plugin config not found."
+}
+
+if_p('plugins.example') do |exampleconfig|
+config = {
+  "config" => exampleconfig
+}
+end
+
+YAML.dump(config)
+%>

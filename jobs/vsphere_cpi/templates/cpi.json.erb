@@ -33,7 +33,8 @@
         ],
         "agent" => {
           "ntp" => p('ntp')
-        }
+        },
+        "plugins" => {}
       }
     }
   }
@@ -146,6 +147,10 @@
     params["cloud"]["properties"]["agent"]["mbus"] = mbus
   end.else_if_p('nats') do
     params["cloud"]["properties"]["agent"]["mbus"] = "nats://#{p('nats.user')}:#{p('nats.password')}@#{p(['agent.nats.address', 'nats.address'])}:#{p('nats.port')}"
+  end
+
+  if_p('plugins') do |plugin_hash|
+    params["cloud"]["properties"]["plugins"] = plugin_hash
   end
 
   JSON.dump(params)

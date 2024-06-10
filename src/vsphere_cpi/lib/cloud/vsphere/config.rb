@@ -276,6 +276,10 @@ module VSphereCloud
       vcenter.dig(:disk, :enableUUID)
     end
 
+    def plugins
+      config['plugins']
+    end
+
     private
 
     attr_reader :config
@@ -339,7 +343,8 @@ module VSphereCloud
               'clusters' => [enum(String, dict(String, {optional('resource_pool') => String}),
               )]
             }]
-          }]
+          }],
+          optional('plugins') => dict(String, Object)
         }
       end
 

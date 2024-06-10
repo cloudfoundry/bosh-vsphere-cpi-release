@@ -75,6 +75,7 @@ module LifecycleProperties
     overrides = stringify_keys(overrides)
 
     datacenter_overrides = overrides.delete('datacenters') || []
+    plugins_overrides = overrides.delete('plugins') || {}
     datacenter_config = deep_merge(
       {
         'name' => @datacenter_name,
@@ -110,7 +111,8 @@ module LifecycleProperties
       'agent' => {
         'ntp' => ['10.80.0.44'],
       },
-      'vcenters' => [vcenter_options]
+      'vcenters' => [vcenter_options],
+      'plugins' => plugins_overrides
     }
     if overrides['soap_log']
       opts['soap_log'] = overrides['soap_log']

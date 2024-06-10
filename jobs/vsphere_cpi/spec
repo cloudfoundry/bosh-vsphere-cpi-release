@@ -126,3 +126,12 @@ properties:
     description: Https proxy to connect to cloud API's
   env.no_proxy:
     description: No Proxy environment variable
+  plugins:
+    description: |
+      Hash of plugins to load and their base configuration. The hash keys are plugin names, and the structure
+      of the values for each key are plugin-dependent. For example:
+      plugins:
+        pluginone:
+          config: { key: value }
+        awesomeplugin: "Enabled"
+        vmsuperdeleter: [ {forcefullness: maximal}, {speed: fastest} ]
