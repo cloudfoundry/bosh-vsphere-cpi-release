@@ -35,9 +35,11 @@ if [ "$BOSH_VSPHERE_CPI_NSXT_HOST" != "null" ]; then
   BOSH_NSXT_CA_CERT_FILE="$(realpath "${PWD}/nsxt-manager-cert.pem")"
   # To get the cert from nsxt-manager, we run openssl on the jump box, and then pipe that result into a local openssl command that reformats it into PEM
   openssl s_client -showcerts -connect "${BOSH_VSPHERE_CPI_NSXT_HOST}":443 </dev/null 2>/dev/null | openssl x509 -outform PEM > $BOSH_NSXT_CA_CERT_FILE
-  # The certificate's subject name is nsxt-manager so SSL validation fails when using the IP address
-  echo "${BOSH_VSPHERE_CPI_NSXT_HOST} nsxt-manager" >> /etc/hosts
-  export BOSH_VSPHERE_CPI_NSXT_HOST="https://nsxt-manager"
+  # The certificate's SAN contains the host name, so extract it because SSL validation fails when using the IP address
+  # NOTE: Don't hard code the name as it is not guaranteed to be "nsxt-manager"
+  BOSH_NSXT_CERT_HOST_NAME="$(openssl x509 -noout -text -in nsxt-manager-cert.pem | awk '/X509v3 Subject Alternative Name/ {getline;gsub(/ /, "", $0); print}' | tr -d "DNS:")"
+  echo "${BOSH_VSPHERE_CPI_NSXT_HOST} ${BOSH_NSXT_CERT_HOST_NAME}" >> /etc/hosts
+  export BOSH_VSPHERE_CPI_NSXT_HOST="https://${BOSH_NSXT_CERT_HOST_NAME}"
 fi
 
 BOSH_VSPHERE_STEMCELL="$(pwd)/stemcell/stemcell.tgz"
