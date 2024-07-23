@@ -264,6 +264,10 @@ module VSphereCloud
       vcenter['vm_storage_policy_name']
     end
 
+    def cpu_reserve_full_mhz
+      vcenter['cpu_reserve_full_mhz']
+    end
+
     def memory_reservation_locked_to_max
       vcenter['memory_reservation_locked_to_max']
     end
@@ -303,6 +307,7 @@ module VSphereCloud
             optional('http_logging') => bool,
             optional('enable_auto_anti_affinity_drs_rules') => bool,
             optional('upgrade_hw_version') => bool,
+            optional('cpu_reserve_full_mhz') => bool,
             optional('memory_reservation_locked_to_max') => bool,
             optional('vm_storage_policy_name') => String,
             optional('vmx_options') => {

@@ -90,6 +90,7 @@ describe 'cpi.json.erb' do
               'default_disk_type' => 'preallocated',
               'enable_auto_anti_affinity_drs_rules' => true,
               'enable_human_readable_name' => true,
+              'cpu_reserve_full_mhz' => false,
               'memory_reservation_locked_to_max' => false,
               'upgrade_hw_version' => true,
               'http_logging' => true,

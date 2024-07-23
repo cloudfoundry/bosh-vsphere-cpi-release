@@ -587,6 +587,44 @@ module VSphereCloud
         end
       end
 
+      context 'when cpu_reserve_full_mhz is false' do
+        let(:cloud_properties) { { 'cpu_reserve_full_mhz' => false } }
+        let(:input) { { vm_type: vm_type } }
+        let(:output) { {} }
+
+        it 'does not set CPU allocation' do
+          expect(vm_config.config_spec_params).to_not have_key(:cpu_allocation)
+          expect(vm_config.config_spec_params).to eq(output)
+        end
+      end
+
+      context 'when cpu_reserve_full_mhz is true' do
+        let(:cloud_properties) { { 'cpu_reserve_full_mhz' => true, 'cpu' => 2 } }
+        let(:input) { { vm_type: vm_type } }
+        let(:output) { { num_cpus: 2, cpu_allocation: VimSdk::Vim::ResourceAllocationInfo.new(reservation: 2468) } }
+        let(:cluster) { double(:cluster, host: [cluster_host1, cluster_host2]) }
+        let(:cluster_host1) { double(:host) }
+        let(:cluster_host2) { double(:host) }
+
+        before do
+          allow(cluster_host1).to receive_message_chain(:runtime, :connection_state).and_return('connected')
+          allow(cluster_host1).to receive_message_chain(:runtime, :in_maintenance_mode).and_return(false)
+          allow(cluster_host1).to receive_message_chain(:summary, :hardware, :cpu_mhz).and_return(789)
+          allow(cluster_host2).to receive_message_chain(:runtime, :connection_state).and_return('connected')
+          allow(cluster_host2).to receive_message_chain(:runtime, :in_maintenance_mode).and_return(false)
+          allow(cluster_host2).to receive_message_chain(:summary, :hardware, :cpu_mhz).and_return(1234)
+
+          # CPU reservation calculation must occur before returning the config spec params.
+          vm_config.calculate_cpu_reservation(cluster)
+        end
+
+        it 'sets a cpu allocation with reservations equal to the max CPU in MHZ * num of CPUs for the cluster with the highest CPU available' do
+          spec_params = vm_config.config_spec_params
+          expect(spec_params[:cpu_allocation]).to_not be_nil
+          expect(spec_params[:cpu_allocation].reservation).to eq(1234 * 2)
+        end
+      end
+
       context 'when memory_reservation_locked_to_max is false' do
         let(:cloud_properties) { { 'memory_reservation_locked_to_max' => false } }
         let(:input) { { vm_type: vm_type } }
