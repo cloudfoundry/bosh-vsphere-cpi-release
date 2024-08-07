@@ -331,7 +331,7 @@ module VSphereCloud
             ensure_all: true
           )
           stemcell_size /= 1024 * 1024
-          cloud_properties = {"memory_reservation_locked_to_max" => config.memory_reservation_locked_to_max}.merge(cloud_properties)
+          cloud_properties = {'memory_reservation_locked_to_max' => config.memory_reservation_locked_to_max, 'cpu_reserve_full_mhz' => config.cpu_reserve_full_mhz}.merge(cloud_properties)
 
           vm_type = VmType.new(@datacenter, cloud_properties, @pbm)
           disk_configs, policy_name = disk_configurations(vm_type, existing_disk_cids)

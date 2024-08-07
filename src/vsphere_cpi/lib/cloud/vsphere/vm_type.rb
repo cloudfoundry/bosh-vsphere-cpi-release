@@ -17,6 +17,7 @@ module VSphereCloud
     CLOUD_PROPERTIES_HASH_PROXY_METHODS = %w[
       cpu
       cpu_hot_add_enabled
+      cpu_reserve_full_mhz
       datacenters
       disable_drs
       disk

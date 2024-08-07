@@ -40,6 +40,7 @@ module VSphereCloud
     let(:nsx_user) { 'fake-nsx-user' }
     let(:nsx_password) { 'fake-nsx-password' }
     let(:vm_storage_policy_name)  { 'VM Storage Policy' }
+    let(:cpu_reserve_full_mhz)  { true }
     let(:memory_reservation_locked_to_max)  { true }
     before do
       allow(VimSdk::Vim::ServiceInstance).to receive(:new).
@@ -55,6 +56,7 @@ module VSphereCloud
           'password' => password,
           'default_disk_type' => default_disk_type,
           'vm_storage_policy_name' => vm_storage_policy_name,
+          'cpu_reserve_full_mhz' => cpu_reserve_full_mhz,
           'memory_reservation_locked_to_max' => memory_reservation_locked_to_max,
           'enable_human_readable_name' => false,
           'ensure_no_ip_conflicts' => true,
@@ -733,6 +735,12 @@ module VSphereCloud
     describe '#vm_storage_policy_name' do
       it 'returns value from config' do
         expect(config.vm_storage_policy_name).to eq(vm_storage_policy_name)
+      end
+    end
+
+    describe '#cpu_reserve_full_mhz' do
+      it 'returns value from config' do
+        expect(config.cpu_reserve_full_mhz).to eq(cpu_reserve_full_mhz)
       end
     end
 

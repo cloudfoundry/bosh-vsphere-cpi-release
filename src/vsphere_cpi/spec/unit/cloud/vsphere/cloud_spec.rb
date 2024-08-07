@@ -21,6 +21,7 @@ module VSphereCloud
       instance_double(
         'VSphereCloud::Config',
         logger: logger,
+        cpu_reserve_full_mhz: cpu_reserve_full_mhz,
         memory_reservation_locked_to_max: memory_reservation_locked_to_max,
         vcenter_host: vcenter_host,
         vcenter_api_uri: vcenter_api_uri,
@@ -57,6 +58,7 @@ module VSphereCloud
     let(:virtual_disk_manager) { instance_double('VimSdk::Vim::VirtualDiskManager') }
     let(:option_manager) { instance_double('VimSdk::Vim::Option::OptionManager') }
     let(:agent_env) { instance_double('VSphereCloud::AgentEnv') }
+    let(:cpu_reserve_full_mhz) { false }
     let(:memory_reservation_locked_to_max) { nil }
     let(:vcenter_host) { 'fake-host' }
     let(:vcenter_api_uri) { URI.parse("https://#{vcenter_host}") }
@@ -1751,6 +1753,70 @@ module VSphereCloud
           it 'creates the VM using the cloud_properties memory_reservation_locked_to_max value' do
             expect(VmConfig).to receive(:new) do |options|
               expect(options[:manifest_params][:vm_type].memory_reservation_locked_to_max).to be_falsey
+              vm_config
+            end
+
+            vsphere_cloud.create_vm(
+              'fake-agent-id',
+              'fake-stemcell-cid',
+              vm_type,
+              'fake-networks-hash',
+              existing_disk_cids,
+              {}
+            )
+          end
+        end
+      end
+
+      context 'when cpu_reserve_full_mhz is specified at the cpi config level' do
+        let(:cpu_reserve_full_mhz) { true }
+        before do
+          expect(VmCreator).to receive(:new)
+                                 .with(
+                                   client: vcenter_client,
+                                   cloud_searcher: cloud_searcher,
+                                   cpi: vsphere_cloud,
+                                   datacenter: datacenter,
+                                   agent_env: agent_env,
+                                   tagging_tagger: tagging_tagger,
+                                   ip_conflict_detector: ip_conflict_detector,
+                                   ensure_no_ip_conflicts: ensure_no_ip_conflicts,
+                                   default_disk_type: 'preallocated',
+                                   enable_auto_anti_affinity_drs_rules: false,
+                                   upgrade_hw_version: true,
+                                   stemcell: stemcell,
+                                   pbm: pbm,
+                                 )
+                                 .and_return(vm_creator)
+          expect(vm_creator).to receive(:create)
+                                  .with(vm_config)
+                                  .and_return(fake_vm)
+        end
+
+        it 'creates the VM with the configured cpu_reserve_full_mhz' do
+          expect(VmConfig).to receive(:new) do |options|
+            expect(options[:manifest_params][:vm_type].cpu_reserve_full_mhz).to be_truthy
+            vm_config
+          end
+
+          vsphere_cloud.create_vm(
+            'fake-agent-id',
+            'fake-stemcell-cid',
+            vm_type,
+            'fake-networks-hash',
+            existing_disk_cids,
+            {}
+          )
+        end
+
+        context 'when cpu_reserve_full_mhz is also specified in the cloud properties' do
+          before do
+            vm_type['cpu_reserve_full_mhz'] = false
+          end
+
+          it 'creates the VM using the cloud_properties cpu_reserve_full_mhz value' do
+            expect(VmConfig).to receive(:new) do |options|
+              expect(options[:manifest_params][:vm_type].cpu_reserve_full_mhz).to be_falsey
               vm_config
             end
 

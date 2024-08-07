@@ -174,7 +174,7 @@ module VSphereCloud
                                       ephemeral_disk_size: 1024,
                                       pci_passthroughs: [],
                                       vgpus: [],
-
+                                      calculate_cpu_reservation: nil,
                                       cluster_placements: [
                                         instance_double(VmPlacement,
                                                         cluster: cluster,
@@ -269,7 +269,7 @@ module VSphereCloud
                                           ephemeral_disk_size: 1024,
                                           pci_passthroughs: [],
                                           vgpus: [],
-
+                                          calculate_cpu_reservation: nil,
                                           cluster_placements: [
                                             instance_double(VmPlacement,
                                                             cluster: cluster,
