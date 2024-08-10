@@ -46,7 +46,7 @@ GEM
     oga (2.3)
       ast
       ruby-ll (~> 2.1)
-    parallel (1.25.1)
+    parallel (1.26.1)
     parallel_tests (4.7.1)
       parallel
     pry (0.14.2)
