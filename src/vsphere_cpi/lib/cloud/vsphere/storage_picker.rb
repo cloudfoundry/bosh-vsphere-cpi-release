@@ -44,7 +44,10 @@ module VSphereCloud
       logger.info("clusters: #{datastore_cluster_list}")
 
       # pick all SDRS-enabled datastore clusters and include their datastores in the set to be used
-      datastores = datastore_cluster_list.select(&:drs_enabled?).map { |datastore_cluster| datastore_cluster.datastores }.flatten
+      clusters_with_drs = datastore_cluster_list.select(&:drs_enabled?)
+      clusters_without_drs = datastore_cluster_list - clusters_with_drs
+      logger.debug("Datastore Clusters excluded because they do not have DRS enabled: [#{clusters_without_drs.map(&:name).join(', ')}]") unless clusters_without_drs.empty?
+      datastores = clusters_with_drs.map { |datastore_cluster| datastore_cluster.datastores }.flatten
       cluster_datastore_names = datastores.map(&:name)
 
       if cluster_datastore_names.empty?
@@ -63,6 +66,8 @@ module VSphereCloud
       datastore_names = disk_pool.datastore_names
       unless disk_pool.datastore_clusters.empty?
         sdrs_enabled_datastore_clusters = disk_pool.datastore_clusters.select(&:drs_enabled?)
+        clusters_without_drs = disk_pool.datastore_clusters - sdrs_enabled_datastore_clusters
+        logger.debug("Datastore Clusters excluded because they do not have DRS enabled: [#{clusters_without_drs.map(&:name).join(', ')}]") unless clusters_without_drs.empty?
         # pick best sdrs enabled datastore cluster and include its datastores in the set to be used for persistent disk
         if sdrs_enabled_datastore_clusters.any?
           datastore_cluster = choose_best_from(sdrs_enabled_datastore_clusters)
@@ -118,6 +123,8 @@ module VSphereCloud
       datastore_names = vm_type.datastore_names
       unless vm_type.datastore_clusters.empty?
         sdrs_enabled_datastore_clusters = vm_type.datastore_clusters.select(&:drs_enabled?)
+        clusters_without_drs = vm_type.datastore_clusters - sdrs_enabled_datastore_clusters
+        logger.debug("Datastore Clusters excluded because they do not have DRS enabled: [#{clusters_without_drs.map(&:name).join(', ')}]") unless clusters_without_drs.empty?
         datastores = sdrs_enabled_datastore_clusters.map { |datastore_cluster| datastore_cluster.datastores }.flatten
         datastore_names.concat(datastores.map(&:name))
       end

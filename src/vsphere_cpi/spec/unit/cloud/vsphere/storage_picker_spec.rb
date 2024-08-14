@@ -83,6 +83,11 @@ module VSphereCloud
             it 'includes a pattern constructed from datastores and datastores from best sdrs enabled datastore cluster' do
               expect(subject).to eq('^(ds\-1|ds\-2|sp\-2\-ds\-1)$')
             end
+
+            it 'logs the datastores excluded because they do not have drs' do
+              expect(logger).to receive(:debug).with("Datastore Clusters excluded because they do not have DRS enabled: [sp3]")
+              subject
+            end
           end
 
           context 'and no datastores' do
@@ -114,11 +119,17 @@ module VSphereCloud
           expect(subject).to eq(global_persistent_pattern)
         end
 
-        context 'with global persistent clusters defined' do
+        context 'with global persistent cluster pattern defined' do
           let(:persistent_cluster_pattern) { 'sp.' }
           it 'includes a pattern constructed from datastores from all SDRS-enabled global persistent datastore cluster and the global persistent pattern' do
             expect(subject).to eq('^(sp\-1\-ds\-1|sp\-2\-ds\-1)$|global-persistent-ds')
           end
+
+          it 'logs the datastores excluded because they do not have drs' do
+            expect(logger).to receive(:debug).with("Datastore Clusters excluded because they do not have DRS enabled: [sp3]")
+            subject
+          end
+
           context 'and no global persistent pattern' do
             let(:global_persistent_pattern) { nil }
             it 'returns a pattern with only the cluster datastores' do
@@ -197,11 +208,16 @@ module VSphereCloud
                 it 'includes a pattern constructed from datastores and datastores from all sdrs enabled datastore cluster' do
                   expect(vm_type).to receive(:storage_policy_name).once
                   expect(vm_type).to receive(:datastore_names).once
-                  expect(vm_type).to receive(:datastore_clusters).twice
+                  expect(vm_type).to receive(:datastore_clusters).thrice
                   expect(vm_type).to_not receive(:datacenter)
                   expect(global_config).to_not receive(:vm_storage_policy_name)
                   expect(vm_type).to_not receive(:storage_policy_datastores)
                   expect(subject).to eq(['^(ds\-1|ds\-2|sp\-1\-ds\-1|sp\-2\-ds\-1)$', nil])
+                end
+
+                it 'logs the datastores excluded because they do not have drs' do
+                  expect(logger).to receive(:debug).with("Datastore Clusters excluded because they do not have DRS enabled: [sp3]")
+                  subject
                 end
               end
 
@@ -210,7 +226,7 @@ module VSphereCloud
                 it 'includes the datastores from all sdrs enabled datastore cluster' do
                   expect(vm_type).to receive(:storage_policy_name).once
                   expect(vm_type).to receive(:datastore_names).once
-                  expect(vm_type).to receive(:datastore_clusters).twice
+                  expect(vm_type).to receive(:datastore_clusters).thrice
                   expect(vm_type).to_not receive(:datacenter)
                   expect(global_config).to_not receive(:vm_storage_policy_name)
                   expect(vm_type).to_not receive(:storage_policy_datastores)
@@ -224,7 +240,7 @@ module VSphereCloud
               it 'should be empty' do
                 expect(vm_type).to receive(:storage_policy_name).once
                 expect(vm_type).to receive(:datastore_names).once
-                expect(vm_type).to receive(:datastore_clusters).thrice
+                expect(vm_type).to receive(:datastore_clusters).exactly(4).times
                 expect(vm_type).to_not receive(:datacenter)
                 expect(global_config).to_not receive(:vm_storage_policy_name)
                 expect(vm_type).to_not receive(:storage_policy_datastores)
