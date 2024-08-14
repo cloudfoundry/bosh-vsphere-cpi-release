@@ -6,7 +6,7 @@ templates:
 
 packages:
 - iso9660wrap
-- ruby-3.1
+- ruby-3.3
 - vsphere_cpi
 
 properties:
