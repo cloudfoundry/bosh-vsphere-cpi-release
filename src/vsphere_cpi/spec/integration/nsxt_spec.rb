@@ -491,37 +491,39 @@ describe 'CPI', nsxt_all: true do
         end
 
         it 'creates more than 5 VMs' do
-          6.times do |i|
-            vm_id, _ = cpi.create_vm(
-                "agent-00#{i}",
-                @stemcell_id,
-                vm_type,
-                policy_network_spec
-            )
-            expect(vm_id).to_not be_nil
-            @created_vms << vm_id
+          begin
+            6.times do |i|
+              vm_id, _ = cpi.create_vm(
+                  "agent-00#{i}",
+                  @stemcell_id,
+                  vm_type,
+                  policy_network_spec
+              )
+              expect(vm_id).to_not be_nil
+              @created_vms << vm_id
 
-            expect(cpi.has_vm?(vm_id)).to be(true)
-          end
+              expect(cpi.has_vm?(vm_id)).to be(true)
+            end
 
-          retryer do
-            results = @policy_group_members_api.get_group_vm_members(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, nsgroup_name_1).results
-            raise StillUpdatingVMsInGroups if results.map(&:display_name).uniq.length < 6
+            retryer do
+              results = @policy_group_members_api.get_group_vm_members(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, nsgroup_name_1).results
+              raise StillUpdatingVMsInGroups if results.map(&:display_name).uniq.length < 6
 
-            # results contain same vms in different power states
-            expect(results.map(&:display_name).uniq.length).to eq(6)
-            expect(results.map(&:display_name).uniq).to match_array(@created_vms)
+              # results contain same vms in different power states
+              expect(results.map(&:display_name).uniq.length).to eq(6)
+              expect(results.map(&:display_name).uniq).to match_array(@created_vms)
 
-            results = @policy_group_members_api.get_group_vm_members(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, nsgroup_name_2).results
-            raise StillUpdatingVMsInGroups if results.map(&:display_name).uniq.length < 6
+              results = @policy_group_members_api.get_group_vm_members(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, nsgroup_name_2).results
+              raise StillUpdatingVMsInGroups if results.map(&:display_name).uniq.length < 6
 
-            expect(results.map(&:display_name).uniq.length).to eq(6)
-            expect(results.map(&:display_name).uniq).to match_array(@created_vms)
-          end
-
-          until @created_vms.empty?
-            vm_cid, _ = @created_vms.pop
-            delete_vm(cpi, vm_cid)
+              expect(results.map(&:display_name).uniq.length).to eq(6)
+              expect(results.map(&:display_name).uniq).to match_array(@created_vms)
+            end
+          ensure
+            until @created_vms.empty?
+              vm_cid, _ = @created_vms.pop
+              delete_vm(cpi, vm_cid)
+            end
           end
 
           retryer do
