@@ -27,8 +27,8 @@ module VSphereCloud
 
     def conflicts(networks)
       conflicts = []
-      networks.each do |name, ips|
-        ips.each do |ip|
+      networks.each do |name, desired_ips|
+        desired_ips.each do |ip|
           logger.info("Checking if ip '#{ip}' is in use")
           @client.find_all_vms_by_ip(ip).each do |vm|
             logger.info("Found VM '#{vm.name}' with IP '#{ip}'. Checking if VM belongs to network '#{name}'...")
