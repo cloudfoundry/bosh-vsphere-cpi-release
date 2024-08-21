@@ -111,6 +111,10 @@ describe 'CPI', nsxt_all: true do
     }
   end
   let(:policy_network_spec) do
+    generate_random_policy_network_spec
+  end
+
+  def generate_random_policy_network_spec
     {
         'static-bridged' => {
             'ip' => "169.254.#{rand(1..254)}.#{rand(4..254)}",
@@ -497,7 +501,8 @@ describe 'CPI', nsxt_all: true do
                   "agent-00#{i}",
                   @stemcell_id,
                   vm_type,
-                  policy_network_spec
+                  # Generate different IP addresses for each VM to ensure no conflicts
+                  generate_random_policy_network_spec
               )
               expect(vm_id).to_not be_nil
               @created_vms << vm_id
