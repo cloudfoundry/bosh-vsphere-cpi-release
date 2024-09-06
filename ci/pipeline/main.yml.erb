@@ -424,6 +424,8 @@ jobs:
         image: vcpi-main-image
     - put: bosh-cpi-src
       tags: [nimbus]
+      inputs:
+      - bosh-cpi-src
       params:
         repository: bosh-cpi-src
         rebase: true
