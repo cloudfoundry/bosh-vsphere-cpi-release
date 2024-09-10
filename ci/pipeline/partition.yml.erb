@@ -12,11 +12,14 @@
       - get: stemcell
         tags: [nimbus]
       - put: environment
-        tags: [nimbus]
+        tags: [broadcom]
         resource: <%= e "pool-#{pool}" %>
+        inputs: detect
         params: { acquire: true }
         on_failure:
           put: <%= e "pool-#{pool}" %>
+          tags: [broadcom]
+          inputs: detect
           params : { release: environment }
     - task: test
       tags: [nimbus]
@@ -29,9 +32,9 @@
 <% end -%>
       on_failure:
         put: <%= e "pool-#{pool}" %>
-        tags: [nimbus]
+        tags: [broadcom]
         params : { remove: environment }
       on_success:
         put: <%= e "pool-#{pool}" %>
-        tags: [nimbus]
+        tags: [broadcom]
         params : { release: environment }

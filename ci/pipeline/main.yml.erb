@@ -67,12 +67,13 @@ jobs:
             passed: [build-candidate]
             trigger: true
           - put: environment
-            tags: [nimbus]
+            tags: [broadcom]
             resource: pool-7.0-nsxt31-policy
+            inputs: detect
             params: {acquire: true}
             on_failure:
               put: pool-7.0-nsxt31-policy
-              tags: [nimbus]
+              tags: [broadcom]
               params : {release: environment}
 
       - task: prepare-director-policy
@@ -100,11 +101,13 @@ jobs:
         on_failure:
           in_parallel:
           - put: pool-7.0-nsxt31-policy
-            tags: [nimbus]
+            tags: [broadcom]
+            inputs: detect
             params : {remove: environment}
         on_success:
           put: pool-7.0-nsxt31-policy
-          tags: [nimbus]
+          tags: [broadcom]
+          inputs: detect
           params : {release: environment}
         ensure:
           do:
@@ -131,12 +134,14 @@ jobs:
           tags: [nimbus]
           passed: [build-candidate]
         - put: environment
-          tags: [nimbus]
+          tags: [broadcom]
           resource: pool-7.0-nsxt31
+          inputs: detect
           params: {acquire: true}
           on_failure:
             put: pool-7.0-nsxt31
-            tags: [nimbus]
+            tags: [broadcom]
+            inputs: detect
             params : {release: environment}
       - task: prepare-director
         tags: [nimbus]
@@ -163,11 +168,13 @@ jobs:
         on_failure:
           in_parallel:
           - put: pool-7.0-nsxt31
-            tags: [nimbus]
+            tags: [broadcom]
+            inputs: detect
             params : {remove: environment}
         on_success:
           put: pool-7.0-nsxt31
-          tags: [nimbus]
+          tags: [broadcom]
+          inputs: detect
           params : {release: environment}
         ensure:
           do:
@@ -194,12 +201,14 @@ jobs:
             tags: [nimbus]
             passed: [build-candidate]
           - put: environment
-            tags: [nimbus]
+            tags: [broadcom]
             resource: pool-7.0-nsxt31-cvds
+            inputs: detect
             params: {acquire: true}
             on_failure:
               put: pool-7.0-nsxt31-cvds
-              tags: [nimbus]
+              tags: [broadcom]
+              inputs: detect
               params : {release: environment}
       - task: prepare-director
         tags: [nimbus]
@@ -226,11 +235,13 @@ jobs:
         on_failure:
           in_parallel:
             - put: pool-7.0-nsxt31-cvds
-              tags: [nimbus]
+              tags: [broadcom]
+              inputs: detect
               params : {remove: environment}
         on_success:
           put: pool-7.0-nsxt31-cvds
-          tags: [nimbus]
+          tags: [broadcom]
+          inputs: detect
           params : {release: environment}
         ensure:
           do:
@@ -257,12 +268,14 @@ jobs:
             tags: [nimbus]
             passed: [build-candidate]
           - put: environment
-            tags: [nimbus]
+            tags: [broadcom]
             resource: pool-8.0-nsxt40-cvds
+            inputs: detect
             params: {acquire: true}
             on_failure:
               put: pool-8.0-nsxt40-cvds
-              tags: [nimbus]
+              tags: [broadcom]
+              inputs: detect
               params : {release: environment}
       - task: prepare-director
         tags: [nimbus]
@@ -289,11 +302,13 @@ jobs:
         on_failure:
           in_parallel:
             - put: pool-8.0-nsxt40-cvds
-              tags: [nimbus]
+              tags: [broadcom]
+              inputs: detect
               params : {remove: environment}
         on_success:
           put: pool-8.0-nsxt40-cvds
-          tags: [nimbus]
+          tags: [broadcom]
+          inputs: detect
           params : {release: environment}
         ensure:
           do:
@@ -611,58 +626,58 @@ jobs:
 
 resources:
   - name: pool-7.0-nsxt30
-    tags: [nimbus]
+    tags: [broadcom]
     type: pool
     source:
-      uri:          git@github.com:pivotal-cf/vcpi-pool.git
+      uri:          git@github.gwd.broadcom.net:TNZ/vcpi-pool.git
       branch:       main
       pool:         v7.0-nsxt30
       private_key:  ((vcpi-pool_deployment_key.private_key))
   - name: pool-7.0-nsxt31
-    tags: [nimbus]
+    tags: [broadcom]
     type: pool
     source:
-      uri:          git@github.com:pivotal-cf/vcpi-pool.git
+      uri:          git@github.gwd.broadcom.net:TNZ/vcpi-pool.git
       branch:       main
       pool:         v7.0-nsxt31
       private_key:  ((vcpi-pool_deployment_key.private_key))
   - name: pool-7.0-nsxt31-policy
-    tags: [nimbus]
+    tags: [broadcom]
     type: pool
     source:
-      uri:          git@github.com:pivotal-cf/vcpi-pool.git
+      uri:          git@github.gwd.broadcom.net:TNZ/vcpi-pool.git
       branch:       main
       pool:         v7.0-nsxt31-policy
       private_key:  ((vcpi-pool_deployment_key.private_key))
   - name: pool-7.0-nsxt31-cvds
-    tags: [nimbus]
+    tags: [broadcom]
     type: pool
     source:
-      uri:          git@github.com:pivotal-cf/vcpi-pool.git
+      uri:          git@github.gwd.broadcom.net:TNZ/vcpi-pool.git
       branch:       main
       pool:         v7.0-nsxt31-cvds
       private_key:  ((vcpi-pool_deployment_key.private_key))
   - name: pool-8.0-nsxt40-cvds
-    tags: [nimbus]
+    tags: [broadcom]
     type: pool
     source:
-      uri:          git@github.com:pivotal-cf/vcpi-pool.git
+      uri:          git@github.gwd.broadcom.net:TNZ/vcpi-pool.git
       branch:       main
       pool:         v8.0-nsxt40-cvds
       private_key:  ((vcpi-pool_deployment_key.private_key))
   - name: pool-8.0-nsxt41-cvds
-    tags: [nimbus]
+    tags: [broadcom]
     type: pool
     source:
-      uri:          git@github.com:pivotal-cf/vcpi-pool.git
+      uri:          git@github.gwd.broadcom.net:TNZ/vcpi-pool.git
       branch:       main
       pool:         v8.0-nsxt41-cvds
       private_key:  ((vcpi-pool_deployment_key.private_key))
   - name: pool-8.pre-release-nsxt41-cvds
-    tags: [nimbus]
+    tags: [broadcom]
     type: pool
     source:
-      uri:          git@github.com:pivotal-cf/vcpi-pool.git
+      uri:          git@github.gwd.broadcom.net:TNZ/vcpi-pool.git
       branch:       main
       pool:         v8.pre-release-nsxt41-cvds
       private_key:  ((vcpi-pool_deployment_key.private_key))
