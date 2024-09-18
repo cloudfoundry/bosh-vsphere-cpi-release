@@ -36,8 +36,6 @@ module VSphereCloud
               unqualified_name = name.split('/').last
               if nic.ip_address.include?(ip) && nic.network == unqualified_name
                 network_mob = @client.find_network(@datacenter, name)
-                logger.info("found network '#{network_mob}' with vm '#{network_mob.vm}' and nic #{nic} with ips '#{nic.ip_address}'")
-
                 if network_mob.vm.include?(vm)
                   logger.info("found conflicting vm: #{vm.name}, on network: #{name} with ip: #{ip}")
                   conflicts << { vm_name: vm.name, network_name: name, ip: ip }

@@ -119,7 +119,7 @@ module VSphereCloud
             end
           end
           context 'when the network does not have that VM on it' do
-            let(:network_mob) { instance_double(VimSdk::Vim::Network, vm: []) }
+            let(:network_mob) { instance_double(VimSdk::Vim::Network, vm: [] ) }
             it 'returns empty conflict list' do
               expect(client).to receive(:find_network).with(datacenter, network_one_name).and_return(network_mob)
               expect(client).to receive(:find_all_vms_by_ip).with('169.254.1.1').and_return([deployed_vm])
