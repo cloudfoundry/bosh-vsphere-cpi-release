@@ -8,6 +8,7 @@ jobs:
         tags: [nimbus]
         trigger: true
       - get: vcpi-main-image
+      - get: python_2_7_image
     - in_parallel:
       - task: test-pyvmomi_to_ruby
         tags: [nimbus]
@@ -402,6 +403,7 @@ jobs:
         tags: [nimbus]
         trigger: true
       - get: vcpi-main-image
+      - get: python_2_7_image
     - task: bump-golang-deps
       tags: [nimbus]
       image: bosh-golang-release-registry-image
@@ -826,6 +828,13 @@ resources:
       username: ((docker.username))
       password: ((docker.password))
     type: registry-image
+  - name: python_2_7_image
+    type: registry-image
+    source:
+      repository: python
+      tag: '2.7'
+      username: ((docker.username))
+      password: ((docker.password))
 
 
 resource_types:
