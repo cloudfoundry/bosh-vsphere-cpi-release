@@ -13,6 +13,7 @@ jobs:
       - task: test-pyvmomi_to_ruby
         tags: [nimbus]
         file: source-ci/ci/tasks/test-pyvmomi_to_ruby.yml
+        image: python_2_7_image
       - task: unit-test
         tags: [nimbus]
         file: source-ci/ci/tasks/unit-test.yml
@@ -435,6 +436,7 @@ jobs:
       - task: test-pyvmomi_to_ruby
         tags: [nimbus]
         file: source-ci/ci/tasks/test-pyvmomi_to_ruby.yml
+        image: python_2_7_image
       - task: unit-test
         tags: [nimbus]
         file: source-ci/ci/tasks/unit-test.yml
