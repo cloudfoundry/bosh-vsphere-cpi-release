@@ -94,7 +94,7 @@ GEM
     vsphere-automation-vcenter (0.4.7)
       vsphere-automation-cis (~> 0.4.6)
       vsphere-automation-runtime (~> 0.4.6)
-    webrick (1.8.1)
+    webrick (1.8.2)
 
 PLATFORMS
   arm64-darwin
@@ -128,4 +128,4 @@ DEPENDENCIES
   webrick (~> 1.7)
 
 BUNDLED WITH
-   2.5.18
+   2.5.20
