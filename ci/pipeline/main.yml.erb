@@ -62,7 +62,11 @@ jobs:
           - {get: certification,            trigger: false, tags: [nimbus]}
           - {get: bosh-deployment,          trigger: false, tags: [nimbus]}
           - {get: bats,                     trigger: false, tags: [nimbus]}
-          - {get: bosh-cli,                 trigger: false, tags: [nimbus]}
+          - get: bosh-cli
+            params:
+              globs:
+              - 'bosh-cli-*-linux-amd64'
+            tags: [nimbus]
           - get: vcpi-main-image
           - get: bosh-cpi-src
             tags: [nimbus]
@@ -130,7 +134,11 @@ jobs:
         - {get: certification,            trigger: false, tags: [nimbus]}
         - {get: bosh-deployment,          trigger: false, tags: [nimbus]}
         - {get: bats,                     trigger: false, tags: [nimbus]}
-        - {get: bosh-cli,                 trigger: false, tags: [nimbus]}
+        - get: bosh-cli
+          params:
+            globs:
+            - 'bosh-cli-*-linux-amd64'
+          tags: [nimbus]
         - get: vcpi-main-image
         - get: bosh-cpi-src
           tags: [nimbus]
@@ -197,7 +205,11 @@ jobs:
           - {get: certification,            trigger: false, tags: [nimbus]}
           - {get: bosh-deployment,          trigger: false, tags: [nimbus]}
           - {get: bats,                     trigger: false, tags: [nimbus]}
-          - {get: bosh-cli,                 trigger: false, tags: [nimbus]}
+          - get: bosh-cli
+            params:
+              globs:
+              - 'bosh-cli-*-linux-amd64'
+            tags: [nimbus]
           - get: vcpi-main-image
           - get: bosh-cpi-src
             tags: [nimbus]
@@ -264,7 +276,11 @@ jobs:
           - {get: certification,            trigger: false, tags: [nimbus]}
           - {get: bosh-deployment,          trigger: false, tags: [nimbus]}
           - {get: bats,                     trigger: false, tags: [nimbus]}
-          - {get: bosh-cli,                 trigger: false, tags: [nimbus]}
+          - get: bosh-cli
+            params:
+              globs:
+              - 'bosh-cli-*-linux-amd64'
+            tags: [nimbus]
           - get: vcpi-main-image
           - get: bosh-cpi-src
             tags: [nimbus]
@@ -757,11 +773,11 @@ resources:
       repository: cloudfoundry/bosh
   - name: bosh-cli
     tags: [nimbus]
-    type: s3
+    type: github-release
     source:
-      regexp: bosh-cli-([0-9.]+)-linux-amd64
-      bucket: bosh-cli-artifacts
-      region_name: us-east-1
+      access_token: ((github_public_repo_token))
+      owner: cloudfoundry
+      repository: bosh-cli
   - name: bats
     tags: [nimbus]
     type: git
