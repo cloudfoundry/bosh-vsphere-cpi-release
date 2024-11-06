@@ -37,12 +37,6 @@ jobs:
         - lifecycle-8.0-nsxt41-cvds
         - lifecycle-8.pre-release-nsxt41-cvds
       - get: vcpi-main-image
-      - get: version-semver
-        trigger: false
-        params: { bump: patch }
-    - put: version-semver
-      params:
-        file: version-semver/version
     - task: build
       file: source-ci/ci/tasks/build-candidate.yml
       image: vcpi-main-image
@@ -741,24 +735,16 @@ resources:
       - README.md
       - .github
       - CONTRIBUTING.md
-  - name: version-semver
-    tags: [nimbus]
-    type: semver
-    source:
-      key:               current-version
-      bucket:            ((s3_vsphere_cpi_bucket))
-      access_key_id:     ((s3_vsphere_cpi_blobwriter_assume_aws_access_key.username))
-      secret_access_key: ((s3_vsphere_cpi_blobwriter_assume_aws_access_key.password))
-      assume_role_arn:   ((s3_vsphere_cpi_blobwriter_assume_aws_access_key.role_arn))
   - name: release-version-semver
     tags: [nimbus]
     type: semver
     source:
-      key:               release-current-version
-      bucket:            ((s3_vsphere_cpi_bucket))
-      access_key_id:     ((s3_vsphere_cpi_blobwriter_assume_aws_access_key.username))
-      secret_access_key: ((s3_vsphere_cpi_blobwriter_assume_aws_access_key.password))
-      assume_role_arn:   ((s3_vsphere_cpi_blobwriter_assume_aws_access_key.role_arn))
+      initial_version: "97.0.16"
+      driver: git
+      uri: git@github.com:cloudfoundry/bosh-vsphere-cpi-release.git
+      branch: release-semver
+      file: VERSION
+      private_key: ((github_deploy_key_bosh-vsphere-cpi-release.private_key))
   - name: stemcell
     tags: [nimbus]
     type: bosh-io-stemcell
