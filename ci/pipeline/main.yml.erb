@@ -23,10 +23,9 @@ jobs:
 <%= render('partition', pool: pool) %>
 <% end -%>
 
-  - name: build-candidate
+  - name: pre-bats-fan-in
     plan:
     - in_parallel:
-      - get: source-ci
       - get: bosh-cpi-src
         trigger: true
         passed:
@@ -36,13 +35,6 @@ jobs:
         - lifecycle-8.0-nsxt40-cvds
         - lifecycle-8.0-nsxt41-cvds
         - lifecycle-8.pre-release-nsxt41-cvds
-      - get: vcpi-main-image
-    - task: build
-      file: source-ci/ci/tasks/build-candidate.yml
-      image: vcpi-main-image
-    - put: bosh-cpi-artifacts
-      params:
-        file: 'dev-artifacts/*.tgz'
 
   - name: bats-policy
     serial: true
@@ -50,7 +42,6 @@ jobs:
       - in_parallel:
           - get: source-ci
             tags: [nimbus]
-          - {get: cpi-release,              trigger: true, tags: [nimbus], resource: bosh-cpi-artifacts, passed: [build-candidate]}
           - {get: bosh-release,             trigger: false, tags: [nimbus], resource: old-bosh-release}
           - {get: stemcell,                 trigger: false, tags: [nimbus]}
           - {get: certification,            trigger: false, tags: [nimbus]}
@@ -64,7 +55,7 @@ jobs:
           - get: vcpi-main-image
           - get: bosh-cpi-src
             tags: [nimbus]
-            passed: [build-candidate]
+            passed: [pre-bats-fan-in]
             trigger: true
           - put: environment
             tags: [broadcom]
@@ -75,7 +66,9 @@ jobs:
               put: pool-7.0-nsxt31-policy
               tags: [broadcom]
               params : {release: environment}
-
+      - task: build
+        file: source-ci/ci/tasks/build-candidate.yml
+        image: vcpi-main-image
       - task: prepare-director-policy
         tags: [nimbus]
         file: source-ci/ci/tasks/prepare-director-policy.yml
@@ -122,7 +115,6 @@ jobs:
       - in_parallel:
         - get: source-ci
           tags: [nimbus]
-        - {get: cpi-release,              trigger: true, tags: [nimbus], resource: bosh-cpi-artifacts, passed: [build-candidate]}
         - {get: bosh-release,             trigger: false, tags: [nimbus], resource: old-bosh-release}
         - {get: stemcell,                 trigger: false, tags: [nimbus], resource: stemcell}
         - {get: certification,            trigger: false, tags: [nimbus]}
@@ -136,7 +128,8 @@ jobs:
         - get: vcpi-main-image
         - get: bosh-cpi-src
           tags: [nimbus]
-          passed: [build-candidate]
+          passed: [pre-bats-fan-in]
+          trigger: true
         - put: environment
           tags: [broadcom]
           resource: pool-7.0-nsxt31
@@ -147,6 +140,9 @@ jobs:
             tags: [broadcom]
             inputs: detect
             params : {release: environment}
+      - task: build
+        file: source-ci/ci/tasks/build-candidate.yml
+        image: vcpi-main-image
       - task: prepare-director
         tags: [nimbus]
         file: source-ci/ci/tasks/prepare-director.yml
@@ -193,7 +189,6 @@ jobs:
       - in_parallel:
           - get: source-ci
             tags: [nimbus]
-          - {get: cpi-release,              trigger: true, tags: [nimbus], resource: bosh-cpi-artifacts, passed: [build-candidate]}
           - {get: bosh-release,             trigger: false, tags: [nimbus], resource: old-bosh-release}
           - {get: stemcell,                 trigger: false, tags: [nimbus]}
           - {get: certification,            trigger: false, tags: [nimbus]}
@@ -207,7 +202,8 @@ jobs:
           - get: vcpi-main-image
           - get: bosh-cpi-src
             tags: [nimbus]
-            passed: [build-candidate]
+            passed: [pre-bats-fan-in]
+            trigger: true
           - put: environment
             tags: [broadcom]
             resource: pool-7.0-nsxt31-cvds
@@ -218,6 +214,9 @@ jobs:
               tags: [broadcom]
               inputs: detect
               params : {release: environment}
+      - task: build
+        file: source-ci/ci/tasks/build-candidate.yml
+        image: vcpi-main-image
       - task: prepare-director
         tags: [nimbus]
         file: source-ci/ci/tasks/prepare-director.yml
@@ -264,7 +263,6 @@ jobs:
       - in_parallel:
           - get: source-ci
             tags: [nimbus]
-          - {get: cpi-release,              trigger: true, tags: [nimbus], resource: bosh-cpi-artifacts, passed: [build-candidate]}
           - {get: bosh-release,             trigger: false, tags: [nimbus], resource: old-bosh-release}
           - {get: stemcell,                 trigger: false, tags: [nimbus]}
           - {get: certification,            trigger: false, tags: [nimbus]}
@@ -278,7 +276,8 @@ jobs:
           - get: vcpi-main-image
           - get: bosh-cpi-src
             tags: [nimbus]
-            passed: [build-candidate]
+            passed: [pre-bats-fan-in]
+            trigger: true
           - put: environment
             tags: [broadcom]
             resource: pool-8.0-nsxt40-cvds
@@ -289,6 +288,9 @@ jobs:
               tags: [broadcom]
               inputs: detect
               params : {release: environment}
+      - task: build
+        file: source-ci/ci/tasks/build-candidate.yml
+        image: vcpi-main-image
       - task: prepare-director
         tags: [nimbus]
         file: source-ci/ci/tasks/prepare-director.yml
@@ -335,13 +337,10 @@ jobs:
     - in_parallel:
       - get: source-ci
         tags: [nimbus]
-      - get: bosh-cpi-artifacts
-        tags: [nimbus]
-        passed: [bats, bats-policy, bats-70-cvds]
       - get: bosh-cpi-src
         trigger: true
         tags: [nimbus]
-        passed: [bats, bats-policy, bats-70-cvds]
+        passed: [bats, bats-policy, bats-70-cvds, bats-80-cvds]
 
   - name: promote-candidate
     serial_groups:
@@ -350,9 +349,6 @@ jobs:
     - in_parallel:
       - get: source-ci
         tags: [nimbus]
-      - get: bosh-cpi-artifacts
-        tags: [nimbus]
-        passed: [pre-release-fan-in]
       - get: bosh-cpi-src
         tags: [nimbus]
         passed: [pre-release-fan-in]
@@ -706,15 +702,6 @@ resources:
       branch:       main
       pool:         v8.pre-release-nsxt41-cvds
       private_key:  ((vcpi-pool_deployment_key.private_key))
-  - name: bosh-cpi-artifacts
-    tags: [nimbus]
-    type: s3
-    source:
-      regexp:            bosh-vsphere-cpi-([\d\.]+)\.tgz
-      bucket:            ((s3_vsphere_cpi_bucket))
-      access_key_id:     ((s3_vsphere_cpi_blobwriter_assume_aws_access_key.username))
-      secret_access_key: ((s3_vsphere_cpi_blobwriter_assume_aws_access_key.password))
-      aws_role_arn:      ((s3_vsphere_cpi_blobwriter_assume_aws_access_key.role_arn))
   - name: source-ci
     tags: [nimbus]
     type: git

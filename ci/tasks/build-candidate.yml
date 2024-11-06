@@ -3,10 +3,9 @@ platform: linux
 inputs:
 - name: source-ci
 - name: bosh-cpi-src
-- name: version-semver
 
 outputs:
-- name: dev-artifacts
+- name: cpi-release
 
 run:
   path: source-ci/ci/tasks/build-candidate.sh
