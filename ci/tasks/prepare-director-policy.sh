@@ -20,15 +20,6 @@ unambiguous_ds=nfs0-1
 
 source environment/metadata
 
-# Hack for old CPI versions which do not support restricted permissions users
-current_cpi_version=$(cat cpi-release/version)
-new_user_cpi_version=51
-
-if [ $current_cpi_version -lt $new_user_cpi_version ]; then
-  export BOSH_VSPHERE_CPI_USER='administrator@vsphere.local'
-  echo "Setting vSphere user to administrator for old CPI version (<45)" 1>&2
-fi
-
 # To get the cert from nsxt-manager, we run openssl on the jump box, and then pipe that result into a local openssl command that reformats it into PEM
 sshpass -p $BOSH_VSPHERE_JUMPER_PASSWORD ssh -o StrictHostKeyChecking=no "vcpi@${BOSH_VSPHERE_JUMPER_HOST}" -C "openssl s_client -showcerts -connect $BOSH_VSPHERE_CPI_NSXT_HOST:443 </dev/null 2>/dev/null" | openssl x509 -outform PEM > nsxt-manager-cert.pem
 
