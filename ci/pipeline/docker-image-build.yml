@@ -9,6 +9,12 @@ jobs:
     - get: bosh-golang-release-image
       trigger: true
     - get: oci-build-task-registry-image
+    - get: bosh-cli-gh-release
+      params:
+        globs:
+        - "unique-nonexisting-glob"
+  - load_var: bosh-cli-version
+    file: bosh-cli-gh-release/version
   - task: generate-docker-config
     image: oci-build-task-registry-image
     config:
@@ -38,6 +44,7 @@ jobs:
       outputs:
       - name: image
       params:
+        BUILD_ARG_BOSH_CLI_VERSION: ((.:bosh-cli-version))
         CONTEXT: source-ci/
         DOCKER_CONFIG: docker-config
         DOCKERFILE: source-ci/ci/docker/Dockerfile
@@ -51,6 +58,11 @@ jobs:
     params:
       image: image/image
 resources:
+- name: bosh-cli-gh-release
+  type: github-release
+  source:
+    owner: cloudfoundry
+    repository: bosh-cli
 - name: source-ci
   source:
     branch: master

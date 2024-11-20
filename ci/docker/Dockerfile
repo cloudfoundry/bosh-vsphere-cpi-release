@@ -7,12 +7,12 @@ FROM bosh/golang-release
 
 LABEL org.opencontainers.image.authors="bosh-ecosystem@groups.vmware.com"
 
-ENV BOSH_VERSION=7.5.2
 ENV LANG=C.UTF-8
 ENV RUBY_INSTALL_VERSION=0.9.3
 
 # TARGETARCH is a "magic" ARG that can be either amd64 or arm64
 ARG TARGETARCH
+ARG BOSH_CLI_VERSION
 
 ADD .ruby-version /tmp/.ruby-version
 
@@ -50,10 +50,9 @@ RUN apt-get update && \
   gem install bundler --no-document
 
 # BOSH CLI
-RUN cd /tmp && \
-  wget -nv https://s3.amazonaws.com/bosh-cli-artifacts/bosh-cli-${BOSH_VERSION}-linux-${TARGETARCH} && \
-  install -Dm755 bosh-cli-${BOSH_VERSION}-linux-${TARGETARCH} /usr/local/bin/bosh && \
-  rm -f bosh-cli-${BOSH_VERSION}-linux-${TARGETARCH}
+RUN curl -sL https://github.com/cloudfoundry/bosh-cli/releases/download/v${BOSH_CLI_VERSION}/bosh-cli-${BOSH_CLI_VERSION}-linux-amd64 \
+    > /usr/local/bin/bosh \
+    && chmod +x /usr/local/bin/bosh
 
 # Oh My zsh, which is awesome
 RUN  echo "" | SHELL=/usr/bin/zsh zsh -c "$(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"; \
