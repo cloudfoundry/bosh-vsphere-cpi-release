@@ -464,6 +464,7 @@ jobs:
         rebase: true
 
   - name: bump-bosh-packages
+    serial: true
     plan:
     - in_parallel:
       - get: bosh-cpi-src
