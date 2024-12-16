@@ -1,10 +1,14 @@
 - type: replace
   path: /instance_groups/name=bosh/properties/agent/env/bosh/ntp?
   value:
-    - time.vmware.com
+    - time5.lvn.broadcom.net
+    - time6.lvn.broadcom.net
+    - time7.lvn.broadcom.net
 
 
 - type: replace
   path: /resource_pools/0/env/bosh/ntp?
   value:
-    - time.vmware.com
+    - time5.lvn.broadcom.net
+    - time6.lvn.broadcom.net
+    - time7.lvn.broadcom.net
