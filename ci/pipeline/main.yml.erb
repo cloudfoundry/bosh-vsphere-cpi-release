@@ -348,20 +348,17 @@ jobs:
     plan:
     - in_parallel:
       - get: source-ci
-        tags: [nimbus]
       - get: bosh-cpi-src
-        tags: [nimbus]
         passed: [pre-release-fan-in]
       - get: release-version-semver
-        tags: [nimbus]
         trigger: true
       - get: release-notes
-        tags: [nimbus]
       - get: vcpi-main-image
       - get: bosh-shared-ci
+      - get: bosh-cli-registry-image
     - task: promote
-      tags: [nimbus]
       file: bosh-shared-ci/tasks/release/create-final-release.yml
+      image: bosh-cli-registry-image
       input_mapping:
         release_repo: bosh-cpi-src
         version: release-version-semver
@@ -375,13 +372,13 @@ jobs:
               credentials_source: static
               json_key: '((cloud-foundry-gcp-credentials))'
     - put: bosh-cpi-src
-      tags: [nimbus]
+      inputs: detect
       params:
         repository: release_repo
         tag: release_metadata/tag-name
         rebase: true
     - put: github-release
-      tags: [nimbus]
+      inputs: detect
       params:
         name: release_metadata/tag-name
         tag: release_metadata/tag-name
@@ -398,6 +395,7 @@ jobs:
     - task: clear-release-notes
       file: golang-release/ci/tasks/shared/clear-release-notes.yml
     - put: release-notes
+      inputs: detect
       params:
         file: release-notes/release-notes.md
 
@@ -604,11 +602,11 @@ jobs:
         on_success:
           do:
             - put: release-notes
-              tags: [nimbus]
+              inputs: detect
               params:
                 file: release-notes/release-notes.md
             - put: release-version-semver
-              tags: [nimbus]
+              inputs: detect
               params:
                 file: patched-version/version
     - try:
@@ -626,11 +624,11 @@ jobs:
         on_success:
           do:
           - put: release-notes
-            tags: [nimbus]
+            inputs: detect
             params:
               file: release-notes/release-notes.md
           - put: release-version-semver
-            tags: [nimbus]
+            inputs: detect
             params:
               file: patched-version/version
     - task: ensure-cve-checker-succeeded
@@ -786,6 +784,12 @@ resources:
       start: 3:00 -0700
       stop: 4:30 -0700
       days: [ Saturday ]
+  - name: bosh-cli-registry-image
+    type: registry-image
+    source:
+      repository: bosh/cli
+      username: ((docker.username))
+      password: ((docker.password))
   - name: bosh-golang-release-registry-image
     type: registry-image
     source:
@@ -811,7 +815,6 @@ resources:
       username: ((docker.username))
       password: ((docker.password))
   - name: release-notes
-    tags: [nimbus]
     type: gcs-resource
     source:
       bucket: bosh-ci-release-notes
@@ -842,7 +845,6 @@ resources:
 
 resource_types:
 - name: gcs-resource
-  tags: [nimbus]
   type: docker-image
   source:
     repository: frodenas/gcs-resource
