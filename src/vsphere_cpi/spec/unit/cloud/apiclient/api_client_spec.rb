@@ -53,6 +53,14 @@ describe 'NSXT' do
       client = NSXT::ApiClient.new
       expect { client.call_api('PUT', 'api/v0/throttled_endpoint') }.to raise_error(NSXT::ApiCallError)
     end
+
+    it 'handles non-JSON responses' do
+      typh_response = instance_double(Typhoeus::Response, success?: false, timed_out?: false, code: 500, body: '', headers: ['some-header'], status_message: 'Server error', return_code: :ok, return_message: 'Some libcurl message')
+      allow_any_instance_of(Typhoeus::Request).to receive(:run).and_return(typh_response)
+
+      client = NSXT::ApiClient.new
+      expect { client.call_api('PUT', 'api/v0/throttled_endpoint') }.to raise_error(NSXT::ApiCallError)
+    end
   end
 end
 
@@ -83,6 +91,14 @@ describe 'NSXTPolicy' do
       typh_response = double('Typhoeus::Response', :success? => false, :timed_out? => false, :code => 429, :body => '{}', :headers => ['some-header'], :status_message => 'Too many requests')
       allow_any_instance_of(Typhoeus::Request).to receive(:run).and_return(typh_response)
       allow_any_instance_of(Kernel).to receive(:sleep) # I don't want the test to take 12 seconds
+      client = NSXTPolicy::ApiClient.new
+      expect { client.call_api('PUT', 'api/v0/throttled_endpoint') }.to raise_error(NSXTPolicy::ApiCallError)
+    end
+
+    it 'handles non-JSON responses' do
+      typh_response = instance_double(Typhoeus::Response, success?: false, timed_out?: false, code: 500, body: '', headers: ['some-header'], status_message: 'Server error', return_code: :ok, return_message: 'Some libcurl message')
+      allow_any_instance_of(Typhoeus::Request).to receive(:run).and_return(typh_response)
+
       client = NSXTPolicy::ApiClient.new
       expect { client.call_api('PUT', 'api/v0/throttled_endpoint') }.to raise_error(NSXTPolicy::ApiCallError)
     end

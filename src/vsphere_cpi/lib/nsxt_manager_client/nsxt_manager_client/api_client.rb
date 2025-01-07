@@ -64,8 +64,14 @@ module NSXT
           fail ApiCallError.new(:code => 0,
                             :message => response.return_message)
         else
-          api_error = ApiError.new(JSON.parse(response.body))
-          error_message = api_error.related_errors ? api_error.related_errors : api_error.error_message
+          error_message = ''
+          begin
+            api_error = ApiError.new(JSON.parse(response.body))
+            error_message = api_error.related_errors ? api_error.related_errors : api_error.error_message
+          rescue JSON::ParserError
+            error_message = "Unable to parse JSON response.\nReturn code:#{response.return_code}\nReturn message:#{response.return_message}\nResponse body: #{response.body}"
+          end
+
           fail ApiCallError.new(:code => response.code,
                             :response_headers => response.headers,
                             :response_body => response.body,
