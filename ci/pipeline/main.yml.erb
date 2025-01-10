@@ -343,6 +343,7 @@ jobs:
         passed: [bats, bats-policy, bats-70-cvds, bats-80-cvds]
 
   - name: promote-candidate
+    disable_manual_trigger: true
     serial_groups:
       - version
     plan:
@@ -383,21 +384,12 @@ jobs:
         name: release_metadata/tag-name
         tag: release_metadata/tag-name
         body: release-notes/release-notes.md
-
-  - name: clear-release-notes
-    plan:
-    - get: release-version-semver
-      tags: [nimbus]
-      passed:
-      - promote-candidate
-      trigger: true
-    - get: golang-release
-    - task: clear-release-notes
-      file: golang-release/ci/tasks/shared/clear-release-notes.yml
+        commitish: bosh-cpi-src/.git/ref
+        generate_release_notes: true
     - put: release-notes
       inputs: detect
       params:
-        file: release-notes/release-notes.md
+        file: release_metadata/empty-file
 
   - name: bump-deps
     plan:
@@ -520,52 +512,25 @@ jobs:
     serial_groups:
     - version
     plan:
-    - get: bosh-cpi-src
-      tags: [nimbus]
-      passed:
-      - pre-release-fan-in
-    - get: release-version-semver
-      tags: [nimbus]
+    - put: release-version-semver
       params:
         bump: patch
-    - put: release-version-semver
-      tags: [nimbus]
-      params:
-        file: release-version-semver/version
 
   - name: release-new-minor
     serial_groups:
     - version
     plan:
-    - get: bosh-cpi-src
-      tags: [nimbus]
-      passed:
-      - pre-release-fan-in
-    - get: release-version-semver
-      tags: [nimbus]
+    - put: release-version-semver
       params:
         bump: minor
-    - put: release-version-semver
-      tags: [nimbus]
-      params:
-        file: release-version-semver/version
 
   - name: release-new-major
     serial_groups:
     - version
     plan:
-    - get: bosh-cpi-src
-      tags: [nimbus]
-      passed:
-      - pre-release-fan-in
-    - get: release-version-semver
-      tags: [nimbus]
+    - put: release-version-semver
       params:
         bump: major
-    - put: release-version-semver
-      tags: [nimbus]
-      params:
-        file: release-version-semver/version
 
   - name: automatically-release-new-patch
     serial_groups:
@@ -573,27 +538,46 @@ jobs:
     plan:
     - in_parallel:
       - get: bosh-cpi-src
-        tags: [nimbus]
         trigger: true
         passed:
         - pre-release-fan-in
-      - get: golang-release
-        tags: [nimbus]
       - get: current-version
         resource: release-version-semver
-        tags: [nimbus]
       - get: patched-version
         resource: release-version-semver
-        tags: [nimbus]
         params:
           bump: patch
-      - get: bosh-ecosystem-concourse-image
-      - get: bosh-golang-release-security-scanner-registry-image
+      - get: bosh-shared-ci
+      - get: bosh-security-scanner-registry-image
     - try:
-        task: check-for-updated-golang-package
-        tags: [nimbus]
-        file: golang-release/ci/tasks/shared/check-for-updated-golang-package.yml
-        image: bosh-golang-release-security-scanner-registry-image
+        task: check-for-patched-cves
+        file: bosh-shared-ci/tasks/release/check-for-patched-cves.yml
+        image: bosh-security-scanner-registry-image
+        input_mapping:
+          input_repo: bosh-cpi-src
+          version: current-version
+        params:
+          GIT_PRIVATE_KEY: ((github_deploy_key_bosh-vsphere-cpi-release.private_key))
+          SEVERITY: CRITICAL,HIGH
+        on_success:
+          do:
+            - put: release-notes
+              inputs: detect
+              params:
+                file: release-notes/release-notes.md
+            - put: release-version-semver
+              inputs: detect
+              params:
+                file: patched-version/version
+    - task: ensure-cve-checker-succeeded
+      file: bosh-shared-ci/tasks/release/ensure-task-succeeded.yml
+      image: bosh-security-scanner-registry-image
+      input_mapping:
+        task-output-folder: patched_cves
+    - try:
+        task: check-for-updated-vendored-packages
+        file: bosh-shared-ci/tasks/release/check-for-updated-vendored-packages.yml
+        image: bosh-security-scanner-registry-image
         input_mapping:
           input_repo: bosh-cpi-src
           version: current-version
@@ -609,35 +593,11 @@ jobs:
               inputs: detect
               params:
                 file: patched-version/version
-    - try:
-        task: check-for-patched-cves
-        tags: [nimbus]
-        file: golang-release/ci/tasks/shared/check-for-patched-cves.yml
-        image: bosh-golang-release-security-scanner-registry-image
-        input_mapping:
-          input_repo: bosh-cpi-src
-          version: current-version
-        params:
-          GIT_PRIVATE_KEY: ((github_deploy_key_bosh-vsphere-cpi-release.private_key))
-          SEVERITY: CRITICAL,HIGH
-          SOURCE_PATH: src/iso9660wrap
-        on_success:
-          do:
-          - put: release-notes
-            inputs: detect
-            params:
-              file: release-notes/release-notes.md
-          - put: release-version-semver
-            inputs: detect
-            params:
-              file: patched-version/version
-    - task: ensure-cve-checker-succeeded
-      tags: [nimbus]
-      file: golang-release/ci/tasks/shared/ensure-cve-checker-succeeded.yml
-      image: bosh-ecosystem-concourse-image
-      params:
-        description: |
-          Since the previous step is wrapped in a "try", this task checks that the previous step fully executed.
+    - task: ensure-update-package-check-succeeded
+      file: bosh-shared-ci/tasks/release/ensure-task-succeeded.yml
+      image: bosh-security-scanner-registry-image
+      input_mapping:
+        task-output-folder: package-updates
 
 resources:
   - name: bosh-shared-ci
@@ -796,10 +756,10 @@ resources:
       repository: bosh/golang-release
       username: ((docker.username))
       password: ((docker.password))
-  - name: bosh-golang-release-security-scanner-registry-image
+  - name: bosh-security-scanner-registry-image
     type: registry-image
     source:
-      repository: bosh/golang-release-security-scanner
+      repository: bosh/security-scanner
       username: ((docker.username))
       password: ((docker.password))
   - name: bosh-ruby-release-registry-image
