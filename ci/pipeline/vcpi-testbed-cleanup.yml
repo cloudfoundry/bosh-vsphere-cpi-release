@@ -24,16 +24,20 @@ jobs:
           platform: linux
           image_resource:
             type: registry-image
-            source: { repository: devtools-docker-local.artifactory.eng.vmware.com/vmware/nimbus/nimbus-worker }
+            source: { repository: vmlib-docker-dev-local.packages.vcfd.broadcom.net/nimbus-core/nimbus-worker/nimbus-worker-ruby27 }
           run:
             path: /bin/bash
             args:
               - -exuc
               - |
                 TESTBED_FILE=~/testbed.txt
-                export USER=svc.tas-anycloud
+                export USER=svc.bosh-ecosystem
 
-                for DATACENTER in sc wdc; do
+                # gawk is necessary for the gensub function used in the awk block.
+                apt-get update
+                apt-get install -y gawk
+
+                for DATACENTER in lvn; do
                   set +e # nimbus-ctl is quick to throw an error, but usually it's not fatal for our purposes, e.g. "Command 'list' does not finish within 600 seconds on sc2-04-vc17"
                   NIMBUS_LOCATION=$DATACENTER nimbus-ctl --testbed list > $TESTBED_FILE-$DATACENTER
                   set -e
