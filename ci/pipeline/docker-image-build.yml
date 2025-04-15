@@ -68,16 +68,18 @@ resources:
     branch: master
     paths:
     - ci
-    private_key: ((github_deploy_key_bosh-vsphere-cpi-release.private_key))
-    uri: git@github.com:cloudfoundry/bosh-vsphere-cpi-release.git
+    uri: https://github.com/cloudfoundry/bosh-vsphere-cpi-release.git
+    username: bosh-admin-bot
+    password: ((github_public_repo_token))
   type: git
 - name: source-ci-trigger
   source:
     branch: master
     paths:
     - ci/docker
-    private_key: ((github_deploy_key_bosh-vsphere-cpi-release.private_key))
-    uri: git@github.com:cloudfoundry/bosh-vsphere-cpi-release.git
+    uri: https://github.com/cloudfoundry/bosh-vsphere-cpi-release.git
+    username: bosh-admin-bot
+    password: ((github_public_repo_token))
   type: git
   check_every: 1h
 - name: vcpi-main-image
