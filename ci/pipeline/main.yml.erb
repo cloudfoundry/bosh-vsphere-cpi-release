@@ -778,7 +778,7 @@ resources:
     type: gcs-resource
     source:
       bucket: bosh-ci-release-notes
-      json_key: ((gcp_credentials_json))
+      json_key: ((broadcom_gcp_credentials_json))
       versioned_file: bosh-vsphere-cpi-release/release-notes.md
       initial_content_text: ""
   - name: github-release
