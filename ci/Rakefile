@@ -46,7 +46,7 @@ task :pipeline, [:name] => 'pipeline.yml' do |t, args|
 
   sh '/bin/bash', '-ec', [
     "fly -t #{CONCOURSE.shellescape} set-pipeline",
-    "--team vsphere-cpi",
+    "--team main",
     "-p #{args.name.shellescape}",
     "-c #{t.prerequisites.first.shellescape}",
     "-v vcpi_branch=#{branch.shellescape}",
