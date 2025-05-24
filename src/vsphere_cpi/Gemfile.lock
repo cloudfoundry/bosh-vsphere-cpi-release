@@ -57,7 +57,7 @@ GEM
       pry (>= 0.13, < 0.16)
     public_suffix (6.0.2)
     racc (1.8.1)
-    rack (2.2.14)
+    rack (2.2.16)
     rake (13.2.1)
     rspec (3.13.0)
       rspec-core (~> 3.13.0)
