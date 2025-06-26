@@ -93,6 +93,7 @@ describe 'cpi.json.erb' do
               'cpu_reserve_full_mhz' => false,
               'memory_reservation_locked_to_max' => false,
               'upgrade_hw_version' => true,
+              'default_hw_version' => 17,
               'http_logging' => true,
               'ensure_no_ip_conflicts' => true,
               'vm_storage_policy_name' => 'VM Storage Policy'
