@@ -33,8 +33,11 @@ properties:
     description: When enabled, the requested memory for the VMs will be reserved in vCenter. Enabling this will likely lead to wasted memory on the hosts and will prevent vCenter from making the best use of the memory resources.
     default: false
   vcenter.upgrade_hw_version:
-    description: Upgrades virtual machines to latest virtual hardware version supported on the ESXi host.
+    description: Upgrades virtual machines to latest virtual hardware version supported on the ESXi host. This overrides default_hw_version.
     default: false
+  vcenter.default_hw_version:
+    description: Upgrades virtual machines to the specified virtual hardware version.
+    default: 17
   vcenter.vm_storage_policy_name:
     description: Name of the storage Policy which is applied to a VM and its ephemeral disk.
   vcenter.enable_human_readable_name:

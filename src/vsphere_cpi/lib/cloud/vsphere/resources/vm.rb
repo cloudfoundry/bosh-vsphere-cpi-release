@@ -134,6 +134,7 @@ module VSphereCloud
       end
 
       def fix_device_unit_numbers(device_changes)
+        # TODO: remove device number 7, increase to 64
         controllers_available_unit_numbers = Hash.new { |h, k| h[k] = (0..15).to_a }
         devices.each do |device|
           if device.controller_key
@@ -223,8 +224,9 @@ module VSphereCloud
         @client.power_on_vm(datacenter_mob, @mob)
       end
 
-      def upgrade_vm_virtual_hardware
-        @client.upgrade_vm_virtual_hardware(@mob)
+      def upgrade_vm_virtual_hardware(version = nil)
+        version_name = version.nil? ? nil : "vmx-#{version}"
+        @client.upgrade_vm_virtual_hardware(@mob, version_name)
       end
 
       def delete
