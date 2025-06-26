@@ -14,7 +14,8 @@ module VSphereCloud
         default_disk_type:,
         enable_auto_anti_affinity_drs_rules: false,
         stemcell:,
-        upgrade_hw_version: false,
+        upgrade_hw_version: upgrade_hw_version,
+        default_hw_version: default_hw_version,
         pbm:,
         ip_conflict_detector: ip_conflict_detector,
         ensure_no_ip_conflicts: ensure_no_ip_conflicts,
@@ -73,7 +74,8 @@ module VSphereCloud
         vcenter_default_disk_type: default_disk_type,
         soap_log: 'fake-log-file',
         vcenter_enable_auto_anti_affinity_drs_rules: false,
-        upgrade_hw_version: false,
+        upgrade_hw_version: upgrade_hw_version,
+        default_hw_version: default_hw_version,
         vcenter_http_logging: true,
         nsxt_enabled?: false,
         human_readable_name_enabled?: true
@@ -101,6 +103,8 @@ module VSphereCloud
     let(:vcenter_api_uri) { URI.parse("https://localhost/sdk/vimService") }
     let(:client) { instance_double('VSphereCloud::VCenterClient', login: nil, service_content: service_content, soap_stub: soap_stub ) }
     let(:virtual_disk_manager) { instance_double('VimSdk::Vim::VirtualDiskManager') }
+    let(:upgrade_hw_version) { false }
+    let(:default_hw_version) { 17 }
 
     before do
       allow_any_instance_of(Cloud).to receive(:at_exit)
@@ -155,7 +159,8 @@ module VSphereCloud
       allow(subject).to receive(:create_drs_rules).and_return(nil)
       allow(subject).to receive(:add_vm_to_vm_group).and_return(nil)
       allow(subject).to receive(:apply_storage_policy).and_return(nil)
-      allow(vm_config).to receive(:upgrade_hw_version?).and_return(false)
+      allow(vm_config).to receive(:upgrade_hw_version?).and_return(upgrade_hw_version)
+      allow(client).to receive(:upgrade_vm_virtual_hardware).with(cloned_vm_mob, "vmx-#{default_hw_version}")
       allow_any_instance_of(Resources::VM).to receive(:power_on).and_raise(VSphereCloud::VCenterClient::GenericVmConfigFault)
       allow(cpi).to receive(:delete_vm)
 
@@ -187,14 +192,36 @@ module VSphereCloud
                                      )
     }
 
+    context 'hardware version' do
+      context 'when upgrade_hw_version is set to true' do
+        let(:upgrade_hw_version) { true }
+
+        it 'will upgrade to the latest version' do
+          # calling with no version will upgrade to the latest version
+          expect(client).to receive(:upgrade_vm_virtual_hardware).with(cloned_vm_mob, nil)
+          subject.create(vm_config)
+        end
+      end
+
+      context 'when upgrade_hw_version is set to false' do
+        let(:upgrade_hw_version) { false }
+
+        it 'will upgrades to default_hw_version' do
+          expect(client).to receive(:upgrade_vm_virtual_hardware).with(cloned_vm_mob, "vmx-#{default_hw_version}")
+          subject.create(vm_config)
+        end
+      end
+    end
+
     context 'with vGPU devices' do
       before do
         allow(vm_config).to receive(:vgpus).and_return(['grid_t4-16q'])
       end
+
       it 'upgrades the vm hardware and reconfigures the VM with the vGPU device' do
         expect(Resources::PCIPassthrough).to receive(:create_vgpu)
                                                .with('grid_t4-16q').and_return(nil)
-        expect(client).to receive(:upgrade_vm_virtual_hardware).with(cloned_vm_mob)
+        expect(client).to receive(:upgrade_vm_virtual_hardware).with(cloned_vm_mob, nil)
         expect(client).to receive(:reconfig_vm).with(cloned_vm_mob, anything)
         subject.create(vm_config)
       end
@@ -207,11 +234,12 @@ module VSphereCloud
           'device_id' => 'abcd',
         }])
       end
+
       it 'reconfigures the VM with the PCI passthrough device' do
         # because of the setup we will still fail with the same error on the 2nd attempt, but we know there is a 2nd attempt..
         expect(Resources::PCIPassthrough).to receive(:create_pci_passthrough)
                                                       .with(vendor_id: '1234', device_id: 'abcd').and_return(nil)
-        expect(client).to receive(:upgrade_vm_virtual_hardware).with(cloned_vm_mob)
+        expect(client).to receive(:upgrade_vm_virtual_hardware).with(cloned_vm_mob, nil)
         expect(client).to receive(:reconfig_vm).with(cloned_vm_mob, anything)
         subject.create(vm_config)
       end
