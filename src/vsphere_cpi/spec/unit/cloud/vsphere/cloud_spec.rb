@@ -2496,6 +2496,7 @@ module VSphereCloud
           folder: 'fake-folder',
         )
       end
+      let(:disk_with_uuid_regex) { /\Adisk-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z/ }
 
       before do
         allow(small_ds).to receive(:accessible?).and_return(accessible)
@@ -2508,18 +2509,29 @@ module VSphereCloud
 
       it 'creates disk via datacenter' do
         expect(datacenter).to receive(:create_disk)
-          .with(VSphereCloud::Resources::Datastore, 1024, default_disk_type)
+          .with(a_string_matching(disk_with_uuid_regex), VSphereCloud::Resources::Datastore, 1024, default_disk_type)
           .and_return(disk)
 
         disk_cid = vsphere_cloud.create_disk(1024, {})
         expect(disk_cid).to eq('fake-disk-cid')
       end
 
+      context 'when disk name is passed in cloud properties' do
+        it 'uses provided disk name' do
+          expect(datacenter).to receive(:create_disk)
+                                  .with('some-disk-name', VSphereCloud::Resources::Datastore, 1024, default_disk_type)
+                                  .and_return(disk)
+
+          disk_cid = vsphere_cloud.create_disk(1024, {'name' => 'some-disk-name'})
+          expect(disk_cid).to eq(disk.cid)
+        end
+      end
+
       context 'when global default_disk_type is set and no disk_pool type is set' do
         let(:default_disk_type) { 'fake-global-type' }
         it 'creates disk with the specified default type' do
           expect(datacenter).to receive(:create_disk)
-                                  .with(VSphereCloud::Resources::Datastore, 1024, 'fake-global-type')
+                                  .with(a_string_matching(disk_with_uuid_regex), VSphereCloud::Resources::Datastore, 1024, 'fake-global-type')
                                   .and_return(disk)
 
           disk_cid = vsphere_cloud.create_disk(1024, {})
@@ -2580,7 +2592,7 @@ module VSphereCloud
         let(:default_disk_type) { 'fake-global-type' }
         it 'create disk with the specified disk_pool type' do
           expect(datacenter).to receive(:create_disk)
-                                  .with(VSphereCloud::Resources::Datastore, 1024, 'fake-disk-pool-type')
+                                  .with(a_string_matching(disk_with_uuid_regex), VSphereCloud::Resources::Datastore, 1024, 'fake-disk-pool-type')
                                   .and_return(disk)
           disk_cid = vsphere_cloud.create_disk(1024, {'type' => 'fake-disk-pool-type'})
           expect(disk_cid).to eq('fake-disk-cid')
@@ -2590,7 +2602,7 @@ module VSphereCloud
       context 'when no global default_disk_type is set and disk_pool type is set' do
         it 'creates disk with the specified disk_pool type' do
           expect(datacenter).to receive(:create_disk)
-            .with(VSphereCloud::Resources::Datastore, 1024, 'fake-disk-pool-type')
+            .with(a_string_matching(disk_with_uuid_regex), VSphereCloud::Resources::Datastore, 1024, 'fake-disk-pool-type')
             .and_return(disk)
 
           disk_cid = vsphere_cloud.create_disk(1024, {'type' => 'fake-disk-pool-type'})
@@ -2616,7 +2628,7 @@ module VSphereCloud
 
         it 'creates disk in vm cluster' do
           expect(datacenter).to receive(:create_disk)
-            .with(datastore, 1024, default_disk_type)
+            .with(a_string_matching(disk_with_uuid_regex), datastore, 1024, default_disk_type)
             .and_return(disk)
 
           disk_cid = vsphere_cloud.create_disk(1024, {}, 'fake-vm-cid')
@@ -2637,10 +2649,10 @@ module VSphereCloud
             .with('large-ds')
             .and_return(large_datastore)
           allow(datacenter).to receive(:create_disk)
-            .with(VSphereCloud::Resources::Datastore, 1024, default_disk_type)
+            .with(a_string_matching(disk_with_uuid_regex), VSphereCloud::Resources::Datastore, 1024, default_disk_type)
             .and_return(disk)
           allow(datacenter).to receive(:create_disk)
-            .with(VSphereCloud::Resources::Datastore, 1024, default_disk_type)
+            .with(a_string_matching(disk_with_uuid_regex), VSphereCloud::Resources::Datastore, 1024, default_disk_type)
             .and_return(disk)
         end
 
