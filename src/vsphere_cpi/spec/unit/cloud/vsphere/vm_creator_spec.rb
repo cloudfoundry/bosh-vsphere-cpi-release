@@ -8,7 +8,7 @@ module VSphereCloud
         client: ,
         cloud_searcher: cloud_searcher,
         cpi:,
-        datacenter: datacenter_mob,
+        datacenter: datacenter,
         agent_env:,
         tagging_tagger:,
         default_disk_type:,
@@ -26,7 +26,7 @@ module VSphereCloud
       [
         default_disk_type: default_disk_type,
         resource_pool: 'test',
-        datacenters: [datacenter],
+        datacenters: [datacenter_config],
         host: 'localhost',
         user: 'admin',
         password: 'password'
@@ -43,7 +43,19 @@ module VSphereCloud
       Cloud.new({ 'vcenters' => config , 'agent' => {}})
     }
     let(:custom_fields_manager) { instance_double('VimSdk::Vim::CustomFieldsManager') }
-    let(:datacenter) { {  mob: datacenter_mob , name: 'dc-1', 'name' => 'dc-1', 'persistent_datastore_pattern' => 'ds-ps-*', 'datastore_pattern'=> 'ds-*', 'vm_folder'=> 'bosh_vms', 'template_folder'=> 'stemcells', 'disk_path' => 'disks', 'clusters' => [] } }
+    let(:vm_folder) { instance_double(Resources::Folder, mob: instance_double(VimSdk::Vim::Folder)) }
+    let(:datacenter_config) do
+      {
+        'name' => 'dc-1',
+        'persistent_datastore_pattern' => 'ds-ps-*',
+        'datastore_pattern' => 'ds-*',
+        'vm_folder' => 'bosh_vms',
+        'template_folder' => 'stemcells',
+        'disk_path' => 'disks',
+        'clusters' => []
+      }
+    end
+    let(:datacenter) { instance_double(Resources::Datacenter,  mob: datacenter_mob, name: 'dc-1', vm_folder: vm_folder) }
     let(:datacenter_mob) { instance_double('VimSdk::Vim::Datacenter', name: 'dc-1') }
     let(:cluster) { instance_double(Resources::Cluster, mob: cluster_mob,
                                     resource_pool: resource_pool, host_group: nil, accessible_datastores: { "ds-1": {}, "ds-2": {} }) }
@@ -105,6 +117,7 @@ module VSphereCloud
     let(:virtual_disk_manager) { instance_double('VimSdk::Vim::VirtualDiskManager') }
     let(:upgrade_hw_version) { false }
     let(:default_hw_version) { 17 }
+    let(:paravirtual_controller) { instance_double(VimSdk::Vim::Vm::Device::ParaVirtualSCSIController) }
 
     before do
       allow_any_instance_of(Cloud).to receive(:at_exit)
@@ -124,7 +137,7 @@ module VSphereCloud
         VimSdk::Vim::VirtualMachine,
         ["snapshot", "datastore"],
         ensure_all: true
-      ).and_return({'snapshot'=> 'value'})
+      ).and_return({'snapshot'=> instance_double(VimSdk::Vim::Vm::SnapshotInfo, current_snapshot: instance_double(VimSdk::Vim::Vm::SnapshotInfo))})
       allow(cloud_searcher).to receive(:get_properties).with(
         stemcell_vm,
         VimSdk::Vim::VirtualMachine,
@@ -153,7 +166,7 @@ module VSphereCloud
       allow(cpi).to receive(:generate_network_env).and_return({})
       allow(cpi).to receive(:generate_disk_env).and_return({})
       allow(cpi).to receive(:generate_agent_env).and_return({})
-      allow(client).to receive(:find_by_inventory_path).with("dc-1").and_return(datacenter)
+      allow(client).to receive(:find_by_inventory_path).with("dc-1").and_return(datacenter_config)
       allow(client).to receive(:find_vm_by_name).and_return(cloned_vm)
       allow(agent_env).to receive(:set_env)
       allow(subject).to receive(:create_drs_rules).and_return(nil)
@@ -166,6 +179,8 @@ module VSphereCloud
 
       allow(vm_config).to receive(:validate_drs_rules).and_return(true)
       allow_any_instance_of(Resources::VM).to receive(:power_on)
+      allow(StoragePicker).to receive(:choose_ephemeral_storage).and_return(datastore)
+      allow_any_instance_of(Resources::VM).to receive(:create_paravirtual_scsi_controller_spec).and_return(paravirtual_controller)
     end
     let(:vm_config) { instance_double(VmConfig,
                                       name: 'norbo',
@@ -256,6 +271,22 @@ module VSphereCloud
       it "reconfigures the VM with a larger root disk and we don't check linked clones because the mocking is already too much" do
         expect(system_disk).to receive(:capacity_in_kb=).with(new_disk_size_gb * 2 ** 20) # convert kiB → GiB
         expect(client).to receive(:reconfig_vm).with(cloned_vm_mob, anything)
+        subject.create(vm_config)
+      end
+    end
+
+    context 'paravirtual SCSI controller' do
+      it "changes default SCSI controller to paravirtual SCSI controller to allow more disks to be attached" do
+        expect(client).to receive(:wait_for_task).and_yield
+
+        expect(cpi).to receive(:clone_vm) do |_vm, _name, _folder, _resource_pool, options|
+          expect(options[:config].device_change).to include(have_attributes(
+                                                              class: VimSdk::Vim::Vm::Device::VirtualDeviceSpec,
+                                                              device: paravirtual_controller,
+                                                              operation: VimSdk::Vim::Vm::Device::VirtualDeviceSpec::Operation::EDIT
+                                                            ))
+          cloned_vm_mob
+        end
         subject.create(vm_config)
       end
     end

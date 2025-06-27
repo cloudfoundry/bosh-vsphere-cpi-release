@@ -86,6 +86,11 @@ module VSphereCloud
           config_spec = VimSdk::Vim::Vm::ConfigSpec.new(vm_config.config_spec_params)
           config_spec.device_change = []
 
+          paravirtual_scsi_controller_spec = replicated_stemcell_vm.create_paravirtual_scsi_controller_spec
+          raise 'Failed to create device change to paravirtual controller' if paravirtual_scsi_controller_spec.nil?
+          scsi_controller_device_change_spec = Resources::VM.create_edit_device_spec(paravirtual_scsi_controller_spec)
+          config_spec.device_change << scsi_controller_device_change_spec
+
           ephemeral_disk = Resources::EphemeralDisk.new(
             size_in_mb: vm_config.ephemeral_disk_size,
             datastore:,

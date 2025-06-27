@@ -615,6 +615,55 @@ describe VSphereCloud::Resources::VM, fake_logger: true do
     end
   end
 
+  describe 'create_paravirtual_scsi_controller_spec' do
+    let(:lsi_scsi_controller) do
+      device = VimSdk::Vim::Vm::Device::VirtualLsiLogicController.new
+      device.key = 7777
+      device.slot_info = double('slot-info')
+      device.controller_key = 1234
+      device.unit_number = 4567
+      device.bus_number = 6789
+      device.device = double('device')
+      device.scsi_ctlr_unit_number = 3456
+      device.shared_bus = 'noSharing'
+      device.hot_add_remove = true
+      device
+    end
+
+    let(:paravirtual_scsi_controller) do
+      device = VimSdk::Vim::Vm::Device::ParaVirtualSCSIController.new
+      device.
+      device.
+      device.controller_key = 1234
+      device.unit_number = 4567
+      device.bus_number = 6789
+      device.device = double('device')
+      device.scsi_ctlr_unit_number = 3456
+      device.shared_bus = 'noSharing'
+      device.hot_add_remove = true
+      device
+    end
+
+    let(:vm_properties) { { 'config.hardware.device' => [lsi_scsi_controller] } }
+
+    it 'creates a new paravirtual scsi controller device spec' do
+      expect(vm.create_paravirtual_scsi_controller_spec).
+        to be_a(
+             VimSdk::Vim::Vm::Device::ParaVirtualSCSIController
+           ).and have_attributes(
+                   key: 7777,
+                   slot_info: lsi_scsi_controller.slot_info,
+                   controller_key: 1234,
+                   unit_number: 4567,
+                   bus_number: 6789,
+                   device: lsi_scsi_controller.device,
+                   scsi_ctlr_unit_number: 3456,
+                   shared_bus: 'noSharing',
+                   hot_add_remove: true
+                 )
+    end
+  end
+
   describe '#to_s' do
     it 'show relevant info' do
       expect(subject.to_s).to eq("(#{subject.class.name} (cid=\"vm-cid\"))")
