@@ -74,7 +74,7 @@ describe VSphereCloud::Resources::VM, fake_logger: true do
     end
   end
 
-  describe '#fix_device_unit_numbers' do
+  describe '#fix_device_key' do
     let(:vm_devices) do
       vm_devices = []
       4.times do |i|
@@ -104,7 +104,7 @@ describe VSphereCloud::Resources::VM, fake_logger: true do
     end
   end
 
-  describe '#fix_device_key' do
+  describe '#fix_device_unit_numbers' do
     let(:vm_properties) { { 'config.hardware.device' => vm_devices } }
     let(:vm_devices) do
       vm_devices = []
@@ -122,11 +122,45 @@ describe VSphereCloud::Resources::VM, fake_logger: true do
       expect(device.unit_number).to eq(4)
     end
 
+    context 'when reserving more that device after unit number 6' do
+      let(:vm_devices) do
+        vm_devices = []
+        7.times do |i|
+          vm_devices << double(:device, controller_key: 7, unit_number: i)
+        end
+        vm_devices
+      end
+
+      let(:device_changes) { [double(:device_change, device: device)] }
+
+      it 'skips device number 7 (reserved)' do
+        vm.fix_device_unit_numbers(device_changes)
+        expect(device.unit_number).to eq(8)
+      end
+    end
+
+    context 'when reserving more that 8 unit numbers' do
+      let(:vm_devices) do
+        vm_devices = []
+        7.times do |i|
+          vm_devices << double(:device, controller_key: 7, unit_number: i)
+        end
+        vm_devices
+      end
+
+      let(:device_changes) { [double(:device_change, device: device)] }
+
+      it 'sets device unit number to available unit number' do
+        vm.fix_device_unit_numbers(device_changes)
+        expect(device.unit_number).to eq(8)
+      end
+    end
+
     context 'when devices use all available unit numbers' do
       let(:vm_devices) do
         vm_devices = []
-        16.times do |i|
-          vm_devices << double(:device, controller_key: 7, unit_number: i)
+        64.times do |i|
+          vm_devices << double(:device, controller_key: 7, unit_number: i) if i != 7
         end
         vm_devices
       end
