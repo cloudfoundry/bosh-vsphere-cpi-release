@@ -134,8 +134,7 @@ module VSphereCloud
       end
 
       def fix_device_unit_numbers(device_changes)
-        # TODO: remove device number 7, increase to 64
-        controllers_available_unit_numbers = Hash.new { |h, k| h[k] = (0..15).to_a }
+        controllers_available_unit_numbers = Hash.new { |h, k| h[k] = (0..63).grep_v(7) }
         devices.each do |device|
           if device.controller_key
             available_unit_numbers = controllers_available_unit_numbers[device.controller_key]
