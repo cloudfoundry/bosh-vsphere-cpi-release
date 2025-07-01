@@ -24,7 +24,7 @@ jobs:
           platform: linux
           image_resource:
             type: registry-image
-            source: { repository: vmlib-docker-dev-local.packages.vcfd.broadcom.net/nimbus-core/nimbus-worker/nimbus-worker-ruby27 }
+            source: { repository: vmlib-docker-dev-local.packages.vcfd.broadcom.net/nimbus-core/nimbus-worker/nimbus-worker-ruby3 }
           run:
             path: /bin/bash
             args:
