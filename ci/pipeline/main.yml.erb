@@ -664,14 +664,24 @@ resources:
     type: git
     source:
       uri:         https://github.com/cloudfoundry/bosh-vsphere-cpi-release.git
-      branch:      {{vcpi_branch}}
+      branch:      ((vcpi_branch))
       paths:       [ci]
+  - name: source-ci-docker
+    source:
+      branch: master
+      paths:
+        - ci/docker
+      uri: https://github.com/cloudfoundry/bosh-vsphere-cpi-release.git
+      username: bosh-admin-bot
+      password: ((github_public_repo_token))
+    type: git
+    check_every: 1h
   - name: bosh-cpi-src
     tags: [nimbus]
     type: git
     source:
       uri:         https://github.com/cloudfoundry/bosh-vsphere-cpi-release.git
-      branch:      {{vcpi_branch}}
+      branch:      ((vcpi_branch))
       username: bosh-admin-bot
       password: ((github_read_write_token))
       ignore_paths:
