@@ -18,11 +18,12 @@ desc 'Create or update the pipeline configuration'
 task :pipeline, [:name] => 'pipeline.yml' do |t, args|
   # Default to the unexpired target expiring furthest in the future known to
   # `fly`
-  CONCOURSE = ENV.fetch('CONCOURSE') do
+  concourse_target = ENV.fetch('CONCOURSE') do
     authorized = Target.list.select { |t| t.expiry > Time.now }
-    unless target = authorized.max_by(&:expiry)
-      fail 'No Concourse target specified and all targets are expired'
+    unless (target = authorized.max_by(&:expiry))
+      raise 'No Concourse target specified and all targets are expired'
     end
+
     target.name
   end
 
@@ -34,9 +35,8 @@ task :pipeline, [:name] => 'pipeline.yml' do |t, args|
   # indeterminate (because HEAD is detached) then the pipeline name must be
   # provided as the name argument to this task.
   args.with_defaults(name: ENV.fetch('PIPELINE') do
-    if branch.empty?
-      fail 'Pipeline name must be specified if HEAD is detached'
-    end
+    raise 'Pipeline name must be specified if HEAD is detached' if branch.empty?
+
     branch == 'master' ? 'vsphere-cpi' : "vcpi-#{branch}"
   end)
 
@@ -45,8 +45,8 @@ task :pipeline, [:name] => 'pipeline.yml' do |t, args|
   branch = !branch.empty? ? branch : 'master'
 
   sh '/bin/bash', '-ec', [
-    "fly -t #{CONCOURSE.shellescape} set-pipeline",
-    "--team main",
+    "fly -t #{concourse_target.shellescape} set-pipeline",
+    '--team main',
     "-p #{args.name.shellescape}",
     "-c #{t.prerequisites.first.shellescape}",
     "-v vcpi_branch=#{branch.shellescape}",
@@ -60,39 +60,44 @@ desc 'Create or update the certification pipeline configuration'
 task 'pipeline:certification', [:name] => 'certifications/pipeline.yml' do |t, args|
   # Default to the unexpired target expiring furthest in the future known to
   # `fly`
-  CONCOURSE = ENV.fetch('CONCOURSE') do
+  concourse_target = ENV.fetch('CONCOURSE') do
     authorized = Target.list.select { |t| t.expiry > Time.now }
-    unless target = authorized.max_by(&:expiry)
-      fail 'No Concourse target specified and all targets are expired'
+    unless (target = authorized.max_by(&:expiry))
+      raise 'No Concourse target specified and all targets are expired'
     end
+
     target.name
   end
 
   # Ensure that the remote host is set from DBCHOST
-  DBCHOST = ENV.fetch('DBCHOST') do
-    fail 'DBCHOST must be set to the unqualified hostname of your DBC host'
+  dbc_host = ENV.fetch('DBCHOST') do
+    raise 'DBCHOST must be set to the unqualified hostname of your DBC host'
   end
-  dbcfqdn = "#{DBCHOST}.eng.vmware.com"
+  dbc_fqdn = "#{dbc_host}.eng.vmware.com"
 
   # Get the remote user name from DBCUSER, the SSH configuration for DBCHOST, or
   # the current user name
-  DBCUSER = ENV.fetch('DBCUSER') do
-    output, _, status = Open3.capture3('ssh', '-G', dbcfqdn)
+  dbc_user = ENV.fetch('DBCUSER') do
+    output, _, status = Open3.capture3('ssh', '-G', dbc_fqdn)
     break nil unless status.success?
+
     record = output.each_line(chomp: true).map do |text|
       text.split(nil, 2)
     end.find { |option, _| option == 'user' }
     break record[1] unless record.nil?
   end || (require 'etc'; Etc.getpwuid.name)
 
-  # Find the SSH identity file to use from the SSH configuration for DBCHOST
-  output, _, status = Open3.capture3('ssh', '-G', dbcfqdn)
-  fail "Unable to get SSH configuration for #{DBCHOST}" unless status.success?
-  dbc_ssh_key = output.each_line(chomp: true).map do |text|
-    text.split(nil, 2)
-  end.find do |option, v|
-    option == 'identityfile' && File.exist?(File.expand_path(v))
-  end or fail "No SSH identity file available for #{DBCHOST}"
+  # Find the SSH identity file to use from the SSH configuration for dbc_host
+  output, _, status = Open3.capture3('ssh', '-G', dbc_fqdn)
+  raise "Unable to get SSH configuration for #{dbc_host}" unless status.success?
+
+  dbc_ssh_key =
+    output.each_line(chomp: true).map do |text|
+      text.split(nil, 2)
+    end.find do |option, v|
+      option == 'identityfile' && File.exist?(File.expand_path(v))
+    end or raise "No SSH identity file available for #{dbc_host}"
+
   dbc_ssh_key = File.expand_path(dbc_ssh_key[1])
 
   # Get the git branch name
@@ -103,9 +108,8 @@ task 'pipeline:certification', [:name] => 'certifications/pipeline.yml' do |t, a
   # indeterminate (because HEAD is detached) then the pipeline name must be
   # provided as the name argument to this task.
   args.with_defaults(name: ENV.fetch('PIPELINE') do
-    if branch.empty?
-      fail 'Pipeline name must be specified if HEAD is detached'
-    end
+    raise 'Pipeline name must be specified if HEAD is detached' if branch.empty?
+
     if branch == 'master'
       'vSphere-CPI-Certification'
     else
@@ -118,12 +122,12 @@ task 'pipeline:certification', [:name] => 'certifications/pipeline.yml' do |t, a
   branch = !branch.empty? ? branch : 'master'
 
   sh '/bin/bash', '-ec', [
-    "fly -t #{CONCOURSE.shellescape} set-pipeline",
+    "fly -t #{concourse_target.shellescape} set-pipeline",
     "-p #{args.name.shellescape}",
     "-c #{t.prerequisites.first.shellescape}",
     "-v vcpi_branch=#{branch.shellescape}",
-    "-v dbc_host=#{DBCHOST.shellescape}",
-    "-v dbc_user=#{DBCUSER.shellescape}",
+    "-v dbc_host=#{dbc_host.shellescape}",
+    "-v dbc_user=#{dbc_user.shellescape}",
     "-v dbc_key=\"$(cat #{dbc_ssh_key.shellescape})\"",
     '-l <(secret show ~/.dot/vcpi-ci.gpg)'
   ].join(' ')
