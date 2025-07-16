@@ -1,4 +1,88 @@
+groups:
+  - name: all
+    jobs:
+      - unit-test
+      - pre-bats-fan-in
+      - bats-policy
+      - bats
+      - bats-70-cvds
+      - bats-80-cvds
+      - pre-release-fan-in
+      - promote-candidate
+      - bump-deps
+      - bump-bosh-packages
+      - release-new-patch
+      - release-new-minor
+      - release-new-major
+      - automatically-release-new-patch
+      - build-vcpi-main-image
+      <% each_pool do |pool| %>
+      - <%= "lifecycle-#{pool}" %>
+      <% end %>
+
+  - name: images
+    jobs:
+      - build-vcpi-main-image
+
 jobs:
+  - name: build-vcpi-main-image
+    plan:
+      - in_parallel:
+          - get: source-ci
+          - get: source-ci-docker
+            trigger: true
+          - get: bosh-golang-release-registry-image
+            trigger: true
+          - get: oci-build-task-registry-image
+          - get: bosh-cli
+            params:
+              globs:
+                - "unique-nonexisting-glob"
+      - load_var: bosh-cli-version
+        file: bosh-cli/version
+      - task: generate-docker-config
+        image: oci-build-task-registry-image
+        config:
+          platform: linux
+          outputs:
+            - name: docker-config
+          run:
+            path: /bin/sh
+            args:
+              - -c
+              - |-
+                cat <<EOF > docker-config/config.json
+                {
+                  "auths": {
+                    "https://registry-1.docker.io/v2/": {
+                      "auth": "$(echo -n '((docker.username)):((docker.password))' | base64)"
+                    }
+                  }
+                }
+                EOF
+      - task: build
+        image: oci-build-task-registry-image
+        config:
+          inputs:
+            - name: source-ci
+            - name: docker-config
+          outputs:
+            - name: image
+          params:
+            BUILD_ARG_BOSH_CLI_VERSION: ((.:bosh-cli-version))
+            CONTEXT: source-ci/
+            DOCKER_CONFIG: docker-config
+            DOCKERFILE: source-ci/ci/docker/Dockerfile
+            IMAGE_PLATFORM: linux/amd64
+            OUTPUT_OCI: true
+          platform: linux
+          run:
+            path: build
+        privileged: true
+      - put: vcpi-main-image
+        params:
+          image: image/image
+
   - name: unit-test
     plan:
     - in_parallel:
@@ -796,6 +880,12 @@ resources:
       owner: cloudfoundry
       repository: bosh-vsphere-cpi-release
       access_token: ((github_public_repo_token))
+  - name: oci-build-task-registry-image
+    type: registry-image
+    source:
+      repository: concourse/oci-build-task
+      username: ((docker.username))
+      password: ((docker.password))
   - name: vcpi-main-image
     source:
       repository: bosh/vsphere-vcpi
