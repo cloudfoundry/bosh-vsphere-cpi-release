@@ -721,12 +721,38 @@ describe VSphereCloud::Resources::VM, fake_logger: true do
       end
     end
 
-    context 'when disk.enableUUID is present' do
+    context 'when disk.enableUUID is present with TRUE' do
       let(:extraconfig) do
         [
             OpenStruct.new(key: 'test', value: 'test-val'),
             OpenStruct.new(key: 'disk.enableresize', value: 'True'),
             OpenStruct.new(key: 'disk.enableUUID', value: 'TRUE'),
+        ]
+      end
+      it 'returns true' do
+        expect(subject.disk_uuid_is_enabled?).to eq(true)
+      end
+    end
+
+    context 'when disk.enableUUID is present with `1`' do
+      let(:extraconfig) do
+        [
+          OpenStruct.new(key: 'test', value: 'test-val'),
+          OpenStruct.new(key: 'disk.enableresize', value: 'True'),
+          OpenStruct.new(key: 'disk.enableUUID', value: '1'),
+        ]
+      end
+      it 'returns true' do
+        expect(subject.disk_uuid_is_enabled?).to eq(true)
+      end
+    end
+
+    context 'when disk.enableUUID is present with 1' do
+      let(:extraconfig) do
+        [
+          OpenStruct.new(key: 'test', value: 'test-val'),
+          OpenStruct.new(key: 'disk.enableresize', value: 'True'),
+          OpenStruct.new(key: 'disk.enableUUID', value: 1),
         ]
       end
       it 'returns true' do

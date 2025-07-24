@@ -157,9 +157,19 @@ module VSphereCloud
 
           raise "Unable to parse vmx options: 'vmx_options' is not a Hash" unless vm_config.vmx_options.is_a?(Hash)
 
-          config_spec.extra_config = vm_config.vmx_options.keys.map do |key|
+          vm_extra_config = vm_config.vmx_options.keys.map do |key|
             VimSdk::Vim::Option::OptionValue.new(key:, value: vm_config.vmx_options[key])
           end
+          # We need to make sure this setting makes to the ExtraConfig so that future `attach_disk` calls use
+          # disk UUIDs correctly even without access to the vm_type.
+          #
+          # It is also used by vSphere to pass the UUID through to the guest os:
+          # https://knowledge.broadcom.com/external/article/321338/enhanced-guest-os-information-for-disks.html
+          if vm_config.disk_uuid_is_enabled? && !vm_config.vmx_options.include?('disk.enableUUID')
+            vm_extra_config << VimSdk::Vim::Option::OptionValue.new(key: 'disk.enableUUID', value: '1')
+          end
+          config_spec.extra_config = vm_extra_config
+
 
           host = nil
           # Before cloning we need to make sure the host is correctly picked up
@@ -211,7 +221,13 @@ module VSphereCloud
           end
           next if created_vm_mob.nil?
 
+          # Important:
+          #   The vm is not powered-on at this point, so we cannot rely on reading the vmx config from the vm directly
+          #   (there are some issues reading that state until its booted), instead we use on our generated vm config.
+          #   The implication of this is methods like vm.disk_uuid_is_enabled? aren't available, and we need a bespoke
+          #   implementation for this specific call site. Hence, we don't pass `created_vm` directly into these methods.
           created_vm = Resources::VM.new(vm_config.name, created_vm_mob, @client)
+
           # Set agent env settings
           begin
             network_env = generate_network_env(
