@@ -44,6 +44,8 @@ cpi_lambda = lambda do |context, _|
 
   cloud_properties = cpi_config['cloud']['properties']
 
+  # If the properties are defined on the top level cpi config, then wrap them in an envelope
+  # so that the final schema is always in the form `{"vcenters":[{...}]}`
   if cloud_properties['vcenters'].nil? || cloud_properties['vcenters'].empty?
     cloud_properties['vcenters'] = [{}]
   end
