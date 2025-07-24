@@ -276,8 +276,11 @@ module VSphereCloud
       vcenter['memory_reservation_locked_to_max']
     end
 
-    def disk_enable_uuid
-      vcenter.dig(:disk, :enableUUID)
+    def disk_uuid_is_enabled?
+      # For backwards compatability we need to check both '1' and 1 as both were previously acceptable due to
+      # inconsistent input validation (the cpi.json file enforces integer typing, but the cpi config does not). So
+      # we need to normalise it out here at the edge of the system.
+      [1, '1'].include? vcenter.dig(:vmx_options, :disk, :enableUUID)
     end
 
     def plugins
@@ -314,6 +317,7 @@ module VSphereCloud
             'password' => String,
             optional('http_logging') => bool,
             optional('enable_auto_anti_affinity_drs_rules') => bool,
+            optional('default_disk_type') => String,
             optional('upgrade_hw_version') => bool,
             optional('default_hw_version') => Integer,
             optional('cpu_reserve_full_mhz') => bool,

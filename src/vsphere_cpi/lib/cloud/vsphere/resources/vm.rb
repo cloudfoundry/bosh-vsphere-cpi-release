@@ -326,8 +326,18 @@ module VSphereCloud
       end
 
       def disk_uuid_is_enabled?
+        # Why do we need to ask the vm whether disk UUIDs are enabled? Well we don't have access to the vm
+        # cloud properties at disk attach time. So what we do is smuggle that information into vm's `extraConfig`
+        # and we read it back out here so that we know whether it was enabled at vm creation. Otherwise, disks may
+        # inconsistently use a mix of UUIDs and Bus IDs.
         extra_config.any? do |option|
-          option.key == 'disk.enableUUID' && option.value == "TRUE"
+          # NOTE: This value is set inconsistently throughout the code base; so for the sake of backwards
+          # compatability we test for the three observed truthy values. :/
+          # 1. cpi.json: only allows integers; so 1 is the only valid truthy value
+          # 2. runtime cpi config: both 1 and '1' are observed in the wild
+          # 3. vm_type/extraConfig: allow 'TRUE' as well (for some reason???)
+          # TODO(nm): Can we drop TRUE? The tests use it randomly, but the docs use '1'
+          option.key == 'disk.enableUUID' && ['1', 1, 'TRUE'].include?(option.value)
         end
       end
 

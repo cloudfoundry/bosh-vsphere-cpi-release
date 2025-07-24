@@ -69,5 +69,12 @@ module VSphereCloud
     def storage_policy_datastores(policy_name)
       policy_name ? @pbm.find_compatible_datastores(policy_name, @datacenter) : []
     end
+
+    def disk_uuid_is_enabled?
+      # For some reason here (unlike literally everywhere else in the code base) we use
+      # `{"disk.enableUUID": 1}` as a key instead of `{"disk": {"enableUUID: 1}}` actually
+      # See `vm.disk_uuid_is_enabled?` for an explanation of the insane parameters.
+      [1, '1', 'TRUE'].include? vmx_options&.dig('disk.enableUUID')
+    end
   end
 end
