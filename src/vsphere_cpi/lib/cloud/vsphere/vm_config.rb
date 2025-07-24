@@ -192,6 +192,10 @@ module VSphereCloud
       end
     end
 
+    def disk_uuid_is_enabled?
+      @manifest_params['enable_disk_uuid'] || vm_type.disk_uuid_is_enabled?
+    end
+
     private
 
     def has_custom_cluster_properties?

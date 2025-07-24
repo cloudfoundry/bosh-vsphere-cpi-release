@@ -366,7 +366,8 @@ module VSphereCloud
             global_clusters: @datacenter.clusters,
             disk_configurations: disk_configs,
             storage_policy: policy_name,
-            enable_human_readable_name: config.human_readable_name_enabled?
+            enable_human_readable_name: config.human_readable_name_enabled?,
+            enable_disk_uuid: config.disk_uuid_is_enabled?
           }
 
           if config.human_readable_name_enabled?
@@ -721,12 +722,12 @@ module VSphereCloud
 
         disk_spec = vm.attach_disk(disk_to_attach)
 
-        # For VMs with multiple SCSI controllers, as is common in Kubernetes workers,
-        # it is mandatory that disk.enableUUID is set in the VMX options / extra config of the VM to ensure
-        # that disk mounting can be performed unambigously.   This is typically set as part of a VM extension.
-        # Using the relative device unit number (see above), which is the traditional vSphere CPI disk identifier,
-        # only presumes a single SCSI controller.   The BOSH agent however does not distinguish SCSI controllers using
-        # this method of volume identification, which can lead to ambiguous mounts, and thus failed agent bootstraps or data loss.
+        # For VMs with multiple SCSI controllers, as is common in Kubernetes workers, it is mandatory that
+        # disk.enableUUID is set in the VMX options / extra config of the VM to ensure that disk mounting can be
+        # performed unambiguously. This is typically set as part of a VM extension. Using the relative device unit
+        # number (see above), which is the traditional vSphere CPI disk identifier, only presumes a single SCSI
+        # controller. The BOSH agent however does not distinguish SCSI controllers using this method of volume
+        # identification, which can lead to ambiguous mounts, and thus failed agent bootstraps or data loss.
         # The BOSH agent already supports volume UUID identification, which is used below for unambiguous
         # BOSH disk association.
         if vm.disk_uuid_is_enabled?

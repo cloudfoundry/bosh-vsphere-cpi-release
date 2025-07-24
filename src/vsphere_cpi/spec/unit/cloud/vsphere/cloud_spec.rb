@@ -39,7 +39,8 @@ module VSphereCloud
         nsxt: nsxt,
         agent: additional_agent_env,
         vm_storage_policy_name: global_storage_policy,
-        human_readable_name_enabled?: true
+        human_readable_name_enabled?: true,
+        disk_uuid_is_enabled?: false
       ).as_null_object
     end
     let(:custom_fields_manager) { instance_double('VimSdk::Vim::CustomFieldsManager') }
@@ -224,196 +225,6 @@ module VSphereCloud
     describe '#resize_disk' do
       it 'raises not implemented exception when called' do
         expect { vsphere_cloud.resize_disk('123', 23) }.to raise_error(Bosh::Clouds::NotImplemented)
-      end
-    end
-
-    describe '#generate_network_env' do
-      let(:device) { instance_double('VimSdk::Vim::Vm::Device::VirtualEthernetCard', backing: backing, mac_address: '00:00:00:00:00:00') }
-      let(:devices) { [device] }
-      let(:network1) {
-        {
-          'cloud_properties' => {
-            'name' => 'fake_network1'
-          }
-        }
-      }
-      let(:networks) { { 'fake_network1' => network1 } }
-      let(:dvs_index) { {} }
-      let(:expected_output) { {
-        'fake_network1' => {
-          'cloud_properties' => {
-            'name' => 'fake_network1'
-          },
-          'mac' => '00:00:00:00:00:00'
-        }
-      } }
-      let(:path_finder) { instance_double('VSphereCloud::PathFinder') }
-
-      before do
-        allow(device).to receive(:kind_of?).with(VimSdk::Vim::Vm::Device::VirtualEthernetCard) { true }
-        allow(PathFinder).to receive(:new).and_return(path_finder)
-        allow(path_finder).to receive(:path).with(any_args).and_return('fake_network1')
-      end
-
-      context 'using a distributed switch' do
-        let(:backing) do
-          backing_info = VimSdk::Vim::Vm::Device::VirtualEthernetCard::DistributedVirtualPortBackingInfo.new
-          backing_info.port = double(:port, portgroup_key: 'fake_pgkey1')
-          backing_info
-        end
-
-        let(:dvs_index) { { 'fake_pgkey1' => 'fake_network1' } }
-
-        it 'generates the network env' do
-
-          allow(datacenter).to receive_message_chain(:mob, :network, :detect).and_return(nil)
-          allow(cloud_searcher).to receive(:find_resources_by_property_path).and_return([])
-          expect(vsphere_cloud.generate_network_env(devices, networks, dvs_index)).to eq(expected_output)
-        end
-      end
-
-      context 'using a NSX on a distributed switch' do
-        let(:opaque_network_id) { 'some_id' }
-        let(:backing) do
-          backing_info = VimSdk::Vim::Vm::Device::VirtualEthernetCard::DistributedVirtualPortBackingInfo.new
-          backing_info.port = double(:port, portgroup_key: 'fake_pgkey1')
-          backing_info
-        end
-        let(:dvpg) do
-          VimSdk::Vim::Dvs::DistributedVirtualPortgroup.new(
-            name: "fake_network1", config: dvpg_config)
-
-        end
-        let(:dvpg_config) { double(:config, backing_type: "nsx", logical_switch_uuid: opaque_network_id) }
-
-        let(:dvs_index) { { opaque_network_id => 'fake_network1' } }
-
-        it 'generates the network env' do
-          allow(datacenter).to receive(:mob)
-          allow(cloud_searcher).to receive(:find_resources_by_property_path).and_return([dvpg])
-          allow(dvpg).to receive(:config).and_return(dvpg_config)
-          expect(vsphere_cloud.generate_network_env(devices, networks, dvs_index)).to eq(expected_output)
-        end
-      end
-
-      context 'using an NSX opaque network' do
-        let(:opaque_network_id) { 'some_id' }
-        let(:backing) do
-          backing_info = VimSdk::Vim::Vm::Device::VirtualEthernetCard::OpaqueNetworkBackingInfo.new
-          backing_info.opaque_network_id = opaque_network_id
-          backing_info
-        end
-
-        let(:dvs_index) { { opaque_network_id => 'fake_network1' } }
-
-        it 'generates the network env' do
-          expect(vsphere_cloud.generate_network_env(devices, networks, dvs_index)).to eq(expected_output)
-        end
-      end
-
-      context 'using a standard switch' do
-        let(:backing) { VimSdk::Vim::Vm::Device::VirtualEthernetCard::NetworkBackingInfo.new }
-
-        it 'generates the network env' do
-          expect(vsphere_cloud.generate_network_env(devices, networks, dvs_index)).to eq(expected_output)
-        end
-      end
-
-      context 'passing in device that is not a VirtualEthernetCard' do
-        let(:devices) { [device, double()] }
-        let(:backing) do
-          backing_info = VimSdk::Vim::Vm::Device::VirtualEthernetCard::NetworkBackingInfo.new
-          backing_info.network = 'fake_network1'
-          backing_info
-        end
-
-        it 'ignores non VirtualEthernetCard devices' do
-          expect(vsphere_cloud.generate_network_env(devices, networks, dvs_index)).to eq(expected_output)
-        end
-      end
-
-      context 'not passing any device that is a VirtualEthernetCard' do
-        let(:devices) { [] }
-        let(:backing) { double }
-
-        it 'responds with an appropriate error message' do
-          expect {
-            vsphere_cloud.generate_network_env(devices, networks, dvs_index)
-          }.to raise_error(Cloud::NetworkException, "Could not find network 'fake_network1'")
-        end
-      end
-
-      context 'when the network is in a folder' do
-
-        context 'using a standard switch' do
-          let(:path_finder) { instance_double('VSphereCloud::PathFinder') }
-          let(:fake_network_object) { double() }
-          let(:backing) do
-            backing_info = VimSdk::Vim::Vm::Device::VirtualEthernetCard::NetworkBackingInfo.new
-            backing_info.network = fake_network_object
-            backing_info
-          end
-          let(:network1) {
-            {
-              'cloud_properties' => {
-                'name' => 'networks/fake_network1'
-              }
-            }
-          }
-          let(:networks) { { 'networks/fake_network1' => network1 } }
-          let(:expected_output) { {
-            'networks/fake_network1' => {
-              'cloud_properties' => {
-                'name' => 'networks/fake_network1'
-              },
-              'mac' => '00:00:00:00:00:00'
-            }
-          } }
-
-          it 'generates the network env' do
-            allow(PathFinder).to receive(:new).and_return(path_finder)
-            allow(path_finder).to receive(:path).with(fake_network_object).and_return('networks/fake_network1')
-
-            expect(vsphere_cloud.generate_network_env(devices, networks, dvs_index)).to eq(expected_output)
-          end
-        end
-
-      end
-
-    end
-
-    describe '#generate_disk_env' do
-      let(:system_disk_unit_number) { 1 }
-      let(:system_disk) do
-        instance_double(VimSdk::Vim::Vm::Device::VirtualDisk, unit_number: system_disk_unit_number)
-      end
-      let(:ephemeral_disk_unit_number) { 2 }
-      let(:ephemeral_uuid) { 'TESTGENERATEDISKENV' }
-      let(:ephemeral_backing) do
-        instance_double(VimSdk::Vim::Vm::Device::VirtualDisk::FlatVer2BackingInfo, uuid: ephemeral_uuid)
-      end
-      let(:ephemeral_disk) do
-        instance_double(VimSdk::Vim::Vm::Device::VirtualDisk,
-                        backing: ephemeral_backing,
-                        unit_number: ephemeral_disk_unit_number
-        )
-      end
-      let(:vm_config) { instance_double(VmConfig) }
-      context 'when disk uuid is disabled on VM' do
-        it 'returns disk env with unit numbers' do
-          allow(vm_config).to receive(:vmx_options).and_return({})
-          disk_env = subject.generate_disk_env(system_disk, ephemeral_disk, vm_config)
-          expect(disk_env['ephemeral']). to eq(ephemeral_disk_unit_number.to_s)
-          expect(disk_env['system']). to eq(system_disk_unit_number.to_s)
-        end
-      end
-      context 'when disk uuid is enabled on VM' do
-        it 'returns disk env with unit numbers and ephemeral disk with UUID set to id key' do
-          allow(vm_config).to receive(:vmx_options).and_return({'disk.enableUUID' => '1'})
-          disk_env = subject.generate_disk_env(system_disk, ephemeral_disk, vm_config)
-          expect(disk_env['ephemeral']). to eq({'id' => ephemeral_uuid.downcase})
-          expect(disk_env['system']). to eq(system_disk_unit_number.to_s)
-        end
       end
     end
 
@@ -612,6 +423,7 @@ module VSphereCloud
           storage_policy: nil,
           human_readable_name_info: nil,
           enable_human_readable_name: true,
+          enable_disk_uuid: false,
         }
 
         expect(VmConfig).to receive(:new)
@@ -665,6 +477,7 @@ module VSphereCloud
           storage_policy: nil,
           human_readable_name_info: nil,
           enable_human_readable_name: true,
+          enable_disk_uuid: false,
         }
         expect(VmConfig).to receive(:new)
           .with(
@@ -835,7 +648,8 @@ module VSphereCloud
             disk_configurations: disk_configurations,
             storage_policy: nil,
             human_readable_name_info: nil,
-            enable_human_readable_name: true
+            enable_human_readable_name: true,
+            enable_disk_uuid: false,
           }
 
           allow(VmConfig).to receive(:new)
@@ -2545,56 +2359,7 @@ module VSphereCloud
           expect(disk_cid).to eq('fake-disk-cid')
         end
       end
-      context 'when global vmx_options are set' do
-        let(:vm_config) { instance_double(VmConfig) }
-        let(:system_disk_unit_number) { 1 }
-        let(:system_disk) do
-          instance_double(VimSdk::Vim::Vm::Device::VirtualDisk, unit_number: system_disk_unit_number)
-        end
-        let(:ephemeral_disk_unit_number) { 2 }
-        let(:ephemeral_uuid) { 'TESTGENERATEDISKENV' }
-        let(:ephemeral_backing) do
-          instance_double(VimSdk::Vim::Vm::Device::VirtualDisk::FlatVer2BackingInfo, uuid: ephemeral_uuid)
-        end
-        let(:ephemeral_disk) do
-          instance_double(VimSdk::Vim::Vm::Device::VirtualDisk,
-                          backing: ephemeral_backing,
-                          unit_number: ephemeral_disk_unit_number
-          )
-        end
-        let(:vm_vmx_options) do
-          {
-            'disk.enableUUID' => 0
-          }
-        end
-        context 'when no config was provided on vm level nor global' do
-          it 'uses the global value' do
-            allow(cloud_config).to receive(:disk_enable_uuid).and_return(nil)
-            allow(vm_config).to receive(:vmx_options).and_return({})
-            disk_env = subject.generate_disk_env(system_disk, ephemeral_disk, vm_config)
-            expect(disk_env['ephemeral']).to eq(ephemeral_disk_unit_number.to_s)
-            expect(disk_env['system']).to eq(system_disk_unit_number.to_s)
-          end
-        end
-        context 'when no config was provided on vm level' do
-          it 'uses the global value' do
-            allow(cloud_config).to receive(:disk_enable_uuid).and_return(1)
-            allow(vm_config).to receive(:vmx_options).and_return({})
-            disk_env = subject.generate_disk_env(system_disk, ephemeral_disk, vm_config)
-            expect(disk_env['ephemeral']). to eq({'id' => ephemeral_uuid.downcase})
-            expect(disk_env['system']).to eq(system_disk_unit_number.to_s)
-          end
-        end
-        context 'when vm_options override global vmx_options' do
-          it 'uses the vm_options value' do
-            allow(cloud_config).to receive(:disk_enable_uuid).and_return(1)
-            allow(vm_config).to receive(:vmx_options).and_return(vm_vmx_options)
-            disk_env = subject.generate_disk_env(system_disk, ephemeral_disk, vm_config)
-            expect(disk_env['ephemeral']).to eq(ephemeral_disk_unit_number.to_s)
-            expect(disk_env['system']).to eq(system_disk_unit_number.to_s)
-          end
-        end
-      end
+
       context 'when both global default_disk_type is set and disk_pool type is set' do
         let(:default_disk_type) { 'fake-global-type' }
         it 'create disk with the specified disk_pool type' do
