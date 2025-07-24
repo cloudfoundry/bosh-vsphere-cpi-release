@@ -37,6 +37,7 @@ module VSphereCloud
         vcenter_http_logging: true,
         nsxt_enabled?: nsxt_enabled,
         nsxt: nsxt,
+        agent: additional_agent_env,
         vm_storage_policy_name: global_storage_policy,
         human_readable_name_enabled?: true
       ).as_null_object
@@ -75,6 +76,7 @@ module VSphereCloud
     let(:tag_client) { instance_double(TaggingTag::AttachTagToVm) }
     let(:tagging_tagger) { instance_double(TaggingTag::AttachTagToVm) }
     let(:cpi_metadata_version){1}
+    let(:additional_agent_env) { {'something' => 'else'} }
 
     before do |example|
       allow(Config).to receive(:build).with(config).and_return(cloud_config)
@@ -600,7 +602,7 @@ module VSphereCloud
           vm_type: an_instance_of(VSphereCloud::VmType),
           networks_spec: 'fake-networks-hash',
           agent_id: 'fake-agent-id',
-          agent_env:     {},
+          agent_env: {},
           stemcell: {
             cid: 'fake-stemcell-cid',
             size: 1024
@@ -624,7 +626,8 @@ module VSphereCloud
             cloud_searcher: cloud_searcher,
             cpi: vsphere_cloud,
             datacenter: datacenter,
-            agent_env: agent_env,
+            agent_env_client: agent_env,
+            additional_agent_env: additional_agent_env,
             tagging_tagger: tagging_tagger,
             ip_conflict_detector: ip_conflict_detector,
             ensure_no_ip_conflicts: ensure_no_ip_conflicts,
@@ -652,7 +655,7 @@ module VSphereCloud
           vm_type: an_instance_of(VSphereCloud::VmType),
           networks_spec: 'fake-networks-hash',
           agent_id: 'fake-agent-id',
-          agent_env:     nil,
+          agent_env: nil,
           stemcell: {
             cid: 'fake-stemcell-cid',
             size: 1024
@@ -676,7 +679,8 @@ module VSphereCloud
             cloud_searcher: cloud_searcher,
             cpi: vsphere_cloud,
             datacenter: datacenter,
-            agent_env: agent_env,
+            agent_env_client: agent_env,
+            additional_agent_env: additional_agent_env,
             tagging_tagger: tagging_tagger,
             ip_conflict_detector: ip_conflict_detector,
             ensure_no_ip_conflicts: ensure_no_ip_conflicts,
@@ -847,7 +851,8 @@ module VSphereCloud
                                    cloud_searcher: cloud_searcher,
                                    cpi: vsphere_cloud,
                                    datacenter: datacenter,
-                                   agent_env: agent_env,
+                                   agent_env_client: agent_env,
+                                   additional_agent_env: additional_agent_env,
                                    tagging_tagger: tagging_tagger,
                                    ip_conflict_detector: ip_conflict_detector,
                                    ensure_no_ip_conflicts: ensure_no_ip_conflicts,
@@ -1717,7 +1722,8 @@ module VSphereCloud
                                    cloud_searcher: cloud_searcher,
                                    cpi: vsphere_cloud,
                                    datacenter: datacenter,
-                                   agent_env: agent_env,
+                                   agent_env_client: agent_env,
+                                   additional_agent_env: additional_agent_env,
                                    tagging_tagger: tagging_tagger,
                                    ip_conflict_detector: ip_conflict_detector,
                                    ensure_no_ip_conflicts: ensure_no_ip_conflicts,
@@ -1782,7 +1788,8 @@ module VSphereCloud
                                    cloud_searcher: cloud_searcher,
                                    cpi: vsphere_cloud,
                                    datacenter: datacenter,
-                                   agent_env: agent_env,
+                                   agent_env_client: agent_env,
+                                   additional_agent_env: additional_agent_env,
                                    tagging_tagger: tagging_tagger,
                                    ip_conflict_detector: ip_conflict_detector,
                                    ensure_no_ip_conflicts: ensure_no_ip_conflicts,
