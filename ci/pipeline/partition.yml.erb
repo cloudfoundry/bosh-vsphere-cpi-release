@@ -12,15 +12,14 @@
       - get: stemcell
         tags: [nimbus]
       - put: environment
-        tags: [broadcom]
+        tags: [nimbus]
         resource: <%= e "pool-#{pool}" %>
-        inputs: detect
-        params: { acquire: true }
-        on_failure:
-          put: <%= e "pool-#{pool}" %>
-          tags: [broadcom]
-          inputs: detect
-          params : { release: environment }
+        timeout: 4h
+        params:
+          action: create
+          lifetime: <%= 4 * 60 * 60 %>
+          timeout: <%= 4 * 60 * 60 %>
+          resource: testbed-lock
     - task: test
       tags: [nimbus]
       file: source-ci/ci/tasks/run-lifecycle.yml
@@ -32,9 +31,9 @@
 <% end -%>
       on_failure:
         put: <%= e "pool-#{pool}" %>
-        tags: [broadcom]
-        params : { remove: environment }
+        tags: [nimbus]
+        params: { action: extend, lifetime: <%= 24 * 60 * 60 %>, resource: environment }
       on_success:
         put: <%= e "pool-#{pool}" %>
-        tags: [broadcom]
-        params : { release: environment }
+        tags: [nimbus]
+        params : { action: release, resource: environment }

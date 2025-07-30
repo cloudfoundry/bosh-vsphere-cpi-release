@@ -27,6 +27,9 @@ task :pipeline, [:name] => 'pipeline.yml' do |t, args|
     target.name
   end
 
+  # Get the git remote url
+  url = ENV.fetch('REPO') { 'https://github.com/cloudfoundry/bosh-vsphere-cpi-release.git' }
+
   # Get the git branch name
   branch = ENV.fetch('BRANCH') { `git symbolic-ref -q --short HEAD`.strip }
 
@@ -49,6 +52,7 @@ task :pipeline, [:name] => 'pipeline.yml' do |t, args|
     '--team main',
     "-p #{args.name.shellescape}",
     "-c #{t.prerequisites.first.shellescape}",
+    "-v vcpi_url=#{url.shellescape}",
     "-v vcpi_branch=#{branch.shellescape}",
     # Set the trigger for delivery job based on which branch it is.
     # Only master branch should trigger delivery jobs.

@@ -29,6 +29,10 @@ $pipeline.pool('7.0-nsxt31-cvds') do |pool|
   }
 end
 
+$pipeline.pool('7.0-nsxt31-policy') do |pool|
+  pool.skip_lifecycle_test
+end
+
 $pipeline.pool('8.0-nsxt40-cvds') do |pool|
   pool.params = {
     RSPEC_FLAGS: [
@@ -52,6 +56,7 @@ $pipeline.pool('8.0-nsxt41-cvds') do |pool|
 end
 
 $pipeline.pool('8.pre-release-nsxt41-cvds') do |pool|
+  pool.gating = false
   pool.params = {
     RSPEC_FLAGS: [
       '--tag ~nvds',
