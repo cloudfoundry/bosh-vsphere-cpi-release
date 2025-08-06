@@ -366,7 +366,8 @@ module VSphereCloud
             global_clusters: @datacenter.clusters,
             disk_configurations: disk_configs,
             storage_policy: policy_name,
-            enable_human_readable_name: config.human_readable_name_enabled?
+            enable_human_readable_name: config.human_readable_name_enabled?,
+            enable_disk_uuid: config.disk_uuid_is_enabled?
           }
 
           if config.human_readable_name_enabled?
@@ -385,7 +386,8 @@ module VSphereCloud
             cloud_searcher: @cloud_searcher,
             cpi: self,
             datacenter: @datacenter,
-            agent_env: @agent_env,
+            agent_env_client: @agent_env,
+            additional_agent_env: @config.agent,
             tagging_tagger: @tagging_tagger,
             ip_conflict_detector: IPConflictDetector.new(@client, @datacenter),
             ensure_no_ip_conflicts: @config.vcenter_ensure_no_ip_conflicts,
@@ -393,6 +395,7 @@ module VSphereCloud
             enable_auto_anti_affinity_drs_rules: @config.vcenter_enable_auto_anti_affinity_drs_rules,
             stemcell: Stemcell.new(stemcell_cid),
             upgrade_hw_version: @config.upgrade_hw_version,
+            default_hw_version: @config.default_hw_version,
             pbm: @pbm,
           )
           created_vm = vm_creator.create(vm_config)
@@ -719,12 +722,12 @@ module VSphereCloud
 
         disk_spec = vm.attach_disk(disk_to_attach)
 
-        # For VMs with multiple SCSI controllers, as is common in Kubernetes workers,
-        # it is mandatory that disk.enableUUID is set in the VMX options / extra config of the VM to ensure
-        # that disk mounting can be performed unambigously.   This is typically set as part of a VM extension.
-        # Using the relative device unit number (see above), which is the traditional vSphere CPI disk identifier,
-        # only presumes a single SCSI controller.   The BOSH agent however does not distinguish SCSI controllers using
-        # this method of volume identification, which can lead to ambiguous mounts, and thus failed agent bootstraps or data loss.
+        # For VMs with multiple SCSI controllers, as is common in Kubernetes workers, it is mandatory that
+        # disk.enableUUID is set in the VMX options / extra config of the VM to ensure that disk mounting can be
+        # performed unambiguously. This is typically set as part of a VM extension. Using the relative device unit
+        # number (see above), which is the traditional vSphere CPI disk identifier, only presumes a single SCSI
+        # controller. The BOSH agent however does not distinguish SCSI controllers using this method of volume
+        # identification, which can lead to ambiguous mounts, and thus failed agent bootstraps or data loss.
         # The BOSH agent already supports volume UUID identification, which is used below for unambiguous
         # BOSH disk association.
         if vm.disk_uuid_is_enabled?
@@ -797,8 +800,9 @@ module VSphereCloud
         pipeline.each do |storage_placement|
           datastore = storage_placement
 
-          logger.info("Trying to create persistent disk on datastore: #{datastore.name}")
-          disk = @datacenter.create_disk(datastore, size_in_mb, disk_type)
+          disk_cid = cloud_properties.key?('name') ? cloud_properties['name'] : "disk-#{SecureRandom.uuid}"
+          logger.info("Trying to create persistent disk #{disk_cid} on datastore: #{datastore.name}")
+          disk = @datacenter.create_disk(disk_cid, datastore, size_in_mb, disk_type)
           next if disk.nil?
 
           logger.info("Created disk: #{disk.inspect}")
@@ -823,114 +827,6 @@ module VSphereCloud
         logger.info('Finished deleting disk')
       end
       @plugin_registry.run_post_hooks(__method__, self)
-    end
-
-    def generate_network_env(devices, networks, dvs_index)
-      nics = {}
-
-      devices.each do |device|
-        next unless device.kind_of?(Vim::Vm::Device::VirtualEthernetCard)
-        v_network_name = case device.backing
-          when Vim::Vm::Device::VirtualEthernetCard::DistributedVirtualPortBackingInfo
-            # If we see DistributedVirtualPortBackingInfo for the device, we're dealing with a cVDS (managed in vsphere):
-
-            # https://kb.vmware.com/s/article/79872#The_reasons_for_running_NSX-T_on_VDS
-            #
-            # With NSX-T 3.0, it is now possible to run NSX-T directly on a VDS (the VDS version must be at least 7.0). 
-            # On ESXi platform, the N-VDS was already sharing its code base with the VDS in the first place, so this 
-            # is not really a change of NSX virtual switch but rather a change of how it is represented in vCenter
-          
-            # In case this is a NSX-T >= 3 backed VDS, we want to filter the networks we fetch from vsphere because
-            # NSX-T may not be used exclusively by vCenter and may have created DVPGs from external sources (e.g via NCP
-            # in kubernetes) 
-            # This can lead to a situation where we potentially find thousands of NSX Logical Switches represented as 
-            # vsphere DVPGs because they're accessible from the DVS so we need to rely on filtering.
-            
-            # Find portgroup that match the portgroup key specified in the device
-            filtered_dvpg = @cloud_searcher.find_resources_by_property_path(@datacenter.mob, 'DistributedVirtualPortgroup', 'key') do |portgroup_key|
-              portgroup_key == device.backing.port.portgroup_key
-            end
-
-            # Check if portgroup is backed by NSX-T
-            dvpg = filtered_dvpg.detect do |n|
-              n.config.respond_to?(:backing_type) &&
-                n.config.backing_type == 'nsx'
-            end
-
-            if dvpg.nil?
-              # If we couldn't find an NSX backed DVPG, we're looking at a standard DVPG.
-              dvs_index[device.backing.port.portgroup_key]
-            else
-              # If it is backed by NSX-T we want the logical_switch_uuid. This matches the opaque_network_id on an N-VDS 
-              dvs_index[dvpg.config.logical_switch_uuid]
-            end
-          when Vim::Vm::Device::VirtualEthernetCard::OpaqueNetworkBackingInfo
-            # If we see OpaqueNetworkBackingInfo for the device, we're dealing with is a NVDS (managed in nsx):
-            # https://kb.vmware.com/s/article/79872#NSX-T_with_N-VDS
-            #
-            # Another reason for decoupling from vSphere was to allow NSX-T to have its own release cycle, 
-            # so that features and bug fixes would be independent of vSphere’s timeline. 
-            # To achieve that feat, the NSX-T virtual switch, the N-VDS, is leveraging an already existing 
-            # software infrastructure that was designed to allow vSphere to consume networking through a 
-            # set of API calls to third party virtual switches. As a result, NSX-T segments are represented 
-            # as “opaque networks”, a name clearly showing that those objects are completely independent 
-            # and unmanageable from vSphere
-            dvs_index[device.backing.opaque_network_id]
-          else
-            PathFinder.new.path(device.backing.network)
-        end
-        nics[v_network_name] = (nics.fetch(v_network_name, []) << device)
-      end
-
-      network_env = {}
-      networks.each do |network_name, network|
-        network_entry = network.dup
-        v_network_name = network['cloud_properties']['name']
-        network = nics[v_network_name]
-        raise NetworkException, "Could not find network '#{v_network_name}'" if network.nil?
-        nic = network.pop
-        network_entry['mac'] = nic.mac_address
-        network_env[network_name] = network_entry
-      end
-      network_env
-    end
-
-    def generate_disk_env(system_disk, ephemeral_disk, vm_config)
-
-      # When disk.enableUUID is true on the vmx options, consistent volume IDs are requested, and we can use them
-      # to ensure the precise ephemeral volume is mounted.   This is mandatory for
-      # cases where multiple SCSI controllers are present on the VM, as is common with Kubernetes VMs.
-      enableUUID = vm_config.vmx_options['disk.enableUUID'] || @config.disk_enable_uuid || 0
-      if enableUUID == "1" || enableUUID == 1
-        logger.info("Using ephemeral disk UUID #{ephemeral_disk.backing.uuid.downcase}")
-        {
-          'system' => system_disk.unit_number.to_s,
-          'ephemeral' => { 'id' => ephemeral_disk.backing.uuid.downcase },
-          'persistent' => {}
-        }
-      else
-        logger.info("Using ephemeral disk unit number #{ephemeral_disk.unit_number.to_s}")
-        {
-          'system' => system_disk.unit_number.to_s,
-          'ephemeral' => ephemeral_disk.unit_number.to_s,
-          'persistent' => {}
-        }
-      end
-    end
-
-    def generate_agent_env(name, vm, agent_id, networking_env, disk_env)
-      vm_env = {
-        'name' => name,
-        'id' => vm.__mo_id__
-      }
-
-      env = {}
-      env['vm'] = vm_env
-      env['agent_id'] = agent_id
-      env['networks'] = networking_env
-      env['disks'] = disk_env
-      env.merge!(config.agent)
-      env
     end
 
     def clone_vm(vm, name, folder, resource_pool, options={})

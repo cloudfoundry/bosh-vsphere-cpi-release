@@ -134,7 +134,7 @@ module VSphereCloud
       end
 
       def fix_device_unit_numbers(device_changes)
-        controllers_available_unit_numbers = Hash.new { |h, k| h[k] = (0..15).to_a }
+        controllers_available_unit_numbers = Hash.new { |h, k| h[k] = (0..63).grep_v(7) }
         devices.each do |device|
           if device.controller_key
             available_unit_numbers = controllers_available_unit_numbers[device.controller_key]
@@ -223,8 +223,9 @@ module VSphereCloud
         @client.power_on_vm(datacenter_mob, @mob)
       end
 
-      def upgrade_vm_virtual_hardware
-        @client.upgrade_vm_virtual_hardware(@mob)
+      def upgrade_vm_virtual_hardware(version = nil)
+        version_name = version.nil? ? nil : "vmx-#{version}"
+        @client.upgrade_vm_virtual_hardware(@mob, version_name)
       end
 
       def delete
@@ -305,8 +306,18 @@ module VSphereCloud
       end
 
       def disk_uuid_is_enabled?
+        # Why do we need to ask the vm whether disk UUIDs are enabled? Well we don't have access to the vm
+        # cloud properties at disk attach time. So what we do is smuggle that information into vm's `extraConfig`
+        # and we read it back out here so that we know whether it was enabled at vm creation. Otherwise, disks may
+        # inconsistently use a mix of UUIDs and Bus IDs.
         extra_config.any? do |option|
-          option.key == 'disk.enableUUID' && option.value == "TRUE"
+          # NOTE: This value is set inconsistently throughout the code base; so for the sake of backwards
+          # compatability we test for the three observed truthy values. :/
+          # 1. cpi.json: only allows integers; so 1 is the only valid truthy value
+          # 2. runtime cpi config: both 1 and '1' are observed in the wild
+          # 3. vm_type/extraConfig: allow 'TRUE' as well (for some reason???)
+          # TODO(nm): Can we drop TRUE? The tests use it randomly, but the docs use '1'
+          option.key == 'disk.enableUUID' && ['1', 1, 'TRUE'].include?(option.value)
         end
       end
 
@@ -388,6 +399,24 @@ module VSphereCloud
         profile_spec = VimSdk::Vim::Vm::DefinedProfileSpec.new
         profile_spec.profile_id = policy.profile_id.unique_id
         profile_spec
+      end
+
+      def create_paravirtual_scsi_controller_spec
+        scsi_controller = devices.find { |device| device.kind_of?(Vim::Vm::Device::VirtualSCSIController) }
+        return nil if scsi_controller.nil?
+
+        new_scsi_controller = VimSdk::Vim::Vm::Device::ParaVirtualSCSIController.new
+        new_scsi_controller.key = scsi_controller.key
+        new_scsi_controller.slot_info = scsi_controller.slot_info
+        new_scsi_controller.controller_key = scsi_controller.controller_key
+        new_scsi_controller.unit_number = scsi_controller.unit_number
+        new_scsi_controller.bus_number = scsi_controller.bus_number
+        new_scsi_controller.device = scsi_controller.device
+        new_scsi_controller.scsi_ctlr_unit_number = scsi_controller.scsi_ctlr_unit_number
+        new_scsi_controller.shared_bus = scsi_controller.shared_bus
+        new_scsi_controller.hot_add_remove = scsi_controller.hot_add_remove
+
+        new_scsi_controller
       end
 
       def self.create_delete_device_spec(device, options = {})

@@ -333,14 +333,13 @@ describe VSphereCloud::Resources::Datacenter, fake_logger: true do
     let(:virtual_disk_manager) { instance_double('VimSdk::Vim::VirtualDiskManager') }
 
     before do
-      allow(SecureRandom).to receive(:uuid).and_return('cid')
       allow(virtual_disk_manager).to receive(:create_virtual_disk)
     end
 
     context 'when disk type is invalid' do
       it 'raises an error' do
         expect {
-          datacenter.create_disk(datastore, 24, 'invalid-type')
+          datacenter.create_disk('disk-cid', datastore, 24, 'invalid-type')
         }.to raise_error("Disk type: 'invalid-type' is not supported")
       end
     end
@@ -351,7 +350,7 @@ describe VSphereCloud::Resources::Datacenter, fake_logger: true do
                             .with(datacenter_mob, datastore, 'disk-cid', 'fake-disk-path', 24, 'thin')
                             .and_return(disk)
 
-        expect(datacenter.create_disk(datastore, 24, 'thin')).to eq(disk)
+        expect(datacenter.create_disk('disk-cid', datastore, 24, 'thin')).to eq(disk)
       end
     end
   end
