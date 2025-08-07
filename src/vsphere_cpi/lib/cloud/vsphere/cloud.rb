@@ -797,8 +797,9 @@ module VSphereCloud
         pipeline.each do |storage_placement|
           datastore = storage_placement
 
-          logger.info("Trying to create persistent disk on datastore: #{datastore.name}")
-          disk = @datacenter.create_disk(datastore, size_in_mb, disk_type)
+          disk_cid = cloud_properties.key?('name') ? cloud_properties['name'] : "disk-#{SecureRandom.uuid}"
+          logger.info("Trying to create persistent disk #{disk_cid} on datastore: #{datastore.name}")
+          disk = @datacenter.create_disk(disk_cid, datastore, size_in_mb, disk_type)
           next if disk.nil?
 
           logger.info("Created disk: #{disk.inspect}")
