@@ -18,7 +18,8 @@ module VSphereCloud
                    pbm:,
                    stemcell:,
                    tagging_tagger:,
-                   upgrade_hw_version:)
+                   upgrade_hw_version:,
+                   default_hw_version:)
       @agent_env = agent_env
       @client = client
       @cloud_searcher = cloud_searcher
@@ -32,6 +33,7 @@ module VSphereCloud
       @stemcell = stemcell
       @tagging_tagger = tagging_tagger
       @upgrade_hw_version = upgrade_hw_version
+      @default_hw_version = default_hw_version
     end
 
     def create(vm_config)
@@ -83,6 +85,11 @@ module VSphereCloud
           # Create device_change config
           config_spec = VimSdk::Vim::Vm::ConfigSpec.new(vm_config.config_spec_params)
           config_spec.device_change = []
+
+          paravirtual_scsi_controller_spec = replicated_stemcell_vm.create_paravirtual_scsi_controller_spec
+          raise 'Failed to create device change to paravirtual controller' if paravirtual_scsi_controller_spec.nil?
+          scsi_controller_device_change_spec = Resources::VM.create_edit_device_spec(paravirtual_scsi_controller_spec)
+          config_spec.device_change << scsi_controller_device_change_spec
 
           ephemeral_disk = Resources::EphemeralDisk.new(
             size_in_mb: vm_config.ephemeral_disk_size,
@@ -240,19 +247,19 @@ module VSphereCloud
               # 4. vm_config of pci_passthroughs has entries
               if vm_config.upgrade_hw_version?(vm_config.vm_type.upgrade_hw_version, @upgrade_hw_version)
                 created_vm.upgrade_vm_virtual_hardware
-              end
-              unless vm_config.vgpus.empty?
+              elsif !vm_config.vgpus.empty?
                 created_vm.upgrade_vm_virtual_hardware
-              end
-              unless vm_config.pci_passthroughs.empty?
+              elsif !vm_config.pci_passthroughs.empty?
                 created_vm.upgrade_vm_virtual_hardware
+              else
+                created_vm.upgrade_vm_virtual_hardware(@default_hw_version)
               end
             rescue VSphereCloud::VCenterClient::AlreadyUpgraded
               logger.debug('VM already upgraded')
             end
             # Add vGPU devices after hardware version has been upgraded
-            # Jammy stemcell at hardware version 13 only allows 1 vGPU; we want to be able to add more
-            unless vm_config.vgpus.empty?
+              # Jammy stemcell at hardware version 13 only allows 1 vGPU; we want to be able to add more
+              unless vm_config.vgpus.empty?
               config_spec = VimSdk::Vim::Vm::ConfigSpec.new
               vm_config.vgpus.each do |vgpu|
                 vgpu = Resources::PCIPassthrough.create_vgpu(vgpu)

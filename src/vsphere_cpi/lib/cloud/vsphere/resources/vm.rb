@@ -134,7 +134,7 @@ module VSphereCloud
       end
 
       def fix_device_unit_numbers(device_changes)
-        controllers_available_unit_numbers = Hash.new { |h, k| h[k] = (0..15).to_a }
+        controllers_available_unit_numbers = Hash.new { |h, k| h[k] = (0..63).grep_v(7) }
         devices.each do |device|
           if device.controller_key
             available_unit_numbers = controllers_available_unit_numbers[device.controller_key]
@@ -223,8 +223,9 @@ module VSphereCloud
         @client.power_on_vm(datacenter_mob, @mob)
       end
 
-      def upgrade_vm_virtual_hardware
-        @client.upgrade_vm_virtual_hardware(@mob)
+      def upgrade_vm_virtual_hardware(version = nil)
+        version_name = version.nil? ? nil : "vmx-#{version}"
+        @client.upgrade_vm_virtual_hardware(@mob, version_name)
       end
 
       def delete
@@ -388,6 +389,24 @@ module VSphereCloud
         profile_spec = VimSdk::Vim::Vm::DefinedProfileSpec.new
         profile_spec.profile_id = policy.profile_id.unique_id
         profile_spec
+      end
+
+      def create_paravirtual_scsi_controller_spec
+        scsi_controller = devices.find { |device| device.kind_of?(Vim::Vm::Device::VirtualSCSIController) }
+        return nil if scsi_controller.nil?
+
+        new_scsi_controller = VimSdk::Vim::Vm::Device::ParaVirtualSCSIController.new
+        new_scsi_controller.key = scsi_controller.key
+        new_scsi_controller.slot_info = scsi_controller.slot_info
+        new_scsi_controller.controller_key = scsi_controller.controller_key
+        new_scsi_controller.unit_number = scsi_controller.unit_number
+        new_scsi_controller.bus_number = scsi_controller.bus_number
+        new_scsi_controller.device = scsi_controller.device
+        new_scsi_controller.scsi_ctlr_unit_number = scsi_controller.scsi_ctlr_unit_number
+        new_scsi_controller.shared_bus = scsi_controller.shared_bus
+        new_scsi_controller.hot_add_remove = scsi_controller.hot_add_remove
+
+        new_scsi_controller
       end
 
       def self.create_delete_device_spec(device, options = {})

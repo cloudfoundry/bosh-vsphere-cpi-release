@@ -393,6 +393,7 @@ module VSphereCloud
             enable_auto_anti_affinity_drs_rules: @config.vcenter_enable_auto_anti_affinity_drs_rules,
             stemcell: Stemcell.new(stemcell_cid),
             upgrade_hw_version: @config.upgrade_hw_version,
+            default_hw_version: @config.default_hw_version,
             pbm: @pbm,
           )
           created_vm = vm_creator.create(vm_config)
