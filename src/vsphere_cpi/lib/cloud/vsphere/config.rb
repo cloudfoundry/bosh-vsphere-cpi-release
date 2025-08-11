@@ -234,6 +234,10 @@ module VSphereCloud
       vcenter['upgrade_hw_version']
     end
 
+    def default_hw_version
+      vcenter['default_hw_version']
+    end
+
     def nsxt
       return nil unless nsxt_enabled?
       NSXTConfig.new(
@@ -311,6 +315,7 @@ module VSphereCloud
             optional('http_logging') => bool,
             optional('enable_auto_anti_affinity_drs_rules') => bool,
             optional('upgrade_hw_version') => bool,
+            optional('default_hw_version') => Integer,
             optional('cpu_reserve_full_mhz') => bool,
             optional('memory_reservation_locked_to_max') => bool,
             optional('vm_storage_policy_name') => String,

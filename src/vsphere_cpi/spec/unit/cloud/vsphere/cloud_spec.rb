@@ -33,6 +33,7 @@ module VSphereCloud
         soap_log: 'fake-log-file',
         vcenter_enable_auto_anti_affinity_drs_rules: false,
         upgrade_hw_version: true,
+        default_hw_version: 17,
         vcenter_http_logging: true,
         nsxt_enabled?: nsxt_enabled,
         nsxt: nsxt,
@@ -631,6 +632,7 @@ module VSphereCloud
             enable_auto_anti_affinity_drs_rules: false,
             stemcell: stemcell,
             upgrade_hw_version: true,
+            default_hw_version: 17,
             pbm: pbm,
           ).and_return(vm_creator)
         expect(vm_creator).to receive(:create).with(vm_config).and_return(fake_vm)
@@ -681,6 +683,7 @@ module VSphereCloud
             default_disk_type: default_disk_type,
             enable_auto_anti_affinity_drs_rules: false,
             upgrade_hw_version: true,
+            default_hw_version: 17,
             stemcell: stemcell,
             pbm: pbm,
         ).and_return(vm_creator)
@@ -851,6 +854,7 @@ module VSphereCloud
                                    default_disk_type: 'thin',
                                    enable_auto_anti_affinity_drs_rules: false,
                                    upgrade_hw_version: true,
+                                   default_hw_version: 17,
                                    stemcell: stemcell,
                                    pbm: pbm,
                                  )
@@ -1720,6 +1724,7 @@ module VSphereCloud
                                    default_disk_type: 'preallocated',
                                    enable_auto_anti_affinity_drs_rules: false,
                                    upgrade_hw_version: true,
+                                   default_hw_version: 17,
                                    stemcell: stemcell,
                                    pbm: pbm,
                                  )
@@ -1784,6 +1789,7 @@ module VSphereCloud
                                    default_disk_type: 'preallocated',
                                    enable_auto_anti_affinity_drs_rules: false,
                                    upgrade_hw_version: true,
+                                   default_hw_version: 17,
                                    stemcell: stemcell,
                                    pbm: pbm,
                                  )
