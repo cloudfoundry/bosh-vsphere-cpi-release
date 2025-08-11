@@ -258,8 +258,8 @@ module VSphereCloud
               logger.debug('VM already upgraded')
             end
             # Add vGPU devices after hardware version has been upgraded
-              # Jammy stemcell at hardware version 13 only allows 1 vGPU; we want to be able to add more
-              unless vm_config.vgpus.empty?
+            # Jammy stemcell at hardware version 13 only allows 1 vGPU; we want to be able to add more
+            unless vm_config.vgpus.empty?
               config_spec = VimSdk::Vim::Vm::ConfigSpec.new
               vm_config.vgpus.each do |vgpu|
                 vgpu = Resources::PCIPassthrough.create_vgpu(vgpu)
