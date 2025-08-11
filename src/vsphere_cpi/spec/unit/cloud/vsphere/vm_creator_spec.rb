@@ -173,7 +173,7 @@ module VSphereCloud
       allow(subject).to receive(:add_vm_to_vm_group).and_return(nil)
       allow(subject).to receive(:apply_storage_policy).and_return(nil)
       allow(vm_config).to receive(:upgrade_hw_version?).and_return(upgrade_hw_version)
-      allow(client).to receive(:upgrade_vm_virtual_hardware).with(cloned_vm_mob, "vmx-#{default_hw_version}")
+      allow(client).to receive(:upgrade_vm_virtual_hardware).with(cloned_vm_mob, default_hw_version)
       allow_any_instance_of(Resources::VM).to receive(:power_on).and_raise(VSphereCloud::VCenterClient::GenericVmConfigFault)
       allow(cpi).to receive(:delete_vm)
 
@@ -222,7 +222,7 @@ module VSphereCloud
         let(:upgrade_hw_version) { false }
 
         it 'will upgrades to default_hw_version' do
-          expect(client).to receive(:upgrade_vm_virtual_hardware).with(cloned_vm_mob, "vmx-#{default_hw_version}")
+          expect(client).to receive(:upgrade_vm_virtual_hardware).with(cloned_vm_mob, 17)
           subject.create(vm_config)
         end
       end

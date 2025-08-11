@@ -9,6 +9,11 @@ module VSphereCloud
 
       NSXT_LOGICAL_SWITCH = 'nsx.LogicalSwitch'.freeze
 
+      # SCSI controllers use '7' as the equivalent of localhost, and the vSphere
+      # Paravirtual SCSI controller allows Bus IDs in the range of 0 to 63.
+      SCSI_CONTROLLER_SELF_ID = 7
+      SCSI_CONTROLLER_VALID_IDS = (Set.new(0..63) - [SCSI_CONTROLLER_SELF_ID]).freeze
+
       DiskWithForcedPath = Struct.new(:disk, :path)
 
       stringify_with :cid
@@ -134,23 +139,39 @@ module VSphereCloud
       end
 
       def fix_device_unit_numbers(device_changes)
-        controllers_available_unit_numbers = Hash.new { |h, k| h[k] = (0..63).grep_v(7) }
-        devices.each do |device|
-          if device.controller_key
-            available_unit_numbers = controllers_available_unit_numbers[device.controller_key]
-            available_unit_numbers.delete(device.unit_number)
-          end
+        # Figure out what bus IDs are available by seeing what is currently in use (there is theoretically a
+        # race condition with concurrent disk mounts; but as its not a regression fixing it is left as an
+        # exercise for the future).
+        # TODO(nm): Add some form of locking mechanism to prevent concurrent disk attach operations from
+        #   attaching to the same Bus ID. This is unlikely to be triggered using the current disk flows,
+        #   but may become an issue if disks can be attached outside the disk creator flow. We may want
+        #   to look at VSphereCloud::DrsLock and generalise it.
+        disks = devices.reject { |device| device.is_a?(Vim::Vm::Device::VirtualDisk) }
+        unit_numbers_by_controller = find_available_unit_numbers_for_each_controller(disks)
+
+        disks = device_changes.select { |device_change| device_change.device.is_a?(VimSdk::Vim::Vm::Device::VirtualDisk) }
+        disks.each do |device_change|
+          next unless device_change.device.unit_number.nil?
+
+          available_unit_numbers = unit_numbers_by_controller[device_change.device.controller_key]
+
+          raise "No available unit numbers for device: #{device_change.device.inspect}" if available_unit_numbers.empty?
+
+          device_change.device.unit_number = available_unit_numbers.shift
+        end
+      end
+
+      def find_available_unit_numbers_for_each_controller(disks)
+        unit_numbers_by_controller = {}
+
+        disks.group_by(&:controller_key).each do |controller_key, disks_for_controller|
+          observed_unit_numbers = disks_for_controller.map(&:unit_number)
+
+          available_unit_numbers = SCSI_CONTROLLER_VALID_IDS - observed_unit_numbers
+          unit_numbers_by_controller[controller_key] = available_unit_numbers.to_a.sort!
         end
 
-        device_changes.each do |device_change|
-          device = device_change.device
-          next if device.is_a?(Vim::Vm::Device::VirtualEthernetCard)
-          if device.controller_key && device.unit_number.nil?
-            available_unit_numbers = controllers_available_unit_numbers[device.controller_key]
-            raise "No available unit numbers for device: #{device.inspect}" if available_unit_numbers.empty?
-            device.unit_number = available_unit_numbers.shift
-          end
-        end
+        unit_numbers_by_controller
       end
 
       def shutdown
@@ -224,8 +245,7 @@ module VSphereCloud
       end
 
       def upgrade_vm_virtual_hardware(version = nil)
-        version_name = version.nil? ? nil : "vmx-#{version}"
-        @client.upgrade_vm_virtual_hardware(@mob, version_name)
+        @client.upgrade_vm_virtual_hardware(@mob, version)
       end
 
       def delete
@@ -252,7 +272,7 @@ module VSphereCloud
       end
 
       def extra_config
-        properties['config.extraConfig'] 
+        properties['config.extraConfig']
       end
 
       def has_persistent_disk_property_mismatch?(disk)
@@ -339,7 +359,7 @@ module VSphereCloud
 
         logger.info("Renaming #{disks_to_move.size} persistent disk(s) to proper path")
         move_disks(disks_to_move)
-        
+
         logger.info('Finished detaching disk(s)')
 
         virtual_disks.each do |disk|
@@ -364,7 +384,7 @@ module VSphereCloud
             dest_filename = "#{disk_path}/#{dest_filename}"
           end
           dest_path = "[#{current_datastore}] #{dest_filename}"
-          
+
           @client.move_disk(datacenter_mob, disk.backing.file_name, datacenter_mob, dest_path)
         end
       end
