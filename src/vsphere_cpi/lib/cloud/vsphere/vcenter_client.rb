@@ -79,10 +79,10 @@ module VSphereCloud
       vm.answer(question, answer)
     end
 
-    def upgrade_vm_virtual_hardware(vm)
+    def upgrade_vm_virtual_hardware(vm, version = nil)
       logger.info("Upgrading virtual hardware on VM")
       wait_for_task do
-        vm.upgrade_virtual_hardware
+        vm.upgrade_virtual_hardware(version)
       end
     end
 

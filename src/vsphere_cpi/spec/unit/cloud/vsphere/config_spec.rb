@@ -42,6 +42,7 @@ module VSphereCloud
     let(:vm_storage_policy_name)  { 'VM Storage Policy' }
     let(:cpu_reserve_full_mhz)  { true }
     let(:memory_reservation_locked_to_max)  { true }
+    let(:vmx_options) { nil }
     before do
       allow(VimSdk::Vim::ServiceInstance).to receive(:new).
         and_return(double(:service_instance, content: service_content))
@@ -50,7 +51,7 @@ module VSphereCloud
     let(:config_hash) do
       {
         'agent' => agent_config,
-        'vcenters' => [
+        'vcenters' => [{
           'host' => host,
           'user' => user,
           'password' => password,
@@ -66,7 +67,8 @@ module VSphereCloud
             'user' => nsx_user,
             'password' => nsx_password,
           },
-        ],
+          'vmx_options' => vmx_options
+        }],
         'soap_log' => 'fake-soap-log'
       }
     end
@@ -816,6 +818,36 @@ module VSphereCloud
 
         it 'returns true' do
           expect(config.datacenter_use_sub_folder).to eq(true)
+        end
+      end
+    end
+
+    context '#disk_uuid_is_enabled?' do
+      context 'enabled with 1' do
+        let(:vmx_options) { {'disk': { 'enableUUID' => 1 }} }
+        it 'returns true' do
+          expect(config.disk_uuid_is_enabled?).to eq(true)
+        end
+      end
+
+      context 'enabled with `1`' do
+        let(:vmx_options) { {'disk': { 'enableUUID' => '1' }} }
+        it 'returns true' do
+          expect(config.disk_uuid_is_enabled?).to eq(true)
+        end
+      end
+
+      context 'an invalid value' do
+        let(:vmx_options) { { 'disk.enableUUID' => 0 } }
+        it 'returns true' do
+          expect(config.disk_uuid_is_enabled?).to eq(false)
+        end
+      end
+
+      context 'no value' do
+        let(:vmx_options) {}
+        it 'returns true' do
+          expect(config.disk_uuid_is_enabled?).to eq(false)
         end
       end
     end

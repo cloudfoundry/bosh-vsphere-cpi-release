@@ -33,11 +33,14 @@ module VSphereCloud
         soap_log: 'fake-log-file',
         vcenter_enable_auto_anti_affinity_drs_rules: false,
         upgrade_hw_version: true,
+        default_hw_version: 17,
         vcenter_http_logging: true,
         nsxt_enabled?: nsxt_enabled,
         nsxt: nsxt,
+        agent: additional_agent_env,
         vm_storage_policy_name: global_storage_policy,
-        human_readable_name_enabled?: true
+        human_readable_name_enabled?: true,
+        disk_uuid_is_enabled?: false
       ).as_null_object
     end
     let(:custom_fields_manager) { instance_double('VimSdk::Vim::CustomFieldsManager') }
@@ -74,6 +77,7 @@ module VSphereCloud
     let(:tag_client) { instance_double(TaggingTag::AttachTagToVm) }
     let(:tagging_tagger) { instance_double(TaggingTag::AttachTagToVm) }
     let(:cpi_metadata_version){1}
+    let(:additional_agent_env) { {'something' => 'else'} }
 
     before do |example|
       allow(Config).to receive(:build).with(config).and_return(cloud_config)
@@ -599,7 +603,7 @@ module VSphereCloud
           vm_type: an_instance_of(VSphereCloud::VmType),
           networks_spec: 'fake-networks-hash',
           agent_id: 'fake-agent-id',
-          agent_env:     {},
+          agent_env: {},
           stemcell: {
             cid: 'fake-stemcell-cid',
             size: 1024
@@ -609,6 +613,7 @@ module VSphereCloud
           storage_policy: nil,
           human_readable_name_info: nil,
           enable_human_readable_name: true,
+          enable_disk_uuid: false,
         }
 
         expect(VmConfig).to receive(:new)
@@ -623,7 +628,8 @@ module VSphereCloud
             cloud_searcher: cloud_searcher,
             cpi: vsphere_cloud,
             datacenter: datacenter,
-            agent_env: agent_env,
+            agent_env_client: agent_env,
+            additional_agent_env: additional_agent_env,
             tagging_tagger: tagging_tagger,
             ip_conflict_detector: ip_conflict_detector,
             ensure_no_ip_conflicts: ensure_no_ip_conflicts,
@@ -631,6 +637,7 @@ module VSphereCloud
             enable_auto_anti_affinity_drs_rules: false,
             stemcell: stemcell,
             upgrade_hw_version: true,
+            default_hw_version: 17,
             pbm: pbm,
           ).and_return(vm_creator)
         expect(vm_creator).to receive(:create).with(vm_config).and_return(fake_vm)
@@ -650,7 +657,7 @@ module VSphereCloud
           vm_type: an_instance_of(VSphereCloud::VmType),
           networks_spec: 'fake-networks-hash',
           agent_id: 'fake-agent-id',
-          agent_env:     nil,
+          agent_env: nil,
           stemcell: {
             cid: 'fake-stemcell-cid',
             size: 1024
@@ -660,6 +667,7 @@ module VSphereCloud
           storage_policy: nil,
           human_readable_name_info: nil,
           enable_human_readable_name: true,
+          enable_disk_uuid: false,
         }
         expect(VmConfig).to receive(:new)
           .with(
@@ -674,13 +682,15 @@ module VSphereCloud
             cloud_searcher: cloud_searcher,
             cpi: vsphere_cloud,
             datacenter: datacenter,
-            agent_env: agent_env,
+            agent_env_client: agent_env,
+            additional_agent_env: additional_agent_env,
             tagging_tagger: tagging_tagger,
             ip_conflict_detector: ip_conflict_detector,
             ensure_no_ip_conflicts: ensure_no_ip_conflicts,
             default_disk_type: default_disk_type,
             enable_auto_anti_affinity_drs_rules: false,
             upgrade_hw_version: true,
+            default_hw_version: 17,
             stemcell: stemcell,
             pbm: pbm,
         ).and_return(vm_creator)
@@ -828,7 +838,8 @@ module VSphereCloud
             disk_configurations: disk_configurations,
             storage_policy: nil,
             human_readable_name_info: nil,
-            enable_human_readable_name: true
+            enable_human_readable_name: true,
+            enable_disk_uuid: false,
           }
 
           allow(VmConfig).to receive(:new)
@@ -844,13 +855,15 @@ module VSphereCloud
                                    cloud_searcher: cloud_searcher,
                                    cpi: vsphere_cloud,
                                    datacenter: datacenter,
-                                   agent_env: agent_env,
+                                   agent_env_client: agent_env,
+                                   additional_agent_env: additional_agent_env,
                                    tagging_tagger: tagging_tagger,
                                    ip_conflict_detector: ip_conflict_detector,
                                    ensure_no_ip_conflicts: ensure_no_ip_conflicts,
                                    default_disk_type: 'thin',
                                    enable_auto_anti_affinity_drs_rules: false,
                                    upgrade_hw_version: true,
+                                   default_hw_version: 17,
                                    stemcell: stemcell,
                                    pbm: pbm,
                                  )
@@ -1713,13 +1726,15 @@ module VSphereCloud
                                    cloud_searcher: cloud_searcher,
                                    cpi: vsphere_cloud,
                                    datacenter: datacenter,
-                                   agent_env: agent_env,
+                                   agent_env_client: agent_env,
+                                   additional_agent_env: additional_agent_env,
                                    tagging_tagger: tagging_tagger,
                                    ip_conflict_detector: ip_conflict_detector,
                                    ensure_no_ip_conflicts: ensure_no_ip_conflicts,
                                    default_disk_type: 'preallocated',
                                    enable_auto_anti_affinity_drs_rules: false,
                                    upgrade_hw_version: true,
+                                   default_hw_version: 17,
                                    stemcell: stemcell,
                                    pbm: pbm,
                                  )
@@ -1777,13 +1792,15 @@ module VSphereCloud
                                    cloud_searcher: cloud_searcher,
                                    cpi: vsphere_cloud,
                                    datacenter: datacenter,
-                                   agent_env: agent_env,
+                                   agent_env_client: agent_env,
+                                   additional_agent_env: additional_agent_env,
                                    tagging_tagger: tagging_tagger,
                                    ip_conflict_detector: ip_conflict_detector,
                                    ensure_no_ip_conflicts: ensure_no_ip_conflicts,
                                    default_disk_type: 'preallocated',
                                    enable_auto_anti_affinity_drs_rules: false,
                                    upgrade_hw_version: true,
+                                   default_hw_version: 17,
                                    stemcell: stemcell,
                                    pbm: pbm,
                                  )
@@ -2490,6 +2507,7 @@ module VSphereCloud
           folder: 'fake-folder',
         )
       end
+      let(:disk_with_uuid_regex) { /\Adisk-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\z/ }
 
       before do
         allow(small_ds).to receive(:accessible?).and_return(accessible)
@@ -2502,79 +2520,41 @@ module VSphereCloud
 
       it 'creates disk via datacenter' do
         expect(datacenter).to receive(:create_disk)
-          .with(VSphereCloud::Resources::Datastore, 1024, default_disk_type)
+          .with(a_string_matching(disk_with_uuid_regex), VSphereCloud::Resources::Datastore, 1024, default_disk_type)
           .and_return(disk)
 
         disk_cid = vsphere_cloud.create_disk(1024, {})
         expect(disk_cid).to eq('fake-disk-cid')
       end
 
+      context 'when disk name is passed in cloud properties' do
+        it 'uses provided disk name' do
+          expect(datacenter).to receive(:create_disk)
+                                  .with('some-disk-name', VSphereCloud::Resources::Datastore, 1024, default_disk_type)
+                                  .and_return(disk)
+
+          disk_cid = vsphere_cloud.create_disk(1024, {'name' => 'some-disk-name'})
+          expect(disk_cid).to eq(disk.cid)
+        end
+      end
+
       context 'when global default_disk_type is set and no disk_pool type is set' do
         let(:default_disk_type) { 'fake-global-type' }
         it 'creates disk with the specified default type' do
           expect(datacenter).to receive(:create_disk)
-                                  .with(VSphereCloud::Resources::Datastore, 1024, 'fake-global-type')
+                                  .with(a_string_matching(disk_with_uuid_regex), VSphereCloud::Resources::Datastore, 1024, 'fake-global-type')
                                   .and_return(disk)
 
           disk_cid = vsphere_cloud.create_disk(1024, {})
           expect(disk_cid).to eq('fake-disk-cid')
         end
       end
-      context 'when global vmx_options are set' do
-        let(:vm_config) { instance_double(VmConfig) }
-        let(:system_disk_unit_number) { 1 }
-        let(:system_disk) do
-          instance_double(VimSdk::Vim::Vm::Device::VirtualDisk, unit_number: system_disk_unit_number)
-        end
-        let(:ephemeral_disk_unit_number) { 2 }
-        let(:ephemeral_uuid) { 'TESTGENERATEDISKENV' }
-        let(:ephemeral_backing) do
-          instance_double(VimSdk::Vim::Vm::Device::VirtualDisk::FlatVer2BackingInfo, uuid: ephemeral_uuid)
-        end
-        let(:ephemeral_disk) do
-          instance_double(VimSdk::Vim::Vm::Device::VirtualDisk,
-                          backing: ephemeral_backing,
-                          unit_number: ephemeral_disk_unit_number
-          )
-        end
-        let(:vm_vmx_options) do
-          {
-            'disk.enableUUID' => 0
-          }
-        end
-        context 'when no config was provided on vm level nor global' do
-          it 'uses the global value' do
-            allow(cloud_config).to receive(:disk_enable_uuid).and_return(nil)
-            allow(vm_config).to receive(:vmx_options).and_return({})
-            disk_env = subject.generate_disk_env(system_disk, ephemeral_disk, vm_config)
-            expect(disk_env['ephemeral']).to eq(ephemeral_disk_unit_number.to_s)
-            expect(disk_env['system']).to eq(system_disk_unit_number.to_s)
-          end
-        end
-        context 'when no config was provided on vm level' do
-          it 'uses the global value' do
-            allow(cloud_config).to receive(:disk_enable_uuid).and_return(1)
-            allow(vm_config).to receive(:vmx_options).and_return({})
-            disk_env = subject.generate_disk_env(system_disk, ephemeral_disk, vm_config)
-            expect(disk_env['ephemeral']). to eq({'id' => ephemeral_uuid.downcase})
-            expect(disk_env['system']).to eq(system_disk_unit_number.to_s)
-          end
-        end
-        context 'when vm_options override global vmx_options' do
-          it 'uses the vm_options value' do
-            allow(cloud_config).to receive(:disk_enable_uuid).and_return(1)
-            allow(vm_config).to receive(:vmx_options).and_return(vm_vmx_options)
-            disk_env = subject.generate_disk_env(system_disk, ephemeral_disk, vm_config)
-            expect(disk_env['ephemeral']).to eq(ephemeral_disk_unit_number.to_s)
-            expect(disk_env['system']).to eq(system_disk_unit_number.to_s)
-          end
-        end
-      end
+
       context 'when both global default_disk_type is set and disk_pool type is set' do
         let(:default_disk_type) { 'fake-global-type' }
         it 'create disk with the specified disk_pool type' do
           expect(datacenter).to receive(:create_disk)
-                                  .with(VSphereCloud::Resources::Datastore, 1024, 'fake-disk-pool-type')
+                                  .with(a_string_matching(disk_with_uuid_regex), VSphereCloud::Resources::Datastore, 1024, 'fake-disk-pool-type')
                                   .and_return(disk)
           disk_cid = vsphere_cloud.create_disk(1024, {'type' => 'fake-disk-pool-type'})
           expect(disk_cid).to eq('fake-disk-cid')
@@ -2584,7 +2564,7 @@ module VSphereCloud
       context 'when no global default_disk_type is set and disk_pool type is set' do
         it 'creates disk with the specified disk_pool type' do
           expect(datacenter).to receive(:create_disk)
-            .with(VSphereCloud::Resources::Datastore, 1024, 'fake-disk-pool-type')
+            .with(a_string_matching(disk_with_uuid_regex), VSphereCloud::Resources::Datastore, 1024, 'fake-disk-pool-type')
             .and_return(disk)
 
           disk_cid = vsphere_cloud.create_disk(1024, {'type' => 'fake-disk-pool-type'})
@@ -2610,7 +2590,7 @@ module VSphereCloud
 
         it 'creates disk in vm cluster' do
           expect(datacenter).to receive(:create_disk)
-            .with(datastore, 1024, default_disk_type)
+            .with(a_string_matching(disk_with_uuid_regex), datastore, 1024, default_disk_type)
             .and_return(disk)
 
           disk_cid = vsphere_cloud.create_disk(1024, {}, 'fake-vm-cid')
@@ -2631,10 +2611,10 @@ module VSphereCloud
             .with('large-ds')
             .and_return(large_datastore)
           allow(datacenter).to receive(:create_disk)
-            .with(VSphereCloud::Resources::Datastore, 1024, default_disk_type)
+            .with(a_string_matching(disk_with_uuid_regex), VSphereCloud::Resources::Datastore, 1024, default_disk_type)
             .and_return(disk)
           allow(datacenter).to receive(:create_disk)
-            .with(VSphereCloud::Resources::Datastore, 1024, default_disk_type)
+            .with(a_string_matching(disk_with_uuid_regex), VSphereCloud::Resources::Datastore, 1024, default_disk_type)
             .and_return(disk)
         end
 

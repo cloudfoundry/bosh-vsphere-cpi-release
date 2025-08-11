@@ -93,14 +93,12 @@ module VSphereCloud
         end
       end
 
-      def create_disk(datastore, size_in_mb, disk_type)
+      def create_disk(disk_cid, datastore, size_in_mb, disk_type)
         unless Resources::PersistentDisk::SUPPORTED_DISK_TYPES.include?(disk_type)
           raise "Disk type: '#{disk_type}' is not supported"
         end
 
-        disk_cid = "disk-#{SecureRandom.uuid}"
         logger.debug("Creating disk '#{disk_cid}' in datastore '#{datastore.name}'")
-
         @client.create_disk(mob, datastore, disk_cid, @disk_path, size_in_mb, disk_type)
       end
 

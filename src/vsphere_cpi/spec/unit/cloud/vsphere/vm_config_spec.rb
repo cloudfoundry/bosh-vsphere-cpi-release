@@ -18,7 +18,7 @@ module VSphereCloud
     end
     let(:pbm) { double('Pbm') }
     let(:datacenter) { double(name: 'fake-dc') }
-    let(:vm_type) { VmType.new(datacenter, cloud_properties, pbm)}
+    let(:vm_type) { VmType.new(datacenter, cloud_properties, pbm) }
     let(:cluster_provider) { nil }
 
     describe '#upgrade_hw_version?' do
@@ -861,6 +861,31 @@ module VSphereCloud
 
         it 'should return an empty array' do
           expect(vm_config.vgpus).to eq([])
+        end
+      end
+    end
+
+    describe '#disk_uuid_is_enabled?' do
+      let(:cloud_properties) {{'vmx_extensions' => {'disk.enableUUID' => nil}}}
+      let(:input) { {vm_type: vm_type, 'enable_disk_uuid' => nil} }
+
+      context 'not enabled anywhere' do
+        it 'should return false' do
+          expect(vm_config.disk_uuid_is_enabled?).to eq(false)
+        end
+      end
+
+      context 'enabled in the manifest' do
+        let(:input) { {vm_type: vm_type, 'enable_disk_uuid' => true} }
+        it 'should return true' do
+          expect(vm_config.disk_uuid_is_enabled?).to eq(true)
+        end
+      end
+
+      context 'enabled in the vm cloud properties' do
+        let(:input) { {vm_type: vm_type, 'enable_disk_uuid' => true} }
+        it 'should return true' do
+          expect(vm_config.disk_uuid_is_enabled?).to eq(true)
         end
       end
     end
