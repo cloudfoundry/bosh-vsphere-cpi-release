@@ -326,7 +326,7 @@ module NSXTPolicy
     def valid?
       return false if !@display_name.nil? && @display_name.to_s.length > 255
       return false if !@description.nil? && @description.to_s.length > 1024
-      tz_type_validator = EnumAttributeValidator.new('String', ['OVERLAY_STANDARD', 'OVERLAY_ENS', 'VLAN_BACKED', 'UNKNOWN'])
+      tz_type_validator = EnumAttributeValidator.new('String', ['OVERLAY_STANDARD', 'OVERLAY_ENS', 'VLAN_BACKED', 'UNKNOWN', 'OVERLAY', 'VLAN_STANDARD', 'OVERLAY_BACKED'])
       return false unless tz_type_validator.valid?(@tz_type)
       true
     end
@@ -354,10 +354,13 @@ module NSXTPolicy
     # Custom attribute writer method checking allowed values (enum).
     # @param [Object] tz_type Object to be assigned
     def tz_type=(tz_type)
-      validator = EnumAttributeValidator.new('String', ['OVERLAY_STANDARD', 'OVERLAY_ENS', 'VLAN_BACKED', 'UNKNOWN'])
-      unless validator.valid?(tz_type)
-        fail ArgumentError, 'invalid value for "tz_type", must be one of #{validator.allowable_values}.'
-      end
+      puts "DEBUG: tz_type= called with value: #{tz_type.inspect}"
+      puts "DEBUG: tz_type class: #{tz_type.class}"
+      puts "DEBUG: tz_type nil?: #{tz_type.nil?}"
+      validator = EnumAttributeValidator.new('String', ['OVERLAY_STANDARD', 'OVERLAY_ENS', 'VLAN_BACKED', 'UNKNOWN', 'OVERLAY', 'VLAN_STANDARD', 'OVERLAY_BACKED'])
+              unless validator.valid?(tz_type)
+          fail ArgumentError, "invalid value for tz_type, must be one of #{validator.allowable_values}."
+        end
       @tz_type = tz_type
     end
 

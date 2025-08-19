@@ -407,14 +407,23 @@ module VSphereCloud
 
         begin
           if @config.nsxt_enabled?
+            puts "DEBUG: NSXT enabled: #{@config.nsxt_enabled?}"
+            puts "DEBUG: policy_api_migration_mode: #{@config.nsxt.policy_api_migration_mode?}"
+            puts "DEBUG: use_policy_api: #{@config.nsxt.use_policy_api?}"
+            puts "DEBUG: nsxt config: #{@config.nsxt.inspect}"
+            
             if @config.nsxt.policy_api_migration_mode?
+              puts "DEBUG: Using policy_api_migration_mode path"
               #in migration mode, try to create associations in Policy API, always create associations in Manager API (i.e. fail if cannot be created).
               add_to_management_groups_and_server_pools(created_vm, vm_type)
               add_to_policy_groups_and_server_pools(created_vm, vm_type, true)
               @nsxt_provider.set_vif_type(created_vm, vm_type.nsxt)
             elsif @config.nsxt.use_policy_api?
+              puts "DEBUG: Using Policy API path"
               add_to_policy_groups_and_server_pools(created_vm, vm_type)
+              # Note: VIF type is not needed in Policy APIs as it's handled differently
             else #management mode
+              puts "DEBUG: Using Manager Mode path"
               add_to_management_groups_and_server_pools(created_vm, vm_type)
               @nsxt_provider.set_vif_type(created_vm, vm_type.nsxt)
             end
@@ -655,7 +664,21 @@ module VSphereCloud
           end
 
           if @config.nsxt.tag_nsx_vm_objects?
-            @nsxt_provider.update_vm_metadata_on_vm_objects(vm, metadata)
+            if @config.nsxt.policy_api_migration_mode?
+              # In migration mode, try both APIs
+              begin
+                @nsxt_policy_provider.update_vm_metadata_on_vm_objects(vm, metadata)
+              rescue => e
+                logger.info("Policy API Migration mode: Failed to update VM metadata on VM objects via Policy API, falling back to Manager mode: #{e.message}")
+                @nsxt_provider.update_vm_metadata_on_vm_objects(vm, metadata)
+              end
+            elsif @config.nsxt.use_policy_api?
+              # Use Policy API only - VM object tagging not available in Policy APIs
+              logger.info("VM object tagging not available in Policy APIs, skipping update_vm_metadata_on_vm_objects")
+            else
+              # Use Manager Mode API only
+              @nsxt_provider.update_vm_metadata_on_vm_objects(vm, metadata)
+            end
           end
        end
       end

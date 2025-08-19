@@ -112,7 +112,7 @@ module NSXT
     def attachment_type=(attachment_type)
       validator = EnumAttributeValidator.new('String', ['VIF', 'LOGICALROUTER', 'BRIDGEENDPOINT', 'DHCP_SERVICE', 'METADATA_PROXY', 'L2VPN_SESSION'])
       unless validator.valid?(attachment_type)
-        fail ArgumentError, 'invalid value for "attachment_type", must be one of #{validator.allowable_values}.'
+        fail ArgumentError, "invalid value for attachment_type, must be one of #{validator.allowable_values}."
       end
       @attachment_type = attachment_type
     end
