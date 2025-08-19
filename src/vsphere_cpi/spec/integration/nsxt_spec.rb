@@ -666,6 +666,15 @@ describe 'CPI', nsxt_all: true do
         let!(:nsgroup_1) { create_policy_group_and_wait(nsgroup_name_1) }
         let!(:nsgroup_2) { create_policy_group_and_wait(nsgroup_name_2) }
 
+        before(:each) do
+          # Clean up any existing VMs from previous test runs
+          if use_policy_api?
+            # For policy API, clear the groups before each test
+            clear_policy_group_members(nsgroup_name_1)
+            clear_policy_group_members(nsgroup_name_2)
+          end
+        end
+
         after do
           delete_policy_group(nsgroup_name_1)
           delete_policy_group(nsgroup_name_2)
@@ -2172,6 +2181,13 @@ describe 'CPI', nsxt_all: true do
 
   def delete_policy_group(group_name)
     @policy_group_api.delete_group(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, group_name)
+  end
+
+  def clear_policy_group_members(group_name)
+    # Clear all members from a policy group by setting an empty expression
+    group = @policy_group_api.read_group_for_domain(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, group_name)
+    group.expression = []
+    @policy_group_api.update_group_for_domain(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, group_name, group)
   end
 
   def create_segments(segments)
