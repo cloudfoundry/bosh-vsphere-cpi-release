@@ -1,7 +1,7 @@
 platform: linux
 inputs:
   - name: source-ci
-  - name: bosh-cpi-src
+  - name: bosh-cpi-src-nsxt9
   - name: stemcell
   - name: environment
 
