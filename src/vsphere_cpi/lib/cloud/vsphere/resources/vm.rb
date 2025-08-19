@@ -146,10 +146,10 @@ module VSphereCloud
         #   attaching to the same Bus ID. This is unlikely to be triggered using the current disk flows,
         #   but may become an issue if disks can be attached outside the disk creator flow. We may want
         #   to look at VSphereCloud::DrsLock and generalise it.
-        disks = devices.reject { |device| device.is_a?(Vim::Vm::Device::VirtualDisk) }
+        disks = devices.select { |device| device.is_a?(Vim::Vm::Device::VirtualDisk) }
         unit_numbers_by_controller = find_available_unit_numbers_for_each_controller(disks)
 
-        disks = device_changes.select { |device_change| device_change.device.is_a?(VimSdk::Vim::Vm::Device::VirtualDisk) }
+        disks = device_changes.select { |device_change| device_change.device.is_a?(Vim::Vm::Device::VirtualDisk) }
         disks.each do |device_change|
           next unless device_change.device.unit_number.nil?
 

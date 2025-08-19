@@ -78,14 +78,14 @@ describe VSphereCloud::Resources::VM, fake_logger: true do
     let(:vm_devices) do
       vm_devices = []
       4.times do |i|
-        vm_devices << double(:device, controller_key: 7, unit_number: i, key: -i-1)
+        vm_devices << VimSdk::Vim::Vm::Device::VirtualDisk.new(controller_key: 7, unit_number: i, key: -i-1)
       end
       vm_devices
     end
 
-    let(:device_1) { VimSdk::Vim::Vm::Device::VirtualDevice.new(key: -1) }
-    let(:device_2) { VimSdk::Vim::Vm::Device::VirtualDevice.new(key: -1) }
-    let(:device_3) { VimSdk::Vim::Vm::Device::VirtualDevice.new(key: -1) }
+    let(:device_1) { VimSdk::Vim::Vm::Device::VirtualDisk.new(key: -1) }
+    let(:device_2) { VimSdk::Vim::Vm::Device::VirtualDisk.new(key: -1) }
+    let(:device_3) { VimSdk::Vim::Vm::Device::VirtualDisk.new(key: -1) }
 
     let(:device_changes) do
       [
@@ -109,7 +109,7 @@ describe VSphereCloud::Resources::VM, fake_logger: true do
     let(:vm_devices) do
       vm_devices = []
       4.times do |i|
-        vm_devices << double(:device, controller_key: 7, unit_number: i)
+        vm_devices << VimSdk::Vim::Vm::Device::VirtualDisk.new(controller_key: 7, unit_number: i)
       end
       vm_devices
     end
@@ -126,7 +126,7 @@ describe VSphereCloud::Resources::VM, fake_logger: true do
       let(:vm_devices) do
         vm_devices = []
         7.times do |i|
-          vm_devices << double(:device, controller_key: 7, unit_number: i)
+          vm_devices << VimSdk::Vim::Vm::Device::VirtualDisk.new(controller_key: 7, unit_number: i)
         end
         vm_devices
       end
@@ -143,7 +143,7 @@ describe VSphereCloud::Resources::VM, fake_logger: true do
       let(:vm_devices) do
         vm_devices = []
         7.times do |i|
-          vm_devices << double(:device, controller_key: 7, unit_number: i)
+          vm_devices << VimSdk::Vim::Vm::Device::VirtualDisk.new(controller_key: 7, unit_number: i)
         end
         vm_devices
       end
@@ -160,7 +160,7 @@ describe VSphereCloud::Resources::VM, fake_logger: true do
       let(:vm_devices) do
         vm_devices = []
         64.times do |i|
-          vm_devices << double(:device, controller_key: 7, unit_number: i) if i != 7
+          vm_devices << VimSdk::Vim::Vm::Device::VirtualDisk.new(controller_key: 7, unit_number: i) if i != 7
         end
         vm_devices
       end
