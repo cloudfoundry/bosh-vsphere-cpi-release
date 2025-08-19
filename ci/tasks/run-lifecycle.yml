@@ -1,6 +1,6 @@
 platform: linux
 inputs:
-  - name: source-ci
+  - name: source-ci-nsxt9
   - name: bosh-cpi-src-nsxt9
   - name: stemcell
   - name: environment
@@ -8,7 +8,7 @@ inputs:
 outputs:
   - name: dummy # dummy output to avoid sending the entire task over the network
 run:
-  path: source-ci/ci/tasks/run-lifecycle.sh
+  path: source-ci-nsxt9/ci/tasks/run-lifecycle.sh
 params:
   RSPEC_FLAGS:                             ""
   BOSH_VSPHERE_VERIFY_LIMITED_PERMISSIONS: true
