@@ -5,9 +5,9 @@ require 'nsxt_manager_client/nsxt_manager_client'
 require 'nsxt_policy_client/nsxt_policy_client'
 
 describe 'CPI', nsxt_all: true do
-  # Helper method to determine if policy API should be used based on skip_nsxt_9 tag exclusion
+  # Helper method to determine if policy API should be used based on nsxt_manager_api tag exclusion
   def use_policy_api?
-    RSpec.configuration.filter_manager.exclusions[:skip_nsxt_9]
+    RSpec.configuration.filter_manager.exclusions[:nsxt_manager_api]
   end
 
   # Helper method to wait for a group to be realized on enforcement points
@@ -108,12 +108,12 @@ describe 'CPI', nsxt_all: true do
   # This works exclusively with cert/key pair
   # Utilizes the CPI code in NSXTApiClientBuilder
   let(:cpi) do
-    # Check if skip_nsxt_9 tag is excluded in RSpec configuration
+    # Check if nsxt_manager_api tag is excluded in RSpec configuration
     # If excluded, use policy API; otherwise use manager API
-    skip_nsxt_9_excluded = RSpec.configuration.filter_manager.exclusions[:skip_nsxt_9]
+    nsxt_manager_api_excluded = RSpec.configuration.filter_manager.exclusions[:nsxt_manager_api]
     
-    nsxt_config = if skip_nsxt_9_excluded
-      # Use policy API when skip_nsxt_9 tag is excluded
+    nsxt_config = if nsxt_manager_api_excluded
+      # Use policy API when nsxt_manager_api tag is excluded
       {
         host: @nsxt_host,
         username: @nsxt_username,
@@ -123,7 +123,7 @@ describe 'CPI', nsxt_all: true do
         default_vif_type: 'PARENT'
       }
     else
-      # Use manager API when skip_nsxt_9 tag is not excluded
+      # Use manager API when nsxt_manager_api tag is not excluded
       {
         host: @nsxt_host,
         auth_certificate: @certificate.to_s,
@@ -979,7 +979,7 @@ describe 'CPI', nsxt_all: true do
     end
   end
 
-  describe 'when policy_api_migration_mode is set', nsxt_policy: true, skip_nsxt_9: true do
+  describe 'when policy_api_migration_mode is set', nsxt_policy: true, nsxt_manager_api: true do
 
     let(:migration_cpi) do
       VSphereCloud::Cloud.new(cpi_options(nsxt: {
@@ -1027,7 +1027,7 @@ describe 'CPI', nsxt_all: true do
 
       let(:cpi) { migration_cpi }
 
-      it "should create VMs only on the management side", skip_nsxt_9: true do
+      it "should create VMs only on the management side", nsxt_manager_api: true do
         management_only_group = create_nsgroup('management-only-group')
         management_only_pool = create_static_server_pool('management-only-pool')
 
@@ -1102,7 +1102,7 @@ describe 'CPI', nsxt_all: true do
 
       context "and the ports are connected to a policy-api created segment/network switch" do
         let(:network_spec) { policy_network_spec }
-        it "can successfully set metadata + remove", skip_nsxt_9: true do
+        it "can successfully set metadata + remove", nsxt_manager_api: true do
           vm_type = {
             'ram' => 512,
             'disk' => 2048,
@@ -1272,7 +1272,7 @@ describe 'CPI', nsxt_all: true do
       end
 
       let(:cpi) { policy_cpi } #the cpi variable is used to cleanup created VMs.
-      it "can successfully set metadata + remove", skip_nsxt_9: true do
+      it "can successfully set metadata + remove", nsxt_manager_api: true do
 
         #server pools cannot be dynamic, so just test one in this case.
         #must manually specify ns_groups since they aren't added via dynamic server pools.
@@ -1386,7 +1386,7 @@ describe 'CPI', nsxt_all: true do
     context "with VMs created via the migration API" do
 
       let(:cpi) { migration_cpi } #the cpi variable is used to cleanup created VMs.
-      it "can successfully set metadata + remove", skip_nsxt_9: true do
+      it "can successfully set metadata + remove", nsxt_manager_api: true do
 
         vm_type = {
           'ram' => 512,
@@ -1841,12 +1841,12 @@ describe 'CPI', nsxt_all: true do
 
       context 'tagging nsx VM objects' do
         let(:cpi) do
-          # Check if skip_nsxt_9 tag is excluded in RSpec configuration
+          # Check if nsxt_manager_api tag is excluded in RSpec configuration
           # If excluded, use policy API; otherwise use manager API
-          skip_nsxt_9_excluded = RSpec.configuration.filter_manager.exclusions[:skip_nsxt_9]
+          nsxt_manager_api_excluded = RSpec.configuration.filter_manager.exclusions[:nsxt_manager_api]
           
-          nsxt_config = if skip_nsxt_9_excluded
-            # Use policy API when skip_nsxt_9 tag is excluded
+          nsxt_config = if nsxt_manager_api_excluded
+            # Use policy API when nsxt_manager_api tag is excluded
             {
               host: @nsxt_host,
               username: @nsxt_username,
@@ -1856,7 +1856,7 @@ describe 'CPI', nsxt_all: true do
               tag_nsx_vm_objects: tag_nsx_vm_objects,
             }
           else
-            # Use manager API when skip_nsxt_9 tag is not excluded
+            # Use manager API when nsxt_manager_api tag is not excluded
             {
               host: @nsxt_host,
               auth_certificate: @certificate.to_s,
