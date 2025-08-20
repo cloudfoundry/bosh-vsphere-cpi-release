@@ -22,8 +22,8 @@ module VSphereCloud
         ensure_no_ip_conflicts: ensure_no_ip_conflicts,
       )
     end
-    let(:vmx_options) { { disk: { enableUUID: disk_uuid_is_enabled ? 1 : 0 } } }
-    let(:disk_uuid_is_enabled) { true }
+    let(:vmx_options) { {} }
+    let(:disk_uuid_is_enabled) { vmx_options.dig('disk.enableUUID') == 1 }
     let(:datacenter_config) do
       {
         'name' => 'dc-1',
@@ -255,7 +255,7 @@ module VSphereCloud
 
       context 'disk uuid' do
         context 'is disabled' do
-          let(:disk_uuid_is_enabled) { false }
+          let(:vmx_options) { {'disk.enableUUID' => 0} }
           it 'will use bus id' do
             expect(subject).to receive(:generate_disk_env).with(system_disk_device, ephemeral_disk_device, false)
             subject.create(vm_config)
@@ -263,7 +263,7 @@ module VSphereCloud
         end
 
         context 'is enabled' do
-          let(:disk_uuid_is_enabled) { true }
+          let(:vmx_options) { {'disk.enableUUID' => 1} }
           it 'will use bus id' do
             expect(subject).to receive(:generate_disk_env).with(system_disk_device, ephemeral_disk_device, true)
             subject.create(vm_config)
@@ -343,7 +343,7 @@ module VSphereCloud
               'super secret' => 'bWFkZSB5b3UgbG9vay4gQWxzbyBoaSB0aGVyZQo='
             }
           end
-          let(:disk_uuid_is_enabled) { false }
+
           it "the vm's vmx config should be copied into the extra_config" do
             expect(client).to receive(:wait_for_task).and_yield
 
@@ -358,7 +358,6 @@ module VSphereCloud
 
         context 'vmx config has disk.enableUUID' do
           let(:vmx_options) { { 'disk.enableUUID' => '2' } }
-          let(:disk_uuid_is_enabled) { false }
 
           it "the vm's vmx config should be copied into the extra_config" do
             expect(client).to receive(:wait_for_task).and_yield
@@ -366,42 +365,6 @@ module VSphereCloud
             expect(cpi).to receive(:clone_vm) do |_vm, _name, _folder, _resource_pool, options|
               expect(options[:config].extra_config).to(
                 include(have_attributes(key: 'disk.enableUUID', value: '2'))
-              )
-              cloned_vm_mob
-            end
-
-            subject.create(vm_config)
-          end
-        end
-
-        context 'vm_config has disk_uuid_is_enabled? set to true' do
-          let(:vmx_options) { {} }
-          let(:disk_uuid_is_enabled) { true }
-
-          it "the vm's vmx config should be copied into the extra_config" do
-            expect(client).to receive(:wait_for_task).and_yield
-
-            expect(cpi).to receive(:clone_vm) do |_vm, _name, _folder, _resource_pool, options|
-              expect(options[:config].extra_config).to(
-                include(have_attributes(key: 'disk.enableUUID', value: '1'))
-              )
-              cloned_vm_mob
-            end
-
-            subject.create(vm_config)
-          end
-        end
-
-        context 'vm_config has vmx_options and disk_uuid_is_enabled? set to true' do
-          let(:vmx_options) { { 'disk.enableUUID' => '2' } }
-          let(:disk_uuid_is_enabled) { true }
-
-          it "the vm's vmx config should only have 1 copy of the option" do
-            expect(client).to receive(:wait_for_task).and_yield
-
-            expect(cpi).to receive(:clone_vm) do |_vm, _name, _folder, _resource_pool, options|
-              expect(options[:config].extra_config).to(
-                have_attributes(size: 1).and include(have_attributes(key: 'disk.enableUUID', value: '2'))
               )
               cloned_vm_mob
             end

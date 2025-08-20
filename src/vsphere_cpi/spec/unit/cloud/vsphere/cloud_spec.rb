@@ -40,7 +40,7 @@ module VSphereCloud
         agent: additional_agent_env,
         vm_storage_policy_name: global_storage_policy,
         human_readable_name_enabled?: true,
-        disk_uuid_is_enabled?: false
+        vmx_options: vmx_options
       ).as_null_object
     end
     let(:custom_fields_manager) { instance_double('VimSdk::Vim::CustomFieldsManager') }
@@ -78,6 +78,7 @@ module VSphereCloud
     let(:tagging_tagger) { instance_double(TaggingTag::AttachTagToVm) }
     let(:cpi_metadata_version){1}
     let(:additional_agent_env) { {'something' => 'else'} }
+    let(:vmx_options) { { } }
 
     before do |example|
       allow(Config).to receive(:build).with(config).and_return(cloud_config)
@@ -423,7 +424,7 @@ module VSphereCloud
           storage_policy: nil,
           human_readable_name_info: nil,
           enable_human_readable_name: true,
-          enable_disk_uuid: false,
+          vmx_options: {},
         }
 
         expect(VmConfig).to receive(:new)
@@ -477,7 +478,7 @@ module VSphereCloud
           storage_policy: nil,
           human_readable_name_info: nil,
           enable_human_readable_name: true,
-          enable_disk_uuid: false,
+          vmx_options: {},
         }
         expect(VmConfig).to receive(:new)
           .with(
@@ -649,7 +650,7 @@ module VSphereCloud
             storage_policy: nil,
             human_readable_name_info: nil,
             enable_human_readable_name: true,
-            enable_disk_uuid: false,
+            vmx_options: {},
           }
 
           allow(VmConfig).to receive(:new)

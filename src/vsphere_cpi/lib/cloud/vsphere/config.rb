@@ -276,11 +276,8 @@ module VSphereCloud
       vcenter['memory_reservation_locked_to_max']
     end
 
-    def disk_uuid_is_enabled?
-      # For backwards compatability we need to check both '1' and 1 as both were previously acceptable due to
-      # inconsistent input validation (the cpi.json file enforces integer typing, but the cpi config does not). So
-      # we need to normalise it out here at the edge of the system.
-      [1, '1'].include? vcenter.dig('vmx_options', 'disk', 'enableUUID')
+    def vmx_options
+      vcenter['vmx_options'] || {}
     end
 
     def plugins
@@ -323,11 +320,7 @@ module VSphereCloud
             optional('cpu_reserve_full_mhz') => bool,
             optional('memory_reservation_locked_to_max') => bool,
             optional('vm_storage_policy_name') => String,
-            optional('vmx_options') => {
-              optional('disk') => {
-                optional('enableUUID') => Integer
-              }
-            },
+            optional('vmx_options') => dict(String, any),
             optional('nsxt') => {
               optional('host') => String,
               optional('username') => String,

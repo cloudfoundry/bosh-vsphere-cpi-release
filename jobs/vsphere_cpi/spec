@@ -80,9 +80,10 @@ properties:
       -----BEGIN CERTIFICATE-----
       MII...
       -----END CERTIFICATE-----
-  vcenter.vmx_options.disk.enableUUID:
-    description: Enable usage of Disk UUIDs for partition lookups of the bosh agent. This is required for Kubernetes Clusters deployed by Bosh to use the Kubernetes CPI (e.g. to provision Pod Volumes). Adds labels to scsi disk devices so the disk device path (`/dev/sd*`) can be discovered via Linux OS. See https://help.ubuntu.com/community/UsingUUID.
-    example: 1 # Allowed values 0 || 1 || "0" || "1"
+  vcenter.vmx_options:
+    description: Inject vmx options globally. For example `disk.enableUUID` to enable usage of Disk UUIDs for partition lookups of the bosh agent.
+    example: {"disk.enableUUID": 1}
+    default: {}
   vcenter.nsxt.default_vif_type:
     description: "Default vif_type for logical port attachment. Supported types: PARENT."
   vcenter.nsxt.use_policy_api:

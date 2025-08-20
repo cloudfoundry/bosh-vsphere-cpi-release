@@ -822,32 +822,18 @@ module VSphereCloud
       end
     end
 
-    context '#disk_uuid_is_enabled?' do
-      context 'enabled with 1' do
-        let(:vmx_options) { {'disk' => { 'enableUUID' => 1 }} }
-        it 'returns true' do
-          expect(config.disk_uuid_is_enabled?).to eq(true)
+    context '#vmx_options' do
+      context 'is nil' do
+        let(:vmx_options) { nil }
+        it 'returns a default value' do
+          expect(config.vmx_options).to eq({})
         end
       end
 
-      context 'enabled with `1`' do
-        let(:vmx_options) { {'disk' => { 'enableUUID' => '1' }} }
-        it 'returns true' do
-          expect(config.disk_uuid_is_enabled?).to eq(true)
-        end
-      end
-
-      context 'an invalid value' do
-        let(:vmx_options) { { 'disk.enableUUID' => 0 } }
-        it 'returns true' do
-          expect(config.disk_uuid_is_enabled?).to eq(false)
-        end
-      end
-
-      context 'no value' do
-        let(:vmx_options) {}
-        it 'returns true' do
-          expect(config.disk_uuid_is_enabled?).to eq(false)
+      context 'is present' do
+        let(:vmx_options) { { 'abc' => 123 } }
+        it 'returns those options' do
+          expect(config.vmx_options).to eq({'abc' => 123})
         end
       end
     end
