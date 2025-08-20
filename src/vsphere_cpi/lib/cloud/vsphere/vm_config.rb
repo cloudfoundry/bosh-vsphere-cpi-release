@@ -165,7 +165,10 @@ module VSphereCloud
     end
 
     def vmx_options
-      vm_type.vmx_options || {}
+      global_vmx_options = @manifest_params[:vmx_options] || {}
+      vm_type_vmx_options = vm_type.vmx_options || {}
+
+      global_vmx_options.merge(vm_type_vmx_options)
     end
 
     #VSphereCloud::VmType
@@ -193,7 +196,7 @@ module VSphereCloud
     end
 
     def disk_uuid_is_enabled?
-      @manifest_params['enable_disk_uuid'] || vm_type.disk_uuid_is_enabled?
+      [1, '1', 'TRUE'].include? vmx_options["disk.enableUUID"]
     end
 
     private

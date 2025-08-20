@@ -29,7 +29,8 @@
             "enable_human_readable_name" => p('vcenter.enable_human_readable_name'),
             "http_logging" => p('vcenter.http_logging'),
             "ensure_no_ip_conflicts" => p('vcenter.ensure_no_ip_conflicts'),
-            "connection_options" => p('vcenter.connection_options')
+            "connection_options" => p('vcenter.connection_options'),
+            "vmx_options" => p('vcenter.vmx_options'),
           }
         ],
         "agent" => {
@@ -80,12 +81,6 @@
 
       vcenter["datacenters"] << datacenter_hash
     end
-  end
-
-  if_p('vcenter.vmx_options.disk.enableUUID') do
-    vcenter = params['cloud']['properties']['vcenters'].first
-    vcenter['vmx_options'] = {} if vcenter['vmx_options'].nil?
-    vcenter['vmx_options']['disk'] = p('vcenter.vmx_options.disk')
   end
 
   if_p('vcenter.nsx.address') do

@@ -157,19 +157,9 @@ module VSphereCloud
 
           raise "Unable to parse vmx options: 'vmx_options' is not a Hash" unless vm_config.vmx_options.is_a?(Hash)
 
-          vm_extra_config = vm_config.vmx_options.keys.map do |key|
+          config_spec.extra_config = vm_config.vmx_options.keys.map do |key|
             VimSdk::Vim::Option::OptionValue.new(key:, value: vm_config.vmx_options[key])
           end
-          # We need to make sure this setting makes to the ExtraConfig so that future `attach_disk` calls use
-          # disk UUIDs correctly even without access to the vm_type.
-          #
-          # It is also used by vSphere to pass the UUID through to the guest os:
-          # https://knowledge.broadcom.com/external/article/321338/enhanced-guest-os-information-for-disks.html
-          if vm_config.disk_uuid_is_enabled? && !vm_config.vmx_options.include?('disk.enableUUID')
-            vm_extra_config << VimSdk::Vim::Option::OptionValue.new(key: 'disk.enableUUID', value: '1')
-          end
-          config_spec.extra_config = vm_extra_config
-
 
           host = nil
           # Before cloning we need to make sure the host is correctly picked up

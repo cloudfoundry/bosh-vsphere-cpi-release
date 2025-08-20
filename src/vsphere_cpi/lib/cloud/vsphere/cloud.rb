@@ -367,7 +367,7 @@ module VSphereCloud
             disk_configurations: disk_configs,
             storage_policy: policy_name,
             enable_human_readable_name: config.human_readable_name_enabled?,
-            enable_disk_uuid: config.disk_uuid_is_enabled?
+            vmx_options: config.vmx_options,
           }
 
           if config.human_readable_name_enabled?

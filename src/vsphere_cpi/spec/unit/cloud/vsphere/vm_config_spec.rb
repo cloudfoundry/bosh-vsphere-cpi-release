@@ -813,33 +813,6 @@ module VSphereCloud
       end
     end
 
-    describe '#vmx_options' do
-      context 'vmx_options are specified' do
-        let(:cloud_properties){
-          {
-            'vmx_options' => {
-              'sched.mem.maxmemctl' => '0'
-            }
-          }
-        }
-        let(:input) { { vm_type: vm_type } }
-
-        it 'should return the vmx_options' do
-          expect(vm_config.vmx_options).to eq({ 'sched.mem.maxmemctl' => '0' })
-        end
-      end
-
-      context 'vmx_options are NOT specified' do
-        let(:cloud_properties) { {} }
-        let(:input) { { vm_type: vm_type } }
-
-        it 'should return empty hash' do
-          expect(vm_config.vmx_options).to eq({})
-        end
-      end
-
-    end
-
     describe '#vpgus' do
       context 'vgpus are specified' do
         let(:vgpus) { ['fake-vgpu1', 'fake-vgpu2'] }
@@ -865,27 +838,103 @@ module VSphereCloud
       end
     end
 
+    describe '#vmx_options' do
+      let(:cloud_properties) { {} }
+      let(:input) { {vm_type: vm_type, vmx_options: nil} }
+
+      describe 'both are absent' do
+        it "should return an empty hash" do
+          expect(vm_config.vmx_options).to eq({})
+        end
+      end
+
+      describe 'its present in the vm type and not the global config' do
+        let(:cloud_properties) { {'vmx_options' => {'disk.enableUUID' => 1}} }
+        let(:input) { {vm_type: vm_type, vmx_options: nil} }
+
+        it "should return an empty hash" do
+          expect(vm_config.vmx_options).to eq({'disk.enableUUID' => 1})
+        end
+      end
+
+      describe 'its present in the global config and not the vm type' do
+        let(:cloud_properties) { {} }
+        let(:input) { {vm_type: vm_type, vmx_options: {'disk.enableUUID' => 2}} }
+
+        it "should return an empty hash" do
+          expect(vm_config.vmx_options).to eq({'disk.enableUUID' => 2})
+        end
+      end
+
+      describe 'its present in the both configs' do
+        let(:cloud_properties) { {'vmx_options' => { 'disk.enableUUID' => 1, 'something' => 2}} }
+        let(:input) { {vm_type: vm_type, vmx_options: {'disk.enableUUID' => 3, 'else' => 4}} }
+
+        it "should merge the two hashes" do
+          expect(vm_config.vmx_options).to eq({
+                                                'disk.enableUUID' => 1,
+                                                'something' => 2,
+                                                'else' => 4,
+                                              })
+        end
+
+        it "the vm type should win on conflicts" do
+          expect(vm_config.vmx_options['disk.enableUUID']).to eq(1)
+        end
+      end
+    end
+
     describe '#disk_uuid_is_enabled?' do
-      let(:cloud_properties) {{'vmx_extensions' => {'disk.enableUUID' => nil}}}
-      let(:input) { {vm_type: vm_type, 'enable_disk_uuid' => nil} }
+      let(:cloud_properties) { {'vmx_options' => {}} }
+      let(:input) { {vm_type: vm_type, vmx_options: {}} }
+
+      context 'not provided anywhere' do
+        it 'should return false' do
+          expect(vm_config.disk_uuid_is_enabled?).to eq(false)
+        end
+      end
 
       context 'not enabled anywhere' do
+        let(:cloud_properties) { {'vmx_options' => {'disk.enableUUID' => 0}} }
+        let(:input) { {vm_type: vm_type, vmx_options: {'disk.enableUUID' => 0}} }
+
         it 'should return false' do
           expect(vm_config.disk_uuid_is_enabled?).to eq(false)
         end
       end
 
       context 'enabled in the manifest' do
-        let(:input) { {vm_type: vm_type, 'enable_disk_uuid' => true} }
+        let(:input) { {vm_type: vm_type, vmx_options: {'disk.enableUUID' => 1}} }
         it 'should return true' do
           expect(vm_config.disk_uuid_is_enabled?).to eq(true)
         end
       end
 
       context 'enabled in the vm cloud properties' do
-        let(:input) { {vm_type: vm_type, 'enable_disk_uuid' => true} }
+        let(:cloud_properties) { {'vmx_options' => {'disk.enableUUID' => 1}} }
         it 'should return true' do
           expect(vm_config.disk_uuid_is_enabled?).to eq(true)
+        end
+      end
+
+      context 'enabled with 1' do
+        let(:cloud_properties) { {'vmx_options' => {'disk.enableUUID' => 1}} }
+        it 'returns true' do
+          expect(vm_config.disk_uuid_is_enabled?).to eq(true)
+        end
+      end
+
+      context 'enabled with `1`' do
+        let(:cloud_properties) { {'vmx_options' => {'disk.enableUUID' => '1'}} }
+        it 'returns true' do
+          expect(vm_config.disk_uuid_is_enabled?).to eq(true)
+        end
+      end
+
+      context 'an invalid value' do
+        let(:cloud_properties) { {'vmx_options' => {'disk.enableUUID' => 0}} }
+        it 'returns false' do
+          expect(vm_config.disk_uuid_is_enabled?).to eq(false)
         end
       end
     end
