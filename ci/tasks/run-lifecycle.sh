@@ -3,7 +3,7 @@ set -eu -o pipefail
 
 set -x
 
-source bosh-cpi-src-nsxt9/.envrc
+source bosh-cpi-src/.envrc
 source environment/metadata
 
 # get the tun device; we need it to establish OpenVPN
@@ -57,7 +57,7 @@ cleanup() {
 trap cleanup EXIT
 
 install_iso9660wrap() {
-  pushd bosh-cpi-src-nsxt9
+  pushd bosh-cpi-src
     pushd src/iso9660wrap
       go build ./...
       export PATH="$PATH:$PWD"
@@ -66,7 +66,7 @@ install_iso9660wrap() {
 }
 install_iso9660wrap
 
-pushd bosh-cpi-src-nsxt9/src/vsphere_cpi
+pushd bosh-cpi-src/src/vsphere_cpi
   bundle install
   bundle exec rspec \
     ${RSPEC_FLAGS:-''} \
