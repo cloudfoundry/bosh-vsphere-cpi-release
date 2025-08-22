@@ -6,7 +6,7 @@ groups:
       - bats-policy
       - bats
       - bats-70-cvds
-      - bats-80-cvds
+      - bats-80-policy
       - pre-release-fan-in
       - promote-candidate
       - bump-deps
@@ -143,7 +143,7 @@ jobs:
             trigger: true
           - put: environment
             tags: [nimbus]
-            resource: pool-7.0-nsxt31-policy
+            resource: pool-7.0-nsxt32-policy
             timeout: 4h
             params:
               action: create
@@ -177,12 +177,12 @@ jobs:
               STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-jammy-go_agent
         on_failure:
           in_parallel:
-          - put: pool-7.0-nsxt31-policy
+          - put: pool-7.0-nsxt32-policy
             tags: [nimbus]
             inputs: detect
             params: { action: extend, lifetime: <%= 24 * 60 * 60 %>, resource: environment }
         on_success:
-          put: pool-7.0-nsxt31-policy
+          put: pool-7.0-nsxt32-policy
           tags: [nimbus]
           params : { action: release, resource: environment }
         ensure:
@@ -215,7 +215,7 @@ jobs:
           trigger: true
         - put: environment
           tags: [nimbus]
-          resource: pool-7.0-nsxt31
+          resource: pool-7.0-nsxt32-nvds
           timeout: 4h
           params:
             action: create
@@ -250,11 +250,11 @@ jobs:
             STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-jammy-go_agent
         on_failure:
           in_parallel:
-          - put: pool-7.0-nsxt31
+          - put: pool-7.0-nsxt32-nvds
             tags: [nimbus]
             params: { action: extend, lifetime: <%= 24 * 60 * 60 %>, resource: environment }
         on_success:
-          put: pool-7.0-nsxt31
+          put: pool-7.0-nsxt32-nvds
           tags: [nimbus]
           params : { action: release, resource: environment }
         ensure:
@@ -287,7 +287,7 @@ jobs:
             trigger: true
           - put: environment
             tags: [nimbus]
-            resource: pool-7.0-nsxt31-cvds
+            resource: pool-7.0-nsxt32-cvds
             timeout: 4h
             params:
               action: create
@@ -321,11 +321,11 @@ jobs:
               STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-jammy-go_agent
         on_failure:
           in_parallel:
-            - put: pool-7.0-nsxt31-cvds
+            - put: pool-7.0-nsxt32-cvds
               tags: [nimbus]
               params: { action: extend, lifetime: <%= 24 * 60 * 60 %>, resource: environment }
         on_success:
-          put: pool-7.0-nsxt31-cvds
+          put: pool-7.0-nsxt32-cvds
           tags: [nimbus]
           params : { action: release, resource: environment }
         ensure:
@@ -335,7 +335,7 @@ jobs:
               file: source-ci/ci/tasks/teardown.yml
               image: vcpi-main-image
 
-  - name: bats-80-cvds
+  - name: bats-80-policy
     serial: true
     plan:
       - in_parallel:
@@ -358,7 +358,7 @@ jobs:
             trigger: true
           - put: environment
             tags: [nimbus]
-            resource: pool-8.0-nsxt40-cvds
+            resource: pool-8.0-nsxt42-policy
             timeout: 4h
             params:
               action: create
@@ -384,7 +384,7 @@ jobs:
             image: vcpi-main-image
           - task: run-bats
             tags: [nimbus]
-            file: source-ci/ci/tasks/run-bats-cvds.yml
+            file: source-ci/ci/tasks/run-bats-policy.yml
             image: vcpi-main-image
             params:
               BAT_INFRASTRUCTURE: vsphere
@@ -392,11 +392,11 @@ jobs:
               STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-jammy-go_agent
         on_failure:
           in_parallel:
-            - put: pool-8.0-nsxt40-cvds
+            - put: pool-8.0-nsxt42-policy
               tags: [nimbus]
               params: { action: extend, lifetime: <%= 24 * 60 * 60 %>, resource: environment }
         on_success:
-          put: pool-8.0-nsxt40-cvds
+          put: pool-8.0-nsxt42-policy
           tags: [nimbus]
           params : { action: release, resource: environment }
         ensure:
@@ -415,7 +415,7 @@ jobs:
       - get: bosh-cpi-src
         trigger: true
         tags: [nimbus]
-        passed: [bats, bats-policy, bats-70-cvds, bats-80-cvds]
+        passed: [bats, bats-policy, bats-70-cvds, bats-80-policy]
 
   - name: promote-candidate
     disable_manual_trigger: true
