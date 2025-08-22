@@ -96,7 +96,8 @@ describe 'cpi.json.erb' do
               'default_hw_version' => 17,
               'http_logging' => true,
               'ensure_no_ip_conflicts' => true,
-              'vm_storage_policy_name' => 'VM Storage Policy'
+              'vm_storage_policy_name' => 'VM Storage Policy',
+              "vmx_options"=>{},
             }
           ],
           'plugins' => {}
