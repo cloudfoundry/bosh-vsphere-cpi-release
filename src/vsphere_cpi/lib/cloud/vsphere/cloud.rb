@@ -407,23 +407,23 @@ module VSphereCloud
 
         begin
           if @config.nsxt_enabled?
-            puts "DEBUG: NSXT enabled: #{@config.nsxt_enabled?}"
-            puts "DEBUG: policy_api_migration_mode: #{@config.nsxt.policy_api_migration_mode?}"
-            puts "DEBUG: use_policy_api: #{@config.nsxt.use_policy_api?}"
-            puts "DEBUG: nsxt config: #{@config.nsxt.inspect}"
+            logger.debug "NSXT enabled: #{@config.nsxt_enabled?}"
+            logger.debug "policy_api_migration_mode: #{@config.nsxt.policy_api_migration_mode?}"
+            logger.debug "use_policy_api: #{@config.nsxt.use_policy_api?}"
+            logger.debug "nsxt config: #{@config.nsxt.inspect}"
             
             if @config.nsxt.policy_api_migration_mode?
-              puts "DEBUG: Using policy_api_migration_mode path"
+              logger.debug "Using policy_api_migration_mode path"
               #in migration mode, try to create associations in Policy API, always create associations in Manager API (i.e. fail if cannot be created).
               add_to_management_groups_and_server_pools(created_vm, vm_type)
               add_to_policy_groups_and_server_pools(created_vm, vm_type, true)
               @nsxt_provider.set_vif_type(created_vm, vm_type.nsxt)
             elsif @config.nsxt.use_policy_api?
-              puts "DEBUG: Using Policy API path"
+              logger.debug "Using Policy API path"
               add_to_policy_groups_and_server_pools(created_vm, vm_type)
               # Note: VIF type is not needed in Policy APIs as it's handled differently
             else #management mode
-              puts "DEBUG: Using Manager Mode path"
+              logger.debug "Using Manager Mode path"
               add_to_management_groups_and_server_pools(created_vm, vm_type)
               @nsxt_provider.set_vif_type(created_vm, vm_type.nsxt)
             end

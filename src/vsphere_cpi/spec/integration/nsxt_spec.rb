@@ -5,6 +5,8 @@ require 'nsxt_manager_client/nsxt_manager_client'
 require 'nsxt_policy_client/nsxt_policy_client'
 
 describe 'CPI', nsxt_all: true do
+  include VSphereCloud::Logger
+  
   # Helper method to determine if policy API should be used based on nsxt_manager_api tag exclusion
   def use_policy_api?
     RSpec.configuration.filter_manager.exclusions[:nsxt_manager_api]
@@ -13,21 +15,21 @@ describe 'CPI', nsxt_all: true do
   # Helper method to wait for a group to be realized on enforcement points
   def wait_for_group_realization(group_name, max_wait_time = 60)
     start_time = Time.now
-    puts "DEBUG: Waiting for group #{group_name} to be realized on enforcement points..."
+    logger.debug "Waiting for group #{group_name} to be realized on enforcement points..."
     
     loop do
       begin
         results = @policy_group_members_api.get_group_vm_members(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, group_name).results
-        puts "DEBUG: Group #{group_name} is now realized, found #{results.length} initial members"
+        logger.debug "Group #{group_name} is now realized, found #{results.length} initial members"
         return results
       rescue NSXTPolicy::ApiCallError => e
         if e.message.include?('may not have been realized on enforcement point')
           elapsed = Time.now - start_time
           if elapsed > max_wait_time
-            puts "DEBUG: Timeout waiting for group realization after #{elapsed} seconds"
+            logger.debug "Timeout waiting for group realization after #{elapsed} seconds"
             raise e
           end
-          puts "DEBUG: Group not yet realized, waiting... (elapsed: #{elapsed}s)"
+          logger.debug "Group not yet realized, waiting... (elapsed: #{elapsed}s)"
           sleep(5)
         else
           raise e
@@ -38,11 +40,11 @@ describe 'CPI', nsxt_all: true do
 
   # Helper method to create a policy group and wait for it to be realized
   def create_policy_group_and_wait(group_name)
-    puts "DEBUG: Creating policy group: #{group_name}"
+    logger.debug "Creating policy group: #{group_name}"
     group = create_policy_group(group_name)
-    puts "DEBUG: Policy group created, waiting for realization..."
+    logger.debug "Policy group created, waiting for realization..."
     wait_for_group_realization(group_name)
-    puts "DEBUG: Policy group #{group_name} is now ready for use"
+    logger.debug "Policy group #{group_name} is now ready for use"
     group
   end
 
@@ -609,25 +611,25 @@ describe 'CPI', nsxt_all: true do
           # the root cause of multiple results.
           
           # First, ensure the group is empty before we start
-          puts "DEBUG: Checking initial state of group #{nsgroup_name_1}"
+          logger.debug "Checking initial state of group #{nsgroup_name_1}"
           # NOTE: NSX-T groups need time to be realized on enforcement points before they can be queried.
           # The wait_for_group_realization helper handles this timing issue by waiting for the group
           # to be available for API calls.
           initial_results = wait_for_group_realization(nsgroup_name_1)
-          puts "DEBUG: Initial group members: #{initial_results.map(&:display_name).inspect}"
+          logger.debug "Initial group members: #{initial_results.map(&:display_name).inspect}"
           
           simple_vm_lifecycle(cpi, '', vm_type, policy_network_spec) do |vm_id|
             vm = @cpi.vm_provider.find(vm_id)
-            puts "DEBUG: Created VM with ID: #{vm_id}"
+            logger.debug "Created VM with ID: #{vm_id}"
             
             retryer do
               begin
                 results = @policy_group_members_api.get_group_vm_members(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, nsgroup_name_1).results
                 
                 # Debug information to understand what's in the results
-                puts "DEBUG: Found #{results.length} results in group #{nsgroup_name_1}"
+                logger.debug "Found #{results.length} results in group #{nsgroup_name_1}"
                 results.each_with_index do |result, index|
-                  puts "DEBUG: Result #{index}: display_name=#{result.display_name}, id=#{result.id}, resource_type=#{result.resource_type}"
+                  logger.debug "Result #{index}: display_name=#{result.display_name}, id=#{result.id}, resource_type=#{result.resource_type}"
                 end
                 
                 # Check if we have at least one VM in the group
@@ -635,7 +637,7 @@ describe 'CPI', nsxt_all: true do
 
                 # Get unique VM IDs to handle potential duplicate entries
                 unique_vm_ids = results.map(&:display_name).uniq
-                puts "DEBUG: Unique VM IDs: #{unique_vm_ids.inspect}"
+                logger.debug "Unique VM IDs: #{unique_vm_ids.inspect}"
                 
                 # Expect exactly one unique VM ID
                 expect(unique_vm_ids.length).to eq(1), "Expected 1 unique VM ID, but got #{unique_vm_ids.length}: #{unique_vm_ids.inspect}"
@@ -646,7 +648,7 @@ describe 'CPI', nsxt_all: true do
                 expect(vm_ids_in_results).to include(vm_id), "VM ID #{vm_id} not found in results: #{vm_ids_in_results.inspect}"
               rescue NSXTPolicy::ApiCallError => e
                 if e.message.include?('may not have been realized on enforcement point')
-                  puts "DEBUG: Group not yet realized on enforcement point, retrying..."
+                  logger.debug "Group not yet realized on enforcement point, retrying..."
                   raise StillUpdatingVMsInGroups
                 else
                   raise e

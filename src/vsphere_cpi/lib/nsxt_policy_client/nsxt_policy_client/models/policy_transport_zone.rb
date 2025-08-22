@@ -354,9 +354,6 @@ module NSXTPolicy
     # Custom attribute writer method checking allowed values (enum).
     # @param [Object] tz_type Object to be assigned
     def tz_type=(tz_type)
-      puts "DEBUG: tz_type= called with value: #{tz_type.inspect}"
-      puts "DEBUG: tz_type class: #{tz_type.class}"
-      puts "DEBUG: tz_type nil?: #{tz_type.nil?}"
       validator = EnumAttributeValidator.new('String', ['OVERLAY_STANDARD', 'OVERLAY_ENS', 'VLAN_BACKED', 'UNKNOWN', 'OVERLAY', 'VLAN_STANDARD', 'OVERLAY_BACKED'])
               unless validator.valid?(tz_type)
           fail ArgumentError, "invalid value for tz_type, must be one of #{validator.allowable_values}."

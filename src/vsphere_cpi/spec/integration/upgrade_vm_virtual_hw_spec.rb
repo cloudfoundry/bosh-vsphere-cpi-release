@@ -11,6 +11,7 @@
 require 'integration/spec_helper'
 
 context 'when upgrade_hw_version is enabled' do
+  include VSphereCloud::Logger
 
   let(:vm_type) do
     {
@@ -37,7 +38,7 @@ context 'when upgrade_hw_version is enabled' do
       expect(version_number).to be >= 10
       
       # Log the actual version for debugging
-      puts "VM hardware version: #{vm_mob.config.version}"
+      logger.debug "VM hardware version: #{vm_mob.config.version}"
     end
   end
 end
