@@ -62,6 +62,19 @@ $pipeline.pool('8.pre-release-nsxt41-cvds') do |pool|
       '--tag ~nvds',
       '--tag cvds',
       '--tag nsxt_all',
+      '--tag ~nsxt_manager_api',
+      '--tag ~host_maintenance',
+    ].join(' '),
+  }
+end
+
+$pipeline.pool('9.0-nsxt9-cvds') do |pool|
+  pool.params = {
+    RSPEC_FLAGS: [
+      '--tag ~nvds',
+      '--tag cvds',
+      '--tag nsxt_all',
+      '--tag ~nsxt_manager_api',
       '--tag ~host_maintenance',
     ].join(' '),
   }
