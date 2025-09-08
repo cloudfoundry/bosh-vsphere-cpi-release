@@ -426,10 +426,8 @@ namespace :swagger do
     sh [
       'jq',
       "'.definitions.ResourceReference.properties.target_id.maxLength = 255'",
-      '<',
-      './data/nsxt_policy_api/nsxt_policy_api_trimmed.json',
-      '>',
-      './data/nsxt_policy_api/nsxt_policy_api_target_id_255.json'
+      '< ./data/nsxt_policy_api/nsxt_policy_api_trimmed.json',
+      '> ./data/nsxt_policy_api/nsxt_policy_api_target_id_255.json'
     ].join(' ')
 
     sh [
@@ -441,23 +439,48 @@ namespace :swagger do
       '-Dmodels=PolicyResourceReferenceForEP',
      ].join(' ')
 
-    rm_rf([
-      './lib/nsxt_policy_client/.swagger-codegen-ignore',
-      './lib/nsxt_policy_client/.swagger-codegen',
-      './lib/nsxt_policy_client/README.md',
-      './lib/nsxt_policy_client/.rspec',
-      './lib/nsxt_policy_client/.gitignore',
-      './lib/nsxt_policy_client/Gemfile',
-      './lib/nsxt_policy_client/git_push.sh',
-      './lib/nsxt_policy_client/docs',
-      './lib/nsxt_policy_client/spec',
-      './lib/nsxt_policy_client/nsxt_policy_client.gemspec',
-      './lib/nsxt_policy_client/Rakefile',
-      './lib/nsxt_policy_client/nsxt_policy_client',
-      './data/nsxt_policy_api/nsxt_policy_api_target_id_255.json',
-      './data/nsxt_policy_api/nsxt_policy_api_trimmed.json',
-      './data/nsxt_policy_api/nsxt_policy_api_trimmed_endpoints.json',
-    ])
+    # So NSXT 3.2+, 4.2+, 9+ Now return an additional transport zone type and the client errors if it sees it so
+    # we add the new type to the enum. Eventually we'd like to update, but that's a larger item.
+    # TODO: remove this when we update the base openapi spec to 3.2+
+    sh [
+       'jq',
+       '\'
+         (
+           .definitions.PolicyTransportZone.allOf[] |
+           select(."x-vmw-nsx-module" == "PolicyEnforcementPointManagement")
+         ).properties.tz_type.enum += ["OVERLAY_BACKED"]
+      \'',
+       '< ./data/nsxt_policy_api/nsxt_policy_api_trimmed_endpoints.json',
+       '> ./data/nsxt_policy_api/nsxt_policy_api_patched_policy_tz_model.json'
+     ].join(' ')
+
+    sh [
+       'swagger-codegen generate',
+       '-i ./data/nsxt_policy_api/nsxt_policy_api_patched_policy_tz_model.json',
+       '-l ruby',
+       '-o ./lib/nsxt_policy_client',
+       '-c ./data/nsxt_policy_api/config.json -t ./data/swagger-nsxt-policy-template',
+       '-Dmodels=PolicyTransportZone',
+     ].join(' ')
+
+    rm_rf %w[
+      ./lib/nsxt_policy_client/.swagger-codegen-ignore
+      ./lib/nsxt_policy_client/.swagger-codegen
+      ./lib/nsxt_policy_client/README.md
+      ./lib/nsxt_policy_client/.rspec
+      ./lib/nsxt_policy_client/.gitignore
+      ./lib/nsxt_policy_client/Gemfile
+      ./lib/nsxt_policy_client/git_push.sh
+      ./lib/nsxt_policy_client/docs
+      ./lib/nsxt_policy_client/spec
+      ./lib/nsxt_policy_client/nsxt_policy_client.gemspec
+      ./lib/nsxt_policy_client/Rakefile
+      ./lib/nsxt_policy_client/nsxt_policy_client
+      ./data/nsxt_policy_api/nsxt_policy_api_target_id_255.json
+      ./data/nsxt_policy_api/nsxt_policy_api_trimmed.json
+      ./data/nsxt_policy_api/nsxt_policy_api_trimmed_endpoints.json
+      ./data/nsxt_policy_api/nsxt_policy_api_patched_policy_tz_model.json
+    ]
 
     mv('./lib/nsxt_policy_client/lib/nsxt_policy_client', './lib/nsxt_policy_client/nsxt_policy_client')
 
