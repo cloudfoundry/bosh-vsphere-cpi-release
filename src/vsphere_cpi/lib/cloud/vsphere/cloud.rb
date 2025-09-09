@@ -379,7 +379,7 @@ module VSphereCloud
             cluster_provider: @cluster_provider
           )
 
-          #TODO refactor this so that manifest related params are moved to manifest_params hash
+          # TODO refactor this so that manifest related params are moved to manifest_params hash
           # eg. upgrade_hw_version, default_disk_type, anti_affinity_drs_rules
           vm_creator = VmCreator.new(
             client: @client,
@@ -1017,10 +1017,10 @@ module VSphereCloud
       vm.accessible_datastores[cdrom.backing.datastore.name]
     end
 
-    def verify_props(type, required_properties, properties)
+    def verify_props(cloud_properties_type, required_properties, properties)
       for prop in required_properties
         if properties[prop].nil?
-          raise "Must specify '#{prop}' in #{type} cloud properties."
+          raise "Must specify '#{prop}' in #{cloud_properties_type} cloud properties."
         end
       end
     end

@@ -155,8 +155,6 @@ module VSphereCloud
           #   for the new device to be added (for example, by using unique negative integers as temporary keys).
           replicated_stemcell_vm.fix_device_key(config_spec.device_change)
 
-          raise "Unable to parse vmx options: 'vmx_options' is not a Hash" unless vm_config.vmx_options.is_a?(Hash)
-
           config_spec.extra_config = vm_config.vmx_options.keys.map do |key|
             VimSdk::Vim::Option::OptionValue.new(key:, value: vm_config.vmx_options[key])
           end
