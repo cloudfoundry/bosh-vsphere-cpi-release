@@ -88,5 +88,31 @@ module VSphereCloud
         end
       end
     end
+
+    describe '#vmx_options' do
+      context 'with a nil vmx properties' do
+        let(:vmx_options) { nil }
+
+        it 'returns nil' do
+          expect(vm_type.vmx_options).to eq(nil)
+        end
+      end
+
+      context 'with a vmx properties object' do
+        let(:vmx_options) { { 'abc' => 123 } }
+
+        it 'returns the properties' do
+          expect(vm_type.vmx_options).to eq(vmx_options)
+        end
+      end
+
+      context 'with an invalid type' do
+        let(:vmx_options) { ['abc' => 123] }
+
+        it 'raises an error during initialisation' do
+          expect { vm_type }.to raise_error(/'vmx_options' is not a Hash/)
+        end
+      end
+    end
   end
 end

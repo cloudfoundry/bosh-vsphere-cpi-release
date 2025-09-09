@@ -12,6 +12,8 @@ module VSphereCloud
       @datacenter = datacenter
       @cloud_properties = cloud_properties
       @pbm = pbm
+
+      validate
     end
 
     CLOUD_PROPERTIES_HASH_PROXY_METHODS = %w[
@@ -68,6 +70,12 @@ module VSphereCloud
     # Datastores compatible with given storage policy
     def storage_policy_datastores(policy_name)
       policy_name ? @pbm.find_compatible_datastores(policy_name, @datacenter) : []
+    end
+
+    private
+
+    def validate
+      raise "Unable to parse vmx options: 'vmx_options' is not a Hash" unless vmx_options.nil? || vmx_options.is_a?(Hash)
     end
   end
 end
