@@ -146,15 +146,13 @@ module VSphereCloud
         #   attaching to the same Bus ID. This is unlikely to be triggered using the current disk flows,
         #   but may become an issue if disks can be attached outside the disk creator flow. We may want
         #   to look at VSphereCloud::DrsLock and generalise it.
-        disks = devices.reject { |device| device.is_a?(Vim::Vm::Device::VirtualDisk) }
+        disks = devices.select { |device| device.is_a?(Vim::Vm::Device::VirtualDisk) }
         unit_numbers_by_controller = find_available_unit_numbers_for_each_controller(disks)
 
         disks = device_changes.select { |device_change| device_change.device.is_a?(VimSdk::Vim::Vm::Device::VirtualDisk) }
         disks.each do |device_change|
           next unless device_change.device.unit_number.nil?
-
           available_unit_numbers = unit_numbers_by_controller[device_change.device.controller_key]
-
           raise "No available unit numbers for device: #{device_change.device.inspect}" if available_unit_numbers.empty?
 
           device_change.device.unit_number = available_unit_numbers.shift
@@ -166,7 +164,6 @@ module VSphereCloud
 
         disks.group_by(&:controller_key).each do |controller_key, disks_for_controller|
           observed_unit_numbers = disks_for_controller.map(&:unit_number)
-
           available_unit_numbers = SCSI_CONTROLLER_VALID_IDS - observed_unit_numbers
           unit_numbers_by_controller[controller_key] = available_unit_numbers.to_a.sort!
         end
