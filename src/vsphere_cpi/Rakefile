@@ -705,9 +705,9 @@ namespace :swagger do
       ./data/nsxt_policy_api/nsxt9_policy_api_patched_policy_tz_model.json
     ]
 
-    FileUtils.mkdir_p('./lib/nsxt9_policy_client/nsxt_policy_client')
+    #FileUtils.mkdir_p('./lib/nsxt9_policy_client/nsxt_policy_client')
 
-    mv('./lib/nsxt9_policy_client/lib/nsxt_policy_client', './lib/nsxt9_policy_client/nsxt_policy_client')
+    mv('./lib/nsxt9_policy_client/lib/nsxt_policy_client', './lib/nsxt9_policy_client')
 
     mv('./lib/nsxt9_policy_client/lib/nsxt_policy_client.rb', './lib/nsxt9_policy_client/nsxt_policy_client.rb')
 
