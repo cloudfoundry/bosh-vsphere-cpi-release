@@ -612,7 +612,7 @@ namespace :swagger do
     ].join(' ')
 
     sh [
-      'java -jar /root/swagger-2/swagger-codegen-cli.jar generate',
+      'swagger-codegen generate',
       '-i ./data/nsxt_policy_api/nsxt9_policy_api_trimmed.json',
       '-l ruby',
       '-o ./lib/nsxt9_policy_client',
@@ -620,7 +620,7 @@ namespace :swagger do
     ].join(' ')
 
     sh [
-       'java -jar /root/swagger-2/swagger-codegen-cli.jar generate',
+       'swagger-codegen generate',
        '-i ./data/nsxt_policy_api/nsxt9_policy_api_trimmed.json',
        '-l ruby',
        '-o ./lib/nsxt9_policy_client',
@@ -630,7 +630,7 @@ namespace :swagger do
 
     # Patch Group which has wrong _deserialize method
     sh [
-     'java -jar /root/swagger-2/swagger-codegen-cli.jar generate',
+     'swagger-codegen generate',
      '-i ./data/nsxt_policy_api/nsxt9_policy_api_trimmed.json',
      '-l ruby',
      '-o ./lib/nsxt9_policy_client',
@@ -650,7 +650,7 @@ namespace :swagger do
     ].join(' ')
 
     sh [
-      'java -jar /root/swagger-2/swagger-codegen-cli.jar generate',
+      'swagger-codegen generate',
       '-i ./data/nsxt_policy_api/nsxt9_policy_api_target_id_255.json',
       '-l ruby',
       '-o ./lib/nsxt9_policy_client',
@@ -674,7 +674,7 @@ namespace :swagger do
      ].join(' ')
 
     sh [
-       'java -jar /root/swagger-2/swagger-codegen-cli.jar generate',
+       'swagger-codegen generate',
        '-i ./data/nsxt_policy_api/nsxt9_policy_api_patched_policy_tz_model.json',
        '-l ruby',
        '-o ./lib/nsxt9_policy_client',
@@ -728,6 +728,13 @@ namespace :swagger do
     output = File.new('lib/nsxt9_policy_client/nsxt_policy_client.rb', 'w')
     lines.each { |line| output.write line }
     output.close
+
+    # Replace NSXTPolicy with Nsxt9PolicyClient in all Ruby files in the generated client
+    Dir.glob('lib/nsxt9_policy_client/nsxt_policy_client/**/*.rb').each do |file|
+      content = File.read(file)
+      content = content.gsub('NSXTPolicy', 'Nsxt9PolicyClient')
+      File.write(file, content)
+    end
   end
 end
 
