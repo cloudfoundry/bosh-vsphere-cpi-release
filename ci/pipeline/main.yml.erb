@@ -167,6 +167,8 @@ jobs:
             tags: [nimbus]
             file: source-ci/ci/tasks/deploy-director.yml
             image: vcpi-main-image
+            params:
+              JUMPBOX_PRIVATE_KEY: ((nimbus_jumpbox_key.private_key))
           - task: run-bats
             tags: [nimbus]
             file: source-ci/ci/tasks/run-bats-policy.yml
@@ -175,6 +177,7 @@ jobs:
               BAT_INFRASTRUCTURE: vsphere
               BAT_RSPEC_FLAGS:    "--tag ~dns --tag ~vip_networking --tag ~dynamic_networking --tag ~root_partition --tag ~raw_ephemeral_storage"
               STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-jammy-go_agent
+              JUMPBOX_PRIVATE_KEY: ((nimbus_jumpbox_key.private_key))
         on_failure:
           in_parallel:
           - put: pool-7.0-nsxt32-policy
@@ -185,12 +188,6 @@ jobs:
           put: pool-7.0-nsxt32-policy
           tags: [nimbus]
           params : { action: release, resource: environment }
-        ensure:
-          do:
-            - task: teardown
-              tags: [nimbus]
-              file: source-ci/ci/tasks/teardown.yml
-              image: vcpi-main-image
 
   - name: bats
     serial: true
@@ -240,6 +237,8 @@ jobs:
           tags: [nimbus]
           file: source-ci/ci/tasks/deploy-director.yml
           image: vcpi-main-image
+          params:
+            JUMPBOX_PRIVATE_KEY: ((nimbus_jumpbox_key.private_key))
         - task: run-bats
           tags: [nimbus]
           file: source-ci/ci/tasks/run-bats.yml
@@ -248,6 +247,7 @@ jobs:
             BAT_INFRASTRUCTURE: vsphere
             BAT_RSPEC_FLAGS:    "--tag ~dns --tag ~vip_networking --tag ~dynamic_networking --tag ~root_partition --tag ~raw_ephemeral_storage"
             STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-jammy-go_agent
+            JUMPBOX_PRIVATE_KEY: ((nimbus_jumpbox_key.private_key))
         on_failure:
           in_parallel:
           - put: pool-7.0-nsxt32-nvds
@@ -257,12 +257,6 @@ jobs:
           put: pool-7.0-nsxt32-nvds
           tags: [nimbus]
           params : { action: release, resource: environment }
-        ensure:
-          do:
-            - task: teardown
-              tags: [nimbus]
-              file: source-ci/ci/tasks/teardown.yml
-              image: vcpi-main-image
 
   - name: bats-70-cvds
     serial: true
@@ -311,6 +305,8 @@ jobs:
             tags: [nimbus]
             file: source-ci/ci/tasks/deploy-director.yml
             image: vcpi-main-image
+            params:
+              JUMPBOX_PRIVATE_KEY: ((nimbus_jumpbox_key.private_key))
           - task: run-bats
             tags: [nimbus]
             file: source-ci/ci/tasks/run-bats-cvds.yml
@@ -319,6 +315,7 @@ jobs:
               BAT_INFRASTRUCTURE: vsphere
               BAT_RSPEC_FLAGS:    "--tag ~dns --tag ~vip_networking --tag ~dynamic_networking --tag ~root_partition --tag ~raw_ephemeral_storage"
               STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-jammy-go_agent
+              JUMPBOX_PRIVATE_KEY: ((nimbus_jumpbox_key.private_key))
         on_failure:
           in_parallel:
             - put: pool-7.0-nsxt32-cvds
@@ -328,12 +325,6 @@ jobs:
           put: pool-7.0-nsxt32-cvds
           tags: [nimbus]
           params : { action: release, resource: environment }
-        ensure:
-          do:
-            - task: teardown
-              tags: [nimbus]
-              file: source-ci/ci/tasks/teardown.yml
-              image: vcpi-main-image
 
   - name: bats-80-policy
     serial: true
@@ -382,6 +373,8 @@ jobs:
             tags: [nimbus]
             file: source-ci/ci/tasks/deploy-director.yml
             image: vcpi-main-image
+            params:
+              JUMPBOX_PRIVATE_KEY: ((nimbus_jumpbox_key.private_key))
           - task: run-bats
             tags: [nimbus]
             file: source-ci/ci/tasks/run-bats-policy.yml
@@ -390,6 +383,7 @@ jobs:
               BAT_INFRASTRUCTURE: vsphere
               BAT_RSPEC_FLAGS:    "--tag ~dns --tag ~vip_networking --tag ~dynamic_networking --tag ~root_partition --tag ~raw_ephemeral_storage"
               STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-jammy-go_agent
+              JUMPBOX_PRIVATE_KEY: ((nimbus_jumpbox_key.private_key))
         on_failure:
           in_parallel:
             - put: pool-8.0-nsxt42-policy
@@ -399,12 +393,6 @@ jobs:
           put: pool-8.0-nsxt42-policy
           tags: [nimbus]
           params : { action: release, resource: environment }
-        ensure:
-          do:
-            - task: teardown
-              tags: [nimbus]
-              file: source-ci/ci/tasks/teardown.yml
-              image: vcpi-main-image
 
   - name: pre-release-fan-in
     serial: true
