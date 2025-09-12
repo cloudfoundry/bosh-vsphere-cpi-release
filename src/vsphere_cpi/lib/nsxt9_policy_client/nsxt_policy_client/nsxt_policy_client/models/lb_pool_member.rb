@@ -12,7 +12,7 @@ Swagger Codegen version: 2.4.46
 
 require 'date'
 
-module NSXTPolicy
+module Nsxt9PolicyClient
   # Pool member.
   class LBPoolMember
     # To ensure members are not overloaded, connections to a member can be capped by the load balancer. When a member reaches this limit, it is skipped during server selection. If it is not specified, it means that connections are unlimited. 
@@ -288,7 +288,7 @@ module NSXTPolicy
           end
         end
       else # model
-        temp_model = NSXTPolicy.const_get(type).new
+        temp_model = Nsxt9PolicyClient.const_get(type).new
         temp_model.build_from_hash(value)
       end
     end

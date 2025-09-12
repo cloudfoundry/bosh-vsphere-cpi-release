@@ -12,7 +12,7 @@ Swagger Codegen version: 2.4.46
 
 require 'date'
 
-module NSXTPolicy
+module Nsxt9PolicyClient
   # Abstract base class for all the policy objects.
   class PolicyResource
     # Link to this resource
@@ -349,7 +349,7 @@ module NSXTPolicy
           end
         end
       else # model
-        temp_model = NSXTPolicy.const_get(type).new
+        temp_model = Nsxt9PolicyClient.const_get(type).new
         temp_model.build_from_hash(value)
       end
     end

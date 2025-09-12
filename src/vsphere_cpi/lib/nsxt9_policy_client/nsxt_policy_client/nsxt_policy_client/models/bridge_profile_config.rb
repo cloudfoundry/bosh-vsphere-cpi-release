@@ -12,7 +12,7 @@ Swagger Codegen version: 2.4.46
 
 require 'date'
 
-module NSXTPolicy
+module Nsxt9PolicyClient
   # configuration parameters for Bridge Profile
   class BridgeProfileConfig
     # The name of the switching uplink teaming policy for the bridge endpoint. This name corresponds to one fot he switching uplink teaming policy names listed in teh transport zone. When this property is not specified, the teaming policy is assigned by MP.
@@ -177,7 +177,7 @@ module NSXTPolicy
           end
         end
       else # model
-        temp_model = NSXTPolicy.const_get(type).new
+        temp_model = Nsxt9PolicyClient.const_get(type).new
         temp_model.build_from_hash(value)
       end
     end

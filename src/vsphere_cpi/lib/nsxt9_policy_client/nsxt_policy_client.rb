@@ -108,10 +108,10 @@ require 'nsxt_policy_client/api/policy_networking_connectivity_segments_segments
 require 'nsxt_policy_client/api/policy_networking_network_services_load_balancing_load_balancer_pools_api'
 require 'nsxt_policy_client/api/search_search_api_api'
 
-module NSXTPolicy
+module Nsxt9PolicyClient
   class << self
     # Customize default settings for the SDK using block.
-    #   NSXTPolicy.configure do |config|
+    #   Nsxt9PolicyClient.configure do |config|
     #     config.username = "xxx"
     #     config.password = "xxx"
     #   end

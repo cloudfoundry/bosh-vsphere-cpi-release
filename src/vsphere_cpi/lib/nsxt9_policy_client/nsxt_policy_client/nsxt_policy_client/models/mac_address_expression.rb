@@ -12,7 +12,7 @@ Swagger Codegen version: 2.4.46
 
 require 'date'
 
-module NSXTPolicy
+module Nsxt9PolicyClient
   # Represents MAC address expressions in the form of an array, to support addition of MAC addresses in a group. Avoid creating groups with multiple MACAddressExpression. In future releases, group will be restricted to contain a single MACAddressExpression. To group MAC addresses, use nested groups instead of multiple MACAddressExpression.
   class MACAddressExpression
     # Link to this resource
@@ -440,7 +440,7 @@ module NSXTPolicy
           end
         end
       else # model
-        temp_model = NSXTPolicy.const_get(type).new
+        temp_model = Nsxt9PolicyClient.const_get(type).new
         temp_model.build_from_hash(value)
       end
     end

@@ -12,7 +12,7 @@ Swagger Codegen version: 2.4.46
 
 require 'date'
 
-module NSXTPolicy
+module Nsxt9PolicyClient
   # The setting is used to add, update or remove pool members from pool. For static pool members, admin_state, display_name and weight can be updated. For dynamic pool members, only admin_state can be updated. 
   class PoolMemberSetting
     # Member admin state
@@ -240,7 +240,7 @@ module NSXTPolicy
           end
         end
       else # model
-        temp_model = NSXTPolicy.const_get(type).new
+        temp_model = Nsxt9PolicyClient.const_get(type).new
         temp_model.build_from_hash(value)
       end
     end

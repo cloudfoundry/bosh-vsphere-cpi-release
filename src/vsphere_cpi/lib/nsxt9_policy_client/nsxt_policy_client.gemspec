@@ -17,7 +17,7 @@ require "nsxt_policy_client/version"
 
 Gem::Specification.new do |s|
   s.name        = "nsxt_policy_client"
-  s.version     = NSXTPolicy::VERSION
+  s.version     = Nsxt9PolicyClient::VERSION
   s.platform    = Gem::Platform::RUBY
   s.authors     = ["Swagger-Codegen"]
   s.email       = [""]

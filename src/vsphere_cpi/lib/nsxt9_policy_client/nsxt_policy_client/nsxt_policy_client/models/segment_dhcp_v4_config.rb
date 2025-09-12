@@ -12,7 +12,7 @@ Swagger Codegen version: 2.4.46
 
 require 'date'
 
-module NSXTPolicy
+module Nsxt9PolicyClient
   # DHCP configuration of IPv4 subnet in a segment
   class SegmentDhcpV4Config
     # IP address of the DHCP server in CIDR format. The server_address is mandatory in case this segment has provided a dhcp_config_path and it represents a DHCP server config. If this SegmentDhcpConfig is a SegmentDhcpV4Config, the address must be an IPv4 address. If this is a SegmentDhcpV6Config, the address must be an IPv6 address. This address must not overlap the ip-ranges of the subnet, or the gateway address of the subnet, or the DHCP static-binding addresses of this segment. 
@@ -241,7 +241,7 @@ module NSXTPolicy
           end
         end
       else # model
-        temp_model = NSXTPolicy.const_get(type).new
+        temp_model = Nsxt9PolicyClient.const_get(type).new
         temp_model.build_from_hash(value)
       end
     end

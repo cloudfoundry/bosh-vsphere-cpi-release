@@ -12,7 +12,7 @@ Swagger Codegen version: 2.4.46
 
 require 'date'
 
-module NSXTPolicy
+module Nsxt9PolicyClient
   # Represents external ID expressions in the form of an array, to support addition of objects like virtual interfaces, virtual machines, CloudNativeServiceInstance PhysicalServer to a group.
   class ExternalIDExpression
     # Link to this resource
@@ -467,7 +467,7 @@ module NSXTPolicy
           end
         end
       else # model
-        temp_model = NSXTPolicy.const_get(type).new
+        temp_model = Nsxt9PolicyClient.const_get(type).new
         temp_model.build_from_hash(value)
       end
     end

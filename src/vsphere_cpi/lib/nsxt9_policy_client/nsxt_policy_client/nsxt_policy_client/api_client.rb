@@ -15,9 +15,9 @@ require 'json'
 require 'logger'
 require 'tempfile'
 require 'typhoeus'
-require 'uri'
+require 'addressable/uri'
 
-module NSXTPolicy
+module Nsxt9PolicyClient
   class ApiClient
     # The Configuration object holding settings to be used in the API client.
     attr_accessor :config
@@ -48,9 +48,7 @@ module NSXTPolicy
     #   the data deserialized from response body (could be nil), response status code and response headers.
     def call_api(http_method, path, opts = {})
       request = build_request(http_method, path, opts)
-      response = with_exponential_backoff do
-        request.run
-      end
+      response = request.run
 
       if @config.debugging
         @config.logger.debug "HTTP response body ~BEGIN~\n#{response.body}\n~END~\n"
@@ -58,24 +56,15 @@ module NSXTPolicy
 
       unless response.success?
         if response.timed_out?
-          fail ApiCallError.new('Connection timed out')
+          fail ApiError.new('Connection timed out')
         elsif response.code == 0
           # Errors from libcurl will be made visible here
-          fail ApiCallError.new(:code => 0,
+          fail ApiError.new(:code => 0,
                             :message => response.return_message)
         else
-          error_message = ''
-          begin
-            api_error = ApiError.new(JSON.parse(response.body))
-            error_message = api_error.related_errors ? api_error.related_errors : api_error.error_message
-          rescue JSON::ParserError
-            error_message = "Unable to parse JSON response.\nReturn code:#{response.return_code}\nReturn message:#{response.return_message}\nResponse body: #{response.body}"
-          end
-
-          fail ApiCallError.new(:code => response.code,
-                            :response_headers => response.headers,
-                            :response_body => response.body,
-                            :message => error_message),
+          fail ApiError.new(:code => response.code,
+                            :response_headers => response.headers.to_h,
+                            :response_body => response.body),
                response.status_message
         end
       end
@@ -86,20 +75,6 @@ module NSXTPolicy
         data = nil
       end
       return data, response.code, response.headers
-    end
-
-    def with_exponential_backoff(&block)
-      response = yield
-      4.times do |count|
-        if !response.success? && response.code == 429 # We're being throttled--try again
-          @config.logger.debug "Sleeping for #{2 ** count} seconds before retrying because NSX returned 429"
-          sleep 2 ** count
-          response = yield
-        else
-          break
-        end
-      end
-      response
     end
 
     # Builds the HTTP request
@@ -119,9 +94,7 @@ module NSXTPolicy
       query_params = opts[:query_params] || {}
       form_params = opts[:form_params] || {}
 
-      unless using_cert_authentication
-        update_params_for_auth! header_params, query_params, opts[:auth_names]
-      end
+      update_params_for_auth! header_params, query_params, opts[:auth_names]
 
       # set ssl_verifyhosts option based on @config.verify_ssl_host (true/false)
       _verify_ssl_host = @config.verify_ssl_host ? 2 : 0
@@ -138,6 +111,8 @@ module NSXTPolicy
         :sslkey => @config.key_file,
         :verbose => @config.debugging
       }
+
+      req_opts.merge!(multipart: true) if header_params['Content-Type'].start_with? "multipart/"
 
       # set custom cert, if provided
       req_opts[:cainfo] = @config.ssl_ca_cert if @config.ssl_ca_cert
@@ -237,7 +212,7 @@ module NSXTPolicy
         end
       else
         # models, e.g. Pet
-        NSXTPolicy.const_get(return_type).new.tap do |model|
+        Nsxt9PolicyClient.const_get(return_type).new.tap do |model|
           model.build_from_hash data
         end
       end
@@ -291,7 +266,7 @@ module NSXTPolicy
     def build_request_url(path)
       # Add leading and trailing slashes to path
       path = "/#{path}".gsub(/\/+/, '/')
-      Addressable::URI.encode(@config.base_url) + Addressable::URI.encode(path).gsub("[","%5B").gsub("]","%5D")
+      Addressable::URI.encode(@config.base_url + path)
     end
 
     # Builds the HTTP request body
@@ -411,10 +386,6 @@ module NSXTPolicy
       else
         fail "unknown collection format: #{collection_format.inspect}"
       end
-    end
-
-    def using_cert_authentication
-      !@config.cert_file.nil? && !@config.key_file.nil?
     end
   end
 end

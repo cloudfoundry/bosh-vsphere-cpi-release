@@ -12,7 +12,7 @@ Swagger Codegen version: 2.4.46
 
 require 'date'
 
-module NSXTPolicy
+module Nsxt9PolicyClient
   # Local Egress is used on both server and client sites so that the gateway is used for N-S traffic and overhead on L2VPN tunnel is reduced. 
   class LocalEgress
     # Gateway IP for Local Egress. Local egress is enabled only when this list is not empty. 
@@ -137,7 +137,7 @@ module NSXTPolicy
           end
         end
       else # model
-        temp_model = NSXTPolicy.const_get(type).new
+        temp_model = Nsxt9PolicyClient.const_get(type).new
         temp_model.build_from_hash(value)
       end
     end

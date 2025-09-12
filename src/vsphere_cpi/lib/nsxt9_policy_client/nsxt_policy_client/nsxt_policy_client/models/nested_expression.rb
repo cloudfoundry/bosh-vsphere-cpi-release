@@ -12,7 +12,7 @@ Swagger Codegen version: 2.4.46
 
 require 'date'
 
-module NSXTPolicy
+module Nsxt9PolicyClient
   # Nested expressions is a list of condition expressions that must follow the below criteria: 0. Only allowed expressions in a NestedExpression are Condition and ConjunctionOperator. 1. A non-empty expression list, must be of odd size. In a list, with indices starting from 0, all condition expressions must be at even indices, separated by the conjunction expressions AND at odd indices. 2. There may be at most 5 condition expressions inside a list. 3. NestedExpressions are homogeneous in nature, i.e, all expressions inside a nested expression must have the same member type. 
   class NestedExpression
     # Link to this resource
@@ -440,7 +440,7 @@ module NSXTPolicy
           end
         end
       else # model
-        temp_model = NSXTPolicy.const_get(type).new
+        temp_model = Nsxt9PolicyClient.const_get(type).new
         temp_model.build_from_hash(value)
       end
     end
