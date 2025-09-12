@@ -89,13 +89,10 @@ describe 'NSXT Policy certificate authentication', nsxt_policy_only: true do
         router_body = "{\"display_name\": \"#{router_name}\"}"
         
         router = router_api.create_or_replace_tier1(router_name, router_body)
-        puts "router: #{router}"
         @router_id = router.id
-        puts "router_id: #{@router_id}"
         expect(@router_id).not_to be_nil
 
         router = router_api2.read_tier1(@router_id)
-        puts "router: #{router}"
         expect(router).not_to be_nil
         expect(router._protection).to eq("REQUIRE_OVERRIDE")
       
@@ -131,13 +128,10 @@ describe 'NSXT Policy certificate authentication', nsxt_policy_only: true do
         router_body = "{\"display_name\": \"#{router_name}\"}"
         
         router = router_api.create_or_replace_tier1(router_name, router_body)
-        puts "router: #{router}"
         @router_id = router.id
-        puts "router_id: #{@router_id}"
         expect(@router_id).not_to be_nil
 
         router = router_api2.read_tier1(@router_id)
-        puts "router: #{router}"
         expect(router).not_to be_nil
         expect(router._protection).to eq("REQUIRE_OVERRIDE")
       

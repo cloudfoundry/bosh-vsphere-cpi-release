@@ -48,9 +48,7 @@ module Nsxt9PolicyClient
     #   the data deserialized from response body (could be nil), response status code and response headers.
     def call_api(http_method, path, opts = {})
       request = build_request(http_method, path, opts)
-      puts "request: #{request.inspect}"
       response = request.run
-      puts "response: #{response.body}"
 
       if @config.debugging
         @config.logger.debug "HTTP response body ~BEGIN~\n#{response.body}\n~END~\n"

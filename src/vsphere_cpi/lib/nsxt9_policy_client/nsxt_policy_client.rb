@@ -1,4 +1,8 @@
+# Use a different internal namespace to avoid conflicts with nsxt_policy_client
 $LOAD_PATH.unshift(File.join(File.dirname(__FILE__), '..', 'nsxt9_policy_client'))
+# Temporarily remove the conflicting path to avoid namespace conflicts
+original_load_path = $LOAD_PATH.dup
+$LOAD_PATH.reject! { |path| path.include?('nsxt_policy_client') && !path.include?('nsxt9_policy_client') }
 =begin
 #NSX Policy API
 
@@ -2692,4 +2696,4 @@ module Nsxt9PolicyClient
 end
 
 # Add alias for compatibility with vSphere CPI
-NSXTPolicy = Nsxt9PolicyClient
+#NSXTPolicy = Nsxt9PolicyClient

@@ -3,30 +3,6 @@ require 'securerandom'
 require 'integration/spec_helper'
 require 'nsxt9_policy_client/nsxt_policy_client'
 
-# Load only the essential NSXT9 policy client components with correct paths
-# require_relative '../../lib/nsxt9_policy_client/nsxt_policy_client/version'
-# require_relative '../../lib/nsxt9_policy_client/nsxt_policy_client/api_client'
-# require_relative '../../lib/nsxt9_policy_client/nsxt_policy_client/configuration'
-
-# # Load only the APIs we need
-# require_relative '../../lib/nsxt9_policy_client/nsxt_policy_client/api/groups_api'
-# require_relative '../../lib/nsxt9_policy_client/nsxt_policy_client/api/load_balancer_pools_api'
-# require_relative '../../lib/nsxt9_policy_client/nsxt_policy_client/api/segments_api'
-# require_relative '../../lib/nsxt9_policy_client/nsxt_policy_client/api/virtual_machines_api'
-# require_relative '../../lib/nsxt9_policy_client/nsxt_policy_client/api/ports_api'
-# require_relative '../../lib/nsxt9_policy_client/nsxt_policy_client/api/transport_zones_api'
-
-# # Load only the models we need
-# require_relative '../../lib/nsxt9_policy_client/nsxt_policy_client/models/group'
-# require_relative '../../lib/nsxt9_policy_client/nsxt_policy_client/models/segment'
-# require_relative '../../lib/nsxt9_policy_client/nsxt_policy_client/models/segment_advanced_config'
-# require_relative '../../lib/nsxt9_policy_client/nsxt_policy_client/models/lb_pool'
-# require_relative '../../lib/nsxt9_policy_client/nsxt_policy_client/models/lb_pool_member'
-# require_relative '../../lib/nsxt9_policy_client/nsxt_policy_client/models/lb_pool_member_group'
-# require_relative '../../lib/nsxt9_policy_client/nsxt_policy_client/models/lb_snat_translation'
-# require_relative '../../lib/nsxt9_policy_client/nsxt_policy_client/models/api_error'
-# require_relative '../../lib/nsxt9_policy_client/nsxt_policy_client/models/transport_zone_end_point'
-
 describe 'CPI', nsxt_policy_only: true do
   include VSphereCloud::Logger
   before(:all) do
