@@ -425,41 +425,6 @@ module Nsxt9PolicyClient
       self
     end
 
-    # Factory method to create the appropriate Expression subclass based on resource_type
-    # @param [Hash] attributes Model attributes in the form of hash
-    # @return [Object] Returns the appropriate Expression subclass
-    def self.build_from_hash(attributes)
-      return nil unless attributes.is_a?(Hash)
-      
-      resource_type = attributes[:resource_type] || attributes['resource_type']
-      return nil if resource_type.nil?
-      
-      # Map resource_type to the appropriate class
-      case resource_type
-      when 'ExternalIDExpression'
-        Nsxt9PolicyClient::ExternalIDExpression.new.build_from_hash(attributes)
-      when 'ConjunctionOperator'
-        Nsxt9PolicyClient::ConjunctionOperator.new.build_from_hash(attributes)
-      when 'IPAddressExpression'
-        Nsxt9PolicyClient::IPAddressExpression.new.build_from_hash(attributes)
-      when 'MACAddressExpression'
-        Nsxt9PolicyClient::MACAddressExpression.new.build_from_hash(attributes)
-      when 'PathExpression'
-        Nsxt9PolicyClient::PathExpression.new.build_from_hash(attributes)
-      when 'IdentityGroupExpression'
-        Nsxt9PolicyClient::IdentityGroupExpression.new.build_from_hash(attributes)
-      when 'GeoLocationExpression'
-        Nsxt9PolicyClient::GeoLocationExpression.new.build_from_hash(attributes)
-      when 'Condition'
-        Nsxt9PolicyClient::Condition.new.build_from_hash(attributes)
-      when 'NestedExpression'
-        Nsxt9PolicyClient::NestedExpression.new.build_from_hash(attributes)
-      else
-        # Fallback to base Expression class
-        Nsxt9PolicyClient::Expression.new.build_from_hash(attributes)
-      end
-    end
-
     # Deserializes the data based on type
     # @param string type Data type
     # @param string value Value to be deserialized
@@ -497,13 +462,8 @@ module Nsxt9PolicyClient
           end
         end
       else # model
-        if type == 'Expression'
-          # Use factory method for polymorphic Expression deserialization
-          Nsxt9PolicyClient::Expression.build_from_hash(value)
-        else
-          temp_model = Nsxt9PolicyClient.const_get(type).new
-          temp_model.build_from_hash(value)
-        end
+        temp_model = Nsxt9PolicyClient.const_get(type).new
+        temp_model.build_from_hash(value)
       end
     end
 

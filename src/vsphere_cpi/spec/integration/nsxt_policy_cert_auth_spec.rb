@@ -19,8 +19,6 @@ describe 'NSXT Policy certificate authentication', nsxt_policy_only: true do
     policy_configuration.verify_ssl = false
     policy_configuration.verify_ssl_host = false
     @policy_client = Nsxt9PolicyClient::ApiClient.new(policy_configuration)
-    @certificates_api = Nsxt9PolicyClient::CertificatesApi.new(@policy_client)
-    @user_management_api = Nsxt9PolicyClient::UserManagementApi.new(@policy_client)
     
     # Initialize Manager API client for certificate and principal identity management
     manager_configuration = NSXT::Configuration.new
@@ -40,7 +38,6 @@ describe 'NSXT Policy certificate authentication', nsxt_policy_only: true do
   let(:policyclient) { create_client_cert_auth_client(@private_key, @certificate) }
   let(:manager_client) { create_client_cert_auth_client_manager_api(@private_key, @certificate) }
   let(:nsx_component_api) { NSXT::ManagementPlaneApiNsxComponentAdministrationTrustManagementCertificateApi.new(manager_client) }
-  let(:user_management_api) { Nsxt9PolicyClient::UserManagementApi.new(policyclient) }
   let(:logger) { Logger.new(STDOUT) }
 
   context 'when certificate is attached to principal' do
@@ -138,7 +135,7 @@ describe 'NSXT Policy certificate authentication', nsxt_policy_only: true do
         router.display_name = 'new-name';
         expect {
           router = router_api2.create_or_replace_tier1(@router_id, router)
-        }.to raise_error(Nsxt9PolicyClient::ApiError)
+        }.to raise_error(Nsxt9PolicyClient::ApiCallError)
       end
     end
   end

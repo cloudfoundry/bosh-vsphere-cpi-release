@@ -151,10 +151,12 @@ module Nsxt9PolicyClient
             value.to_i
           when /Float/i
             value.to_f
+          when /String/i
+            [value, value.downcase]
           else
             value
           end
-        end
+        end.flatten
       end
 
       def valid?(value)
@@ -474,7 +476,7 @@ module Nsxt9PolicyClient
       return false if @state.nil?
       state_validator = EnumAttributeValidator.new('String', ['UNAVAILABLE', 'UNREALIZED', 'REALIZED', 'ERROR'])
       return false unless state_validator.valid?(@state)
-      power_state_validator = EnumAttributeValidator.new('String', ['VM_RUNNING', 'VM_STOPPED', 'VM_SUSPENDED', 'UNKNOWN', "vm_running", "vm_stopped", "vm_suspended", "unknown"])
+      power_state_validator = EnumAttributeValidator.new('String', ['VM_RUNNING', 'VM_STOPPED', 'VM_SUSPENDED', 'UNKNOWN'])
       return false unless power_state_validator.valid?(@power_state)
       true
     end
@@ -512,7 +514,7 @@ module Nsxt9PolicyClient
     # Custom attribute writer method checking allowed values (enum).
     # @param [Object] power_state Object to be assigned
     def power_state=(power_state)
-      validator = EnumAttributeValidator.new('String', ['VM_RUNNING', 'VM_STOPPED', 'VM_SUSPENDED', 'UNKNOWN', "vm_running", "vm_stopped", "vm_suspended", "unknown"])
+      validator = EnumAttributeValidator.new('String', ['VM_RUNNING', 'VM_STOPPED', 'VM_SUSPENDED', 'UNKNOWN'])
       unless validator.valid?(power_state)
         fail ArgumentError, 'invalid value for "power_state", must be one of #{validator.allowable_values}.'
       end
@@ -685,4 +687,5 @@ module Nsxt9PolicyClient
     end
 
   end
+
 end
