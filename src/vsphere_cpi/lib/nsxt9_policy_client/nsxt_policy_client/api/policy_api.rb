@@ -145,6 +145,66 @@ module Nsxt9PolicyClient
       end
       return data, status_code, headers
     end
+    # Create or update tier-1 configuration
+    # If Tier-1 with the tier-1-id is not already present, create a new Tier-1 instance. If it already exists, replace the Tier-1 instance with this object. 
+    # @param tier_1_id 
+    # @param tier1 
+    # @param [Hash] opts the optional parameters
+    # @return [Tier1]
+    def create_or_replace_tier1(tier_1_id, tier1, opts = {})
+      data, _status_code, _headers = create_or_replace_tier1_with_http_info(tier_1_id, tier1, opts)
+      data
+    end
+
+    # Create or update tier-1 configuration
+    # If Tier-1 with the tier-1-id is not already present, create a new Tier-1 instance. If it already exists, replace the Tier-1 instance with this object. 
+    # @param tier_1_id 
+    # @param tier1 
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(Tier1, Fixnum, Hash)>] Tier1 data, response status code and response headers
+    def create_or_replace_tier1_with_http_info(tier_1_id, tier1, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: PolicyApi.create_or_replace_tier1 ...'
+      end
+      # verify the required parameter 'tier_1_id' is set
+      if @api_client.config.client_side_validation && tier_1_id.nil?
+        fail ArgumentError, "Missing the required parameter 'tier_1_id' when calling PolicyApi.create_or_replace_tier1"
+      end
+      # verify the required parameter 'tier1' is set
+      if @api_client.config.client_side_validation && tier1.nil?
+        fail ArgumentError, "Missing the required parameter 'tier1' when calling PolicyApi.create_or_replace_tier1"
+      end
+      # resource path
+      local_var_path = '/infra/tier-1s/{tier-1-id}'.sub('{' + 'tier-1-id' + '}', tier_1_id.to_s)
+
+      # query parameters
+      query_params = {}
+
+      # header parameters
+      header_params = {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json'])
+      # HTTP header 'Content-Type'
+      header_params['Content-Type'] = @api_client.select_header_content_type(['application/json'])
+
+      # form parameters
+      form_params = {}
+
+      # http body (model)
+      post_body = @api_client.object_to_http_body(tier1)
+      auth_names = ['BasicAuth']
+      data, status_code, headers = @api_client.call_api(:PUT, local_var_path,
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => 'Tier1')
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: PolicyApi#create_or_replace_tier1\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
     # Create or update a Tier-1 segment port
     # Create a Tier-1 segment port if it does not exist based on the IDs, or update existing port information by replacing the port object already exists. 
     # @param tier_1_id 
@@ -450,6 +510,59 @@ module Nsxt9PolicyClient
       end
       return data, status_code, headers
     end
+    # Delete Tier-1 configuration
+    # Delete Tier-1 configuration
+    # @param tier_1_id 
+    # @param [Hash] opts the optional parameters
+    # @return [nil]
+    def delete_tier1(tier_1_id, opts = {})
+      delete_tier1_with_http_info(tier_1_id, opts)
+      nil
+    end
+
+    # Delete Tier-1 configuration
+    # Delete Tier-1 configuration
+    # @param tier_1_id 
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(nil, Fixnum, Hash)>] nil, response status code and response headers
+    def delete_tier1_with_http_info(tier_1_id, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: PolicyApi.delete_tier1 ...'
+      end
+      # verify the required parameter 'tier_1_id' is set
+      if @api_client.config.client_side_validation && tier_1_id.nil?
+        fail ArgumentError, "Missing the required parameter 'tier_1_id' when calling PolicyApi.delete_tier1"
+      end
+      # resource path
+      local_var_path = '/infra/tier-1s/{tier-1-id}'.sub('{' + 'tier-1-id' + '}', tier_1_id.to_s)
+
+      # query parameters
+      query_params = {}
+
+      # header parameters
+      header_params = {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json'])
+      # HTTP header 'Content-Type'
+      header_params['Content-Type'] = @api_client.select_header_content_type(['application/json'])
+
+      # form parameters
+      form_params = {}
+
+      # http body (model)
+      post_body = nil
+      auth_names = ['BasicAuth']
+      data, status_code, headers = @api_client.call_api(:DELETE, local_var_path,
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: PolicyApi#delete_tier1\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
     # Delete a Tier-1 segment port. Please note that this operation will not delete the segment port from vCenter Server if the port was connected to a Virtual Machine. Please connect Virtual Machine to another network for the segment port to be deleted from vCenter Server. 
     # Delete a Tier-1 segment port by giving ID. 
     # @param tier_1_id 
@@ -512,6 +625,95 @@ module Nsxt9PolicyClient
         :auth_names => auth_names)
       if @api_client.config.debugging
         @api_client.config.logger.debug "API called: PolicyApi#delete_tier1_segment_port\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+    # Get segment ports that belong to this Group
+    # Get segment ports that belong to this Group 
+    # @param domain_id Domain id
+    # @param group_id Group Id
+    # @param [Hash] opts the optional parameters
+    # @option opts [String] :cursor Opaque cursor to be used for getting next page of records (supplied by current result page)
+    # @option opts [String] :enforcement_point_path String Path of the enforcement point
+    # @option opts [BOOLEAN] :include_mark_for_delete_objects Include objects that are marked for deletion in results (default to false)
+    # @option opts [String] :included_fields Comma separated list of fields that should be included in query result
+    # @option opts [Integer] :page_size Maximum number of results to return in this page (server may return fewer) (default to 1000)
+    # @option opts [BOOLEAN] :sort_ascending 
+    # @option opts [String] :sort_by Field by which records are sorted
+    # @return [PolicyGroupMembersListResult]
+    def get_group_segment_port_members(domain_id, group_id, opts = {})
+      data, _status_code, _headers = get_group_segment_port_members_with_http_info(domain_id, group_id, opts)
+      data
+    end
+
+    # Get segment ports that belong to this Group
+    # Get segment ports that belong to this Group 
+    # @param domain_id Domain id
+    # @param group_id Group Id
+    # @param [Hash] opts the optional parameters
+    # @option opts [String] :cursor Opaque cursor to be used for getting next page of records (supplied by current result page)
+    # @option opts [String] :enforcement_point_path String Path of the enforcement point
+    # @option opts [BOOLEAN] :include_mark_for_delete_objects Include objects that are marked for deletion in results
+    # @option opts [String] :included_fields Comma separated list of fields that should be included in query result
+    # @option opts [Integer] :page_size Maximum number of results to return in this page (server may return fewer)
+    # @option opts [BOOLEAN] :sort_ascending 
+    # @option opts [String] :sort_by Field by which records are sorted
+    # @return [Array<(PolicyGroupMembersListResult, Fixnum, Hash)>] PolicyGroupMembersListResult data, response status code and response headers
+    def get_group_segment_port_members_with_http_info(domain_id, group_id, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: PolicyApi.get_group_segment_port_members ...'
+      end
+      # verify the required parameter 'domain_id' is set
+      if @api_client.config.client_side_validation && domain_id.nil?
+        fail ArgumentError, "Missing the required parameter 'domain_id' when calling PolicyApi.get_group_segment_port_members"
+      end
+      # verify the required parameter 'group_id' is set
+      if @api_client.config.client_side_validation && group_id.nil?
+        fail ArgumentError, "Missing the required parameter 'group_id' when calling PolicyApi.get_group_segment_port_members"
+      end
+      if @api_client.config.client_side_validation && !opts[:'page_size'].nil? && opts[:'page_size'] > 1000
+        fail ArgumentError, 'invalid value for "opts[:"page_size"]" when calling PolicyApi.get_group_segment_port_members, must be smaller than or equal to 1000.'
+      end
+
+      if @api_client.config.client_side_validation && !opts[:'page_size'].nil? && opts[:'page_size'] < 0
+        fail ArgumentError, 'invalid value for "opts[:"page_size"]" when calling PolicyApi.get_group_segment_port_members, must be greater than or equal to 0.'
+      end
+
+      # resource path
+      local_var_path = '/infra/domains/{domain-id}/groups/{group-id}/members/segment-ports'.sub('{' + 'domain-id' + '}', domain_id.to_s).sub('{' + 'group-id' + '}', group_id.to_s)
+
+      # query parameters
+      query_params = {}
+      query_params[:'cursor'] = opts[:'cursor'] if !opts[:'cursor'].nil?
+      query_params[:'enforcement_point_path'] = opts[:'enforcement_point_path'] if !opts[:'enforcement_point_path'].nil?
+      query_params[:'include_mark_for_delete_objects'] = opts[:'include_mark_for_delete_objects'] if !opts[:'include_mark_for_delete_objects'].nil?
+      query_params[:'included_fields'] = opts[:'included_fields'] if !opts[:'included_fields'].nil?
+      query_params[:'page_size'] = opts[:'page_size'] if !opts[:'page_size'].nil?
+      query_params[:'sort_ascending'] = opts[:'sort_ascending'] if !opts[:'sort_ascending'].nil?
+      query_params[:'sort_by'] = opts[:'sort_by'] if !opts[:'sort_by'].nil?
+
+      # header parameters
+      header_params = {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json'])
+      # HTTP header 'Content-Type'
+      header_params['Content-Type'] = @api_client.select_header_content_type(['application/json'])
+
+      # form parameters
+      form_params = {}
+
+      # http body (model)
+      post_body = nil
+      auth_names = ['BasicAuth']
+      data, status_code, headers = @api_client.call_api(:GET, local_var_path,
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => 'PolicyGroupMembersListResult')
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: PolicyApi#get_group_segment_port_members\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
       end
       return data, status_code, headers
     end
@@ -814,6 +1016,166 @@ module Nsxt9PolicyClient
       end
       return data, status_code, headers
     end
+    # List all virtual machines
+    # This API filters objects of type virtual machine. This API also gives some VM details such as VM name, IDs and the current state of the VMs. 
+    # @param [Hash] opts the optional parameters
+    # @option opts [String] :cursor Opaque cursor to be used for getting next page of records (supplied by current result page)
+    # @option opts [String] :enforcement_point_path String Path of the enforcement point
+    # @option opts [BOOLEAN] :include_mark_for_delete_objects Include objects that are marked for deletion in results (default to false)
+    # @option opts [String] :included_fields Comma separated list of fields that should be included in query result
+    # @option opts [Integer] :page_size Maximum number of results to return in this page (server may return fewer) (default to 1000)
+    # @option opts [BOOLEAN] :sort_ascending 
+    # @option opts [String] :sort_by Field by which records are sorted
+    # @return [VirtualMachineListResult]
+    def list_all_virtual_machines(opts = {})
+      data, _status_code, _headers = list_all_virtual_machines_with_http_info(opts)
+      data
+    end
+
+    # List all virtual machines
+    # This API filters objects of type virtual machine. This API also gives some VM details such as VM name, IDs and the current state of the VMs. 
+    # @param [Hash] opts the optional parameters
+    # @option opts [String] :cursor Opaque cursor to be used for getting next page of records (supplied by current result page)
+    # @option opts [String] :enforcement_point_path String Path of the enforcement point
+    # @option opts [BOOLEAN] :include_mark_for_delete_objects Include objects that are marked for deletion in results
+    # @option opts [String] :included_fields Comma separated list of fields that should be included in query result
+    # @option opts [Integer] :page_size Maximum number of results to return in this page (server may return fewer)
+    # @option opts [BOOLEAN] :sort_ascending 
+    # @option opts [String] :sort_by Field by which records are sorted
+    # @return [Array<(VirtualMachineListResult, Fixnum, Hash)>] VirtualMachineListResult data, response status code and response headers
+    def list_all_virtual_machines_with_http_info(opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: PolicyApi.list_all_virtual_machines ...'
+      end
+      if @api_client.config.client_side_validation && !opts[:'page_size'].nil? && opts[:'page_size'] > 1000
+        fail ArgumentError, 'invalid value for "opts[:"page_size"]" when calling PolicyApi.list_all_virtual_machines, must be smaller than or equal to 1000.'
+      end
+
+      if @api_client.config.client_side_validation && !opts[:'page_size'].nil? && opts[:'page_size'] < 0
+        fail ArgumentError, 'invalid value for "opts[:"page_size"]" when calling PolicyApi.list_all_virtual_machines, must be greater than or equal to 0.'
+      end
+
+      # resource path
+      local_var_path = '/infra/realized-state/virtual-machines'
+
+      # query parameters
+      query_params = {}
+      query_params[:'cursor'] = opts[:'cursor'] if !opts[:'cursor'].nil?
+      query_params[:'enforcement_point_path'] = opts[:'enforcement_point_path'] if !opts[:'enforcement_point_path'].nil?
+      query_params[:'include_mark_for_delete_objects'] = opts[:'include_mark_for_delete_objects'] if !opts[:'include_mark_for_delete_objects'].nil?
+      query_params[:'included_fields'] = opts[:'included_fields'] if !opts[:'included_fields'].nil?
+      query_params[:'page_size'] = opts[:'page_size'] if !opts[:'page_size'].nil?
+      query_params[:'sort_ascending'] = opts[:'sort_ascending'] if !opts[:'sort_ascending'].nil?
+      query_params[:'sort_by'] = opts[:'sort_by'] if !opts[:'sort_by'].nil?
+
+      # header parameters
+      header_params = {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json'])
+      # HTTP header 'Content-Type'
+      header_params['Content-Type'] = @api_client.select_header_content_type(['application/json'])
+
+      # form parameters
+      form_params = {}
+
+      # http body (model)
+      post_body = nil
+      auth_names = ['BasicAuth']
+      data, status_code, headers = @api_client.call_api(:GET, local_var_path,
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => 'VirtualMachineListResult')
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: PolicyApi#list_all_virtual_machines\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+    # List Groups for a domain
+    # List Groups for a domain. Groups can be filtered using member_types query parameter, which returns the groups that contains the specified member types. Multiple member types can be provided as comma separated values. The API also return groups having member type that are subset of provided member_types. 
+    # @param domain_id Domain ID
+    # @param [Hash] opts the optional parameters
+    # @option opts [String] :cursor Opaque cursor to be used for getting next page of records (supplied by current result page)
+    # @option opts [BOOLEAN] :include_mark_for_delete_objects Include objects that are marked for deletion in results (default to false)
+    # @option opts [String] :included_fields Comma separated list of fields that should be included in query result
+    # @option opts [String] :member_types Comma Separated Member types
+    # @option opts [Integer] :page_size Maximum number of results to return in this page (server may return fewer) (default to 1000)
+    # @option opts [BOOLEAN] :sort_ascending 
+    # @option opts [String] :sort_by Field by which records are sorted
+    # @return [GroupListResult]
+    def list_group_for_domain(domain_id, opts = {})
+      data, _status_code, _headers = list_group_for_domain_with_http_info(domain_id, opts)
+      data
+    end
+
+    # List Groups for a domain
+    # List Groups for a domain. Groups can be filtered using member_types query parameter, which returns the groups that contains the specified member types. Multiple member types can be provided as comma separated values. The API also return groups having member type that are subset of provided member_types. 
+    # @param domain_id Domain ID
+    # @param [Hash] opts the optional parameters
+    # @option opts [String] :cursor Opaque cursor to be used for getting next page of records (supplied by current result page)
+    # @option opts [BOOLEAN] :include_mark_for_delete_objects Include objects that are marked for deletion in results
+    # @option opts [String] :included_fields Comma separated list of fields that should be included in query result
+    # @option opts [String] :member_types Comma Separated Member types
+    # @option opts [Integer] :page_size Maximum number of results to return in this page (server may return fewer)
+    # @option opts [BOOLEAN] :sort_ascending 
+    # @option opts [String] :sort_by Field by which records are sorted
+    # @return [Array<(GroupListResult, Fixnum, Hash)>] GroupListResult data, response status code and response headers
+    def list_group_for_domain_with_http_info(domain_id, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: PolicyApi.list_group_for_domain ...'
+      end
+      # verify the required parameter 'domain_id' is set
+      if @api_client.config.client_side_validation && domain_id.nil?
+        fail ArgumentError, "Missing the required parameter 'domain_id' when calling PolicyApi.list_group_for_domain"
+      end
+      if @api_client.config.client_side_validation && !opts[:'page_size'].nil? && opts[:'page_size'] > 1000
+        fail ArgumentError, 'invalid value for "opts[:"page_size"]" when calling PolicyApi.list_group_for_domain, must be smaller than or equal to 1000.'
+      end
+
+      if @api_client.config.client_side_validation && !opts[:'page_size'].nil? && opts[:'page_size'] < 0
+        fail ArgumentError, 'invalid value for "opts[:"page_size"]" when calling PolicyApi.list_group_for_domain, must be greater than or equal to 0.'
+      end
+
+      # resource path
+      local_var_path = '/infra/domains/{domain-id}/groups'.sub('{' + 'domain-id' + '}', domain_id.to_s)
+
+      # query parameters
+      query_params = {}
+      query_params[:'cursor'] = opts[:'cursor'] if !opts[:'cursor'].nil?
+      query_params[:'include_mark_for_delete_objects'] = opts[:'include_mark_for_delete_objects'] if !opts[:'include_mark_for_delete_objects'].nil?
+      query_params[:'included_fields'] = opts[:'included_fields'] if !opts[:'included_fields'].nil?
+      query_params[:'member_types'] = opts[:'member_types'] if !opts[:'member_types'].nil?
+      query_params[:'page_size'] = opts[:'page_size'] if !opts[:'page_size'].nil?
+      query_params[:'sort_ascending'] = opts[:'sort_ascending'] if !opts[:'sort_ascending'].nil?
+      query_params[:'sort_by'] = opts[:'sort_by'] if !opts[:'sort_by'].nil?
+
+      # header parameters
+      header_params = {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json'])
+      # HTTP header 'Content-Type'
+      header_params['Content-Type'] = @api_client.select_header_content_type(['application/json'])
+
+      # form parameters
+      form_params = {}
+
+      # http body (model)
+      post_body = nil
+      auth_names = ['BasicAuth']
+      data, status_code, headers = @api_client.call_api(:GET, local_var_path,
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => 'GroupListResult')
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: PolicyApi#list_group_for_domain\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
     # List infra segment ports
     # List all the ports for an infra. 
     # @param segment_id 
@@ -968,6 +1330,80 @@ module Nsxt9PolicyClient
       end
       return data, status_code, headers
     end
+    # List Tier-1 instances
+    # Paginated list of all Tier-1 instances 
+    # @param [Hash] opts the optional parameters
+    # @option opts [String] :cursor Opaque cursor to be used for getting next page of records (supplied by current result page)
+    # @option opts [BOOLEAN] :include_mark_for_delete_objects Include objects that are marked for deletion in results (default to false)
+    # @option opts [String] :included_fields Comma separated list of fields that should be included in query result
+    # @option opts [Integer] :page_size Maximum number of results to return in this page (server may return fewer) (default to 1000)
+    # @option opts [BOOLEAN] :sort_ascending 
+    # @option opts [String] :sort_by Field by which records are sorted
+    # @return [Tier1ListResult]
+    def list_tier1(opts = {})
+      data, _status_code, _headers = list_tier1_with_http_info(opts)
+      data
+    end
+
+    # List Tier-1 instances
+    # Paginated list of all Tier-1 instances 
+    # @param [Hash] opts the optional parameters
+    # @option opts [String] :cursor Opaque cursor to be used for getting next page of records (supplied by current result page)
+    # @option opts [BOOLEAN] :include_mark_for_delete_objects Include objects that are marked for deletion in results
+    # @option opts [String] :included_fields Comma separated list of fields that should be included in query result
+    # @option opts [Integer] :page_size Maximum number of results to return in this page (server may return fewer)
+    # @option opts [BOOLEAN] :sort_ascending 
+    # @option opts [String] :sort_by Field by which records are sorted
+    # @return [Array<(Tier1ListResult, Fixnum, Hash)>] Tier1ListResult data, response status code and response headers
+    def list_tier1_with_http_info(opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: PolicyApi.list_tier1 ...'
+      end
+      if @api_client.config.client_side_validation && !opts[:'page_size'].nil? && opts[:'page_size'] > 1000
+        fail ArgumentError, 'invalid value for "opts[:"page_size"]" when calling PolicyApi.list_tier1, must be smaller than or equal to 1000.'
+      end
+
+      if @api_client.config.client_side_validation && !opts[:'page_size'].nil? && opts[:'page_size'] < 0
+        fail ArgumentError, 'invalid value for "opts[:"page_size"]" when calling PolicyApi.list_tier1, must be greater than or equal to 0.'
+      end
+
+      # resource path
+      local_var_path = '/infra/tier-1s'
+
+      # query parameters
+      query_params = {}
+      query_params[:'cursor'] = opts[:'cursor'] if !opts[:'cursor'].nil?
+      query_params[:'include_mark_for_delete_objects'] = opts[:'include_mark_for_delete_objects'] if !opts[:'include_mark_for_delete_objects'].nil?
+      query_params[:'included_fields'] = opts[:'included_fields'] if !opts[:'included_fields'].nil?
+      query_params[:'page_size'] = opts[:'page_size'] if !opts[:'page_size'].nil?
+      query_params[:'sort_ascending'] = opts[:'sort_ascending'] if !opts[:'sort_ascending'].nil?
+      query_params[:'sort_by'] = opts[:'sort_by'] if !opts[:'sort_by'].nil?
+
+      # header parameters
+      header_params = {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json'])
+      # HTTP header 'Content-Type'
+      header_params['Content-Type'] = @api_client.select_header_content_type(['application/json'])
+
+      # form parameters
+      form_params = {}
+
+      # http body (model)
+      post_body = nil
+      auth_names = ['BasicAuth']
+      data, status_code, headers = @api_client.call_api(:GET, local_var_path,
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => 'Tier1ListResult')
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: PolicyApi#list_tier1\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
     # List Transport Zones under an Enforcement Point
     # Paginated list of all Transport Zones under an Enforcement Point 
     # @param site_id 
@@ -1051,6 +1487,86 @@ module Nsxt9PolicyClient
         :return_type => 'PolicyTransportZoneListResult')
       if @api_client.config.debugging
         @api_client.config.logger.debug "API called: PolicyApi#list_transport_zones_for_enforcement_point\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+    # Listing of VIFs on the NSX Manager
+    # This API lists VIFs from the specified NSX Manager. 
+    # @param enforcement_point_name 
+    # @param [Hash] opts the optional parameters
+    # @option opts [String] :cursor Opaque cursor to be used for getting next page of records (supplied by current result page)
+    # @option opts [String] :included_fields Comma separated list of fields that should be included in query result
+    # @option opts [String] :lport_attachment_id LPort attachment ID of the VIF.
+    # @option opts [Integer] :page_size Maximum number of results to return in this page (server may return fewer) (default to 1000)
+    # @option opts [BOOLEAN] :sort_ascending 
+    # @option opts [String] :sort_by Field by which records are sorted
+    # @return [VirtualNetworkInterfaceListResult]
+    def list_vifs_on_enforcement_point(enforcement_point_name, opts = {})
+      data, _status_code, _headers = list_vifs_on_enforcement_point_with_http_info(enforcement_point_name, opts)
+      data
+    end
+
+    # Listing of VIFs on the NSX Manager
+    # This API lists VIFs from the specified NSX Manager. 
+    # @param enforcement_point_name 
+    # @param [Hash] opts the optional parameters
+    # @option opts [String] :cursor Opaque cursor to be used for getting next page of records (supplied by current result page)
+    # @option opts [String] :included_fields Comma separated list of fields that should be included in query result
+    # @option opts [String] :lport_attachment_id LPort attachment ID of the VIF.
+    # @option opts [Integer] :page_size Maximum number of results to return in this page (server may return fewer)
+    # @option opts [BOOLEAN] :sort_ascending 
+    # @option opts [String] :sort_by Field by which records are sorted
+    # @return [Array<(VirtualNetworkInterfaceListResult, Fixnum, Hash)>] VirtualNetworkInterfaceListResult data, response status code and response headers
+    def list_vifs_on_enforcement_point_with_http_info(enforcement_point_name, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: PolicyApi.list_vifs_on_enforcement_point ...'
+      end
+      # verify the required parameter 'enforcement_point_name' is set
+      if @api_client.config.client_side_validation && enforcement_point_name.nil?
+        fail ArgumentError, "Missing the required parameter 'enforcement_point_name' when calling PolicyApi.list_vifs_on_enforcement_point"
+      end
+      if @api_client.config.client_side_validation && !opts[:'page_size'].nil? && opts[:'page_size'] > 1000
+        fail ArgumentError, 'invalid value for "opts[:"page_size"]" when calling PolicyApi.list_vifs_on_enforcement_point, must be smaller than or equal to 1000.'
+      end
+
+      if @api_client.config.client_side_validation && !opts[:'page_size'].nil? && opts[:'page_size'] < 0
+        fail ArgumentError, 'invalid value for "opts[:"page_size"]" when calling PolicyApi.list_vifs_on_enforcement_point, must be greater than or equal to 0.'
+      end
+
+      # resource path
+      local_var_path = '/infra/realized-state/enforcement-points/{enforcement-point-name}/vifs'.sub('{' + 'enforcement-point-name' + '}', enforcement_point_name.to_s)
+
+      # query parameters
+      query_params = {}
+      query_params[:'cursor'] = opts[:'cursor'] if !opts[:'cursor'].nil?
+      query_params[:'included_fields'] = opts[:'included_fields'] if !opts[:'included_fields'].nil?
+      query_params[:'lport_attachment_id'] = opts[:'lport_attachment_id'] if !opts[:'lport_attachment_id'].nil?
+      query_params[:'page_size'] = opts[:'page_size'] if !opts[:'page_size'].nil?
+      query_params[:'sort_ascending'] = opts[:'sort_ascending'] if !opts[:'sort_ascending'].nil?
+      query_params[:'sort_by'] = opts[:'sort_by'] if !opts[:'sort_by'].nil?
+
+      # header parameters
+      header_params = {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json'])
+      # HTTP header 'Content-Type'
+      header_params['Content-Type'] = @api_client.select_header_content_type(['application/json'])
+
+      # form parameters
+      form_params = {}
+
+      # http body (model)
+      post_body = nil
+      auth_names = ['BasicAuth']
+      data, status_code, headers = @api_client.call_api(:GET, local_var_path,
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => 'VirtualNetworkInterfaceListResult')
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: PolicyApi#list_vifs_on_enforcement_point\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
       end
       return data, status_code, headers
     end
@@ -1385,6 +1901,65 @@ module Nsxt9PolicyClient
       end
       return data, status_code, headers
     end
+    # Create or update Tier-1 configuration
+    # If Tier-1 with the tier-1-id is not already present, create a new Tier-1 instance. If it already exists, update the tier-1 instance with specified attributes. 
+    # @param tier_1_id 
+    # @param tier1 
+    # @param [Hash] opts the optional parameters
+    # @return [nil]
+    def patch_tier1(tier_1_id, tier1, opts = {})
+      patch_tier1_with_http_info(tier_1_id, tier1, opts)
+      nil
+    end
+
+    # Create or update Tier-1 configuration
+    # If Tier-1 with the tier-1-id is not already present, create a new Tier-1 instance. If it already exists, update the tier-1 instance with specified attributes. 
+    # @param tier_1_id 
+    # @param tier1 
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(nil, Fixnum, Hash)>] nil, response status code and response headers
+    def patch_tier1_with_http_info(tier_1_id, tier1, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: PolicyApi.patch_tier1 ...'
+      end
+      # verify the required parameter 'tier_1_id' is set
+      if @api_client.config.client_side_validation && tier_1_id.nil?
+        fail ArgumentError, "Missing the required parameter 'tier_1_id' when calling PolicyApi.patch_tier1"
+      end
+      # verify the required parameter 'tier1' is set
+      if @api_client.config.client_side_validation && tier1.nil?
+        fail ArgumentError, "Missing the required parameter 'tier1' when calling PolicyApi.patch_tier1"
+      end
+      # resource path
+      local_var_path = '/infra/tier-1s/{tier-1-id}'.sub('{' + 'tier-1-id' + '}', tier_1_id.to_s)
+
+      # query parameters
+      query_params = {}
+
+      # header parameters
+      header_params = {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json'])
+      # HTTP header 'Content-Type'
+      header_params['Content-Type'] = @api_client.select_header_content_type(['application/json'])
+
+      # form parameters
+      form_params = {}
+
+      # http body (model)
+      post_body = @api_client.object_to_http_body(tier1)
+      auth_names = ['BasicAuth']
+      data, status_code, headers = @api_client.call_api(:PATCH, local_var_path,
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names)
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: PolicyApi#patch_tier1\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
     # Patch a Tier-1 segment port
     # Create a Tier-1 segment port if it does not exist based on the IDs, or update existing port information by replacing the port object fields which presents in the request body. 
     # @param tier_1_id 
@@ -1621,6 +2196,60 @@ module Nsxt9PolicyClient
         :return_type => 'LBPool')
       if @api_client.config.debugging
         @api_client.config.logger.debug "API called: PolicyApi#read_lb_pool\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+    # Read Tier-1 configuration
+    # Read Tier-1 configuration
+    # @param tier_1_id 
+    # @param [Hash] opts the optional parameters
+    # @return [Tier1]
+    def read_tier1(tier_1_id, opts = {})
+      data, _status_code, _headers = read_tier1_with_http_info(tier_1_id, opts)
+      data
+    end
+
+    # Read Tier-1 configuration
+    # Read Tier-1 configuration
+    # @param tier_1_id 
+    # @param [Hash] opts the optional parameters
+    # @return [Array<(Tier1, Fixnum, Hash)>] Tier1 data, response status code and response headers
+    def read_tier1_with_http_info(tier_1_id, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: PolicyApi.read_tier1 ...'
+      end
+      # verify the required parameter 'tier_1_id' is set
+      if @api_client.config.client_side_validation && tier_1_id.nil?
+        fail ArgumentError, "Missing the required parameter 'tier_1_id' when calling PolicyApi.read_tier1"
+      end
+      # resource path
+      local_var_path = '/infra/tier-1s/{tier-1-id}'.sub('{' + 'tier-1-id' + '}', tier_1_id.to_s)
+
+      # query parameters
+      query_params = {}
+
+      # header parameters
+      header_params = {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json'])
+      # HTTP header 'Content-Type'
+      header_params['Content-Type'] = @api_client.select_header_content_type(['application/json'])
+
+      # form parameters
+      form_params = {}
+
+      # http body (model)
+      post_body = nil
+      auth_names = ['BasicAuth']
+      data, status_code, headers = @api_client.call_api(:GET, local_var_path,
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => 'Tier1')
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: PolicyApi#read_tier1\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
       end
       return data, status_code, headers
     end

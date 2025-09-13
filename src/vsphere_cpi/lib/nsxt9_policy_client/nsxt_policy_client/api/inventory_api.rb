@@ -84,6 +84,95 @@ module Nsxt9PolicyClient
       end
       return data, status_code, headers
     end
+    # Get segment ports that belong to this Group
+    # Get segment ports that belong to this Group 
+    # @param domain_id Domain id
+    # @param group_id Group Id
+    # @param [Hash] opts the optional parameters
+    # @option opts [String] :cursor Opaque cursor to be used for getting next page of records (supplied by current result page)
+    # @option opts [String] :enforcement_point_path String Path of the enforcement point
+    # @option opts [BOOLEAN] :include_mark_for_delete_objects Include objects that are marked for deletion in results (default to false)
+    # @option opts [String] :included_fields Comma separated list of fields that should be included in query result
+    # @option opts [Integer] :page_size Maximum number of results to return in this page (server may return fewer) (default to 1000)
+    # @option opts [BOOLEAN] :sort_ascending 
+    # @option opts [String] :sort_by Field by which records are sorted
+    # @return [PolicyGroupMembersListResult]
+    def get_group_segment_port_members(domain_id, group_id, opts = {})
+      data, _status_code, _headers = get_group_segment_port_members_with_http_info(domain_id, group_id, opts)
+      data
+    end
+
+    # Get segment ports that belong to this Group
+    # Get segment ports that belong to this Group 
+    # @param domain_id Domain id
+    # @param group_id Group Id
+    # @param [Hash] opts the optional parameters
+    # @option opts [String] :cursor Opaque cursor to be used for getting next page of records (supplied by current result page)
+    # @option opts [String] :enforcement_point_path String Path of the enforcement point
+    # @option opts [BOOLEAN] :include_mark_for_delete_objects Include objects that are marked for deletion in results
+    # @option opts [String] :included_fields Comma separated list of fields that should be included in query result
+    # @option opts [Integer] :page_size Maximum number of results to return in this page (server may return fewer)
+    # @option opts [BOOLEAN] :sort_ascending 
+    # @option opts [String] :sort_by Field by which records are sorted
+    # @return [Array<(PolicyGroupMembersListResult, Fixnum, Hash)>] PolicyGroupMembersListResult data, response status code and response headers
+    def get_group_segment_port_members_with_http_info(domain_id, group_id, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: InventoryApi.get_group_segment_port_members ...'
+      end
+      # verify the required parameter 'domain_id' is set
+      if @api_client.config.client_side_validation && domain_id.nil?
+        fail ArgumentError, "Missing the required parameter 'domain_id' when calling InventoryApi.get_group_segment_port_members"
+      end
+      # verify the required parameter 'group_id' is set
+      if @api_client.config.client_side_validation && group_id.nil?
+        fail ArgumentError, "Missing the required parameter 'group_id' when calling InventoryApi.get_group_segment_port_members"
+      end
+      if @api_client.config.client_side_validation && !opts[:'page_size'].nil? && opts[:'page_size'] > 1000
+        fail ArgumentError, 'invalid value for "opts[:"page_size"]" when calling InventoryApi.get_group_segment_port_members, must be smaller than or equal to 1000.'
+      end
+
+      if @api_client.config.client_side_validation && !opts[:'page_size'].nil? && opts[:'page_size'] < 0
+        fail ArgumentError, 'invalid value for "opts[:"page_size"]" when calling InventoryApi.get_group_segment_port_members, must be greater than or equal to 0.'
+      end
+
+      # resource path
+      local_var_path = '/infra/domains/{domain-id}/groups/{group-id}/members/segment-ports'.sub('{' + 'domain-id' + '}', domain_id.to_s).sub('{' + 'group-id' + '}', group_id.to_s)
+
+      # query parameters
+      query_params = {}
+      query_params[:'cursor'] = opts[:'cursor'] if !opts[:'cursor'].nil?
+      query_params[:'enforcement_point_path'] = opts[:'enforcement_point_path'] if !opts[:'enforcement_point_path'].nil?
+      query_params[:'include_mark_for_delete_objects'] = opts[:'include_mark_for_delete_objects'] if !opts[:'include_mark_for_delete_objects'].nil?
+      query_params[:'included_fields'] = opts[:'included_fields'] if !opts[:'included_fields'].nil?
+      query_params[:'page_size'] = opts[:'page_size'] if !opts[:'page_size'].nil?
+      query_params[:'sort_ascending'] = opts[:'sort_ascending'] if !opts[:'sort_ascending'].nil?
+      query_params[:'sort_by'] = opts[:'sort_by'] if !opts[:'sort_by'].nil?
+
+      # header parameters
+      header_params = {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json'])
+      # HTTP header 'Content-Type'
+      header_params['Content-Type'] = @api_client.select_header_content_type(['application/json'])
+
+      # form parameters
+      form_params = {}
+
+      # http body (model)
+      post_body = nil
+      auth_names = ['BasicAuth']
+      data, status_code, headers = @api_client.call_api(:GET, local_var_path,
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => 'PolicyGroupMembersListResult')
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: InventoryApi#get_group_segment_port_members\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
     # Get Virtual machines that belong to this Group
     # Get Virtual machines that belong to this Group. This API is applicable for Groups containing VirtualMachine,member type. For Groups containing other member types,an empty list is returned. 
     # @param domain_id Domain id
@@ -254,6 +343,166 @@ module Nsxt9PolicyClient
         :return_type => 'PolicyResourceReferenceForEPListResult')
       if @api_client.config.debugging
         @api_client.config.logger.debug "API called: InventoryApi#get_groups_for_vm\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+    # List all virtual machines
+    # This API filters objects of type virtual machine. This API also gives some VM details such as VM name, IDs and the current state of the VMs. 
+    # @param [Hash] opts the optional parameters
+    # @option opts [String] :cursor Opaque cursor to be used for getting next page of records (supplied by current result page)
+    # @option opts [String] :enforcement_point_path String Path of the enforcement point
+    # @option opts [BOOLEAN] :include_mark_for_delete_objects Include objects that are marked for deletion in results (default to false)
+    # @option opts [String] :included_fields Comma separated list of fields that should be included in query result
+    # @option opts [Integer] :page_size Maximum number of results to return in this page (server may return fewer) (default to 1000)
+    # @option opts [BOOLEAN] :sort_ascending 
+    # @option opts [String] :sort_by Field by which records are sorted
+    # @return [VirtualMachineListResult]
+    def list_all_virtual_machines(opts = {})
+      data, _status_code, _headers = list_all_virtual_machines_with_http_info(opts)
+      data
+    end
+
+    # List all virtual machines
+    # This API filters objects of type virtual machine. This API also gives some VM details such as VM name, IDs and the current state of the VMs. 
+    # @param [Hash] opts the optional parameters
+    # @option opts [String] :cursor Opaque cursor to be used for getting next page of records (supplied by current result page)
+    # @option opts [String] :enforcement_point_path String Path of the enforcement point
+    # @option opts [BOOLEAN] :include_mark_for_delete_objects Include objects that are marked for deletion in results
+    # @option opts [String] :included_fields Comma separated list of fields that should be included in query result
+    # @option opts [Integer] :page_size Maximum number of results to return in this page (server may return fewer)
+    # @option opts [BOOLEAN] :sort_ascending 
+    # @option opts [String] :sort_by Field by which records are sorted
+    # @return [Array<(VirtualMachineListResult, Fixnum, Hash)>] VirtualMachineListResult data, response status code and response headers
+    def list_all_virtual_machines_with_http_info(opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: InventoryApi.list_all_virtual_machines ...'
+      end
+      if @api_client.config.client_side_validation && !opts[:'page_size'].nil? && opts[:'page_size'] > 1000
+        fail ArgumentError, 'invalid value for "opts[:"page_size"]" when calling InventoryApi.list_all_virtual_machines, must be smaller than or equal to 1000.'
+      end
+
+      if @api_client.config.client_side_validation && !opts[:'page_size'].nil? && opts[:'page_size'] < 0
+        fail ArgumentError, 'invalid value for "opts[:"page_size"]" when calling InventoryApi.list_all_virtual_machines, must be greater than or equal to 0.'
+      end
+
+      # resource path
+      local_var_path = '/infra/realized-state/virtual-machines'
+
+      # query parameters
+      query_params = {}
+      query_params[:'cursor'] = opts[:'cursor'] if !opts[:'cursor'].nil?
+      query_params[:'enforcement_point_path'] = opts[:'enforcement_point_path'] if !opts[:'enforcement_point_path'].nil?
+      query_params[:'include_mark_for_delete_objects'] = opts[:'include_mark_for_delete_objects'] if !opts[:'include_mark_for_delete_objects'].nil?
+      query_params[:'included_fields'] = opts[:'included_fields'] if !opts[:'included_fields'].nil?
+      query_params[:'page_size'] = opts[:'page_size'] if !opts[:'page_size'].nil?
+      query_params[:'sort_ascending'] = opts[:'sort_ascending'] if !opts[:'sort_ascending'].nil?
+      query_params[:'sort_by'] = opts[:'sort_by'] if !opts[:'sort_by'].nil?
+
+      # header parameters
+      header_params = {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json'])
+      # HTTP header 'Content-Type'
+      header_params['Content-Type'] = @api_client.select_header_content_type(['application/json'])
+
+      # form parameters
+      form_params = {}
+
+      # http body (model)
+      post_body = nil
+      auth_names = ['BasicAuth']
+      data, status_code, headers = @api_client.call_api(:GET, local_var_path,
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => 'VirtualMachineListResult')
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: InventoryApi#list_all_virtual_machines\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
+      end
+      return data, status_code, headers
+    end
+    # List Groups for a domain
+    # List Groups for a domain. Groups can be filtered using member_types query parameter, which returns the groups that contains the specified member types. Multiple member types can be provided as comma separated values. The API also return groups having member type that are subset of provided member_types. 
+    # @param domain_id Domain ID
+    # @param [Hash] opts the optional parameters
+    # @option opts [String] :cursor Opaque cursor to be used for getting next page of records (supplied by current result page)
+    # @option opts [BOOLEAN] :include_mark_for_delete_objects Include objects that are marked for deletion in results (default to false)
+    # @option opts [String] :included_fields Comma separated list of fields that should be included in query result
+    # @option opts [String] :member_types Comma Separated Member types
+    # @option opts [Integer] :page_size Maximum number of results to return in this page (server may return fewer) (default to 1000)
+    # @option opts [BOOLEAN] :sort_ascending 
+    # @option opts [String] :sort_by Field by which records are sorted
+    # @return [GroupListResult]
+    def list_group_for_domain(domain_id, opts = {})
+      data, _status_code, _headers = list_group_for_domain_with_http_info(domain_id, opts)
+      data
+    end
+
+    # List Groups for a domain
+    # List Groups for a domain. Groups can be filtered using member_types query parameter, which returns the groups that contains the specified member types. Multiple member types can be provided as comma separated values. The API also return groups having member type that are subset of provided member_types. 
+    # @param domain_id Domain ID
+    # @param [Hash] opts the optional parameters
+    # @option opts [String] :cursor Opaque cursor to be used for getting next page of records (supplied by current result page)
+    # @option opts [BOOLEAN] :include_mark_for_delete_objects Include objects that are marked for deletion in results
+    # @option opts [String] :included_fields Comma separated list of fields that should be included in query result
+    # @option opts [String] :member_types Comma Separated Member types
+    # @option opts [Integer] :page_size Maximum number of results to return in this page (server may return fewer)
+    # @option opts [BOOLEAN] :sort_ascending 
+    # @option opts [String] :sort_by Field by which records are sorted
+    # @return [Array<(GroupListResult, Fixnum, Hash)>] GroupListResult data, response status code and response headers
+    def list_group_for_domain_with_http_info(domain_id, opts = {})
+      if @api_client.config.debugging
+        @api_client.config.logger.debug 'Calling API: InventoryApi.list_group_for_domain ...'
+      end
+      # verify the required parameter 'domain_id' is set
+      if @api_client.config.client_side_validation && domain_id.nil?
+        fail ArgumentError, "Missing the required parameter 'domain_id' when calling InventoryApi.list_group_for_domain"
+      end
+      if @api_client.config.client_side_validation && !opts[:'page_size'].nil? && opts[:'page_size'] > 1000
+        fail ArgumentError, 'invalid value for "opts[:"page_size"]" when calling InventoryApi.list_group_for_domain, must be smaller than or equal to 1000.'
+      end
+
+      if @api_client.config.client_side_validation && !opts[:'page_size'].nil? && opts[:'page_size'] < 0
+        fail ArgumentError, 'invalid value for "opts[:"page_size"]" when calling InventoryApi.list_group_for_domain, must be greater than or equal to 0.'
+      end
+
+      # resource path
+      local_var_path = '/infra/domains/{domain-id}/groups'.sub('{' + 'domain-id' + '}', domain_id.to_s)
+
+      # query parameters
+      query_params = {}
+      query_params[:'cursor'] = opts[:'cursor'] if !opts[:'cursor'].nil?
+      query_params[:'include_mark_for_delete_objects'] = opts[:'include_mark_for_delete_objects'] if !opts[:'include_mark_for_delete_objects'].nil?
+      query_params[:'included_fields'] = opts[:'included_fields'] if !opts[:'included_fields'].nil?
+      query_params[:'member_types'] = opts[:'member_types'] if !opts[:'member_types'].nil?
+      query_params[:'page_size'] = opts[:'page_size'] if !opts[:'page_size'].nil?
+      query_params[:'sort_ascending'] = opts[:'sort_ascending'] if !opts[:'sort_ascending'].nil?
+      query_params[:'sort_by'] = opts[:'sort_by'] if !opts[:'sort_by'].nil?
+
+      # header parameters
+      header_params = {}
+      # HTTP header 'Accept' (if needed)
+      header_params['Accept'] = @api_client.select_header_accept(['application/json'])
+      # HTTP header 'Content-Type'
+      header_params['Content-Type'] = @api_client.select_header_content_type(['application/json'])
+
+      # form parameters
+      form_params = {}
+
+      # http body (model)
+      post_body = nil
+      auth_names = ['BasicAuth']
+      data, status_code, headers = @api_client.call_api(:GET, local_var_path,
+        :header_params => header_params,
+        :query_params => query_params,
+        :form_params => form_params,
+        :body => post_body,
+        :auth_names => auth_names,
+        :return_type => 'GroupListResult')
+      if @api_client.config.debugging
+        @api_client.config.logger.debug "API called: InventoryApi#list_group_for_domain\nData: #{data.inspect}\nStatus code: #{status_code}\nHeaders: #{headers}"
       end
       return data, status_code, headers
     end
