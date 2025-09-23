@@ -9,6 +9,7 @@ groups:
       - bats-70-cvds
       - bats-80-cvds
       - bats-90-cvds
+      - bats-80-policy
       - pre-release-fan-in
       - promote-candidate
       - bump-deps
@@ -145,11 +146,11 @@ jobs:
             trigger: true
           - put: environment
             tags: [nimbus]
-            resource: pool-7.0-nsxt31-policy
+            resource: pool-7.0-nsxt32-policy
             timeout: 4h
             params:
               action: create
-              lifetime: <%= 4 * 60 * 60 %>
+              lifetime: <%= 8 * 60 * 60 %>
               timeout: <%= 4 * 60 * 60 %>
               resource: testbed-lock
       - task: build
@@ -169,6 +170,8 @@ jobs:
             tags: [nimbus]
             file: source-ci/ci/tasks/deploy-director.yml
             image: vcpi-main-image
+            params:
+              JUMPBOX_PRIVATE_KEY: ((nimbus_jumpbox_key.private_key))
           - task: run-bats
             tags: [nimbus]
             file: source-ci/ci/tasks/run-bats-policy.yml
@@ -177,22 +180,17 @@ jobs:
               BAT_INFRASTRUCTURE: vsphere
               BAT_RSPEC_FLAGS:    "--tag ~dns --tag ~vip_networking --tag ~dynamic_networking --tag ~root_partition --tag ~raw_ephemeral_storage"
               STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-jammy-go_agent
+              JUMPBOX_PRIVATE_KEY: ((nimbus_jumpbox_key.private_key))
         on_failure:
           in_parallel:
-          - put: pool-7.0-nsxt31-policy
+          - put: pool-7.0-nsxt32-policy
             tags: [nimbus]
             inputs: detect
             params: { action: extend, lifetime: <%= 24 * 60 * 60 %>, resource: environment }
         on_success:
-          put: pool-7.0-nsxt31-policy
+          put: pool-7.0-nsxt32-policy
           tags: [nimbus]
           params : { action: release, resource: environment }
-        ensure:
-          do:
-            - task: teardown
-              tags: [nimbus]
-              file: source-ci/ci/tasks/teardown.yml
-              image: vcpi-main-image
 
   - name: bats
     serial: true
@@ -217,11 +215,11 @@ jobs:
           trigger: true
         - put: environment
           tags: [nimbus]
-          resource: pool-7.0-nsxt31
+          resource: pool-7.0-nsxt32-nvds
           timeout: 4h
           params:
             action: create
-            lifetime: <%= 4 * 60 * 60 %>
+            lifetime: <%= 8 * 60 * 60 %>
             timeout: <%= 4 * 60 * 60 %>
             resource: testbed-lock
 
@@ -242,6 +240,8 @@ jobs:
           tags: [nimbus]
           file: source-ci/ci/tasks/deploy-director.yml
           image: vcpi-main-image
+          params:
+            JUMPBOX_PRIVATE_KEY: ((nimbus_jumpbox_key.private_key))
         - task: run-bats
           tags: [nimbus]
           file: source-ci/ci/tasks/run-bats.yml
@@ -250,21 +250,16 @@ jobs:
             BAT_INFRASTRUCTURE: vsphere
             BAT_RSPEC_FLAGS:    "--tag ~dns --tag ~vip_networking --tag ~dynamic_networking --tag ~root_partition --tag ~raw_ephemeral_storage"
             STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-jammy-go_agent
+            JUMPBOX_PRIVATE_KEY: ((nimbus_jumpbox_key.private_key))
         on_failure:
           in_parallel:
-          - put: pool-7.0-nsxt31
+          - put: pool-7.0-nsxt32-nvds
             tags: [nimbus]
             params: { action: extend, lifetime: <%= 24 * 60 * 60 %>, resource: environment }
         on_success:
-          put: pool-7.0-nsxt31
+          put: pool-7.0-nsxt32-nvds
           tags: [nimbus]
           params : { action: release, resource: environment }
-        ensure:
-          do:
-            - task: teardown
-              tags: [nimbus]
-              file: source-ci/ci/tasks/teardown.yml
-              image: vcpi-main-image
 
   - name: bats-70-cvds
     serial: true
@@ -289,11 +284,11 @@ jobs:
             trigger: true
           - put: environment
             tags: [nimbus]
-            resource: pool-7.0-nsxt31-cvds
+            resource: pool-7.0-nsxt32-cvds
             timeout: 4h
             params:
               action: create
-              lifetime: <%= 4 * 60 * 60 %>
+              lifetime: <%= 8 * 60 * 60 %>
               timeout: <%= 4 * 60 * 60 %>
               resource: testbed-lock
       - task: build
@@ -313,6 +308,8 @@ jobs:
             tags: [nimbus]
             file: source-ci/ci/tasks/deploy-director.yml
             image: vcpi-main-image
+            params:
+              JUMPBOX_PRIVATE_KEY: ((nimbus_jumpbox_key.private_key))
           - task: run-bats
             tags: [nimbus]
             file: source-ci/ci/tasks/run-bats-cvds.yml
@@ -321,23 +318,18 @@ jobs:
               BAT_INFRASTRUCTURE: vsphere
               BAT_RSPEC_FLAGS:    "--tag ~dns --tag ~vip_networking --tag ~dynamic_networking --tag ~root_partition --tag ~raw_ephemeral_storage"
               STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-jammy-go_agent
+              JUMPBOX_PRIVATE_KEY: ((nimbus_jumpbox_key.private_key))
         on_failure:
           in_parallel:
-            - put: pool-7.0-nsxt31-cvds
+            - put: pool-7.0-nsxt32-cvds
               tags: [nimbus]
               params: { action: extend, lifetime: <%= 24 * 60 * 60 %>, resource: environment }
         on_success:
-          put: pool-7.0-nsxt31-cvds
+          put: pool-7.0-nsxt32-cvds
           tags: [nimbus]
           params : { action: release, resource: environment }
-        ensure:
-          do:
-            - task: teardown
-              tags: [nimbus]
-              file: source-ci/ci/tasks/teardown.yml
-              image: vcpi-main-image
 
-  - name: bats-80-cvds
+  - name: bats-80-policy
     serial: true
     plan:
       - in_parallel:
@@ -360,11 +352,11 @@ jobs:
             trigger: true
           - put: environment
             tags: [nimbus]
-            resource: pool-8.0-nsxt40-cvds
+            resource: pool-8.0-nsxt42-policy
             timeout: 4h
             params:
               action: create
-              lifetime: <%= 4 * 60 * 60 %>
+              lifetime: <%= 8 * 60 * 60 %>
               timeout: <%= 4 * 60 * 60 %>
               resource: testbed-lock
       - task: build
@@ -384,29 +376,26 @@ jobs:
             tags: [nimbus]
             file: source-ci/ci/tasks/deploy-director.yml
             image: vcpi-main-image
+            params:
+              JUMPBOX_PRIVATE_KEY: ((nimbus_jumpbox_key.private_key))
           - task: run-bats
             tags: [nimbus]
-            file: source-ci/ci/tasks/run-bats-cvds.yml
+            file: source-ci/ci/tasks/run-bats-policy.yml
             image: vcpi-main-image
             params:
               BAT_INFRASTRUCTURE: vsphere
               BAT_RSPEC_FLAGS:    "--tag ~dns --tag ~vip_networking --tag ~dynamic_networking --tag ~root_partition --tag ~raw_ephemeral_storage"
               STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-jammy-go_agent
+              JUMPBOX_PRIVATE_KEY: ((nimbus_jumpbox_key.private_key))
         on_failure:
           in_parallel:
-            - put: pool-8.0-nsxt40-cvds
+            - put: pool-8.0-nsxt42-policy
               tags: [nimbus]
               params: { action: extend, lifetime: <%= 24 * 60 * 60 %>, resource: environment }
         on_success:
-          put: pool-8.0-nsxt40-cvds
+          put: pool-8.0-nsxt42-policy
           tags: [nimbus]
           params : { action: release, resource: environment }
-        ensure:
-          do:
-            - task: teardown
-              tags: [nimbus]
-              file: source-ci/ci/tasks/teardown.yml
-              image: vcpi-main-image
 
   - name: bats-90-cvds
     serial: true
@@ -491,7 +480,7 @@ jobs:
       - get: bosh-cpi-src
         trigger: true
         tags: [nimbus]
-        passed: [bats, bats-policy, bats-70-cvds, bats-80-cvds, bats-90-cvds]
+        passed: [bats, bats-policy, bats-70-cvds, bats-80-cvds, bats-80-policy, bats-90-cvds]
 
   - name: promote-candidate
     disable_manual_trigger: true
