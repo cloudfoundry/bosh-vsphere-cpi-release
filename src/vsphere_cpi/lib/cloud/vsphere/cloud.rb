@@ -642,12 +642,12 @@ module VSphereCloud
         end
         if @config.nsxt_enabled?
           if @config.nsxt.policy_api_migration_mode?
+            @nsxt_provider.update_vm_metadata_on_logical_ports(vm, metadata)
             begin
               @nsxt_policy_provider.update_vm_metadata_on_segment_ports(vm, metadata)
             rescue VSphereCloud::SegmentPortNotFound => e
-              logger.info("Policy API Migration mode: No Segment Ports found for #{vm_cid} in Policy API, falling back to Manager mode:\n #{e.full_message}")
+              logger.info("Policy API Migration mode: No Segment Ports found for #{vm_cid} in Policy API; metadata set via Manager mode:\n #{e.full_message}")
             end
-            @nsxt_provider.update_vm_metadata_on_logical_ports(vm, metadata)
           elsif @config.nsxt.use_policy_api?
             @nsxt_policy_provider.update_vm_metadata_on_segment_ports(vm, metadata)
           else
