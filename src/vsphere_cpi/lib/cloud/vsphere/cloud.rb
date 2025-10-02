@@ -301,6 +301,9 @@ module VSphereCloud
     end
 
     def delete_stemcell(stemcell)
+      if stemcell == ''
+        raise ArgumentError, 'stemcell id cannot be blank'
+      end
       @plugin_registry.run_pre_hooks(__method__, self)
       with_thread_name("delete_stemcell(#{stemcell})") do
         Bosh::ThreadPool.new(max_threads: 32, logger: logger).wrap do |pool|

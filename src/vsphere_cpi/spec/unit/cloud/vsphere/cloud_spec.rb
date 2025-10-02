@@ -146,6 +146,14 @@ module VSphereCloud
       end
     end
 
+    describe '#delete_stemcell' do
+      it 'errors when the passed id is blank' do
+        expect do
+          vsphere_cloud.delete_stemcell('')
+        end.to raise_error(ArgumentError, /stemcell id cannot be blank/)
+      end
+    end
+
     describe '#has_vm?' do
       context 'the vm is found' do
         it 'returns true' do
