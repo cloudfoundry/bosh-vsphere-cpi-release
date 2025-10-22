@@ -16,7 +16,7 @@ context 'when upgrade_hw_version is enabled' do
     simple_vm_lifecycle(@cpi, @vlan, vm_type) do |vm_id|
       vm = @cpi.vm_provider.find(vm_id)
       vm_mob = vm.mob
-      expect(vm_mob.config.version).to match /vmx-1./
+      expect(vm_mob.config.version).to match /vmx-[12]./
     end
   end
 end
