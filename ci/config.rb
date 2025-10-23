@@ -24,7 +24,7 @@ $pipeline.pool('7.0-nsxt32-policy') do |pool|
     RSPEC_FLAGS: [
       '--tag ~nvds',
       '--tag ~host_maintenance',
-      '--tag ~nsxt-all',
+      '--tag ~nsxt_all',
     ].join(' ')
   }
 end
@@ -43,7 +43,7 @@ $pipeline.pool('8.0-nsxt42-policy') do |pool|
     RSPEC_FLAGS: [
       '--tag ~nvds',
       '--tag ~host_maintenance',
-      '--tag ~nsxt-all',
+      '--tag ~nsxt_all',
     ].join(' ')
   }
 end
