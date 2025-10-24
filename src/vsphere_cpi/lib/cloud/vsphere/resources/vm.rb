@@ -41,11 +41,11 @@ module VSphereCloud
 
       def accessible_datastores
         Datastore.build_from_client(
-            @client,
-            host_properties['datastore'],
-            ensure_all: true
+          @client,
+          host_properties['datastore'],
+          ensure_all: true
         ).select(&:accessible)
-            .inject({}) do |acc, datastore|
+                 .inject({}) do |acc, datastore|
           acc[datastore.name] = datastore
           acc
         end
@@ -133,7 +133,7 @@ module VSphereCloud
         device_changes.each do |device_change|
           # Re assing keys for only those devices which are being added.
           next unless device_change.operation == VimSdk::Vim::Vm::Device::VirtualDeviceSpec::Operation::ADD
-          seed -=1 while key_memo.add?(seed).nil?
+          seed -= 1 while key_memo.add?(seed).nil?
           device_change.device.key = seed
         end
       end
@@ -199,7 +199,7 @@ module VSphereCloud
         if question
           choices = question.choice
           logger.info("VM is blocked on a question: #{question.text}, " +
-              "providing default answer: #{choices.choice_info[choices.default_index].label}")
+                      "providing default answer: #{choices.choice_info[choices.default_index].label}")
           @client.answer_vm(@mob, question.id, choices.choice_info[choices.default_index].key)
         end
 
@@ -359,7 +359,7 @@ module VSphereCloud
             disks_to_move << DiskWithForcedPath.new(virtual_disk, force_disk_path)
           elsif has_persistent_disk_property_mismatch?(virtual_disk) && !@client.disk_path_exists?(@mob, disk_property.value)
             logger.info('Persistent disk was moved: moving disk to vApp property recorded location')
-            disks_to_move << DiskWithForcedPath.new(virtual_disk,  nil)
+            disks_to_move << DiskWithForcedPath.new(virtual_disk, nil)
           end
         end
 
@@ -389,22 +389,27 @@ module VSphereCloud
             dest_filename = original_disk_path.match(/^\[[^\]]+\] (.*)/)[1]
           else
             # Use current disk path incuded with the disk
-            dest_filename =  disk.backing.file_name.match(/^\[[^\]]+\] .*\/(.*)/)[1]
+            dest_filename = disk.backing.file_name.match(/^\[[^\]]+\] .*\/(.*)/)[1]
             dest_filename = "#{disk_path}/#{dest_filename}"
           end
           dest_path = "[#{current_datastore}] #{dest_filename}"
 
-          @client.move_disk(datacenter_mob, disk.backing.file_name, datacenter_mob, dest_path)
+          destination_exists = @client.disk_path_exists?(@mob, dest_path)
+          datastore_type = disk.backing.datastore.summary.type
+          if datastore_type == 'vsan' && destination_exists
+            logger.debug("Skipping disk relocation for vsan datastore because destination already exists: #{dest_path}")
+          else
+            @client.move_disk(datacenter_mob, disk.backing.file_name, datacenter_mob, dest_path)
+          end
         end
       end
-
 
       # Apply new storage policy to VM, system disk and ephemeral disk.
 
       def apply_storage_policy(policy)
         profile_spec = Resources::VM.create_profile_spec(policy)
         disks = [system_disk, ephemeral_disk]
-        device_specs = disks.map {|disk| Resources::VM.create_edit_device_spec(disk)}
+        device_specs = disks.map { |disk| Resources::VM.create_edit_device_spec(disk) }
         device_specs.each do |d|
           d.profile = [profile_spec]
         end
@@ -469,10 +474,10 @@ module VSphereCloud
 
       def get_nsxt_nics
         nsxt_nics = nics.select do |nic|
-          ( nic.backing.is_a?(VimSdk::Vim::Vm::Device::VirtualEthernetCard::DistributedVirtualPortBackingInfo) &&
-            @client.dvpg_istype_nsxt?(key: nic.backing.port.portgroup_key, dc_mob: datacenter_mob) ) ||
-          ( nic.backing.is_a?(VimSdk::Vim::Vm::Device::VirtualEthernetCard::OpaqueNetworkBackingInfo) &&
-            nic.backing.opaque_network_type == NSXT_LOGICAL_SWITCH )
+          (nic.backing.is_a?(VimSdk::Vim::Vm::Device::VirtualEthernetCard::DistributedVirtualPortBackingInfo) &&
+            @client.dvpg_istype_nsxt?(key: nic.backing.port.portgroup_key, dc_mob: datacenter_mob)) ||
+            (nic.backing.is_a?(VimSdk::Vim::Vm::Device::VirtualEthernetCard::OpaqueNetworkBackingInfo) &&
+              nic.backing.opaque_network_type == NSXT_LOGICAL_SWITCH)
         end
         logger.info("Networks found for VM: #{cid}: #{nics.map(&:device_info).map(&:summary)}")
         nsxt_nics
