@@ -420,11 +420,15 @@ describe VSphereCloud::Resources::VM, fake_logger: true do
   end
 
   describe '#detach_disks' do
+    let(:datastore_summary) { double(:datastore_summary, type: 'iscsi')}
+    let(:datastore) { double(:datastore, name: 'datastore x', summary: datastore_summary)}
+
     let(:disk0) do
       disk = VimSdk::Vim::Vm::Device::VirtualDisk.new
       disk.backing = VimSdk::Vim::Vm::Device::VirtualDisk::FlatVer2BackingInfo.new
       disk.backing.file_name = '[datastore x] fake-disk-path/fake-file_name.vmdk'
       disk.backing.disk_mode = VimSdk::Vim::Vm::Device::VirtualDiskOption::DiskMode::INDEPENDENT_PERSISTENT
+      disk.backing.datastore = datastore
       disk.key = 'first-disk-key'
       disk
     end
@@ -493,6 +497,7 @@ describe VSphereCloud::Resources::VM, fake_logger: true do
           '[datastore x] current-fake-disk-path/fake-file_name.vmdk'
         )
         expect(client).to receive(:delete_persistent_disk_property_from_vm).with(vm, 'first-disk-key')
+        expect(client).to receive(:disk_path_exists?).and_return(false)
         vm.detach_disks([disk0], 'current-fake-disk-path')
       end
     end
@@ -525,6 +530,21 @@ describe VSphereCloud::Resources::VM, fake_logger: true do
         )
         expect(client).to receive(:delete_persistent_disk_property_from_vm).with(vm, 'first-disk-key')
         vm.detach_disks([disk0])
+      end
+
+      context 'when the datastore is vsan, and the original path exists in the new datastore' do
+        let(:datastore_summary) { double(:datastore_summary, type: 'vsan')}
+        it 'does not try to move the disk to its original name' do
+          expect(client).to receive(:disk_path_exists?).and_return(false, true)
+          expect(client).to receive(:reconfig_vm) do |mob, spec|
+            expect(mob).to equal(vm_mob)
+            expect(spec.device_change.first.device).to eq(disk0)
+            expect(spec.device_change.first.operation).to eq(VimSdk::Vim::Vm::Device::VirtualDeviceSpec::Operation::REMOVE)
+          end
+          expect(client).to_not receive(:move_disk)
+          expect(client).to receive(:delete_persistent_disk_property_from_vm).with(vm, 'first-disk-key')
+          vm.detach_disks([disk0])
+        end
       end
 
       context 'when original disk still exists' do
@@ -772,23 +792,23 @@ describe VSphereCloud::Resources::VM, fake_logger: true do
       allow(subject).to receive(:nics).and_return([nic0])
     end
 
-    context "when the NIC is an NSX-T DVS NIC" do
+    context 'when the NIC is an NSX-T DVS NIC' do
       before do
         allow(client).to receive(:dvpg_istype_nsxt?).and_return(true)
         allow(subject).to receive(:get_nsxt_networks_id_name_map).and_return({'nic-portgroup-key' => 'some-segment-name'})
         allow(nic0).to receive(:external_id).and_return('nic-external-id')
       end
-      it "is not returned in the list of NSX-T vifs" do
-        expect(subject.get_nsxt_segment_vif_list).to match_array([["some-segment-name", "nic-external-id"]])
+      it 'is not returned in the list of NSX-T vifs' do
+        expect(subject.get_nsxt_segment_vif_list).to match_array([['some-segment-name', 'nic-external-id']])
       end
     end
 
-    context "when the NIC is a DVS NIC but NOT an NSX-T DVS nic" do
+    context 'when the NIC is a DVS NIC but NOT an NSX-T DVS nic' do
       before do
         allow(client).to receive(:dvpg_istype_nsxt?).and_return(false)
         allow(nic0).to receive_message_chain(:backing, :is_a?).with(VimSdk::Vim::Vm::Device::VirtualEthernetCard::OpaqueNetworkBackingInfo).and_return(false)
       end
-      it "is not returned in the list of NSX-T vifs" do
+      it 'is not returned in the list of NSX-T vifs' do
         expect(subject.get_nsxt_segment_vif_list).to be_nil
       end
     end
