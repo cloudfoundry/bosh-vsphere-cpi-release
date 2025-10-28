@@ -18,13 +18,13 @@ bosh int source-ci/ci/shared/bats-spec.yml \
   -v network1-staticRange=[30.0.2.156-30.0.2.163] \
   -v network1-reservedRange="['30.0.0.0-30.0.1.255' , '30.0.3.0-30.0.3.255']" \
   -v network1-vCenterGateway=30.0.0.1 \
-  -v network1-vCenterVLAN="vcpi-segment" \
+  -v network1-vCenterVLAN="nsxt-switch1" \
   -v network2-staticIP-1=30.0.3.164 \
   -v network2-vCenterCIDR=30.0.0.0/22 \
   -v network2-staticRange=[30.0.3.164-30.0.3.174] \
   -v network2-reservedRange="['30.0.0.0-30.0.2.255']" \
   -v network2-vCenterGateway=30.0.0.1 \
-  -v network2-vCenterVLAN="vcpi-segment" \
+  -v network2-vCenterVLAN="nsxt-switch1" \
   -v jumpbox_host="${BOSH_VSPHERE_JUMPER_HOST}" \
   -v gateway_private_key="${JUMPBOX_PRIVATE_KEY}" \
   -v ssh_private_key="$(bosh int director-state/creds.yml --path=/jumpbox_ssh/private_key)" \
