@@ -58,7 +58,7 @@ GEM
     public_suffix (6.0.2)
     racc (1.8.1)
     rack (2.2.20)
-    rake (13.3.0)
+    rake (13.3.1)
     rspec (3.13.2)
       rspec-core (~> 3.13.0)
       rspec-expectations (~> 3.13.0)
