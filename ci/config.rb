@@ -45,3 +45,16 @@ $pipeline.pool('8.0-nsxt42-policy') do |pool|
     ].join(' ')
   }
 end
+
+$pipeline.pool('9.0-nsxt90-cvds') do |pool|
+  pool.params = {
+    RSPEC_FLAGS: [
+      '--tag ~nvds',
+      '--tag cvds',
+      '--tag nsxt_all',
+      '--tag nsxt_policy_only',
+      '--tag ~host_maintenance',
+    ].join(' '),
+  }
+end
+
