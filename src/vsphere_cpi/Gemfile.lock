@@ -47,7 +47,7 @@ GEM
       ast
       ruby-ll (~> 2.1)
     parallel (1.27.0)
-    parallel_tests (5.4.0)
+    parallel_tests (5.5.0)
       parallel
     pry (0.15.2)
       coderay (~> 1.1)
@@ -71,7 +71,7 @@ GEM
     rspec-its (2.0.0)
       rspec-core (>= 3.13.0)
       rspec-expectations (>= 3.13.0)
-    rspec-mocks (3.13.6)
+    rspec-mocks (3.13.7)
       diff-lcs (>= 1.2.0, < 2.0)
       rspec-support (~> 3.13.0)
     rspec-support (3.13.6)
