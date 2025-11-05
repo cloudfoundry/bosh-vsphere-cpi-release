@@ -465,14 +465,14 @@ describe 'Host Groups in Cluster and VM Host Rules' do
         context 'and one of the cluster has host group and other has resource pool' do
           let(:options) do
             cpi_options(
-                datacenters: [{
-                                  'datastore_pattern' => @datastore_shared_pattern,
-                                  'persistent_datastore_pattern' => @datastore_shared_pattern,
-                                  clusters: [
-                                      { @cluster_name => { host_group: {'name' => @second_host_group, 'drs_rule' => 'Must'} } },
-                                      { @second_cluster_name => { resource_pool: @second_cluster_resource_pool_name, } },
-                                  ]
-                              }]
+              datacenters: [{
+                              'datastore_pattern' => @datastore_shared_pattern,
+                              'persistent_datastore_pattern' => @datastore_shared_pattern,
+                              clusters: [
+                                { @cluster_name => { resource_pool: @first_cluster_second_resource_pool_name, } },
+                                { @second_cluster_name => { host_group: { 'name' => @third_host_group, 'drs_rule' => 'Must' } } },
+                              ]
+                            }]
             )
           end
           let(:cpi) do
@@ -487,35 +487,35 @@ describe 'Host Groups in Cluster and VM Host Rules' do
             (as resource pool has more memory available than host group)' do
             simple_vm_lifecycle(cpi, '', vm_type, get_network_spec) do |vm_id|
               vm = cpi.vm_provider.find(vm_id)
-              expect(vm.cluster).to eq(@second_cluster_name)
+              expect(vm.cluster).to eq(@cluster_name)
             end
             expect(get_count_vm_host_affinity_rules(cluster_mob) +
-                       get_count_vm_host_affinity_rules(second_cluster_mob)).to eq(0)
+                   get_count_vm_host_affinity_rules(second_cluster_mob)).to eq(0)
           end
-          it 'creates multiple VMs (3) one after another on the second cluster\'s resource pool' do
+          it 'creates multiple VMs (3) one after another on the resource pool' do
             vm_list = []
             begin
               3.times do
                 vm_id, _ = cpi.create_vm(
-                    'agent-007',
-                    @stemcell_id,
-                    vm_type,
-                    get_network_spec,
-                    [],
-                    {}
+                  'agent-007',
+                  @stemcell_id,
+                  vm_type,
+                  get_network_spec,
+                  [],
+                  {}
                 )
                 expect(vm_id).to_not be_nil
                 vm_list << vm_id
                 vm = cpi.vm_provider.find(vm_id)
                 expect(vm).to_not be_nil
-                expect(vm.cluster).to eq(@second_cluster_name)
+                expect(vm.cluster).to eq(@cluster_name)
               end
             ensure
               vm_list.each do |vm_id|
                 delete_vm(cpi, vm_id)
               end
               expect(get_count_vm_host_affinity_rules(cluster_mob) +
-                         get_count_vm_host_affinity_rules(second_cluster_mob)).to eq(0)
+                     get_count_vm_host_affinity_rules(second_cluster_mob)).to eq(0)
             end
           end
         end
