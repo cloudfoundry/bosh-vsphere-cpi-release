@@ -92,7 +92,7 @@ context 'given cpis that are configured to use VSAN datastores', vsan_datastore:
       non_vsan_cpi.cleanup
     end
 
-    it '#attach_disk can move the disk to and from the vsan datastore', focus: true do
+    it '#attach_disk can move the disk to and from the vsan datastore' do
       vsan_cpi.attach_disk(@vm_id, @disk_id)
 
       disk = vsan_cpi.datacenter.find_disk(VSphereCloud::DirectorDiskCID.new(@disk_id))

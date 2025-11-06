@@ -6,7 +6,7 @@ describe 'Give a cluster with DRS On ', host_maintenance: true  do
     # We actually use a healthy cluster but manipulate it before the test and restore after we are done
     @cluster_name_maintenance = fetch_and_verify_cluster('BOSH_VSPHERE_CPI_CLUSTER__MAINTENANCE_MODE_HOST')
     @datastore_shared_pattern = fetch_and_verify_datastore('BOSH_VSPHERE_CPI_SHARED_DATASTORE_MAINTENANCE_MODE_HOST', @cluster_name_maintenance)
-    @datastore_pattern_maintenance_cluster = fetch_and_verify_datastore('BOSH_VSPHERE_CPI_DATASTORE_PATTERN_MAINTENANCE_MODE_HOST', @cluster_name_maintenance)
+    @datastore_pattern_maintenance_cluster = fetch_datastore('BOSH_VSPHERE_CPI_DATASTORE_PATTERN_MAINTENANCE_MODE_HOST', @cluster_name_maintenance)
   end
 
   context 'when regex matches one or more of datastores that are accessible by one or few non-maintenance mode hosts in a cluster (datastore-*) ' do
