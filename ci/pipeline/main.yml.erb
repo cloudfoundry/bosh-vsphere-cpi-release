@@ -103,6 +103,8 @@ jobs:
         tags: [nimbus]
         file: source-ci/ci/tasks/unit-test.yml
         image: vcpi-main-image
+        params:
+          RUBY_GEMS_MIRROR: ((repository_mirrors.rubygems))
 
 <% each_pool do |pool| -%>
 <% next unless pool.generate_lifecycle_test? %>
@@ -178,6 +180,7 @@ jobs:
               BAT_RSPEC_FLAGS:    "--tag ~dns --tag ~vip_networking --tag ~dynamic_networking --tag ~root_partition --tag ~raw_ephemeral_storage"
               STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-jammy-go_agent
               JUMPBOX_PRIVATE_KEY: ((nimbus_jumpbox_key.private_key))
+              RUBY_GEMS_MIRROR: ((repository_mirrors.rubygems))
         on_failure:
           in_parallel:
           - put: pool-7.0-nsxt32-policy
@@ -248,6 +251,7 @@ jobs:
             BAT_RSPEC_FLAGS:    "--tag ~dns --tag ~vip_networking --tag ~dynamic_networking --tag ~root_partition --tag ~raw_ephemeral_storage"
             STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-jammy-go_agent
             JUMPBOX_PRIVATE_KEY: ((nimbus_jumpbox_key.private_key))
+            RUBY_GEMS_MIRROR: ((repository_mirrors.rubygems))
         on_failure:
           in_parallel:
           - put: pool-7.0-nsxt32-nvds
@@ -316,6 +320,7 @@ jobs:
               BAT_RSPEC_FLAGS:    "--tag ~dns --tag ~vip_networking --tag ~dynamic_networking --tag ~root_partition --tag ~raw_ephemeral_storage"
               STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-jammy-go_agent
               JUMPBOX_PRIVATE_KEY: ((nimbus_jumpbox_key.private_key))
+              RUBY_GEMS_MIRROR: ((repository_mirrors.rubygems))
         on_failure:
           in_parallel:
             - put: pool-7.0-nsxt32-cvds
@@ -384,6 +389,7 @@ jobs:
               BAT_RSPEC_FLAGS:    "--tag ~dns --tag ~vip_networking --tag ~dynamic_networking --tag ~root_partition --tag ~raw_ephemeral_storage"
               STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-jammy-go_agent
               JUMPBOX_PRIVATE_KEY: ((nimbus_jumpbox_key.private_key))
+              RUBY_GEMS_MIRROR: ((repository_mirrors.rubygems))
         on_failure:
           in_parallel:
             - put: pool-8.0-nsxt42-policy
@@ -500,6 +506,7 @@ jobs:
         GIT_USER_EMAIL: bots@cloudfoundry.org
         UPDATE_BUNDLER_VERSION: false
         PACKAGE: ruby-3.3
+        RUBY_GEMS_MIRROR: ((repository_mirrors.rubygems))
         VENDOR: true
     - in_parallel:
       - task: test-pyvmomi_to_ruby
@@ -510,6 +517,8 @@ jobs:
         tags: [nimbus]
         file: source-ci/ci/tasks/unit-test.yml
         image: vcpi-main-image
+        params:
+          RUBY_GEMS_MIRROR: ((repository_mirrors.rubygems))
     - put: bosh-cpi-src
       tags: [nimbus]
       inputs:
