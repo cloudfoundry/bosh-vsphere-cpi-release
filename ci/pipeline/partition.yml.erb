@@ -26,6 +26,7 @@
       image: vcpi-main-image
       privileged: true
       params:
+        RUBY_GEMS_MIRROR: ((repository_mirrors.rubygems))
 <% pool.params.each do |k, v| -%>
         <%= e k %>: <%= e v %>
 <% end -%>
