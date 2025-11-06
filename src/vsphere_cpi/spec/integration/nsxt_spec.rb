@@ -430,7 +430,7 @@ describe 'CPI', nsxt_all: true do
           delete_policy_group(nsgroup_name_1)
         end
 
-        it 'authenticates successfully and creates VM in specified ns groups', focus: true do
+        it 'authenticates successfully and creates VM in specified ns groups' do
           # This test exists primarily to exercise principal identity (cert-based) authentication with
           # the policy API. To do this, we need to add the VM to at least one group to force the CPI
           # to interact with the policy API.

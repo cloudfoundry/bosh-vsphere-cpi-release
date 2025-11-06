@@ -510,11 +510,13 @@ module LifecycleHelpers
     cluster = cpi.client.cloud_searcher.get_managed_object(VimSdk::Vim::ClusterComputeResource, name: cluster_name)
     host_mob_array = cluster.host
     host_mob_array.each do |host_mob|
-      begin
-        cpi.client.wait_for_task do
-          host_mob.exit_maintenance_mode(0)
+      if host_mob.runtime.in_maintenance_mode
+        begin
+          cpi.client.wait_for_task do
+            host_mob.exit_maintenance_mode(0)
+          end
+        rescue VSphereCloud::VCenterClient::TaskException => e
         end
-      rescue VSphereCloud::VCenterClient::TaskException => e
       end
     end
   end
