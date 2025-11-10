@@ -44,7 +44,7 @@ bosh int \
   -v internal_cidr=30.0.0.0/16 \
   -v internal_gw=30.0.0.1 \
   -v internal_ip=30.0.1.1 \
-  -v internal_dns=192.168.111.1 \
+  -v internal_dns=[192.168.111.1] \
   -v reserved_range=30.0.0.0-30.0.1.0 \
   -v network_name="$BOSH_VSPHERE_VLAN" \
   -v vcenter_dc="$BOSH_VSPHERE_CPI_DATACENTER" \
