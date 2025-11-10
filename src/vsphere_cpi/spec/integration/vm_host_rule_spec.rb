@@ -11,7 +11,7 @@ describe 'Host Groups in Cluster and VM Host Rules' do
       @first_host_group = fetch_property('BOSH_VSPHERE_CPI_FIRST_CLUSTER_FIRST_HOST_GROUP')
       @second_host_group = fetch_property('BOSH_VSPHERE_CPI_FIRST_CLUSTER_SECOND_HOST_GROUP')
       @third_host_group = fetch_property('BOSH_VSPHERE_CPI_SECOND_CLUSTER_FIRST_HOST_GROUP')
-      @second_cluster_resource_pool_name = fetch_and_verify_resource_pool('BOSH_VSPHERE_CPI_SECOND_CLUSTER_RESOURCE_POOL', @second_cluster_name)
+      @first_cluster_second_resource_pool_name = fetch_and_verify_resource_pool('BOSH_VSPHERE_CPI_SECOND_RESOURCE_POOL', @cluster_name)
     end
 
     let(:options) do
