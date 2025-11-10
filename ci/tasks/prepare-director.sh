@@ -29,6 +29,7 @@ bosh int \
   -o bosh-deployment/vsphere/cpi.yml \
   -o bosh-deployment/misc/proxy.yml \
   -o bosh-deployment/jumpbox-user.yml \
+  -o bosh-deployment/misc/dns.yml \
   -o source-ci/ci/shared/ops/ntp.yml \
   $OPTIONAL_OPS_FILE \
   -o certification/shared/assets/ops/custom-releases.yml \
@@ -40,6 +41,7 @@ bosh int \
   -v internal_cidr=192.168.111.0/24 \
   -v internal_gw=192.168.111.1 \
   -v internal_ip=192.168.111.152 \
+  -v internal_dns=192.168.111.1 \
   -v reserved_range=192.168.111.2-192.168.111.155 \
   -v network_name="$BOSH_VSPHERE_VLAN" \
   -v vcenter_dc="$BOSH_VSPHERE_CPI_DATACENTER" \
