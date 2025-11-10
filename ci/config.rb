@@ -14,7 +14,6 @@ $pipeline.pool('7.0-nsxt32-cvds') do |pool|
   pool.params = {
     RSPEC_FLAGS: [
       '--tag ~nvds',
-      '--tag ~host_maintenance',
     ].join(' ')
   }
 end
