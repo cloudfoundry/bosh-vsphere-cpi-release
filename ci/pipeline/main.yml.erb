@@ -178,7 +178,7 @@ jobs:
             image: vcpi-main-image
             params:
               BAT_INFRASTRUCTURE: vsphere
-              BAT_RSPEC_FLAGS:    "--tag ~dns --tag ~vip_networking --tag ~dynamic_networking --tag ~root_partition --tag ~raw_ephemeral_storage"
+              BAT_RSPEC_FLAGS:    "--tag ~dns --tag ~vip_networking --tag ~dynamic_networking --tag ~root_partition --tag ~raw_ephemeral_storage --tag ~ipv6"
               STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-jammy-go_agent
               JUMPBOX_PRIVATE_KEY: ((nimbus_jumpbox_key.private_key))
               RUBY_GEMS_MIRROR: ((repository_mirrors.rubygems))
@@ -250,7 +250,7 @@ jobs:
           image: vcpi-main-image
           params:
             BAT_INFRASTRUCTURE: vsphere
-            BAT_RSPEC_FLAGS:    "--tag ~dns --tag ~vip_networking --tag ~dynamic_networking --tag ~root_partition --tag ~raw_ephemeral_storage"
+            BAT_RSPEC_FLAGS:    "--tag ~dns --tag ~vip_networking --tag ~dynamic_networking --tag ~root_partition --tag ~raw_ephemeral_storage --tag ~ipv6"
             STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-jammy-go_agent
             JUMPBOX_PRIVATE_KEY: ((nimbus_jumpbox_key.private_key))
             RUBY_GEMS_MIRROR: ((repository_mirrors.rubygems))
@@ -320,7 +320,7 @@ jobs:
             image: vcpi-main-image
             params:
               BAT_INFRASTRUCTURE: vsphere
-              BAT_RSPEC_FLAGS:    "--tag ~dns --tag ~vip_networking --tag ~dynamic_networking --tag ~root_partition --tag ~raw_ephemeral_storage"
+              BAT_RSPEC_FLAGS:    "--tag ~dns --tag ~vip_networking --tag ~dynamic_networking --tag ~root_partition --tag ~raw_ephemeral_storage --tag ~ipv6"
               STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-jammy-go_agent
               JUMPBOX_PRIVATE_KEY: ((nimbus_jumpbox_key.private_key))
               RUBY_GEMS_MIRROR: ((repository_mirrors.rubygems))
@@ -390,7 +390,7 @@ jobs:
             image: vcpi-main-image
             params:
               BAT_INFRASTRUCTURE: vsphere
-              BAT_RSPEC_FLAGS:    "--tag ~dns --tag ~vip_networking --tag ~dynamic_networking --tag ~root_partition --tag ~raw_ephemeral_storage"
+              BAT_RSPEC_FLAGS:    "--tag ~dns --tag ~vip_networking --tag ~dynamic_networking --tag ~root_partition --tag ~raw_ephemeral_storage --tag ~ipv6"
               STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-jammy-go_agent
               JUMPBOX_PRIVATE_KEY: ((nimbus_jumpbox_key.private_key))
               RUBY_GEMS_MIRROR: ((repository_mirrors.rubygems))
