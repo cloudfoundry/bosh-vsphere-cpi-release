@@ -864,5 +864,5 @@ resource_types:
   tags: [nimbus]
   source:
     repository: tpe-build-harbor.tanzu.broadcom.net/shepherd/v1/shepherd-resource
-    username: svc.bosh-ecosystem
-    password: ((broadcom_artifactory_api_key))
+    username: ((broadcom_artifactory.username))
+    password: ((broadcom_artifactory.password))
