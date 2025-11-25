@@ -15,7 +15,7 @@ describe 'CPI', nsxt_policy_only: true do
     @nsxt_overlay_tz = fetch_property('BOSH_VSPHERE_TRANSPORT_ZONE_ID')
 
     # Configure NSXT9 Policy API client
-    configuration = Nsxt9PolicyClient::Configuration.new
+    configuration = NsxtPolicyClient::Configuration.new
     configuration.host = @nsxt_host
     configuration.username = @nsxt_username
     configuration.password = @nsxt_password
@@ -28,17 +28,17 @@ describe 'CPI', nsxt_policy_only: true do
       configuration.verify_ssl_host = false
     end
 
-    @policy_client = Nsxt9PolicyClient::ApiClient.new(configuration)
+    @policy_client = NsxtPolicyClient::ApiClient.new(configuration)
     
     # Initialize NSXT9 Policy APIs
-    @policy_group_api = Nsxt9PolicyClient::GroupsApi.new(@policy_client)
-    @policy_load_balancer_pools_api = Nsxt9PolicyClient::LoadBalancerPoolsApi.new(@policy_client)
-    @policy_segment_api = Nsxt9PolicyClient::SegmentsApi.new(@policy_client)
-    @policy_virtual_machines_api = Nsxt9PolicyClient::VirtualMachinesApi.new(@policy_client)
-    @policy_transport_zones_api = Nsxt9PolicyClient::TransportZonesApi.new(@policy_client)
-    @segments_ports_api = Nsxt9PolicyClient::PortsApi.new(@policy_client)
-    @policy_infra_api = Nsxt9PolicyClient::InfraApi.new(@policy_client)
-    @policy_group_members_api = Nsxt9PolicyClient::GroupMembersApi.new(@policy_client)
+    @policy_group_api = NsxtPolicyClient::GroupsApi.new(@policy_client)
+    @policy_load_balancer_pools_api = NsxtPolicyClient::LoadBalancerPoolsApi.new(@policy_client)
+    @policy_segment_api = NsxtPolicyClient::SegmentsApi.new(@policy_client)
+    @policy_virtual_machines_api = NsxtPolicyClient::VirtualMachinesApi.new(@policy_client)
+    @policy_transport_zones_api = NsxtPolicyClient::TransportZonesApi.new(@policy_client)
+    @segments_ports_api = NsxtPolicyClient::PortsApi.new(@policy_client)
+    @policy_infra_api = NsxtPolicyClient::InfraApi.new(@policy_client)
+    @policy_group_members_api = NsxtPolicyClient::GroupMembersApi.new(@policy_client)
   end
 
   # Test variables
@@ -670,8 +670,8 @@ describe 'CPI', nsxt_policy_only: true do
           end
 
           let(:dynamic_pool) do
-            member_group = Nsxt9PolicyClient::LBPoolMemberGroup.new(group_path: dynamic_pool_group.path)
-            @policy_load_balancer_pools_api.update_lb_pool('pool-id', Nsxt9PolicyClient::LBPool.new(id: 'pool-id', display_name: 'dynamic-pool', member_group: member_group))
+            member_group = NsxtPolicyClient::LBPoolMemberGroup.new(group_path: dynamic_pool_group.path)
+            @policy_load_balancer_pools_api.update_lb_pool('pool-id', NsxtPolicyClient::LBPool.new(id: 'pool-id', display_name: 'dynamic-pool', member_group: member_group))
           end
 
           after do
@@ -1185,7 +1185,7 @@ describe 'CPI', nsxt_policy_only: true do
   private
 
   def create_policy_group(group_name)
-    grp = Nsxt9PolicyClient::Group.new(:display_name => group_name)
+    grp = NsxtPolicyClient::Group.new(:display_name => group_name)
     @policy_group_api.update_group_for_domain('default', group_name, grp)
   end
 
@@ -1198,7 +1198,7 @@ describe 'CPI', nsxt_policy_only: true do
     overlay_tz = tzs.results.find { |tz| tz.display_name == @nsxt_overlay_tz }
 
     segments.each do |segment|
-      seg = Nsxt9PolicyClient::Segment.new(display_name: segment.name, transport_zone_path: overlay_tz.path)
+      seg = NsxtPolicyClient::Segment.new(display_name: segment.name, transport_zone_path: overlay_tz.path)
       @policy_segment_api.create_or_replace_infra_segment(segment.id, seg)
       logger.info("Created segment: #{segment.name}")
       
@@ -1214,7 +1214,7 @@ describe 'CPI', nsxt_policy_only: true do
   end
 
   def create_lb_pool(pool)
-    @policy_load_balancer_pools_api.update_lb_pool(pool.id, Nsxt9PolicyClient::LBPool.new(id: pool.id, display_name: pool.name))
+    @policy_load_balancer_pools_api.update_lb_pool(pool.id, NsxtPolicyClient::LBPool.new(id: pool.id, display_name: pool.name))
   end
 
   def delete_lb_pool(pool)
@@ -1223,7 +1223,7 @@ describe 'CPI', nsxt_policy_only: true do
 
   def add_vm_to_unmanaged_server_pool_with_policy_api(server_pool_id, vm_ip, port_no)
     load_balancer_pool = @policy_load_balancer_pools_api.read_lb_pool(server_pool_id)
-    (load_balancer_pool.members ||= []).push(Nsxt9PolicyClient::LBPoolMember.new(port: port_no, ip_address: vm_ip, display_name: 'not-a-vm-cid'))
+    (load_balancer_pool.members ||= []).push(NsxtPolicyClient::LBPoolMember.new(port: port_no, ip_address: vm_ip, display_name: 'not-a-vm-cid'))
     @policy_load_balancer_pools_api.update_lb_pool(server_pool_id, load_balancer_pool)
   end
 
@@ -1291,7 +1291,7 @@ describe 'CPI', nsxt_policy_only: true do
   def nsgroup_effective_logical_port_member_ids(nsgroup)
     logger.info("Waiting for 30 seconds to allow the NSGroup to be updated")
     sleep (5)
-    policy_group_members_api = Nsxt9PolicyClient::GroupMembersApi.new(@policy_client)
+    policy_group_members_api = NsxtPolicyClient::GroupMembersApi.new(@policy_client)
     results = policy_group_members_api.get_group_segment_port_members('default', nsgroup.id).results
     results.map { |member| member.id }
   end

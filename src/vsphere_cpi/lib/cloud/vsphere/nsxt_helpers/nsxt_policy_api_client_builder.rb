@@ -7,17 +7,8 @@ module VSphereCloud
 
     def get_client
       return @client unless @client.nil?
-      use_nsxt9_policy_client = ENV['BOSH_VSPHERE_CPI_NSXT_POLICY_ONLY'] == 'true'
-      
-      if use_nsxt9_policy_client
-        require 'nsxt9_policy_client/nsxt_policy_client'
-        client_class = Nsxt9PolicyClient
-      else
-        require 'nsxt_policy_client/nsxt_policy_client'
-        client_class = NSXTPolicy
-      end
-      
-      configuration = client_class::Configuration.new
+
+      configuration = NSXTPolicy::Configuration.new
       configuration.host = @config.host
       configuration.logger = @logger
       configuration.client_side_validation = false
@@ -39,7 +30,7 @@ module VSphereCloud
       configuration.verify_ssl = !@config.ca_cert_file.nil?
       configuration.verify_ssl_host = !@config.ca_cert_file.nil?
 
-      @client = client_class::ApiClient.new(configuration)
+      @client = NSXTPolicy::ApiClient.new(configuration)
     end
   end
 end

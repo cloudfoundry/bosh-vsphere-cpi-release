@@ -1,6 +1,5 @@
 require 'spec_helper'
 require 'nsxt_policy_client/nsxt_policy_client'
-require 'nsxt9_policy_client/nsxt_policy_client'
 
 describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
   let(:client) { instance_double(NSXTPolicy::ApiClient) }
