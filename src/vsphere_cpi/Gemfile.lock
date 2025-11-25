@@ -1,5 +1,5 @@
 GEM
-  remote: https://usw1.packages.broadcom.com/artifactory/tas-bosh-gems-virtual/
+  remote: https://rubygems.org/
   specs:
     addressable (2.8.8)
       public_suffix (>= 2.0.2, < 8.0)

@@ -31,9 +31,9 @@ describe 'CPI', nsxt_policy_only: true do
     @policy_client = NsxtPolicyClient::ApiClient.new(configuration)
     
     # Initialize NSXT9 Policy APIs
-    @policy_group_api = NsxtPolicyClient::GroupsApi.new(@policy_client)
+    @policy_groups_api = NsxtPolicyClient::GroupsApi.new(@policy_client)
     @policy_load_balancer_pools_api = NsxtPolicyClient::LoadBalancerPoolsApi.new(@policy_client)
-    @policy_segment_api = NsxtPolicyClient::SegmentsApi.new(@policy_client)
+    @policy_segments_api = NsxtPolicyClient::SegmentsApi.new(@policy_client)
     @policy_virtual_machines_api = NsxtPolicyClient::VirtualMachinesApi.new(@policy_client)
     @policy_transport_zones_api = NsxtPolicyClient::TransportZonesApi.new(@policy_client)
     @segments_ports_api = NsxtPolicyClient::PortsApi.new(@policy_client)
@@ -1186,11 +1186,11 @@ describe 'CPI', nsxt_policy_only: true do
 
   def create_policy_group(group_name)
     grp = NsxtPolicyClient::Group.new(:display_name => group_name)
-    @policy_group_api.update_group_for_domain('default', group_name, grp)
+    @policy_groups_api.update_group_for_domain('default', group_name, grp)
   end
 
   def delete_policy_group(group_name)
-    @policy_group_api.delete_group('default', group_name)
+    @policy_groups_api.delete_group('default', group_name)
   end
 
   def create_segments(segments)
@@ -1199,7 +1199,7 @@ describe 'CPI', nsxt_policy_only: true do
 
     segments.each do |segment|
       seg = NsxtPolicyClient::Segment.new(display_name: segment.name, transport_zone_path: overlay_tz.path)
-      @policy_segment_api.create_or_replace_infra_segment(segment.id, seg)
+      @policy_segments_api.create_or_replace_infra_segment(segment.id, seg)
       logger.info("Created segment: #{segment.name}")
       
     end
@@ -1207,7 +1207,7 @@ describe 'CPI', nsxt_policy_only: true do
 
   def delete_segments(segments)
     segments.each do |segment|
-      @policy_segment_api.delete_infra_segment(segment.id)
+      @policy_segments_api.delete_infra_segment(segment.id)
       rescue => e
         # Ignore errors during cleanup
     end
@@ -1278,10 +1278,10 @@ describe 'CPI', nsxt_policy_only: true do
   def retrieve_all_ns_groups_with_pagination
     logger.info("Gathering all NS Groups using policy API")
     objects = []
-    result_list = @policy_group_api.list_group_for_domain('default')
+    result_list = @policy_groups_api.list_group_for_domain('default')
     objects.push(*result_list.results)
     until result_list.cursor.nil?
-      result_list = @policy_group_api.list_group_for_domain('default', cursor: result_list.cursor)
+      result_list = @policy_groups_api.list_group_for_domain('default', cursor: result_list.cursor)
       objects.push(*result_list.results)
     end
     logger.info("Found #{objects.size} number of NS Groups")

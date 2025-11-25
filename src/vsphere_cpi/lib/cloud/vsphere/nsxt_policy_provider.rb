@@ -140,9 +140,9 @@ module VSphereCloud
           segment_id = segment_data.nil? ? nil : segment_data[1]
           if tier1_router_id
             # Segment port is scoped under the tier-1
-            segment_port = policy_segment_api.get_tier1_segment_port(tier1_router_id, segment_id, segment_port_search_result[:id])
+            segment_port = policy_segments_api.get_tier1_segment_port(tier1_router_id, segment_id, segment_port_search_result[:id])
           else
-            segment_port = policy_segment_api.get_infra_segment_port(segment_id, segment_port_search_result[:id])
+            segment_port = policy_segments_api.get_infra_segment_port(segment_id, segment_port_search_result[:id])
           end
           raise SegmentPortNotFound.new(attachment_id) if segment_port.nil?
 
@@ -168,9 +168,9 @@ module VSphereCloud
           segment_port.tags = tags
 
           if tier1_router_id
-            policy_segment_api.patch_tier1_segment_port(tier1_router_id, segment_id, segment_port.id, segment_port)
+            policy_segments_api.patch_tier1_segment_port(tier1_router_id, segment_id, segment_port.id, segment_port)
           else
-            policy_segment_api.patch_infra_segment_port(segment_id, segment_port.id, segment_port)
+            policy_segments_api.patch_infra_segment_port(segment_id, segment_port.id, segment_port)
           end
 
           true
@@ -306,7 +306,7 @@ module VSphereCloud
     def retrieve_group(group_id:)
       logger.info("Searching for Policy Group with group id: #{group_id}")
       begin
-        group = policy_group_api.read_group_for_domain(DEFAULT_NSXT_POLICY_DOMAIN, group_id)
+        group = policy_groups_api.read_group_for_domain(DEFAULT_NSXT_POLICY_DOMAIN, group_id)
       rescue => e
         logger.info("Failed to find Policy Group: #{group_id} with error #{e.inspect}")
         raise e
@@ -361,7 +361,7 @@ module VSphereCloud
       end
 
       logger.info("Adding vm #{vm_cid} to group #{group_obj}")
-      policy_group_api.update_group_for_domain(DEFAULT_NSXT_POLICY_DOMAIN, group_obj.id, group_obj)
+      policy_groups_api.update_group_for_domain(DEFAULT_NSXT_POLICY_DOMAIN, group_obj.id, group_obj)
     end
 
     def delete_vm_from_group(group_obj, vm_cid, vm_external_id)
@@ -397,7 +397,7 @@ module VSphereCloud
 
       if updated
         logger.info("Removing vm #{vm_cid} from group #{group_obj}")
-        policy_group_api.update_group_for_domain(DEFAULT_NSXT_POLICY_DOMAIN, group_obj.id, group_obj)
+        policy_groups_api.update_group_for_domain(DEFAULT_NSXT_POLICY_DOMAIN, group_obj.id, group_obj)
       end
     end
 
@@ -437,12 +437,12 @@ module VSphereCloud
                                           id: "conjunction-#{vm_cid}-#{existing_expr_count}")
     end
 
-    def policy_segment_api
-      @policy_segment_api ||= NSXTPolicy::SegmentsApi.new(@client_builder.get_client)
+    def policy_segments_api
+      @policy_segments_api ||= NSXTPolicy::SegmentsApi.new(@client_builder.get_client)
     end
 
-    def policy_group_api
-      @policy_group_api ||= NSXTPolicy::GroupsApi.new(@client_builder.get_client)
+    def policy_groups_api
+      @policy_groups_api ||= NSXTPolicy::GroupsApi.new(@client_builder.get_client)
     end
 
     def policy_group_members_api

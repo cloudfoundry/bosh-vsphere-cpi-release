@@ -52,10 +52,10 @@ describe 'CPI', nsxt_all: true do
       policy_configuration.verify_ssl_host = false
     end
     policy_client = NSXTPolicy::ApiClient.new(policy_configuration)
-    @policy_group_api = NSXTPolicy::PolicyInventoryGroupsGroupsApi.new(policy_client)
+    @policy_groups_api = NSXTPolicy::PolicyInventoryGroupsGroupsApi.new(policy_client)
     @policy_load_balancer_pools_api = NSXTPolicy::PolicyNetworkingNetworkServicesLoadBalancingLoadBalancerPoolsApi.new(policy_client)
     @policy_group_members_api = NSXTPolicy::PolicyInventoryGroupsGroupMembersApi.new(policy_client)
-    @policy_segment_api = NSXTPolicy::PolicyNetworkingConnectivitySegmentsSegmentsApi.new(policy_client)
+    @policy_segments_api = NSXTPolicy::PolicyNetworkingConnectivitySegmentsSegmentsApi.new(policy_client)
     @policy_enforcement_points_api = NSXTPolicy::PolicyInfraEnforcementPointsApi.new(policy_client)
     @segments_ports_api = NSXTPolicy::PolicyNetworkingConnectivitySegmentsPortsApi.new(policy_client)
   end
@@ -1765,11 +1765,11 @@ describe 'CPI', nsxt_all: true do
 
   def create_policy_group(group_name)
     grp = NSXTPolicy::Group.new(:display_name => group_name)
-    @policy_group_api.update_group_for_domain(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, group_name, grp)
+    @policy_groups_api.update_group_for_domain(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, group_name, grp)
   end
 
   def delete_policy_group(group_name)
-    @policy_group_api.delete_group(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, group_name)
+    @policy_groups_api.delete_group(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, group_name)
   end
 
   def create_segments(segments)
@@ -1777,7 +1777,7 @@ describe 'CPI', nsxt_all: true do
     overlay_tz = tzs.results.find { |tz| tz.display_name == 'tz-overlay' }
     segments.each do |segment|
       seg_1 = NSXTPolicy::Segment.new(display_name: segment.name, transport_zone_path: overlay_tz.path)
-      @policy_segment_api.create_or_replace_infra_segment(segment.id, seg_1)
+      @policy_segments_api.create_or_replace_infra_segment(segment.id, seg_1)
     end
   end
 
@@ -1897,7 +1897,7 @@ describe 'CPI', nsxt_all: true do
         on: [NSXTPolicy::ApiCallError]
     ).retryer do |i|
       segments.each do |segment|
-        @policy_segment_api.delete_infra_segment(segment.id)
+        @policy_segments_api.delete_infra_segment(segment.id)
       end
       true
     end
