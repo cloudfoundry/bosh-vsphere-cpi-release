@@ -7,7 +7,6 @@ if ENV['COVERAGE']
   SimpleCov.start do
     add_filter '/nsxt_manager_client/'
     add_filter '/nsxt_policy_client/'
-    add_filter '/nsxt9_policy_client/'
     add_filter '/spec/'
   end
 end

@@ -94,7 +94,7 @@ module VSphereCloud
           retry_on_conflict("while adding vm: #{vm.cid} to group #{server_pool.display_name}") do
             logger.info("Adding vm: '#{vm.cid}' with ip:#{vm_ip} to ServerPool: #{server_pool.id} on Port: #{port_no} ")
             lb_pool = policy_load_balancer_pools_api.read_lb_pool(server_pool.id)
-            (lb_pool.members ||= []).push(client_class::LBPoolMember.new(port: port_no, ip_address: vm_ip, display_name: vm.cid))
+            (lb_pool.members ||= []).push(NSXTPolicy::LBPoolMember.new(port: port_no, ip_address: vm_ip, display_name: vm.cid))
 
             policy_load_balancer_pools_api.update_lb_pool(lb_pool.id, lb_pool)
           end
@@ -140,9 +140,9 @@ module VSphereCloud
           segment_id = segment_data.nil? ? nil : segment_data[1]
           if tier1_router_id
             # Segment port is scoped under the tier-1
-            segment_port = policy_segment_ports_api.get_tier1_segment_port(tier1_router_id, segment_id, segment_port_search_result[:id])
+            segment_port = policy_segment_api.get_tier1_segment_port(tier1_router_id, segment_id, segment_port_search_result[:id])
           else
-            segment_port = policy_segment_ports_api.get_infra_segment_port(segment_id, segment_port_search_result[:id])
+            segment_port = policy_segment_api.get_infra_segment_port(segment_id, segment_port_search_result[:id])
           end
           raise SegmentPortNotFound.new(attachment_id) if segment_port.nil?
 
@@ -160,7 +160,7 @@ module VSphereCloud
                 raise InvalidSegmentPortError.new(segment_port)
               end
             end
-            bosh_tag = client_class::Tag.new('scope' => metadata_key, 'tag' => metadata_value)
+            bosh_tag = NSXTPolicy::Tag.new('scope' => metadata_key, 'tag' => metadata_value)
             tags.delete_if { |tag| tag.scope == metadata_key }
             tags << bosh_tag
           end
@@ -168,9 +168,9 @@ module VSphereCloud
           segment_port.tags = tags
 
           if tier1_router_id
-            policy_segment_ports_api.patch_tier1_segment_port(tier1_router_id, segment_id, segment_port.id, segment_port)
+            policy_segment_api.patch_tier1_segment_port(tier1_router_id, segment_id, segment_port.id, segment_port)
           else
-            policy_segment_ports_api.patch_infra_segment_port(segment_id, segment_port.id, segment_port)
+            policy_segment_api.patch_infra_segment_port(segment_id, segment_port.id, segment_port)
           end
 
           true
@@ -199,7 +199,7 @@ module VSphereCloud
           search_response = search_api.query_search(query, search_opts)
           break if search_response.results.nil? || search_response.results.empty?
           
-          all_groups.concat(search_response.results.map { |group_attrs| client_class::Group.new(group_attrs) })
+          all_groups.concat(search_response.results.map { |group_attrs| NSXTPolicy::Group.new(group_attrs) })
           
           # Check if there are more pages
           cursor = search_response.cursor
@@ -217,7 +217,7 @@ module VSphereCloud
     def retrieve_groups_by_id(group_ids)
       logger.info("Searching for Policy Groups with group ids: #{group_ids}")
       query = "resource_type:Group AND id:(#{group_ids.join(" OR ")})"
-      search_api.query_search(query).results.map { |group_attrs| client_class::Group.new(group_attrs) }
+      search_api.query_search(query).results.map { |group_attrs| NSXTPolicy::Group.new(group_attrs) }
     end
 
     def retrieve_server_pools(server_pools, allow_missing_pools=false)
@@ -258,20 +258,6 @@ module VSphereCloud
 
     DEFAULT_NSXT_POLICY_DOMAIN = 'default'.freeze
 
-    def client_class
-      @client_class ||= begin
-        use_nsxt9_policy_client = ENV['BOSH_VSPHERE_CPI_NSXT_POLICY_ONLY'] == 'true'
-        
-        if use_nsxt9_policy_client
-          require 'nsxt9_policy_client/nsxt_policy_client'
-          Nsxt9PolicyClient
-        else
-          require 'nsxt_policy_client/nsxt_policy_client'
-          NSXTPolicy
-        end
-      end
-    end
-
     def api_class_name(api_name)
       # Handle API class name differences between old and new NSXT policy clients
       use_nsxt9_policy_client = ENV['BOSH_VSPHERE_CPI_NSXT_POLICY_ONLY'] == 'true'
@@ -306,7 +292,7 @@ module VSphereCloud
 
     def retry_on_conflict(log_str)
       yield
-    rescue client_class::ApiCallError => e
+    rescue NSXTPolicy::ApiCallError => e
       if [409, 412].include?(e.code)
         logger.info("Revision Error: #{log_str if log_str} with message #{e.message}")
         # To limit request rate on NSX-T server
@@ -348,13 +334,13 @@ module VSphereCloud
       vm_external_id = get_vm_external_id(vm_cid)
       raise VirtualMachineNotFound.new(vm_cid) if vm_external_id.nil?
 
-      external_id_expressions = group_obj.expression.select { |expr| expr.is_a?(client_class::ExternalIDExpression) && expr.member_type == 'VirtualMachine' }
+      external_id_expressions = group_obj.expression.select { |expr| expr.is_a?(NSXTPolicy::ExternalIDExpression) && expr.member_type == 'VirtualMachine' }
       if external_id_expressions.size < 1
         unless group_obj.expression.empty?
           group_obj.expression << generate_conjunction_expression(vm_cid, group_obj.expression)
         end
 
-        group_obj.expression << client_class::ExternalIDExpression.new(resource_type: 'ExternalIDExpression',
+        group_obj.expression << NSXTPolicy::ExternalIDExpression.new(resource_type: 'ExternalIDExpression',
                                                                      member_type: 'VirtualMachine',
                                                                      external_ids: [vm_external_id])
       else
@@ -368,7 +354,7 @@ module VSphereCloud
           available_external_id_expression.external_ids << vm_external_id
         else
           group_obj.expression << generate_conjunction_expression(vm_cid, group_obj.expression)
-          group_obj.expression << client_class::ExternalIDExpression.new(resource_type: 'ExternalIDExpression',
+          group_obj.expression << NSXTPolicy::ExternalIDExpression.new(resource_type: 'ExternalIDExpression',
                                                                        member_type: 'VirtualMachine',
                                                                        external_ids: [vm_external_id])
         end
@@ -383,7 +369,7 @@ module VSphereCloud
 
       updated = false
       group_obj.expression.each_with_index do |expr, index|
-        if expr.is_a?(client_class::ExternalIDExpression) &&
+        if expr.is_a?(NSXTPolicy::ExternalIDExpression) &&
             expr.member_type == 'VirtualMachine' &&
             expr.resource_type == 'ExternalIDExpression'
           expr.external_ids.delete_if { |id| id == vm_external_id }
@@ -399,7 +385,7 @@ module VSphereCloud
               else
                 e=group_obj.expression[index-1]
               end
-              if e.is_a?(client_class::ConjunctionOperator) &&
+              if e.is_a?(NSXTPolicy::ConjunctionOperator) &&
                     e.resource_type == 'ConjunctionOperator' &&
                     e.conjunction_operator == 'OR'
                 group_obj.expression.delete(e)
@@ -422,7 +408,7 @@ module VSphereCloud
           tries: 10,
           sleep: ->(_, _) { 1 },
         ).retryer do |_|
-          search_results = policy_infra_realized_state_api.list_virtual_machines_on_enforcement_point(DEFAULT_NSXT_POLICY_DOMAIN, { query: "display_name:#{vm_cid}" }).results
+          search_results = policy_virtual_machine_api.list_virtual_machines_on_enforcement_point(DEFAULT_NSXT_POLICY_DOMAIN, { query: "display_name:#{vm_cid}" }).results
           search_results.length > 0
         end
       rescue => e
@@ -440,43 +426,39 @@ module VSphereCloud
 
     def generate_conjunction_expression(vm_cid, expressions)
       existing_expr_count = expressions.count do |expr|
-        expr.is_a?(client_class::ConjunctionOperator) &&
+        expr.is_a?(NSXTPolicy::ConjunctionOperator) &&
             expr.resource_type == 'ConjunctionOperator' &&
             expr.conjunction_operator == 'OR' &&
             expr.id.start_with?("conjunction-#{vm_cid}")
       end
 
-      client_class::ConjunctionOperator.new(resource_type: 'ConjunctionOperator',
+      NSXTPolicy::ConjunctionOperator.new(resource_type: 'ConjunctionOperator',
                                           conjunction_operator: 'OR',
                                           id: "conjunction-#{vm_cid}-#{existing_expr_count}")
     end
 
-    def policy_segment_ports_api
-      @policy_segment_ports_api ||= client_class.const_get(api_class_name('PolicyNetworkingConnectivitySegmentsPortsApi')).new(@client_builder.get_client)
-    end
-
     def policy_segment_api
-      @policy_segment_api ||= client_class.const_get(api_class_name('PolicyNetworkingConnectivitySegmentsSegmentsApi')).new(@client_builder.get_client)
+      @policy_segment_api ||= NSXTPolicy::SegmentsApi.new(@client_builder.get_client)
     end
 
     def policy_group_api
-      @policy_group_api ||= client_class.const_get(api_class_name('PolicyInventoryGroupsGroupsApi')).new(@client_builder.get_client)
+      @policy_group_api ||= NSXTPolicy::GroupsApi.new(@client_builder.get_client)
     end
 
     def policy_group_members_api
-      @policy_group_members_api ||= client_class.const_get(api_class_name('PolicyInventoryGroupsGroupMembersApi')).new(@client_builder.get_client)
+      @policy_group_members_api ||= NSXTPolicy::GroupMembersApi.new(@client_builder.get_client)
     end
 
     def policy_load_balancer_pools_api
-      @policy_load_balancer_pools_api ||= client_class.const_get(api_class_name('PolicyNetworkingNetworkServicesLoadBalancingLoadBalancerPoolsApi')).new(@client_builder.get_client)
+      @policy_load_balancer_pools_api ||= NSXTPolicy::LoadBalancerPoolsApi.new(@client_builder.get_client)
     end
 
-    def policy_infra_realized_state_api
-      @policy_infra_realized_state_api ||= client_class.const_get(api_class_name('PolicyInfraRealizedStateApi')).new(@client_builder.get_client)
+    def policy_virtual_machine_api
+      @policy_virtual_machine_api ||= NSXTPolicy::VirtualMachine.new(@client_builder.get_client)
     end
 
     def search_api
-      @search_api ||= client_class.const_get(api_class_name('SearchSearchAPIApi')).new(@client_builder.get_client)
+      @search_api ||= NSXTPolicy::SearchApi.new(@client_builder.get_client)
     end
   end
 end

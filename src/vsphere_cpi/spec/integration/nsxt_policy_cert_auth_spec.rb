@@ -2,7 +2,7 @@ require 'integration/spec_helper'
 require 'openssl'
 require 'securerandom'
 require 'logger'
-require 'nsxt9_policy_client/nsxt_policy_client'
+require 'nsxt_policy_client/nsxt_policy_client'
 require 'nsxt_manager_client/nsxt_manager_client'
 
 describe 'NSXT Policy certificate authentication', nsxt_policy_only: true do

@@ -1,7 +1,7 @@
 require 'digest'
 require 'securerandom'
 require 'integration/spec_helper'
-require 'nsxt9_policy_client/nsxt_policy_client'
+require 'nsxt_policy_client/nsxt_policy_client'
 
 describe 'CPI', nsxt_policy_only: true do
   include VSphereCloud::Logger

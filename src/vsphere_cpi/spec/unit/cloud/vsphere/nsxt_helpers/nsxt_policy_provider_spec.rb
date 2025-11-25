@@ -7,37 +7,37 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
     described_class.new(client)
   end
 
-  let(:policy_group_api) { instance_double(NSXTPolicy::PolicyInventoryGroupsGroupsApi) }
+  let(:policy_group_api) { instance_double(NSXTPolicy::GroupsApi) }
   before do
     allow(nsxt_policy_provider).to receive(:policy_group_api).and_return(policy_group_api)
   end
 
-  let(:policy_group_members_api) { instance_double(NSXTPolicy::PolicyInventoryGroupsGroupMembersApi) }
+  let(:policy_group_members_api) { instance_double(NSXTPolicy::GroupMembersApi) }
   before do
     allow(nsxt_policy_provider).to receive(:policy_group_members_api).and_return(policy_group_members_api)
   end
 
-  let(:policy_load_balancer_pools_api) { instance_double(NSXTPolicy::PolicyNetworkingNetworkServicesLoadBalancingLoadBalancerPoolsApi) }
+  let(:policy_load_balancer_pools_api) { instance_double(NSXTPolicy::LoadBalancerPoolsApi) }
   before do
     allow(nsxt_policy_provider).to receive(:policy_load_balancer_pools_api).and_return(policy_load_balancer_pools_api)
   end
 
-  let(:search_api) { instance_double(NSXTPolicy::SearchSearchAPIApi) }
+  let(:search_api) { instance_double(NSXTPolicy::SearchAPIApi) }
   before do
     allow(nsxt_policy_provider).to receive(:search_api).and_return(search_api)
   end
 
-  let(:policy_segment_ports_api) { instance_double(NSXTPolicy::PolicyNetworkingConnectivitySegmentsPortsApi) }
+  let(:policy_virtual_machine_api) { instance_double(NSXTPolicy::VirtualMachinesApi) }
   before do
-    allow(nsxt_policy_provider).to receive(:policy_segment_ports_api).and_return(policy_segment_ports_api)
+    allow(nsxt_policy_provider).to receive(:policy_virtual_machine_api).and_return(policy_virtual_machine_api)
+    allow(policy_virtual_machine_api).to receive(:list_virtual_machines_on_enforcement_point).and_return(
+      instance_double(NSXTPolicy::SearchResponse, results: [{external_id: 'some-vm-external-id'}])
+    )
   end
 
-  let(:policy_infra_realized_state_api) { instance_double(NSXTPolicy::PolicyInfraRealizedStateApi) }
+  let(:policy_segments_api) { instance_double(NSXTPolicy::SegmentsApi) }
   before do
-    allow(nsxt_policy_provider).to receive(:policy_infra_realized_state_api).and_return(policy_infra_realized_state_api)
-    allow(policy_infra_realized_state_api).to receive(:list_virtual_machines_on_enforcement_point).and_return(
-        instance_double(NSXTPolicy::SearchResponse, results: [{external_id: 'some-vm-external-id'}])
-    )
+    allow(nsxt_policy_provider).to receive(:policy_segments_api).and_return(policy_segments_api)
   end
 
   let(:vm) { instance_double(VSphereCloud::Resources::VM, cid: "some-vm-cid") }
@@ -279,7 +279,7 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
 
     context "when finding the VM by external id fails" do
       before do
-        allow(policy_infra_realized_state_api).to receive(:list_virtual_machines_on_enforcement_point).and_return(
+        allow(policy_virtual_machine_api).to receive(:list_virtual_machines_on_enforcement_point).and_return(
           instance_double(NSXTPolicy::SearchResponse, results: []),
         )
       end
@@ -291,7 +291,7 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
 
     context "when finding the VM by external id fails because NSXT does not yet see it" do
       before do
-        allow(policy_infra_realized_state_api).to receive(:list_virtual_machines_on_enforcement_point).and_return(
+        allow(policy_virtual_machine_api).to receive(:list_virtual_machines_on_enforcement_point).and_return(
           instance_double(NSXTPolicy::SearchResponse, results: []),
           instance_double(NSXTPolicy::SearchResponse, results: []),
           instance_double(NSXTPolicy::SearchResponse, results: [{external_id: 'some-vm-external-id'}])
@@ -401,7 +401,7 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
 
     context "when finding the VM by external id fails because it's connected to a VDS port group and not an NSX segment" do
       before do
-        allow(policy_infra_realized_state_api).to receive(:list_virtual_machines_on_enforcement_point).and_return(
+        allow(policy_virtual_machine_api).to receive(:list_virtual_machines_on_enforcement_point).and_return(
           instance_double(NSXTPolicy::SearchResponse, results: []),
         )
       end
@@ -666,8 +666,8 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
 
     context 'when segment port is scoped under the tier-1 router' do
       before do
-        allow(policy_segment_ports_api).to receive(:get_infra_segment_port).with('segment-id-1', 'segment-port-id-1').and_return(segment_port1)
-        allow(policy_segment_ports_api).to receive(:get_infra_segment_port).with('segment-id-2', 'segment-port-id-2').and_return(segment_port2)
+        allow(policy_segments_api).to receive(:get_infra_segment_port).with('segment-id-1', 'segment-port-id-1').and_return(segment_port1)
+        allow(policy_segments_api).to receive(:get_infra_segment_port).with('segment-id-2', 'segment-port-id-2').and_return(segment_port2)
       end
 
       context 'when segment ports do not have any tags' do
@@ -677,12 +677,12 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
         ] }
 
         it 'adds the id tag' do
-          expect(policy_segment_ports_api).to receive(:patch_infra_segment_port).once.ordered do |segment_id, port_id, segment_port|
+          expect(policy_segments_api).to receive(:patch_infra_segment_port).once.ordered do |segment_id, port_id, segment_port|
             expect(segment_id).to eq('segment-id-1')
             expect(port_id).to eq('segment-port-id-1')
             expect(segment_port.tags).to eq(new_tags)
           end
-          expect(policy_segment_ports_api).to receive(:patch_infra_segment_port).once.ordered do |segment_id, port_id, segment_port|
+          expect(policy_segments_api).to receive(:patch_infra_segment_port).once.ordered do |segment_id, port_id, segment_port|
             expect(segment_id).to eq('segment-id-2')
             expect(port_id).to eq('segment-port-id-2')
             expect(segment_port.tags).to eq(new_tags)
@@ -702,12 +702,12 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
         ] }
 
         it 'sets the id tag' do
-          expect(policy_segment_ports_api).to receive(:patch_infra_segment_port).once.ordered do |segment_id, port_id, segment_port|
+          expect(policy_segments_api).to receive(:patch_infra_segment_port).once.ordered do |segment_id, port_id, segment_port|
             expect(segment_id).to eq('segment-id-1')
             expect(port_id).to eq('segment-port-id-1')
             expect(segment_port.tags).to eq(new_tags)
           end
-          expect(policy_segment_ports_api).to receive(:patch_infra_segment_port).once.ordered do |segment_id, port_id, segment_port|
+          expect(policy_segments_api).to receive(:patch_infra_segment_port).once.ordered do |segment_id, port_id, segment_port|
             expect(segment_id).to eq('segment-id-2')
             expect(port_id).to eq('segment-port-id-2')
             expect(segment_port.tags).to eq(new_tags)
@@ -728,12 +728,12 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
         ] }
 
         it 'consolidates the existing id tags and sets it' do
-          expect(policy_segment_ports_api).to receive(:patch_infra_segment_port).once.ordered do |segment_id, port_id, segment_port|
+          expect(policy_segments_api).to receive(:patch_infra_segment_port).once.ordered do |segment_id, port_id, segment_port|
             expect(segment_id).to eq('segment-id-1')
             expect(port_id).to eq('segment-port-id-1')
             expect(segment_port.tags).to eq(new_tags)
           end
-          expect(policy_segment_ports_api).to receive(:patch_infra_segment_port).once.ordered do |segment_id, port_id, segment_port|
+          expect(policy_segments_api).to receive(:patch_infra_segment_port).once.ordered do |segment_id, port_id, segment_port|
             expect(segment_id).to eq('segment-id-2')
             expect(port_id).to eq('segment-port-id-2')
             expect(segment_port.tags).to eq(new_tags)
@@ -795,18 +795,18 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
       ] }
 
       before do
-        allow(policy_segment_ports_api).to receive(:get_tier1_segment_port).with('tier-1-name-1', 'segment-id-1', 'segment-port-id-1').and_return(segment_port1)
-        allow(policy_segment_ports_api).to receive(:get_tier1_segment_port).with('tier-1-name-2', 'segment-id-2', 'segment-port-id-2').and_return(segment_port2)
+        allow(policy_segments_api).to receive(:get_tier1_segment_port).with('tier-1-name-1', 'segment-id-1', 'segment-port-id-1').and_return(segment_port1)
+        allow(policy_segments_api).to receive(:get_tier1_segment_port).with('tier-1-name-2', 'segment-id-2', 'segment-port-id-2').and_return(segment_port2)
       end
 
       it 'adds the id tag' do
-        expect(policy_segment_ports_api).to receive(:patch_tier1_segment_port).once.ordered do |tier1_name, segment_id, port_id, segment_port|
+        expect(policy_segments_api).to receive(:patch_tier1_segment_port).once.ordered do |tier1_name, segment_id, port_id, segment_port|
           expect(tier1_name).to eq('tier-1-name-1')
           expect(segment_id).to eq('segment-id-1')
           expect(port_id).to eq('segment-port-id-1')
           expect(segment_port.tags).to eq(new_tags)
         end
-        expect(policy_segment_ports_api).to receive(:patch_tier1_segment_port).once.ordered do |tier1_name, segment_id, port_id, segment_port|
+        expect(policy_segments_api).to receive(:patch_tier1_segment_port).once.ordered do |tier1_name, segment_id, port_id, segment_port|
           expect(tier1_name).to eq('tier-1-name-2')
           expect(segment_id).to eq('segment-id-2')
           expect(port_id).to eq('segment-port-id-2')
@@ -900,8 +900,9 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
     let(:group_2) { NSXTPolicy::Group.new(group_2_attributes) }
 
     before do
-        allow(search_api).to receive(:query_search).with("resource_type:Group AND display_name:(fake nsgroup 1 OR fake nsgroup 2)").
-          and_return(double(NSXTPolicy::SearchResponse, results: results) )
+        allow(search_api).to receive(:query_search).
+          with("resource_type:Group AND display_name:(fake nsgroup 1 OR fake nsgroup 2)", {:page_size=>50}).
+          and_return(double(NSXTPolicy::SearchResponse, results: results, cursor: nil) )
     end
 
     context "when all groups are found" do
@@ -922,7 +923,23 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
         expect(nsxt_policy_provider.retrieve_groups_by_name([group_1.display_name, group_2.display_name])).to eq([])
       end
     end
+    context "when there are 2 pages" do
+      before do
+        expect(search_api).to receive(:query_search).
+          with("resource_type:Group AND display_name:(fake nsgroup 1 OR fake nsgroup 2)", {:page_size=>50}).
+          and_return(double(NSXTPolicy::SearchResponse, results: results, cursor: "page-0-cursor") )
 
+        expect(search_api).to receive(:query_search).
+          with("resource_type:Group AND display_name:(fake nsgroup 1 OR fake nsgroup 2)", {:page_size=>50, :cursor=>"page-0-cursor"}).
+          and_return(double(NSXTPolicy::SearchResponse, results: results_page_2, cursor: nil) )
+      end
+      let(:results) { [group_1_attributes] }
+      let(:results_page_2) { [group_2_attributes] }
+
+      it "returns all groups" do
+        expect(nsxt_policy_provider.retrieve_groups_by_name([group_1.display_name, group_2.display_name])).to contain_exactly(group_1, group_2)
+      end
+    end
   end
 
   describe "#retrieve_groups_by_id" do
