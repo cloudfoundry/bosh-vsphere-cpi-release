@@ -425,18 +425,19 @@ jobs:
           - get: vcpi-main-image
           - get: bosh-cpi-src
             tags: [nimbus]
-            passed: [pre-bats-fan-in]
+            # TODO before merge uncomment
+#            passed: [pre-bats-fan-in]
+            passed: [unit-test]
             trigger: true
           - put: environment
-            tags: [broadcom]
-            resource: pool-9.0-nsxt90-cvds
-            inputs: detect
-            params: {acquire: true}
-            on_failure:
-              put: pool-9.0-nsxt90-cvds
-              tags: [broadcom]
-              inputs: detect
-              params : {release: environment}
+            tags: [nimbus]
+            resource: pool-9.0-nsxt42-policy
+            timeout: 4h
+            params:
+              action: create
+              lifetime: <%= 8 * 60 * 60 %>
+              timeout: <%= 4 * 60 * 60 %>
+              resource: testbed-lock
       - task: build
         file: source-ci/ci/tasks/build-candidate.yml
         image: vcpi-main-image
@@ -466,12 +467,12 @@ jobs:
               RUBY_GEMS_MIRROR: ((repository_mirrors.rubygems))
         on_failure:
           in_parallel:
-            - put: pool-9.0-nsxt90-cvds
+            - put: pool-9.0-nsxt90-policy
               tags: [broadcom]
               inputs: detect
               params : {remove: environment}
         on_success:
-          put: pool-9.0-nsxt90-cvds
+          put: pool-9.0-nsxt90-policy
           tags: [broadcom]
           inputs: detect
           params : {release: environment}

@@ -7,9 +7,9 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
     described_class.new(client)
   end
 
-  let(:policy_group_api) { instance_double(NSXTPolicy::GroupsApi) }
+  let(:policy_groups_api) { instance_double(NSXTPolicy::GroupsApi) }
   before do
-    allow(nsxt_policy_provider).to receive(:policy_group_api).and_return(policy_group_api)
+    allow(nsxt_policy_provider).to receive(:policy_groups_api).and_return(policy_groups_api)
   end
 
   let(:policy_group_members_api) { instance_double(NSXTPolicy::GroupMembersApi) }
@@ -66,9 +66,9 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
     let(:groups) { [group_1, group_2] }
 
     before do
-      allow(policy_group_api).to receive(:read_group_for_domain).
+      allow(policy_groups_api).to receive(:read_group_for_domain).
           with(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, "fake-nsgroup-1-id").and_return(group_1)
-      allow(policy_group_api).to receive(:read_group_for_domain).
+      allow(policy_groups_api).to receive(:read_group_for_domain).
           with(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, "fake-nsgroup-2-id").and_return(group_2)
     end
 
@@ -76,14 +76,14 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
       it "should reload the group to ensure it has the latest revision" do
         #throw some kind of conlfict error
         call_count = 0
-        allow(policy_group_api).to receive(:update_group_for_domain).
+        allow(policy_groups_api).to receive(:update_group_for_domain).
           with(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, group_1.id, group_1) do
           call_count += 1
           conflict_response = NSXTPolicy::ApiCallError.new(code: 409, response_body: 'The object was modified by somebody else')
           raise conflict_response if call_count == 1
         end
         nsxt_policy_provider.add_vm_to_groups(vm, [group_1])
-        expect(policy_group_api).to have_received(:read_group_for_domain).
+        expect(policy_groups_api).to have_received(:read_group_for_domain).
           with(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, "fake-nsgroup-1-id").twice
       end
     end
@@ -91,12 +91,12 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
     context 'when groups do not have any existing members' do
       it 'adds vm to groups' do
         expected_expression = NSXTPolicy::ExternalIDExpression.new(resource_type: 'ExternalIDExpression', member_type: 'VirtualMachine', external_ids: ['some-vm-external-id'])
-        expect(policy_group_api).to receive(:update_group_for_domain).
+        expect(policy_groups_api).to receive(:update_group_for_domain).
           with(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, group_1.id, group_1) do |domain, group_id, group|
             expect(group.expression).to eq([expected_expression])
           end
 
-        expect(policy_group_api).to receive(:update_group_for_domain).
+        expect(policy_groups_api).to receive(:update_group_for_domain).
           with( VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, group_2.id, group_2) do |domain, group_id, group|
             expect(group.expression).to eq([expected_expression])
           end
@@ -114,12 +114,12 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
 
       it 'adds vm to existing members' do
         expected_expression = NSXTPolicy::ExternalIDExpression.new(resource_type: 'ExternalIDExpression', member_type: 'VirtualMachine', external_ids: ['existing-vm-external-id', 'some-vm-external-id'])
-        expect(policy_group_api).to receive(:update_group_for_domain).
+        expect(policy_groups_api).to receive(:update_group_for_domain).
           with(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, group_1.id, group_1) do |domain, group_id, group|
             expect(group.expression).to eq([expected_expression])
           end
 
-        expect(policy_group_api).to receive(:update_group_for_domain).
+        expect(policy_groups_api).to receive(:update_group_for_domain).
           with( VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, group_2.id, group_2) do |domain, group_id, group|
             expect(group.expression).to eq([expected_expression])
           end
@@ -146,7 +146,7 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
 
       it 'makes a new criteria for the ids of additional VMs past 500 external ids with conjunction operator' do
         additional_vm = NSXTPolicy::ExternalIDExpression.new(resource_type: 'ExternalIDExpression', member_type: 'VirtualMachine', external_ids: ['some-vm-external-id'])
-        expect(policy_group_api).to receive(:update_group_for_domain).
+        expect(policy_groups_api).to receive(:update_group_for_domain).
           with(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, group_1.id, group_1) do |domain, group_id, group|
             expect(group.expression).to eq([first_500_vms, conjunction_expression, additional_vm])
           end
@@ -182,7 +182,7 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
 
       it 'adds vm to the expression with less than 500 vms' do
         next_201_vms = NSXTPolicy::ExternalIDExpression.new(resource_type: 'ExternalIDExpression', member_type: 'VirtualMachine', external_ids: existing_external_ids_200.dup.append('some-vm-external-id'))
-        expect(policy_group_api).to receive(:update_group_for_domain).
+        expect(policy_groups_api).to receive(:update_group_for_domain).
           with(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, group_1.id, group_1) do |domain, group_id, group|
             expect(group.expression).to eq([first_500_vms, conjunction_expression, next_201_vms])
           end
@@ -220,7 +220,7 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
       it 'generates unique conjunction expression and places vm in third expression group' do
         conjunction_with_vm = NSXTPolicy::ConjunctionOperator.new(resource_type: 'ConjunctionOperator', conjunction_operator: 'OR', id: 'conjunction-some-vm-cid-1')
         new_vm_member =  NSXTPolicy::ExternalIDExpression.new(resource_type: 'ExternalIDExpression', member_type: 'VirtualMachine', external_ids: ['some-vm-external-id'])
-        expect(policy_group_api).to receive(:update_group_for_domain).
+        expect(policy_groups_api).to receive(:update_group_for_domain).
           with(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, group_1.id, group_1) do |domain, group_id, group|
             expect(group.expression).to eq([first_500_vms, conjunction_expression, next_500_vms, conjunction_with_vm, new_vm_member])
           end
@@ -246,7 +246,7 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
         new_vm_expression = NSXTPolicy::ExternalIDExpression.new(resource_type: 'ExternalIDExpression',
                                                                member_type: 'VirtualMachine',
                                                                external_ids: ['some-vm-external-id'])
-        expect(policy_group_api).to receive(:update_group_for_domain).
+        expect(policy_groups_api).to receive(:update_group_for_domain).
           with(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, group_1.id, group_1) do |domain, group_id, group|
             expect(group.expression).to eq([existing_expression, conjunction_expression, new_vm_expression])
           end
@@ -272,7 +272,7 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
       end
 
       it 'does not add it' do
-        expect(policy_group_api).to_not receive(:update_group_for_domain)
+        expect(policy_groups_api).to_not receive(:update_group_for_domain)
         nsxt_policy_provider.add_vm_to_groups(vm, [group_1])
       end
     end
@@ -299,11 +299,11 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
       end
 
       it "should retry the find" do
-        allow(policy_group_api).to receive(:update_group_for_domain)
+        allow(policy_groups_api).to receive(:update_group_for_domain)
 
         nsxt_policy_provider.add_vm_to_groups(vm, [group_1])
 
-        expect(policy_group_api).to have_received(:update_group_for_domain)
+        expect(policy_groups_api).to have_received(:update_group_for_domain)
       end
     end
   end
@@ -312,16 +312,16 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
     let(:groups_result) { instance_double(NSXTPolicy::PolicyResourceReferenceForEPListResult, results: [group1ref, group2ref], cursor: nil) }
     before do
       allow(policy_group_members_api).to receive(:get_groups_for_vm).and_return(groups_result)
-      allow(policy_group_api).to receive(:read_group_for_domain).
+      allow(policy_groups_api).to receive(:read_group_for_domain).
           with(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, "some-group-1").and_return(group1)
-      allow(policy_group_api).to receive(:read_group_for_domain).
+      allow(policy_groups_api).to receive(:read_group_for_domain).
           with(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, "some-group-2").and_return(group2)
     end
 
     context 'when groups are empty' do
       let(:groups_result) { instance_double(NSXTPolicy::PolicyResourceReferenceForEPListResult, results: [], cursor: nil) }
       it 'does not delete from groups' do
-        expect(policy_group_api).to_not receive(:update_group_for_domain)
+        expect(policy_groups_api).to_not receive(:update_group_for_domain)
         nsxt_policy_provider.remove_vm_from_groups(vm)
       end
     end
@@ -341,11 +341,11 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
                                      id: "some-group-2")}
 
       it 'removes vm from groups' do
-        expect(policy_group_api).to receive(:update_group_for_domain).
+        expect(policy_groups_api).to receive(:update_group_for_domain).
             with(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN,
                  "some-group-1",
                  group1)
-        expect(policy_group_api).to receive(:update_group_for_domain).
+        expect(policy_groups_api).to receive(:update_group_for_domain).
             with(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN,
                  "some-group-2",
                  group2)
@@ -379,11 +379,11 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
                                      id: "some-group-2")}
 
       it 'removes vm from groups with conjunction operator' do
-        expect(policy_group_api).to receive(:update_group_for_domain).
+        expect(policy_groups_api).to receive(:update_group_for_domain).
             with(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN,
                  "some-group-1",
                  group1)
-        expect(policy_group_api).to receive(:update_group_for_domain).
+        expect(policy_groups_api).to receive(:update_group_for_domain).
             with(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN,
                  "some-group-2",
                  group2)
@@ -432,11 +432,11 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
                                      id: "some-group-2")}
 
       it 'does not remove from groups' do
-        expect(policy_group_api).to receive(:update_group_for_domain).
+        expect(policy_groups_api).to receive(:update_group_for_domain).
             with(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN,
                  "some-group-1",
                  group1)
-        expect(policy_group_api).to_not receive(:update_group_for_domain)
+        expect(policy_groups_api).to_not receive(:update_group_for_domain)
         nsxt_policy_provider.remove_vm_from_groups(vm)
         expect(group1.expression).to match_array([existing_expression])
       end
@@ -462,11 +462,11 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
                                      id: "some-group-2")}
 
       it 'removes the whole expression with conjunction expression' do
-        expect(policy_group_api).to receive(:update_group_for_domain).
+        expect(policy_groups_api).to receive(:update_group_for_domain).
             with(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN,
                  "some-group-1",
                  group1)
-        expect(policy_group_api).to receive(:update_group_for_domain).
+        expect(policy_groups_api).to receive(:update_group_for_domain).
             with(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN,
                  "some-group-2",
                  group2)
@@ -485,11 +485,11 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
                                        expression: [another_expression, conjunction_expression, existing_expression],
                                        id: "some-group-1")}
         it 'removes the whole expression with conjunction expression' do
-          expect(policy_group_api).to receive(:update_group_for_domain).
+          expect(policy_groups_api).to receive(:update_group_for_domain).
             with(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN,
                  "some-group-1",
                  group1)
-          expect(policy_group_api).to receive(:update_group_for_domain).
+          expect(policy_groups_api).to receive(:update_group_for_domain).
             with(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN,
                  "some-group-2",
                  group2)
