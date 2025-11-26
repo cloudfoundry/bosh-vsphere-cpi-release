@@ -4,8 +4,8 @@ require 'integration/spec_helper'
 require 'nsxt_manager_client/nsxt_manager_client'
 require 'nsxt_policy_client/nsxt_policy_client'
 
-describe 'CPI', nsxt_all: true do
-
+# This spec is designed to run on environments which have both the policy and management APIs available.
+describe 'CPI tests with NSXT', nsxt_all: true do
   before(:all) do
     # Read basic info about env
     @nsxt_host = fetch_property('BOSH_VSPHERE_CPI_NSXT_HOST')
@@ -52,12 +52,12 @@ describe 'CPI', nsxt_all: true do
       policy_configuration.verify_ssl_host = false
     end
     policy_client = NSXTPolicy::ApiClient.new(policy_configuration)
-    @policy_groups_api = NSXTPolicy::PolicyInventoryGroupsGroupsApi.new(policy_client)
-    @policy_load_balancer_pools_api = NSXTPolicy::PolicyNetworkingNetworkServicesLoadBalancingLoadBalancerPoolsApi.new(policy_client)
-    @policy_group_members_api = NSXTPolicy::PolicyInventoryGroupsGroupMembersApi.new(policy_client)
-    @policy_segments_api = NSXTPolicy::PolicyNetworkingConnectivitySegmentsSegmentsApi.new(policy_client)
-    @policy_enforcement_points_api = NSXTPolicy::PolicyInfraEnforcementPointsApi.new(policy_client)
-    @segments_ports_api = NSXTPolicy::PolicyNetworkingConnectivitySegmentsPortsApi.new(policy_client)
+    @policy_groups_api = NSXTPolicy::GroupsApi.new(policy_client)
+    @policy_load_balancer_pools_api = NSXTPolicy::LoadBalancerPoolsApi.new(policy_client)
+    @policy_group_members_api = NSXTPolicy::GroupMembersApi.new(policy_client)
+    @policy_segments_api = NSXTPolicy::SegmentsApi.new(policy_client)
+    @policy_transport_zones_api = NSXTPolicy::TransportZonesApi.new(policy_client)
+    @segments_api = NSXTPolicy::SegmentsApi.new(policy_client)
   end
 
   after(:all) do
@@ -1744,7 +1744,7 @@ describe 'CPI', nsxt_all: true do
   def verify_policy_ports(segments)
     retryer do
       segments.each do |segment|
-        segment_ports = @segments_ports_api.list_infra_segment_ports(segment.id).results
+        segment_ports = @segments_api.list_infra_segment_ports(segment.id).results
         raise SegmentPortsAreNotInitialized.new if segment_ports.empty?
         expect(segment_ports.length).to eq(1)
         yield segment_ports if block_given?
@@ -1773,7 +1773,7 @@ describe 'CPI', nsxt_all: true do
   end
 
   def create_segments(segments)
-    tzs = @policy_enforcement_points_api.list_transport_zones_for_enforcement_point(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, 'default')
+    tzs = @policy_transport_zones_api.list_transport_zones_for_enforcement_point(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, 'default')
     overlay_tz = tzs.results.find { |tz| tz.display_name == 'tz-overlay' }
     segments.each do |segment|
       seg_1 = NSXTPolicy::Segment.new(display_name: segment.name, transport_zone_path: overlay_tz.path)

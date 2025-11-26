@@ -257,34 +257,6 @@ module VSphereCloud
     private
 
     DEFAULT_NSXT_POLICY_DOMAIN = 'default'.freeze
-
-    def api_class_name(api_name)
-      # Handle API class name differences between old and new NSXT policy clients
-      use_nsxt9_policy_client = ENV['BOSH_VSPHERE_CPI_NSXT_POLICY_ONLY'] == 'true'
-      
-      if use_nsxt9_policy_client
-        case api_name
-        when 'SearchSearchAPIApi'
-          'SearchApi'
-        when 'PolicyNetworkingConnectivitySegmentsPortsApi'
-          'PortsApi'
-        when 'PolicyNetworkingConnectivitySegmentsSegmentsApi'
-          'SegmentsApi'
-        when 'PolicyInventoryGroupsGroupsApi'
-          'GroupsApi'
-        when 'PolicyInventoryGroupsGroupMembersApi'
-          'GroupMembersApi'
-        when 'PolicyNetworkingNetworkServicesLoadBalancingLoadBalancerPoolsApi'
-          'LoadBalancerPoolsApi'
-        when 'PolicyInfraRealizedStateApi'
-          'VirtualMachinesApi'
-        else
-          api_name
-        end
-      else
-        api_name
-      end
-    end
     NSXT_MIN_SLEEP = 1
     DEFAULT_SLEEP = 1
     NSXT_SEGMENT_PORT_RETRIES = 300
