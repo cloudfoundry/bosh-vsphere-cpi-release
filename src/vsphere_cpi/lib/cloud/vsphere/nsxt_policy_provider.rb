@@ -426,7 +426,7 @@ module VSphereCloud
     end
 
     def policy_virtual_machine_api
-      @policy_virtual_machine_api ||= NSXTPolicy::VirtualMachine.new(@client_builder.get_client)
+      @policy_virtual_machine_api ||= NSXTPolicy::VirtualMachinesApi.new(@client_builder.get_client)
     end
 
     def search_api
