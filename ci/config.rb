@@ -50,9 +50,10 @@ $pipeline.pool('9.0-nsxt90-policy') do |pool|
     RSPEC_FLAGS: [
       '--tag ~nvds',
       '--tag ~host_maintenance',
+      '--tag ~nsxt_pure_management',
       '--tag cvds',
       '--tag nsxt_all',
-      '--tag nsxt_policy_only',
+      '--tag nsxt_pure_policy',
     ].join(' '),
   }
 end
