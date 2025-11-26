@@ -5,7 +5,7 @@ require 'nsxt_manager_client/nsxt_manager_client'
 require 'nsxt_policy_client/nsxt_policy_client'
 
 # This spec is designed to run on environments which have both the policy and management APIs available.
-describe 'CPI tests with NSXT', nsxt_all: true do
+describe 'CPI tests with NSXT', nsxt_all: true, nsxt_management: true do
   before(:all) do
     # Read basic info about env
     @nsxt_host = fetch_property('BOSH_VSPHERE_CPI_NSXT_HOST')

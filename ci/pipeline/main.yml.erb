@@ -397,10 +397,9 @@ jobs:
               JUMPBOX_PRIVATE_KEY: ((nimbus_jumpbox_key.private_key))
               RUBY_GEMS_MIRROR: ((repository_mirrors.rubygems))
         on_failure:
-          in_parallel:
-            - put: pool-8.0-nsxt42-policy
-              tags: [nimbus]
-              params: { action: extend, lifetime: <%= 24 * 60 * 60 %>, resource: environment }
+          put: pool-8.0-nsxt42-policy
+          tags: [nimbus]
+          params: { action: extend, lifetime: <%= 24 * 60 * 60 %>, resource: environment }
         on_success:
           put: pool-8.0-nsxt42-policy
           tags: [nimbus]
@@ -431,7 +430,7 @@ jobs:
             trigger: true
           - put: environment
             tags: [nimbus]
-            resource: pool-9.0-nsxt42-policy
+            resource: pool-9.0-nsxt90-policy
             timeout: 4h
             params:
               action: create
@@ -466,22 +465,13 @@ jobs:
               JUMPBOX_PRIVATE_KEY: ((nimbus_jumpbox_key.private_key))
               RUBY_GEMS_MIRROR: ((repository_mirrors.rubygems))
         on_failure:
-          in_parallel:
-            - put: pool-9.0-nsxt90-policy
-              tags: [broadcom]
-              inputs: detect
-              params : {remove: environment}
+          put: pool-9.0-nsxt90-policy
+          tags: [nimbus]
+          params: { action: extend, lifetime: <%= 24 * 60 * 60 %>, resource: environment }
         on_success:
           put: pool-9.0-nsxt90-policy
-          tags: [broadcom]
-          inputs: detect
-          params : {release: environment}
-        ensure:
-          do:
-            - task: teardown
-              tags: [nimbus]
-              file: source-ci/ci/tasks/teardown.yml
-              image: vcpi-main-image
+          tags: [nimbus]
+          params : { action: release, resource: environment }
 
   - name: pre-release-fan-in
     serial: true
