@@ -1,8 +1,8 @@
 GEM
   remote: https://usw1.packages.broadcom.com/artifactory/tas-bosh-gems-virtual/
   specs:
-    addressable (2.8.7)
-      public_suffix (>= 2.0.2, < 7.0)
+    addressable (2.8.8)
+      public_suffix (>= 2.0.2, < 8.0)
     ansi (1.5.0)
     ast (2.4.3)
     bosh_common (1.3262.24.0)
@@ -55,7 +55,7 @@ GEM
     pry-byebug (3.11.0)
       byebug (~> 12.0)
       pry (>= 0.13, < 0.16)
-    public_suffix (6.0.2)
+    public_suffix (7.0.0)
     racc (1.8.1)
     rack (2.2.21)
     rake (13.3.1)
@@ -94,7 +94,7 @@ GEM
     vsphere-automation-vcenter (0.4.7)
       vsphere-automation-cis (~> 0.4.6)
       vsphere-automation-runtime (~> 0.4.6)
-    webrick (1.9.1)
+    webrick (1.9.2)
 
 PLATFORMS
   arm64-darwin
