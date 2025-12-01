@@ -181,7 +181,7 @@ jobs:
             params:
               BAT_INFRASTRUCTURE: vsphere
               BAT_RSPEC_FLAGS:    "--tag ~dns --tag ~vip_networking --tag ~dynamic_networking --tag ~root_partition --tag ~raw_ephemeral_storage --tag ~ipv6"
-              STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-jammy-go_agent
+              STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-noble
               JUMPBOX_PRIVATE_KEY: ((nimbus_jumpbox_key.private_key))
               RUBY_GEMS_MIRROR: ((repository_mirrors.rubygems))
         on_failure:
@@ -253,7 +253,7 @@ jobs:
           params:
             BAT_INFRASTRUCTURE: vsphere
             BAT_RSPEC_FLAGS:    "--tag ~dns --tag ~vip_networking --tag ~dynamic_networking --tag ~root_partition --tag ~raw_ephemeral_storage --tag ~ipv6"
-            STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-jammy-go_agent
+            STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-noble
             JUMPBOX_PRIVATE_KEY: ((nimbus_jumpbox_key.private_key))
             RUBY_GEMS_MIRROR: ((repository_mirrors.rubygems))
         on_failure:
@@ -323,7 +323,7 @@ jobs:
             params:
               BAT_INFRASTRUCTURE: vsphere
               BAT_RSPEC_FLAGS:    "--tag ~dns --tag ~vip_networking --tag ~dynamic_networking --tag ~root_partition --tag ~raw_ephemeral_storage --tag ~ipv6"
-              STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-jammy-go_agent
+              STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-noble
               JUMPBOX_PRIVATE_KEY: ((nimbus_jumpbox_key.private_key))
               RUBY_GEMS_MIRROR: ((repository_mirrors.rubygems))
         on_failure:
@@ -393,7 +393,7 @@ jobs:
             params:
               BAT_INFRASTRUCTURE: vsphere
               BAT_RSPEC_FLAGS:    "--tag ~dns --tag ~vip_networking --tag ~dynamic_networking --tag ~root_partition --tag ~raw_ephemeral_storage --tag ~ipv6"
-              STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-jammy-go_agent
+              STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-noble
               JUMPBOX_PRIVATE_KEY: ((nimbus_jumpbox_key.private_key))
               RUBY_GEMS_MIRROR: ((repository_mirrors.rubygems))
         on_failure:
@@ -454,6 +454,8 @@ jobs:
             tags: [nimbus]
             file: source-ci/ci/tasks/deploy-director.yml
             image: vcpi-main-image
+            params:
+              JUMPBOX_PRIVATE_KEY: ((nimbus_jumpbox_key.private_key))
           - task: run-bats
             tags: [nimbus]
             file: source-ci/ci/tasks/run-bats-cvds.yml
@@ -461,7 +463,7 @@ jobs:
             params:
               BAT_INFRASTRUCTURE: vsphere
               BAT_RSPEC_FLAGS:    "--tag ~dns --tag ~vip_networking --tag ~dynamic_networking --tag ~root_partition --tag ~raw_ephemeral_storage --tag ~ipv6"
-              STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-jammy-go_agent
+              STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-noble
               JUMPBOX_PRIVATE_KEY: ((nimbus_jumpbox_key.private_key))
               RUBY_GEMS_MIRROR: ((repository_mirrors.rubygems))
         on_failure:
@@ -808,7 +810,7 @@ resources:
     tags: [nimbus]
     type: bosh-io-stemcell
     source:
-      name: bosh-vsphere-esxi-ubuntu-jammy-go_agent
+      name: bosh-vsphere-esxi-ubuntu-noble
   - name: bosh-deployment
     tags: [nimbus]
     type: git
