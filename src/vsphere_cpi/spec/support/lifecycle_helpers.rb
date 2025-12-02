@@ -257,7 +257,7 @@ module LifecycleHelpers
 
     start_time = Time.now
     cpi.logger.info("Waiting for VMWare Tools on the VM...")
-    Bosh::Common.retryable(tries: 20, on: VMWareToolsNotFound) do
+    Bosh::Common.retryable(tries: 30, on: VMWareToolsNotFound) do
       wait_for_vmware_tools(cpi, vm_name)
     end
     cpi.logger.info("Finished waiting for VMWare Tools. Took #{Time.now - start_time} seconds.")

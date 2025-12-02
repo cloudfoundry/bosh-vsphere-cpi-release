@@ -433,9 +433,7 @@ jobs:
           - get: vcpi-main-image
           - get: bosh-cpi-src
             tags: [nimbus]
-            # TODO before merge uncomment
-#            passed: [pre-bats-fan-in]
-            passed: [unit-test]
+            passed: [pre-bats-fan-in]
             trigger: true
           - put: environment
             tags: [nimbus]
