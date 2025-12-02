@@ -5,7 +5,7 @@ require 'logger'
 require 'nsxt_policy_client/nsxt_policy_client'
 require 'nsxt_manager_client/nsxt_manager_client'
 
-describe 'NSXT policy certificate authentication', nsxt_policy_only: true do
+describe 'NSXT policy certificate authentication', nsxt_pure_policy: true do
 
   before(:all) do
     @nsxt_host = fetch_property('BOSH_VSPHERE_CPI_NSXT_HOST')

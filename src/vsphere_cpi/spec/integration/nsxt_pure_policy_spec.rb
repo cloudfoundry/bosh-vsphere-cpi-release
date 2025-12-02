@@ -4,7 +4,7 @@ require 'integration/spec_helper'
 require 'nsxt_policy_client/nsxt_policy_client'
 
 # This spec is designed to run on environments which have only the policy API available.
-describe 'CPI', nsxt_pure_policy: true, nsxt_management: true do
+describe 'CPI', nsxt_pure_policy: true do
   include VSphereCloud::Logger
   before(:all) do
     # Read basic info about env
