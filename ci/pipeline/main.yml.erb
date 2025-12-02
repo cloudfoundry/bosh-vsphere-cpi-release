@@ -132,6 +132,7 @@ jobs:
             tags: [nimbus]
           - {get: bosh-release,             trigger: false, tags: [nimbus], resource: old-bosh-release}
           - {get: stemcell,                 trigger: false, tags: [nimbus]}
+          - {get: stemcell-director,        trigger: false, tags: [nimbus]}
           - {get: certification,            trigger: false, tags: [nimbus]}
           - {get: bosh-deployment,          trigger: false, tags: [nimbus]}
           - {get: bats,                     trigger: false, tags: [nimbus]}
@@ -166,12 +167,13 @@ jobs:
             -o certification/shared/assets/ops/remove-hm.yml
             -o bosh-deployment/vsphere/resource-pool.yml
             -o certification/shared/assets/ops/remove-provider-cert.yml
-            -o bosh-deployment/misc/source-releases/bosh.yml
       - do:
           - task: deploy-director
             tags: [nimbus]
             file: source-ci/ci/tasks/deploy-director.yml
             image: vcpi-main-image
+            input_mapping:
+              stemcell: stemcell-director
             params:
               JUMPBOX_PRIVATE_KEY: ((nimbus_jumpbox_key.private_key))
           - task: run-bats
@@ -202,7 +204,8 @@ jobs:
         - get: source-ci
           tags: [nimbus]
         - {get: bosh-release,             trigger: false, tags: [nimbus], resource: old-bosh-release}
-        - {get: stemcell,                 trigger: false, tags: [nimbus], resource: stemcell}
+        - {get: stemcell,                 trigger: false, tags: [nimbus]}
+        - {get: stemcell-director,        trigger: false, tags: [nimbus]}
         - {get: certification,            trigger: false, tags: [nimbus]}
         - {get: bosh-deployment,          trigger: false, tags: [nimbus]}
         - {get: bats,                     trigger: false, tags: [nimbus]}
@@ -238,12 +241,13 @@ jobs:
             -o certification/shared/assets/ops/remove-hm.yml
             -o bosh-deployment/vsphere/resource-pool.yml
             -o certification/shared/assets/ops/remove-provider-cert.yml
-            -o bosh-deployment/misc/source-releases/bosh.yml
       - do:
         - task: deploy-director
           tags: [nimbus]
           file: source-ci/ci/tasks/deploy-director.yml
           image: vcpi-main-image
+          input_mapping:
+            stemcell: stemcell-director
           params:
             JUMPBOX_PRIVATE_KEY: ((nimbus_jumpbox_key.private_key))
         - task: run-bats
@@ -253,7 +257,7 @@ jobs:
           params:
             BAT_INFRASTRUCTURE: vsphere
             BAT_RSPEC_FLAGS:    "--tag ~dns --tag ~vip_networking --tag ~dynamic_networking --tag ~root_partition --tag ~raw_ephemeral_storage --tag ~ipv6"
-            STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-noble
+            STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-jammy-go_agent
             JUMPBOX_PRIVATE_KEY: ((nimbus_jumpbox_key.private_key))
             RUBY_GEMS_MIRROR: ((repository_mirrors.rubygems))
         on_failure:
@@ -274,6 +278,7 @@ jobs:
             tags: [nimbus]
           - {get: bosh-release,             trigger: false, tags: [nimbus], resource: old-bosh-release}
           - {get: stemcell,                 trigger: false, tags: [nimbus]}
+          - {get: stemcell-director,        trigger: false, tags: [nimbus]}
           - {get: certification,            trigger: false, tags: [nimbus]}
           - {get: bosh-deployment,          trigger: false, tags: [nimbus]}
           - {get: bats,                     trigger: false, tags: [nimbus]}
@@ -308,12 +313,13 @@ jobs:
             -o certification/shared/assets/ops/remove-hm.yml
             -o bosh-deployment/vsphere/resource-pool.yml
             -o certification/shared/assets/ops/remove-provider-cert.yml
-            -o bosh-deployment/misc/source-releases/bosh.yml
       - do:
           - task: deploy-director
             tags: [nimbus]
             file: source-ci/ci/tasks/deploy-director.yml
             image: vcpi-main-image
+            input_mapping:
+              stemcell: stemcell-director
             params:
               JUMPBOX_PRIVATE_KEY: ((nimbus_jumpbox_key.private_key))
           - task: run-bats
@@ -323,7 +329,7 @@ jobs:
             params:
               BAT_INFRASTRUCTURE: vsphere
               BAT_RSPEC_FLAGS:    "--tag ~dns --tag ~vip_networking --tag ~dynamic_networking --tag ~root_partition --tag ~raw_ephemeral_storage --tag ~ipv6"
-              STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-noble
+              STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-jammy-go_agent
               JUMPBOX_PRIVATE_KEY: ((nimbus_jumpbox_key.private_key))
               RUBY_GEMS_MIRROR: ((repository_mirrors.rubygems))
         on_failure:
@@ -344,6 +350,7 @@ jobs:
             tags: [nimbus]
           - {get: bosh-release,             trigger: false, tags: [nimbus], resource: old-bosh-release}
           - {get: stemcell,                 trigger: false, tags: [nimbus]}
+          - {get: stemcell-director,        trigger: false, tags: [nimbus]}
           - {get: certification,            trigger: false, tags: [nimbus]}
           - {get: bosh-deployment,          trigger: false, tags: [nimbus]}
           - {get: bats,                     trigger: false, tags: [nimbus]}
@@ -378,12 +385,13 @@ jobs:
             -o certification/shared/assets/ops/remove-hm.yml
             -o bosh-deployment/vsphere/resource-pool.yml
             -o certification/shared/assets/ops/remove-provider-cert.yml
-            -o bosh-deployment/misc/source-releases/bosh.yml
       - do:
           - task: deploy-director
             tags: [nimbus]
             file: source-ci/ci/tasks/deploy-director.yml
             image: vcpi-main-image
+            input_mapping:
+              stemcell: stemcell-director
             params:
               JUMPBOX_PRIVATE_KEY: ((nimbus_jumpbox_key.private_key))
           - task: run-bats
@@ -393,7 +401,7 @@ jobs:
             params:
               BAT_INFRASTRUCTURE: vsphere
               BAT_RSPEC_FLAGS:    "--tag ~dns --tag ~vip_networking --tag ~dynamic_networking --tag ~root_partition --tag ~raw_ephemeral_storage --tag ~ipv6"
-              STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-noble
+              STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-jammy-go_agent
               JUMPBOX_PRIVATE_KEY: ((nimbus_jumpbox_key.private_key))
               RUBY_GEMS_MIRROR: ((repository_mirrors.rubygems))
         on_failure:
@@ -413,6 +421,7 @@ jobs:
             tags: [nimbus]
           - {get: bosh-release,             trigger: false, tags: [nimbus], resource: old-bosh-release}
           - {get: stemcell,                 trigger: false, tags: [nimbus]}
+          - {get: stemcell-director,        trigger: false, tags: [nimbus]}
           - {get: certification,            trigger: false, tags: [nimbus]}
           - {get: bosh-deployment,          trigger: false, tags: [nimbus]}
           - {get: bats,                     trigger: false, tags: [nimbus]}
@@ -454,6 +463,8 @@ jobs:
             tags: [nimbus]
             file: source-ci/ci/tasks/deploy-director.yml
             image: vcpi-main-image
+            input_mapping:
+              stemcell: stemcell-director
             params:
               JUMPBOX_PRIVATE_KEY: ((nimbus_jumpbox_key.private_key))
           - task: run-bats
@@ -463,7 +474,7 @@ jobs:
             params:
               BAT_INFRASTRUCTURE: vsphere
               BAT_RSPEC_FLAGS:    "--tag ~dns --tag ~vip_networking --tag ~dynamic_networking --tag ~root_partition --tag ~raw_ephemeral_storage --tag ~ipv6"
-              STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-noble
+              STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-jammy-go_agent
               JUMPBOX_PRIVATE_KEY: ((nimbus_jumpbox_key.private_key))
               RUBY_GEMS_MIRROR: ((repository_mirrors.rubygems))
         on_failure:
@@ -807,6 +818,11 @@ resources:
       username: bosh-admin-bot
       password: ((github_read_write_token))
   - name: stemcell
+    tags: [nimbus]
+    type: bosh-io-stemcell
+    source:
+      name: bosh-vsphere-esxi-ubuntu-jammy-go_agent
+  - name: stemcell-director
     tags: [nimbus]
     type: bosh-io-stemcell
     source:
