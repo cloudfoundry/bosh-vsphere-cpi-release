@@ -494,7 +494,7 @@ namespace :swagger do
       ./data/nsxt_policy_api/nsxt_policy_api_target_id_255.json
       ./data/nsxt_policy_api/nsxt_policy_api_trimmed.json
       ./data/nsxt_policy_api/nsxt_policy_api_trimmed_endpoints.json
-      # ./data/nsxt_policy_api/nsxt_policy_api_patched_policy_tz_model.json
+      ./data/nsxt_policy_api/nsxt_policy_api_patched_policy_tz_model.json
     ]
 
     mv('./lib/nsxt_policy_client/lib/nsxt_policy_client', './lib/nsxt_policy_client/nsxt_policy_client')
