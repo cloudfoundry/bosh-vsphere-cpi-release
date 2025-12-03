@@ -106,7 +106,7 @@ module VSphereCloud
     def remove_vm_from_server_pools(vm_ip, vm_cid, cpi_metadata_version)
       policy_load_balancer_pools_api.list_lb_pools.results.each do |server_pool|
         original_size = server_pool.members&.length
-        # Filter out members that match the VM instead of deleting while iterating
+
         server_pool.members&.select! do |member|
           member.ip_address == vm_ip && ((cpi_metadata_version > 0 && vm_cid == member.display_name) || cpi_metadata_version == 0)
         end
