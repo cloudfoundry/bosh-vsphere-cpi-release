@@ -105,17 +105,18 @@ module VSphereCloud
     # cpi_metadata_version must be an integer
     def remove_vm_from_server_pools(vm_ip, vm_cid, cpi_metadata_version)
       policy_load_balancer_pools_api.list_lb_pools.results.each do |server_pool|
-        original_size = server_pool.members&.length
+        next if server_pool.members.nil?
 
-        server_pool.members&.reject! do |member|
+        members_to_remove, members_to_keep = server_pool.members.partition do |member|
           member.ip_address == vm_ip && ((cpi_metadata_version > 0 && vm_cid == member.display_name) || cpi_metadata_version == 0)
         end
-        server_pool.members&.each do |member|
+        members_to_remove.each do |member|
           logger.info("Removing vm with ip: '#{vm_ip}', port_no: #{member.port} from ServerPool: #{server_pool.id} ")
         end
 
-        next if server_pool.members&.length == original_size
+        next if members_to_remove.empty?
 
+        server_pool.members = members_to_keep
         policy_load_balancer_pools_api.update_lb_pool(server_pool.id, server_pool)
       end
     end
