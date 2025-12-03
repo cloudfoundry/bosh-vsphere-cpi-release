@@ -107,15 +107,15 @@ module VSphereCloud
       policy_load_balancer_pools_api.list_lb_pools.results.each do |server_pool|
         original_size = server_pool.members&.length
         # Filter out members that match the VM instead of deleting while iterating
-        server_pool.members = server_pool.members&.reject do |member|
-          if member.ip_address == vm_ip && ((cpi_metadata_version > 0 && vm_cid == member.display_name) || cpi_metadata_version == 0)
-            logger.info("Removing vm with ip: '#{vm_ip}', port_no: #{member.port} from ServerPool: #{server_pool.id} ")
-            true  # Remove this member
-          else
-            false # Keep this member
-          end
+        server_pool.members&.select! do |member|
+          member.ip_address == vm_ip && ((cpi_metadata_version > 0 && vm_cid == member.display_name) || cpi_metadata_version == 0)
         end
+        server_pool.members&.each do |member|
+          logger.info("Removing vm with ip: '#{vm_ip}', port_no: #{member.port} from ServerPool: #{server_pool.id} ")
+        end
+
         next if server_pool.members&.length == original_size
+
         policy_load_balancer_pools_api.update_lb_pool(server_pool.id, server_pool)
       end
     end
