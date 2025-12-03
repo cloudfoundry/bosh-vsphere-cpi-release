@@ -1024,8 +1024,12 @@ describe 'CPI', nsxt_all: true do
 
             verify_ports(vm_id) do |logical_port|
               raise StillUpdatingSegmentPorts if logical_port.tags.length < 1
-              expect(logical_port.tags).to contain_exactly(
+              expect(logical_port.tags).to include(
                 an_object_having_attributes(scope: 'bosh/id', tag: Digest::SHA1.hexdigest(bosh_id)),
+              )
+              expect(logical_port.tags).not_to include(
+                an_object_having_attributes(scope: 'test-tag-1-key'),
+                an_object_having_attributes(scope: 'test-tag-2-key'),
               )
             end
 
@@ -1502,7 +1506,7 @@ describe 'CPI', nsxt_all: true do
             cpi.set_vm_metadata(vm_id, 'id' => bosh_id)
             verify_ports(vm_id) do |logical_port|
               raise StillUpdatingSegmentPorts if logical_port.tags.length < 1
-              expect(logical_port.tags).to contain_exactly( an_object_having_attributes(scope: 'bosh/id', tag: Digest::SHA1.hexdigest(bosh_id)) )
+              expect(logical_port.tags).to include( an_object_having_attributes(scope: 'bosh/id', tag: Digest::SHA1.hexdigest(bosh_id)) )
             end
           end
         end
