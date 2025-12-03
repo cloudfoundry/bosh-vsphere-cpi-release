@@ -107,7 +107,7 @@ module VSphereCloud
       policy_load_balancer_pools_api.list_lb_pools.results.each do |server_pool|
         original_size = server_pool.members&.length
 
-        server_pool.members&.select! do |member|
+        server_pool.members&.reject! do |member|
           member.ip_address == vm_ip && ((cpi_metadata_version > 0 && vm_cid == member.display_name) || cpi_metadata_version == 0)
         end
         server_pool.members&.each do |member|
