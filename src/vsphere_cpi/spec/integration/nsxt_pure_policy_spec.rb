@@ -1196,7 +1196,7 @@ describe 'CPI', nsxt_pure_policy: true do
 
   def create_segments(segments)
     tzs = @policy_transport_zones_api.list_transport_zones_for_enforcement_point(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, 'default')
-    overlay_tz = tzs.results.find { |tz| tz.display_name == @nsxt_overlay_tz }
+    overlay_tz = tzs.results.find { |tz| tz.id == @nsxt_overlay_tz }
 
     segments.each do |segment|
       seg = NSXTPolicy::Segment.new(display_name: segment.name, transport_zone_path: overlay_tz.path)
