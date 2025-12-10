@@ -11,7 +11,8 @@ module VSphereCloud
       )
     end
 
-    let(:client) { instance_double('VSphereCloud::VCenterClient') }
+    let(:client) { instance_double('VSphereCloud::VCenterClient', cloud_searcher: cloud_searcher) }
+    let(:cloud_searcher) { instance_double('VSphereCloud::CloudSearcher') }
     let(:file_provider) { double('VSphereCloud::FileProvider') }
     let(:fake_datastore) { instance_double('VimSdk::Vim::Datastore', name: 'fake-datastore-1')}
     let(:location) do
@@ -25,8 +26,8 @@ module VSphereCloud
     describe '#clean_env' do
       let(:vm) do
         instance_double('VimSdk::Vim::VirtualMachine',
-          config: double(:config, hardware: double(:hardware, device: [cdrom])),
-          name: 'fake-vm-name',
+                        config: double(:config, hardware: double(:hardware, device: [cdrom])),
+                        name: 'fake-vm-name',
         )
       end
 
@@ -74,8 +75,8 @@ module VSphereCloud
     describe '#set_env' do
       let(:vm) do
         instance_double('VimSdk::Vim::VirtualMachine',
-          config: double(:config, hardware: double(:hardware, device: [cdrom])),
-          name: 'fake-vm-name',
+                        config: double(:config, hardware: double(:hardware, device: [cdrom])),
+                        name: 'fake-vm-name',
         )
       end
 
@@ -108,11 +109,22 @@ module VSphereCloud
       let(:datacenter) { instance_double('VimSdk::Vim::Datacenter') }
       let(:vm_datastore_mob) { instance_double('VimSdk::Vim::Datastore', name: 'fake-datastore-name 1') }
       let(:vm_datastore) { instance_double('VSphereCloud::Resources::Datastore', mob: vm_datastore_mob, name: 'fake-datastore-name 1') }
+      let(:vm_properties) do
+        {
+          'config.extraConfig' => [
+            VimSdk::Vim::Option::OptionValue.new(key: 'snapshot.maxSnapshots', value: 1),
+            VimSdk::Vim::Option::OptionValue.new(key: 'guestinfo.userdata.encoding', value: 'foo')
+          ]
+        }
+      end
       before do
         allow(cdrom).to receive(:kind_of?).with(VimSdk::Vim::Vm::Device::VirtualCdrom).and_return(true)
         allow(client).to receive(:get_cdrom_device).with(vm).and_return(cdrom)
         allow(client).to receive(:find_parent).with(vm, VimSdk::Vim::Datacenter).and_return(datacenter)
         allow(subject).to receive(:get_vm_vsphere_cluster_hosts).with(vm).and_return([])
+        allow(cloud_searcher).to receive(:get_properties)
+          .with(vm, VimSdk::Vim::VirtualMachine, ['config.extraConfig'], { ensure: ['config.extraConfig'] })
+          .and_return(vm_properties)
       end
 
       def it_disconnects_cdrom
@@ -124,7 +136,6 @@ module VSphereCloud
           expect(cdrom_change.device.connectable.connected).to eq(false)
         end
       end
-
       def it_cleans_up_old_env_files
         expect(client).to receive(:delete_path).with(datacenter, '[fake-old-datastore-name 1] fake-vm-name/env.json')
         expect(client).to receive(:delete_path).with(datacenter, '[fake-old-datastore-name 1] fake-vm-name/env.iso')
@@ -181,13 +192,25 @@ module VSphereCloud
         end
       end
 
-      it 'disconnects cdrom, cleans up old env files, uploads environment json, uploads environment iso and connectes cdrom' do
+      def it_sets_extra_config
+        expect(client).to receive(:reconfig_vm) do |reconfig_vm, config_spec|
+          expect(reconfig_vm).to eq(vm)
+          extra = config_spec.extra_config
+          expect(extra.size).to eq(3)
+          expect(extra).to include(have_attributes(key: 'guestinfo.userdata'))
+          expect(extra).to include(have_attributes(key: 'guestinfo.userdata.encoding'))
+          expect(extra).to include(have_attributes(key: 'snapshot.maxSnapshots'))
+        end
+      end
+
+      it 'disconnects cdrom, cleans up old env files, uploads environment json, uploads environment iso, connects cdrom, and sets extra config' do
         it_disconnects_cdrom.ordered
         it_cleans_up_old_env_files.ordered
         it_uploads_environment_json.ordered
         it_generates_environment_iso.ordered
         it_uploads_environment_iso.ordered
         it_reconfigures_cdrom.ordered
+        it_sets_extra_config.ordered
 
         subject.set_env(vm, location, env)
       end
@@ -201,6 +224,7 @@ module VSphereCloud
           it_generates_environment_iso(iso_generator: 'genisoimage').ordered
           it_uploads_environment_iso.ordered
           it_reconfigures_cdrom.ordered
+          it_sets_extra_config.ordered
 
           subject.set_env(vm, location, env)
         end
@@ -220,6 +244,7 @@ module VSphereCloud
           it_generates_environment_iso(iso_generator: '/bin/genisoimage').ordered
           it_uploads_environment_iso.ordered
           it_reconfigures_cdrom.ordered
+          it_sets_extra_config.ordered
 
           subject.set_env(vm, location, env)
         end
@@ -239,6 +264,7 @@ module VSphereCloud
           it_generates_environment_iso(iso_generator: '/bin/iso9660wrap').ordered
           it_uploads_environment_iso.ordered
           it_reconfigures_cdrom.ordered
+          it_sets_extra_config.ordered
 
           subject.set_env(vm, location, env)
         end
@@ -289,6 +315,7 @@ module VSphereCloud
           it_generates_environment_iso.ordered
           it_uploads_environment_iso.ordered
           it_reconfigures_cdrom.ordered
+          it_sets_extra_config.ordered
 
           expect(client).not_to receive(:delete_path)
 

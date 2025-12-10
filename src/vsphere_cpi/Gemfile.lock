@@ -5,6 +5,7 @@ GEM
       public_suffix (>= 2.0.2, < 8.0)
     ansi (1.5.0)
     ast (2.4.3)
+    base64 (0.3.0)
     bosh_common (1.3262.24.0)
       logging (~> 1.8.2)
       semi_semantic (~> 1.2.0)
@@ -104,6 +105,7 @@ PLATFORMS
 
 DEPENDENCIES
   addressable
+  base64
   bosh_common (= 1.3262.24.0)
   bosh_cpi (= 2.5.0)
   builder (~> 3.2.3)
