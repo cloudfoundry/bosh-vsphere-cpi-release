@@ -33,6 +33,10 @@ module VSphereCloud
 
       file_name = "[#{location[:datastore].name}] #{location[:vm]}/env.iso"
       update_cdrom_env(vm, location[:datastore].mob, file_name)
+
+      # cloudinit env can eventually replace cdrom env entirely. For now, we need to keep both in case we are using an
+      # older stemcell with an agent that doesn't have cloudinit capability.
+      update_cloudinit_env(vm, env_json)
     end
 
     def env_iso_folder(cdrom_device)
@@ -62,6 +66,30 @@ module VSphereCloud
       vm_mob.runtime.host.parent.host
     end
 
+    def update_cloudinit_env(vm, env_json)
+      # env json can be attached either in base64, or in gzip+base64. For expediency,
+      # we'll just use base64 encoding here.
+      extra_config_array = [
+        VimSdk::Vim::Option::OptionValue.new(key: 'guestinfo.userdata' , value: Base64.strict_encode64(env_json)),
+        VimSdk::Vim::Option::OptionValue.new(key: 'guestinfo.userdata.encoding' , value: 'base64')
+      ]
+
+      previous_config = @client.cloud_searcher.get_properties(
+        vm,
+        Vim::VirtualMachine,
+        ['config.extraConfig'],
+        ensure: ['config.extraConfig']
+      )['config.extraConfig']
+
+      # remove any old settings, and add new ones
+      previous_config = previous_config.reject{ |c| c.key == 'guestinfo.userdata' || c.key == 'guestinfo.userdata.encoding' }
+      extra_config_array += previous_config
+
+      vm_config_spec = Vim::Vm::ConfigSpec.new
+      vm_config_spec.extra_config = extra_config_array
+
+      @client.reconfig_vm(vm, vm_config_spec)
+    end
     def update_cdrom_env(vm, datastore, file_name)
       backing_info = Vim::Vm::Device::VirtualCdrom::IsoBackingInfo.new
       backing_info.datastore = datastore
