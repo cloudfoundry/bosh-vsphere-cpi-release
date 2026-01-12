@@ -21,6 +21,7 @@ module VSphereCloud
       cpu_hot_add_enabled
       cpu_reserve_full_mhz
       datacenters
+      device_groups
       disable_drs
       disk
       memory_hot_add_enabled

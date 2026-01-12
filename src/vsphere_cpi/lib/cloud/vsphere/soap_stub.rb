@@ -14,7 +14,7 @@ module VSphereCloud
       version = if $vc_version == "7.0"
                   'vim.version.v7_0'
                 elsif $vc_version == "8.0"
-                  'vim.version.v8_0_0_0'
+                  'vim.version.v8_0_0_1'
                 else
                   'vim.version.version12'
                 end

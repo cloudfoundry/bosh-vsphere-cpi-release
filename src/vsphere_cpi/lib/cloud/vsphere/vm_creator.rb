@@ -247,16 +247,19 @@ module VSphereCloud
 
             begin
               # Upgrade to latest virtual hardware version
-              # We decide to upgrade hardware version on basis of four params
+              # We decide to upgrade hardware version on basis of five params
               # 1. vm_type specification of upgrade hardware flag and
               # 2. Global upgrade hardware flag @upgrade_hw_version
               # 3. vm_config of vgpus has entries (>1 vgpu requires upgraded hw)
               # 4. vm_config of pci_passthroughs has entries
+              # 5. vm_config of device_groups has entries (device groups require upgraded hw)
               if vm_config.upgrade_hw_version?(vm_config.vm_type.upgrade_hw_version, @upgrade_hw_version)
                 created_vm.upgrade_vm_virtual_hardware
               elsif !vm_config.vgpus.empty?
                 created_vm.upgrade_vm_virtual_hardware
               elsif !vm_config.pci_passthroughs.empty?
+                created_vm.upgrade_vm_virtual_hardware
+              elsif !vm_config.device_groups.empty?
                 created_vm.upgrade_vm_virtual_hardware
               else
                 created_vm.upgrade_vm_virtual_hardware(@default_hw_version)
@@ -286,6 +289,83 @@ module VSphereCloud
                 # add 1 GPU per task, allow multiple GPUs with same deviceId to be added
                 @client.reconfig_vm(created_vm_mob, config_spec)
               end
+            end
+            # Add device groups after hardware version has been upgraded
+            # Device groups require vSphere 8.0+ and upgraded hardware
+            unless vm_config.device_groups.empty?
+              # Get the VM's host, or fall back to searching all hosts in the cluster
+              vm_runtime = @cloud_searcher.get_property(created_vm_mob, VimSdk::Vim::VirtualMachine, 'runtime', ensure_all: true)
+              query_host = vm_runtime.host
+
+              # If VM doesn't have a host assigned yet, or we need to find which host has the device group,
+              # search all healthy hosts in the cluster
+              if query_host.nil?
+                query_host = cluster.host.find do |h|
+                  h.runtime.connection_state == 'connected' &&
+                    !h.runtime.in_maintenance_mode
+                end
+              end
+              raise "Failed to find a healthy host in cluster to query device group information" if query_host.nil?
+
+              # Create VM-level VirtualDeviceGroups configuration and individual vGPU devices
+              config_spec = VimSdk::Vim::Vm::ConfigSpec.new
+              config_spec.device_change = []
+
+              device_groups_config = VimSdk::Vim::Vm::VirtualDeviceGroups.new
+              device_groups_config.device_group = []
+
+              vm_config.device_groups.each_with_index do |device_group_name, group_index|
+                # Add VM-level device group declaration
+                vendor_device_group = VimSdk::Vim::Vm::VirtualDeviceGroups::VendorDeviceGroup.new
+                vendor_device_group.group_instance_key = group_index
+                vendor_device_group.device_group_name = device_group_name
+                device_groups_config.device_group << vendor_device_group
+
+                # Query vSphere and create individual vGPU devices with deviceGroupInfo
+                # Try the VM's host first, then try all hosts if not found
+                vgpu_devices = nil
+                begin
+                  vgpu_devices = Resources::PCIPassthrough.create_device_group_vgpus(
+                    device_group_name,
+                    group_index,
+                    query_host,
+                    @cloud_searcher
+                  )
+                rescue => e
+                  if e.message.include?('not found on host')
+                    # Device group not found on VM's host, try all hosts in cluster
+                    logger.debug("Device group '#{device_group_name}' not found on VM's host, searching all hosts in cluster")
+                    found = false
+                    cluster.host.each do |h|
+                      next unless h.runtime.connection_state == 'connected' && !h.runtime.in_maintenance_mode
+                      begin
+                        vgpu_devices = Resources::PCIPassthrough.create_device_group_vgpus(
+                          device_group_name,
+                          group_index,
+                          h,
+                          @cloud_searcher
+                        )
+                        found = true
+                        logger.debug("Found device group '#{device_group_name}' on host #{h.name}")
+                        break
+                      rescue => search_error
+                        next if search_error.message.include?('not found on host')
+                        raise search_error
+                      end
+                    end
+                    raise "Device group '#{device_group_name}' not found on any host in cluster" unless found
+                  else
+                    raise
+                  end
+                end
+
+                vgpu_devices.each do |vgpu_device|
+                  config_spec.device_change << Resources::VM.create_add_device_spec(vgpu_device)
+                end
+              end
+
+              config_spec.device_groups = device_groups_config
+              @client.reconfig_vm(created_vm_mob, config_spec)
             end
 
             if vm_config.root_disk_size_gb > 0

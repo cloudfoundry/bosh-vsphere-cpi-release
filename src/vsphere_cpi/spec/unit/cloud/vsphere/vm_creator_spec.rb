@@ -149,6 +149,7 @@ module VSphereCloud
           ephemeral_disk_size: 1024,
           pci_passthroughs: [],
           vgpus: [],
+          device_groups: [],
           calculate_cpu_reservation: nil,
           cluster_placements: [
             instance_double(VmPlacement,
@@ -199,6 +200,9 @@ module VSphereCloud
         allow_any_instance_of(Resources::VM).to receive(:system_disk).and_return(system_disk_device)
         allow_any_instance_of(Resources::VM).to receive(:ephemeral_disk).and_return(ephemeral_disk_device)
         allow_any_instance_of(Resources::VM).to receive('__mo_id__').and_return('1234')
+        allow_any_instance_of(Resources::VM).to receive(:upgrade_vm_virtual_hardware) do |instance, version|
+          client.upgrade_vm_virtual_hardware(instance.mob, version)
+        end
         allow(client).to receive(:find_by_inventory_path).with("dc-1").and_return(datacenter_config)
         allow(client).to receive(:find_vm_by_name).and_return(cloned_vm)
         allow(agent_env).to receive(:set_env)
@@ -207,7 +211,7 @@ module VSphereCloud
         allow(subject).to receive(:apply_storage_policy).and_return(nil)
         allow(vm_config).to receive(:upgrade_hw_version?).and_return(upgrade_hw_version)
         allow(vm_config).to receive(:disk_uuid_is_enabled?).and_return(disk_uuid_is_enabled)
-        allow(client).to receive(:upgrade_vm_virtual_hardware).with(cloned_vm_mob, default_hw_version)
+        allow(client).to receive(:upgrade_vm_virtual_hardware)
         allow_any_instance_of(Resources::VM).to receive(:power_on).and_raise(VSphereCloud::VCenterClient::GenericVmConfigFault)
         allow(cpi).to receive(:delete_vm)
 
@@ -411,6 +415,7 @@ module VSphereCloud
                                             ephemeral_disk_size: 1024,
                                             pci_passthroughs: [],
                                             vgpus: [],
+                                            device_groups: [],
                                             calculate_cpu_reservation: nil,
                                             cluster_placements: [
                                               instance_double(VmPlacement,
