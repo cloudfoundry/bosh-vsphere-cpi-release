@@ -417,6 +417,27 @@ describe VSphereCloud::NSXTPolicyProvider, fake_logger: true do
       end
     end
 
+    context "when finding the VM by external id fails with a NOT_FOUND error" do
+      before do
+        not_found_error = NSXTPolicy::ApiCallError.new(
+          code: 500312,
+          message: "Error while getting group associations from enforcement point : NOT_FOUND: Group association resource ID was not found.""Error while getting group associations from enforcement point : NOT_FOUND: Group association resource ID was not found."
+        )
+        allow(policy_group_members_api).to receive(:get_groups_for_vm).with('some-vm-external-id').and_raise(not_found_error)
+      end
+
+      it "logs a message but should not raise an error" do
+        emitted_expected_message = false
+        allow(logger).to receive(:info) do |message|
+          if message.include?("Ignoring NOT_FOUND error for VM")
+            emitted_expected_message = true
+          end
+        end
+        expect { nsxt_policy_provider.remove_vm_from_groups(vm) }.to_not raise_error
+        expect(emitted_expected_message).to be true
+      end
+    end
+
     context 'when group does not have vm condition even though it is a group member somehow' do
       let(:existing_expression) {
         NSXTPolicy::ExternalIDExpression.new(resource_type: 'ExternalIDExpression',

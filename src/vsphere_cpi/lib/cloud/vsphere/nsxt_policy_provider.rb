@@ -70,7 +70,23 @@ module VSphereCloud
       logger.info("Removing vm: #{vm.cid} from all Policy Groups it is part of")
       vm_external_id = get_vm_external_id(vm.cid)
       return if vm_external_id.nil? # If VM external ID is nil, then it's not connected to NSX: return immediately
-      vm_groups = retrieve_vm_groups(vm_external_id)
+      logger.info("Finding Policy Groups that contain VM (via external ID '#{vm_external_id}')")
+      begin
+        vm_groups = retrieve_vm_groups(vm_external_id)
+      rescue => e
+        # 2026-01-20 - We have observed many issues where the NSX API incorrectly returns a NOT_FOUND error when trying to retrieve groups via external id
+        # root cause is not currently known, but it _seems_ like a timing problem?
+        # We are choosing to ignore this failure case, because:
+        # 1) if encountered, this error blocks vm deletes
+        # 2) we think NSX will remove memberships anyways
+        # 3) we take this "ignore" approach eleswhere (e.g. policy migration mode).
+        if e.message.include?("NOT_FOUND")
+          vm_groups = []
+          logger.info("Ignoring NOT_FOUND error for VM #{vm.cid}. This error may occur in cases where the NSX data is incompletely propagated. NSX should eventually remove any memberships automatically, but in some cases manual cleanup may be necessary.")
+        else
+          raise e
+        end
+      end
 
       # For all the groups
       vm_groups.each do |grp_ref|
