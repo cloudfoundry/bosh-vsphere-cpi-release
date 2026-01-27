@@ -413,7 +413,7 @@ module VSphereCloud
           end
 
           it 'falls back to searching all hosts in cluster' do
-            expect(logger).to receive(:debug).with("Device group '#{device_group_name}' not found on VM's host, searching all hosts in cluster")
+            expect(logger).to receive(:debug).with("Device group '#{device_group_name}' not found on host #{vm_host.name}, searching other hosts")
             expect(logger).to receive(:debug).with("Found device group '#{device_group_name}' on host #{fallback_host.name}")
 
             expect(client).to receive(:upgrade_vm_virtual_hardware).with(cloned_vm_mob, nil)
@@ -431,7 +431,7 @@ module VSphereCloud
           end
 
           it 'raises an error' do
-            expect(logger).to receive(:debug).with("Device group '#{device_group_name}' not found on VM's host, searching all hosts in cluster")
+            expect(logger).to receive(:debug).with("Device group '#{device_group_name}' not found on host #{vm_host.name}, searching other hosts")
 
             expect {
               subject.create(vm_config)
