@@ -260,6 +260,8 @@ module VSphereCloud
       @cluster_placement
     end
 
+    # vSphere requires memory reservation to be locked to max when using PCI passthrough devices
+    # (vGPUs, PCI passthroughs, or device groups) to ensure consistent memory mapping for direct device access
     def memory_reservation_locked_to_max?
       if vm_type.memory_reservation_locked_to_max
         return true
