@@ -67,11 +67,18 @@ module VSphereCloud
 
         # Extract component device information
         component_devices = device_group_info.component_device_info || []
-        raise "Device group '#{device_group_name}' has no component devices" if component_devices.empty?
+        if component_devices.empty?
+          raise "Device group '#{device_group_name}' has no component devices. " \
+                "This is a configuration issue - verify the device group contains vGPU devices in vSphere."
+        end
 
         # Filter for nvidiaVgpu devices
         vgpu_devices = component_devices.select { |comp| comp.type == 'nvidiaVgpu' }
-        raise "Device group '#{device_group_name}' has no nvidiaVgpu component devices" if vgpu_devices.empty?
+        if vgpu_devices.empty?
+          found_types = component_devices.map(&:type).uniq.join(', ')
+          raise "Device group '#{device_group_name}' has no nvidiaVgpu component devices (found: #{found_types}). " \
+                "This is a configuration issue - verify the device group contains vGPU devices in vSphere."
+        end
 
         # Create vGPU devices with deviceGroupInfo
         devices = []

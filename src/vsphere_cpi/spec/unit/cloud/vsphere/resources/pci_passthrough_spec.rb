@@ -200,7 +200,7 @@ describe VSphereCloud::Resources::PCIPassthrough do
       it 'raises an error' do
         expect {
           described_class.create_device_group_vgpus(device_group_name, group_instance_key, host, cloud_searcher)
-        }.to raise_error("Device group '#{device_group_name}' has no component devices")
+        }.to raise_error(/Device group '#{device_group_name}' has no component devices.*configuration issue/)
       end
     end
 
@@ -224,7 +224,7 @@ describe VSphereCloud::Resources::PCIPassthrough do
       it 'raises an error' do
         expect {
           described_class.create_device_group_vgpus(device_group_name, group_instance_key, host, cloud_searcher)
-        }.to raise_error("Device group '#{device_group_name}' has no nvidiaVgpu component devices")
+        }.to raise_error(/Device group '#{device_group_name}' has no nvidiaVgpu component devices \(found: otherType\).*configuration issue/)
       end
     end
 
