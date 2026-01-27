@@ -84,6 +84,8 @@ module VSphereCloud
         devices = []
         vgpu_devices.each_with_index do |comp_device, sequence_id|
           # Extract vGPU profile from the device backing
+          # Note: comp_device.device is a template/example device from metadata (not an attached device)
+          # We validate its structure to extract the vGPU profile for creating new devices
           device = comp_device.device
           raise "Component device does not have backing information" unless device.is_a?(VimSdk::Vim::Vm::Device::VirtualPCIPassthrough)
           raise "Component device does not have VmiopBackingInfo" unless device.backing.is_a?(VimSdk::Vim::Vm::Device::VirtualPCIPassthrough::VmiopBackingInfo)
