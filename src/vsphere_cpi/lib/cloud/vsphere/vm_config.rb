@@ -101,6 +101,10 @@ module VSphereCloud
       vm_type.vgpus || []
     end
 
+    def device_groups
+      vm_type.device_groups || []
+    end
+
     def human_readable_name_enabled?
       @manifest_params[:enable_human_readable_name]
     end
@@ -256,6 +260,8 @@ module VSphereCloud
       @cluster_placement
     end
 
+    # vSphere requires memory reservation to be locked to max when using PCI passthrough devices
+    # (vGPUs, PCI passthroughs, or device groups) to ensure consistent memory mapping for direct device access
     def memory_reservation_locked_to_max?
       if vm_type.memory_reservation_locked_to_max
         return true
@@ -264,6 +270,9 @@ module VSphereCloud
         return true
       end
       if pci_passthroughs.size > 0
+        return true
+      end
+      if device_groups.size > 0
         return true
       end
       false

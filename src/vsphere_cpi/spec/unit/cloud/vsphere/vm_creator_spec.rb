@@ -149,6 +149,7 @@ module VSphereCloud
           ephemeral_disk_size: 1024,
           pci_passthroughs: [],
           vgpus: [],
+          device_groups: [],
           calculate_cpu_reservation: nil,
           cluster_placements: [
             instance_double(VmPlacement,
@@ -199,6 +200,9 @@ module VSphereCloud
         allow_any_instance_of(Resources::VM).to receive(:system_disk).and_return(system_disk_device)
         allow_any_instance_of(Resources::VM).to receive(:ephemeral_disk).and_return(ephemeral_disk_device)
         allow_any_instance_of(Resources::VM).to receive('__mo_id__').and_return('1234')
+        allow_any_instance_of(Resources::VM).to receive(:upgrade_vm_virtual_hardware) do |instance, version|
+          client.upgrade_vm_virtual_hardware(instance.mob, version)
+        end
         allow(client).to receive(:find_by_inventory_path).with("dc-1").and_return(datacenter_config)
         allow(client).to receive(:find_vm_by_name).and_return(cloned_vm)
         allow(agent_env).to receive(:set_env)
@@ -207,7 +211,7 @@ module VSphereCloud
         allow(subject).to receive(:apply_storage_policy).and_return(nil)
         allow(vm_config).to receive(:upgrade_hw_version?).and_return(upgrade_hw_version)
         allow(vm_config).to receive(:disk_uuid_is_enabled?).and_return(disk_uuid_is_enabled)
-        allow(client).to receive(:upgrade_vm_virtual_hardware).with(cloned_vm_mob, default_hw_version)
+        allow(client).to receive(:upgrade_vm_virtual_hardware)
         allow_any_instance_of(Resources::VM).to receive(:power_on).and_raise(VSphereCloud::VCenterClient::GenericVmConfigFault)
         allow(cpi).to receive(:delete_vm)
 
@@ -300,6 +304,209 @@ module VSphereCloud
           expect(client).to receive(:upgrade_vm_virtual_hardware).with(cloned_vm_mob, nil)
           expect(client).to receive(:reconfig_vm).with(cloned_vm_mob, anything)
           subject.create(vm_config)
+        end
+      end
+
+      context 'with device groups' do
+        let(:device_group_name) { 'Nvidia:2@nvidia_h100l-94c%NVLink' }
+        let(:vm_runtime) { instance_double('VimSdk::Vim::Vm::RuntimeInfo', host: vm_host) }
+        let(:vm_host) { instance_double('VimSdk::Vim::HostSystem', name: 'host-1') }
+        let(:vgpu_device1) do
+          device = VimSdk::Vim::Vm::Device::VirtualPCIPassthrough.new
+          device.key = -1
+          device_group_info = VimSdk::Vim::Vm::Device::VirtualDevice::DeviceGroupInfo.new
+          device_group_info.group_instance_key = 0
+          device_group_info.sequence_id = 0
+          device.device_group_info = device_group_info
+          device
+        end
+        let(:vgpu_device2) do
+          device = VimSdk::Vim::Vm::Device::VirtualPCIPassthrough.new
+          device.key = -2
+          device_group_info = VimSdk::Vim::Vm::Device::VirtualDevice::DeviceGroupInfo.new
+          device_group_info.group_instance_key = 0
+          device_group_info.sequence_id = 1
+          device.device_group_info = device_group_info
+          device
+        end
+
+        before do
+          allow(vm_config).to receive(:device_groups).and_return([device_group_name])
+          allow(cloud_searcher).to receive(:get_property).with(
+            cloned_vm_mob,
+            VimSdk::Vim::VirtualMachine,
+            'runtime',
+            ensure_all: true
+          ).and_return(vm_runtime)
+          allow(cluster).to receive(:host).and_return([vm_host])
+          allow(vm_host).to receive_message_chain(:runtime, :connection_state).and_return('connected')
+          allow(vm_host).to receive_message_chain(:runtime, :in_maintenance_mode).and_return(false)
+        end
+
+        it 'upgrades the vm hardware and reconfigures the VM with device groups' do
+          expect(Resources::PCIPassthrough).to receive(:create_device_group_vgpus).with(
+            device_group_name,
+            0,
+            vm_host,
+            cloud_searcher
+          ).and_return([vgpu_device1, vgpu_device2])
+
+          expect(client).to receive(:upgrade_vm_virtual_hardware).with(cloned_vm_mob, nil)
+          expect(client).to receive(:reconfig_vm) do |vm_mob, config_spec|
+            expect(vm_mob).to eq(cloned_vm_mob)
+            expect(config_spec.device_groups).to be_a(VimSdk::Vim::Vm::VirtualDeviceGroups)
+            expect(config_spec.device_groups.device_group.length).to eq(1)
+            expect(config_spec.device_groups.device_group.first.group_instance_key).to eq(0)
+            expect(config_spec.device_groups.device_group.first.device_group_name).to eq(device_group_name)
+            expect(config_spec.device_change.length).to eq(2)
+            expect(config_spec.device_change.map(&:device)).to include(vgpu_device1, vgpu_device2)
+          end
+
+          subject.create(vm_config)
+        end
+
+        context 'when VM has no host assigned' do
+          let(:vm_runtime) { instance_double('VimSdk::Vim::Vm::RuntimeInfo', host: nil) }
+          let(:fallback_host) { instance_double('VimSdk::Vim::HostSystem', name: 'host-2') }
+
+          before do
+            allow(cluster).to receive(:host).and_return([fallback_host])
+            allow(fallback_host).to receive_message_chain(:runtime, :connection_state).and_return('connected')
+            allow(fallback_host).to receive_message_chain(:runtime, :in_maintenance_mode).and_return(false)
+          end
+
+          it 'searches all hosts in cluster and uses the first healthy host' do
+            expect(Resources::PCIPassthrough).to receive(:create_device_group_vgpus).with(
+              device_group_name,
+              0,
+              fallback_host,
+              cloud_searcher
+            ).and_return([vgpu_device1, vgpu_device2])
+
+            expect(client).to receive(:upgrade_vm_virtual_hardware).with(cloned_vm_mob, nil)
+            expect(client).to receive(:reconfig_vm).with(cloned_vm_mob, anything)
+
+            subject.create(vm_config)
+          end
+        end
+
+        context 'when device group is not found on VM host' do
+          let(:fallback_host) { instance_double('VimSdk::Vim::HostSystem', name: 'host-2') }
+
+          before do
+            allow(cluster).to receive(:host).and_return([vm_host, fallback_host])
+            allow(fallback_host).to receive_message_chain(:runtime, :connection_state).and_return('connected')
+            allow(fallback_host).to receive_message_chain(:runtime, :in_maintenance_mode).and_return(false)
+            allow(Resources::PCIPassthrough).to receive(:create_device_group_vgpus).with(
+              device_group_name,
+              0,
+              vm_host,
+              cloud_searcher
+            ).and_raise("Device group '#{device_group_name}' not found on host")
+            allow(Resources::PCIPassthrough).to receive(:create_device_group_vgpus).with(
+              device_group_name,
+              0,
+              fallback_host,
+              cloud_searcher
+            ).and_return([vgpu_device1, vgpu_device2])
+            allow(logger).to receive(:debug)
+          end
+
+          it 'falls back to searching all hosts in cluster' do
+            expect(logger).to receive(:debug).with("Device group '#{device_group_name}' not found on host #{vm_host.name}, searching other hosts")
+            expect(logger).to receive(:debug).with("Found device group '#{device_group_name}' on host #{fallback_host.name}")
+
+            expect(client).to receive(:upgrade_vm_virtual_hardware).with(cloned_vm_mob, nil)
+            expect(client).to receive(:reconfig_vm).with(cloned_vm_mob, anything)
+
+            subject.create(vm_config)
+          end
+        end
+
+        context 'when device group is not found on any host' do
+          before do
+            allow(cluster).to receive(:host).and_return([vm_host])
+            allow(Resources::PCIPassthrough).to receive(:create_device_group_vgpus).and_raise("Device group '#{device_group_name}' not found on host")
+            allow(logger).to receive(:debug)
+          end
+
+          it 'raises an error' do
+            expect(logger).to receive(:debug).with("Device group '#{device_group_name}' not found on host #{vm_host.name}, searching other hosts")
+
+            expect {
+              subject.create(vm_config)
+            }.to raise_error("Device group '#{device_group_name}' not found on any host in cluster")
+          end
+        end
+
+        context 'when no healthy host is found in cluster' do
+          let(:vm_runtime) { instance_double('VimSdk::Vim::Vm::RuntimeInfo', host: nil) }
+
+          before do
+            allow(cloud_searcher).to receive(:get_property).with(
+              cloned_vm_mob,
+              VimSdk::Vim::VirtualMachine,
+              'runtime',
+              ensure_all: true
+            ).and_return(vm_runtime)
+            allow(cluster).to receive(:host).and_return([])
+          end
+
+          it 'raises an error' do
+            expect {
+              subject.create(vm_config)
+            }.to raise_error("Failed to find a healthy host in cluster to query device group information")
+          end
+        end
+
+        context 'with multiple device groups' do
+          let(:device_group_name2) { 'Nvidia:4@nvidia_h100l-94c%NVLink' }
+          let(:vgpu_device3) do
+            device = VimSdk::Vim::Vm::Device::VirtualPCIPassthrough.new
+            device.key = -3
+            device_group_info = VimSdk::Vim::Vm::Device::VirtualDevice::DeviceGroupInfo.new
+            device_group_info.group_instance_key = 1
+            device_group_info.sequence_id = 0
+            device.device_group_info = device_group_info
+            device
+          end
+
+          before do
+            allow(vm_config).to receive(:device_groups).and_return([device_group_name, device_group_name2])
+            allow(cloud_searcher).to receive(:get_property).with(
+              cloned_vm_mob,
+              VimSdk::Vim::VirtualMachine,
+              'runtime',
+              ensure_all: true
+            ).and_return(vm_runtime)
+            allow(cluster).to receive(:host).and_return([vm_host])
+            allow(Resources::PCIPassthrough).to receive(:create_device_group_vgpus).with(
+              device_group_name,
+              0,
+              vm_host,
+              cloud_searcher
+            ).and_return([vgpu_device1, vgpu_device2])
+            allow(Resources::PCIPassthrough).to receive(:create_device_group_vgpus).with(
+              device_group_name2,
+              1,
+              vm_host,
+              cloud_searcher
+            ).and_return([vgpu_device3])
+          end
+
+          it 'creates device groups with correct group_instance_key' do
+            expect(client).to receive(:upgrade_vm_virtual_hardware).with(cloned_vm_mob, nil)
+            expect(client).to receive(:reconfig_vm) do |vm_mob, config_spec|
+              expect(config_spec.device_groups.device_group.length).to eq(2)
+              expect(config_spec.device_groups.device_group[0].group_instance_key).to eq(0)
+              expect(config_spec.device_groups.device_group[0].device_group_name).to eq(device_group_name)
+              expect(config_spec.device_groups.device_group[1].group_instance_key).to eq(1)
+              expect(config_spec.device_groups.device_group[1].device_group_name).to eq(device_group_name2)
+              expect(config_spec.device_change.length).to eq(3)
+            end
+
+            subject.create(vm_config)
+          end
         end
       end
 
@@ -411,6 +618,7 @@ module VSphereCloud
                                             ephemeral_disk_size: 1024,
                                             pci_passthroughs: [],
                                             vgpus: [],
+                                            device_groups: [],
                                             calculate_cpu_reservation: nil,
                                             cluster_placements: [
                                               instance_double(VmPlacement,
