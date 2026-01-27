@@ -75,7 +75,7 @@ module VimSdk
           fault = Vmodl::Fault::MethodNotFound.new
           fault.receiver = managed_object
           fault.method = info.name
-          raise VimSdk::SoapError.new('Method not found', fault)
+          raise VimSdk::SoapError.new("Method not found: #{info.name}", fault)
         end
 
         namespace_map = SOAP_NAMESPACE_MAP.dup
