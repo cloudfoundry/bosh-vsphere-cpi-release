@@ -438,7 +438,7 @@ describe 'CPI tests with NSXT', nsxt_all: true, nsxt_management: true do
             vm = @cpi.vm_provider.find(vm_id)
             retryer do
               results = @policy_group_members_api.get_group_vm_members(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, nsgroup_name_1).results
-              raise StillUpdatingVMsInGroups if results.map(&:display_name).uniq.length < 1
+              raise StillUpdatingVMsInGroups unless results.any? { |r| r.display_name == vm_id }
 
               expect(results.length).to eq(1)
               expect(results[0].display_name).to eq(vm_id)
@@ -470,13 +470,13 @@ describe 'CPI tests with NSXT', nsxt_all: true, nsxt_management: true do
             expect(segment_names).to include(segment_2.name)
             retryer do
               results = @policy_group_members_api.get_group_vm_members(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, nsgroup_name_1).results
-              raise StillUpdatingVMsInGroups if results.map(&:display_name).uniq.length < 1
+              raise StillUpdatingVMsInGroups unless results.any? { |r| r.display_name == vm_id }
 
               expect(results.length).to eq(1)
               expect(results[0].display_name).to eq(vm_id)
 
               results = @policy_group_members_api.get_group_vm_members(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, nsgroup_name_2).results
-              raise StillUpdatingVMsInGroups if results.map(&:display_name).uniq.length < 1
+              raise StillUpdatingVMsInGroups unless results.any? { |r| r.display_name == vm_id }
 
               expect(results.length).to eq(1)
               expect(results[0].display_name).to eq(vm_id)
@@ -513,14 +513,14 @@ describe 'CPI tests with NSXT', nsxt_all: true, nsxt_management: true do
 
             retryer do
               results = @policy_group_members_api.get_group_vm_members(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, nsgroup_name_1).results
-              raise StillUpdatingVMsInGroups if results.map(&:display_name).uniq.length < 6
+              raise StillUpdatingVMsInGroups unless @created_vms.all? { |vm| results.any? { |r| r.display_name == vm } }
 
               # results contain same vms in different power states
               expect(results.map(&:display_name).uniq.length).to eq(6)
               expect(results.map(&:display_name).uniq).to match_array(@created_vms)
 
               results = @policy_group_members_api.get_group_vm_members(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, nsgroup_name_2).results
-              raise StillUpdatingVMsInGroups if results.map(&:display_name).uniq.length < 6
+              raise StillUpdatingVMsInGroups unless @created_vms.all? { |vm| results.any? { |r| r.display_name == vm } }
 
               expect(results.map(&:display_name).uniq.length).to eq(6)
               expect(results.map(&:display_name).uniq).to match_array(@created_vms)
@@ -706,7 +706,7 @@ describe 'CPI tests with NSXT', nsxt_all: true, nsxt_management: true do
 
               retryer do
                 results = @policy_group_members_api.get_group_vm_members(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, dynamic_pool_group.display_name).results
-                raise StillUpdatingVMsInGroups if results.map(&:display_name).uniq.length < 1
+                raise StillUpdatingVMsInGroups unless results.any? { |r| r.display_name == vm_id }
 
                 expect(results.length).to eq(1)
                 expect(results[0].display_name).to eq(vm_id)
