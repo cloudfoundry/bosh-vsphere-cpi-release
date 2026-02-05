@@ -8,11 +8,16 @@ module VSphereCloud
     DRS_LOCK_HOST_VM_GROUP = 'host_vm_group'
     DEFAULT_RULE_NAME = 'vcpi-drs-rule'
 
-    def initialize(rule_name, client, datacenter_cluster)
+    # @param [String] rule_name Name of the DRS rule
+    # @param [VCenterClient] client vCenter client
+    # @param [Vim::ClusterComputeResource] datacenter_cluster Cluster MOB
+    # @param [String] rule_type 'MUST' for hard anti-affinity (mandatory), 'SHOULD' for soft anti-affinity (non-mandatory)
+    def initialize(rule_name, client, datacenter_cluster, rule_type: Resources::Cluster::CLUSTER_VM_HOST_RULE_MUST)
       @rule_name = rule_name
       @client = client
       @cloud_searcher = CloudSearcher.new(@client.service_content)
       @datacenter_cluster = datacenter_cluster
+      @rule_type = rule_type
     end
 
     def add_vm(vm)
@@ -103,15 +108,20 @@ module VSphereCloud
       rule_info = VimSdk::Vim::Cluster::AntiAffinityRuleSpec.new
       rule_info.enabled = true
       rule_info.name = @rule_name
+      rule_info.mandatory = mandatory?
       rule_info.vm = tagged_vms
       vm_names = rule_info.vm.map { |v| v.name }
-      logger.debug("Setting DRS rule: #{@rule_name}, vms: #{vm_names.join(', ')}")
+      logger.debug("Setting DRS rule: #{@rule_name}, rule_type: #{@rule_type}, mandatory: #{mandatory?}, vms: #{vm_names.join(', ')}")
       rule_info.key = rule_key if rule_key
 
       rule_spec.info = rule_info
 
       config_spec.rules_spec = [rule_spec]
       reconfigure_cluster(config_spec)
+    end
+
+    def mandatory?
+      @rule_type.to_s.strip.casecmp?(Resources::Cluster::CLUSTER_VM_HOST_RULE_MUST)
     end
 
     def reconfigure_cluster(config_spec)
