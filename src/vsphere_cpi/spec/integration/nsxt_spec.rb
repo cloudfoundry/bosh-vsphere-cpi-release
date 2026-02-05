@@ -1095,7 +1095,7 @@ describe 'CPI tests with NSXT', nsxt_all: true, nsxt_management: true do
           #verify vm is a member of the nsgroup_1
           retryer do
             results = @policy_group_members_api.get_group_vm_members(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, nsgroup_name_1).results
-            raise StillUpdatingVMsInGroups if results.map(&:display_name).uniq.length < 1
+            raise StillUpdatingVMsInGroups unless results.any? { |r| r.display_name == vm_id }
             expect(results).to contain_exactly(an_object_having_attributes(display_name: vm_id))
           end
 
@@ -1208,7 +1208,7 @@ describe 'CPI tests with NSXT', nsxt_all: true, nsxt_management: true do
           #verify vm is a member of the nsgroup_1
           retryer do
             results = @policy_group_members_api.get_group_vm_members(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, nsgroup_name_1).results
-            raise StillUpdatingVMsInGroups if results.map(&:display_name).uniq.length < 1
+            raise StillUpdatingVMsInGroups unless results.any? { |r| r.display_name == vm_id }
             expect(results).to contain_exactly(an_object_having_attributes(display_name: vm_id))
           end
 
