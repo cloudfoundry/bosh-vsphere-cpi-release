@@ -30,7 +30,7 @@ describe 'CPI', nsxt_pure_policy: true do
     end
 
     @policy_client = NSXTPolicy::ApiClient.new(configuration)
-    
+
     # Initialize NSXT9 Policy APIs
     @policy_groups_api = NSXTPolicy::GroupsApi.new(@policy_client)
     @policy_load_balancer_pools_api = NSXTPolicy::LoadBalancerPoolsApi.new(@policy_client)
@@ -50,7 +50,7 @@ describe 'CPI', nsxt_pure_policy: true do
   let(:pool_1) { NameAndID.new}
   let(:pool_2) { NameAndID.new}
   let(:unmanaged_pool) { NameAndID.new}
-  
+
   let(:vm_type) do
     {
       'ram' => 512,
@@ -238,7 +238,7 @@ describe 'CPI', nsxt_pure_policy: true do
               retryer do
                 all_nsx_vms=@policy_virtual_machines_api.list_virtual_machines_on_enforcement_point('default').results
                 nsxt_vms = all_nsx_vms.select { |vm| vm[:display_name] == vm_id }
-  
+
                 raise VSphereCloud::VirtualMachineNotFound.new(vm_id) if nsxt_vms.empty?
                 raise VSphereCloud::MultipleVirtualMachinesFound.new(vm_id, nsxt_vms.length) if nsxt_vms.length > 1
 
@@ -553,12 +553,12 @@ describe 'CPI', nsxt_pure_policy: true do
             expect(segment_names.length).to eq(2)
             expect(segment_names).to include(segment_1.name)
             expect(segment_names).to include(segment_2.name)
-            
+
             server_pool_1 = @policy_load_balancer_pools_api.read_lb_pool(pool_1.id)
             expect(server_pool_1.members.length).to eq(1)
             expect(server_pool_1.members[0].ip_address).to eq(vm.mob.guest&.ip_address)
             expect(server_pool_1.members[0].port).to eq("80")
-            
+
             server_pool_2 = @policy_load_balancer_pools_api.read_lb_pool(pool_2.id)
             expect(server_pool_2.members.length).to eq(1)
             expect(server_pool_2.members[0].ip_address).to eq(vm.mob.guest&.ip_address)
@@ -576,7 +576,7 @@ describe 'CPI', nsxt_pure_policy: true do
           after do
             delete_lb_pool(unmanaged_lb_pool)
           end
-          
+
           context 'when cpi_metadata_version is greater than 0' do
             it 'creates VM in specified server pools, and deletes the vm membership only from the managed lb server pools' do
               simple_vm_lifecycle(cpi, '', vm_type, policy_network_spec) do |vm_id|
@@ -585,11 +585,11 @@ describe 'CPI', nsxt_pure_policy: true do
                 expect(segment_names.length).to eq(2)
                 expect(segment_names).to include(segment_1.name)
                 expect(segment_names).to include(segment_2.name)
-                
+
                 server_pool_1 = @policy_load_balancer_pools_api.read_lb_pool(pool_1.id)
                 expect(server_pool_1.members.length).to eq(1)
                 expect(server_pool_1.members[0].display_name).to eq(vm.cid)
-                
+
                 server_pool_2 = @policy_load_balancer_pools_api.read_lb_pool(pool_2.id)
                 expect(server_pool_2.members.length).to eq(1)
                 expect(server_pool_2.members[0].display_name).to eq(vm.cid)
@@ -610,7 +610,7 @@ describe 'CPI', nsxt_pure_policy: true do
               expect(unmanaged_server_pool.members.count).to eq(1)
             end
           end
-          
+
           context 'when cpi_metadata_version is 0' do
             let(:cpi_metadata_version) { 0 }
 
@@ -621,11 +621,11 @@ describe 'CPI', nsxt_pure_policy: true do
                 expect(segment_names.length).to eq(2)
                 expect(segment_names).to include(segment_1.name)
                 expect(segment_names).to include(segment_2.name)
-                
+
                 server_pool_1 = @policy_load_balancer_pools_api.read_lb_pool(pool_1.id)
                 expect(server_pool_1.members.length).to eq(1)
                 expect(server_pool_1.members[0].display_name).to eq(vm.cid)
-                
+
                 server_pool_2 = @policy_load_balancer_pools_api.read_lb_pool(pool_2.id)
                 expect(server_pool_2.members.length).to eq(1)
                 expect(server_pool_2.members[0].display_name).to eq(vm.cid)
@@ -773,15 +773,15 @@ describe 'CPI', nsxt_pure_policy: true do
         delete_policy_group(nsgroup_name_1)
         delete_policy_group(nsgroup_name_2)
       end
-      
+
       before do
         create_segments([segment_1, segment_2])
       end
-      
+
       after do
         delete_segments([segment_1, segment_2])
       end
-      
+
       it "removes all the VM's logical ports from all NSGroups" do
         lport_ids = []
         simple_vm_lifecycle(cpi, '', vm_type, policy_network_spec) do |vm_id|
@@ -790,7 +790,7 @@ describe 'CPI', nsxt_pure_policy: true do
             lport_ids << lport.id
           end
         end
-        
+
         lport_ids.each do |id|
           expect(nsgroup_effective_logical_port_member_ids(nsgroup_1)).not_to include(id)
           expect(nsgroup_effective_logical_port_member_ids(nsgroup_2)).not_to include(id)
@@ -829,15 +829,15 @@ describe 'CPI', nsxt_pure_policy: true do
         delete_lb_pool(lb_pool_2)
         delete_policy_group(nsgroup_name_1)
       end
-      
+
       before do
         create_segments([segment_1, segment_2])
       end
-      
+
       after do
         delete_segments([segment_1, segment_2])
       end
-      
+
       it "removes all the VM's logical ports from all NSGroups linked to dynamic server pool" do
         lport_ids = []
         simple_vm_lifecycle(cpi, '', vm_type, policy_network_spec) do |vm_id|
@@ -851,7 +851,7 @@ describe 'CPI', nsxt_pure_policy: true do
           expect(nsgroup_effective_logical_port_member_ids(nsgroup_1)).not_to include(id)
         end
       end
-      
+
       it 'removes VM from all server pools' do
         simple_vm_lifecycle(cpi, '', vm_type, policy_network_spec) do |vm_id|
           vm = cpi.vm_provider.find(vm_id)
@@ -887,15 +887,15 @@ describe 'CPI', nsxt_pure_policy: true do
         delete_lb_pool(unmanaged_pool)
         delete_policy_group(nsgroup_name_1)
       end
-      
+
       before do
         create_segments([segment_1, segment_2])
       end
-      
+
       after do
         delete_segments([segment_1, segment_2])
       end
-      
+
       context 'when cpi_metadata_version is greater than 0' do
         it 'removes the VM from the bosh managed server pools' do
           simple_vm_lifecycle(cpi, '', vm_type, policy_network_spec) do |vm_id|
@@ -917,7 +917,7 @@ describe 'CPI', nsxt_pure_policy: true do
           expect(unmanaged_pool.members.length).to eq(1)
         end
       end
-      
+
       context 'when cpi_metadata_version is 0' do
         let(:cpi_metadata_version) {0}
 
@@ -1196,13 +1196,13 @@ describe 'CPI', nsxt_pure_policy: true do
 
   def create_segments(segments)
     tzs = @policy_transport_zones_api.list_transport_zones_for_enforcement_point(VSphereCloud::NSXTPolicyProvider::DEFAULT_NSXT_POLICY_DOMAIN, 'default')
-    overlay_tz = tzs.results.find { |tz| tz.id == @nsxt_overlay_tz }
+    overlay_tz = tzs.results.find { |tz| tz.id == @nsxt_overlay_tz || tz.nsx_id == @nsxt_overlay_tz }
 
     segments.each do |segment|
       seg = NSXTPolicy::Segment.new(display_name: segment.name, transport_zone_path: overlay_tz.path)
       @policy_segments_api.create_or_replace_infra_segment(segment.id, seg)
       logger.info("Created segment: #{segment.name}")
-      
+
     end
   end
 
