@@ -1,5 +1,5 @@
 GEM
-  remote: https://usw1.packages.broadcom.com/artifactory/tas-bosh-gems-virtual/
+  remote: https://rubygems.org/
   specs:
     addressable (2.8.8)
       public_suffix (>= 2.0.2, < 8.0)
@@ -50,7 +50,7 @@ GEM
       ast
       ruby-ll (~> 2.1)
     parallel (1.27.0)
-    parallel_tests (5.5.0)
+    parallel_tests (5.6.0)
       parallel
     pry (0.16.0)
       coderay (~> 1.1)
