@@ -376,9 +376,9 @@ jobs:
       - task: build
         file: source-ci/ci/tasks/build-candidate.yml
         image: vcpi-main-image
-      - task: prepare-director
+      - task: prepare-director-policy
         tags: [nimbus]
-        file: source-ci/ci/tasks/prepare-director.yml
+        file: source-ci/ci/tasks/prepare-director-policy.yml
         image: vcpi-main-image
         params:
           OPTIONAL_OPS_FILE:  |
@@ -447,9 +447,9 @@ jobs:
       - task: build
         file: source-ci/ci/tasks/build-candidate.yml
         image: vcpi-main-image
-      - task: prepare-director
+      - task: prepare-director-policy
         tags: [nimbus]
-        file: source-ci/ci/tasks/prepare-director.yml
+        file: source-ci/ci/tasks/prepare-director-policy.yml
         image: vcpi-main-image
         params:
           OPTIONAL_OPS_FILE:  |

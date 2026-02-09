@@ -270,6 +270,7 @@ module VSphereCloud
       [static_server_pools, dynamic_server_pools]
     end
 
+    before(*instance_methods) { require 'nsxt_policy_client/nsxt_policy_client' }
 
     private
 
