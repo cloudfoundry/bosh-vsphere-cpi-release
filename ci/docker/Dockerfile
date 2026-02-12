@@ -16,26 +16,23 @@ ARG BOSH_CLI_VERSION
 
 ADD .ruby-version /tmp/.ruby-version
 
-RUN apt-get update && apt-get install -y --no-install-recommends \
-  ca-certificates \
-  curl \
-  git \
-  git-lfs \
-  jq \
-  make \
-  neovim \
-  netcat-openbsd \
-  openssh-client \
-  openvpn \
-  rsync \
-  sshpass \
-  sshuttle \
-  tar \
-  wget \
-  zsh \
-  \
-  && \
-  rm -rf /var/lib/apt/lists/*
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+      ca-certificates \
+      curl \
+      git \
+      git-lfs \
+      jq \
+      make \
+      neovim \
+      netcat-openbsd \
+      openssh-client \
+      openvpn \
+      rsync \
+      sshpass \
+      sshuttle \
+      tar \
+      wget
 
 RUN wget -O ruby-install-${RUBY_INSTALL_VERSION}.tar.gz https://github.com/postmodern/ruby-install/archive/v${RUBY_INSTALL_VERSION}.tar.gz && \
   tar -xzvf ruby-install-${RUBY_INSTALL_VERSION}.tar.gz && \
@@ -53,11 +50,3 @@ RUN apt-get update && \
 RUN curl -sL https://github.com/cloudfoundry/bosh-cli/releases/download/v${BOSH_CLI_VERSION}/bosh-cli-${BOSH_CLI_VERSION}-linux-amd64 \
     > /usr/local/bin/bosh \
     && chmod +x /usr/local/bin/bosh
-
-# Oh My zsh, which is awesome
-RUN  echo "" | SHELL=/usr/bin/zsh zsh -c "$(curl -fsSL https://raw.github.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"; \
-  sed -i 's/robbyrussell/agnoster/' ~/.zshrc; \
-  echo 'export EDITOR=nvim' >> ~/.zshrc
-
-# `zsh` is the hot new shell
-CMD [ "/usr/bin/zsh" ]
