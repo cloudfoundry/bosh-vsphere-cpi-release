@@ -23,6 +23,13 @@ source environment/metadata
 # To get the cert from nsxt-manager, we run openssl on the jump box, and then pipe that result into a local openssl command that reformats it into PEM
 sshpass -p $BOSH_VSPHERE_JUMPER_PASSWORD ssh -o StrictHostKeyChecking=no "vcpi@${BOSH_VSPHERE_JUMPER_HOST}" -C "openssl s_client -showcerts -connect $BOSH_VSPHERE_CPI_NSXT_HOST:443 </dev/null 2>/dev/null" | openssl x509 -outform PEM > nsxt-manager-cert.pem
 
+# Extract FQDN from cert CN for use in the manifest. The CPI verifies that the
+# host it connects to matches the certificate SAN. Some environments (e.g. NSX-T
+# 9.0) issue certs with only a DNS SAN and no IP SAN, so we must use the FQDN
+# rather than the IP address to pass hostname verification.
+NSXT_CERT_CN=$(openssl x509 -in nsxt-manager-cert.pem -noout -subject -nameopt multiline | grep commonName | sed 's/.*= //')
+NSXT_HOST_FOR_MANIFEST="${NSXT_CERT_CN}"
+
 # Bosh is give internal ip of 192.168.111.152
 # This is because on Nimbus
 # The IP range 192.168.111.151 ~ 192.168.111.254 has been reserved for static IP.
@@ -66,7 +73,7 @@ bosh int \
   -v second_internal_ip=2013:930:0:0:0:0:0:98 \
   -v DNS=2013:930:0:0:0:0:0:1 \
   -v reserved_range_ipv6=2013:930:0:0:0:0:0:1-2013:930:0:0:0:0:0:98 \
-  -v nsxt_host="$BOSH_VSPHERE_CPI_NSXT_HOST" \
+  -v nsxt_host="$NSXT_HOST_FOR_MANIFEST" \
   -v nsxt_username="$BOSH_VSPHERE_CPI_NSXT_USERNAME" \
   -v nsxt_password="$BOSH_VSPHERE_CPI_NSXT_PASSWORD" \
   -v nsxt_segment="$BOSH_VSPHERE_CPI_NSXT_SEGMENT" \
