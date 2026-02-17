@@ -61,7 +61,7 @@ GEM
       pry (>= 0.13, < 0.17)
     public_suffix (7.0.2)
     racc (1.8.1)
-    rack (2.2.21)
+    rack (2.2.22)
     rake (13.3.1)
     reline (0.6.3)
       io-console (~> 0.5)
