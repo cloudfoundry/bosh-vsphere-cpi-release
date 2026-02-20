@@ -467,7 +467,7 @@ jobs:
               JUMPBOX_PRIVATE_KEY: ((nimbus_jumpbox_key.private_key))
           - task: run-bats
             tags: [nimbus]
-            file: source-ci/ci/tasks/run-bats-cvds.yml
+            file: source-ci/ci/tasks/run-bats-policy.yml
             image: vcpi-main-image
             params:
               BAT_INFRASTRUCTURE: vsphere
