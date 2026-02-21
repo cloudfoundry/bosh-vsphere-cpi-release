@@ -1,5 +1,5 @@
 GEM
-  remote: https://rubygems.org/
+  remote: https://usw1.packages.broadcom.com/artifactory/api/gems/tas-bosh-rubygems-virtual/
   specs:
     addressable (2.8.8)
       public_suffix (>= 2.0.2, < 8.0)
@@ -37,14 +37,14 @@ GEM
     mono_logger (1.1.2)
     multi_json (1.19.1)
     netaddr (2.0.6)
-    nokogiri (1.19.0)
+    nokogiri (1.19.1)
       mini_portile2 (~> 2.8.2)
       racc (~> 1.4)
-    nokogiri (1.19.0-arm64-darwin)
+    nokogiri (1.19.1-arm64-darwin)
       racc (~> 1.4)
-    nokogiri (1.19.0-x86_64-darwin)
+    nokogiri (1.19.1-x86_64-darwin)
       racc (~> 1.4)
-    nokogiri (1.19.0-x86_64-linux-gnu)
+    nokogiri (1.19.1-x86_64-linux-gnu)
       racc (~> 1.4)
     oga (2.3)
       ast
