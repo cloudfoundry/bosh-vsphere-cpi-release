@@ -1,4 +1,5 @@
 require 'erb'
+require 'set'
 
 require 'ci/pool'
 

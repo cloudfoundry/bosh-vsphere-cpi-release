@@ -761,8 +761,11 @@ resources:
     type: git
     source:
       uri: https://github.com/cloudfoundry/bosh-shared-ci.git
+<% seen_shepherd_pools = Set.new -%>
 <% each_pool do |pool| -%>
-  - name: <%= e "pool-#{pool}" %>
+<% next if seen_shepherd_pools.include?(pool.shepherd_pool) -%>
+<% seen_shepherd_pools.add(pool.shepherd_pool) -%>
+  - name: <%= e "pool-#{pool.shepherd_pool}" %>
     tags: [nimbus]
     type: shepherd-resource
     source:
@@ -771,7 +774,7 @@ resources:
       # log: debug # The value doesn't matter, just its presence
       config:
         namespace: bosh-team
-        pool: vcpi-<%= pool.name %>
+        pool: vcpi-<%= pool.shepherd_pool %>
 <% end -%>
   - name: source-ci
     tags: [nimbus]
