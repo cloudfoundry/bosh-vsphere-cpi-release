@@ -13,7 +13,7 @@
         tags: [nimbus]
       - put: environment
         tags: [nimbus]
-        resource: <%= e "pool-#{pool}" %>
+        resource: <%= e "pool-#{pool.shepherd_pool}" %>
         timeout: 4h
         params:
           action: create
@@ -31,10 +31,10 @@
         <%= e k %>: <%= e v %>
 <% end -%>
       on_failure:
-        put: <%= e "pool-#{pool}" %>
+        put: <%= e "pool-#{pool.shepherd_pool}" %>
         tags: [nimbus]
         params: { action: extend, lifetime: <%= 24 * 60 * 60 %>, resource: environment }
       on_success:
-        put: <%= e "pool-#{pool}" %>
+        put: <%= e "pool-#{pool.shepherd_pool}" %>
         tags: [nimbus]
         params : { action: release, resource: environment }

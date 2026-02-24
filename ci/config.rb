@@ -1,6 +1,3 @@
-# TODO(nm,ck):
-#  - reenable host maintenance tests
-
 $pipeline.pool('7.0-nsxt32-nvds') do |pool|
   pool.params = {
     RSPEC_FLAGS: [
@@ -16,6 +13,7 @@ $pipeline.pool('7.0-nsxt32-cvds') do |pool|
     RSPEC_FLAGS: [
       '--tag ~nvds',
       '--tag ~nsxt_pure_policy',
+      '--tag ~host_maintenance',
     ].join(' ')
   }
 end
@@ -57,6 +55,15 @@ $pipeline.pool('9.0-nsxt90-policy') do |pool|
       '--tag cvds',
       '--tag nsxt_all',
       '--tag nsxt_pure_policy',
+    ].join(' '),
+  }
+end
+
+$pipeline.pool('9.0-nsxt90-policy-maintenance') do |pool|
+  pool.shepherd_pool = '9.0-nsxt90-policy'
+  pool.params = {
+    RSPEC_FLAGS: [
+      '--tag host_maintenance',
     ].join(' '),
   }
 end
