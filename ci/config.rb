@@ -59,8 +59,8 @@ $pipeline.pool('9.0-nsxt90-policy') do |pool|
   }
 end
 
-$pipeline.pool('9.0-nsxt90-policy-maintenance') do |pool|
-  pool.shepherd_pool = '9.0-nsxt90-policy'
+$pipeline.pool('7.0-nsxt32-nvds-maintenance') do |pool|
+  pool.shepherd_pool = '7.0-nsxt32-nvds'
   pool.params = {
     RSPEC_FLAGS: [
       '--tag host_maintenance',
