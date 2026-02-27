@@ -1,4 +1,9 @@
 #!/bin/bash
+# @AI-Generated
+# Modified with AI assistance using Cursor with Claude 4.6 Opus
+# Description:
+# 2026-02-26: Removed Windows (x86-mingw32) platform fetch and updated x86_64-linux to x86_64-linux-gnu for Bundler 4 compatibility
+
 # When vendoring gems, vendor on a linux machine as that is the operating system that
 set -e
 
@@ -14,8 +19,7 @@ bundle package
 nokogiri_version=$(bundle info nokogiri | grep \* | awk -F"[()]" '{print $2}')
 
 pushd "src/vsphere_cpi/${BUNDLE_CACHE_PATH}"
-  gem fetch nokogiri -v $nokogiri_version --platform x86-mingw32
-  gem fetch nokogiri -v $nokogiri_version --platform x86_64-linux
+  gem fetch nokogiri -v $nokogiri_version --platform x86_64-linux-gnu
   gem fetch nokogiri -v $nokogiri_version --platform x86_64-darwin
 popd
 
