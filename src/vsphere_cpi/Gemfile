@@ -1,4 +1,4 @@
-source ENV.fetch('RUBY_GEMS_MIRROR', 'https://rubygems.org')
+source ENV.fetch('RUBY_GEMS_MIRROR', 'https://usw1.packages.broadcom.com/artifactory/api/gems/tas-bosh-rubygems-virtual/')
 
 gem 'bosh_common', '1.3262.24.0'
 gem 'bosh_cpi',    '2.5.0'
