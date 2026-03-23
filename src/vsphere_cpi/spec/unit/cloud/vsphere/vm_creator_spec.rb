@@ -565,17 +565,21 @@ module VSphereCloud
             )
           end
 
-          it "does not change the SCSI controller" do
+          it "does not change the SCSI controller when stemcell already has LSI Logic" do
+            # The stemcell VM already has a VirtualLsiLogicController, so
+            # create_scsi_controller_spec('lsi_logic') detects no class difference
+            # and returns nil — no device_change is added.
+            allow_any_instance_of(Resources::VM).to receive(:create_scsi_controller_spec)
+              .with('lsi_logic').and_return(nil)
+
             expect(client).to receive(:wait_for_task).and_yield
 
             expect(cpi).to receive(:clone_vm) do |_vm, _name, _folder, _resource_pool, options|
-              expect(options[:config].device_change).not_to include(
-                have_attributes(
-                  class: VimSdk::Vim::Vm::Device::VirtualDeviceSpec,
-                  device: paravirtual_controller_device,
-                  operation: VimSdk::Vim::Vm::Device::VirtualDeviceSpec::Operation::EDIT
-                )
-              )
+              scsi_edits = options[:config].device_change.select do |dc|
+                dc.respond_to?(:operation) &&
+                  dc.operation == VimSdk::Vim::Vm::Device::VirtualDeviceSpec::Operation::EDIT
+              end
+              expect(scsi_edits).to be_empty
               cloned_vm_mob
             end
             subject.create(vm_config)

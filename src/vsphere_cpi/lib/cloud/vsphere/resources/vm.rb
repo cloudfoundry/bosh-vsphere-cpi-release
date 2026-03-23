@@ -435,6 +435,9 @@ module VSphereCloud
         controller_class = SCSI_CONTROLLER_CLASSES[controller_type]
         raise "Unsupported SCSI controller type: '#{controller_type}'" if controller_class.nil?
 
+        # No change needed if the stemcell already has the target controller type
+        return nil if scsi_controller.is_a?(controller_class)
+
         new_scsi_controller = controller_class.new
         new_scsi_controller.key = scsi_controller.key
         new_scsi_controller.slot_info = scsi_controller.slot_info

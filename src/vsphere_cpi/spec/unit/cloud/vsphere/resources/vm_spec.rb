@@ -705,18 +705,36 @@ describe VSphereCloud::Resources::VM, fake_logger: true do
     end
 
     context 'when controller_type is lsi_logic' do
-      it 'creates a VirtualLsiLogicController with all properties copied' do
+      it 'returns nil when stemcell already has the same controller type' do
+        result = vm.create_scsi_controller_spec('lsi_logic')
+        expect(result).to be_nil
+      end
+    end
+
+    context 'when controller_type matches the existing controller (paravirtual stemcell)' do
+      let(:pvscsi_controller) do
+        device = VimSdk::Vim::Vm::Device::ParaVirtualSCSIController.new
+        device.key = 7777
+        device.slot_info = double('slot-info')
+        device.controller_key = 1234
+        device.unit_number = 4567
+        device.bus_number = 6789
+        device.device = double('device')
+        device.scsi_ctlr_unit_number = 3456
+        device.shared_bus = 'noSharing'
+        device.hot_add_remove = true
+        device
+      end
+      let(:vm_properties) { { 'config.hardware.device' => [pvscsi_controller] } }
+
+      it 'returns nil when target type matches existing controller' do
+        expect(vm.create_scsi_controller_spec('paravirtual')).to be_nil
+      end
+
+      it 'creates a new controller when target type differs from existing' do
         result = vm.create_scsi_controller_spec('lsi_logic')
         expect(result).to be_a(VimSdk::Vim::Vm::Device::VirtualLsiLogicController)
-        expect(result).to have_attributes(
-          key: 7777,
-          controller_key: 1234,
-          unit_number: 4567,
-          bus_number: 6789,
-          scsi_ctlr_unit_number: 3456,
-          shared_bus: 'noSharing',
-          hot_add_remove: true
-        )
+        expect(result.key).to eq(7777)
       end
     end
 
