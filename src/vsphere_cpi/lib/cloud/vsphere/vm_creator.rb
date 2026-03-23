@@ -90,9 +90,8 @@ module VSphereCloud
           config_spec = VimSdk::Vim::Vm::ConfigSpec.new(vm_config.config_spec_params)
           config_spec.device_change = []
 
-          if @default_scsi_controller_type != 'lsi_logic'
-            scsi_controller_spec = replicated_stemcell_vm.create_scsi_controller_spec(@default_scsi_controller_type)
-            raise "Failed to create device change to #{@default_scsi_controller_type} controller" if scsi_controller_spec.nil?
+          scsi_controller_spec = replicated_stemcell_vm.create_scsi_controller_spec(@default_scsi_controller_type)
+          if scsi_controller_spec
             scsi_controller_device_change_spec = Resources::VM.create_edit_device_spec(scsi_controller_spec)
             config_spec.device_change << scsi_controller_device_change_spec
           end
