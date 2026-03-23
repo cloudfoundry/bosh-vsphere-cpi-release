@@ -218,6 +218,7 @@ module VSphereCloud
         allow(vm_config).to receive(:validate_drs_rules).and_return(true)
         allow_any_instance_of(Resources::VM).to receive(:power_on)
         allow(StoragePicker).to receive(:choose_ephemeral_storage).and_return(datastore)
+        allow_any_instance_of(Resources::VM).to receive(:create_scsi_controller_spec).and_return(paravirtual_controller_device)
         allow_any_instance_of(Resources::VM).to receive(:create_paravirtual_scsi_controller_spec).and_return(paravirtual_controller_device)
 
         allow(subject).to receive(:generate_network_env).and_return({'from': 'network env'})
@@ -525,19 +526,60 @@ module VSphereCloud
         end
       end
 
-      context 'paravirtual SCSI controller' do
-        it "changes default SCSI controller to paravirtual SCSI controller to allow more disks to be attached" do
-          expect(client).to receive(:wait_for_task).and_yield
+      context 'SCSI controller type' do
+        context 'when default_scsi_controller_type is paravirtual (default)' do
+          it "changes default SCSI controller to paravirtual SCSI controller to allow more disks to be attached" do
+            expect(client).to receive(:wait_for_task).and_yield
 
-          expect(cpi).to receive(:clone_vm) do |_vm, _name, _folder, _resource_pool, options|
-            expect(options[:config].device_change).to include(have_attributes(
-                                                                class: VimSdk::Vim::Vm::Device::VirtualDeviceSpec,
-                                                                device: paravirtual_controller_device,
-                                                                operation: VimSdk::Vim::Vm::Device::VirtualDeviceSpec::Operation::EDIT
-                                                              ))
-            cloned_vm_mob
+            expect(cpi).to receive(:clone_vm) do |_vm, _name, _folder, _resource_pool, options|
+              expect(options[:config].device_change).to include(have_attributes(
+                                                                  class: VimSdk::Vim::Vm::Device::VirtualDeviceSpec,
+                                                                  device: paravirtual_controller_device,
+                                                                  operation: VimSdk::Vim::Vm::Device::VirtualDeviceSpec::Operation::EDIT
+                                                                ))
+              cloned_vm_mob
+            end
+            subject.create(vm_config)
           end
-          subject.create(vm_config)
+        end
+
+        context 'when default_scsi_controller_type is lsi_logic' do
+          subject(:creator) do
+            VmCreator.new(
+              client:,
+              cloud_searcher: cloud_searcher,
+              cpi:,
+              datacenter: datacenter,
+              agent_env_client: agent_env,
+              additional_agent_env: config['agent'],
+              tagging_tagger:,
+              default_disk_type:,
+              default_scsi_controller_type: 'lsi_logic',
+              enable_auto_anti_affinity_drs_rules: false,
+              stemcell:,
+              upgrade_hw_version: upgrade_hw_version,
+              default_hw_version: default_hw_version,
+              pbm:,
+              ip_conflict_detector: ip_conflict_detector,
+              ensure_no_ip_conflicts: ensure_no_ip_conflicts,
+            )
+          end
+
+          it "does not change the SCSI controller" do
+            expect(client).to receive(:wait_for_task).and_yield
+
+            expect(cpi).to receive(:clone_vm) do |_vm, _name, _folder, _resource_pool, options|
+              expect(options[:config].device_change).not_to include(
+                have_attributes(
+                  class: VimSdk::Vim::Vm::Device::VirtualDeviceSpec,
+                  device: paravirtual_controller_device,
+                  operation: VimSdk::Vim::Vm::Device::VirtualDeviceSpec::Operation::EDIT
+                )
+              )
+              cloned_vm_mob
+            end
+            subject.create(vm_config)
+          end
         end
       end
 

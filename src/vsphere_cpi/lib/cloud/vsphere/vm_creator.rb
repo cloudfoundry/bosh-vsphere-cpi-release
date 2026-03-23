@@ -13,6 +13,7 @@ module VSphereCloud
                    cpi:,
                    datacenter:,
                    default_disk_type:,
+                   default_scsi_controller_type: 'paravirtual',
                    enable_auto_anti_affinity_drs_rules:,
                    ensure_no_ip_conflicts:,
                    ip_conflict_detector:,
@@ -28,6 +29,7 @@ module VSphereCloud
       @cpi = cpi
       @datacenter = datacenter
       @default_disk_type = default_disk_type
+      @default_scsi_controller_type = default_scsi_controller_type
       @enable_auto_anti_affinity_drs_rules = enable_auto_anti_affinity_drs_rules
       @ensure_no_ip_conflicts = ensure_no_ip_conflicts
       @ip_conflict_detector = ip_conflict_detector
@@ -88,10 +90,12 @@ module VSphereCloud
           config_spec = VimSdk::Vim::Vm::ConfigSpec.new(vm_config.config_spec_params)
           config_spec.device_change = []
 
-          paravirtual_scsi_controller_spec = replicated_stemcell_vm.create_paravirtual_scsi_controller_spec
-          raise 'Failed to create device change to paravirtual controller' if paravirtual_scsi_controller_spec.nil?
-          scsi_controller_device_change_spec = Resources::VM.create_edit_device_spec(paravirtual_scsi_controller_spec)
-          config_spec.device_change << scsi_controller_device_change_spec
+          if @default_scsi_controller_type != 'lsi_logic'
+            scsi_controller_spec = replicated_stemcell_vm.create_scsi_controller_spec(@default_scsi_controller_type)
+            raise "Failed to create device change to #{@default_scsi_controller_type} controller" if scsi_controller_spec.nil?
+            scsi_controller_device_change_spec = Resources::VM.create_edit_device_spec(scsi_controller_spec)
+            config_spec.device_change << scsi_controller_device_change_spec
+          end
 
           ephemeral_disk = Resources::EphemeralDisk.new(
             size_in_mb: vm_config.ephemeral_disk_size,

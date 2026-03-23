@@ -260,6 +260,33 @@ module VSphereCloud
         end
       end
 
+      context 'when default_scsi_controller_type is valid' do
+        before { config_hash['vcenters'].first['default_scsi_controller_type'] = 'paravirtual' }
+        it 'does not raise an error' do
+          expect { config.validate }.to_not raise_error
+        end
+      end
+
+      context 'when default_scsi_controller_type is lsi_logic_sas' do
+        before { config_hash['vcenters'].first['default_scsi_controller_type'] = 'lsi_logic_sas' }
+        it 'does not raise an error' do
+          expect { config.validate }.to_not raise_error
+        end
+      end
+
+      context 'when default_scsi_controller_type is invalid' do
+        before { config_hash['vcenters'].first['default_scsi_controller_type'] = 'invalid_type' }
+        it 'raises an error' do
+          expect { config.validate }.to raise_error(RuntimeError, /invalid_type/)
+        end
+      end
+
+      context 'when default_scsi_controller_type is not set' do
+        it 'does not raise an error (defaults to paravirtual)' do
+          expect { config.validate }.to_not raise_error
+        end
+      end
+
       context 'when the vcenter_default_disk_type is "preallocated"' do
         let(:default_disk_type) { 'preallocated' }
         it 'returns value from config' do

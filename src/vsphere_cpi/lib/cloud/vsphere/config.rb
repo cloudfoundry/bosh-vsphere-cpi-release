@@ -46,6 +46,7 @@ module VSphereCloud
     end
 
     SUPPORTED_DISK_TYPES = ['thin', 'preallocated']
+    SUPPORTED_SCSI_CONTROLLER_TYPES = ['lsi_logic', 'lsi_logic_sas', 'paravirtual']
 
     def initialize(config_hash)
       @config = config_hash
@@ -72,6 +73,11 @@ module VSphereCloud
 
       unless SUPPORTED_DISK_TYPES.include?(default_disk_type)
         raise "Unsupported default_disk_type '#{default_disk_type}'. vSphere CPI only supports a default_disk_type of 'preallocated' or 'thin'"
+      end
+
+      scsi_controller_type = config['vcenters'].first['default_scsi_controller_type']
+      if scsi_controller_type && !SUPPORTED_SCSI_CONTROLLER_TYPES.include?(scsi_controller_type)
+        raise "Unsupported default_scsi_controller_type '#{scsi_controller_type}'. vSphere CPI only supports 'lsi_logic', 'lsi_logic_sas', or 'paravirtual'"
       end
 
       pdp = config['vcenters'].first['datacenters'].first['persistent_datastore_pattern']
@@ -155,6 +161,10 @@ module VSphereCloud
 
     def vcenter_default_disk_type
       vcenter['default_disk_type']
+    end
+
+    def vcenter_default_scsi_controller_type
+      vcenter['default_scsi_controller_type'] || 'paravirtual'
     end
 
     def vcenter_enable_auto_anti_affinity_drs_rules
@@ -315,6 +325,7 @@ module VSphereCloud
             optional('http_logging') => bool,
             optional('enable_auto_anti_affinity_drs_rules') => bool,
             optional('default_disk_type') => String,
+            optional('default_scsi_controller_type') => String,
             optional('upgrade_hw_version') => bool,
             optional('default_hw_version') => Integer,
             optional('cpu_reserve_full_mhz') => bool,
