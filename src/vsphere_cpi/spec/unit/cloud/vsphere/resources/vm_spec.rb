@@ -669,7 +669,7 @@ describe VSphereCloud::Resources::VM, fake_logger: true do
     end
   end
 
-  describe 'create_paravirtual_scsi_controller_spec' do
+  describe 'create_scsi_controller_spec' do
     let(:lsi_scsi_controller) do
       device = VimSdk::Vim::Vm::Device::VirtualLsiLogicController.new
       device.key = 7777
@@ -684,10 +684,77 @@ describe VSphereCloud::Resources::VM, fake_logger: true do
       device
     end
 
-    let(:paravirtual_scsi_controller) do
-      device = VimSdk::Vim::Vm::Device::ParaVirtualSCSIController.new
-      device.
-      device.
+    let(:vm_properties) { { 'config.hardware.device' => [lsi_scsi_controller] } }
+
+    context 'when controller_type is paravirtual' do
+      it 'creates a ParaVirtualSCSIController with all properties copied' do
+        result = vm.create_scsi_controller_spec('paravirtual')
+        expect(result).to be_a(VimSdk::Vim::Vm::Device::ParaVirtualSCSIController)
+        expect(result).to have_attributes(
+          key: 7777,
+          slot_info: lsi_scsi_controller.slot_info,
+          controller_key: 1234,
+          unit_number: 4567,
+          bus_number: 6789,
+          device: lsi_scsi_controller.device,
+          scsi_ctlr_unit_number: 3456,
+          shared_bus: 'noSharing',
+          hot_add_remove: true
+        )
+      end
+    end
+
+    context 'when controller_type is lsi_logic' do
+      it 'creates a VirtualLsiLogicController with all properties copied' do
+        result = vm.create_scsi_controller_spec('lsi_logic')
+        expect(result).to be_a(VimSdk::Vim::Vm::Device::VirtualLsiLogicController)
+        expect(result).to have_attributes(
+          key: 7777,
+          controller_key: 1234,
+          unit_number: 4567,
+          bus_number: 6789,
+          scsi_ctlr_unit_number: 3456,
+          shared_bus: 'noSharing',
+          hot_add_remove: true
+        )
+      end
+    end
+
+    context 'when controller_type is lsi_logic_sas' do
+      it 'creates a VirtualLsiLogicSASController with all properties copied' do
+        result = vm.create_scsi_controller_spec('lsi_logic_sas')
+        expect(result).to be_a(VimSdk::Vim::Vm::Device::VirtualLsiLogicSASController)
+        expect(result).to have_attributes(
+          key: 7777,
+          controller_key: 1234,
+          unit_number: 4567,
+          bus_number: 6789,
+          scsi_ctlr_unit_number: 3456,
+          shared_bus: 'noSharing',
+          hot_add_remove: true
+        )
+      end
+    end
+
+    context 'when controller_type is unsupported' do
+      it 'raises an error' do
+        expect { vm.create_scsi_controller_spec('invalid_type') }.to raise_error(RuntimeError, /Unsupported SCSI controller type/)
+      end
+    end
+
+    context 'when no SCSI controller exists on the VM' do
+      let(:vm_properties) { { 'config.hardware.device' => [] } }
+      it 'returns nil' do
+        expect(vm.create_scsi_controller_spec('paravirtual')).to be_nil
+      end
+    end
+  end
+
+  describe 'create_paravirtual_scsi_controller_spec (backwards compatibility)' do
+    let(:lsi_scsi_controller) do
+      device = VimSdk::Vim::Vm::Device::VirtualLsiLogicController.new
+      device.key = 7777
+      device.slot_info = double('slot-info')
       device.controller_key = 1234
       device.unit_number = 4567
       device.bus_number = 6789

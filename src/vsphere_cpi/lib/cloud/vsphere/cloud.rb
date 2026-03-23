@@ -395,6 +395,7 @@ module VSphereCloud
             ip_conflict_detector: IPConflictDetector.new(@client, @datacenter),
             ensure_no_ip_conflicts: @config.vcenter_ensure_no_ip_conflicts,
             default_disk_type: @config.vcenter_default_disk_type,
+            default_scsi_controller_type: @config.vcenter_default_scsi_controller_type,
             enable_auto_anti_affinity_drs_rules: @config.vcenter_enable_auto_anti_affinity_drs_rules,
             stemcell: Stemcell.new(stemcell_cid),
             upgrade_hw_version: @config.upgrade_hw_version,

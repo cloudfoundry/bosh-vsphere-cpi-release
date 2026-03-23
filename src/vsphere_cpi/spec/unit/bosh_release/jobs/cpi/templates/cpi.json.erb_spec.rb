@@ -88,6 +88,7 @@ describe 'cpi.json.erb' do
               'user' => 'vcenter-user',
               'connection_options' => { 'ca_cert' => nil },
               'default_disk_type' => 'preallocated',
+              'default_scsi_controller_type' => 'paravirtual',
               'enable_auto_anti_affinity_drs_rules' => true,
               'enable_human_readable_name' => true,
               'cpu_reserve_full_mhz' => false,
@@ -217,6 +218,19 @@ describe 'cpi.json.erb' do
     before(:each) { manifest['properties']['vcenter']['default_disk_type'] = 'thin' }
     it 'renders the default_disk_type properly' do
       expect(subject['cloud']['properties']['vcenters'].first['default_disk_type']).to eq('thin')
+    end
+  end
+
+  context 'when `default_scsi_controller_type` is `paravirtual`' do
+    before(:each) { manifest['properties']['vcenter']['default_scsi_controller_type'] = 'paravirtual' }
+    it 'renders the default_scsi_controller_type properly' do
+      expect(subject['cloud']['properties']['vcenters'].first['default_scsi_controller_type']).to eq('paravirtual')
+    end
+  end
+
+  context 'when `default_scsi_controller_type` is not set' do
+    it 'defaults to paravirtual' do
+      expect(subject['cloud']['properties']['vcenters'].first['default_scsi_controller_type']).to eq('paravirtual')
     end
   end
 

@@ -422,11 +422,20 @@ module VSphereCloud
         profile_spec
       end
 
-      def create_paravirtual_scsi_controller_spec
+      SCSI_CONTROLLER_CLASSES = {
+        'paravirtual' => VimSdk::Vim::Vm::Device::ParaVirtualSCSIController,
+        'lsi_logic' => VimSdk::Vim::Vm::Device::VirtualLsiLogicController,
+        'lsi_logic_sas' => VimSdk::Vim::Vm::Device::VirtualLsiLogicSASController,
+      }.freeze
+
+      def create_scsi_controller_spec(controller_type)
         scsi_controller = devices.find { |device| device.kind_of?(Vim::Vm::Device::VirtualSCSIController) }
         return nil if scsi_controller.nil?
 
-        new_scsi_controller = VimSdk::Vim::Vm::Device::ParaVirtualSCSIController.new
+        controller_class = SCSI_CONTROLLER_CLASSES[controller_type]
+        raise "Unsupported SCSI controller type: '#{controller_type}'" if controller_class.nil?
+
+        new_scsi_controller = controller_class.new
         new_scsi_controller.key = scsi_controller.key
         new_scsi_controller.slot_info = scsi_controller.slot_info
         new_scsi_controller.controller_key = scsi_controller.controller_key
@@ -438,6 +447,11 @@ module VSphereCloud
         new_scsi_controller.hot_add_remove = scsi_controller.hot_add_remove
 
         new_scsi_controller
+      end
+
+      # Backwards-compatible alias
+      def create_paravirtual_scsi_controller_spec
+        create_scsi_controller_spec('paravirtual')
       end
 
       def self.create_delete_device_spec(device, options = {})

@@ -17,6 +17,9 @@ properties:
   vcenter.default_disk_type:
     description: backing for ephemeral and persistent disks unless overridden by `disk_pools.cloud_properties.type`; can be `thin` or `preallocated`
     default: preallocated
+  vcenter.default_scsi_controller_type:
+    description: SCSI controller type for VMs; can be `paravirtual` (supports up to 63 disks), `lsi_logic` (preserves stemcell controller, may reduce write latency), or `lsi_logic_sas`
+    default: paravirtual
   vcenter.user:
     description: User to connect to vCenter server used by vsphere cpi
   vcenter.password:
