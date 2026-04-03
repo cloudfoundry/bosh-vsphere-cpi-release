@@ -274,6 +274,13 @@ module VSphereCloud
         end
       end
 
+      context 'when default_scsi_controller_type is lsi_logic' do
+        before { config_hash['vcenters'].first['default_scsi_controller_type'] = 'lsi_logic' }
+        it 'does not raise an error' do
+          expect { config.validate }.to_not raise_error
+        end
+      end
+
       context 'when default_scsi_controller_type is invalid' do
         before { config_hash['vcenters'].first['default_scsi_controller_type'] = 'invalid_type' }
         it 'raises an error' do

@@ -754,6 +754,31 @@ describe VSphereCloud::Resources::VM, fake_logger: true do
       end
     end
 
+    context 'when multiple SCSI controllers exist' do
+      let(:controller_1) do
+        device = VimSdk::Vim::Vm::Device::VirtualLsiLogicController.new
+        device.key = 7777
+        device
+      end
+      let(:controller_2) do
+        device = VimSdk::Vim::Vm::Device::ParaVirtualSCSIController.new
+        device.key = 8888
+        device
+      end
+      let(:system_disk) do
+        disk = VimSdk::Vim::Vm::Device::VirtualDisk.new
+        disk.controller_key = 8888
+        disk
+      end
+      let(:vm_properties) { { 'config.hardware.device' => [controller_1, controller_2, system_disk] } }
+
+      it 'locates the controller that matches the system disk controller_key' do
+        result = vm.create_scsi_controller_spec('lsi_logic')
+        expect(result).to be_a(VimSdk::Vim::Vm::Device::VirtualLsiLogicController)
+        expect(result.key).to eq(8888)
+      end
+    end
+
     context 'when controller_type is unsupported' do
       it 'raises an error' do
         expect { vm.create_scsi_controller_spec('invalid_type') }.to raise_error(RuntimeError, /Unsupported SCSI controller type/)
