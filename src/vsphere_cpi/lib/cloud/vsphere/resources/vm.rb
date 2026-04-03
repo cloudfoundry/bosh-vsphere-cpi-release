@@ -423,13 +423,16 @@ module VSphereCloud
       end
 
       SCSI_CONTROLLER_CLASSES = {
-        'paravirtual' => VimSdk::Vim::Vm::Device::ParaVirtualSCSIController,
-        'lsi_logic' => VimSdk::Vim::Vm::Device::VirtualLsiLogicController,
-        'lsi_logic_sas' => VimSdk::Vim::Vm::Device::VirtualLsiLogicSASController,
+        VSphereCloud::ScsiControllerType::PARAVIRTUAL => VimSdk::Vim::Vm::Device::ParaVirtualSCSIController,
+        VSphereCloud::ScsiControllerType::LSI_LOGIC => VimSdk::Vim::Vm::Device::VirtualLsiLogicController,
+        VSphereCloud::ScsiControllerType::LSI_LOGIC_SAS => VimSdk::Vim::Vm::Device::VirtualLsiLogicSASController,
       }.freeze
 
       def create_scsi_controller_spec(controller_type)
-        scsi_controller = devices.find { |device| device.kind_of?(Vim::Vm::Device::VirtualSCSIController) }
+        scsi_controller = devices.find do |device|
+          device.kind_of?(Vim::Vm::Device::VirtualSCSIController) &&
+            (system_disk ? device.key == system_disk.controller_key : true)
+        end
         return nil if scsi_controller.nil?
 
         controller_class = SCSI_CONTROLLER_CLASSES[controller_type]

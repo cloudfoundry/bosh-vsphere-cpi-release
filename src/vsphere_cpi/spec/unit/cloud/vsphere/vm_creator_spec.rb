@@ -565,10 +565,10 @@ module VSphereCloud
             )
           end
 
-          it "does not change the SCSI controller when stemcell already has LSI Logic" do
-            # The stemcell VM already has a VirtualLsiLogicController, so
-            # create_scsi_controller_spec('lsi_logic') detects no class difference
-            # and returns nil — no device_change is added.
+          it "does not add controller edit when create_scsi_controller_spec returns nil" do
+            # When the stemcell VM already has a controller of the target type (e.g., VirtualLsiLogicController),
+            # create_scsi_controller_spec returns nil. The controller device edit is cleanly ignored
+            # and the controller definition does not have to be repeatedly saved/returned.
             allow_any_instance_of(Resources::VM).to receive(:create_scsi_controller_spec)
               .with('lsi_logic').and_return(nil)
 

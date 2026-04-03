@@ -46,7 +46,6 @@ module VSphereCloud
     end
 
     SUPPORTED_DISK_TYPES = ['thin', 'preallocated']
-    SUPPORTED_SCSI_CONTROLLER_TYPES = ['lsi_logic', 'lsi_logic_sas', 'paravirtual']
 
     def initialize(config_hash)
       @config = config_hash
@@ -76,7 +75,7 @@ module VSphereCloud
       end
 
       scsi_controller_type = config['vcenters'].first['default_scsi_controller_type']
-      if scsi_controller_type && !SUPPORTED_SCSI_CONTROLLER_TYPES.include?(scsi_controller_type)
+      if scsi_controller_type && !VSphereCloud::ScsiControllerType::ALL.include?(scsi_controller_type)
         raise "Unsupported default_scsi_controller_type '#{scsi_controller_type}'. vSphere CPI only supports 'lsi_logic', 'lsi_logic_sas', or 'paravirtual'"
       end
 
