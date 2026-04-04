@@ -3,7 +3,7 @@ GEM
   specs:
     addressable (2.8.9)
       public_suffix (>= 2.0.2, < 8.0)
-    ansi (1.5.0)
+    ansi (1.6.0)
     ast (2.4.3)
     base64 (0.3.0)
     bosh_common (1.3262.24.0)
@@ -21,7 +21,7 @@ GEM
     ethon (0.18.0)
       ffi (>= 1.15.0)
       logger
-    fakefs (3.2.0)
+    fakefs (3.2.1)
     ffi (1.17.4)
     ffi (1.17.4-arm64-darwin)
     ffi (1.17.4-x86_64-darwin)
@@ -51,7 +51,7 @@ GEM
     oga (2.3)
       ast
       ruby-ll (~> 2.1)
-    parallel (1.27.0)
+    parallel (2.0.0)
     parallel_tests (5.6.0)
       parallel
     pry (0.16.0)
@@ -63,7 +63,7 @@ GEM
       pry (>= 0.13, < 0.17)
     public_suffix (7.0.5)
     racc (1.8.1)
-    rack (2.2.22)
+    rack (2.2.23)
     rake (13.3.1)
     reline (0.6.3)
       io-console (~> 0.5)
