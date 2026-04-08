@@ -558,9 +558,11 @@ module VSphereCloud
     def create_drs_rules(vm_config, vm_mob, cluster)
       if should_create_auto_drs_rule(vm_config, cluster) then
         drs_rule_name = vm_config.bosh_group
+        drs_rule_type = Resources::Cluster::CLUSTER_VM_HOST_RULE_MUST
       elsif !vm_config.drs_rule(cluster).nil? then
-        drs_rule_res = vm_config.drs_rule(cluster)
-        drs_rule_name = drs_rule_res['name']
+        drs_rule_config = vm_config.drs_rule(cluster)
+        drs_rule_name = drs_rule_config['name']
+        drs_rule_type = drs_rule_config.fetch('rule_type', Resources::Cluster::CLUSTER_VM_HOST_RULE_MUST)
       else
         return
       end
@@ -568,7 +570,8 @@ module VSphereCloud
       drs_rule = VSphereCloud::DrsRule.new(
         drs_rule_name,
         @client,
-        cluster.mob
+        cluster.mob,
+        rule_type: drs_rule_type
       )
       drs_rule.add_vm(vm_mob)
     end
