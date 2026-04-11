@@ -1,7 +1,7 @@
 GEM
   remote: https://usw1.packages.broadcom.com/artifactory/api/gems/tas-bosh-rubygems-virtual/
   specs:
-    addressable (2.8.9)
+    addressable (2.9.0)
       public_suffix (>= 2.0.2, < 8.0)
     ansi (1.6.0)
     ast (2.4.3)
@@ -37,7 +37,7 @@ GEM
     method_source (1.1.0)
     mini_portile2 (2.8.9)
     mono_logger (1.1.2)
-    multi_json (1.19.1)
+    multi_json (1.20.0)
     netaddr (2.0.6)
     nokogiri (1.19.2)
       mini_portile2 (~> 2.8.2)
@@ -51,8 +51,8 @@ GEM
     oga (2.3)
       ast
       ruby-ll (~> 2.1)
-    parallel (2.0.0)
-    parallel_tests (5.6.0)
+    parallel (2.0.1)
+    parallel_tests (5.7.0)
       parallel
     pry (0.16.0)
       coderay (~> 1.1)
