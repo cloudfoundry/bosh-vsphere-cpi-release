@@ -108,6 +108,25 @@ module VSphereCloud
       allow(VSphereCloud::AgentEnv).to receive(:new).and_return(agent_env)
     end
 
+    describe '#tagging_tagger' do
+      it 'does not create a CIS tagging REST session until first use' do
+        connect_calls = 0
+        allow(TaggingTag::AttachTagToVm).to receive(:InitializeConnection) do |_cfg, _log|
+          connect_calls += 1
+          tag_client
+        end
+        allow(TaggingTag::AttachTagToVm).to receive(:new).with(tag_client).and_return(tagging_tagger)
+
+        cloud = VSphereCloud::Cloud.new(config)
+        expect(connect_calls).to eq(0)
+
+        cloud.tagging_tagger
+        expect(connect_calls).to eq(1)
+
+        cloud.tagging_tagger
+        expect(connect_calls).to eq(1)
+      end
+    end
 
     describe '#enable_telemetry' do
       before do

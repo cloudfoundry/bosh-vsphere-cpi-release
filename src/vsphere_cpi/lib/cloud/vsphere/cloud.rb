@@ -141,10 +141,6 @@ module VSphereCloud
         @nsxt_policy_provider = NSXTPolicyProvider.new(nsxt_policy_client_builder, @config.nsxt.default_vif_type)
       end
 
-      # Initialize tagging tagger object
-      tag_client = TaggingTag::AttachTagToVm.InitializeConnection(@config, logger)
-      @tagging_tagger = TaggingTag::AttachTagToVm.new(tag_client)
-
       # We get disconnected if the connection is inactive for a long period.
       @heartbeat_thread = Thread.new do
         while true do
@@ -164,6 +160,12 @@ module VSphereCloud
         rescue VSphereCloud::VCenterClient::NotLoggedInException
         end
       end
+    end
+
+    def tagging_tagger
+      @tagging_tagger ||= TaggingTag::AttachTagToVm.new(
+        TaggingTag::AttachTagToVm.InitializeConnection(@config, logger)
+      )
     end
 
     def has_vm?(vm_cid)
@@ -391,7 +393,7 @@ module VSphereCloud
             datacenter: @datacenter,
             agent_env_client: @agent_env,
             additional_agent_env: @config.agent,
-            tagging_tagger: @tagging_tagger,
+            tagging_tagger: tagging_tagger,
             ip_conflict_detector: IPConflictDetector.new(@client, @datacenter),
             ensure_no_ip_conflicts: @config.vcenter_ensure_no_ip_conflicts,
             default_disk_type: @config.vcenter_default_disk_type,
