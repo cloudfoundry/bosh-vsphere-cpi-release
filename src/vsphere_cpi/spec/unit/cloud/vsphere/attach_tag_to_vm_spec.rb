@@ -1,12 +1,68 @@
 require 'spec_helper'
 require 'vsphere-automation-cis'
 require 'vsphere-automation-vcenter'
+require 'stringio'
 
 module VSphereCloud
   module TaggingTag
     describe AttachTagToVm, fake_logger: true do
       subject(:api_client) { VSphereAutomation::ApiClient.new }
       subject(:tagging_tag) { TaggingTag::AttachTagToVm.new(api_client) }
+
+      describe '.InitializeConnection' do
+        let(:logger) { ::Logger.new(StringIO.new) }
+        let(:cloud_config) do
+          instance_double(
+            VSphereCloud::Config,
+            vcenter_host: 'vc.example.test',
+            vcenter_user: 'u',
+            vcenter_password: 'p',
+            vcenter_connection_options: connection_options,
+          )
+        end
+        let(:connection_options) { {} }
+        let(:configuration) { instance_double(VSphereAutomation::Configuration) }
+        let(:api_client_instance) { instance_double(VSphereAutomation::ApiClient, default_headers: {}) }
+        let(:session_api) { instance_double(VSphereAutomation::CIS::SessionApi) }
+
+        before do
+          allow(VSphereAutomation::Configuration).to receive(:new).and_return(configuration)
+          allow(configuration).to receive(:tap).and_yield(configuration).and_return(configuration)
+          %i[
+            host=
+            username=
+            password=
+            scheme=
+            verify_ssl=
+            verify_ssl_host=
+            ssl_ca_cert=
+            logger=
+            debugging=
+          ].each { |m| allow(configuration).to receive(m) }
+          allow(configuration).to receive(:basic_auth_token).and_return('Basic x')
+          allow(VSphereAutomation::ApiClient).to receive(:new).with(configuration).and_return(api_client_instance)
+          allow(VSphereAutomation::CIS::SessionApi).to receive(:new).with(api_client_instance).and_return(session_api)
+          allow(session_api).to receive(:create).with('').and_return(double(value: 'session-id'))
+        end
+
+        it 'does not pin a CA and disables TLS verification when ca_cert_file is absent' do
+          expect(configuration).to receive(:verify_ssl=).with(false)
+          expect(configuration).to receive(:verify_ssl_host=).with(false)
+          expect(configuration).not_to receive(:ssl_ca_cert=)
+          described_class.InitializeConnection(cloud_config, logger)
+        end
+
+        context 'when vcenter.connection_options.ca_cert_file is set' do
+          let(:connection_options) { { 'ca_cert_file' => '/tmp/vcenter-ca.pem' } }
+
+          it 'pins the CA and enables TLS verification' do
+            expect(configuration).to receive(:ssl_ca_cert=).with('/tmp/vcenter-ca.pem')
+            expect(configuration).to receive(:verify_ssl=).with(true)
+            expect(configuration).to receive(:verify_ssl_host=).with(true)
+            described_class.InitializeConnection(cloud_config, logger)
+          end
+        end
+      end
 
       describe '#retrieve_category_id' do
         let(:result_1) do

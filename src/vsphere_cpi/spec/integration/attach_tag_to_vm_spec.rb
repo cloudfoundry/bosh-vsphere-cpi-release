@@ -199,7 +199,12 @@ module VSphereCloud
 
     def tag_client
       return @tag_client unless @tag_client.nil?
-      cloud_config = OpenStruct.new(vcenter_host: @host, vcenter_password: @password, vcenter_user: @user)
+      cloud_config = OpenStruct.new(
+        vcenter_host: @host,
+        vcenter_password: @password,
+        vcenter_user: @user,
+        vcenter_connection_options: {},
+      )
       @tag_client = VSphereCloud::TaggingTag::AttachTagToVm.InitializeConnection(cloud_config, Bosh::Cpi::Logger.new(STDOUT))
     end
 
