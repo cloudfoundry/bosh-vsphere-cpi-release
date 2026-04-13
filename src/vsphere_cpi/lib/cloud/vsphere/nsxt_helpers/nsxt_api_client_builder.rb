@@ -31,11 +31,14 @@ module VSphereCloud
       end
 
       # Root CA Cert
-      configuration.ssl_ca_cert = @config.ca_cert_file
+      raw_ca = @config.ca_cert_file
+      s = raw_ca.to_s.strip
+      ca_file = s.empty? ? nil : s
+      configuration.ssl_ca_cert = ca_file
 
       # SKIP SSL VALIDATION?
-      configuration.verify_ssl = !@config.ca_cert_file.nil?
-      configuration.verify_ssl_host = !@config.ca_cert_file.nil?
+      configuration.verify_ssl = !ca_file.nil?
+      configuration.verify_ssl_host = !ca_file.nil?
 
       @client = NSXT::ApiClient.new(configuration)
       #Design here isn't ideal but allows us to keep "x-allow-overwrite" switching logic out of Swagger generated code.

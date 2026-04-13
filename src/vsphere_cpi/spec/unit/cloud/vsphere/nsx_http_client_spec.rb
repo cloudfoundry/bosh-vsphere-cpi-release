@@ -21,6 +21,14 @@ module VSphereCloud
         end
       end
 
+      context 'when ca_cert_file is an empty string' do
+        let(:ca_cert_file) { '' }
+
+        it 'does not validate the NSX certificate when connecting' do
+          expect(backing_client.ssl_config.verify_mode).to eq(OpenSSL::SSL::VERIFY_NONE)
+        end
+      end
+
       context 'when the CA cert file provided signs the NSX cert' do
         let(:ca_cert_file) { certificate(:success).path }
 

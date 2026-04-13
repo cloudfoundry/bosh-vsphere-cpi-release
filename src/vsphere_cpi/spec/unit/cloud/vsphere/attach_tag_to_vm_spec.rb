@@ -62,6 +62,17 @@ module VSphereCloud
             described_class.InitializeConnection(cloud_config, logger)
           end
         end
+
+        context 'when vcenter.connection_options.ca_cert_file is blank' do
+          let(:connection_options) { { 'ca_cert_file' => '' } }
+
+          it 'does not pin a CA and disables TLS verification' do
+            expect(configuration).to receive(:verify_ssl=).with(false)
+            expect(configuration).to receive(:verify_ssl_host=).with(false)
+            expect(configuration).not_to receive(:ssl_ca_cert=)
+            described_class.InitializeConnection(cloud_config, logger)
+          end
+        end
       end
 
       describe '#retrieve_category_id' do

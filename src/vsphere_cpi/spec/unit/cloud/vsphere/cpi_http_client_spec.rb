@@ -43,6 +43,24 @@ module VSphereCloud
         response = http_client.get("https://localhost:#{@server.port}")
         expect(response.body).to eq('success')
       end
+
+      context 'when ca_cert_file is an empty or blank string' do
+        let(:ca_cert_file) { '' }
+
+        it 'treats it like no bundle and skips TLS verification' do
+          expect(backing_client.ssl_config.verify_mode).to eq(OpenSSL::SSL::VERIFY_NONE)
+          response = http_client.get("https://localhost:#{@server.port}")
+          expect(response.body).to eq('success')
+        end
+      end
+
+      context 'when ca_cert_file is only whitespace' do
+        let(:ca_cert_file) { "  \t  " }
+
+        it 'treats it like no bundle' do
+          expect(backing_client.ssl_config.verify_mode).to eq(OpenSSL::SSL::VERIFY_NONE)
+        end
+      end
     end
   end
 end
