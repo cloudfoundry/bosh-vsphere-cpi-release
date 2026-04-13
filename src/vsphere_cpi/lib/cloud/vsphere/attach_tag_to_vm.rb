@@ -92,7 +92,9 @@ module  VSphereCloud
     class AttachTagToVm
       include Logger
       def self.InitializeConnection(cloud_config, logger)
-        ca_file = cloud_config.vcenter_connection_options['ca_cert_file']
+        raw = cloud_config.vcenter_connection_options['ca_cert_file']
+        s = raw.to_s.strip
+        ca_file = s.empty? ? nil : s
         configuration = VSphereAutomation::Configuration.new.tap do |config|
           config.host = cloud_config.vcenter_host
           config.username = cloud_config.vcenter_user
