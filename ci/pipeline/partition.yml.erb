@@ -7,7 +7,7 @@
       - get: bosh-cpi-src
         tags: [nimbus]
         trigger: true
-        passed: [unit-test]
+        passed: [lint, unit-test]
       - get: vcpi-main-image
       - get: stemcell
         tags: [nimbus]

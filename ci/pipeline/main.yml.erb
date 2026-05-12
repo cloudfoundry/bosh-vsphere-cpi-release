@@ -2,6 +2,7 @@
 groups:
   - name: all
     jobs:
+      - lint
       - unit-test
       - pre-bats-fan-in
       - bats-policy
@@ -85,6 +86,22 @@ jobs:
       - put: vcpi-main-image
         params:
           image: image/image
+
+  - name: lint
+    plan:
+    - in_parallel:
+      - get: source-ci
+        tags: [nimbus]
+      - get: bosh-cpi-src
+        tags: [nimbus]
+        trigger: true
+      - get: vcpi-main-image
+    - task: lint
+      tags: [nimbus]
+      file: source-ci/ci/tasks/lint.yml
+      image: vcpi-main-image
+      params:
+        RUBY_GEMS_MIRROR: ((repository_mirrors.rubygems))
 
   - name: unit-test
     plan:
@@ -597,6 +614,12 @@ jobs:
         tags: [nimbus]
         file: source-ci/ci/tasks/test-pyvmomi_to_ruby.yml
         image: python_2_7_image
+      - task: lint
+        tags: [nimbus]
+        file: source-ci/ci/tasks/lint.yml
+        image: vcpi-main-image
+        params:
+          RUBY_GEMS_MIRROR: ((repository_mirrors.rubygems))
       - task: unit-test
         tags: [nimbus]
         file: source-ci/ci/tasks/unit-test.yml

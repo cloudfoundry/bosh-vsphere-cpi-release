@@ -1,0 +1,6 @@
+platform: linux
+inputs:
+- name: source-ci
+- name: bosh-cpi-src
+run:
+  path: source-ci/ci/tasks/lint.sh
