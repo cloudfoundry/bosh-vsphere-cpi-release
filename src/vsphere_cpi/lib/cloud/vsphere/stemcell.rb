@@ -1,6 +1,6 @@
-require 'securerandom'
+require "securerandom"
 
-require 'cloud/vsphere/logger'
+require "cloud/vsphere/logger"
 
 module VSphereCloud
   class Stemcell
@@ -15,7 +15,7 @@ module VSphereCloud
     def ==(other)
       instance_of?(other.class) && id == other.id
     end
-    alias eql? ==
+    alias_method :eql?, :==
 
     def hash
       id.hash
@@ -52,7 +52,7 @@ module VSphereCloud
 
       # Check if original stemcell lives on same datastore.
       logger.info("Searching for stemcell #{id} on datastore #{datastore_name}")
-      replica_vm = find_replica_in(datacenter.mob,  client, datastore_name)
+      replica_vm = find_replica_in(datacenter.mob, client, datastore_name)
       return replica_vm if replica_vm
 
       replica_name = "#{id} %2f #{to_datastore_mob.__mo_id__}"
@@ -69,10 +69,11 @@ module VSphereCloud
 
         # add extension managed by info to clone spec only if extension exists
         if client.service_content.extension_manager.find_extension(
-          VCPIExtension::DEFAULT_VSPHERE_CPI_EXTENSION_KEY) then
+          VCPIExtension::DEFAULT_VSPHERE_CPI_EXTENSION_KEY
+        )
           managed_by_info = VimSdk::Vim::Ext::ManagedByInfo.new
           managed_by_info.extension_key = VCPIExtension::DEFAULT_VSPHERE_CPI_EXTENSION_KEY
-          managed_by_info.type =  VCPIExtension::DEFAULT_VSPHERE_MANAGED_BY_INFO_RESOURCE
+          managed_by_info.type = VCPIExtension::DEFAULT_VSPHERE_MANAGED_BY_INFO_RESOURCE
           clone_spec.config = VimSdk::Vim::Vm::ConfigSpec.new
           clone_spec.config.managed_by = managed_by_info
         end
@@ -84,18 +85,18 @@ module VSphereCloud
 
         logger.info("Creating initial snapshot for linked clones on #{replica_vm}")
         client.wait_for_task do
-          replica_vm.create_snapshot('initial', nil, false, false)
+          replica_vm.create_snapshot("initial", nil, false, false)
         end
         logger.info("Created initial snapshot for linked clones on #{replica_vm}")
       rescue VSphereCloud::VCenterClient::DuplicateName
         logger.info("Stemcell is already being replicated, waiting for #{replica_name} to be ready")
-        path_array = [datacenter.name, 'vm', datacenter.template_folder.path_components, replica_name]
+        path_array = [datacenter.name, "vm", datacenter.template_folder.path_components, replica_name]
         replica_vm = client.find_by_inventory_path(path_array.flatten)
         # cloud_searcher#get_properties will ensure the existence of a snapshot
         # by retrying. This forces us to wait for a valid snapshot before
         # returning with the replicated stemcell vm. If a snapshot is not found
         # then an exception is thrown.
-        client.cloud_searcher.get_properties(replica_vm, VimSdk::Vim::VirtualMachine, ['snapshot'], ensure_all: true)
+        client.cloud_searcher.get_properties(replica_vm, VimSdk::Vim::VirtualMachine, ["snapshot"], ensure_all: true)
         logger.info("Stemcell #{replica_name} has been replicated.")
       end
       replica_vm
@@ -142,10 +143,10 @@ module VSphereCloud
       raise "Storage DRS failed to make a recommendation for stemcell #{id} replication" unless recommendation
       logger.info("Recommendation from Storage DRS for: #{replica_name}, Destination: #{recommendation.action.first.destination.name}")
 
-      #TODO: loop over all actions to pick one with reason as storagePlacement
-      if recommendation.reason == 'storagePlacement' && recommendation.action.first.destination.class == VimSdk::Vim::Datastore
+      # TODO: loop over all actions to pick one with reason as storagePlacement
+      if recommendation.reason == "storagePlacement" && recommendation.action.first.destination.class == VimSdk::Vim::Datastore
         recommended_datastore = recommendation.action.first.destination
-        #cancel storage drs recommendation as we are not going to apply it
+        # cancel storage drs recommendation as we are not going to apply it
         srm.cancel_recommendation(recommendation.key)
         recommended_datastore
       else
@@ -156,7 +157,7 @@ module VSphereCloud
 
     private
 
-    def find_replica_in(object, client, datastore_name=nil)
+    def find_replica_in(object, client, datastore_name = nil)
       if datastore_name
         client.find_all_stemcell_replicas_in_datastore(object, id, datastore_name).first
       else

@@ -1,4 +1,4 @@
-require 'forwardable'
+require "forwardable"
 
 module VSphereCloud
   class DiskPlacementSelectionPipeline < SelectionPipeline
@@ -8,7 +8,7 @@ module VSphereCloud
       attr_reader :size_in_mb, :target_datastore_pattern, :existing_ds_pattern,
         :ephemeral_disk, :max_swapfile_size
 
-      alias ephemeral_disk? ephemeral_disk
+      alias_method :ephemeral_disk?, :ephemeral_disk
 
       # TODO : make a named variable ctor
       def initialize(size_in_mb, target_ds_pattern, existing_ds_pattern = nil, ephemeral = false, max_swapfile_size = 0)
@@ -59,7 +59,7 @@ module VSphereCloud
       def inspect
         "Storage #{resource.name} [free space: #{resource.free_space} maintenance_mode: #{resource.maintenance_mode?}]"
       end
-      alias inspect_before inspect
+      alias_method :inspect_before, :inspect
     end
     private_constant :StoragePlacement
 

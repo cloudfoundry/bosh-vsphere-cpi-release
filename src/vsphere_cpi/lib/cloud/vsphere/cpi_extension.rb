@@ -1,6 +1,7 @@
 module VSphereCloud
   module VCPIExtension
     include Logger
+
     DEFAULT_VSPHERE_CPI_EXTENSION_KEY = "sddc.cpi.extension".freeze
     DEFAULT_VSPHERE_CPI_EXTENSION_LABEL = "BOSH vSphere CPI".freeze
     DEFAULT_VSPHERE_CPI_EXTENSION_SUMMARY = "BOSH vSphere CPI Extension".freeze
@@ -31,8 +32,7 @@ module VSphereCloud
       label: DEFAULT_VSPHERE_CPI_EXTENSION_LABEL,
       summary: DEFAULT_VSPHERE_CPI_EXTENSION_SUMMARY,
       managed_by_info_desc: DEFAULT_VSPHERE_MANAGED_BY_INFO_DESC,
-      managed_by_info_resource: DEFAULT_VSPHERE_MANAGED_BY_INFO_RESOURCE, **option
-    )
+      managed_by_info_resource: DEFAULT_VSPHERE_MANAGED_BY_INFO_RESOURCE, **option)
       cpi_extension = VimSdk::Vim::Extension.new
       cpi_extension.key = key
       cpi_extension.version = version
@@ -61,7 +61,7 @@ module VSphereCloud
       ext_mgr = vc_client.service_content.extension_manager
       cpi_extension = ext_mgr.find_extension(key)
       logger.debug("Extension already exists") unless cpi_extension.nil?
-      return !cpi_extension.nil?
+      !cpi_extension.nil?
     end
 
     module_function :create_cpi_extension, :build_extension,

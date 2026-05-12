@@ -5,12 +5,12 @@ module VSphereCloud
         cloud_properties.fetch("plugins", {}).fetch(plugin_name, {})
       end
 
-      def self.get_plugin_config_base_dir(plugin_name = '')
-        jobs_dir_env = ENV['BOSH_JOBS_DIR']
+      def self.get_plugin_config_base_dir(plugin_name = "")
+        jobs_dir_env = ENV["BOSH_JOBS_DIR"]
         if jobs_dir_env.nil?
-          return "/var/vcap/jobs/#{plugin_name}/"
+          "/var/vcap/jobs/#{plugin_name}/"
         else
-          return "#{jobs_dir_env}/#{plugin_name}/"
+          "#{jobs_dir_env}/#{plugin_name}/"
         end
       end
     end

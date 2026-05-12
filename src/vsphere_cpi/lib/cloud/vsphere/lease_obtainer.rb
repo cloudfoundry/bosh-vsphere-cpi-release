@@ -1,4 +1,4 @@
-require 'cloud/vsphere/logger'
+require "cloud/vsphere/logger"
 
 module VSphereCloud
   class LeaseObtainer
@@ -10,10 +10,10 @@ module VSphereCloud
     end
 
     def obtain(resource_pool, import_spec, template_folder)
-      logger.info('Importing VApp')
+      logger.info("Importing VApp")
       nfc_lease = resource_pool.mob.import_vapp(import_spec, template_folder.mob, nil)
 
-      logger.info('Waiting for NFC lease to become ready')
+      logger.info("Waiting for NFC lease to become ready")
       state = wait_for_nfc_lease(nfc_lease)
 
       if state == Vim::HttpNfcLease::State::ERROR
@@ -31,19 +31,19 @@ module VSphereCloud
 
     def wait_for_nfc_lease(nfc_lease)
       loop do
-        state = @cloud_searcher.get_property(nfc_lease, Vim::HttpNfcLease, 'state')
+        state = @cloud_searcher.get_property(nfc_lease, Vim::HttpNfcLease, "state")
         return state unless state == Vim::HttpNfcLease::State::INITIALIZING
         sleep(1.0)
       end
     end
 
     def raise_nfc_lease_error(nfc_lease)
-      error = @cloud_searcher.get_property(nfc_lease, Vim::HttpNfcLease, 'error')
+      error = @cloud_searcher.get_property(nfc_lease, Vim::HttpNfcLease, "error")
       raise "Could not acquire HTTP NFC lease, message is: '#{error.msg}' " +
-              "fault cause is: '#{error.fault_cause}', " +
-              "fault message is: #{error.fault_message}, " +
-              "dynamic type is '#{error.dynamic_type}', " +
-              "dynamic property is #{error.dynamic_property}"
+        "fault cause is: '#{error.fault_cause}', " +
+        "fault message is: #{error.fault_message}, " +
+        "dynamic type is '#{error.dynamic_type}', " +
+        "dynamic property is #{error.dynamic_property}"
     end
   end
 end

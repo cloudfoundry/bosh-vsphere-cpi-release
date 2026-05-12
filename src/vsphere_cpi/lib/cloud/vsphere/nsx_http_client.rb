@@ -10,7 +10,7 @@ module VSphereCloud
         super(
           http_log: http_log,
           trusted_ca_file: ca_cert_file.to_s.strip,
-          ca_cert_manifest_key: 'vcenter.nsx.ca_cert',
+          ca_cert_manifest_key: "vcenter.nsx.ca_cert",
           skip_ssl_verify: false
         )
       end

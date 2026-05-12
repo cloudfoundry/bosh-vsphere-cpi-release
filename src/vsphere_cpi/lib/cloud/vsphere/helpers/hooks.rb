@@ -4,7 +4,7 @@ module Hooks
       m = instance_method(name)
       define_method(name) do |*args, &block|
         yield
-        m.bind(self).(*args, &block)
+        m.bind_call(self, *args, &block)
       end
     end
   end

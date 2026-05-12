@@ -1,14 +1,14 @@
-require 'cloud/vsphere/logger'
-require 'netaddr'
+require "cloud/vsphere/logger"
+require "netaddr"
 
 module VSphereCloud
   class NetworkDeletionError < StandardError
   end
 
-
   class Network
     include Logger
-    TAG_SCOPE_NAME = 'bosh_cpi_subnet_id'
+
+    TAG_SCOPE_NAME = "bosh_cpi_subnet_id"
 
     def initialize(switch_provider, router_provider, ip_block_provider)
       @switch_provider = switch_provider
@@ -30,18 +30,18 @@ module VSphereCloud
         @router_provider.attach_t1_to_t0(network_definition.t0_router_id, t1_router_id)
 
         if @block_subnet
-          tags = [ NSXT::Tag.new(scope: TAG_SCOPE_NAME, tag: @block_subnet.id) ]
+          tags = [NSXT::Tag.new(scope: TAG_SCOPE_NAME, tag: @block_subnet.id)]
         end
 
         logger.info("Creating logical switch in zone #{network_definition.transport_zone_id}")
         switch = @switch_provider.create_logical_switch(network_definition.transport_zone_id,
-                                                        name: network_definition.switch_name,
-                                                        tags: tags)
+          name: network_definition.switch_name,
+          tags: tags)
         switch_id = switch.id
         logger.debug("Attaching switch(#{switch_id}) to T1(#{t1_router_id})")
         attach_switch_to_t1(switch_id, t1_router_id, gateway, range_prefix)
       rescue => e
-        logger.error('Failed to create network. Trying to clean up')
+        logger.error("Failed to create network. Trying to clean up")
         @router_provider.delete_t1_router(t1_router_id) unless t1_router_id.nil?
         @switch_provider.delete_logical_switch(switch_id) unless switch_id.nil?
         @ip_block_provider.release_subnet(@block_subnet.id) unless @block_subnet.nil?
@@ -57,7 +57,7 @@ module VSphereCloud
 
     def destroy(switch_id)
       logger.info("Destroying network infrastructure with switch id #{switch_id}")
-      raise 'switch id must be provided for deleting a network' if switch_id.nil?
+      raise "switch id must be provided for deleting a network" if switch_id.nil?
       # check if switch exists first
       switch = @switch_provider.get_switch_by_id(switch_id)
       t1_router_ids = @router_provider.get_attached_router_ids(switch_id)
@@ -112,7 +112,7 @@ module VSphereCloud
     end
 
     def block_size(netmask_bits)
-      2 ** (32 - netmask_bits)
+      2**(32 - netmask_bits)
     end
 
     def release_subnets(tags)

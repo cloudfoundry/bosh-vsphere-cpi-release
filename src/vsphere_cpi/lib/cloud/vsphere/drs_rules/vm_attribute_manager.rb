@@ -1,4 +1,4 @@
-require 'cloud/vsphere/logger'
+require "cloud/vsphere/logger"
 
 module VSphereCloud
   module VMAttributeManager
@@ -18,7 +18,7 @@ module VSphereCloud
       logger.debug("Creating DRS rule attribute: #{name}")
       @custom_fields_manager.add_field_definition(
         name,
-        VimSdk::Vim::VirtualMachine,
+        VimSdk::Vim::VirtualMachine
       )
     end
 

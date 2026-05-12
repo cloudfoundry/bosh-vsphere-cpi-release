@@ -1,4 +1,4 @@
-require 'cloud/vsphere/logger'
+require "cloud/vsphere/logger"
 
 module VSphereCloud
   class VCenterClient
@@ -21,7 +21,7 @@ module VSphereCloud
     def initialize(vcenter_api_uri:, http_client:)
       @soap_stub = SoapStub.new(vcenter_api_uri, http_client).create
 
-      @service_instance = Vim::ServiceInstance.new('ServiceInstance', @soap_stub)
+      @service_instance = Vim::ServiceInstance.new("ServiceInstance", @soap_stub)
 
       begin
         @service_content = @service_instance.content
@@ -29,7 +29,7 @@ module VSphereCloud
         raise "Please make sure the CPI has proper network access to vSphere. (#{e.class}: #{e.message})"
       end
 
-      @metrics_cache  = {}
+      @metrics_cache = {}
       @lock = Mutex.new
 
       @cloud_searcher = CloudSearcher.new(service_content)
@@ -58,7 +58,7 @@ module VSphereCloud
 
     def find_parent(obj, parent_type)
       while obj && obj.class != parent_type
-        obj = @cloud_searcher.get_property(obj, obj.class, "parent", :ensure_all => true)
+        obj = @cloud_searcher.get_property(obj, obj.class, "parent", ensure_all: true)
       end
       obj
     end
@@ -94,7 +94,7 @@ module VSphereCloud
           datacenter.power_on_vm([vm], nil)
         end
 
-        raise 'Recommendations were detected, you may be running in Manual DRS mode. Aborting.' if result.recommendations.any?
+        raise "Recommendations were detected, you may be running in Manual DRS mode. Aborting." if result.recommendations.any?
 
         vms_powering_on = result.attempted
         if vms_powering_on.empty?
@@ -115,37 +115,33 @@ module VSphereCloud
     end
 
     def get_cdrom_device(vm)
-      devices = @cloud_searcher.get_property(vm, Vim::VirtualMachine, 'config.hardware.device', ensure_all: true)
-      devices.find { |device| device.kind_of?(Vim::Vm::Device::VirtualCdrom) }
+      devices = @cloud_searcher.get_property(vm, Vim::VirtualMachine, "config.hardware.device", ensure_all: true)
+      devices.find { |device| device.is_a?(Vim::Vm::Device::VirtualCdrom) }
     end
 
     def delete_path(datacenter_mob, path)
-      begin
-        wait_for_task do
-          @service_content.file_manager.delete_file(path, datacenter_mob)
-        end
-      rescue => e
-        unless e.message =~ /File .* was not found|Invalid datastore path/ 
-          raise e
-        end
-        logger.warn("Cannot delete file: #{e}")
+      wait_for_task do
+        @service_content.file_manager.delete_file(path, datacenter_mob)
       end
+    rescue => e
+      unless /File .* was not found|Invalid datastore path/.match?(e.message)
+        raise e
+      end
+      logger.warn("Cannot delete file: #{e}")
     end
 
     def delete_disk(datacenter_mob, path)
-      begin
-        wait_for_task do
-          service_content.virtual_disk_manager.delete_virtual_disk(
-            path,
-            datacenter_mob
-          )
-        end
-      rescue => e
-        unless e.message =~ /File .* was not found|Invalid datastore path/ 
-          raise e
-        end
-        logger.warn("Cannot delete disk: #{e}")
+      wait_for_task do
+        service_content.virtual_disk_manager.delete_virtual_disk(
+          path,
+          datacenter_mob
+        )
       end
+    rescue => e
+      unless /File .* was not found|Invalid datastore path/.match?(e.message)
+        raise e
+      end
+      logger.warn("Cannot delete disk: #{e}")
     end
 
     def move_disk(source_datacenter_mob, source_path, dest_datacenter_mob, dest_path)
@@ -161,7 +157,7 @@ module VSphereCloud
           nil
         )
       end
-      logger.info('Moved disk')
+      logger.info("Moved disk")
     end
 
     def create_datastore_folder(folder_path, datacenter)
@@ -192,13 +188,13 @@ module VSphereCloud
     end
 
     def find_vm_by_name(datacenter_mob, vm_name)
-      @cloud_searcher.find_resource_by_property_path(datacenter_mob, 'VirtualMachine', 'name') do |name|
+      @cloud_searcher.find_resource_by_property_path(datacenter_mob, "VirtualMachine", "name") do |name|
         name == vm_name
       end
     end
 
     def find_vm_by_disk_cid(datacenter_mob, disk_cid)
-      @cloud_searcher.find_resource_by_property_path(datacenter_mob, 'VirtualMachine', 'config.vAppConfig.property') do |vapp_properties|
+      @cloud_searcher.find_resource_by_property_path(datacenter_mob, "VirtualMachine", "config.vAppConfig.property") do |vapp_properties|
         vapp_properties.any? do |prop|
           prop.label == disk_cid
         end
@@ -206,7 +202,7 @@ module VSphereCloud
     end
 
     def find_all_stemcell_replicas(datacenter_mob, stemcell_id)
-      @cloud_searcher.find_resources_by_property_path(datacenter_mob, 'VirtualMachine', 'name') do |name|
+      @cloud_searcher.find_resources_by_property_path(datacenter_mob, "VirtualMachine", "name") do |name|
         name =~ Regexp.new(stemcell_id)
       end
     end
@@ -214,7 +210,7 @@ module VSphereCloud
     def find_all_stemcell_replicas_in_datastore(datacenter_mob, stemcell_id, datastore_name)
       matches = []
       find_all_stemcell_replicas(datacenter_mob, stemcell_id).each do |vm_mob|
-        vm_datastore = @cloud_searcher.get_property(vm_mob, Vim::VirtualMachine, 'datastore', ensure_all: true)
+        vm_datastore = @cloud_searcher.get_property(vm_mob, Vim::VirtualMachine, "datastore", ensure_all: true)
         if vm_datastore.first && vm_datastore.first.name == datastore_name
           matches << vm_mob
         end
@@ -223,28 +219,26 @@ module VSphereCloud
     end
 
     def find_network_retryably(datacenter, network_name)
-      begin
-        Bosh::Retryable.new(
-            tries: 62, #total retry time - 10 minutes
-            on: [NetworkNotFoundError]
-        ).retryer do |i|
-          logger.info("Trying to find network #{network_name} for #{i} time")
-          network_mob = find_network(datacenter, network_name)
-          raise NetworkNotFoundError if network_mob.nil?
-          VSphereCloud::Resources::Network.make_network_resource(network_mob, self)
-        end
-      rescue NetworkNotFoundError => e
-        raise e, "Error in finding network '#{network_name}' after multiple retries. Verify that the portgroup exists."
+      Bosh::Retryable.new(
+        tries: 62, # total retry time - 10 minutes
+        on: [NetworkNotFoundError]
+      ).retryer do |i|
+        logger.info("Trying to find network #{network_name} for #{i} time")
+        network_mob = find_network(datacenter, network_name)
+        raise NetworkNotFoundError if network_mob.nil?
+        VSphereCloud::Resources::Network.make_network_resource(network_mob, self)
       end
+    rescue NetworkNotFoundError => e
+      raise e, "Error in finding network '#{network_name}' after multiple retries. Verify that the portgroup exists."
     end
 
     def find_network(datacenter, name)
       # Split the name into an optional container part and name part
-      *container_path, name = name.split('/')
+      *container_path, name = name.split("/")
 
       # Find the container if specified
       if !container_path.empty?
-        container = find_by_inventory_path([datacenter.name, 'network', *container_path])
+        container = find_by_inventory_path([datacenter.name, "network", *container_path])
         container ||= find_child_by_name(datacenter.mob.network_folder, container_path)
         return nil if container.nil?
       else
@@ -253,15 +247,15 @@ module VSphereCloud
 
       # Make the list of candidate networks from the container
       networks = case container
-        when VimSdk::Vim::Dvs::VmwareDistributedVirtualSwitch
-          container.portgroup
-        when VimSdk::Vim::Folder
-          container.child_entity
-        when nil
-          network = @cloud_searcher.find_resources_by_property_path(datacenter.mob, 'Network', 'name') do |network_name|
-            network_name == name
-          end
-          [network].flatten
+      when VimSdk::Vim::Dvs::VmwareDistributedVirtualSwitch
+        container.portgroup
+      when VimSdk::Vim::Folder
+        container.child_entity
+      when nil
+        network = @cloud_searcher.find_resources_by_property_path(datacenter.mob, "Network", "name") do |network_name|
+          network_name == name
+        end
+        [network].flatten
       end
 
       # Find networks that match the network name
@@ -300,7 +294,7 @@ module VSphereCloud
 
         return dvpg_networks.first if dvpg_networks.all? do |n|
           next unless n.config.respond_to?(:backing_type)
-          next unless n.config.backing_type == 'nsx'
+          next unless n.config.backing_type == "nsx"
           next if n.config.logical_switch_uuid.nil?
 
           referent ||= networks.first.config.logical_switch_uuid
@@ -326,11 +320,12 @@ module VSphereCloud
       queries = []
       mobs.each do |mob|
         queries << Vim::PerformanceManager::QuerySpec.new(
-            :entity => mob,
-            :metric_id => metric_ids,
-            :format => Vim::PerformanceManager::Format::CSV,
-            :interval_id => options[:interval_id] || 20,
-            :max_sample => options[:max_sample])
+          entity: mob,
+          metric_id: metric_ids,
+          format: Vim::PerformanceManager::Format::CSV,
+          interval_id: options[:interval_id] || 20,
+          max_sample: options[:max_sample]
+        )
       end
 
       query_perf_response = @service_content.perf_manager.query_stats(queries)
@@ -356,7 +351,7 @@ module VSphereCloud
 
     def create_disk(datacenter_mob, datastore, disk_cid, disk_folder, disk_size_in_mb, disk_type)
       if disk_type.nil?
-        raise 'no disk type specified'
+        raise "no disk type specified"
       end
 
       disk_path = "[#{datastore.name}] #{disk_folder}/#{disk_cid}.vmdk"
@@ -366,7 +361,7 @@ module VSphereCloud
       disk_spec = VimSdk::Vim::VirtualDiskManager::FileBackedVirtualDiskSpec.new
       disk_spec.disk_type = disk_type
       disk_spec.capacity_kb = disk_size_in_mb * 1024
-      disk_spec.adapter_type = 'lsiLogic'
+      disk_spec.adapter_type = "lsiLogic"
 
       begin
         wait_for_task do
@@ -380,7 +375,7 @@ module VSphereCloud
         logger.warn("Ignoring error disk #{disk_path} already exists")
       end
 
-        Resources::PersistentDisk.new(cid: disk_cid, size_in_mb: disk_size_in_mb, datastore: datastore, folder: disk_folder)
+      Resources::PersistentDisk.new(cid: disk_cid, size_in_mb: disk_size_in_mb, datastore: datastore, folder: disk_folder)
     end
 
     def find_disk_size_using_browser(datastore, disk_cid, disk_folder)
@@ -429,7 +424,7 @@ module VSphereCloud
       return false if vm_disk_infos.empty?
 
       true
-    rescue 
+    rescue
       false
     end
 
@@ -437,7 +432,7 @@ module VSphereCloud
       vm_disk = vm.disk_by_cid(disk.cid)
       disk_device_key = vm_disk.key
 
-      if vm.get_vapp_property_by_key(disk_device_key) != nil
+      if !vm.get_vapp_property_by_key(disk_device_key).nil?
         logger.debug("Disk property already exists '#{disk.cid}' on vm '#{vm.cid}'")
         return
       end
@@ -446,10 +441,10 @@ module VSphereCloud
       v_app_property_info.key = disk_device_key
       v_app_property_info.id = disk.cid
       v_app_property_info.label = disk.cid
-      v_app_property_info.category = 'BOSH Persistent Disks'
-      v_app_property_info.type = 'string'
+      v_app_property_info.category = "BOSH Persistent Disks"
+      v_app_property_info.type = "string"
       v_app_property_info.value = disk.path
-      v_app_property_info.description = 'Used by BOSH to track persistent disks. Change at your own risk.'
+      v_app_property_info.description = "Used by BOSH to track persistent disks. Change at your own risk."
       v_app_property_info.user_configurable = true
 
       v_app_property_spec = VimSdk::Vim::VApp::PropertySpec.new
@@ -493,9 +488,9 @@ module VSphereCloud
       begin
         field = @fields_manager.add_field_definition(name, mob.class, nil, nil)
       rescue SoapError => e
-        if e.fault.kind_of?(Vim::Fault::NoPermission)
+        if e.fault.is_a?(Vim::Fault::NoPermission)
           logger.warn("Can't create custom field definition due to lack of permission: #{e.message}")
-        elsif e.fault.kind_of?(Vim::Fault::DuplicateName)
+        elsif e.fault.is_a?(Vim::Fault::DuplicateName)
           logger.warn("Custom field definition already exists: #{e.message}")
           custom_fields = @fields_manager.field
           field = custom_fields.find do |field|
@@ -508,9 +503,9 @@ module VSphereCloud
 
       unless field.nil?
         begin
-        @fields_manager.set_field(mob, field.key, value)
+          @fields_manager.set_field(mob, field.key, value)
         rescue SoapError => e
-          if e.fault.kind_of?(Vim::Fault::NoPermission)
+          if e.fault.is_a?(Vim::Fault::NoPermission)
             logger.warn("Can't set custom fields due to lack of permission: #{e.message}")
           end
         end
@@ -538,18 +533,20 @@ module VSphereCloud
         field.name == name && field.managed_object_type == mob.class
       end
       return_value = nil
-      custom_values.each do |custom_value|
-        if field.key == custom_value.key
-          return_value = custom_value.value
+      unless field.nil?
+        custom_values.each do |custom_value|
+          if field.key == custom_value.key
+            return_value = custom_value.value
+          end
         end
-      end unless field.nil?
-      return return_value
+      end
+      return_value
     end
 
     def find_child_by_name(mob, child_path)
       return mob if child_path.empty?
       child_entity_name = child_path.shift
-      find_child_by_name(mob.child_entity.find {|c| c.name == child_entity_name }, child_path)
+      find_child_by_name(mob.child_entity.find { |c| c.name == child_entity_name }, child_path)
     end
 
     def dvpg_istype_nsxt?(key:, dc_mob:)
@@ -557,15 +554,15 @@ module VSphereCloud
 
       # This replaces an Enumerable.detect. Because the function we're calling might return multiple items, let's
       # try our best to mimic that behavior by returning the first item returned.
-      portgroup = @cloud_searcher.find_resources_by_property_path(dc_mob, 'DistributedVirtualPortgroup', 'key') do |portgroup_key|
+      portgroup = @cloud_searcher.find_resources_by_property_path(dc_mob, "DistributedVirtualPortgroup", "key") do |portgroup_key|
         portgroup_key == key
       end
-      portgroup = [portgroup].flatten()[0]
+      portgroup = [portgroup].flatten[0]
 
       return false if portgroup.nil?
       return false unless portgroup.config.respond_to?(:backing_type)
-      logger.info("DVPG #{key} is backed by NSXT") if portgroup.config.backing_type == 'nsx'
-      portgroup.config.backing_type == 'nsx'
+      logger.info("DVPG #{key} is backed by NSXT") if portgroup.config.backing_type == "nsx"
+      portgroup.config.backing_type == "nsx"
     end
 
     private

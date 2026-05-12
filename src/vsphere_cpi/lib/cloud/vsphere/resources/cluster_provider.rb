@@ -15,7 +15,7 @@ module VSphereCloud
 
         cluster_properties = @client.cloud_searcher.get_properties(
           cluster_mob, VimSdk::Vim::ClusterComputeResource,
-          Cluster::PROPERTIES, :ensure_all => true
+          Cluster::PROPERTIES, ensure_all: true
         )
         raise "Can't find properties for cluster '#{name}'" if cluster_properties.nil?
 
@@ -23,7 +23,7 @@ module VSphereCloud
           config,
           cluster_properties,
           @client,
-          datacenter_name,
+          datacenter_name
         )
       end
 
@@ -42,7 +42,7 @@ module VSphereCloud
             root: datacenter_mob,
             include_name: true
           )
-          Hash[*(cluster_tuples.flatten)]
+          Hash[*cluster_tuples.flatten]
         end
       end
     end

@@ -16,7 +16,7 @@ module VSphereCloud
     def ==(other)
       instance_of?(other.class) && other.cluster.name == cluster.name
     end
-    alias eql? ==
+    alias_method :eql?, :==
 
     def hash
       cluster.name.hash
@@ -98,7 +98,7 @@ module VSphereCloud
         existing_ds_name = disk.existing_datastore_name
 
         # Only persistent disks will have existing_ds_name
-        if existing_ds_name =~ Regexp.new(disk.target_datastore_pattern)
+        if existing_ds_name&.match?(Regexp.new(disk.target_datastore_pattern))
           datastore = vm_placement.datastores.find do |ds|
             ds.name == existing_ds_name
           end
@@ -126,7 +126,7 @@ module VSphereCloud
 
         logger.debug("Found #{result.inspect} for #{disk.inspect}")
         vm_placement.disk_placement = result unless disk.existing_datastore_name
-        vm_placement.fallback_disk_placements =  pipeline.each.to_a - [result] if disk.ephemeral?
+        vm_placement.fallback_disk_placements = pipeline.each.to_a - [result] if disk.ephemeral?
 
         logger.debug("Found alternative disk placements: #{vm_placement.fallback_disk_placements}") if disk.ephemeral?
         result.free_space -= disk.size

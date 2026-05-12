@@ -1,5 +1,5 @@
-require 'cloud/vsphere/logger'
-require 'cloud/vsphere/resources/resource_pool'
+require "cloud/vsphere/logger"
+require "cloud/vsphere/resources/resource_pool"
 
 module VSphereCloud
   module Resources
@@ -7,15 +7,16 @@ module VSphereCloud
       include VimSdk
       include ObjectStringifier
       include Logger
+
       stringify_with :name
 
-      CLUSTER_VM_GROUP_SUFFIX = '_vm_group'.freeze
-      CLUSTER_VM_HOST_RULE_SUFFIX = '_rule'.freeze
-      CLUSTER_VM_HOST_RULE_SHOULD = 'SHOULD'.freeze
-      CLUSTER_VM_HOST_RULE_MUST = 'MUST'.freeze
-      PROPERTIES = %w(name datastore resourcePool host)
-      HOST_PROPERTIES = %w(name hardware.memorySize runtime.connectionState runtime.inMaintenanceMode runtime.powerState summary.hardware.cpuMhz)
-      HOST_COUNTERS = %w(mem.usage.average)
+      CLUSTER_VM_GROUP_SUFFIX = "_vm_group".freeze
+      CLUSTER_VM_HOST_RULE_SUFFIX = "_rule".freeze
+      CLUSTER_VM_HOST_RULE_SHOULD = "SHOULD".freeze
+      CLUSTER_VM_HOST_RULE_MUST = "MUST".freeze
+      PROPERTIES = %w[name datastore resourcePool host]
+      HOST_PROPERTIES = %w[name hardware.memorySize runtime.connectionState runtime.inMaintenanceMode runtime.powerState summary.hardware.cpuMhz]
+      HOST_COUNTERS = %w[mem.usage.average]
 
       MEMORY_HEADROOM = 128
 
@@ -42,7 +43,7 @@ module VSphereCloud
 
         @config = cluster_config
         @mob = properties[:obj]
-        @resource_pool = ResourcePool.new(@client, cluster_config, properties['resourcePool'], datacenter_name)
+        @resource_pool = ResourcePool.new(@client, cluster_config, properties["resourcePool"], datacenter_name)
       end
 
       # @return [FreeMemory] amount of free memory in the cluster
@@ -50,17 +51,17 @@ module VSphereCloud
         return @synced_free_memory if @synced_free_memory
         # Have to use separate mechanisms for fetching utilization depending on
         # whether we're using resource pools or raw clusters.
-        if @config.resource_pool.nil?
+        @synced_free_memory = if @config.resource_pool.nil?
           # Get cluster utilization only if host group is nil
-          @synced_free_memory = if host_group.nil?
-                                  FreeMemory.new(fetch_cluster_utilization, fetch_cluster_utilization)
-                                elsif host_group_rule_type == CLUSTER_VM_HOST_RULE_SHOULD
-                                  FreeMemory.new(fetch_cluster_utilization, fetch_host_group_utilization)
-                                elsif host_group_rule_type == CLUSTER_VM_HOST_RULE_MUST
-                                  FreeMemory.new(fetch_host_group_utilization, fetch_host_group_utilization)
-                                end
+          if host_group.nil?
+            FreeMemory.new(fetch_cluster_utilization, fetch_cluster_utilization)
+          elsif host_group_rule_type == CLUSTER_VM_HOST_RULE_SHOULD
+            FreeMemory.new(fetch_cluster_utilization, fetch_host_group_utilization)
+          elsif host_group_rule_type == CLUSTER_VM_HOST_RULE_MUST
+            FreeMemory.new(fetch_host_group_utilization, fetch_host_group_utilization)
+          end
         else
-          @synced_free_memory = FreeMemory.new(fetch_resource_pool_utilization, fetch_resource_pool_utilization)
+          FreeMemory.new(fetch_resource_pool_utilization, fetch_resource_pool_utilization)
         end
       end
 
@@ -101,18 +102,18 @@ module VSphereCloud
         # if host_group.length > 100
         #   return "#{self.rule_type_suffix}-vm_group-#{(0...6).map { (97 + rand(26)).chr }.join}"
         # end
-        host_group + self.rule_type_suffix + CLUSTER_VM_GROUP_SUFFIX
+        host_group + rule_type_suffix + CLUSTER_VM_GROUP_SUFFIX
       end
 
       def rule_type_suffix
         rule_type = host_group_drs_rule
         # rule_type can never be nil as Cluster Config
         # makes sure to return default 'SHOULD'
-        rule_type.strip.casecmp?(CLUSTER_VM_HOST_RULE_MUST) == false ?
+        (rule_type.strip.casecmp?(CLUSTER_VM_HOST_RULE_MUST) == false) ?
             CLUSTER_VM_HOST_RULE_SHOULD :
             CLUSTER_VM_HOST_RULE_MUST
       end
-      alias host_group_rule_type rule_type_suffix
+      alias_method :host_group_rule_type, :rule_type_suffix
 
       def host_group_mob
         return nil if host_group.nil?
@@ -152,11 +153,10 @@ module VSphereCloud
       def accessible_datastores
         @accessible_datastores ||= Datastore.build_from_client(
           @client,
-          properties['datastore']
+          properties["datastore"]
         ).select { |datastore| datastore.accessible }
-        .inject({}) do |acc, datastore|
-          acc[datastore.name] = datastore
-          acc
+          .each_with_object({}) do |datastore, acc|
+            acc[datastore.name] = datastore
         end
       end
 
@@ -178,7 +178,7 @@ module VSphereCloud
         # Maintenance hosts report all stats so we need to filter them
         logger.debug("Fetching Memory utilization for Host Group #{host_group}")
         healthy_hosts = host_group_mob.host.select do |host|
-          host.runtime.connection_state == 'connected' && !host.runtime.in_maintenance_mode
+          host.runtime.connection_state == "connected" && !host.runtime.in_maintenance_mode
         end
         if healthy_hosts.empty?
           logger.debug("No fit host found in #{host_group}") if healthy_hosts.empty?
@@ -206,13 +206,13 @@ module VSphereCloud
       # Fetches the raw cluster utilization from vSphere.
       #
       # @return
-      def fetch_cluster_utilization()
-        logger.debug("Fetching Memory utilization for Cluster #{self.mob.name}")
-        properties = @client.cloud_searcher.get_properties(mob, Vim::ClusterComputeResource, 'summary')
-        raise "Failed to get utilization for cluster'#{self.mob.name}'" if properties.nil?
+      def fetch_cluster_utilization
+        logger.debug("Fetching Memory utilization for Cluster #{mob.name}")
+        properties = @client.cloud_searcher.get_properties(mob, Vim::ClusterComputeResource, "summary")
+        raise "Failed to get utilization for cluster'#{mob.name}'" if properties.nil?
 
         compute_resource_summary = properties["summary"]
-        return compute_resource_summary.effective_memory
+        compute_resource_summary.effective_memory
       end
 
       # Fetches the resource pool utilization from vSphere.
@@ -226,13 +226,13 @@ module VSphereCloud
       # @return [void]
       def fetch_resource_pool_utilization
         logger.debug("Fetching Memory utilization for Resource Pool #{resource_pool.name}")
-        properties = @client.cloud_searcher.get_properties(resource_pool.mob, Vim::ResourcePool, 'summary')
+        properties = @client.cloud_searcher.get_properties(resource_pool.mob, Vim::ResourcePool, "summary")
         raise "Failed to get utilization for resource pool '#{resource_pool}'" if properties.nil?
 
         runtime_info = properties["summary"].runtime
         quick_stats = properties["summary"].quick_stats
         memory = runtime_info.memory
-        return (memory.max_usage - (quick_stats.host_memory_usage) * 1024) / BYTES_IN_MB
+        (memory.max_usage - quick_stats.host_memory_usage * 1024) / BYTES_IN_MB
       end
     end
   end

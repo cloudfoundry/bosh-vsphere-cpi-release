@@ -1,5 +1,5 @@
-require 'cloud/vsphere/logger'
-require 'cloud/vsphere/resources/cluster'
+require "cloud/vsphere/logger"
+require "cloud/vsphere/resources/cluster"
 
 module VSphereCloud
   module Resources
@@ -7,6 +7,7 @@ module VSphereCloud
       include VimSdk
       include ObjectStringifier
       include Logger
+
       stringify_with :name
 
       attr_accessor :config
@@ -36,7 +37,7 @@ module VSphereCloud
 
       def vm_folder
         if @use_sub_folder
-          folder_path = [@vm_folder, Bosh::Clouds::Config.uuid].join('/')
+          folder_path = [@vm_folder, Bosh::Clouds::Config.uuid].join("/")
           Folder.new(folder_path, @client, name)
         else
           master_vm_folder
@@ -44,7 +45,7 @@ module VSphereCloud
       end
 
       def vm_path(vm_cid)
-        [name, 'vm', vm_folder.path_components, vm_cid].join('/')
+        [name, "vm", vm_folder.path_components, vm_cid].join("/")
       end
 
       def master_vm_folder
@@ -53,7 +54,7 @@ module VSphereCloud
 
       def template_folder
         if @use_sub_folder
-          folder_path = [@template_folder, Bosh::Clouds::Config.uuid].join('/')
+          folder_path = [@template_folder, Bosh::Clouds::Config.uuid].join("/")
           Folder.new(folder_path, @client, name)
         else
           master_template_folder
@@ -77,7 +78,7 @@ module VSphereCloud
 
       def find_cluster(cluster_name)
         cluster_config = @clusters[cluster_name]
-        @cluster_provider.find(cluster_name, cluster_config, self.name)
+        @cluster_provider.find(cluster_name, cluster_config, name)
       end
 
       def find_datastore(datastore_name)
@@ -87,9 +88,8 @@ module VSphereCloud
       end
 
       def accessible_datastores
-        clusters.inject({}) do |acc, cluster|
+        clusters.each_with_object({}) do |cluster, acc|
           acc.merge!(cluster.accessible_datastores)
-          acc
         end
       end
 
@@ -107,7 +107,7 @@ module VSphereCloud
       # If disk is not found and vm is present, find disk in vm.accessible_datastores
       # @param [DirectorDiskCID] director_disk_cid
       # @param [Resources::VirtualMachine] vm
-      def find_disk(director_disk_cid, vm=nil)
+      def find_disk(director_disk_cid, vm = nil)
         disk_cid = director_disk_cid.value
         datastore_pattern = director_disk_cid.target_datastore_pattern
         hint_datastores = {}
@@ -160,8 +160,10 @@ module VSphereCloud
           unless disk_path.nil?
             datastore_name, disk_folder, disk_file = /\[(.+)\] (.+)\/(.+)\.vmdk/.match(disk_path)[1..3]
             datastore = accessible_datastores[datastore_name]
-            raise Bosh::Clouds::DiskNotFound.new(false),
-              "Could not find disk with id '#{disk_cid}'. Datastore '#{datastore_name}' is not accessible." if datastore.nil?
+            if datastore.nil?
+              raise Bosh::Clouds::DiskNotFound.new(false),
+                "Could not find disk with id '#{disk_cid}'. Datastore '#{datastore_name}' is not accessible."
+            end
             disk = @client.find_disk(disk_file, datastore, disk_folder)
 
             logger.debug("Disk #{disk_cid} found at new location: #{disk.path}") unless disk.nil?
@@ -175,7 +177,7 @@ module VSphereCloud
         destination_path = "[#{destination_datastore.name}] #{@disk_path}/#{disk.cid}.vmdk"
         logger.info("Moving #{disk.path} to #{destination_path}")
         @client.move_disk(mob, disk.path, mob, destination_path)
-        logger.info('Moved disk successfully')
+        logger.info("Moved disk successfully")
         Resources::PersistentDisk.new(cid: disk.cid, size_in_mb: disk.size_in_mb, datastore: destination_datastore, folder: @disk_path)
       end
 
@@ -190,17 +192,15 @@ module VSphereCloud
 
         datastores.each do |_, datastore|
           pool.process do
-            begin
-              disk = @client.find_disk(disk_cid, datastore, @disk_path)
-              unless disk.nil?
+            disk = @client.find_disk(disk_cid, datastore, @disk_path)
+            unless disk.nil?
 
-                logger.debug("disk #{disk_cid} found in: #{datastore}")
-                raise FindSuccessfulException.new(disk)
-              end
-            rescue => e
-              mutex.synchronize do
-                error = e if error.nil?
-              end
+              logger.debug("disk #{disk_cid} found in: #{datastore}")
+              raise FindSuccessfulException.new(disk)
+            end
+          rescue => e
+            mutex.synchronize do
+              error = e if error.nil?
             end
           end
         end

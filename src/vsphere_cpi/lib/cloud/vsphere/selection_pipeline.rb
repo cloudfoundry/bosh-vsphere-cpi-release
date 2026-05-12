@@ -14,7 +14,7 @@ module VSphereCloud
     attr_reader :object
 
     def self.with_filter(*args, &block)
-      filter_list << { args: args, block: block }
+      filter_list << {args: args, block: block}
     end
 
     def self.filter_list
@@ -22,7 +22,7 @@ module VSphereCloud
     end
 
     def self.with_scorer(*args, &block)
-      scorer_list << { args: args, block: block }
+      scorer_list << {args: args, block: block}
     end
 
     def self.scorer_list
@@ -31,10 +31,10 @@ module VSphereCloud
 
     # @param object [Object] the object to select placements for
     def initialize(object, *args)
-      raise ArgumentError, 'No gather block provided' unless block_given?
+      raise ArgumentError, "No gather block provided" unless block_given?
 
       @object = object
-      @gather = Proc.new{yield}
+      @gather = proc { yield }
 
       self.class.filter_list.each do |filter|
         with_filter(*filter[:args], &filter[:block])
@@ -50,11 +50,10 @@ module VSphereCloud
     end
 
     def accept?(placement)
-      result = filter_list.all? do |filter|
+      filter_list.all? do |filter|
         result = filter.call(placement, @object)
         result
       end
-      result
     end
 
     def each(&block)
@@ -64,7 +63,7 @@ module VSphereCloud
 
       gather.select do |placement|
         accept?(placement)
-      end.sort(&compare_placements).each(&Proc.new{|placement| block.call(placement)})
+      end.sort(&compare_placements).each(&proc { |placement| block.call(placement) })
     end
 
     def with_filter(*args, &block)
@@ -103,7 +102,7 @@ module VSphereCloud
             return result
           end
         end
-        return 0
+        0
       end
     end
 

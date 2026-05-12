@@ -1,5 +1,5 @@
-require 'uri'
-require 'ostruct'
+require "uri"
+require "ostruct"
 
 module VSphereCloud
   class VmConfig
@@ -40,9 +40,9 @@ module VSphereCloud
       if vm_type.cpu_reserve_full_mhz
         @maxMhz = 0
         cluster.host.each do |host|
-          if host.runtime.connection_state == 'connected' &&
+          if host.runtime.connection_state == "connected" &&
               !host.runtime.in_maintenance_mode
-                @maxMhz = host.summary.hardware.cpu_mhz if host.summary.hardware.cpu_mhz > @maxMhz
+            @maxMhz = host.summary.hardware.cpu_mhz if host.summary.hardware.cpu_mhz > @maxMhz
           end
         end
       end
@@ -62,7 +62,7 @@ module VSphereCloud
       cluster_name = cluster.name
       cluster_spec = resource_pool_clusters_spec.find { |cluster_spec| cluster_spec.keys.first == cluster_name }
       return nil if cluster_spec.nil? || cluster_spec[cluster_name].nil?
-      cluster_spec[cluster_name].fetch('drs_rules', []).first
+      cluster_spec[cluster_name].fetch("drs_rules", []).first
     end
 
     def ephemeral_disk_size
@@ -126,7 +126,7 @@ module VSphereCloud
         if deployment_name.size <= 25 #  deployment name length set to 25
           instance_name = instance_name.slice(0, instance_name.size - trim_codepoint_size)
         else
-          instance_codepoint_size = [max_prefix -  25, instance_name.size].min
+          instance_codepoint_size = [max_prefix - 25, instance_name.size].min
           instance_name = instance_name.slice(0, instance_codepoint_size)
           deployment_name = deployment_name.slice(0, max_prefix - instance_codepoint_size)
         end
@@ -137,11 +137,11 @@ module VSphereCloud
     def vsphere_networks
       networks_map = {}
       networks_spec.each_value do |network_spec|
-        cloud_properties = network_spec['cloud_properties']
-        unless cloud_properties.nil? || cloud_properties['name'].nil?
-          name = cloud_properties['name']
+        cloud_properties = network_spec["cloud_properties"]
+        unless cloud_properties.nil? || cloud_properties["name"].nil?
+          name = cloud_properties["name"]
           networks_map[name] ||= []
-          networks_map[name] << network_spec['ip']
+          networks_map[name] << network_spec["ip"]
         end
       end
       networks_map
@@ -159,12 +159,9 @@ module VSphereCloud
       params.delete_if { |k, v| v.nil? }
     end
 
-
     def bosh_group
-      if !agent_env['bosh'].nil? then
-        return agent_env['bosh']['group']
-      else
-        return nil
+      if !agent_env["bosh"].nil?
+        agent_env["bosh"]["group"]
       end
     end
 
@@ -175,32 +172,32 @@ module VSphereCloud
       global_vmx_options.merge(vm_type_vmx_options)
     end
 
-    #VSphereCloud::VmType
+    # VSphereCloud::VmType
     def vm_type
       @manifest_params[:vm_type]
     end
 
     def validate_drs_rules(cluster)
       cluster_name = cluster.name
-      cluster_config = resource_pool_clusters_spec.find {|cluster_spec| cluster_spec.keys.first == cluster_name}
+      cluster_config = resource_pool_clusters_spec.find { |cluster_spec| cluster_spec.keys.first == cluster_name }
       return if cluster_config.nil?
 
-      drs_rules = cluster_config[cluster_name]['drs_rules']
+      drs_rules = cluster_config[cluster_name]["drs_rules"]
       return if drs_rules.nil?
 
       if drs_rules.size > 1
-        raise 'vSphere CPI supports only one DRS rule per resource pool'
+        raise "vSphere CPI supports only one DRS rule per resource pool"
       end
 
       rule_config = drs_rules.first
 
-      if rule_config['type'] != 'separate_vms'
-        raise "vSphere CPI only supports DRS rule of 'separate_vms' type, not '#{rule_config['type']}'"
+      if rule_config["type"] != "separate_vms"
+        raise "vSphere CPI only supports DRS rule of 'separate_vms' type, not '#{rule_config["type"]}'"
       end
     end
 
     def disk_uuid_is_enabled?
-      [1, '1', 'TRUE'].include? vmx_options["disk.enableUUID"]
+      [1, "1", "TRUE"].include? vmx_options["disk.enableUUID"]
     end
 
     private
@@ -209,7 +206,7 @@ module VSphereCloud
       # custom properties include drs_rules and vcenter resource_pools
       !resource_pool_clusters_spec.empty?
     end
-    
+
     def find_clusters(clusters_spec)
       clusters_spec.map do |cluster_spec|
         ClusterConfig.new(cluster_spec.keys.first, cluster_spec.values.first)
@@ -236,12 +233,12 @@ module VSphereCloud
 
     def resource_pool_clusters_spec
       datacenter_spec = datacenters_spec.first || {}
-      datacenter_spec.fetch('clusters', [])
+      datacenter_spec.fetch("clusters", [])
     end
 
     def validate_clusters
       if global_clusters.empty? && !has_custom_cluster_properties?
-        raise Bosh::Clouds::CloudError, 'No valid clusters were provided'
+        raise Bosh::Clouds::CloudError, "No valid clusters were provided"
       end
     end
 
@@ -255,8 +252,10 @@ module VSphereCloud
         end
       end
       @cluster_placement = vm_selection_placement_pipeline.each.to_a
-      raise Bosh::Clouds::CloudError,
-        'No valid placement found for VM compute and storage requirement' if @cluster_placement.first.nil?
+      if @cluster_placement.first.nil?
+        raise Bosh::Clouds::CloudError,
+          "No valid placement found for VM compute and storage requirement"
+      end
       @cluster_placement
     end
 

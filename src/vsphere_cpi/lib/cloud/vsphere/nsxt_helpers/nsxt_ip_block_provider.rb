@@ -1,4 +1,4 @@
-require 'netaddr'
+require "netaddr"
 
 module VSphereCloud
   class NSXTIpBlockProvider
@@ -22,6 +22,6 @@ module VSphereCloud
       @pool_api ||= NSXT::PoolManagementApi.new(@client_builder.get_client)
     end
 
-    before(*instance_methods) { require 'nsxt_manager_client/nsxt_manager_client' }
+    before(*instance_methods) { require "nsxt_manager_client/nsxt_manager_client" }
   end
 end

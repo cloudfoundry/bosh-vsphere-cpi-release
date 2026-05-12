@@ -1,5 +1,5 @@
-require 'cloud/vsphere/logger'
-require 'cpi_plugin/plugin_base'
+require "cloud/vsphere/logger"
+require "cpi_plugin/plugin_base"
 
 module VSphereCloud
   module CpiPlugin
@@ -8,10 +8,10 @@ module VSphereCloud
         @logger = VSphereCloud::Logger.logger
         @plugin_objects = []
 
-        load_path = ENV['BOSH_PACKAGES_DIR']
-        if load_path.nil? || load_path == ''
+        load_path = ENV["BOSH_PACKAGES_DIR"]
+        if load_path.nil? || load_path == ""
           @logger.debug("CpiPlugin::Registry: BOSH_PACKAGES_DIR environment variable is not set; using default load path '/var/vcap/packages'")
-          load_path = '/var/vcap/packages/'
+          load_path = "/var/vcap/packages/"
         end
 
         @logger.debug("CpiPlugin::Registry: Initializing with plugin list #{plugins}")
@@ -28,16 +28,16 @@ module VSphereCloud
           end
 
           plugin_obj = Object.const_get("VSphereCloud::CpiPlugin::#{plugin.capitalize}")
-          @plugin_objects.push({:plugin_object => plugin_obj, :plugin_name => plugin})
+          @plugin_objects.push({plugin_object: plugin_obj, plugin_name: plugin})
         end
       end
 
       def run_pre_hooks(cpi_method, cpi_self, context = {})
         plugin_method = "#{cpi_method}_pre"
         if cpi_method == :has_vm?
-          plugin_method = 'has_vm_pre'
+          plugin_method = "has_vm_pre"
         elsif cpi_method == :has_disk?
-          plugin_method = 'has_disk_pre'
+          plugin_method = "has_disk_pre"
         end
 
         @plugin_objects.each do |p_obj|
@@ -46,15 +46,15 @@ module VSphereCloud
           context_object = VSphereCloud::CpiPlugin::PluginCallContext.new(plugin_name, cpi_self, context)
           plugin_object.send(plugin_method, context_object)
         end
-        return nil
+        nil
       end
 
       def run_post_hooks(cpi_method, cpi_self, context = {})
         plugin_method = "#{cpi_method}_post"
         if cpi_method == :has_vm?
-          plugin_method = 'has_vm_post'
+          plugin_method = "has_vm_post"
         elsif cpi_method == :has_disk?
-          plugin_method = 'has_disk_post'
+          plugin_method = "has_disk_post"
         end
 
         @plugin_objects.each do |p_obj|
@@ -63,7 +63,7 @@ module VSphereCloud
           context_object = VSphereCloud::CpiPlugin::PluginCallContext.new(plugin_name, cpi_self, context)
           plugin_object.send(plugin_method, context_object)
         end
-        return nil
+        nil
       end
     end
   end

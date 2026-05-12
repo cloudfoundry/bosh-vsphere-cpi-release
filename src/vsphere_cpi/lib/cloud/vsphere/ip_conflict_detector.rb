@@ -1,4 +1,4 @@
-require 'cloud/vsphere/logger'
+require "cloud/vsphere/logger"
 
 module VSphereCloud
   class IPConflictDetector
@@ -33,12 +33,12 @@ module VSphereCloud
           @client.find_all_vms_by_ip(ip).each do |vm|
             logger.info("Found VM '#{vm.name}' with IP '#{ip}'. Checking if VM belongs to network '#{name}'...")
             vm.guest.net.each do |nic|
-              unqualified_name = name.split('/').last
+              unqualified_name = name.split("/").last
               if nic.ip_address.include?(ip) && nic.network == unqualified_name
                 network_mob = @client.find_network(@datacenter, name)
                 if network_mob.vm.include?(vm)
                   logger.info("found conflicting vm: #{vm.name}, on network: #{name} with ip: #{ip}")
-                  conflicts << { vm_name: vm.name, network_name: name, ip: ip }
+                  conflicts << {vm_name: vm.name, network_name: name, ip: ip}
                 end
               end
             end
@@ -47,6 +47,5 @@ module VSphereCloud
       end
       conflicts
     end
-
   end
 end

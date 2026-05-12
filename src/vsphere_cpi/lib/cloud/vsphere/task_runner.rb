@@ -1,4 +1,4 @@
-require 'cloud/vsphere/logger'
+require "cloud/vsphere/logger"
 
 module VSphereCloud
   class TaskRunner
@@ -11,7 +11,7 @@ module VSphereCloud
     end
 
     def run(&block)
-      method_result = @retryer.try do |i|
+      @retryer.try do |i|
         task_mob = block.call
         task = Resources::Task.new(@cloud_searcher, task_mob, @retry_judge)
 
@@ -33,7 +33,6 @@ module VSphereCloud
 
         [result, vcenter_client_err]
       end
-      method_result
     end
 
     private
@@ -66,15 +65,15 @@ module VSphereCloud
         end
 
         case task.state
-          when VimSdk::Vim::TaskInfo::State::RUNNING
-            sleep(interval)
-          when VimSdk::Vim::TaskInfo::State::QUEUED
-            sleep(interval)
-          when VimSdk::Vim::TaskInfo::State::SUCCESS
-            logger.debug("Finished task '#{task.name}' after #{duration} seconds")
-            return task.result, nil
-          when VimSdk::Vim::TaskInfo::State::ERROR
-            return nil, task.error
+        when VimSdk::Vim::TaskInfo::State::RUNNING
+          sleep(interval)
+        when VimSdk::Vim::TaskInfo::State::QUEUED
+          sleep(interval)
+        when VimSdk::Vim::TaskInfo::State::SUCCESS
+          logger.debug("Finished task '#{task.name}' after #{duration} seconds")
+          return task.result, nil
+        when VimSdk::Vim::TaskInfo::State::ERROR
+          return nil, task.error
         end
       end
     end
@@ -100,7 +99,7 @@ module VSphereCloud
         fault_messages = fault.fault_message.map(&:message).join(",")
         msg += " and fault message '#{fault_messages}'"
       end
-      msg << '.'
+      msg << "."
       msg
     end
   end

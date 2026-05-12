@@ -1,27 +1,27 @@
-require 'cloud/vsphere/logger'
+require "cloud/vsphere/logger"
 
 module VSphereCloud
   class DrsLock
     include Logger
 
-    DRS_LOCK_NAME = 'drs_lock'
+    DRS_LOCK_NAME = "drs_lock"
     MAX_LOCK_TIMEOUT_IN_SECONDS = 600
 
     class LockError < RuntimeError; end
     class TimeoutError < RuntimeError; end
 
-    def initialize(drs_lock_name=DRS_LOCK_NAME)
+    def initialize(drs_lock_name = DRS_LOCK_NAME)
       @drs_lock_name = drs_lock_name
     end
 
     def with_drs_lock
       acquire_lock
-      logger.debug('Acquired drs lock')
+      logger.debug("Acquired drs lock")
       # Ensure to release the lock only after it is successfully acquired
       begin
         yield
       ensure
-        logger.debug('Releasing drs lock')
+        logger.debug("Releasing drs lock")
         release_lock
       end
     end

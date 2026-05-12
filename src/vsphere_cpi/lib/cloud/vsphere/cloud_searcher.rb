@@ -1,4 +1,4 @@
-require 'common/common'
+require "common/common"
 
 module VSphereCloud
   class CloudSearcher
@@ -17,16 +17,16 @@ module VSphereCloud
     end
 
     def get_properties(obj, type, properties, options = {})
-      properties = [properties] if properties.kind_of?(String)
-      property_specs = [PC::PropertySpec.new(:type => type, :all => false, :path_set => properties)]
+      properties = [properties] if properties.is_a?(String)
+      property_specs = [PC::PropertySpec.new(type: type, all: false, path_set: properties)]
 
-      if obj.is_a?(Vmodl::ManagedObject)
-        object_spec = PC::ObjectSpec.new(:obj => obj, :skip => false)
+      object_spec = if obj.is_a?(Vmodl::ManagedObject)
+        PC::ObjectSpec.new(obj: obj, skip: false)
       else
-        object_spec = obj.collect { |o| PC::ObjectSpec.new(:obj => o, :skip => false) }
+        obj.collect { |o| PC::ObjectSpec.new(obj: o, skip: false) }
       end
 
-      filter_spec = PC::FilterSpec.new(:prop_set => property_specs, :object_set => object_spec)
+      filter_spec = PC::FilterSpec.new(prop_set: property_specs, object_set: object_spec)
 
       # Bosh::Common.retryable default has an exponential sleeper,
       # with 30 tries the timeout will be ~265s
@@ -36,11 +36,11 @@ module VSphereCloud
         result = {}
 
         properties_response.each do |object_content|
-          object_properties = {:obj => object_content.obj}
-          if options[:ensure_all]
-            remaining_properties = Set.new(properties)
+          object_properties = {obj: object_content.obj}
+          remaining_properties = if options[:ensure_all]
+            Set.new(properties)
           else
-            remaining_properties = Set.new(options[:ensure])
+            Set.new(options[:ensure])
           end
           if object_content.prop_set
             object_content.prop_set.each do |property|
@@ -85,17 +85,17 @@ module VSphereCloud
       end
     end
 
-    def get_managed_objects(type, options={})
-      object_specs = get_object_specs(type, options[:root], 'name')
+    def get_managed_objects(type, options = {})
+      object_specs = get_object_specs(type, options[:root], "name")
 
       result = []
       object_specs.each do |object_spec|
         name = object_spec.prop_set.first.val
         if options[:name].nil? || name == options[:name]
-          if options[:include_name]
-            result << [name , object_spec.obj]
+          result << if options[:include_name]
+            [name, object_spec.obj]
           else
-            result << object_spec.obj
+            object_spec.obj
           end
         end
       end
@@ -110,22 +110,19 @@ module VSphereCloud
     end
 
     def get_managed_objects_with_attribute(type, custom_field_key, options = {})
-      object_specs = get_object_specs(type, options[:root], 'customValue')
+      object_specs = get_object_specs(type, options[:root], "customValue")
 
       results = []
       object_specs.each do |object|
-
         catch(:found_object) do
           object.prop_set.each do |property|
             property.val.each do |property_value|
-
               if property_value.key == custom_field_key
                 if options[:value].nil? || property_value.value == options[:value]
                   results << object.obj
                   throw :found_object
                 end
               end
-
             end
           end
         end
@@ -135,7 +132,7 @@ module VSphereCloud
     end
 
     def has_managed_object_with_attribute?(type, custom_field_key, options = {})
-      object_specs = get_object_specs(type, options[:root], 'customValue')
+      object_specs = get_object_specs(type, options[:root], "customValue")
 
       object_specs.each do |object|
         object.prop_set.each do |property|
@@ -153,7 +150,7 @@ module VSphereCloud
     end
 
     def find_resource_by_property_path(parent, type, property_path, &block)
-      raise 'Requires a vSphere object type' if type.nil?
+      raise "Requires a vSphere object type" if type.nil?
 
       filter_spec = get_recursive_search_filter_spec(parent, type, [property_path])
 
@@ -170,7 +167,7 @@ module VSphereCloud
     end
 
     def find_resources_by_property_path(parent, type, property_path, &block)
-      raise 'Requires a vSphere object type' if type.nil?
+      raise "Requires a vSphere object type" if type.nil?
 
       filter_spec = get_recursive_search_filter_spec(parent, type, [property_path])
 
@@ -192,7 +189,7 @@ module VSphereCloud
     def get_object_specs(type, root, path_set)
       root ||= @service_content.root_folder
 
-      property_specs = [PC::PropertySpec.new(:type => type, :all => false, :path_set => [path_set])]
+      property_specs = [PC::PropertySpec.new(type: type, all: false, path_set: [path_set])]
       filter_spec = get_search_filter_spec(root, property_specs)
       get_all_properties(filter_spec)
     end
@@ -208,9 +205,9 @@ module VSphereCloud
 
       # Create a traversal spec to select all objects in the 'view' of the ContainerView
       vm_traversal_spec = VimSdk::Vmodl::Query::PropertyCollector::TraversalSpec.new
-      vm_traversal_spec.name = 'searchTraversalSpec'
-      vm_traversal_spec.path = 'view'
-      vm_traversal_spec.type = 'ContainerView'
+      vm_traversal_spec.name = "searchTraversalSpec"
+      vm_traversal_spec.path = "view"
+      vm_traversal_spec.type = "ContainerView"
       object_spec.select_set << vm_traversal_spec
 
       # Specify the properties for retrieval
@@ -227,99 +224,99 @@ module VSphereCloud
 
     def get_search_filter_spec(obj, property_specs)
       resource_pool_traversal_spec = PC::TraversalSpec.new(
-        :name => "resourcePoolTraversalSpec",
-        :type => Vim::ResourcePool,
-        :path => "resourcePool",
-        :skip => false,
-        :select_set => [
-          PC::SelectionSpec.new(:name => "resourcePoolTraversalSpec"),
-          PC::SelectionSpec.new(:name => "resourcePoolVmTraversalSpec")
+        name: "resourcePoolTraversalSpec",
+        type: Vim::ResourcePool,
+        path: "resourcePool",
+        skip: false,
+        select_set: [
+          PC::SelectionSpec.new(name: "resourcePoolTraversalSpec"),
+          PC::SelectionSpec.new(name: "resourcePoolVmTraversalSpec")
         ]
       )
 
       resource_pool_vm_traversal_spec = PC::TraversalSpec.new(
-        :name => "resourcePoolVmTraversalSpec",
-        :type => Vim::ResourcePool,
-        :path => "vm",
-        :skip => false
+        name: "resourcePoolVmTraversalSpec",
+        type: Vim::ResourcePool,
+        path: "vm",
+        skip: false
       )
 
       compute_resource_rp_traversal_spec = PC::TraversalSpec.new(
-        :name => "computeResourceRpTraversalSpec",
-        :type => Vim::ComputeResource,
-        :path => "resourcePool",
-        :skip => false,
-        :select_set => [
-          PC::SelectionSpec.new(:name => "resourcePoolTraversalSpec"),
-          PC::SelectionSpec.new(:name => "resourcePoolVmTraversalSpec")
+        name: "computeResourceRpTraversalSpec",
+        type: Vim::ComputeResource,
+        path: "resourcePool",
+        skip: false,
+        select_set: [
+          PC::SelectionSpec.new(name: "resourcePoolTraversalSpec"),
+          PC::SelectionSpec.new(name: "resourcePoolVmTraversalSpec")
         ]
       )
 
       compute_resource_datastore_traversal_spec = PC::TraversalSpec.new(
-        :name => "computeResourceDatastoreTraversalSpec",
-        :type => Vim::ComputeResource,
-        :path => "datastore",
-        :skip => false
+        name: "computeResourceDatastoreTraversalSpec",
+        type: Vim::ComputeResource,
+        path: "datastore",
+        skip: false
       )
 
       compute_resource_host_traversal_spec = PC::TraversalSpec.new(
-        :name => "computeResourceHostTraversalSpec",
-        :type => Vim::ComputeResource,
-        :path => "host",
-        :skip => false
+        name: "computeResourceHostTraversalSpec",
+        type: Vim::ComputeResource,
+        path: "host",
+        skip: false
       )
 
       datacenter_host_traversal_spec = PC::TraversalSpec.new(
-        :name => "datacenterHostTraversalSpec",
-        :type => Vim::Datacenter,
-        :path => "hostFolder",
-        :skip => false,
-        :select_set => [
-          PC::SelectionSpec.new(:name => "folderTraversalSpec")
+        name: "datacenterHostTraversalSpec",
+        type: Vim::Datacenter,
+        path: "hostFolder",
+        skip: false,
+        select_set: [
+          PC::SelectionSpec.new(name: "folderTraversalSpec")
         ]
       )
 
       datacenter_vm_traversal_spec = PC::TraversalSpec.new(
-        :name => "datacenterVmTraversalSpec",
-        :type => Vim::Datacenter,
-        :path => "vmFolder",
-        :skip => false,
-        :select_set => [
-          PC::SelectionSpec.new(:name => "folderTraversalSpec")
+        name: "datacenterVmTraversalSpec",
+        type: Vim::Datacenter,
+        path: "vmFolder",
+        skip: false,
+        select_set: [
+          PC::SelectionSpec.new(name: "folderTraversalSpec")
         ]
       )
 
       host_vm_traversal_spec = PC::TraversalSpec.new(
-        :name => "hostVmTraversalSpec",
-        :type => Vim::HostSystem,
-        :path => "vm",
-        :skip => false,
-        :select_set => [
-          PC::SelectionSpec.new(:name => "folderTraversalSpec")
+        name: "hostVmTraversalSpec",
+        type: Vim::HostSystem,
+        path: "vm",
+        skip: false,
+        select_set: [
+          PC::SelectionSpec.new(name: "folderTraversalSpec")
         ]
       )
 
       folder_traversal_spec = PC::TraversalSpec.new(
-        :name => "folderTraversalSpec",
-        :type => Vim::Folder,
-        :path => "childEntity",
-        :skip => false,
-        :select_set => [
-          PC::SelectionSpec.new(:name => "folderTraversalSpec"),
-          PC::SelectionSpec.new(:name => "datacenterHostTraversalSpec"),
-          PC::SelectionSpec.new(:name => "datacenterVmTraversalSpec"),
-          PC::SelectionSpec.new(:name => "computeResourceRpTraversalSpec"),
-          PC::SelectionSpec.new(:name => "computeResourceDatastoreTraversalSpec"),
-          PC::SelectionSpec.new(:name => "computeResourceHostTraversalSpec"),
-          PC::SelectionSpec.new(:name => "hostVmTraversalSpec"),
-          PC::SelectionSpec.new(:name => "resourcePoolVmTraversalSpec")
+        name: "folderTraversalSpec",
+        type: Vim::Folder,
+        path: "childEntity",
+        skip: false,
+        select_set: [
+          PC::SelectionSpec.new(name: "folderTraversalSpec"),
+          PC::SelectionSpec.new(name: "datacenterHostTraversalSpec"),
+          PC::SelectionSpec.new(name: "datacenterVmTraversalSpec"),
+          PC::SelectionSpec.new(name: "computeResourceRpTraversalSpec"),
+          PC::SelectionSpec.new(name: "computeResourceDatastoreTraversalSpec"),
+          PC::SelectionSpec.new(name: "computeResourceHostTraversalSpec"),
+          PC::SelectionSpec.new(name: "hostVmTraversalSpec"),
+          PC::SelectionSpec.new(name: "resourcePoolVmTraversalSpec")
         ]
       )
 
       obj_spec = PC::ObjectSpec.new(
-        :obj => obj,
-        :skip => false,
-        :select_set => [
+        obj: obj,
+        skip: false,
+        select_set: [
           folder_traversal_spec,
           datacenter_vm_traversal_spec,
           datacenter_host_traversal_spec,
@@ -328,10 +325,10 @@ module VSphereCloud
           compute_resource_rp_traversal_spec,
           resource_pool_traversal_spec,
           host_vm_traversal_spec,
-          resource_pool_vm_traversal_spec,
+          resource_pool_vm_traversal_spec
         ]
       )
-      PC::FilterSpec.new(:prop_set => property_specs, :object_set => [obj_spec])
+      PC::FilterSpec.new(prop_set: property_specs, object_set: [obj_spec])
     end
   end
 end

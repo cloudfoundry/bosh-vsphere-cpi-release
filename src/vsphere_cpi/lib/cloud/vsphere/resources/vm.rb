@@ -1,4 +1,4 @@
-require 'cloud/vsphere/logger'
+require "cloud/vsphere/logger"
 
 module VSphereCloud
   module Resources
@@ -7,7 +7,7 @@ module VSphereCloud
       include ObjectStringifier
       include Logger
 
-      NSXT_LOGICAL_SWITCH = 'nsx.LogicalSwitch'.freeze
+      NSXT_LOGICAL_SWITCH = "nsx.LogicalSwitch".freeze
 
       # SCSI controllers use '7' as the equivalent of localhost, and the vSphere
       # Paravirtual SCSI controller allows Bus IDs in the range of 0 to 63.
@@ -31,23 +31,22 @@ module VSphereCloud
       end
 
       def cluster
-        cluster = cloud_searcher.get_properties(host_properties['parent'], Vim::ClusterComputeResource, 'name', ensure_all: true)
-        cluster['name']
+        cluster = cloud_searcher.get_properties(host_properties["parent"], Vim::ClusterComputeResource, "name", ensure_all: true)
+        cluster["name"]
       end
 
       def resource_pool
-        properties['resourcePool'].name
+        properties["resourcePool"].name
       end
 
       def accessible_datastores
         Datastore.build_from_client(
           @client,
-          host_properties['datastore'],
+          host_properties["datastore"],
           ensure_all: true
         ).select(&:accessible)
-                 .inject({}) do |acc, datastore|
-          acc[datastore.name] = datastore
-          acc
+          .each_with_object({}) do |datastore, acc|
+            acc[datastore.name] = datastore
         end
       end
 
@@ -68,19 +67,19 @@ module VSphereCloud
       end
 
       def devices
-        properties['config.hardware.device']
+        properties["config.hardware.device"]
       end
 
       def nics
-        devices.select { |device| device.kind_of?(Vim::Vm::Device::VirtualEthernetCard) }
+        devices.select { |device| device.is_a?(Vim::Vm::Device::VirtualEthernetCard) }
       end
 
       def cdrom
-        devices.find { |device| device.kind_of?(Vim::Vm::Device::VirtualCdrom) }
+        devices.find { |device| device.is_a?(Vim::Vm::Device::VirtualCdrom) }
       end
 
       def system_disk
-        devices.find { |device| device.kind_of?(Vim::Vm::Device::VirtualDisk) }
+        devices.find { |device| device.is_a?(Vim::Vm::Device::VirtualDisk) }
       end
 
       def get_nsxt_segment_vif_list
@@ -91,10 +90,10 @@ module VSphereCloud
         end
         nsxt_networks_id_name_map = get_nsxt_networks_id_name_map
         nsxt_nics.reduce([]) do |list, nic|
-          if nic.backing.is_a?(VimSdk::Vim::Vm::Device::VirtualEthernetCard::DistributedVirtualPortBackingInfo)
-            segment_name = nsxt_networks_id_name_map[nic.backing.port.portgroup_key]
+          segment_name = if nic.backing.is_a?(VimSdk::Vim::Vm::Device::VirtualEthernetCard::DistributedVirtualPortBackingInfo)
+            nsxt_networks_id_name_map[nic.backing.port.portgroup_key]
           else
-            segment_name = nsxt_networks_id_name_map[nic.backing.opaque_network_id]
+            nsxt_networks_id_name_map[nic.backing.opaque_network_id]
           end
           port_id = nic.external_id
           list << [segment_name, port_id]
@@ -103,7 +102,7 @@ module VSphereCloud
 
       def persistent_disks
         virtual_disks = devices.select do |device|
-          device.kind_of?(Vim::Vm::Device::VirtualDisk)
+          device.is_a?(Vim::Vm::Device::VirtualDisk)
         end
 
         # To account for disk modes that were changed outside of the CPI,
@@ -118,12 +117,12 @@ module VSphereCloud
 
       def ephemeral_disk
         devices.find do |device|
-          device.kind_of?(Vim::Vm::Device::VirtualDisk) && device.backing.file_name =~ /#{Resources::EphemeralDisk::DISK_NAME}.vmdk$/
+          device.is_a?(Vim::Vm::Device::VirtualDisk) && device.backing.file_name =~ /#{Resources::EphemeralDisk::DISK_NAME}.vmdk$/o
         end
       end
 
       def pci_controller
-        devices.find { |device| device.kind_of?(Vim::Vm::Device::VirtualPCIController) }
+        devices.find { |device| device.is_a?(Vim::Vm::Device::VirtualPCIController) }
       end
 
       def fix_device_key(device_changes)
@@ -174,7 +173,7 @@ module VSphereCloud
       def shutdown
         check_for_nonpersistent_disk_modes
 
-        logger.debug('Waiting for the VM to shutdown')
+        logger.debug("Waiting for the VM to shutdown")
         begin
           begin
             @mob.shutdown_guest
@@ -184,7 +183,7 @@ module VSphereCloud
 
           wait_until_off(60)
         rescue VSphereCloud::Cloud::TimeoutException
-          logger.debug('The guest did not shutdown in time, requesting it to power off')
+          logger.debug("The guest did not shutdown in time, requesting it to power off")
           @client.power_off_vm(@mob)
         end
       end
@@ -192,7 +191,7 @@ module VSphereCloud
       def power_off
         check_for_nonpersistent_disk_modes
 
-        question = properties['runtime.question']
+        question = properties["runtime.question"]
         if question
           choices = question.choice
           logger.info("VM is blocked on a question: #{question.text}, " +
@@ -201,14 +200,14 @@ module VSphereCloud
         end
 
         # get current power state from the server
-        power_state = cloud_searcher.get_property(@mob, Vim::VirtualMachine, 'runtime.powerState')
+        power_state = cloud_searcher.get_property(@mob, Vim::VirtualMachine, "runtime.powerState")
 
         if power_state != Vim::VirtualMachine::PowerState::POWERED_OFF
           begin
             @client.power_off_vm(@mob)
           rescue VCenterClient::InvalidPowerState => e
-            raise e unless e.message.include? 'Powered off'
-            logger.warn('ignoring PowerState exception because vm is powered off')
+            raise e unless e.message.include? "Powered off"
+            logger.warn("ignoring PowerState exception because vm is powered off")
           end
         else
           logger.info("VM '#{@cid}' is already powered off, skipping power off task.")
@@ -217,13 +216,13 @@ module VSphereCloud
 
       def disk_by_cid(disk_cid)
         disk = devices.find do |d|
-          d.kind_of?(Vim::Vm::Device::VirtualDisk) &&
+          d.is_a?(Vim::Vm::Device::VirtualDisk) &&
             d.backing.file_name.end_with?("/#{disk_cid}.vmdk")
         end
         if disk.nil?
-          return disk_by_original_cid(disk_cid)
+          disk_by_original_cid(disk_cid)
         else
-          return disk
+          disk
         end
       end
 
@@ -257,7 +256,7 @@ module VSphereCloud
       def wait_until_off(timeout)
         started = Time.now
         loop do
-          power_state = cloud_searcher.get_property(@mob, Vim::VirtualMachine, 'runtime.powerState')
+          power_state = cloud_searcher.get_property(@mob, Vim::VirtualMachine, "runtime.powerState")
           break if power_state == Vim::VirtualMachine::PowerState::POWERED_OFF
           raise VSphereCloud::Cloud::TimeoutException if Time.now - started > timeout
           sleep(1.0)
@@ -265,11 +264,11 @@ module VSphereCloud
       end
 
       def power_state
-        properties['runtime.powerState']
+        properties["runtime.powerState"]
       end
 
       def extra_config
-        properties['config.extraConfig']
+        properties["config.extraConfig"]
       end
 
       def has_persistent_disk_property_mismatch?(disk)
@@ -311,15 +310,15 @@ module VSphereCloud
         fix_device_unit_numbers(vm_config.device_change)
         fix_device_key(vm_config.device_change)
 
-        logger.info('Attaching disk')
+        logger.info("Attaching disk")
         @client.reconfig_vm(@mob, vm_config)
-        logger.info('Finished attaching disk')
+        logger.info("Finished attaching disk")
 
         reload
         logger.debug("Adding persistent disk property to vm '#{@cid}'")
         @client.add_persistent_disk_property_to_vm(self, disk)
-        logger.debug('Finished adding persistent disk property to vm')
-        return disk_config_spec
+        logger.debug("Finished adding persistent disk property to vm")
+        disk_config_spec
       end
 
       def disk_uuid_is_enabled?
@@ -333,7 +332,7 @@ module VSphereCloud
           # 1. cpi.json: only allows integers; so 1 is the only valid truthy value
           # 2. runtime cpi config: both 1 and '1' are observed in the wild
           # 3. vm_type/extraConfig: allow 'TRUE' as well
-          option.key == 'disk.enableUUID' && ['1', 1, 'TRUE'].include?(option.value)
+          option.key == "disk.enableUUID" && ["1", 1, "TRUE"].include?(option.value)
         end
       end
 
@@ -352,10 +351,10 @@ module VSphereCloud
 
           disk_property = get_vapp_property_by_key(virtual_disk.key)
           if disk_property.nil? && !force_disk_path.nil?
-            logger.info('Persistent disk is BOSH-managed but VM has no vApp property: moving disk to current location on same datastore')
+            logger.info("Persistent disk is BOSH-managed but VM has no vApp property: moving disk to current location on same datastore")
             disks_to_move << DiskWithForcedPath.new(virtual_disk, force_disk_path)
           elsif has_persistent_disk_property_mismatch?(virtual_disk) && !@client.disk_path_exists?(@mob, disk_property.value)
-            logger.info('Persistent disk was moved: moving disk to vApp property recorded location')
+            logger.info("Persistent disk was moved: moving disk to vApp property recorded location")
             disks_to_move << DiskWithForcedPath.new(virtual_disk, nil)
           end
         end
@@ -366,13 +365,13 @@ module VSphereCloud
         logger.info("Renaming #{disks_to_move.size} persistent disk(s) to proper path")
         move_disks(disks_to_move)
 
-        logger.info('Finished detaching disk(s)')
+        logger.info("Finished detaching disk(s)")
 
         virtual_disks.each do |disk|
           logger.debug("Deleting persistent disk property #{disk.key} from vm '#{@cid}'")
           @client.delete_persistent_disk_property_from_vm(self, disk.key)
         end
-        logger.debug('Finished deleting persistent disk properties from vm')
+        logger.debug("Finished deleting persistent disk properties from vm")
       end
 
       def move_disks(disks_to_move)
@@ -393,7 +392,7 @@ module VSphereCloud
 
           destination_exists = @client.disk_path_exists?(@mob, dest_path)
           datastore_type = disk.backing.datastore.summary.type
-          if datastore_type == 'vsan' && destination_exists
+          if datastore_type == "vsan" && destination_exists
             logger.debug("Skipping disk relocation for vsan datastore because destination already exists: #{dest_path}")
           else
             @client.move_disk(datacenter_mob, disk.backing.file_name, datacenter_mob, dest_path)
@@ -425,12 +424,12 @@ module VSphereCloud
       SCSI_CONTROLLER_CLASSES = {
         VSphereCloud::ScsiControllerType::PARAVIRTUAL => VimSdk::Vim::Vm::Device::ParaVirtualSCSIController,
         VSphereCloud::ScsiControllerType::LSI_LOGIC => VimSdk::Vim::Vm::Device::VirtualLsiLogicController,
-        VSphereCloud::ScsiControllerType::LSI_LOGIC_SAS => VimSdk::Vim::Vm::Device::VirtualLsiLogicSASController,
+        VSphereCloud::ScsiControllerType::LSI_LOGIC_SAS => VimSdk::Vim::Vm::Device::VirtualLsiLogicSASController
       }.freeze
 
       def create_scsi_controller_spec(controller_type)
         scsi_controller = devices.find do |device|
-          device.kind_of?(Vim::Vm::Device::VirtualSCSIController) &&
+          device.is_a?(Vim::Vm::Device::VirtualSCSIController) &&
             (system_disk ? device.key == system_disk.controller_key : true)
         end
         return nil if scsi_controller.nil?
@@ -457,7 +456,7 @@ module VSphereCloud
 
       # Backwards-compatible alias
       def create_paravirtual_scsi_controller_spec
-        create_scsi_controller_spec('paravirtual')
+        create_scsi_controller_spec("paravirtual")
       end
 
       def self.create_delete_device_spec(device, options = {})
@@ -501,34 +500,33 @@ module VSphereCloud
       end
 
       def get_nsxt_networks_id_name_map
-        mob.network.reduce({}) do |map, net|
+        mob.network.each_with_object({}) do |net, map|
           if net.summary.is_a?(VimSdk::Vim::OpaqueNetwork::Summary)
             map[net.summary.opaque_network_id] = net.name
           elsif net.summary.is_a?(VimSdk::Vim::Network::Summary) && net.summary.network.is_a?(VimSdk::Vim::Dvs::DistributedVirtualPortgroup)
             map[net.summary.network.__mo_id__] = net.name
           end
-          map
         end
       end
 
       def verify_persistent_disk_property?(property)
-        property.category == 'BOSH Persistent Disks'
+        property.category == "BOSH Persistent Disks"
       end
 
       def properties
         @properties ||= cloud_searcher.get_properties(
           @mob,
           Vim::VirtualMachine,
-          ['runtime.powerState', 'runtime.question', 'config.hardware.device', 'name', 'runtime', 'resourcePool', 'config.extraConfig'],
-          ensure: ['config.hardware.device', 'runtime', 'config.extraConfig']
+          ["runtime.powerState", "runtime.question", "config.hardware.device", "name", "runtime", "resourcePool", "config.extraConfig"],
+          ensure: ["config.hardware.device", "runtime", "config.extraConfig"]
         )
       end
 
       def host_properties
         @host_properties ||= cloud_searcher.get_properties(
-          properties['runtime'].host,
+          properties["runtime"].host,
           Vim::HostSystem,
-          ['datastore', 'parent'],
+          ["datastore", "parent"],
           ensure_all: true
         )
       end
@@ -538,7 +536,7 @@ module VSphereCloud
         return [] if v_app_config.nil?
 
         disk_properties = v_app_config.property.select do |property|
-          property.category == 'BOSH Persistent Disks'
+          property.category == "BOSH Persistent Disks"
         end
         disk_properties.map { |property| property.key }
       end
@@ -548,7 +546,7 @@ module VSphereCloud
       end
 
       def disk_by_original_cid(disk_cid)
-        disks = devices.select { |d| d.kind_of?(Vim::Vm::Device::VirtualDisk) }
+        disks = devices.select { |d| d.is_a?(Vim::Vm::Device::VirtualDisk) }
         disks.each do |d|
           disk_property = get_vapp_property_by_key(d.key)
           if disk_property.nil?
@@ -570,7 +568,7 @@ module VSphereCloud
         end
 
         unless nonpersistent_file_names.empty?
-          raise "The following disks are attached with non-persistent disk modes: [ #{nonpersistent_file_names.join(', ')} ]. Please change the disk modes to 'independent persistent' before attempting to power off the VM to avoid data loss."
+          raise "The following disks are attached with non-persistent disk modes: [ #{nonpersistent_file_names.join(", ")} ]. Please change the disk modes to 'independent persistent' before attempting to power off the VM to avoid data loss."
         end
       end
     end

@@ -1,10 +1,9 @@
-require 'httpclient'
-require 'openssl'
-require 'cloud/vsphere/sdk_helpers/log_filter'
+require "httpclient"
+require "openssl"
+require "cloud/vsphere/sdk_helpers/log_filter"
 
 module VSphereCloud
   class BaseHttpClient
-
     attr_reader :backing_client
 
     def initialize(http_log: nil, trusted_ca_file: nil, ca_cert_manifest_key: nil, skip_ssl_verify: false)
@@ -13,7 +12,7 @@ module VSphereCloud
       @backing_client.receive_timeout = 14400
       @backing_client.connect_timeout = 60
       @backing_client.tcp_keepalive = true
-      @backing_client.transparent_gzip_decompression = true #The 'httpclient' gem doesn't handle gzip-compressed responses by default.
+      @backing_client.transparent_gzip_decompression = true # The 'httpclient' gem doesn't handle gzip-compressed responses by default.
       @ca_cert_manifest_key = ca_cert_manifest_key
       @log_filter = VSphereCloud::SdkHelpers::LogFilter.new
 
@@ -28,31 +27,31 @@ module VSphereCloud
       end
 
       case http_log
-        when String
-          log_file = File.open(http_log, 'w')
-          log_file.sync = true
-          @log_writer = log_file
-        when IO, StringIO
-          @log_writer = http_log
-        else
-          @log_writer = File.open(File::NULL, 'w')
+      when String
+        log_file = File.open(http_log, "w")
+        log_file.sync = true
+        @log_writer = log_file
+      when IO, StringIO
+        @log_writer = http_log
+      else
+        @log_writer = File.open(File::NULL, "w")
       end
     end
 
     def get(url, additional_headers = {})
-      do_request(url, 'GET', nil, additional_headers)
+      do_request(url, "GET", nil, additional_headers)
     end
 
     def put(url, content, additional_headers = {})
-      do_request(url, 'PUT', content, additional_headers)
+      do_request(url, "PUT", content, additional_headers)
     end
 
     def post(url, content, additional_headers = {})
-      do_request(url, 'POST', content, additional_headers)
+      do_request(url, "POST", content, additional_headers)
     end
 
     def delete(url, additional_headers = {})
-      do_request(url, 'DELETE', nil, additional_headers)
+      do_request(url, "DELETE", nil, additional_headers)
     end
 
     private
@@ -67,25 +66,25 @@ module VSphereCloud
       if content
         @log_writer << "Request Body:\n"
 
-        if is_content_loggable?(content, additional_headers)
-          @log_writer << @log_filter.filter(content) + "\n"
+        @log_writer << if is_content_loggable?(content, additional_headers)
+          @log_filter.filter(content) + "\n"
         else
-          @log_writer << "REQUEST BODY IS BINARY DATA\n"
+          "REQUEST BODY IS BINARY DATA\n"
         end
       end
 
       begin
         case method
-          when 'GET'
-            resp = @backing_client.get(url, nil, additional_headers)
-          when 'PUT'
-            resp = @backing_client.put(url, content, additional_headers)
-          when 'POST'
-            resp = @backing_client.post(url, content, additional_headers)
-          when 'DELETE'
-            resp = @backing_client.delete(url, additional_headers)
-          else
-            raise "Invalid HTTP method '#{method}'"
+        when "GET"
+          resp = @backing_client.get(url, nil, additional_headers)
+        when "PUT"
+          resp = @backing_client.put(url, content, additional_headers)
+        when "POST"
+          resp = @backing_client.post(url, content, additional_headers)
+        when "DELETE"
+          resp = @backing_client.delete(url, additional_headers)
+        else
+          raise "Invalid HTTP method '#{method}'"
         end
       rescue OpenSSL::SSL::SSLError => e
         error_msg = "The URL #{url} does not have a valid SSL certificate."
@@ -117,16 +116,16 @@ module VSphereCloud
       if resp.content
         @log_writer << "Response Body:\n"
 
-        if is_content_loggable?(resp.content, resp.headers)
-          @log_writer << resp.content + "\n"
+        @log_writer << if is_content_loggable?(resp.content, resp.headers)
+          resp.content + "\n"
         else
-          @log_writer << "RESPONSE BODY IS BINARY DATA\n"
+          "RESPONSE BODY IS BINARY DATA\n"
         end
       end
     end
 
     def is_content_loggable?(content, headers)
-      content.is_a?(String) && headers['Content-Type'] != 'application/octet-stream' && content.force_encoding('utf-8').valid_encoding?
+      content.is_a?(String) && headers["Content-Type"] != "application/octet-stream" && content.force_encoding("utf-8").valid_encoding?
     end
   end
 end

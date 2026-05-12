@@ -1,7 +1,8 @@
-require 'cloud/vsphere/logger'
+require "cloud/vsphere/logger"
 module VSphereCloud
   class Pbm
     include Logger
+
     attr_reader :service_content
 
     # Connect to Pbm Server and initialize PbmServiceContent
@@ -11,11 +12,11 @@ module VSphereCloud
     def initialize(pbm_api_uri:, http_client:, vc_cookie:)
       pbm_soap_stub = VimSdk::Soap::PbmStubAdapter.new(
         pbm_api_uri,
-        'pbm.version.version12',
+        "pbm.version.version12",
         http_client,
         vc_cookie: vc_cookie
       )
-      pbm_instance = VimSdk::Pbm::ServiceInstance.new('ServiceInstance', pbm_soap_stub)
+      pbm_instance = VimSdk::Pbm::ServiceInstance.new("ServiceInstance", pbm_soap_stub)
 
       @service_content = pbm_instance.retrieve_content
     end
@@ -29,7 +30,7 @@ module VSphereCloud
       resource_type.resource_type = VimSdk::Pbm::Profile::ResourceTypeEnum::STORAGE
       profile_ids = profile_mgr.query_profile(resource_type, profile_category)
       profiles = profile_mgr.retrieve_content(profile_ids)
-      profile = profiles.find{ |p| p.name == policy_name }
+      profile = profiles.find { |p| p.name == policy_name }
       raise "Storage Policy: #{policy_name} not found" unless profile
       profile
     end
@@ -45,7 +46,7 @@ module VSphereCloud
       results = placement_result.select { |pr| pr.error.empty? }
       raise "No compatible Datastore for Storage Policy: #{policy_name}" if results.empty?
 
-      datastore_hubs = results.select { |r| r.hub.hub_type == 'Datastore' }
+      datastore_hubs = results.select { |r| r.hub.hub_type == "Datastore" }
 
       # TODO figure out if we needs to support only SDRS enabled datastore clusters and then select all datastores from that list
       # datastore_clusters = results.select { |r| r.hub.hub_type == 'StoragePod' }

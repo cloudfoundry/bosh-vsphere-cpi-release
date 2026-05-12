@@ -1,6 +1,6 @@
 module VSphereCloud
   class ManagedNetwork
-     def initialize(switch, range = nil, gateway = nil)
+    def initialize(switch, range = nil, gateway = nil)
       @switch = switch
       @range = range
       @gateway = gateway
@@ -14,7 +14,7 @@ module VSphereCloud
     end
 
     def to_a
-      [ @switch.id, created_network, {name: @switch.display_name} ]
+      [@switch.id, created_network, {name: @switch.display_name}]
     end
 
     def to_json(opts)

@@ -1,5 +1,5 @@
-require 'cloud/vsphere/logger'
-require 'digest'
+require "cloud/vsphere/logger"
+require "digest"
 
 module VSphereCloud
   class VirtualMachineNotFound < StandardError
@@ -42,9 +42,9 @@ module VSphereCloud
 
     def to_s
       if @vm_id
-        return "VIF for VM #{@vm_id} with 'external_id' #{@external_id} was expected in NSX-T but was not found"
+        "VIF for VM #{@vm_id} with 'external_id' #{@external_id} was expected in NSX-T but was not found"
       else
-        return "VIF for lport attachment id #{@vif_id} was expected in NSX-T but was not found"
+        "VIF for lport attachment id #{@vif_id} was expected in NSX-T but was not found"
 
       end
     end
@@ -59,11 +59,10 @@ module VSphereCloud
 
     def to_s
       if @vm_id
-        return "Logical port for VM #{@vm_id} with 'external_id' #{@external_id} was expected in NSX-T but was not found"
+        "Logical port for VM #{@vm_id} with 'external_id' #{@external_id} was expected in NSX-T but was not found"
       else
-        return "Logical port with lport_attachment_id #{@vif_id} was expected in NSX-T but was not found"
+        "Logical port with lport_attachment_id #{@vif_id} was expected in NSX-T but was not found"
       end
-
     end
   end
 
@@ -73,7 +72,7 @@ module VSphereCloud
     end
 
     def to_s
-      "NSGroups [#{@display_names.join(', ')}] were not found in NSX-T"
+      "NSGroups [#{@display_names.join(", ")}] were not found in NSX-T"
     end
   end
 
@@ -83,7 +82,7 @@ module VSphereCloud
     end
 
     def to_s
-      "ServerPools [#{@display_names.join(', ')}] were not found in NSX-T"
+      "ServerPools [#{@display_names.join(", ")}] were not found in NSX-T"
     end
   end
 
@@ -140,7 +139,7 @@ module VSphereCloud
       logger.info("Adding vm '#{vm.cid}' to NSGroups: #{ns_groups}")
       nsgroups = retrieve_nsgroups(ns_groups)
       nsgroups.each do |nsgroup|
-        if nsgroup._protection == 'PROTECTED'
+        if nsgroup._protection == "PROTECTED"
           logger.error("Attempting to modify #{nsgroup.display_name} (#{nsgroup.id}) but it is a \"PROTECTED\" resource. The CPI configuration may be incorrect.")
         end
         logger.info("Adding LogicalPorts: #{lports.map(&:id)} to NSGroup '#{nsgroup.id}'")
@@ -151,10 +150,10 @@ module VSphereCloud
           grouping_obj_svc.add_or_remove_ns_group_expression(
             nsgroup.id,
             *to_simple_expressions(lports),
-            'ADD_MEMBERS'
+            "ADD_MEMBERS"
           )
         rescue NSXT::ApiCallError => e
-          raise NSXTOptimisticUpdateError if e.code == 409 || e.code == 412 #Conflict or PreconditionFailed
+          raise NSXTOptimisticUpdateError if e.code == 409 || e.code == 412 # Conflict or PreconditionFailed
           raise
         end
       end
@@ -167,13 +166,13 @@ module VSphereCloud
       nsgroups = retrieve_all_ns_groups_with_pagination.select do |nsgroup|
         nsgroup.members&.any? do |member|
           member.is_a?(NSXT::NSGroupSimpleExpression) &&
-            member.target_property == 'id' &&
+            member.target_property == "id" &&
             lport_ids.include?(member.value)
         end
       end
       nsgroups.each do |nsgroup|
         logger.info("Removing LogicalPorts: #{lport_ids} to NSGroup '#{nsgroup.id}'")
-        if nsgroup._protection == 'PROTECTED'
+        if nsgroup._protection == "PROTECTED"
           logger.error("Attempting to modify #{nsgroup.display_name} (#{nsgroup.id}) but it is a \"PROTECTED\" resource. The CPI configuration may be incorrect.")
         end
         Bosh::Retryable.new(
@@ -183,29 +182,29 @@ module VSphereCloud
           grouping_obj_svc.add_or_remove_ns_group_expression(
             nsgroup.id,
             *to_simple_expressions(lports),
-            'REMOVE_MEMBERS'
+            "REMOVE_MEMBERS"
           )
         rescue NSXT::ApiCallError => e
-          raise NSXTOptimisticUpdateError if e.code == 409 || e.code == 412 #Conflict or PreconditionFailed
+          raise NSXTOptimisticUpdateError if e.code == 409 || e.code == 412 # Conflict or PreconditionFailed
           raise
         end
       end
     end
 
     def update_vm_metadata_on_logical_ports(vm, metadata)
-      return unless metadata.has_key?('id')
+      return unless metadata.has_key?("id")
       return if nsxt_nics(vm).empty?
 
       logical_ports(vm).each do |logical_port|
         loop do
           tags = logical_port.tags || []
           tags_by_scope = tags.group_by { |tag| tag.scope }
-          bosh_id_tags = tags_by_scope.fetch('bosh/id', [])
+          bosh_id_tags = tags_by_scope.fetch("bosh/id", [])
 
           raise InvalidLogicalPortError.new(logical_port) if bosh_id_tags.uniq.length > 1
 
-          id_tag = NSXT::Tag.new('scope' => 'bosh/id', 'tag' => Digest::SHA1.hexdigest(metadata['id']))
-          tags.delete_if { |tag| tag.scope == 'bosh/id' }
+          id_tag = NSXT::Tag.new("scope" => "bosh/id", "tag" => Digest::SHA1.hexdigest(metadata["id"]))
+          tags.delete_if { |tag| tag.scope == "bosh/id" }
           tags << id_tag
 
           logical_port.tags = tags
@@ -224,7 +223,7 @@ module VSphereCloud
     end
 
     def update_vm_metadata_on_vm_objects(vm, metadata)
-      return unless metadata.has_key?('id')
+      return unless metadata.has_key?("id")
       return if nsxt_nics(vm).empty?
       tags = vm_fabric_svc.list_virtual_machines(display_name: vm.cid).results.first.tags || []
 
@@ -233,7 +232,7 @@ module VSphereCloud
         if metadata_key == "bosh/id"
           metadata_value = Digest::SHA1.hexdigest(metadata_value)
         end
-        tags << NSXT::Tag.new('scope' => metadata_key, 'tag' => metadata_value)
+        tags << NSXT::Tag.new("scope" => metadata_key, "tag" => metadata_value)
       end
       external_id = vm_fabric_svc.list_virtual_machines(display_name: vm.cid).results.first.external_id
 
@@ -241,7 +240,7 @@ module VSphereCloud
     end
 
     def set_vif_type(vm, vm_type_nsxt)
-      vif_type = (vm_type_nsxt || {}).has_key?('vif_type') ? vm_type_nsxt['vif_type'] : @default_vif_type
+      vif_type = (vm_type_nsxt || {}).has_key?("vif_type") ? vm_type_nsxt["vif_type"] : @default_vif_type
       return if vif_type.nil?
       return if nsxt_nics(vm).empty?
       ports = logical_ports(vm)
@@ -249,7 +248,7 @@ module VSphereCloud
         logger.info("Setting VIF attachment on logical port #{logical_port.id} to have vif_type '#{vif_type}'")
         loop do
           logical_port.attachment.context = NSXT::VifAttachmentContext.new
-          logical_port.attachment.context.resource_type = 'VifAttachmentContext'
+          logical_port.attachment.context.resource_type = "VifAttachmentContext"
           logical_port.attachment.context.vif_type = vif_type
           begin
             lport = logical_switching_svc.update_logical_port_with_http_info(logical_port.id, logical_port)
@@ -278,16 +277,16 @@ module VSphereCloud
         vm_ip = vm.mob.guest&.ip_address
         raise VirtualMachineIpNotFound.new(vm) unless vm_ip
         server_pools.each do |server_pool, port_no|
-          if server_pool._protection == 'PROTECTED'
+          if server_pool._protection == "PROTECTED"
             logger.error("Attempting to modify #{server_pool.display_name} (#{server_pool.id}) but it is a \"PROTECTED\" resource. The CPI configuration may be incorrect.")
           end
           logger.info("Adding vm: '#{vm.cid}' with ip:#{vm_ip} to ServerPool: #{server_pool.id} on Port: #{port_no} ")
           pool_member = NSXT::PoolMemberSetting.new(ip_address: vm_ip, port: port_no, display_name: vm.cid)
           pool_member_setting_list = NSXT::PoolMemberSettingList.new(members: [pool_member])
           begin
-            services_svc.perform_pool_member_action(server_pool.id, pool_member_setting_list, 'ADD_MEMBERS')
+            services_svc.perform_pool_member_action(server_pool.id, pool_member_setting_list, "ADD_MEMBERS")
           rescue NSXT::ApiCallError => e
-            retry if e.code == 409 || e.code == 412 #Conflict or PreconditionFailed
+            retry if e.code == 409 || e.code == 412 # Conflict or PreconditionFailed
             raise e
           end
         end
@@ -300,20 +299,20 @@ module VSphereCloud
     def retrieve_server_pools(server_pools)
       return [] if server_pools.nil? || server_pools.empty?
 
-      #Create a hash of server_pools with key as their name and value as list of matching server_pools
+      # Create a hash of server_pools with key as their name and value as list of matching server_pools
       server_pools_by_name = services_svc.list_load_balancer_pools.results.each_with_object({}) do |server_pool, hash|
         hash[server_pool.display_name] ? hash[server_pool.display_name] << server_pool : hash[server_pool.display_name] = [server_pool]
       end
 
       missing = server_pools.reject do |server_pool|
-        server_pools_by_name.key?(server_pool['name'])
+        server_pools_by_name.key?(server_pool["name"])
       end
       raise ServerPoolsNotFound.new(*missing) unless missing.empty?
 
       static_server_pools, dynamic_server_pools = [], []
       server_pools.each do |server_pool|
-        server_pool_name = server_pool['name']
-        server_pool_port = server_pool['port']
+        server_pool_name = server_pool["name"]
+        server_pool_port = server_pool["port"]
         matching_server_pools = server_pools_by_name[server_pool_name]
         matching_server_pools.each do |matching_server_pool|
           matching_server_pool.member_group ? dynamic_server_pools << matching_server_pool : static_server_pools << [matching_server_pool, server_pool_port]
@@ -331,7 +330,7 @@ module VSphereCloud
             logger.info("Removing vm with ip: '#{vm_ip}', port_no: #{member_found.port} from ServerPool: #{server_pool.id} ")
             pool_member = NSXT::PoolMemberSetting.new(ip_address: vm_ip, port: member_found.port)
             pool_member_setting_list = NSXT::PoolMemberSettingList.new(members: [pool_member])
-            services_svc.perform_pool_member_action(server_pool.id, pool_member_setting_list, 'REMOVE_MEMBERS')
+            services_svc.perform_pool_member_action(server_pool.id, pool_member_setting_list, "REMOVE_MEMBERS")
           end
         end
       end
@@ -347,13 +346,13 @@ module VSphereCloud
       switch_lport_display_id
     end
 
-    before(*instance_methods) { require 'nsxt_manager_client/nsxt_manager_client' }
+    before(*instance_methods) { require "nsxt_manager_client/nsxt_manager_client" }
 
     private
 
     MAX_TRIES = 20
     DEFAULT_SLEEP_TIME = NSXT_MIN_SLEEP = 1
-    NSXT_LOGICAL_SWITCH = 'nsx.LogicalSwitch'.freeze
+    NSXT_LOGICAL_SWITCH = "nsx.LogicalSwitch".freeze
     NSXT_MULTI_VM_COPY_RETRY = 62
 
     def retrieve_all_ns_groups_with_pagination
@@ -451,7 +450,7 @@ module VSphereCloud
       ns_grp_exprn_lst.members = []
       lports.each do |lport|
         ns_grp_exprn_lst.members.push(
-          op: 'EQUALS',
+          op: "EQUALS",
           target_type: lport.resource_type,
           target_property: "id",
           value: lport.id,
@@ -477,6 +476,5 @@ module VSphereCloud
       logger.info("NSX-T networks found for vm '#{vm.cid}': #{nics.map(&:device_info).map(&:summary)}")
       nics
     end
-
   end
 end

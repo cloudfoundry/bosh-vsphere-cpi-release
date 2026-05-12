@@ -1,7 +1,6 @@
 module VSphereCloud
   module Resources
     class Disk
-
       attr_reader :cid, :size_in_mb, :datastore, :folder
       protected :initialize
 
@@ -34,7 +33,7 @@ module VSphereCloud
     end
 
     class EphemeralDisk < Disk
-      DISK_NAME = 'ephemeral_disk'.freeze
+      DISK_NAME = "ephemeral_disk".freeze
 
       attr_reader :disk_type
 
@@ -48,7 +47,7 @@ module VSphereCloud
           # Note: DiskMode::PERSISTENT has no relation to BOSH's persistent disks;
           # https://www.vmware.com/support/developer/vc-sdk/visdk41pubs/ApiReference/vim.vm.device.VirtualDiskOption.DiskMode.html
           spec.device.backing.disk_mode = VimSdk::Vim::Vm::Device::VirtualDiskOption::DiskMode::PERSISTENT
-          spec.device.backing.thin_provisioned = @disk_type == 'thin'
+          spec.device.backing.thin_provisioned = @disk_type == "thin"
 
           spec.file_operation = VimSdk::Vim::Vm::Device::VirtualDeviceSpec::FileOperation::CREATE
         end
@@ -56,14 +55,13 @@ module VSphereCloud
     end
 
     class PersistentDisk < Disk
-
       # https://pubs.vmware.com/vsphere-55/index.jsp?topic=%2Fcom.vmware.wssdk.apiref.doc%2Fvim.VirtualDiskManager.VirtualDiskType.html
-      SUPPORTED_DISK_TYPES = %w{
+      SUPPORTED_DISK_TYPES = %w[
         eagerZeroedThick
         preallocated
         thick
         thin
-      }
+      ]
 
       def initialize(cid:, size_in_mb:, datastore:, folder:)
         super(size_in_mb, datastore, folder, cid)

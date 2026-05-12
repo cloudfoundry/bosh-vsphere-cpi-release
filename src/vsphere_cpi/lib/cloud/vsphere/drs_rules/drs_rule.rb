@@ -1,12 +1,12 @@
-require 'cloud/vsphere/logger'
+require "cloud/vsphere/logger"
 
 module VSphereCloud
   class DrsRule
     include Logger
 
-    CUSTOM_ATTRIBUTE_NAME = 'drs_rule'
-    DRS_LOCK_HOST_VM_GROUP = 'host_vm_group'
-    DEFAULT_RULE_NAME = 'vcpi-drs-rule'
+    CUSTOM_ATTRIBUTE_NAME = "drs_rule"
+    DRS_LOCK_HOST_VM_GROUP = "host_vm_group"
+    DEFAULT_RULE_NAME = "vcpi-drs-rule"
 
     def initialize(rule_name, client, datacenter_cluster)
       @rule_name = rule_name
@@ -49,7 +49,7 @@ module VSphereCloud
     def tag_vm(vm)
       custom_attribute = VMAttributeManager.find_by_name(CUSTOM_ATTRIBUTE_NAME)
       unless custom_attribute
-        logger.debug('Creating DRS rule attribute')
+        logger.debug("Creating DRS rule attribute")
         VMAttributeManager.create(CUSTOM_ATTRIBUTE_NAME)
       end
 
@@ -75,11 +75,7 @@ module VSphereCloud
       vm_host_rule_info = VimSdk::Vim::Cluster::VmHostRuleInfo.new
       vm_host_rule_info.enabled = true
       # Check Hard or Soft Affinity
-      if rule_type == VSphereCloud::Resources::Cluster::CLUSTER_VM_HOST_RULE_MUST
-        vm_host_rule_info.mandatory = true
-      else
-        vm_host_rule_info.mandatory =  false
-      end
+      vm_host_rule_info.mandatory = rule_type == VSphereCloud::Resources::Cluster::CLUSTER_VM_HOST_RULE_MUST
       vm_host_rule_info.name = @rule_name
       vm_host_rule_info.vm_group_name = vm_group_name
       vm_host_rule_info.affine_host_group_name = host_group_name
@@ -105,7 +101,7 @@ module VSphereCloud
       rule_info.name = @rule_name
       rule_info.vm = tagged_vms
       vm_names = rule_info.vm.map { |v| v.name }
-      logger.debug("Setting DRS rule: #{@rule_name}, vms: #{vm_names.join(', ')}")
+      logger.debug("Setting DRS rule: #{@rule_name}, vms: #{vm_names.join(", ")}")
       rule_info.key = rule_key if rule_key
 
       rule_spec.info = rule_info
@@ -132,4 +128,3 @@ module VSphereCloud
     end
   end
 end
-

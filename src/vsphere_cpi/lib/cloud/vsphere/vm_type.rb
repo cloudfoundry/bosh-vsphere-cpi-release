@@ -1,8 +1,9 @@
-require 'cloud/vsphere/storage_list'
+require "cloud/vsphere/storage_list"
 
 module VSphereCloud
   class VmType
     include VSphereCloud::StorageList
+
     attr_reader :datacenter, :storage_list
 
     # @param [Resources::Datacenter] datacenter
@@ -45,27 +46,27 @@ module VSphereCloud
     end
 
     def storage_list
-      @storage_list = @cloud_properties['datastores'] || []
+      @storage_list = @cloud_properties["datastores"] || []
     end
 
     def nsx_security_groups
-      nsx['security_groups'] if nsx
+      nsx["security_groups"] if nsx
     end
 
     def nsx_lbs
-      nsx['lbs'] if nsx
+      nsx["lbs"] if nsx
     end
 
     def nsxt_server_pools
-      nsxt&.dig('lb', 'server_pools')
+      nsxt&.dig("lb", "server_pools")
     end
 
     def ns_groups
-      nsxt&.dig('ns_groups')
+      nsxt&.dig("ns_groups")
     end
 
     def storage_policy_name
-      storage_policy&.dig('name')
+      storage_policy&.dig("name")
     end
 
     # Datastores compatible with given storage policy

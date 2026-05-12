@@ -1,7 +1,8 @@
 module VSphereCloud
   class VmGroup
     include Logger
-    DRS_LOCK_VMGROUP = 'drs_lock_vm_group'
+
+    DRS_LOCK_VMGROUP = "drs_lock_vm_group"
 
     # @param [VSphereCloud::VCenterClient] client
     # @param [Vim::ClusterComputeResource] cluster
@@ -39,7 +40,7 @@ module VSphereCloud
     # @param [String[]] vm_group_names - List of VM Groups
     def delete_vm_groups(vm_group_names)
       return if vm_group_names.empty?
-      DrsLock.new(DRS_LOCK_VMGROUP ).with_drs_lock do
+      DrsLock.new(DRS_LOCK_VMGROUP).with_drs_lock do
         empty_vm_groups = @cluster.configuration_ex.group.select do |group|
           group.is_a?(VimSdk::Vim::Cluster::VmGroup) && vm_group_names.include?(group.name) && group.vm.empty?
         end
@@ -51,7 +52,7 @@ module VSphereCloud
 
           group_spec = VimSdk::Vim::Cluster::GroupSpec.new
           group_spec.info = vm_group_spec
-          group_spec.operation =  VimSdk::Vim::Option::ArrayUpdateSpec::Operation::REMOVE
+          group_spec.operation = VimSdk::Vim::Option::ArrayUpdateSpec::Operation::REMOVE
           group_spec.remove_key = vm_group.name
           group_spec
         end
@@ -78,16 +79,17 @@ module VSphereCloud
     end
 
     private
+
     def get_delete_rule_spec(empty_vm_groups)
       # returning empty array for consistent return type.
       if @cluster.configuration_ex.rule.nil?
         return []
       end
-      rules_spec= empty_vm_groups.each_with_object([]) do |vm_group, rules_spec|
+      empty_vm_groups.each_with_object([]) do |vm_group, rules_spec|
         # Filter rules for deletion
         rule_keys = @cluster.configuration_ex.rule.select do |rule_info|
-          rule_info.is_a?(VimSdk::Vim::Cluster::VmHostRuleInfo) && \
-              rule_info.vm_group_name == vm_group.name
+          rule_info.is_a?(VimSdk::Vim::Cluster::VmHostRuleInfo) &&
+            rule_info.vm_group_name == vm_group.name
         end.map(&:key)
 
         # Generate Rule Spec
@@ -98,9 +100,7 @@ module VSphereCloud
           rules_spec << rule_spec
         end
       end
-      rules_spec
     end
-
 
     def find_vm_group(vm_group_name)
       @cluster.configuration_ex.group.find do |group|

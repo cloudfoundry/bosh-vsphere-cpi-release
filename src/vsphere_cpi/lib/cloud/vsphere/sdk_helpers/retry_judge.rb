@@ -1,91 +1,90 @@
 module VSphereCloud
   module SdkHelpers
     class RetryJudge
-
       # A failed call must satisfy all criteria for at least one hash below to be deemed non-retryable
       NON_RETRYABLE_CRITERIA = [
         {
           # The CPI rescues on this fault to avoid race conditions
-          fault_class: VimSdk::Vim::Fault::DuplicateName,
+          fault_class: VimSdk::Vim::Fault::DuplicateName
         },
         {
           # Don't retry power off when the power is already off
           fault_class: VimSdk::Vim::Fault::InvalidPowerState,
-          method_name: 'PowerOffVM_Task'
+          method_name: "PowerOffVM_Task"
         },
         {
           # Don't retry create disk when the disk is already created
           fault_class: VimSdk::Vim::Fault::FileAlreadyExists,
-          method_name: 'CreateVirtualDisk_Task'
+          method_name: "CreateVirtualDisk_Task"
         },
         {
           # Don't retry delete as sometimes the file is already gone
           fault_class: VimSdk::Vim::Fault::FileFault,
           entity_class: VimSdk::Vim::FileManager,
-          method_name: 'DeleteDatastoreFile_Task',
+          method_name: "DeleteDatastoreFile_Task"
         },
         {
           # Don't retry delete as sometimes the disk is already gone
           fault_class: VimSdk::Vim::Fault::FileFault,
           entity_class: VimSdk::Vim::VirtualDiskManager,
-          method_name: 'DeleteVirtualDisk_Task',
+          method_name: "DeleteVirtualDisk_Task"
         },
         {
           # moving persistent data would be dangerous to retry
-          method_name: 'MoveVirtualDisk_Task',
+          method_name: "MoveVirtualDisk_Task"
         },
         {
           # only called by tests, not by CPI; leave in blacklist as it moves disks
           entity_class: VimSdk::Vim::VirtualMachine,
-          method_name: 'RelocateVM_Task',
+          method_name: "RelocateVM_Task"
         },
         {
           # this class requires permission on the vCenter Root rather than a datacenter which may not be present
           # used in set_vm_metadata where failure is only cosmetic and error is swallowed
           # also used in drs_lock where failure will cause deploy to fail
           entity_class: VimSdk::Vim::CustomFieldsManager,
-          fault_class: VimSdk::Vim::Fault::NoPermission,
+          fault_class: VimSdk::Vim::Fault::NoPermission
         },
         {
           # sometimes called to confirm a disk does not exist
-          method_name: 'SearchDatastore_Task',
-          fault_class: VimSdk::Vim::Fault::FileNotFound,
+          method_name: "SearchDatastore_Task",
+          fault_class: VimSdk::Vim::Fault::FileNotFound
         },
         {
           # called to upgrade a vm
-          method_name: 'UpgradeVM_Task',
-          fault_class: VimSdk::Vim::Fault::AlreadyUpgraded,
+          method_name: "UpgradeVM_Task",
+          fault_class: VimSdk::Vim::Fault::AlreadyUpgraded
         },
         {
           # called to register an extension
-          method_name: 'RegisterExtension',
-          entity_class: VimSdk::Vim::ExtensionManager,
+          method_name: "RegisterExtension",
+          entity_class: VimSdk::Vim::ExtensionManager
 
         },
         {
           # called to upgrade a vm
-          method_name: 'UnregisterExtension',
-          entity_class: VimSdk::Vim::ExtensionManager,
+          method_name: "UnregisterExtension",
+          entity_class: VimSdk::Vim::ExtensionManager
         },
         {
           # when a datastore was filled by creating another VM in another thread and there is not enough space to create the VM that returned this error, we see the below
-          method_name: 'Drm.ExecuteVmPowerOnLRO',
+          method_name: "Drm.ExecuteVmPowerOnLRO",
           entity_class: VimSdk::Vim::VirtualMachine,
           fault_class: VimSdk::Vim::Fault::GenericVmConfigFault
         },
         {
-          method_name: 'AcquireGenericServiceTicket',
-          fault_class: VimSdk::Vim::Fault::NoPermission,
+          method_name: "AcquireGenericServiceTicket",
+          fault_class: VimSdk::Vim::Fault::NoPermission
         },
         {
-          method_name: 'Logout',
-          fault_class: VimSdk::Vim::Fault::NotAuthenticated,
+          method_name: "Logout",
+          fault_class: VimSdk::Vim::Fault::NotAuthenticated
         },
         {
-          method_name: 'RetrieveProperties',
+          method_name: "RetrieveProperties",
           entity_class: VimSdk::Vim::OpaqueNetwork,
           fault_class: VimSdk::Vmodl::Fault::ManagedObjectNotFound
-        },
+        }
       ]
 
       def retryable?(entity, method_name, fault)

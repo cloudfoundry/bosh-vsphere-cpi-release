@@ -1,4 +1,4 @@
-require 'cloud/vsphere/logger'
+require "cloud/vsphere/logger"
 
 module VSphereCloud
   module SdkHelpers
@@ -7,30 +7,29 @@ module VSphereCloud
 
       PC = VimSdk::Vmodl::Query::PropertyCollector
 
-      def initialize(stub_adapter, retry_judge=nil, retryer=nil)
+      def initialize(stub_adapter, retry_judge = nil, retryer = nil)
         @stub_adapter = stub_adapter
         @retry_judge = retry_judge || RetryJudge.new
         @retryer = retryer || Retryer.new
       end
 
-
       SILENT_RUN_METHOD = Set[
-        'QueryOptions',
-        'UpdateOptions',
-        'RetrievePropertiesEx',
-        'RetrieveProperties',
-        'HttpNfcLeaseProgress',
-        'CurrentTime'
+        "QueryOptions",
+        "UpdateOptions",
+        "RetrievePropertiesEx",
+        "RetrieveProperties",
+        "HttpNfcLeaseProgress",
+        "CurrentTime"
       ]
 
       SILENT_ERROR_METHOD = Set[
-        'QueryOptions',
-        'UpdateOptions',
+        "QueryOptions",
+        "UpdateOptions"
       ]
 
       def invoke_method(managed_object, method_info, arguments)
         method_name = method_info.wsdl_name
-        method_result = @retryer.try do |i|
+        @retryer.try do |i|
           result = nil
           err = nil
 
@@ -61,10 +60,10 @@ module VSphereCloud
           else
             if status.between?(200, 299)
               result = object
-            elsif object.kind_of?(VimSdk::Vmodl::MethodFault)
+            elsif object.is_a?(VimSdk::Vmodl::MethodFault)
               err = VimSdk::SoapError.new(object.msg, object)
             else
-              err = VimSdk::SoapError.new('Unknown SOAP fault', object)
+              err = VimSdk::SoapError.new("Unknown SOAP fault", object)
             end
 
             if err
@@ -76,7 +75,6 @@ module VSphereCloud
           end
           [result, err]
         end
-        method_result
       end
 
       def invoke_property(managed_object, property_info)
@@ -96,7 +94,7 @@ module VSphereCloud
       def should_log?(method_name, object)
         return false if SILENT_ERROR_METHOD.include?(method_name)
         # Don't trouble the user with "Error running method 'AddCustomFieldDef'. Failed with message 'The name 'created_at' already exists.'."
-        return false if (method_name == 'AddCustomFieldDef' && object.kind_of?(VimSdk::Vim::Fault::DuplicateName))
+        return false if method_name == "AddCustomFieldDef" && object.is_a?(VimSdk::Vim::Fault::DuplicateName)
         true
       end
 
@@ -105,7 +103,7 @@ module VSphereCloud
         if err.fault&.fault_cause
           msg += " and cause '#{err.fault.fault_cause}'"
         end
-        msg << '.'
+        msg << "."
         msg
       end
     end

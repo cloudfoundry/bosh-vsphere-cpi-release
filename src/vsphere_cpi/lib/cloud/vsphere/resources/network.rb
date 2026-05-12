@@ -1,4 +1,4 @@
-require 'cloud/vsphere/resources'
+require "cloud/vsphere/resources"
 
 module VSphereCloud
   module Resources
@@ -6,6 +6,7 @@ module VSphereCloud
     # index.
     class Network
       include ObjectStringifier
+
       stringify_with :name, :mob
 
       attr_reader :mob, :client
@@ -15,7 +16,7 @@ module VSphereCloud
       def self.make_network_resource(mob, client)
         nw_type = case mob
         when VimSdk::Vim::Dvs::DistributedVirtualPortgroup
-          if mob.config.respond_to?(:backing_type) && mob.config.backing_type == 'nsx'
+          if mob.config.respond_to?(:backing_type) && mob.config.backing_type == "nsx"
             DistributedVirtualPortGroupNSXTNetwork
           else
             DistributedVirtualPortGroupNetwork
@@ -74,14 +75,16 @@ module VSphereCloud
       def nic_backing
         portgroup_properties = client.cloud_searcher.get_properties(
           mob, VimSdk::Vim::Dvs::DistributedVirtualPortgroup,
-          ['config.key', 'config.distributedVirtualSwitch'], ensure_all: true)
-        switch = portgroup_properties['config.distributedVirtualSwitch']
+          ["config.key", "config.distributedVirtualSwitch"], ensure_all: true
+        )
+        switch = portgroup_properties["config.distributedVirtualSwitch"]
         switch_uuid = client.cloud_searcher.get_property(
-          switch, VimSdk::Vim::DistributedVirtualSwitch, 'uuid', ensure_all: true)
+          switch, VimSdk::Vim::DistributedVirtualSwitch, "uuid", ensure_all: true
+        )
 
         port = VimSdk::Vim::Dvs::PortConnection.new
         port.switch_uuid = switch_uuid
-        port.portgroup_key = portgroup_properties['config.key']
+        port.portgroup_key = portgroup_properties["config.key"]
 
         backing_info = VimSdk::Vim::Vm::Device::VirtualEthernetCard::DistributedVirtualPortBackingInfo.new
         backing_info.port = port
@@ -93,7 +96,6 @@ module VSphereCloud
       end
     end
 
-
     # NSX-T backed DVPGs are a CVDS feature supported with only in vSphere 7.0.
     # The CPI treats these NSX-T DVPGs like an opaque network and uses their
     # logical switch uuid to create an opaque network backing rather than DVPG
@@ -102,7 +104,7 @@ module VSphereCloud
       def nic_backing
         backing_info = VimSdk::Vim::Vm::Device::VirtualEthernetCard::OpaqueNetworkBackingInfo.new
         backing_info.opaque_network_id = mob.config.logical_switch_uuid
-        backing_info.opaque_network_type = 'nsx.LogicalSwitch'
+        backing_info.opaque_network_type = "nsx.LogicalSwitch"
         backing_info
       end
 

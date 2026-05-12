@@ -1,15 +1,15 @@
-require 'fileutils'
+require "fileutils"
 
 # if you are regenerating the manager client, make sure you check that configuration.rb still has remote_auth for
 # VMware Identity Manager
 namespace :swagger do
-  desc 'Create swagger manager client from swagger spec'
+  desc "Create swagger manager client from swagger spec"
   task :nsxt_manager_client do
-    rm_rf(['./lib/nsxt_manager_client/*'])
+    rm_rf(["./lib/nsxt_manager_client/*"])
 
     # Trim unneeded endpoints; NSX-T 2.5.1 has 872, we only need 24
     sh [
-      'jq',
+      "jq",
       '\'.paths |= {
         "/fabric/vifs",
         "/fabric/virtual-machines",
@@ -39,14 +39,14 @@ namespace :swagger do
         "/trust-management/principal-identities",
         "/trust-management/principal-identities/{principal-identity-id}",
       }\'',
-      '< ./data/nsxt_manager_api/nsxt_manager_api.json',
-      '> ./data/nsxt_manager_api/nsxt_manager_api_trimmed_endpoints.json'
-    ].join(' ')
+      "< ./data/nsxt_manager_api/nsxt_manager_api.json",
+      "> ./data/nsxt_manager_api/nsxt_manager_api_trimmed_endpoints.json"
+    ].join(" ")
 
     # Trim unneeded models/objects/definitions; NSX-T 2.5.1 has 1260; we only need 146
     # Dependencies are indented. Dependencies only appear once.
     sh [
-      'jq',
+      "jq",
       '\'.definitions |= {
         "ALGTypeNSService",
         "ApiError",
@@ -195,100 +195,100 @@ namespace :swagger do
         "VmknicNetwork",
         "X509Certificate",
       }\'',
-      '< ./data/nsxt_manager_api/nsxt_manager_api_trimmed_endpoints.json',
-      '> ./data/nsxt_manager_api/nsxt_manager_api_trimmed.json'
-    ].join(' ')
+      "< ./data/nsxt_manager_api/nsxt_manager_api_trimmed_endpoints.json",
+      "> ./data/nsxt_manager_api/nsxt_manager_api_trimmed.json"
+    ].join(" ")
 
     # Patch NSX-T's OpenAPI to use a properly-escaped regex
     sh [
-      'sed',
+      "sed",
       "'s~\\[a-zA-Z0-9-.\\]~[a-zA-Z0-9.-]~g'",
-      '< ./data/nsxt_manager_api/nsxt_manager_api_trimmed.json',
-      '> ./data/nsxt_manager_api/nsxt_manager_api_escaped_regex.json'
-    ].join(' ')
+      "< ./data/nsxt_manager_api/nsxt_manager_api_trimmed.json",
+      "> ./data/nsxt_manager_api/nsxt_manager_api_escaped_regex.json"
+    ].join(" ")
     # generate all models
     sh [
-      'swagger-codegen generate',
-      '-i ./data/nsxt_manager_api/nsxt_manager_api_escaped_regex.json',
-      '-l ruby',
-      '-o ./lib/nsxt_manager_client',
-      '-c ./data/nsxt_manager_api/config.json -t ./data/swagger-nsxt-manager-template'
-    ].join(' ')
+      "swagger-codegen generate",
+      "-i ./data/nsxt_manager_api/nsxt_manager_api_escaped_regex.json",
+      "-l ruby",
+      "-o ./lib/nsxt_manager_client",
+      "-c ./data/nsxt_manager_api/config.json -t ./data/swagger-nsxt-manager-template"
+    ].join(" ")
 
     # Patch models that have wrong _deserialize method
     # TODO: Patch both LogicalRouterPortListResult and LogicalPortAttachment in 1 call
     sh [
-      'swagger-codegen generate',
-      '-i ./data/nsxt_manager_api/nsxt_manager_api_escaped_regex.json',
-      '-l ruby',
-      '-o ./lib/nsxt_manager_client',
-      '-c ./data/nsxt_manager_api/config.json -t ./data/swagger-nsxt-template-deserialization',
-      '-Dmodels=LogicalRouterPortListResult'
-    ].join(' ')
+      "swagger-codegen generate",
+      "-i ./data/nsxt_manager_api/nsxt_manager_api_escaped_regex.json",
+      "-l ruby",
+      "-o ./lib/nsxt_manager_client",
+      "-c ./data/nsxt_manager_api/config.json -t ./data/swagger-nsxt-template-deserialization",
+      "-Dmodels=LogicalRouterPortListResult"
+    ].join(" ")
 
     # Patch LogicalPortAttachment which also has wrong _deserialize method
     sh [
-      'swagger-codegen generate',
-      '-i ./data/nsxt_manager_api/nsxt_manager_api_escaped_regex.json',
-      '-l ruby',
-      '-o ./lib/nsxt_manager_client',
-      '-c ./data/nsxt_manager_api/config.json -t ./data/swagger-nsxt-template-deserialization',
-      '-Dmodels=LogicalPortAttachment'
-    ].join(' ')
+      "swagger-codegen generate",
+      "-i ./data/nsxt_manager_api/nsxt_manager_api_escaped_regex.json",
+      "-l ruby",
+      "-o ./lib/nsxt_manager_client",
+      "-c ./data/nsxt_manager_api/config.json -t ./data/swagger-nsxt-template-deserialization",
+      "-Dmodels=LogicalPortAttachment"
+    ].join(" ")
 
     # Patch Configuration which also has wrong _deserialize method
     sh [
-      'swagger-codegen generate',
-      '-i ./data/nsxt_manager_api/nsxt_manager_api_escaped_regex.json',
-      '-l ruby',
-      '-o ./lib/nsxt_manager_client',
-      '-c ./data/nsxt_manager_api/config.json -t ./data/swagger-nsxt-template-deserialization',
-      '-Dmodels=Configuration'
-    ].join(' ')
+      "swagger-codegen generate",
+      "-i ./data/nsxt_manager_api/nsxt_manager_api_escaped_regex.json",
+      "-l ruby",
+      "-o ./lib/nsxt_manager_client",
+      "-c ./data/nsxt_manager_api/config.json -t ./data/swagger-nsxt-template-deserialization",
+      "-Dmodels=Configuration"
+    ].join(" ")
 
     rm_rf([
-      './lib/nsxt_manager_client/.swagger-codegen-ignore',
-      './lib/nsxt_manager_client/.swagger-codegen',
-      './lib/nsxt_manager_client/README.md',
-      './lib/nsxt_manager_client/.rspec',
-      './lib/nsxt_manager_client/.gitignore',
-      './lib/nsxt_manager_client/Gemfile',
-      './lib/nsxt_manager_client/git_push.sh',
-      './lib/nsxt_manager_client/docs',
-      './lib/nsxt_manager_client/spec',
-      './lib/nsxt_manager_client/nsxt_manager_client.gemspec',
-      './lib/nsxt_manager_client/Rakefile',
-      './lib/nsxt_manager_client/nsxt_manager_client',
-      './data/nsxt_manager_api/nsxt_manager_api_trimmed.json',
-      './data/nsxt_manager_api/nsxt_manager_api_trimmed_endpoints.json',
-      './data/nsxt_manager_api/nsxt_manager_api_escaped_regex.json'
+      "./lib/nsxt_manager_client/.swagger-codegen-ignore",
+      "./lib/nsxt_manager_client/.swagger-codegen",
+      "./lib/nsxt_manager_client/README.md",
+      "./lib/nsxt_manager_client/.rspec",
+      "./lib/nsxt_manager_client/.gitignore",
+      "./lib/nsxt_manager_client/Gemfile",
+      "./lib/nsxt_manager_client/git_push.sh",
+      "./lib/nsxt_manager_client/docs",
+      "./lib/nsxt_manager_client/spec",
+      "./lib/nsxt_manager_client/nsxt_manager_client.gemspec",
+      "./lib/nsxt_manager_client/Rakefile",
+      "./lib/nsxt_manager_client/nsxt_manager_client",
+      "./data/nsxt_manager_api/nsxt_manager_api_trimmed.json",
+      "./data/nsxt_manager_api/nsxt_manager_api_trimmed_endpoints.json",
+      "./data/nsxt_manager_api/nsxt_manager_api_escaped_regex.json"
     ])
 
-    mv('./lib/nsxt_manager_client/lib/nsxt_manager_client', './lib/nsxt_manager_client/nsxt_manager_client')
+    mv("./lib/nsxt_manager_client/lib/nsxt_manager_client", "./lib/nsxt_manager_client/nsxt_manager_client")
 
-    mv('./lib/nsxt_manager_client/lib/nsxt_manager_client.rb', './lib/nsxt_manager_client/nsxt_manager_client.rb')
+    mv("./lib/nsxt_manager_client/lib/nsxt_manager_client.rb", "./lib/nsxt_manager_client/nsxt_manager_client.rb")
 
-    rm_rf(['./lib/nsxt_manager_client/lib'])
+    rm_rf(["./lib/nsxt_manager_client/lib"])
 
     # Prepend load.unshift line
     # read the file
-    f = File.open('lib/nsxt_manager_client/nsxt_manager_client.rb', 'r+')
+    f = File.open("lib/nsxt_manager_client/nsxt_manager_client.rb", "r+")
     lines = f.readlines
     f.close
     # Add line
     str = "$LOAD_PATH.unshift(File.join(File.dirname(__FILE__), '..', 'nsxt_manager_client'))\n"
     lines = [str] + lines
-    output = File.new('lib/nsxt_manager_client/nsxt_manager_client.rb', 'w')
+    output = File.new("lib/nsxt_manager_client/nsxt_manager_client.rb", "w")
     lines.each { |line| output.write line }
     output.close
   end
-  desc 'Create swagger policy client from swagger spec'
+  desc "Create swagger policy client from swagger spec"
   task :nsxt_policy_client do
-    rm_rf(['./lib/nsxt_policy_client/*'])
+    rm_rf(["./lib/nsxt_policy_client/*"])
 
     # Trim unneeded endpoints; NSX-T 3.1.0 has 1299; we only need 12
     sh [
-      'jq',
+      "jq",
       '\'.paths |= {
         "/infra/domains/{domain-id}/groups",
         "/infra/domains/{domain-id}/groups/{group-id}",
@@ -309,14 +309,14 @@ namespace :swagger do
         "/infra/virtual-machine-group-associations",
         "/search/query",
       }\'',
-      '< ./data/nsxt_policy_api/nsxt_policy_api.json',
-      '> ./data/nsxt_policy_api/nsxt_policy_api_trimmed_endpoints.json'
-    ].join(' ')
+      "< ./data/nsxt_policy_api/nsxt_policy_api.json",
+      "> ./data/nsxt_policy_api/nsxt_policy_api_trimmed_endpoints.json"
+    ].join(" ")
 
     # Trim unneeded models/objects/definitions; NSX-T 3.1.0 has 1344; we only need 75
     # Dependencies are indented. Dependencies only appear once.
     sh [
-      'jq',
+      "jq",
       '\'.definitions |= {
         "ApiError",
         "AttachedInterfaceEntry",
@@ -403,80 +403,80 @@ namespace :swagger do
         "VifAttachment",
         "VifAttachmentListResult",
       }\'',
-      '< ./data/nsxt_policy_api/nsxt_policy_api_trimmed_endpoints.json',
-      '> ./data/nsxt_policy_api/nsxt_policy_api_trimmed.json'
-    ].join(' ')
+      "< ./data/nsxt_policy_api/nsxt_policy_api_trimmed_endpoints.json",
+      "> ./data/nsxt_policy_api/nsxt_policy_api_trimmed.json"
+    ].join(" ")
 
     sh [
-      'swagger-codegen generate',
-      '-i ./data/nsxt_policy_api/nsxt_policy_api_trimmed.json',
-      '-l ruby',
-      '-o ./lib/nsxt_policy_client',
-      '-c ./data/nsxt_policy_api/config.json -t ./data/swagger-nsxt-policy-template'
-    ].join(' ')
+      "swagger-codegen generate",
+      "-i ./data/nsxt_policy_api/nsxt_policy_api_trimmed.json",
+      "-l ruby",
+      "-o ./lib/nsxt_policy_client",
+      "-c ./data/nsxt_policy_api/config.json -t ./data/swagger-nsxt-policy-template"
+    ].join(" ")
 
     sh [
-       'swagger-codegen generate',
-       '-i ./data/nsxt_policy_api/nsxt_policy_api_trimmed.json',
-       '-l ruby',
-       '-o ./lib/nsxt_policy_client',
-       '-c ./data/nsxt_policy_api/config.json -t ./data/nsxt_policy_api/virtual_machine_patch',
-       '-Dmodels=RealizedVirtualMachine'
-     ].join(' ')
+      "swagger-codegen generate",
+      "-i ./data/nsxt_policy_api/nsxt_policy_api_trimmed.json",
+      "-l ruby",
+      "-o ./lib/nsxt_policy_client",
+      "-c ./data/nsxt_policy_api/config.json -t ./data/nsxt_policy_api/virtual_machine_patch",
+      "-Dmodels=RealizedVirtualMachine"
+    ].join(" ")
 
     # Patch Group which has wrong _deserialize method
     sh [
-     'swagger-codegen generate',
-     '-i ./data/nsxt_policy_api/nsxt_policy_api_trimmed.json',
-     '-l ruby',
-     '-o ./lib/nsxt_policy_client',
-     '-c ./data/nsxt_policy_api/config.json -t ./data/swagger-nsxt-template-deserialization',
-     '-Dmodels=Group'
-     ].join(' ')
+      "swagger-codegen generate",
+      "-i ./data/nsxt_policy_api/nsxt_policy_api_trimmed.json",
+      "-l ruby",
+      "-o ./lib/nsxt_policy_client",
+      "-c ./data/nsxt_policy_api/config.json -t ./data/swagger-nsxt-template-deserialization",
+      "-Dmodels=Group"
+    ].join(" ")
 
     # We set the target_id length to 255 to fix 'invalid value for "target_id",
     # the character length must be smaller than or equal to 64' when
     # `get_groups_for_vm()` is called. We only do this for
     # PolicyResourceReferenceForEP; it's the only place we need it.
     sh [
-      'jq',
+      "jq",
       "'.definitions.ResourceReference.properties.target_id.maxLength = 255'",
-      '< ./data/nsxt_policy_api/nsxt_policy_api_trimmed.json',
-      '> ./data/nsxt_policy_api/nsxt_policy_api_target_id_255.json'
-    ].join(' ')
+      "< ./data/nsxt_policy_api/nsxt_policy_api_trimmed.json",
+      "> ./data/nsxt_policy_api/nsxt_policy_api_target_id_255.json"
+    ].join(" ")
 
     sh [
-      'swagger-codegen generate',
-      '-i ./data/nsxt_policy_api/nsxt_policy_api_target_id_255.json',
-      '-l ruby',
-      '-o ./lib/nsxt_policy_client',
-      '-c ./data/nsxt_policy_api/config.json -t ./data/swagger-nsxt-policy-template',
-      '-Dmodels=PolicyResourceReferenceForEP',
-     ].join(' ')
+      "swagger-codegen generate",
+      "-i ./data/nsxt_policy_api/nsxt_policy_api_target_id_255.json",
+      "-l ruby",
+      "-o ./lib/nsxt_policy_client",
+      "-c ./data/nsxt_policy_api/config.json -t ./data/swagger-nsxt-policy-template",
+      "-Dmodels=PolicyResourceReferenceForEP"
+    ].join(" ")
 
     # So NSXT 3.2+, 4.2+, 9+ Now return an additional transport zone type and the client errors if it sees it so
     # we add the new type to the enum. Eventually we'd like to update, but that's a larger item.
     # TODO: remove this when we update the base openapi spec to 3.2+
     sh [
-       'jq',
-       '\'
+      "jq",
+      '\'
          (
            .definitions.PolicyTransportZone.allOf[] |
            select(."x-vmw-nsx-module" == "PolicyEnforcementPointManagement")
          ).properties.tz_type.enum += ["OVERLAY_BACKED"]
       \'',
-       '< ./data/nsxt_policy_api/nsxt_policy_api_trimmed_endpoints.json',
-       '> ./data/nsxt_policy_api/nsxt_policy_api_patched_policy_tz_model.json'
-     ].join(' ')
+      "< ./data/nsxt_policy_api/nsxt_policy_api_trimmed_endpoints.json",
+      "> ./data/nsxt_policy_api/nsxt_policy_api_patched_policy_tz_model.json"
+    ].join(" ")
 
     sh [
-       'swagger-codegen generate',
-       '-i ./data/nsxt_policy_api/nsxt_policy_api_patched_policy_tz_model.json',
-       '-l ruby',
-       '-o ./lib/nsxt_policy_client',
-       '-c ./data/nsxt_policy_api/config.json -t ./data/swagger-nsxt-policy-template',
-       '-Dmodels=PolicyTransportZone',
-     ].join(' ')
+      "swagger-codegen generate",
+      "-i ./data/nsxt_policy_api/nsxt_policy_api_patched_policy_tz_model.json",
+      "-l ruby",
+      "-o ./lib/nsxt_policy_client",
+      "-c ./data/nsxt_policy_api/config.json -t ./data/swagger-nsxt-policy-template",
+      "-Dmodels=PolicyTransportZone"
+    ].join(" ")
 
     rm_rf %w[
       ./lib/nsxt_policy_client/.swagger-codegen-ignore
@@ -497,24 +497,24 @@ namespace :swagger do
       ./data/nsxt_policy_api/nsxt_policy_api_patched_policy_tz_model.json
     ]
 
-    mv('./lib/nsxt_policy_client/lib/nsxt_policy_client', './lib/nsxt_policy_client/nsxt_policy_client')
+    mv("./lib/nsxt_policy_client/lib/nsxt_policy_client", "./lib/nsxt_policy_client/nsxt_policy_client")
 
-    mv('./lib/nsxt_policy_client/lib/nsxt_policy_client.rb', './lib/nsxt_policy_client/nsxt_policy_client.rb')
+    mv("./lib/nsxt_policy_client/lib/nsxt_policy_client.rb", "./lib/nsxt_policy_client/nsxt_policy_client.rb")
 
-    rm_rf(['./lib/nsxt_policy_client/lib'])
+    rm_rf(["./lib/nsxt_policy_client/lib"])
 
     # Prepend load.unshift line
     # read the file
-    f = File.open('lib/nsxt_policy_client/nsxt_policy_client.rb', 'r+')
+    f = File.open("lib/nsxt_policy_client/nsxt_policy_client.rb", "r+")
     lines = f.readlines
     f.close
     # Add line
     str = "$LOAD_PATH.unshift(File.join(File.dirname(__FILE__), '..', 'nsxt_policy_client'))\n"
     lines = [str] + lines
-    output = File.new('lib/nsxt_policy_client/nsxt_policy_client.rb', 'w')
+    output = File.new("lib/nsxt_policy_client/nsxt_policy_client.rb", "w")
     lines.each { |line| output.write line }
     output.close
   end
 end
 
-task default: 'swagger:nsxt_manager_client'
+task default: "swagger:nsxt_manager_client"

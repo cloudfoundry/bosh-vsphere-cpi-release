@@ -26,7 +26,7 @@ module VSphereCloud
       end
 
       # REMOTE AUTH for NSX-T vIDM Integration
-      if @config.remote_auth != nil
+      if !@config.remote_auth.nil?
         configuration.remote_auth = @config.remote_auth
       end
 
@@ -41,7 +41,7 @@ module VSphereCloud
       configuration.verify_ssl_host = !ca_file.nil?
 
       @client = NSXT::ApiClient.new(configuration)
-      #Design here isn't ideal but allows us to keep "x-allow-overwrite" switching logic out of Swagger generated code.
+      # Design here isn't ideal but allows us to keep "x-allow-overwrite" switching logic out of Swagger generated code.
       if @config.allow_overwrite?
         @client.x_allow_overwrite(true)
       end

@@ -1,9 +1,8 @@
-require 'json'
-require 'base64'
+require "json"
+require "base64"
 
 module VSphereCloud
   class DirectorDiskCID
-
     attr_reader :value, :raw
 
     def initialize(raw_director_cid)
@@ -17,7 +16,7 @@ module VSphereCloud
       @metadata[:target_datastore_pattern]
     end
 
-    DISK_METADATA_SEPARATOR = '.'.freeze
+    DISK_METADATA_SEPARATOR = ".".freeze
 
     private
 
@@ -53,12 +52,16 @@ module VSphereCloud
 
       def convert_keys_to_symbols(obj)
         if obj.is_a? Hash
-          return obj.inject({}) { |memo,(k,v)| memo[k.to_sym] = convert_keys_to_symbols(v); memo }
+          return obj.each_with_object({}) { |(k, v), memo|
+            memo[k.to_sym] = convert_keys_to_symbols(v)
+          }
         end
         if obj.is_a? Array
-          return obj.inject([]) { |memo,v| memo << convert_keys_to_symbols(v); memo }
+          return obj.each_with_object([]) { |v, memo|
+            memo << convert_keys_to_symbols(v)
+          }
         end
-        return obj
+        obj
       end
     end
   end

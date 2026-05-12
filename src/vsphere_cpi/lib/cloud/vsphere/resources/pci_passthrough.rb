@@ -35,11 +35,11 @@ module VSphereCloud
         host_properties = cloud_searcher.get_properties(
           host,
           VimSdk::Vim::HostSystem,
-          ['configManager.assignableHardwareManager'],
+          ["configManager.assignableHardwareManager"],
           ensure_all: true
         )
 
-        assignable_hw_manager = host_properties['configManager.assignableHardwareManager']
+        assignable_hw_manager = host_properties["configManager.assignableHardwareManager"]
         raise "Failed to get AssignableHardwareManager from host" if assignable_hw_manager.nil?
 
         # Retrieve device group information from the host
@@ -47,13 +47,13 @@ module VSphereCloud
         begin
           device_group_infos = assignable_hw_manager.retrieve_vendor_device_group_info
         rescue NameError => e
-          if e.message.include?('SoapError')
+          if e.message.include?("SoapError")
             raise "Device groups require vSphere 8.0+. The vCenter version may not support device groups, or the SDK version is incompatible."
           else
             raise
           end
         rescue => e
-          if e.message.include?('MethodNotFound') || e.message.include?('not available')
+          if e.message.include?("MethodNotFound") || e.message.include?("not available")
             raise "Device groups require vSphere 8.0+. The method 'retrieve_vendor_device_group_info' is not available: #{e.message}"
           else
             raise
@@ -73,9 +73,9 @@ module VSphereCloud
         end
 
         # Filter for nvidiaVgpu devices
-        vgpu_devices = component_devices.select { |comp| comp.type == 'nvidiaVgpu' }
+        vgpu_devices = component_devices.select { |comp| comp.type == "nvidiaVgpu" }
         if vgpu_devices.empty?
-          found_types = component_devices.map(&:type).uniq.join(', ')
+          found_types = component_devices.map(&:type).uniq.join(", ")
           raise "Device group '#{device_group_name}' has no nvidiaVgpu component devices (found: #{found_types}). " \
                 "This is a configuration issue - verify the device group contains vGPU devices in vSphere."
         end

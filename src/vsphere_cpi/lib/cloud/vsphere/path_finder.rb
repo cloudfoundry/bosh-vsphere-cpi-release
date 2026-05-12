@@ -6,7 +6,7 @@ module VSphereCloud
         path_objects.unshift(managed_object.name)
         managed_object = managed_object.parent
       end
-      path_objects.join('/')
+      path_objects.join("/")
     end
   end
 end

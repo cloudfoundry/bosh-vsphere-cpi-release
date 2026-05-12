@@ -5,18 +5,19 @@ module VSphereCloud
 
       Membrane::SchemaParser.parse do
         common_rules = {
-            'host' => String,
-            optional('default_vif_type') => enum('PARENT', 'CHILD')}
-        if config['username'].nil?
-          #using cert authentication
-          common_rules.merge! ({
-              'auth_certificate' => String,
-              'auth_private_key' => String})
+          "host" => String,
+          optional("default_vif_type") => enum("PARENT", "CHILD")
+        }
+        if config["username"].nil?
+          # using cert authentication
+          common_rules.merge!({
+            "auth_certificate" => String,
+            "auth_private_key" => String
+          })
         else
-          common_rules.merge!({'username' => String,
-                               'password' => String,
-                               optional('remote_auth') => bool
-                             })
+          common_rules.merge!({"username" => String,
+                               "password" => String,
+                               optional("remote_auth") => bool})
         end
         common_rules
       end.validate(config)
@@ -45,7 +46,7 @@ module VSphereCloud
       new(config_hash).tap(&:validate)
     end
 
-    SUPPORTED_DISK_TYPES = ['thin', 'preallocated']
+    SUPPORTED_DISK_TYPES = ["thin", "preallocated"]
 
     def initialize(config_hash)
       @config = config_hash
@@ -56,67 +57,67 @@ module VSphereCloud
     def validate
       return true if @is_validated
 
-      unless config['vcenters'].size == 1
-        raise 'vSphere CPI only supports a single vCenter'
+      unless config["vcenters"].size == 1
+        raise "vSphere CPI only supports a single vCenter"
       end
 
-      unless config['vcenters'].first['datacenters'].size ==1
-        raise 'vSphere CPI only supports a single datacenter'
+      unless config["vcenters"].first["datacenters"].size == 1
+        raise "vSphere CPI only supports a single datacenter"
       end
 
-      default_disk_type = config['vcenters'].first['default_disk_type']
+      default_disk_type = config["vcenters"].first["default_disk_type"]
 
       if default_disk_type.nil?
-        raise 'Missing required property: vcenters[0].default_disk_type'
+        raise "Missing required property: vcenters[0].default_disk_type"
       end
 
       unless SUPPORTED_DISK_TYPES.include?(default_disk_type)
         raise "Unsupported default_disk_type '#{default_disk_type}'. vSphere CPI only supports a default_disk_type of 'preallocated' or 'thin'"
       end
 
-      scsi_controller_type = config['vcenters'].first['default_scsi_controller_type']
+      scsi_controller_type = config["vcenters"].first["default_scsi_controller_type"]
       if scsi_controller_type && !VSphereCloud::ScsiControllerType::ALL.include?(scsi_controller_type)
         raise "Unsupported default_scsi_controller_type '#{scsi_controller_type}'. vSphere CPI only supports 'lsi_logic', 'lsi_logic_sas', or 'paravirtual'"
       end
 
-      pdp = config['vcenters'].first['datacenters'].first['persistent_datastore_pattern']
-      pdcp = config['vcenters'].first['datacenters'].first['persistent_datastore_cluster_pattern']
+      pdp = config["vcenters"].first["datacenters"].first["persistent_datastore_pattern"]
+      pdcp = config["vcenters"].first["datacenters"].first["persistent_datastore_cluster_pattern"]
       unless (pdp && !pdp.empty?) || (pdcp && !pdcp.empty?)
         raise "Either property persistent_datastore_pattern or property persistent_datastore_cluster_pattern must be set on vcenters[0].datacenters[0]"
       end
 
-      dp = config['vcenters'].first['datacenters'].first['datastore_pattern']
-      dcp = config['vcenters'].first['datacenters'].first['datastore_cluster_pattern']
+      dp = config["vcenters"].first["datacenters"].first["datastore_pattern"]
+      dcp = config["vcenters"].first["datacenters"].first["datastore_cluster_pattern"]
       unless (dp && !dp.empty?) || (dcp && !dcp.empty?)
         raise "Either property datastore_pattern or property datastore_cluster_pattern must be set on vcenters[0].datacenters[0]"
       end
 
       validate_schema
-      NSXTConfig.validate_schema(config['nsxt'])
+      NSXTConfig.validate_schema(config["nsxt"])
 
       @is_validated = true
     end
 
-    REQUIRED_NSX_OPTIONS = ['address', 'user', 'password']
-    NSX_MANIFEST_LOCATION = '`jobs.bosh.properties.vcenter.nsx`'
+    REQUIRED_NSX_OPTIONS = ["address", "user", "password"]
+    NSX_MANIFEST_LOCATION = "`jobs.bosh.properties.vcenter.nsx`"
 
     def nsx_enabled?
-      vcenter['nsx'].nil? == false
+      vcenter["nsx"].nil? == false
     end
 
     def validate_nsx_options
-      if vcenter['nsx'].nil?
+      if vcenter["nsx"].nil?
         raise "Must specify global NSX config in your director manifest under #{NSX_MANIFEST_LOCATION}"
       end
 
       missing_properties = []
-      REQUIRED_NSX_OPTIONS.each do | option |
-        missing_properties << option if vcenter['nsx'][option].nil?
+      REQUIRED_NSX_OPTIONS.each do |option|
+        missing_properties << option if vcenter["nsx"][option].nil?
       end
 
       unless missing_properties.empty?
-        missing_properties.map! { |p| "'#{p}'"}
-        raise "Must specify the NSX config options #{missing_properties.join(', ')} in your director manifest under #{NSX_MANIFEST_LOCATION}"
+        missing_properties.map! { |p| "'#{p}'" }
+        raise "Must specify the NSX config options #{missing_properties.join(", ")} in your director manifest under #{NSX_MANIFEST_LOCATION}"
       end
 
       true
@@ -128,22 +129,20 @@ module VSphereCloud
 
     def soap_log
       if vcenter_http_logging
-        config['soap_log'] || config['cpi_log']
-      else
-        nil
+        config["soap_log"] || config["cpi_log"]
       end
     end
 
     def vcenter_http_logging
-      vcenter['http_logging']
+      vcenter["http_logging"]
     end
 
     def agent
-      config['agent']
+      config["agent"]
     end
 
     def vcenter_host
-      vcenter['host']
+      vcenter["host"]
     end
 
     def vcenter_api_uri
@@ -151,63 +150,63 @@ module VSphereCloud
     end
 
     def vcenter_user
-      vcenter['user']
+      vcenter["user"]
     end
 
     def vcenter_password
-      vcenter['password']
+      vcenter["password"]
     end
 
     def vcenter_default_disk_type
-      vcenter['default_disk_type']
+      vcenter["default_disk_type"]
     end
 
     def vcenter_default_scsi_controller_type
-      vcenter['default_scsi_controller_type'] || 'paravirtual'
+      vcenter["default_scsi_controller_type"] || "paravirtual"
     end
 
     def vcenter_enable_auto_anti_affinity_drs_rules
-      vcenter['enable_auto_anti_affinity_drs_rules']
+      vcenter["enable_auto_anti_affinity_drs_rules"]
     end
 
     def vcenter_connection_options
-      vcenter['connection_options'] || {}
+      vcenter["connection_options"] || {}
     end
 
     def vcenter_ensure_no_ip_conflicts
-      vcenter['ensure_no_ip_conflicts']
+      vcenter["ensure_no_ip_conflicts"]
     end
 
     def datacenter_name
-      vcenter_datacenter['name']
+      vcenter_datacenter["name"]
     end
 
     def datacenter_vm_folder
-      vcenter_datacenter['vm_folder']
+      vcenter_datacenter["vm_folder"]
     end
 
     def datacenter_template_folder
-      vcenter_datacenter['template_folder']
+      vcenter_datacenter["template_folder"]
     end
 
     def datacenter_disk_path
-      vcenter_datacenter['disk_path']
+      vcenter_datacenter["disk_path"]
     end
 
     def datacenter_datastore_pattern
-      vcenter_datacenter['datastore_pattern']
+      vcenter_datacenter["datastore_pattern"]
     end
 
     def datacenter_datastore_cluster_pattern
-      vcenter_datacenter['datastore_cluster_pattern']
+      vcenter_datacenter["datastore_cluster_pattern"]
     end
 
     def datacenter_persistent_datastore_pattern
-      vcenter_datacenter['persistent_datastore_pattern']
+      vcenter_datacenter["persistent_datastore_pattern"]
     end
 
     def datacenter_persistent_datastore_cluster_pattern
-      vcenter_datacenter['persistent_datastore_cluster_pattern']
+      vcenter_datacenter["persistent_datastore_cluster_pattern"]
     end
 
     def datacenter_clusters
@@ -216,57 +215,57 @@ module VSphereCloud
 
     def datacenter_use_sub_folder
       datacenter_clusters.any? { |_, cluster| cluster.resource_pool } ||
-        !!vcenter_datacenter['use_sub_folder']
+        !!vcenter_datacenter["use_sub_folder"]
     end
 
     def human_readable_name_enabled?
-      vcenter['enable_human_readable_name']
+      vcenter["enable_human_readable_name"]
     end
 
     def nsx_url
-      vcenter['nsx']['address']
+      vcenter["nsx"]["address"]
     end
 
     def nsx_user
-      vcenter['nsx']['user']
+      vcenter["nsx"]["user"]
     end
 
     def nsx_password
-      vcenter['nsx']['password']
+      vcenter["nsx"]["password"]
     end
 
     def nsx_ca_cert_file
-      vcenter['nsx']['ca_cert_file']
+      vcenter["nsx"]["ca_cert_file"]
     end
 
     def upgrade_hw_version
-      vcenter['upgrade_hw_version']
+      vcenter["upgrade_hw_version"]
     end
 
     def default_hw_version
-      vcenter['default_hw_version']
+      vcenter["default_hw_version"]
     end
 
     def nsxt
       return nil unless nsxt_enabled?
       NSXTConfig.new(
-        vcenter['nsxt']['host'],
-        vcenter['nsxt']['username'],
-        vcenter['nsxt']['password'],
-        vcenter['nsxt']['ca_cert_file'],
-        vcenter['nsxt']['remote_auth'],
-        vcenter['nsxt']['auth_certificate'],
-        vcenter['nsxt']['auth_private_key'],
-        vcenter['nsxt']['default_vif_type'],
-        vcenter['nsxt']['use_policy_api'],
-        vcenter['nsxt']['policy_api_migration_mode'],
-        vcenter['nsxt']['allow_overwrite'],
-        vcenter['nsxt']['tag_nsx_vm_objects'],
+        vcenter["nsxt"]["host"],
+        vcenter["nsxt"]["username"],
+        vcenter["nsxt"]["password"],
+        vcenter["nsxt"]["ca_cert_file"],
+        vcenter["nsxt"]["remote_auth"],
+        vcenter["nsxt"]["auth_certificate"],
+        vcenter["nsxt"]["auth_private_key"],
+        vcenter["nsxt"]["default_vif_type"],
+        vcenter["nsxt"]["use_policy_api"],
+        vcenter["nsxt"]["policy_api_migration_mode"],
+        vcenter["nsxt"]["allow_overwrite"],
+        vcenter["nsxt"]["tag_nsx_vm_objects"]
       )
     end
 
     def nsxt_enabled?
-      !vcenter['nsxt'].nil?
+      !vcenter["nsxt"].nil?
     end
 
     def pbm_api_uri
@@ -274,23 +273,23 @@ module VSphereCloud
     end
 
     def vm_storage_policy_name
-      vcenter['vm_storage_policy_name']
+      vcenter["vm_storage_policy_name"]
     end
 
     def cpu_reserve_full_mhz
-      vcenter['cpu_reserve_full_mhz']
+      vcenter["cpu_reserve_full_mhz"]
     end
 
     def memory_reservation_locked_to_max
-      vcenter['memory_reservation_locked_to_max']
+      vcenter["memory_reservation_locked_to_max"]
     end
 
     def vmx_options
-      vcenter['vmx_options'] || {}
+      vcenter["vmx_options"] || {}
     end
 
     def plugins
-      config['plugins']
+      config["plugins"]
     end
 
     private
@@ -298,65 +297,64 @@ module VSphereCloud
     attr_reader :config
 
     def is_validated?
-      raise 'Configuration has not been validated' unless @is_validated
+      raise "Configuration has not been validated" unless @is_validated
     end
 
     def vcenter
-      config['vcenters'].first
+      config["vcenters"].first
     end
 
     def vcenter_datacenter
-      vcenter['datacenters'].first
+      vcenter["datacenters"].first
     end
 
     def validate_schema
       # Membrane schema for the provided config.
       schema = Membrane::SchemaParser.parse do
         {
-          'agent' => dict(String, Object), # passthrough to the agent
-          optional('cpi_log') => enum(String, Object),
-          optional('soap_log') => enum(String, Object),
-          optional('perform_ip_conflict_detection') => bool,
-          'vcenters' => [{
-            'host' => String,
-            'user' => String,
-            'password' => String,
-            optional('http_logging') => bool,
-            optional('enable_auto_anti_affinity_drs_rules') => bool,
-            optional('default_disk_type') => String,
-            optional('default_scsi_controller_type') => String,
-            optional('upgrade_hw_version') => bool,
-            optional('default_hw_version') => Integer,
-            optional('cpu_reserve_full_mhz') => bool,
-            optional('memory_reservation_locked_to_max') => bool,
-            optional('vm_storage_policy_name') => String,
-            optional('vmx_options') => dict(String, any),
-            optional('nsxt') => {
-              optional('host') => String,
-              optional('username') => String,
-              optional('password') => String,
-              optional('remote_auth') => bool,
-              optional('auth_certificate') => String,
-              optional('auth_private_key') => String,
-              optional('default_vif_type') => String
+          "agent" => dict(String, Object), # passthrough to the agent
+          optional("cpi_log") => enum(String, Object),
+          optional("soap_log") => enum(String, Object),
+          optional("perform_ip_conflict_detection") => bool,
+          "vcenters" => [{
+            "host" => String,
+            "user" => String,
+            "password" => String,
+            optional("http_logging") => bool,
+            optional("enable_auto_anti_affinity_drs_rules") => bool,
+            optional("default_disk_type") => String,
+            optional("default_scsi_controller_type") => String,
+            optional("upgrade_hw_version") => bool,
+            optional("default_hw_version") => Integer,
+            optional("cpu_reserve_full_mhz") => bool,
+            optional("memory_reservation_locked_to_max") => bool,
+            optional("vm_storage_policy_name") => String,
+            optional("vmx_options") => dict(String, any),
+            optional("nsxt") => {
+              optional("host") => String,
+              optional("username") => String,
+              optional("password") => String,
+              optional("remote_auth") => bool,
+              optional("auth_certificate") => String,
+              optional("auth_private_key") => String,
+              optional("default_vif_type") => String
             },
-            optional('enable_human_readable_name') => bool,
-            'datacenters' => [{
-              'name' => String,
-              'vm_folder' => String,
-              'template_folder' => String,
-              optional('use_sub_folder') => bool,
-              'disk_path' => String,
-              optional('datastore_pattern') => String,
-              optional('datastore_cluster_pattern') => String,
-              optional('persistent_datastore_pattern') => String,
-              optional('persistent_datastore_cluster_pattern') => String,
-              optional('allow_mixed_datastores') => bool,
-              'clusters' => [enum(String, dict(String, {optional('resource_pool') => String}),
-              )]
+            optional("enable_human_readable_name") => bool,
+            "datacenters" => [{
+              "name" => String,
+              "vm_folder" => String,
+              "template_folder" => String,
+              optional("use_sub_folder") => bool,
+              "disk_path" => String,
+              optional("datastore_pattern") => String,
+              optional("datastore_cluster_pattern") => String,
+              optional("persistent_datastore_pattern") => String,
+              optional("persistent_datastore_cluster_pattern") => String,
+              optional("allow_mixed_datastores") => bool,
+              "clusters" => [enum(String, dict(String, {optional("resource_pool") => String}))]
             }]
           }],
-          optional('plugins') => dict(String, Object)
+          optional("plugins") => dict(String, Object)
         }
       end
 
@@ -365,7 +363,7 @@ module VSphereCloud
 
     def cluster_objs
       cluster_objs = {}
-      vcenter_datacenter['clusters'].each do |cluster|
+      vcenter_datacenter["clusters"].each do |cluster|
         if cluster.is_a?(Hash)
           name = cluster.keys.first
           cluster_objs[name] = ClusterConfig.new(name, cluster[name])
@@ -376,5 +374,4 @@ module VSphereCloud
       cluster_objs
     end
   end
-
 end

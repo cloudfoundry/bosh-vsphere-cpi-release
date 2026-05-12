@@ -1,25 +1,26 @@
-require 'cloud/vsphere/resources'
+require "cloud/vsphere/resources"
 
 module VSphereCloud
   module Resources
     class Datastore
       include VimSdk
       include ObjectStringifier
+
       stringify_with :name, :mob
-      PROPERTIES = %w(summary.freeSpace summary.capacity summary.accessible name)
+      PROPERTIES = %w[summary.freeSpace summary.capacity summary.accessible name]
       DISK_HEADROOM = 1024
 
-      def self.build_from_client(client, datastore_mob, options={})
+      def self.build_from_client(client, datastore_mob, options = {})
         # datastore_mob can be an empty array or nil. Return empty array immediately
         return [] if datastore_mob.nil? || datastore_mob.empty?
         ds_properties_map = client.cloud_searcher.get_properties(datastore_mob, Vim::Datastore, Datastore::PROPERTIES, options)
         ds_properties_map.values.map do |ds_properties|
           Datastore.new(
-            ds_properties['name'],
+            ds_properties["name"],
             ds_properties[:obj],
-            ds_properties['summary.accessible'],
-            ds_properties['summary.capacity'].to_i / BYTES_IN_MB,
-            ds_properties['summary.freeSpace'].to_i / BYTES_IN_MB,
+            ds_properties["summary.accessible"],
+            ds_properties["summary.capacity"].to_i / BYTES_IN_MB,
+            ds_properties["summary.freeSpace"].to_i / BYTES_IN_MB
           )
         end
       end
@@ -64,14 +65,14 @@ module VSphereCloud
       def ==(other)
         instance_of?(other.class) && name == other.name
       end
-      alias eql? ==
+      alias_method :eql?, :==
 
       def hash
         name.hash
       end
 
       def maintenance_mode?
-        mob.summary.maintenance_mode != 'normal'
+        mob.summary.maintenance_mode != "normal"
       end
 
       def accessible?

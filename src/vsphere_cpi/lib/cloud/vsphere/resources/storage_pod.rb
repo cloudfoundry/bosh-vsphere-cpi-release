@@ -17,7 +17,7 @@ module VSphereCloud
 
       def maintenance_mode?
         mob.child_entity.all? do |ds|
-          ds.summary.maintenance_mode != 'normal'
+          ds.summary.maintenance_mode != "normal"
         end
       end
 
@@ -38,7 +38,7 @@ module VSphereCloud
       end
 
       def self.find_storage_pod(name, datacenter_mob)
-        path_segments = name.split('/')
+        path_segments = name.split("/")
         current_folder = datacenter_mob.datastore_folder
         while path_segments.length > 1
           current_segment = path_segments.shift
@@ -55,23 +55,23 @@ module VSphereCloud
         storage_pods = search_in_subfolders(datacenter_mob.datastore_folder)
 
         # Remove the leading datastore folder name from the paths
-        storage_pods.transform_keys! { |key| key.sub("/#{datacenter_mob.datastore_folder.name}/", '') }
+        storage_pods.transform_keys! { |key| key.sub("/#{datacenter_mob.datastore_folder.name}/", "") }
 
         matching_storage_pods = storage_pods.select { |path, _| path =~ name_pattern }
         matching_storage_pods.values.map { |storage_pod| new(storage_pod) }
       end
 
-      def self.search_in_subfolders(child_entity, path_prefix = '')
-        path_prefix = path_prefix + '/'
+      def self.search_in_subfolders(child_entity, path_prefix = "")
+        path_prefix += "/"
         if child_entity.class == VimSdk::Vim::Folder
           paths = {}
           child_entity.child_entity.each do |grandchild|
-            paths.merge!(search_in_subfolders(grandchild, path_prefix + child_entity.name ))
+            paths.merge!(search_in_subfolders(grandchild, path_prefix + child_entity.name))
           end
           return paths
         end
         if child_entity.class == VimSdk::Vim::StoragePod
-          return { path_prefix + child_entity.name => child_entity }
+          return {path_prefix + child_entity.name => child_entity}
         end
         {}
       end
@@ -83,9 +83,8 @@ module VSphereCloud
 
       # @return [String] debug storagePod information.
       def inspect
-        "<StoragePod: #@mob / #{name}>"
+        "<StoragePod: #{@mob} / #{name}>"
       end
-
     end
   end
 end

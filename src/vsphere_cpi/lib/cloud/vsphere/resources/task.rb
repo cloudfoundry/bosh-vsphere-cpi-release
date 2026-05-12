@@ -8,23 +8,23 @@ module VSphereCloud
       end
 
       def name
-        task_info['info.descriptionId'] || task_info['info.name'] || 'Unknown Task'
+        task_info["info.descriptionId"] || task_info["info.name"] || "Unknown Task"
       end
 
       def progress
-        task_info['info.progress'] || 0
+        task_info["info.progress"] || 0
       end
 
       def state
-        task_info['info.state'] || 0
+        task_info["info.state"] || 0
       end
 
       def result
-        task_info['info.result']
+        task_info["info.result"]
       end
 
       def error
-        task_info['info.error']
+        task_info["info.error"]
       end
 
       def reload
@@ -32,9 +32,9 @@ module VSphereCloud
       end
 
       def retryable?
-        entity = task_info['info.entity']
-        method_name = task_info['info.name'] || task_info['info.descriptionId']
-        fault = task_info['info.error']
+        entity = task_info["info.entity"]
+        method_name = task_info["info.name"] || task_info["info.descriptionId"]
+        fault = task_info["info.error"]
         @retry_judge.retryable?(entity, method_name, fault)
       end
 
@@ -52,8 +52,8 @@ module VSphereCloud
         @cloud_searcher.get_properties(
           [@task_mob],
           VimSdk::Vim::Task,
-          ['info.name', 'info.descriptionId', 'info.progress', 'info.state', 'info.result', 'info.error', 'info.entity'],
-          ensure: ['info.state'],
+          ["info.name", "info.descriptionId", "info.progress", "info.state", "info.result", "info.error", "info.entity"],
+          ensure: ["info.state"]
         )[@task_mob]
       end
     end

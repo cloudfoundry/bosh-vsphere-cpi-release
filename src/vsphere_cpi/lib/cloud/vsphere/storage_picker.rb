@@ -1,4 +1,4 @@
-require 'cloud/vsphere/logger'
+require "cloud/vsphere/logger"
 
 module VSphereCloud
   module StoragePicker
@@ -30,11 +30,11 @@ module VSphereCloud
     # param [Boolean] is_persistent
     def choose_global_datastore_pattern(datacenter, is_persistent)
       if is_persistent
-        pattern=datacenter.persistent_pattern
-        cluster_pattern=datacenter.persistent_datastore_cluster_pattern
+        pattern = datacenter.persistent_pattern
+        cluster_pattern = datacenter.persistent_datastore_cluster_pattern
       else
-        pattern=datacenter.ephemeral_pattern
-        cluster_pattern=datacenter.ephemeral_datastore_cluster_pattern
+        pattern = datacenter.ephemeral_pattern
+        cluster_pattern = datacenter.ephemeral_datastore_cluster_pattern
       end
       logger.info("Using global datastore pattern #{pattern} and global datastore cluster pattern #{cluster_pattern} persistent: #{is_persistent}")
       return pattern unless cluster_pattern && !cluster_pattern.empty?
@@ -46,16 +46,16 @@ module VSphereCloud
       # pick all SDRS-enabled datastore clusters and include their datastores in the set to be used
       clusters_with_drs = datastore_cluster_list.select(&:drs_enabled?)
       clusters_without_drs = datastore_cluster_list - clusters_with_drs
-      logger.debug("Datastore Clusters excluded because they do not have DRS enabled: [#{clusters_without_drs.map(&:name).join(', ')}]") unless clusters_without_drs.empty?
+      logger.debug("Datastore Clusters excluded because they do not have DRS enabled: [#{clusters_without_drs.map(&:name).join(", ")}]") unless clusters_without_drs.empty?
       datastores = clusters_with_drs.map { |datastore_cluster| datastore_cluster.datastores }.flatten
       cluster_datastore_names = datastores.map(&:name)
 
       if cluster_datastore_names.empty?
         pattern
       else
-        ret = "^(#{cluster_datastore_names.map { |name| Regexp.escape(name) }.join('|')})$"
+        ret = "^(#{cluster_datastore_names.map { |name| Regexp.escape(name) }.join("|")})$"
         if pattern && !pattern.empty?
-          ret += "|"+pattern
+          ret += "|" + pattern
         end
         ret
       end
@@ -67,7 +67,7 @@ module VSphereCloud
       unless disk_pool.datastore_clusters.empty?
         sdrs_enabled_datastore_clusters = disk_pool.datastore_clusters.select(&:drs_enabled?)
         clusters_without_drs = disk_pool.datastore_clusters - sdrs_enabled_datastore_clusters
-        logger.debug("Datastore Clusters excluded because they do not have DRS enabled: [#{clusters_without_drs.map(&:name).join(', ')}]") unless clusters_without_drs.empty?
+        logger.debug("Datastore Clusters excluded because they do not have DRS enabled: [#{clusters_without_drs.map(&:name).join(", ")}]") unless clusters_without_drs.empty?
         # pick best sdrs enabled datastore cluster and include its datastores in the set to be used for persistent disk
         if sdrs_enabled_datastore_clusters.any?
           datastore_cluster = choose_best_from(sdrs_enabled_datastore_clusters)
@@ -75,12 +75,12 @@ module VSphereCloud
         end
       end
 
-      #if datastores is set use that else use global pattern
+      # if datastores is set use that else use global pattern
       if datastore_names.empty? && disk_pool.datastore_clusters.empty?
         choose_global_persistent_pattern(disk_pool.datacenter)
       else
-        logger.info("Using datastore list: #{datastore_names.join(', ')}")
-        "^(#{datastore_names.map { |name| Regexp.escape(name) }.join('|')})$"
+        logger.info("Using datastore list: #{datastore_names.join(", ")}")
+        "^(#{datastore_names.map { |name| Regexp.escape(name) }.join("|")})$"
       end
     end
 
@@ -109,13 +109,12 @@ module VSphereCloud
     #
     # @return [String]DS Pattern, [String, nil] PolicyName (if applicable)
     def choose_ephemeral_pattern(global_config, vm_type)
-
       # 1. Check for vm_type storage policy first
       # return if exists
       if vm_type.storage_policy_name
-        datastore_names = vm_type.storage_policy_datastores(vm_type.storage_policy_name).map{|d| d.name }
-        logger.info("Using compatible datastores: #{datastore_names.join(', ')} for Storage policy #{vm_type.storage_policy_name}")
-        return "^(#{datastore_names.map { |name| Regexp.escape(name) }.join('|')})$", vm_type.storage_policy_name
+        datastore_names = vm_type.storage_policy_datastores(vm_type.storage_policy_name).map { |d| d.name }
+        logger.info("Using compatible datastores: #{datastore_names.join(", ")} for Storage policy #{vm_type.storage_policy_name}")
+        return "^(#{datastore_names.map { |name| Regexp.escape(name) }.join("|")})$", vm_type.storage_policy_name
       end
 
       # 2. Check if vm_type datastore or SDRS enabled datastore cluster exists
@@ -124,28 +123,28 @@ module VSphereCloud
       unless vm_type.datastore_clusters.empty?
         sdrs_enabled_datastore_clusters = vm_type.datastore_clusters.select(&:drs_enabled?)
         clusters_without_drs = vm_type.datastore_clusters - sdrs_enabled_datastore_clusters
-        logger.debug("Datastore Clusters excluded because they do not have DRS enabled: [#{clusters_without_drs.map(&:name).join(', ')}]") unless clusters_without_drs.empty?
+        logger.debug("Datastore Clusters excluded because they do not have DRS enabled: [#{clusters_without_drs.map(&:name).join(", ")}]") unless clusters_without_drs.empty?
         datastores = sdrs_enabled_datastore_clusters.map { |datastore_cluster| datastore_cluster.datastores }.flatten
         datastore_names.concat(datastores.map(&:name))
       end
       datastore_names = datastore_names.compact
       # @TA: TODO Do we need second condition here?
       if !(datastore_names.empty? && vm_type.datastore_clusters.empty?)
-        logger.info("Using datastore list: #{datastore_names.join(', ')}")
-        return "^(#{datastore_names.map { |name| Regexp.escape(name) }.join('|')})$", nil
+        logger.info("Using datastore list: #{datastore_names.join(", ")}")
+        return "^(#{datastore_names.map { |name| Regexp.escape(name) }.join("|")})$", nil
       end
 
       # 3. Check for global storage policy if present.
       # return compatible ds if exists
       if global_config.vm_storage_policy_name
-        datastore_names = vm_type.storage_policy_datastores(global_config.vm_storage_policy_name).map{|d| d.name }
-        logger.info("Using compatible datastores for given Storage policy: #{datastore_names.join(', ')}")
-        return "^(#{datastore_names.map { |name| Regexp.escape(name) }.join('|')})$", global_config.vm_storage_policy_name
+        datastore_names = vm_type.storage_policy_datastores(global_config.vm_storage_policy_name).map { |d| d.name }
+        logger.info("Using compatible datastores for given Storage policy: #{datastore_names.join(", ")}")
+        return "^(#{datastore_names.map { |name| Regexp.escape(name) }.join("|")})$", global_config.vm_storage_policy_name
       end
 
       # 4. If nothing else is specified, return global ephemeral pattern.
       logger.info("Using global ephemeral disk datastore pattern: #{vm_type.datacenter.ephemeral_pattern}")
-      return choose_global_ephemeral_pattern(vm_type.datacenter), nil
+      [choose_global_ephemeral_pattern(vm_type.datacenter), nil]
     end
   end
 end

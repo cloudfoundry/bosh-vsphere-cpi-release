@@ -1,4 +1,4 @@
-require 'openssl'
+require "openssl"
 
 # TLS truncation mitigation setting:
 #  - https://www.openssl.org/docs/man3.0/man3/SSL_CTX_set_options.html#SSL_OP_IGNORE_UNEXPECTED_EOF

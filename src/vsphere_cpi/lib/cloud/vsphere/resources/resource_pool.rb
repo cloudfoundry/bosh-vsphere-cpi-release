@@ -1,4 +1,4 @@
-require 'cloud/vsphere/logger'
+require "cloud/vsphere/logger"
 
 module VSphereCloud
   module Resources
@@ -32,7 +32,7 @@ module VSphereCloud
           datacenter_cluster_path_prefix = "#{@datacenter_name}/host/#{@cluster_config.name}/Resources/"
           full_inventory_path = datacenter_cluster_path_prefix + resource_pool_path_suffix
           # Replace all multiple consecutive / with single /
-          full_inventory_path.gsub!(/\/+/, '/').chomp!('/')
+          full_inventory_path = full_inventory_path.squeeze("/").chomp("/")
           @mob = @client.service_content.search_index.find_by_inventory_path(full_inventory_path)
           return @mob unless @mob.nil?
 
@@ -40,9 +40,10 @@ module VSphereCloud
 
           logger.info("Trying to find #{@cluster_config.resource_pool} through property collector")
           @mob = @client.cloud_searcher.get_managed_object(
-              Vim::ResourcePool,
-              :root => @root_resource_pool,
-              :name => @cluster_config.resource_pool)
+            Vim::ResourcePool,
+            root: @root_resource_pool,
+            name: @cluster_config.resource_pool
+          )
           raise "Could not find resource pool #{@cluster_config.resource_pool}" if @mob.nil?
           logger.debug("Found requested resource pool: #{@mob.name}")
         end

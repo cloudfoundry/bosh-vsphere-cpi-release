@@ -1,5 +1,5 @@
-require 'cloud/vsphere/logger'
-require 'digest'
+require "cloud/vsphere/logger"
+require "digest"
 
 module VSphereCloud
   class UnrealizedResource < StandardError
@@ -46,7 +46,7 @@ module VSphereCloud
     include Logger
     extend Hooks
 
-    def initialize(client_builder, default_vif_type='PARENT')
+    def initialize(client_builder, default_vif_type = "PARENT")
       @client_builder = client_builder
       @default_vif_type = default_vif_type
       @sleep_time = DEFAULT_SLEEP
@@ -91,7 +91,7 @@ module VSphereCloud
       # For all the groups
       vm_groups.each do |grp_ref|
         retry_on_conflict("while removing vm: #{vm.cid} from group #{grp_ref.target_id}") do
-          group_obj = retrieve_group(group_id: grp_ref.path.split('/').last)
+          group_obj = retrieve_group(group_id: grp_ref.path.split("/").last)
           delete_vm_from_group(group_obj, vm.cid, vm_external_id)
         end
       end
@@ -144,9 +144,9 @@ module VSphereCloud
       return if segment_ports.nil?
       segment_ports.each do |_, attachment_id|
         Bosh::Retryable.new(
-            tries: [@max_tries, NSXT_SEGMENT_PORT_RETRIES].max,
-            sleep: ->(try_count, retry_exception) { [NSXT_MIN_SLEEP, @sleep_time].max },
-            on: [SegmentPortNotFound]
+          tries: [@max_tries, NSXT_SEGMENT_PORT_RETRIES].max,
+          sleep: ->(try_count, retry_exception) { [NSXT_MIN_SLEEP, @sleep_time].max },
+          on: [SegmentPortNotFound]
         ).retryer do |i|
           segment_port_search_result = search_api.query_search("attachment.id:#{attachment_id}").results[0]
           raise SegmentPortNotFound.new(attachment_id) if segment_port_search_result.nil?
@@ -155,11 +155,11 @@ module VSphereCloud
           tier1_router_id = tier1_data.nil? ? nil : tier1_data[1]
           segment_data = segment_port_search_result[:parent_path].match(/\/segments\/(.*)/)
           segment_id = segment_data.nil? ? nil : segment_data[1]
-          if tier1_router_id
+          segment_port = if tier1_router_id
             # Segment port is scoped under the tier-1
-            segment_port = policy_segments_api.get_tier1_segment_port(tier1_router_id, segment_id, segment_port_search_result[:id])
+            policy_segments_api.get_tier1_segment_port(tier1_router_id, segment_id, segment_port_search_result[:id])
           else
-            segment_port = policy_segments_api.get_infra_segment_port(segment_id, segment_port_search_result[:id])
+            policy_segments_api.get_infra_segment_port(segment_id, segment_port_search_result[:id])
           end
           raise SegmentPortNotFound.new(attachment_id) if segment_port.nil?
 
@@ -177,7 +177,7 @@ module VSphereCloud
                 raise InvalidSegmentPortError.new(segment_port)
               end
             end
-            bosh_tag = NSXTPolicy::Tag.new('scope' => metadata_key, 'tag' => metadata_value)
+            bosh_tag = NSXTPolicy::Tag.new("scope" => metadata_key, "tag" => metadata_value)
             tags.delete_if { |tag| tag.scope == metadata_key }
             tags << bosh_tag
           end
@@ -195,63 +195,63 @@ module VSphereCloud
       end
     end
 
-    #We don't page here but extremely unlikely to hit the pagination limit.
+    # We don't page here but extremely unlikely to hit the pagination limit.
     def retrieve_groups_by_name(group_display_names)
       logger.info("Searching for Policy Groups with group display names: #{group_display_names}")
-      
+
       all_groups = []
       # Split group names into smaller chunks to avoid query string length limits
       chunk_size = 20  # Process 20 group names at a time
       group_display_names.each_slice(chunk_size) do |name_chunk|
         query = "resource_type:Group AND display_name:(#{name_chunk.join(" OR ")})"
         logger.debug("Searching for chunk of #{name_chunk.length} groups")
-        
+
         cursor = nil
         page_size = 50  # Use smaller page size to avoid remote errors
-        
+
         loop do
-          search_opts = { page_size: page_size }
+          search_opts = {page_size: page_size}
           search_opts[:cursor] = cursor if cursor
-          
+
           search_response = search_api.query_search(query, search_opts)
           break if search_response.results.nil? || search_response.results.empty?
-          
+
           all_groups.concat(search_response.results.map { |group_attrs| NSXTPolicy::Group.new(group_attrs) })
-          
+
           # Check if there are more pages
           cursor = search_response.cursor
           break if cursor.nil? || cursor.empty?
-          
+
           logger.debug("Retrieved #{all_groups.length} groups so far, continuing with cursor: #{cursor}")
         end
       end
-      
+
       logger.info("Retrieved total of #{all_groups.length} groups")
       all_groups
     end
 
-    #We don't page here but extremely unlikely to hit the pagination limit.
+    # We don't page here but extremely unlikely to hit the pagination limit.
     def retrieve_groups_by_id(group_ids)
       logger.info("Searching for Policy Groups with group ids: #{group_ids}")
       query = "resource_type:Group AND id:(#{group_ids.join(" OR ")})"
       search_api.query_search(query).results.map { |group_attrs| NSXTPolicy::Group.new(group_attrs) }
     end
 
-    def retrieve_server_pools(server_pools, allow_missing_pools=false)
+    def retrieve_server_pools(server_pools, allow_missing_pools = false)
       return [] if server_pools.nil? || server_pools.empty?
 
-      #Create a hash of server_pools with key as their name and value as list of matching server_pools
+      # Create a hash of server_pools with key as their name and value as list of matching server_pools
       server_pools_by_name = policy_load_balancer_pools_api.list_lb_pools.results.each_with_object({}) do |server_pool, hash|
         hash[server_pool.display_name] ? hash[server_pool.display_name] << server_pool : hash[server_pool.display_name] = [server_pool]
       end
 
       missing = server_pools.reject do |server_pool|
-        server_pools_by_name.key?(server_pool['name'])
+        server_pools_by_name.key?(server_pool["name"])
       end
 
       if !missing.empty?
         if allow_missing_pools
-          logger.info("Not all server pools found, missing #{missing.map {|p| p['name'] }.join(",")}. The VM will still be added to found server pools.")
+          logger.info("Not all server pools found, missing #{missing.map { |p| p["name"] }.join(",")}. The VM will still be added to found server pools.")
         else
           raise ServerPoolsNotFound.new(*missing)
         end
@@ -259,8 +259,8 @@ module VSphereCloud
 
       static_server_pools, dynamic_server_pools = [], []
       server_pools.each do |server_pool|
-        server_pool_name = server_pool['name']
-        server_pool_port = server_pool['port']
+        server_pool_name = server_pool["name"]
+        server_pool_port = server_pool["port"]
         matching_server_pools = server_pools_by_name[server_pool_name]
         next unless matching_server_pools
         matching_server_pools.each do |matching_server_pool|
@@ -270,15 +270,15 @@ module VSphereCloud
       [static_server_pools, dynamic_server_pools]
     end
 
-    before(*instance_methods) { require 'nsxt_policy_client/nsxt_policy_client' }
+    before(*instance_methods) { require "nsxt_policy_client/nsxt_policy_client" }
 
     private
 
-    DEFAULT_NSXT_POLICY_DOMAIN = 'default'.freeze
+    DEFAULT_NSXT_POLICY_DOMAIN = "default".freeze
     NSXT_MIN_SLEEP = 1
     DEFAULT_SLEEP = 1
     NSXT_SEGMENT_PORT_RETRIES = 300
-    MAX_TRIES=100
+    MAX_TRIES = 100
 
     def retry_on_conflict(log_str)
       yield
@@ -286,7 +286,7 @@ module VSphereCloud
       if [409, 412].include?(e.code)
         logger.info("Revision Error: #{log_str if log_str} with message #{e.message}")
         # To limit request rate on NSX-T server
-        sleep(rand(5)/2.0)
+        sleep(rand(5) / 2.0)
         retry
       end
       logger.info("Failed #{log_str if log_str} with message #{e.message}")
@@ -324,29 +324,29 @@ module VSphereCloud
       vm_external_id = get_vm_external_id(vm_cid)
       raise VirtualMachineNotFound.new(vm_cid) if vm_external_id.nil?
 
-      external_id_expressions = group_obj.expression.select { |expr| expr.is_a?(NSXTPolicy::ExternalIDExpression) && expr.member_type == 'VirtualMachine' }
+      external_id_expressions = group_obj.expression.select { |expr| expr.is_a?(NSXTPolicy::ExternalIDExpression) && expr.member_type == "VirtualMachine" }
       if external_id_expressions.size < 1
         unless group_obj.expression.empty?
           group_obj.expression << generate_conjunction_expression(vm_cid, group_obj.expression)
         end
 
-        group_obj.expression << NSXTPolicy::ExternalIDExpression.new(resource_type: 'ExternalIDExpression',
-                                                                     member_type: 'VirtualMachine',
-                                                                     external_ids: [vm_external_id])
+        group_obj.expression << NSXTPolicy::ExternalIDExpression.new(resource_type: "ExternalIDExpression",
+          member_type: "VirtualMachine",
+          external_ids: [vm_external_id])
       else
         existing_external_id = external_id_expressions.find { |expr| expr.external_ids.include?(vm_external_id) }
-        if existing_external_id != nil
+        if !existing_external_id.nil?
           return
         end
 
         available_external_id_expression = external_id_expressions.find { |expr| expr.external_ids.size < 500 }
-        if available_external_id_expression != nil
+        if !available_external_id_expression.nil?
           available_external_id_expression.external_ids << vm_external_id
         else
           group_obj.expression << generate_conjunction_expression(vm_cid, group_obj.expression)
-          group_obj.expression << NSXTPolicy::ExternalIDExpression.new(resource_type: 'ExternalIDExpression',
-                                                                       member_type: 'VirtualMachine',
-                                                                       external_ids: [vm_external_id])
+          group_obj.expression << NSXTPolicy::ExternalIDExpression.new(resource_type: "ExternalIDExpression",
+            member_type: "VirtualMachine",
+            external_ids: [vm_external_id])
         end
       end
 
@@ -360,24 +360,24 @@ module VSphereCloud
       updated = false
       group_obj.expression.each_with_index do |expr, index|
         if expr.is_a?(NSXTPolicy::ExternalIDExpression) &&
-            expr.member_type == 'VirtualMachine' &&
-            expr.resource_type == 'ExternalIDExpression'
+            expr.member_type == "VirtualMachine" &&
+            expr.resource_type == "ExternalIDExpression"
           expr.external_ids.delete_if { |id| id == vm_external_id }
-           # not true if id does not exist in any eid expr. but this is very unlikely
+          # not true if id does not exist in any eid expr. but this is very unlikely
           updated = true
 
           if expr.external_ids.empty?
             group_obj.expression.delete(expr)
-            if ! group_obj.expression.empty?
+            if !group_obj.expression.empty?
               # delete the OR op before or after
-              if index == 0
-                e=group_obj.expression[0]
+              e = if index == 0
+                group_obj.expression[0]
               else
-                e=group_obj.expression[index-1]
+                group_obj.expression[index - 1]
               end
               if e.is_a?(NSXTPolicy::ConjunctionOperator) &&
-                    e.resource_type == 'ConjunctionOperator' &&
-                    e.conjunction_operator == 'OR'
+                  e.resource_type == "ConjunctionOperator" &&
+                  e.conjunction_operator == "OR"
                 group_obj.expression.delete(e)
               end
             end
@@ -396,13 +396,13 @@ module VSphereCloud
       begin
         Bosh::Retryable.new(
           tries: 10,
-          sleep: ->(_, _) { 1 },
+          sleep: ->(_, _) { 1 }
         ).retryer do |_|
-          search_results = policy_virtual_machine_api.list_virtual_machines_on_enforcement_point(DEFAULT_NSXT_POLICY_DOMAIN, { query: "display_name:#{vm_cid}" }).results
+          search_results = policy_virtual_machine_api.list_virtual_machines_on_enforcement_point(DEFAULT_NSXT_POLICY_DOMAIN, {query: "display_name:#{vm_cid}"}).results
           search_results.length > 0
         end
       rescue => e
-        raise unless e.kind_of?(Bosh::Common::RetryCountExceeded)
+        raise unless e.is_a?(Bosh::Common::RetryCountExceeded)
       end
 
       if search_results.length < 1
@@ -417,14 +417,14 @@ module VSphereCloud
     def generate_conjunction_expression(vm_cid, expressions)
       existing_expr_count = expressions.count do |expr|
         expr.is_a?(NSXTPolicy::ConjunctionOperator) &&
-            expr.resource_type == 'ConjunctionOperator' &&
-            expr.conjunction_operator == 'OR' &&
-            expr.id.start_with?("conjunction-#{vm_cid}")
+          expr.resource_type == "ConjunctionOperator" &&
+          expr.conjunction_operator == "OR" &&
+          expr.id.start_with?("conjunction-#{vm_cid}")
       end
 
-      NSXTPolicy::ConjunctionOperator.new(resource_type: 'ConjunctionOperator',
-                                          conjunction_operator: 'OR',
-                                          id: "conjunction-#{vm_cid}-#{existing_expr_count}")
+      NSXTPolicy::ConjunctionOperator.new(resource_type: "ConjunctionOperator",
+        conjunction_operator: "OR",
+        id: "conjunction-#{vm_cid}-#{existing_expr_count}")
     end
 
     def policy_segments_api

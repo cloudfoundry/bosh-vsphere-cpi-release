@@ -1,4 +1,4 @@
-require 'cloud/vsphere/logger'
+require "cloud/vsphere/logger"
 
 module VSphereCloud
   module Resources
@@ -11,7 +11,7 @@ module VSphereCloud
         @path = path
         @client = client
         @datacenter_name = datacenter_name
-        @path_components = path.split('/')
+        @path_components = path.split("/")
 
         @mob = find_or_create_folder(@path_components)
       end
@@ -45,11 +45,11 @@ module VSphereCloud
       end
 
       def find_folder(path_components)
-        @client.find_by_inventory_path([@datacenter_name, 'vm', path_components].flatten)
+        @client.find_by_inventory_path([@datacenter_name, "vm", path_components].flatten)
       end
 
       def root_vm_folder
-        @client.find_by_inventory_path([@datacenter_name, 'vm'])
+        @client.find_by_inventory_path([@datacenter_name, "vm"])
       end
     end
   end

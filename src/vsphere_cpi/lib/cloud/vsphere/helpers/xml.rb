@@ -1,4 +1,4 @@
-require 'oga'
+require "oga"
 
 module VSphereCloud
   module Helpers
@@ -16,7 +16,7 @@ module VSphereCloud
         elsif ruby_struct.is_a?(Array)
           ruby_struct.each do |item|
             if item.keys.length != 1
-              raise "Each XML item in an array must have a single key at the top-level, but found '#{item.keys.join(', ')}'. This key will be used as the name of the XML element."
+              raise "Each XML item in an array must have a single key at the top-level, but found '#{item.keys.join(", ")}'. This key will be used as the name of the XML element."
             end
 
             itemName = item.keys.first

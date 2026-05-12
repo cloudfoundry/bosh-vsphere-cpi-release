@@ -1,7 +1,7 @@
 module ObjectHelpers
   refine Object do
     def blank?
-      self.nil? || (self.is_a?(String) && self.empty?)
+      nil? || (is_a?(String) && empty?)
     end
   end
 end

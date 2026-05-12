@@ -1,4 +1,4 @@
-require 'cloud/vsphere/logger'
+require "cloud/vsphere/logger"
 
 module VSphereCloud
   class AgentEnv
@@ -22,14 +22,14 @@ module VSphereCloud
       # 'get_current_env' method has been removed and 'env.json' is written out purely for consistency & debugging
       # purposes.
       @file_provider.upload_file_to_datastore(location[:datacenter],
-                                              location[:datastore].mob,
-                                              "#{location[:vm]}/env.json",
-                                              env_json, ds_hosts)
+        location[:datastore].mob,
+        "#{location[:vm]}/env.json",
+        env_json, ds_hosts)
 
       @file_provider.upload_file_to_datastore(location[:datacenter],
-                                              location[:datastore].mob,
-                                              "#{location[:vm]}/env.iso",
-                                              generate_env_iso(env_json), ds_hosts)
+        location[:datastore].mob,
+        "#{location[:vm]}/env.iso",
+        generate_env_iso(env_json), ds_hosts)
 
       file_name = "[#{location[:datastore].name}] #{location[:vm]}/env.iso"
       update_cdrom_env(vm, location[:datastore].mob, file_name)
@@ -52,8 +52,8 @@ module VSphereCloud
 
       datacenter = @client.find_parent(vm, Vim::Datacenter)
 
-      @client.delete_path(datacenter, File.join(env_iso_folder, 'env.json'))
-      @client.delete_path(datacenter, File.join(env_iso_folder, 'env.iso'))
+      @client.delete_path(datacenter, File.join(env_iso_folder, "env.json"))
+      @client.delete_path(datacenter, File.join(env_iso_folder, "env.iso"))
     end
 
     private
@@ -70,19 +70,19 @@ module VSphereCloud
       # env json can be attached either in base64, or in gzip+base64. For expediency,
       # we'll just use base64 encoding here.
       extra_config_array = [
-        VimSdk::Vim::Option::OptionValue.new(key: 'guestinfo.userdata' , value: Base64.strict_encode64(env_json)),
-        VimSdk::Vim::Option::OptionValue.new(key: 'guestinfo.userdata.encoding' , value: 'base64')
+        VimSdk::Vim::Option::OptionValue.new(key: "guestinfo.userdata", value: Base64.strict_encode64(env_json)),
+        VimSdk::Vim::Option::OptionValue.new(key: "guestinfo.userdata.encoding", value: "base64")
       ]
 
       previous_config = @client.cloud_searcher.get_properties(
         vm,
         Vim::VirtualMachine,
-        ['config.extraConfig'],
-        ensure: ['config.extraConfig']
-      )['config.extraConfig']
+        ["config.extraConfig"],
+        ensure: ["config.extraConfig"]
+      )["config.extraConfig"]
 
       # remove any old settings, and add new ones
-      previous_config = previous_config.reject{ |c| c.key == 'guestinfo.userdata' || c.key == 'guestinfo.userdata.encoding' }
+      previous_config = previous_config.reject { |c| c.key == "guestinfo.userdata" || c.key == "guestinfo.userdata.encoding" }
       extra_config_array += previous_config
 
       vm_config_spec = Vim::Vm::ConfigSpec.new
@@ -90,6 +90,7 @@ module VSphereCloud
 
       @client.reconfig_vm(vm, vm_config_spec)
     end
+
     def update_cdrom_env(vm, datastore, file_name)
       backing_info = Vim::Vm::Device::VirtualCdrom::IsoBackingInfo.new
       backing_info.datastore = datastore
@@ -121,24 +122,24 @@ module VSphereCloud
 
     def generate_env_iso(env)
       Dir.mktmpdir do |path|
-        env_path = File.join(path, 'env')
-        iso_path = File.join(path, 'env.iso')
-        File.open(env_path, 'w') { |f| f.write(env) }
+        env_path = File.join(path, "env")
+        iso_path = File.join(path, "env.iso")
+        File.write(env_path, env)
 
         mkiso = genisoimage
-        if mkiso.match('iso9660wrap$')
-          output = `#{mkiso} #{env_path} #{iso_path} 2>&1`
+        output = if mkiso.match?("iso9660wrap$")
+          `#{mkiso} #{env_path} #{iso_path} 2>&1`
         else
-          output = `#{mkiso} -o #{iso_path} #{env_path} 2>&1`
+          `#{mkiso} -o #{iso_path} #{env_path} 2>&1`
         end
 
         raise "#{$?.exitstatus} -#{output}" if $?.exitstatus != 0
-        File.open(iso_path, 'r') { |f| f.read }
+        File.read(iso_path)
       end
     end
 
     def which(programs)
-      ENV['PATH'].split(File::PATH_SEPARATOR).each do |path|
+      ENV["PATH"].split(File::PATH_SEPARATOR).each do |path|
         programs.each do |bin|
           exe = File.join(path, bin)
           return exe if File.exist?(exe)
@@ -148,7 +149,7 @@ module VSphereCloud
     end
 
     def genisoimage
-      @genisoimage ||= which(%w{genisoimage iso9660wrap})
+      @genisoimage ||= which(%w[genisoimage iso9660wrap])
     end
   end
 end

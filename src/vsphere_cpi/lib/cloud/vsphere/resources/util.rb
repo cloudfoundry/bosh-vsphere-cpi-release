@@ -1,10 +1,8 @@
 module VSphereCloud
   module Resources
-
     # Resources common utility class.
     class Util
       class << self
-
         # Returns the average value from a given CSV string.
         #
         # @param [String] csv CSV string of integers/floats.

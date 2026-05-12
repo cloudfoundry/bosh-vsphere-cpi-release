@@ -1,8 +1,9 @@
-require 'cloud/vsphere/storage_list'
+require "cloud/vsphere/storage_list"
 
 module VSphereCloud
   class DiskPool
     include VSphereCloud::StorageList
+
     attr_reader :datacenter, :storage_list
 
     # @param [Resources::Datacenter] datacenter

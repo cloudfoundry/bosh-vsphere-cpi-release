@@ -1,27 +1,19 @@
-require 'cloud/vsphere/logger'
-require 'cloud/vsphere/cpi_extension'
-require 'cloud/vsphere/attach_tag_to_vm'
+require "cloud/vsphere/logger"
+require "cloud/vsphere/cpi_extension"
+require "cloud/vsphere/attach_tag_to_vm"
 
 module VSphereCloud
   class VmCreator
     include Logger
 
     def initialize(agent_env_client:,
-                   additional_agent_env:,
-                   client:,
-                   cloud_searcher:,
-                   cpi:,
-                   datacenter:,
-                   default_disk_type:,
-                   default_scsi_controller_type: 'paravirtual',
-                   enable_auto_anti_affinity_drs_rules:,
-                   ensure_no_ip_conflicts:,
-                   ip_conflict_detector:,
-                   pbm:,
-                   stemcell:,
-                   tagging_tagger:,
-                   upgrade_hw_version:,
-                   default_hw_version:)
+      additional_agent_env:,
+      client:,
+      cloud_searcher:,
+      cpi:,
+      datacenter:,
+      default_disk_type:,
+      enable_auto_anti_affinity_drs_rules:, ensure_no_ip_conflicts:, ip_conflict_detector:, pbm:, stemcell:, tagging_tagger:, upgrade_hw_version:, default_hw_version:, default_scsi_controller_type: "paravirtual")
       @agent_env_client = agent_env_client
       @additional_agent_env = additional_agent_env
       @client = client
@@ -79,12 +71,12 @@ module VSphereCloud
           if datastore_cluster
             datastore = Resources::Datastore.build_from_client(
               @client,
-              replicated_stemcell_properties['datastore']
+              replicated_stemcell_properties["datastore"]
             ).first
           end
           replicated_stemcell_vm = Resources::VM.new(vm_config.stemcell_cid, replicated_stemcell_vm_mob, @client)
 
-          snapshot = replicated_stemcell_properties['snapshot']
+          snapshot = replicated_stemcell_properties["snapshot"]
 
           # Create device_change config
           config_spec = VimSdk::Vim::Vm::ConfigSpec.new(vm_config.config_spec_params)
@@ -165,7 +157,7 @@ module VSphereCloud
           host = nil
           # Before cloning we need to make sure the host is correctly picked up
           # from cluster's host group if provided.
-          if !cluster.host_group.nil? && cluster.host_group_drs_rule.strip.casecmp?('MUST') == true
+          if !cluster.host_group.nil? && cluster.host_group_drs_rule.strip.casecmp?("MUST") == true
             # placement_spec = VimSdk::Vim::Cluster::PlacementSpec.new
             # placement_spec.config_spec = config_spec
             # placement_spec.datastores = [datastore.mob]
@@ -186,7 +178,7 @@ module VSphereCloud
             # Selecting a random host out of all host groups to get initial placement correct
             # Filtering it for healthy host.
             host = cluster.host_group_mob.host.find do |host|
-              host.runtime.connection_state == 'connected' &&
+              host.runtime.connection_state == "connected" &&
                 !host.runtime.in_maintenance_mode
             end
             raise "Failed to find a healthy host in #{cluster.host_group} to create the VM." if host.nil?
@@ -195,7 +187,7 @@ module VSphereCloud
           # Clone VM
           logger.info("Cloning vm: #{replicated_stemcell_vm} to #{vm_config.name}")
           # Don't link clone if expanding root disk, otherwise "Invalid operation for device '0'. Disks with parents cannot be expanded."
-          linked = vm_config.root_disk_size_gb > 0 ? false : true
+          linked = !(vm_config.root_disk_size_gb > 0)
           created_vm_mob = @client.wait_for_task do
             @cpi.clone_vm(
               replicated_stemcell_vm.mob,
@@ -239,7 +231,7 @@ module VSphereCloud
               network_env,
               disk_env
             )
-            env['env'] = vm_config.agent_env
+            env["env"] = vm_config.agent_env
             location = {
               datacenter: @datacenter.name,
               datastore:,
@@ -268,7 +260,7 @@ module VSphereCloud
                 created_vm.upgrade_vm_virtual_hardware(@default_hw_version)
               end
             rescue VSphereCloud::VCenterClient::AlreadyUpgraded
-              logger.debug('VM already upgraded')
+              logger.debug("VM already upgraded")
             end
             # Add vGPU devices after hardware version has been upgraded
             # Jammy stemcell at hardware version 13 only allows 1 vGPU; we want to be able to add more
@@ -284,8 +276,8 @@ module VSphereCloud
             unless vm_config.pci_passthroughs.empty?
               vm_config.pci_passthroughs.each do |pci_passthrough|
                 virtual_pci_passthrough = Resources::PCIPassthrough.create_pci_passthrough(
-                  vendor_id: pci_passthrough['vendor_id'],
-                  device_id: pci_passthrough['device_id'],
+                  vendor_id: pci_passthrough["vendor_id"],
+                  device_id: pci_passthrough["device_id"]
                 )
                 config_spec = VimSdk::Vim::Vm::ConfigSpec.new
                 config_spec.device_change << Resources::VM.create_add_device_spec(virtual_pci_passthrough)
@@ -297,13 +289,13 @@ module VSphereCloud
             # Device groups require vSphere 8.0+ and upgraded hardware
             unless vm_config.device_groups.empty?
               # Get the VM's host (may be nil if DRS hasn't placed it yet)
-              vm_runtime = @cloud_searcher.get_property(created_vm_mob, VimSdk::Vim::VirtualMachine, 'runtime', ensure_all: true)
+              vm_runtime = @cloud_searcher.get_property(created_vm_mob, VimSdk::Vim::VirtualMachine, "runtime", ensure_all: true)
               vm_host = vm_runtime.host
 
               # Build prioritized list of hosts to try: VM's host first (if exists), then all other healthy hosts
               # This ensures we try the VM's host first, but also distributes load across hosts to avoid thundering herd
               healthy_hosts = cluster.host.select do |h|
-                h.runtime.connection_state == 'connected' && !h.runtime.in_maintenance_mode
+                h.runtime.connection_state == "connected" && !h.runtime.in_maintenance_mode
               end
               raise "Failed to find a healthy host in cluster to query device group information" if healthy_hosts.empty?
 
@@ -328,22 +320,20 @@ module VSphereCloud
                 # Start with the VM's host and then fall back to other hosts if needed
                 vgpu_devices = nil
                 hosts_to_try.each do |h|
-                  begin
-                    vgpu_devices = Resources::PCIPassthrough.create_device_group_vgpus(
-                      device_group_name,
-                      group_index,
-                      h,
-                      @cloud_searcher
-                    )
-                    logger.debug("Found device group '#{device_group_name}' on host #{h.name}")
-                    break
-                  rescue => e
-                    if e.message.include?('not found on host')
-                      logger.debug("Device group '#{device_group_name}' not found on host #{h.name}, searching other hosts")
-                      next
-                    end
-                    raise
+                  vgpu_devices = Resources::PCIPassthrough.create_device_group_vgpus(
+                    device_group_name,
+                    group_index,
+                    h,
+                    @cloud_searcher
+                  )
+                  logger.debug("Found device group '#{device_group_name}' on host #{h.name}")
+                  break
+                rescue => e
+                  if e.message.include?("not found on host")
+                    logger.debug("Device group '#{device_group_name}' not found on host #{h.name}, searching other hosts")
+                    next
                   end
+                  raise
                 end
 
                 raise "Device group '#{device_group_name}' not found on any host in cluster" if vgpu_devices.nil?
@@ -359,7 +349,7 @@ module VSphereCloud
 
             if vm_config.root_disk_size_gb > 0
               device_spec = Resources::VM.create_edit_device_spec(created_vm.system_disk)
-              device_spec.device.capacity_in_kb = vm_config.root_disk_size_gb * 2 ** 20 # GiB → kiB
+              device_spec.device.capacity_in_kb = vm_config.root_disk_size_gb * 2**20 # GiB → kiB
               config_spec = VimSdk::Vim::Vm::ConfigSpec.new
               config_spec.device_change << device_spec
               @client.reconfig_vm(created_vm_mob, config_spec)
@@ -394,7 +384,7 @@ module VSphereCloud
               created_vm.power_on
             rescue VSphereCloud::VMPowerOnError, VSphereCloud::VCenterClient::GenericVmConfigFault, VSphereCloud::VCenterClient::TaskException => e
               if e.instance_of?(VSphereCloud::VCenterClient::GenericVmConfigFault) && !cluster_placement.fallback_disk_placements.empty?
-                logger.debug('VM start failed with datastore issues, retrying on next ds')
+                logger.debug("VM start failed with datastore issues, retrying on next ds")
                 ordered_ephemeral_ds_options.push(*cluster_placement.fallback_disk_placements) if index.zero?
               end
 
@@ -430,65 +420,65 @@ module VSphereCloud
       devices.each do |device|
         next unless device.kind_of?(VimSdk::Vim::Vm::Device::VirtualEthernetCard)
         v_network_name = case device.backing
-         when VimSdk::Vim::Vm::Device::VirtualEthernetCard::DistributedVirtualPortBackingInfo
-           # If we see DistributedVirtualPortBackingInfo for the device, we're dealing with a cVDS (managed in vsphere):
+        when VimSdk::Vim::Vm::Device::VirtualEthernetCard::DistributedVirtualPortBackingInfo
+          # If we see DistributedVirtualPortBackingInfo for the device, we're dealing with a cVDS (managed in vsphere):
 
-           # https://kb.vmware.com/s/article/79872#The_reasons_for_running_NSX-T_on_VDS
-           #
-           # With NSX-T 3.0, it is now possible to run NSX-T directly on a VDS (the VDS version must be at least 7.0).
-           # On ESXi platform, the N-VDS was already sharing its code base with the VDS in the first place, so this
-           # is not really a change of NSX virtual switch but rather a change of how it is represented in vCenter
+          # https://kb.vmware.com/s/article/79872#The_reasons_for_running_NSX-T_on_VDS
+          #
+          # With NSX-T 3.0, it is now possible to run NSX-T directly on a VDS (the VDS version must be at least 7.0).
+          # On ESXi platform, the N-VDS was already sharing its code base with the VDS in the first place, so this
+          # is not really a change of NSX virtual switch but rather a change of how it is represented in vCenter
 
-           # In case this is a NSX-T >= 3 backed VDS, we want to filter the networks we fetch from vsphere because
-           # NSX-T may not be used exclusively by vCenter and may have created DVPGs from external sources (e.g via NCP
-           # in kubernetes)
-           # This can lead to a situation where we potentially find thousands of NSX Logical Switches represented as
-           # vsphere DVPGs because they're accessible from the DVS so we need to rely on filtering.
+          # In case this is a NSX-T >= 3 backed VDS, we want to filter the networks we fetch from vsphere because
+          # NSX-T may not be used exclusively by vCenter and may have created DVPGs from external sources (e.g via NCP
+          # in kubernetes)
+          # This can lead to a situation where we potentially find thousands of NSX Logical Switches represented as
+          # vsphere DVPGs because they're accessible from the DVS so we need to rely on filtering.
 
-           # Find portgroup that match the portgroup key specified in the device
-           filtered_dvpg = @cloud_searcher.find_resources_by_property_path(@datacenter.mob, 'DistributedVirtualPortgroup', 'key') do |portgroup_key|
-             portgroup_key == device.backing.port.portgroup_key
-           end
+          # Find portgroup that match the portgroup key specified in the device
+          filtered_dvpg = @cloud_searcher.find_resources_by_property_path(@datacenter.mob, "DistributedVirtualPortgroup", "key") do |portgroup_key|
+            portgroup_key == device.backing.port.portgroup_key
+          end
 
-           # Check if portgroup is backed by NSX-T
-           dvpg = filtered_dvpg.detect do |n|
-             n.config.respond_to?(:backing_type) &&
-               n.config.backing_type == 'nsx'
-           end
+          # Check if portgroup is backed by NSX-T
+          dvpg = filtered_dvpg.detect do |n|
+            n.config.respond_to?(:backing_type) &&
+              n.config.backing_type == "nsx"
+          end
 
-           if dvpg.nil?
-             # If we couldn't find an NSX backed DVPG, we're looking at a standard DVPG.
-             dvs_index[device.backing.port.portgroup_key]
-           else
-             # If it is backed by NSX-T we want the logical_switch_uuid. This matches the opaque_network_id on an N-VDS
-             dvs_index[dvpg.config.logical_switch_uuid]
-           end
-         when VimSdk::Vim::Vm::Device::VirtualEthernetCard::OpaqueNetworkBackingInfo
-           # If we see OpaqueNetworkBackingInfo for the device, we're dealing with is a NVDS (managed in nsx):
-           # https://kb.vmware.com/s/article/79872#NSX-T_with_N-VDS
-           #
-           # Another reason for decoupling from vSphere was to allow NSX-T to have its own release cycle,
-           # so that features and bug fixes would be independent of vSphere’s timeline.
-           # To achieve that feat, the NSX-T virtual switch, the N-VDS, is leveraging an already existing
-           # software infrastructure that was designed to allow vSphere to consume networking through a
-           # set of API calls to third party virtual switches. As a result, NSX-T segments are represented
-           # as “opaque networks”, a name clearly showing that those objects are completely independent
-           # and unmanageable from vSphere
-           dvs_index[device.backing.opaque_network_id]
-         else
-           PathFinder.new.path(device.backing.network)
-         end
+          if dvpg.nil?
+            # If we couldn't find an NSX backed DVPG, we're looking at a standard DVPG.
+            dvs_index[device.backing.port.portgroup_key]
+          else
+            # If it is backed by NSX-T we want the logical_switch_uuid. This matches the opaque_network_id on an N-VDS
+            dvs_index[dvpg.config.logical_switch_uuid]
+          end
+        when VimSdk::Vim::Vm::Device::VirtualEthernetCard::OpaqueNetworkBackingInfo
+          # If we see OpaqueNetworkBackingInfo for the device, we're dealing with is a NVDS (managed in nsx):
+          # https://kb.vmware.com/s/article/79872#NSX-T_with_N-VDS
+          #
+          # Another reason for decoupling from vSphere was to allow NSX-T to have its own release cycle,
+          # so that features and bug fixes would be independent of vSphere’s timeline.
+          # To achieve that feat, the NSX-T virtual switch, the N-VDS, is leveraging an already existing
+          # software infrastructure that was designed to allow vSphere to consume networking through a
+          # set of API calls to third party virtual switches. As a result, NSX-T segments are represented
+          # as “opaque networks”, a name clearly showing that those objects are completely independent
+          # and unmanageable from vSphere
+          dvs_index[device.backing.opaque_network_id]
+        else
+          PathFinder.new.path(device.backing.network)
+        end
         nics[v_network_name] = (nics.fetch(v_network_name, []) << device)
       end
 
       network_env = {}
       networks.each do |network_name, network|
         network_entry = network.dup
-        v_network_name = network['cloud_properties']['name']
+        v_network_name = network["cloud_properties"]["name"]
         network = nics[v_network_name]
         raise Cloud::NetworkException, "Could not find network '#{v_network_name}'" if network.nil?
         nic = network.pop
-        network_entry['mac'] = nic.mac_address
+        network_entry["mac"] = nic.mac_address
         network_env[network_name] = network_entry
       end
       network_env
@@ -503,31 +493,31 @@ module VSphereCloud
       if disk_uuid_is_enabled
         logger.info("Using ephemeral disk UUID #{ephemeral_disk.backing.uuid.downcase}")
         {
-          'system' => system_disk.unit_number.to_s,
-          'ephemeral' => { 'id' => ephemeral_disk.backing.uuid.downcase },
-          'persistent' => {}
+          "system" => system_disk.unit_number.to_s,
+          "ephemeral" => {"id" => ephemeral_disk.backing.uuid.downcase},
+          "persistent" => {}
         }
       else
-        logger.info("Using ephemeral disk unit number #{ephemeral_disk.unit_number.to_s}")
+        logger.info("Using ephemeral disk unit number #{ephemeral_disk.unit_number}")
         {
-          'system' => system_disk.unit_number.to_s,
-          'ephemeral' => ephemeral_disk.unit_number.to_s,
-          'persistent' => {}
+          "system" => system_disk.unit_number.to_s,
+          "ephemeral" => ephemeral_disk.unit_number.to_s,
+          "persistent" => {}
         }
       end
     end
 
     def generate_agent_env(name, vm, agent_id, additional_agent_env, networking_env, disk_env)
       vm_env = {
-        'name' => name,
-        'id' => vm.__mo_id__
+        "name" => name,
+        "id" => vm.__mo_id__
       }
 
       env = {}
-      env['vm'] = vm_env
-      env['agent_id'] = agent_id
-      env['networks'] = networking_env
-      env['disks'] = disk_env
+      env["vm"] = vm_env
+      env["agent_id"] = agent_id
+      env["networks"] = networking_env
+      env["disks"] = disk_env
       env.merge!(additional_agent_env)
       env
     end
@@ -535,7 +525,7 @@ module VSphereCloud
     private
 
     def disable_drs(vm_resource, cluster_resource)
-      DrsLock.new('DISABLE_DRS_LOCK').with_drs_lock do
+      DrsLock.new("DISABLE_DRS_LOCK").with_drs_lock do
         drs_vm_spec = VimSdk::Vim::Cluster::DrsVmConfigSpec.new
         drs_vm_spec.info = VimSdk::Vim::Cluster::DrsVmConfigInfo.new
         drs_vm_spec.info.enabled = false
@@ -555,15 +545,15 @@ module VSphereCloud
     end
 
     def should_create_auto_drs_rule(vm_config, cluster)
-      return @enable_auto_anti_affinity_drs_rules && vm_config.drs_rule(cluster).nil? && !vm_config.bosh_group.nil?
+      @enable_auto_anti_affinity_drs_rules && vm_config.drs_rule(cluster).nil? && !vm_config.bosh_group.nil?
     end
 
     def create_drs_rules(vm_config, vm_mob, cluster)
-      if should_create_auto_drs_rule(vm_config, cluster) then
+      if should_create_auto_drs_rule(vm_config, cluster)
         drs_rule_name = vm_config.bosh_group
-      elsif !vm_config.drs_rule(cluster).nil? then
+      elsif !vm_config.drs_rule(cluster).nil?
         drs_rule_res = vm_config.drs_rule(cluster)
-        drs_rule_name = drs_rule_res['name']
+        drs_rule_name = drs_rule_res["name"]
       else
         return
       end
