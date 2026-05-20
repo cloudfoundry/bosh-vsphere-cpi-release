@@ -36,9 +36,6 @@ soap_log = StringIO.new
 cpi_rpc_api_request_raw = ARGF.read
 temp_certificate_files_to_clean_up = []
 
-# PEM in manifest must be non-empty after trim; treat "", whitespace-only, and nil as absent.
-nonempty_pem_string = ->(value) { !value.to_s.strip.empty? }
-
 #cpi_lambda now requires 2 arguments context, cpi_api_version
 cpi_lambda = lambda do |context, _|
   unless cpi_config.has_key?('cloud') && cpi_config['cloud'].has_key?('properties')
@@ -56,30 +53,27 @@ cpi_lambda = lambda do |context, _|
 
   cloud_properties['soap_log'] = soap_log
 
-  vcenter_ca = cloud_properties['vcenters'][0].dig('connection_options', 'ca_cert')
-  if nonempty_pem_string.call(vcenter_ca)
+  if cloud_properties['vcenters'][0].fetch('connection_options', {}).fetch('ca_cert', nil)
     temp = Tempfile.new('vsphere-cpi-vcenter-ca')
-    temp.write(vcenter_ca.to_s.strip)
+    temp.write(cloud_properties['vcenters'][0]['connection_options']['ca_cert'])
     temp.close
 
     temp_certificate_files_to_clean_up << temp
     cloud_properties['vcenters'][0]['connection_options']['ca_cert_file'] = temp.path
   end
 
-  nsx_ca = cloud_properties['vcenters'][0].dig('nsx', 'ca_cert')
-  if nonempty_pem_string.call(nsx_ca)
+  if cloud_properties['vcenters'][0].fetch('nsx', {}).fetch('ca_cert', nil)
     temp = Tempfile.new('vsphere-cpi-nsx-ca')
-    temp.write(nsx_ca.to_s.strip)
+    temp.write(cloud_properties['vcenters'][0]['nsx']['ca_cert'])
     temp.close
 
     temp_certificate_files_to_clean_up << temp
     cloud_properties['vcenters'][0]['nsx']['ca_cert_file'] = temp.path
   end
 
-  nsxt_ca = cloud_properties['vcenters'][0].dig('nsxt', 'ca_cert')
-  if nonempty_pem_string.call(nsxt_ca)
+  if cloud_properties['vcenters'][0].fetch('nsxt', {}).fetch('ca_cert', nil)
     temp = Tempfile.new('vsphere-cpi-nsxt-ca')
-    temp.write(nsxt_ca.to_s.strip)
+    temp.write(cloud_properties['vcenters'][0]['nsxt']['ca_cert'])
     temp.close
 
     temp_certificate_files_to_clean_up << temp
