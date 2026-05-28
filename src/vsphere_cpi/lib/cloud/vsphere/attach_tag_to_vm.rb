@@ -1,10 +1,8 @@
 require 'cloud/vsphere/logger'
-require 'vsphere-automation-cis'
-require 'vsphere-automation-vcenter'
+require 'cloud/vsphere/tag_client'
 
-module  VSphereCloud
+module VSphereCloud
   module TaggingTag
-
     class VCenterBadEntityError < StandardError
       def initialize(name, type)
         @name = name
@@ -91,63 +89,52 @@ module  VSphereCloud
 
     class AttachTagToVm
       include Logger
+
+      # Builds a {TagClient} that connects to the configured vCenter and trusts
+      # the operator-provided CA bundle when one is present. The returned client
+      # is lazy: it does not contact vCenter until a method that requires a
+      # session is invoked.
       def self.InitializeConnection(cloud_config, logger)
-        configuration = VSphereAutomation::Configuration.new.tap do |config|
-          config.host = cloud_config.vcenter_host
-          config.username = cloud_config.vcenter_user
-          config.password = cloud_config.vcenter_password
-          config.scheme = 'https'
-          config.verify_ssl = false
-          config.verify_ssl_host = false
-          config.logger = logger
-          config.debugging = false
-        end
-        api_client = VSphereAutomation::ApiClient.new(configuration)
-        api_client.default_headers['Authorization'] = configuration.basic_auth_token
-        session_api = VSphereAutomation::CIS::SessionApi.new(api_client)
-        session_id = session_api.create('').value
-        api_client.default_headers['vmware-api-session-id'] = session_id
-        api_client
+        connection_options = cloud_config.vcenter_connection_options || {}
+        raw_ca = connection_options['ca_cert_file']
+        ca_file = raw_ca.to_s.strip
+        ca_file = nil if ca_file.empty?
+
+        TagClient.new(
+          host: cloud_config.vcenter_host,
+          username: cloud_config.vcenter_user,
+          password: cloud_config.vcenter_password,
+          ca_cert_file: ca_file,
+          http_log: logger,
+        )
       end
 
-      def initialize(api_client)
-        @api_client = api_client
-      end
-
-      private def tag_association_api
-        @tag_association_api ||= VSphereAutomation::CIS::TaggingTagAssociationApi.new(@api_client)
-      end
-
-      private def tagging_tag_api
-        @tagging_tag_api ||= VSphereAutomation::CIS::TaggingTagApi.new(@api_client)
-      end
-
-      private def tagging_category_api
-        @tagging_category_api ||= VSphereAutomation::CIS::TaggingCategoryApi.new(@api_client)
+      def initialize(tag_client)
+        @tag_client = tag_client
       end
 
       def retrieve_category_id(category_name, category_ids)
-        category_ids.find { |category_id| tagging_category_api.get(category_id).value.name == category_name }
+        category_ids.find { |category_id| @tag_client.get_category(category_id)['name'] == category_name }
       end
 
       def retrieve_tag_id(tag_name, tag_id_list)
-        tag_id_list.find { |tag_id| tagging_tag_api.get(tag_id).value.name == tag_name }
+        tag_id_list.find { |tag_id| @tag_client.get_tag(tag_id)['name'] == tag_name }
       end
 
       def vm_association?(target_category_id)
-        category_information = tagging_category_api.get(target_category_id)
-        category_assoc_types = category_information.value.associable_types
-        category_assoc_types.empty? || category_assoc_types.include?("VirtualMachine")
+        category_assoc_types = @tag_client.get_category(target_category_id)['associable_types']
+        category_assoc_types = [] if category_assoc_types.nil?
+        category_assoc_types.empty? || category_assoc_types.include?('VirtualMachine')
       end
 
       def create_tag_hash(vm_config_tags)
-        tag_hash = Hash.new
+        tag_hash = {}
         vm_config_tags.each do |vm_config_tag|
           begin
-            raise BadCategoryTagInfoError.new("Missing category content") if vm_config_tag["category"].nil?
-            raise BadCategoryTagInfoError.new("Empty category") if vm_config_tag["category"].empty?
-            raise CreateTagHashTagError.new("Missing tag",vm_config_tag["category"] ) if vm_config_tag["tag"].nil?
-            raise CreateTagHashTagError.new("Empty tag",vm_config_tag["category"] ) if vm_config_tag["tag"].empty?
+            raise BadCategoryTagInfoError.new('Missing category content') if vm_config_tag['category'].nil?
+            raise BadCategoryTagInfoError.new('Empty category') if vm_config_tag['category'].empty?
+            raise CreateTagHashTagError.new('Missing tag', vm_config_tag['category']) if vm_config_tag['tag'].nil?
+            raise CreateTagHashTagError.new('Empty tag', vm_config_tag['category']) if vm_config_tag['tag'].empty?
           rescue => e
             if e.instance_of?(BadCategoryTagInfoError)
               logger.warn("Create Tag Hash Category Error Raised with message : #{e.message}")
@@ -156,42 +143,33 @@ module  VSphereCloud
             end
             next
           end
-          tag_hash[vm_config_tag["category"]] ||= []
-          tag_hash[vm_config_tag["category"]] << vm_config_tag["tag"]
+          tag_hash[vm_config_tag['category']] ||= []
+          tag_hash[vm_config_tag['category']] << vm_config_tag['tag']
         end
         tag_hash
       end
 
       def attach_single_tag(vm_mob_id, tag_id)
-        tag_assoc_info = VSphereAutomation::CIS::CisTaggingTagAssociationAttach.new
-        tag_assoc_info.object_id = VSphereAutomation::CIS::VapiStdDynamicID.new
-        tag_assoc_info.object_id.id = vm_mob_id
-        tag_assoc_info.object_id.type = 'VirtualMachine'
-        tag_association_api.attach(tag_id, tag_assoc_info)
+        @tag_client.attach_tag(tag_id, vm_mob_id)
       end
 
       def attach_multi_tags(vm_mob_id, tag_ids, category_name, target_category_id)
-        if tagging_category_api.get(target_category_id).value.cardinality == "SINGLE"
+        if @tag_client.get_category(target_category_id)['cardinality'] == 'SINGLE'
           raise CardinalityError.new(category_name)
         end
-        multi_tag_assoc_info = VSphereAutomation::CIS::CisTaggingTagAssociationAttachMultipleTagsToObject.new
-        multi_tag_assoc_info.object_id = VSphereAutomation::CIS::VapiStdDynamicID.new
-        multi_tag_assoc_info.object_id.id = vm_mob_id
-        multi_tag_assoc_info.object_id.type = 'VirtualMachine'
-        multi_tag_assoc_info.tag_ids = tag_ids
-        tag_association_api.attach_multiple_tags_to_object(multi_tag_assoc_info)
+        @tag_client.attach_multiple_tags_to_object(tag_ids, vm_mob_id)
       end
 
       def attach_tags(vm_mob_id, vm_config_tags, vm_config_name)
         begin
           tag_hash = create_tag_hash(vm_config_tags)
           raise NoCategoryTagPairError.new if tag_hash.empty?
-          category_ids = tagging_category_api.list.value
+          category_ids = @tag_client.list_categories
           raise VCenterNoCategoryFoundError.new if category_ids.empty?
           tag_hash.keys.each do |category_name|
             begin
               target_category_id = retrieve_category_id(category_name, category_ids)
-              raise VCenterBadEntityError.new(category_name, "category") if target_category_id.nil?
+              raise VCenterBadEntityError.new(category_name, 'category') if target_category_id.nil?
 
               vm_association = vm_association?(target_category_id)
               raise VmAssociationError.new(category_name) unless vm_association
@@ -199,34 +177,33 @@ module  VSphereCloud
               tag_array = tag_hash[category_name]
               logger.warn(DuplicatedTagError.new(category_name).message) if tag_array.uniq!
 
-              tag_id_list = tagging_tag_api.list_tags_for_category(target_category_id).value
-              tag_ids = tag_array.inject([]) do |tag_ids, tag_name|
+              tag_id_list = @tag_client.list_tags_for_category(target_category_id)
+              tag_ids = tag_array.inject([]) do |acc, tag_name|
                 target_tag_id = retrieve_tag_id(tag_name, tag_id_list)
-                logger.warn(VCenterBadEntityError.new(tag_name, "tag")) if target_tag_id.nil?
-                tag_ids << target_tag_id
+                logger.warn(VCenterBadEntityError.new(tag_name, 'tag')) if target_tag_id.nil?
+                acc << target_tag_id
               end.compact
 
               case tag_ids.size
-                when 0
-                  raise VCenterNoTagFoundError.new(category_name)
-                when 1
-                  attach_single_tag(vm_mob_id, tag_ids[0])
-                else
-                  attach_multi_tags(vm_mob_id, tag_ids, category_name, target_category_id)
+              when 0
+                raise VCenterNoTagFoundError.new(category_name)
+              when 1
+                attach_single_tag(vm_mob_id, tag_ids[0])
+              else
+                attach_multi_tags(vm_mob_id, tag_ids, category_name, target_category_id)
               end
-
             rescue => e
               case e
-                when VCenterBadEntityError
-                  logger.warn("Bad Entity Error Raised with message : #{e.message}")
-                when VmAssociationError
-                  logger.warn("Bad VM Association Error Raised with message : #{e.message}")
-                when VCenterNoTagFoundError
-                  logger.warn("vCenter No Tag Found Error Raised with message : #{e.message}")
-                when CardinalityError
-                  logger.warn("Cardinality Error Raised with message : #{e.message}")
-                else
-                  logger.warn(e.message)
+              when VCenterBadEntityError
+                logger.warn("Bad Entity Error Raised with message : #{e.message}")
+              when VmAssociationError
+                logger.warn("Bad VM Association Error Raised with message : #{e.message}")
+              when VCenterNoTagFoundError
+                logger.warn("vCenter No Tag Found Error Raised with message : #{e.message}")
+              when CardinalityError
+                logger.warn("Cardinality Error Raised with message : #{e.message}")
+              else
+                logger.warn(e.message)
               end
             end
           end
