@@ -1,13 +1,11 @@
 require 'spec_helper'
-require 'vsphere-automation-cis'
-require 'vsphere-automation-vcenter'
 require 'stringio'
 
 module VSphereCloud
   module TaggingTag
     describe AttachTagToVm, fake_logger: true do
-      subject(:api_client) { VSphereAutomation::ApiClient.new }
-      subject(:tagging_tag) { TaggingTag::AttachTagToVm.new(api_client) }
+      let(:tag_client) { instance_double(TaggingTag::TagClient) }
+      subject(:tagging_tag) { TaggingTag::AttachTagToVm.new(tag_client) }
 
       describe '.InitializeConnection' do
         let(:logger) { ::Logger.new(StringIO.new) }
@@ -21,44 +19,31 @@ module VSphereCloud
           )
         end
         let(:connection_options) { {} }
-        let(:configuration) { instance_double(VSphereAutomation::Configuration) }
-        let(:api_client_instance) { instance_double(VSphereAutomation::ApiClient, default_headers: {}) }
-        let(:session_api) { instance_double(VSphereAutomation::CIS::SessionApi) }
 
-        before do
-          allow(VSphereAutomation::Configuration).to receive(:new).and_return(configuration)
-          allow(configuration).to receive(:tap).and_yield(configuration).and_return(configuration)
-          %i[
-            host=
-            username=
-            password=
-            scheme=
-            verify_ssl=
-            verify_ssl_host=
-            ssl_ca_cert=
-            logger=
-            debugging=
-          ].each { |m| allow(configuration).to receive(m) }
-          allow(configuration).to receive(:basic_auth_token).and_return('Basic x')
-          allow(VSphereAutomation::ApiClient).to receive(:new).with(configuration).and_return(api_client_instance)
-          allow(VSphereAutomation::CIS::SessionApi).to receive(:new).with(api_client_instance).and_return(session_api)
-          allow(session_api).to receive(:create).with('').and_return(double(value: 'session-id'))
-        end
+        it 'builds a TagClient that skips TLS verification when ca_cert_file is absent' do
+          expect(TaggingTag::TagClient).to receive(:new).with(
+            host: 'vc.example.test',
+            username: 'u',
+            password: 'p',
+            ca_cert_file: nil,
+            http_log: logger,
+          ).and_return(tag_client)
 
-        it 'does not pin a CA and disables TLS verification when ca_cert_file is absent' do
-          expect(configuration).to receive(:verify_ssl=).with(false)
-          expect(configuration).to receive(:verify_ssl_host=).with(false)
-          expect(configuration).not_to receive(:ssl_ca_cert=)
-          described_class.InitializeConnection(cloud_config, logger)
+          expect(described_class.InitializeConnection(cloud_config, logger)).to eq(tag_client)
         end
 
         context 'when vcenter.connection_options.ca_cert_file is set' do
           let(:connection_options) { { 'ca_cert_file' => '/tmp/vcenter-ca.pem' } }
 
-          it 'pins the CA and enables TLS verification' do
-            expect(configuration).to receive(:ssl_ca_cert=).with('/tmp/vcenter-ca.pem')
-            expect(configuration).to receive(:verify_ssl=).with(true)
-            expect(configuration).to receive(:verify_ssl_host=).with(true)
+          it 'builds a TagClient that pins the CA bundle' do
+            expect(TaggingTag::TagClient).to receive(:new).with(
+              host: 'vc.example.test',
+              username: 'u',
+              password: 'p',
+              ca_cert_file: '/tmp/vcenter-ca.pem',
+              http_log: logger,
+            ).and_return(tag_client)
+
             described_class.InitializeConnection(cloud_config, logger)
           end
         end
@@ -66,248 +51,205 @@ module VSphereCloud
         context 'when vcenter.connection_options.ca_cert_file is blank' do
           let(:connection_options) { { 'ca_cert_file' => '' } }
 
-          it 'does not pin a CA and disables TLS verification' do
-            expect(configuration).to receive(:verify_ssl=).with(false)
-            expect(configuration).to receive(:verify_ssl_host=).with(false)
-            expect(configuration).not_to receive(:ssl_ca_cert=)
+          it 'treats blank as absent' do
+            expect(TaggingTag::TagClient).to receive(:new).with(
+              hash_including(ca_cert_file: nil)
+            ).and_return(tag_client)
+
+            described_class.InitializeConnection(cloud_config, logger)
+          end
+        end
+
+        context 'when vcenter.connection_options.ca_cert_file is whitespace only' do
+          let(:connection_options) { { 'ca_cert_file' => "  \t\n" } }
+
+          it 'treats whitespace-only as absent' do
+            expect(TaggingTag::TagClient).to receive(:new).with(
+              hash_including(ca_cert_file: nil)
+            ).and_return(tag_client)
+
+            described_class.InitializeConnection(cloud_config, logger)
+          end
+        end
+
+        context 'when vcenter_connection_options is nil' do
+          let(:connection_options) { nil }
+
+          it 'still constructs a TagClient with no CA' do
+            expect(TaggingTag::TagClient).to receive(:new).with(
+              hash_including(ca_cert_file: nil)
+            ).and_return(tag_client)
+
             described_class.InitializeConnection(cloud_config, logger)
           end
         end
       end
 
       describe '#retrieve_category_id' do
-        let(:result_1) do
-          instance_double(VSphereAutomation::CIS::CisTaggingCategoryResult,
-                          value: instance_double(VSphereAutomation::CIS::CisTaggingCategoryModel,
-                                                 id: "fake-category-id-1",
-                                                 name: "fake-category-name-1"
-                          )
-          )
+        let(:category_1) { { 'id' => 'fake-category-id-1', 'name' => 'fake-category-name-1' } }
+        let(:category_2) { { 'id' => 'fake-category-id-2', 'name' => 'fake-category-name-2' } }
+        let(:category_ids) { %w[fake-category-id-1 fake-category-id-2] }
+
+        before do
+          allow(tag_client).to receive(:get_category).with('fake-category-id-1').and_return(category_1)
+          allow(tag_client).to receive(:get_category).with('fake-category-id-2').and_return(category_2)
         end
-        let(:result_2) do
-          instance_double(VSphereAutomation::CIS::CisTaggingCategoryResult,
-                          value: instance_double( VSphereAutomation::CIS::CisTaggingCategoryModel,
-                                                  id: "fake-category-id-2",
-                                                  name: "fake-category-name-2"
-                          )
-          )
-        end
-        let(:category_ids) { %w[ fake-category-id-1 fake-category-id-2 ] }
 
         context 'when trying to find a category that exists on vCenter' do
-          let(:category_name ) { "fake-category-name-1" }
-          it "should return the correct category id" do
-            allow_any_instance_of(VSphereAutomation::CIS::TaggingCategoryApi).to receive(:get).with("fake-category-id-1").and_return(result_1)
-            allow_any_instance_of(VSphereAutomation::CIS::TaggingCategoryApi).to receive(:get).with("fake-category-id-2").and_return(result_2)
-            expect(tagging_tag.retrieve_category_id(category_name, category_ids)) .to eq("fake-category-id-1")
+          it 'returns the correct category id' do
+            expect(tagging_tag.retrieve_category_id('fake-category-name-1', category_ids)).to eq('fake-category-id-1')
           end
         end
 
         context 'when trying to find a non-existent category on vCenter' do
-          let(:category_name ) { "fake-category-name-3" }
-          it 'should return nil' do
-            allow_any_instance_of(VSphereAutomation::CIS::TaggingCategoryApi).to receive(:get).with("fake-category-id-1").and_return(result_1)
-            allow_any_instance_of(VSphereAutomation::CIS::TaggingCategoryApi).to receive(:get).with("fake-category-id-2").and_return(result_2)
-            expect(tagging_tag.retrieve_category_id(category_name, category_ids)) .to eq(nil)
+          it 'returns nil' do
+            expect(tagging_tag.retrieve_category_id('fake-category-name-3', category_ids)).to be_nil
           end
         end
       end
 
       describe '#retrieve_tag_id' do
-        let(:result_1) do
-          instance_double(VSphereAutomation::CIS::CisTaggingCategoryResult,
-                          value: instance_double(VSphereAutomation::CIS::CisTaggingCategoryModel,
-                                                 id: "fake-tag-id-1",
-                                                 name: "fake-tag-name-1"
-                          )
-          )
+        let(:tag_1) { { 'id' => 'fake-tag-id-1', 'name' => 'fake-tag-name-1' } }
+        let(:tag_2) { { 'id' => 'fake-tag-id-2', 'name' => 'fake-tag-name-2' } }
+        let(:tag_id_list_empty) { [] }
+        let(:tag_id_list) { %w[fake-tag-id-1 fake-tag-id-2] }
+
+        before do
+          allow(tag_client).to receive(:get_tag).with('fake-tag-id-1').and_return(tag_1)
+          allow(tag_client).to receive(:get_tag).with('fake-tag-id-2').and_return(tag_2)
         end
-        let(:result_2) do
-          instance_double(VSphereAutomation::CIS::CisTaggingCategoryResult,
-                          value: instance_double(VSphereAutomation::CIS::CisTaggingCategoryModel,
-                                                 id: "fake-tag-id-2",
-                                                 name: "fake-tag-name-2"
-                          )
-          )
-        end
-        let(:config_tag_1 ) { "fake-tag-name-1" }
-        let(:config_tag_2 ) { "fake-tag-name-3" }
-        let(:tag_id_list_1) { [] }
-        let(:tag_id_list_2) { %w[ fake-tag-id-1 fake-tag-id-2 ] }
 
         context 'when received an empty tag id list' do
-          it 'should return nil' do
-            allow_any_instance_of(VSphereAutomation::CIS::TaggingCategoryApi).to receive(:get).with("fake-tag-id-1").and_return(result_1)
-            allow_any_instance_of(VSphereAutomation::CIS::TaggingCategoryApi).to receive(:get).with("fake-tag-id-2").and_return(result_2)
-            expect(tagging_tag.retrieve_tag_id(config_tag_2, tag_id_list_1)).to eq(nil)
+          it 'returns nil' do
+            expect(tagging_tag.retrieve_tag_id('fake-tag-name-3', tag_id_list_empty)).to be_nil
           end
         end
 
         context 'when trying to find a tag that exists on vCenter' do
-          it "should return the correct category id" do
-            allow_any_instance_of(VSphereAutomation::CIS::TaggingCategoryApi).to receive(:get).with("fake-tag-id-1").and_return(result_1)
-            allow_any_instance_of(VSphereAutomation::CIS::TaggingCategoryApi).to receive(:get).with("fake-tag-id-2").and_return(result_2)
-            expect(tagging_tag.retrieve_category_id(config_tag_1, tag_id_list_2)) .to eq("fake-tag-id-1")
+          it 'returns the correct tag id' do
+            expect(tagging_tag.retrieve_tag_id('fake-tag-name-1', tag_id_list)).to eq('fake-tag-id-1')
           end
         end
 
-        context 'when trying to find a tag that does exist on vCenter' do
-          it 'should return nil' do
-            allow_any_instance_of(VSphereAutomation::CIS::TaggingCategoryApi).to receive(:get).with("fake-tag-id-1").and_return(result_1)
-            allow_any_instance_of(VSphereAutomation::CIS::TaggingCategoryApi).to receive(:get).with("fake-tag-id-2").and_return(result_2)
-            expect(tagging_tag.retrieve_category_id(config_tag_2, tag_id_list_2)).to eq(nil)
+        context 'when trying to find a tag that does not exist on vCenter' do
+          it 'returns nil' do
+            expect(tagging_tag.retrieve_tag_id('fake-tag-name-3', tag_id_list)).to be_nil
           end
         end
       end
 
       describe '#vm_association?' do
-        let(:category_information_1) do
-          instance_double(VSphereAutomation::CIS::CisTaggingCategoryResult,
-                          value: instance_double( VSphereAutomation::CIS::CisTaggingCategoryModel,
-                                                  associable_types: []
-                          )
-          )
-        end
-        let(:category_information_2) do
-          instance_double(VSphereAutomation::CIS::CisTaggingCategoryResult,
-                          value: instance_double(VSphereAutomation::CIS::CisTaggingCategoryModel,
-                                                 associable_types: ["VirtualMachine", "Host"]
-                          )
-          )
-        end
-        let(:category_information_3) do
-          instance_double(VSphereAutomation::CIS::CisTaggingCategoryResult,
-                          value: instance_double(VSphereAutomation::CIS::CisTaggingCategoryModel,
-                                                 associable_types: ["Host"]
-                          )
-          )
-        end
-        let(:target_category_id) {"fake-category-id"}
+        let(:target_category_id) { 'fake-category-id' }
 
-        context 'when vm is associated with all types' do
-          it 'should return true' do
-            allow_any_instance_of(VSphereAutomation::CIS::TaggingCategoryApi).to receive(:get).with(target_category_id).and_return(category_information_1)
+        context 'when associable_types is empty (i.e. all types are allowed)' do
+          before { allow(tag_client).to receive(:get_category).with(target_category_id).and_return({ 'associable_types' => [] }) }
+          it 'returns true' do
             expect(tagging_tag.vm_association?(target_category_id)).to be(true)
           end
         end
 
-        context 'when vm is associated with some types including virtual machine' do
-          it 'should return true' do
-            allow_any_instance_of(VSphereAutomation::CIS::TaggingCategoryApi).to receive(:get).with(target_category_id).and_return(category_information_2)
+        context 'when associable_types is nil' do
+          before { allow(tag_client).to receive(:get_category).with(target_category_id).and_return({ 'associable_types' => nil }) }
+          it 'still returns true (treats nil as unconstrained)' do
             expect(tagging_tag.vm_association?(target_category_id)).to be(true)
           end
         end
 
-        context 'when vm is associated with some types excluding virtual machine' do
-          it 'should return true' do
-            allow_any_instance_of(VSphereAutomation::CIS::TaggingCategoryApi).to receive(:get).with(target_category_id).and_return(category_information_3)
+        context 'when associable_types includes VirtualMachine' do
+          before { allow(tag_client).to receive(:get_category).with(target_category_id).and_return({ 'associable_types' => %w[VirtualMachine Host] }) }
+          it 'returns true' do
+            expect(tagging_tag.vm_association?(target_category_id)).to be(true)
+          end
+        end
+
+        context 'when associable_types excludes VirtualMachine' do
+          before { allow(tag_client).to receive(:get_category).with(target_category_id).and_return({ 'associable_types' => ['Host'] }) }
+          it 'returns false' do
             expect(tagging_tag.vm_association?(target_category_id)).to be(false)
           end
         end
       end
 
-      describe "#create_tag_hash" do
+      describe '#create_tag_hash' do
         let(:log) { StringIO.new('') }
         let(:logger) { Bosh::Cpi::Logger.new(log) }
 
         context 'when no category in category-tag pair' do
-          let(:vm_config_tags){ [ { "tag" => "fake-tag-name"} ] }
-          it 'should return an empty hash and raise log info' do
+          let(:vm_config_tags) { [{ 'tag' => 'fake-tag-name' }] }
+          it 'returns an empty hash and logs the issue' do
             expect(tagging_tag.create_tag_hash(vm_config_tags)).to be_empty
-            expect(log.string).to include("Missing category content in cloud config , skip processing this category-tag pair.")
+            expect(log.string).to include('Missing category content in cloud config , skip processing this category-tag pair.')
           end
         end
 
         context 'when category value is empty' do
-          let(:vm_config_tags) { [ { "category" => {}, "tag" => "fake-tag-name" } ] }
-          it 'should return an empty hash' do
+          let(:vm_config_tags) { [{ 'category' => {}, 'tag' => 'fake-tag-name' }] }
+          it 'returns an empty hash' do
             expect(tagging_tag.create_tag_hash(vm_config_tags)).to be_empty
-            expect(log.string).to include("Empty category in cloud config , skip processing this category-tag pair.")
+            expect(log.string).to include('Empty category in cloud config , skip processing this category-tag pair.')
           end
         end
 
         context 'when no tag in category-tag pair' do
-          let(:vm_config_tags) { [ { "category" => "fake-category-name"} ] }
-          it 'should return an empty hash' do
+          let(:vm_config_tags) { [{ 'category' => 'fake-category-name' }] }
+          it 'returns an empty hash' do
             expect(tagging_tag.create_tag_hash(vm_config_tags)).to be_empty
             expect(log.string).to include("Missing tag in category 'fake-category-name', skip attaching this tag.")
           end
         end
 
-        context 'when tag area is empty' do
-          let(:vm_config_tags) { [ { "category" => "fake-category-name", "tag" => {} } ] }
-          it 'should return an empty hash and raise log info' do
+        context 'when tag value is empty' do
+          let(:vm_config_tags) { [{ 'category' => 'fake-category-name', 'tag' => {} }] }
+          it 'returns an empty hash' do
             expect(tagging_tag.create_tag_hash(vm_config_tags)).to be_empty
             expect(log.string).to include("Empty tag in category 'fake-category-name', skip attaching this tag.")
           end
         end
 
         context 'when category-tag pair is correct' do
-          let(:vm_config_tags) { [ { "category" => "fake-category-name", "tag" => "fake-tag-name" } ] }
-          it 'should return a non-empty tag hash' do
+          let(:vm_config_tags) { [{ 'category' => 'fake-category-name', 'tag' => 'fake-tag-name' }] }
+          it 'returns a non-empty tag hash' do
             result = tagging_tag.create_tag_hash(vm_config_tags)
-            expect(result).to eq( { "fake-category-name" => [ "fake-tag-name" ] } )
+            expect(result).to eq({ 'fake-category-name' => ['fake-tag-name'] })
             expect(log.string).to be_empty
           end
         end
       end
 
-      describe "#attach_single_tag" do
-        let(:log) { StringIO.new('') }
-        let(:logger) { Bosh::Cpi::Logger.new(log) }
-        let(:tag_id) { "fake-tag-id" }
-        let(:vm_mob_id) { "fake-mob-id" }
+      describe '#attach_single_tag' do
+        let(:tag_id) { 'fake-tag-id' }
+        let(:vm_mob_id) { 'fake-mob-id' }
 
-        context 'when attach a single tag to vm' do
-          it 'should attach the tag successfully and return nil' do
-            allow(tagging_tag).to receive_message_chain(:tag_association_api, :attach).with(tag_id, anything).and_return(nil)
-            result = tagging_tag.attach_single_tag(vm_mob_id, tag_id)
-            expect(result).to be_nil
-            expect(log.string).to be_empty
-          end
+        it 'delegates to TagClient#attach_tag' do
+          expect(tag_client).to receive(:attach_tag).with(tag_id, vm_mob_id).and_return(nil)
+          expect(tagging_tag.attach_single_tag(vm_mob_id, tag_id)).to be_nil
         end
       end
 
-      describe "#attach_multi_tags" do
-        let(:log) { StringIO.new('') }
-        let(:logger) { Bosh::Cpi::Logger.new(log) }
-        let(:tag_ids) { %w[ fake-tag-id-1 fake-tag-id-2] }
-        let(:vm_mob_id) { "fake-mob-id" }
-        let(:category_name) { "fake-category-name" }
-        let(:target_category_id) { "fake-category-id" }
-        let(:tag_association_api) { VSphereAutomation::CIS::TaggingTagAssociationApi.new(api_client) }
-        let(:multi_tag_assoc_info) { VSphereAutomation::CIS::CisTaggingTagAssociationAttachMultipleTagsToObject.new }
-        let(:category_information_1) do
-          instance_double(VSphereAutomation::CIS::CisTaggingCategoryResult,
-                          value: instance_double(VSphereAutomation::CIS::CisTaggingCategoryModel,
-                                                 cardinality: "SINGLE"
-                          )
-          )
-        end
-        let (:category_information_2) do
-          instance_double(VSphereAutomation::CIS::CisTaggingCategoryResult,
-                          value: instance_double(VSphereAutomation::CIS::CisTaggingCategoryModel,
-                                                 cardinality: "MULTIPLE"
-                          )
-          )
-        end
+      describe '#attach_multi_tags' do
+        let(:tag_ids) { %w[fake-tag-id-1 fake-tag-id-2] }
+        let(:vm_mob_id) { 'fake-mob-id' }
+        let(:category_name) { 'fake-category-name' }
+        let(:target_category_id) { 'fake-category-id' }
 
-        context 'when category with single cardinality' do
-          it 'should return nil and raise log info' do
-            allow_any_instance_of(VSphereAutomation::CIS::TaggingCategoryApi).to receive(:get).with(target_category_id).and_return(category_information_1)
-            expect do
+        context 'when category has single cardinality' do
+          before do
+            allow(tag_client).to receive(:get_category).with(target_category_id).and_return({ 'cardinality' => 'SINGLE' })
+          end
+          it 'raises CardinalityError' do
+            expect {
               tagging_tag.attach_multi_tags(vm_mob_id, tag_ids, category_name, target_category_id)
-            end.to raise_error(/does not support 'Multiple Cardinality'/)
+            }.to raise_error(/does not support 'Multiple Cardinality'/)
           end
         end
 
-        context 'when category with multiple cardinality' do
-          it 'should attach tags successfully and return nil' do
-            allow_any_instance_of(VSphereAutomation::CIS::TaggingCategoryApi).to receive(:get).with(target_category_id).and_return(category_information_2)
-            allow(tagging_tag).to receive_message_chain(:tag_association_api, :attach_multiple_tags_to_object).with(anything).and_return(nil)
-            result = tagging_tag.attach_multi_tags(vm_mob_id, tag_ids, category_name, target_category_id)
-            expect(result).to be_nil
-            expect(log.string).to be_empty
+        context 'when category has multiple cardinality' do
+          before do
+            allow(tag_client).to receive(:get_category).with(target_category_id).and_return({ 'cardinality' => 'MULTIPLE' })
+          end
+          it 'delegates to TagClient#attach_multiple_tags_to_object' do
+            expect(tag_client).to receive(:attach_multiple_tags_to_object).with(tag_ids, vm_mob_id).and_return(nil)
+            expect(tagging_tag.attach_multi_tags(vm_mob_id, tag_ids, category_name, target_category_id)).to be_nil
           end
         end
       end
@@ -316,43 +258,43 @@ module VSphereCloud
         let(:log) { StringIO.new('') }
         let(:logger) { Bosh::Cpi::Logger.new(log) }
         let(:empty_hash_tag) { {} }
-        let(:vm_mob_id) { "fake-mob-id" }
-        let(:tag_id_1) { "fake-tag-id-1" }
-        let(:tag_id_2) { "fake-tag-id-2" }
-        let(:tag_name_1) { "fake-tag-name-1" }
-        let(:tag_name_2) { "fake-tag-name-2" }
-        let(:tag_name_3) { "fake-tag-name-3" }
-        let(:category_id){ "fake-category-id-1" }
-        let(:tag_id_list) { ["mock-tag-id-list"] }
-        let(:category_name) { "fake-category-name-1" }
-        let(:vm_config_name) { "fake-vm-config-name" }
-        let(:vm_config_tags) { "mock-vm-config-tags" }
-        let(:category_ids){ %w[ fake-category-id-1 fake-category-id-2] }
-        let(:hash_tag) { { category_name => [tag_name_1, tag_name_2, tag_name_3 ] } }
-        let(:hash_tag_with_dup) { { category_name => [ tag_name_1, tag_name_2, tag_name_2 ] } }
+        let(:vm_mob_id) { 'fake-mob-id' }
+        let(:tag_id_1) { 'fake-tag-id-1' }
+        let(:tag_id_2) { 'fake-tag-id-2' }
+        let(:tag_name_1) { 'fake-tag-name-1' }
+        let(:tag_name_2) { 'fake-tag-name-2' }
+        let(:tag_name_3) { 'fake-tag-name-3' }
+        let(:category_id) { 'fake-category-id-1' }
+        let(:tag_id_list) { ['mock-tag-id-list'] }
+        let(:category_name) { 'fake-category-name-1' }
+        let(:vm_config_name) { 'fake-vm-config-name' }
+        let(:vm_config_tags) { 'mock-vm-config-tags' }
+        let(:category_ids) { %w[fake-category-id-1 fake-category-id-2] }
+        let(:hash_tag) { { category_name => [tag_name_1, tag_name_2, tag_name_3] } }
+        let(:hash_tag_with_dup) { { category_name => [tag_name_1, tag_name_2, tag_name_2] } }
 
         context 'when no valid category-tag pairs in cloud config' do
-          it 'should raise log info' do
+          it 'logs and returns' do
             allow(tagging_tag).to receive(:create_tag_hash).with(anything).and_return(empty_hash_tag)
             tagging_tag.attach_tags(vm_mob_id, vm_config_tags, vm_config_name)
 
-            expect(log.string).to include("No valid category-tag pair in cloud config")
+            expect(log.string).to include('No valid category-tag pair in cloud config')
           end
         end
 
         context 'when no category exists on vCenter' do
-          it 'should raise log info' do
+          it 'logs the error' do
             allow(tagging_tag).to receive(:create_tag_hash).with(anything).and_return(hash_tag)
-            allow(tagging_tag).to receive_message_chain(:tagging_category_api, :list, :value).and_return([])
+            allow(tag_client).to receive(:list_categories).and_return([])
             tagging_tag.attach_tags(vm_mob_id, vm_config_tags, vm_config_name)
-            expect(log.string).to include("No category exist on vCenter, skip attaching tags.")
+            expect(log.string).to include('No category exist on vCenter, skip attaching tags.')
           end
         end
 
-        context 'when a category does not exit on vCenter' do
-          it 'should skip this category' do
+        context 'when a category does not exist on vCenter' do
+          it 'skips this category' do
             allow(tagging_tag).to receive(:create_tag_hash).with(anything).and_return(hash_tag)
-            allow(tagging_tag).to receive_message_chain(:tagging_category_api, :list, :value).and_return(category_ids)
+            allow(tag_client).to receive(:list_categories).and_return(category_ids)
             allow(tagging_tag).to receive(:retrieve_category_id).with(category_name, category_ids).and_return(nil)
             result = tagging_tag.attach_tags(vm_mob_id, vm_config_tags, vm_config_name)
             expect(result).to be(true)
@@ -361,9 +303,9 @@ module VSphereCloud
         end
 
         context 'when a category is not associated with virtual machine' do
-          it 'should skip this category' do
+          it 'skips this category' do
             allow(tagging_tag).to receive(:create_tag_hash).with(anything).and_return(hash_tag)
-            allow(tagging_tag).to receive_message_chain(:tagging_category_api, :list, :value).and_return(category_ids)
+            allow(tag_client).to receive(:list_categories).and_return(category_ids)
             allow(tagging_tag).to receive(:retrieve_category_id).with(category_name, category_ids).and_return(category_id)
             allow(tagging_tag).to receive(:vm_association?).with(category_id).and_return(false)
             result = tagging_tag.attach_tags(vm_mob_id, vm_config_tags, vm_config_name)
@@ -373,11 +315,16 @@ module VSphereCloud
         end
 
         context 'when there are duplicated tags in a category' do
-          it 'should remove duplicated tags and raise log info' do
+          it 'removes duplicated tags and logs the warning' do
             allow(tagging_tag).to receive(:create_tag_hash).with(anything).and_return(hash_tag_with_dup)
-            allow(tagging_tag).to receive_message_chain(:tagging_category_api, :list, :value).and_return(category_ids)
+            allow(tag_client).to receive(:list_categories).and_return(category_ids)
             allow(tagging_tag).to receive(:retrieve_category_id).with(category_name, category_ids).and_return(category_id)
             allow(tagging_tag).to receive(:vm_association?).with(category_id).and_return(true)
+            allow(tag_client).to receive(:list_tags_for_category).with(category_id).and_return(tag_id_list)
+            allow(tagging_tag).to receive(:retrieve_tag_id).with(tag_name_1, tag_id_list).and_return(tag_id_1)
+            allow(tagging_tag).to receive(:retrieve_tag_id).with(tag_name_2, tag_id_list).and_return(tag_id_2)
+            allow(tag_client).to receive(:attach_multiple_tags_to_object).and_return(nil)
+            allow(tag_client).to receive(:get_category).and_return({ 'cardinality' => 'MULTIPLE' })
             result = tagging_tag.attach_tags(vm_mob_id, vm_config_tags, vm_config_name)
             expect(result).to be(true)
             expect(log.string).to include("Duplicated tags found in tag category '#{category_name}', deduplicated and continue")
@@ -385,12 +332,12 @@ module VSphereCloud
         end
 
         context 'when a tag of a category does not exist on vCenter' do
-          it 'should skip the tag and continue attach other tags in the category' do
+          it 'skips the missing tags and continues' do
             allow(tagging_tag).to receive(:create_tag_hash).with(anything).and_return(hash_tag)
-            allow(tagging_tag).to receive_message_chain(:tagging_category_api, :list, :value).and_return(category_ids)
+            allow(tag_client).to receive(:list_categories).and_return(category_ids)
             allow(tagging_tag).to receive(:retrieve_category_id).with(category_name, category_ids).and_return(category_id)
             allow(tagging_tag).to receive(:vm_association?).with(category_id).and_return(true)
-            allow(tagging_tag).to receive_message_chain( :tagging_tag_api, :list_tags_for_category, :value).and_return(tag_id_list)
+            allow(tag_client).to receive(:list_tags_for_category).and_return(tag_id_list)
             allow(tagging_tag).to receive(:retrieve_tag_id).with(tag_name_1, tag_id_list).and_return(tag_id_1)
             allow(tagging_tag).to receive(:retrieve_tag_id).with(tag_name_2, tag_id_list).and_return(nil)
             allow(tagging_tag).to receive(:retrieve_tag_id).with(tag_name_3, tag_id_list).and_return(nil)
@@ -402,13 +349,13 @@ module VSphereCloud
           end
         end
 
-        context 'when category does not have any tags on vCenter' do
-          it 'should skip the category and raise log info' do
+        context 'when category does not have any matching tags on vCenter' do
+          it 'logs the error' do
             allow(tagging_tag).to receive(:create_tag_hash).with(anything).and_return(hash_tag)
-            allow(tagging_tag).to receive_message_chain(:tagging_category_api, :list, :value).and_return(category_ids)
+            allow(tag_client).to receive(:list_categories).and_return(category_ids)
             allow(tagging_tag).to receive(:retrieve_category_id).with(category_name, category_ids).and_return(category_id)
             allow(tagging_tag).to receive(:vm_association?).with(category_id).and_return(true)
-            allow(tagging_tag).to receive_message_chain( :tagging_tag_api, :list_tags_for_category, :value).and_return(tag_id_list)
+            allow(tag_client).to receive(:list_tags_for_category).and_return(tag_id_list)
             allow(tagging_tag).to receive(:retrieve_tag_id).with(tag_name_1, tag_id_list).and_return(nil)
             allow(tagging_tag).to receive(:retrieve_tag_id).with(tag_name_2, tag_id_list).and_return(nil)
             allow(tagging_tag).to receive(:retrieve_tag_id).with(tag_name_3, tag_id_list).and_return(nil)
@@ -419,49 +366,51 @@ module VSphereCloud
         end
 
         context 'when only one tag of a category to be attached' do
-          let(:hash_tag_single_tag) { { category_name => [tag_name_1 ] } }
-          it 'should call the correct function and succeed' do
+          let(:hash_tag_single_tag) { { category_name => [tag_name_1] } }
+          it 'attaches a single tag' do
             allow(tagging_tag).to receive(:create_tag_hash).with(anything).and_return(hash_tag_single_tag)
-            allow(tagging_tag).to receive_message_chain(:tagging_category_api, :list, :value).and_return(category_ids)
+            allow(tag_client).to receive(:list_categories).and_return(category_ids)
             allow(tagging_tag).to receive(:retrieve_category_id).with(category_name, category_ids).and_return(category_id)
             allow(tagging_tag).to receive(:vm_association?).with(category_id).and_return(true)
-            allow(tagging_tag).to receive_message_chain( :tagging_tag_api, :list_tags_for_category, :value).and_return(tag_id_list)
+            allow(tag_client).to receive(:list_tags_for_category).and_return(tag_id_list)
             allow(tagging_tag).to receive(:retrieve_tag_id).with(tag_name_1, tag_id_list).and_return(tag_id_1)
+            expect(tagging_tag).to receive(:attach_single_tag).with(vm_mob_id, tag_id_1).and_return(nil)
             result = tagging_tag.attach_tags(vm_mob_id, vm_config_tags, vm_config_name)
             expect(result).to be(true)
           end
         end
 
         context 'when multiple tags of a category to be attached' do
-          let(:tag_ids) { [ tag_id_1, tag_id_2 ] }
-          it 'should call the correct function and succeed' do
+          let(:tag_ids) { [tag_id_1, tag_id_2] }
+          it 'delegates to attach_multi_tags' do
             allow(tagging_tag).to receive(:create_tag_hash).with(anything).and_return(hash_tag)
-            allow(tagging_tag).to receive_message_chain(:tagging_category_api, :list, :value).and_return(category_ids)
+            allow(tag_client).to receive(:list_categories).and_return(category_ids)
             allow(tagging_tag).to receive(:retrieve_category_id).with(category_name, category_ids).and_return(category_id)
             allow(tagging_tag).to receive(:vm_association?).with(category_id).and_return(true)
-            allow(tagging_tag).to receive_message_chain( :tagging_tag_api, :list_tags_for_category, :value).and_return(tag_id_list)
+            allow(tag_client).to receive(:list_tags_for_category).and_return(tag_id_list)
             allow(tagging_tag).to receive(:retrieve_tag_id).with(tag_name_1, tag_id_list).and_return(tag_id_1)
             allow(tagging_tag).to receive(:retrieve_tag_id).with(tag_name_2, tag_id_list).and_return(tag_id_2)
             allow(tagging_tag).to receive(:retrieve_tag_id).with(tag_name_3, tag_id_list).and_return(nil)
-            allow(tagging_tag).to receive(:attach_multi_tags).with(vm_mob_id, tag_ids, category_name, category_id ).and_return(nil)
+            expect(tagging_tag).to receive(:attach_multi_tags).with(vm_mob_id, tag_ids, category_name, category_id).and_return(nil)
             result = tagging_tag.attach_tags(vm_mob_id, vm_config_tags, vm_config_name)
             expect(result).to be(true)
           end
+
           context 'when category is single cardinality' do
-            let(:tag_ids) { [ tag_id_1, tag_id_2 ] }
-            it 'should call the correct function and succeed' do
+            let(:tag_ids) { [tag_id_1, tag_id_2] }
+            it 'logs the cardinality error and continues' do
               allow(tagging_tag).to receive(:create_tag_hash).with(anything).and_return(hash_tag)
-              allow(tagging_tag).to receive_message_chain(:tagging_category_api, :list, :value).and_return(category_ids)
+              allow(tag_client).to receive(:list_categories).and_return(category_ids)
               allow(tagging_tag).to receive(:retrieve_category_id).with(category_name, category_ids).and_return(category_id)
               allow(tagging_tag).to receive(:vm_association?).with(category_id).and_return(true)
-              allow(tagging_tag).to receive_message_chain( :tagging_tag_api, :list_tags_for_category, :value).and_return(tag_id_list)
+              allow(tag_client).to receive(:list_tags_for_category).and_return(tag_id_list)
               allow(tagging_tag).to receive(:retrieve_tag_id).with(tag_name_1, tag_id_list).and_return(tag_id_1)
               allow(tagging_tag).to receive(:retrieve_tag_id).with(tag_name_2, tag_id_list).and_return(tag_id_2)
               allow(tagging_tag).to receive(:retrieve_tag_id).with(tag_name_3, tag_id_list).and_return(nil)
-              allow(tagging_tag).to receive(:attach_multi_tags).with(vm_mob_id, tag_ids, category_name, category_id ).and_raise(VSphereCloud::TaggingTag::CardinalityError.new('category_id'))
+              allow(tagging_tag).to receive(:attach_multi_tags).with(vm_mob_id, tag_ids, category_name, category_id).and_raise(VSphereCloud::TaggingTag::CardinalityError.new(category_name))
               result = tagging_tag.attach_tags(vm_mob_id, vm_config_tags, vm_config_name)
               expect(result).to be(true)
-              expect(log.string).to include("Cardinality Error Raised with message")
+              expect(log.string).to include('Cardinality Error Raised with message')
             end
           end
         end

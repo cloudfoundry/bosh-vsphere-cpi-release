@@ -88,12 +88,6 @@ GEM
     timecop (0.9.10)
     typhoeus (1.4.1)
       ethon (>= 0.9.0)
-    vsphere-automation-cis (0.4.7)
-      vsphere-automation-runtime (~> 0.4.6)
-    vsphere-automation-runtime (0.4.7)
-    vsphere-automation-vcenter (0.4.7)
-      vsphere-automation-cis (~> 0.4.6)
-      vsphere-automation-runtime (~> 0.4.6)
     webrick (1.9.1)
 
 PLATFORMS
@@ -123,8 +117,6 @@ DEPENDENCIES
   simplecov
   timecop
   typhoeus (>= 1.3.1)
-  vsphere-automation-cis (~> 0.4.0)
-  vsphere-automation-vcenter (~> 0.4.0)
   webrick (~> 1.7)
 
 BUNDLED WITH
