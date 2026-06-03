@@ -190,6 +190,13 @@ module VSphereCloud
       end
     end
 
+    after(:each) do
+      if @tag_client
+        @tag_client.logout rescue nil
+        @tag_client = nil
+      end
+    end
+
     context 'TagClient TLS handling against the live vCenter' do
       # Targeted, lightweight regression test for TNZ-101747:
       # when an operator pins a CA bundle, the tagging client must trust it AND
@@ -203,12 +210,16 @@ module VSphereCloud
           password: @password,
           ca_cert_file: @ca_cert_file,
         )
-        backing_client = client.instance_variable_get(:@http_client).backing_client
-        expect(backing_client.ssl_config.verify_mode).to eq(OpenSSL::SSL::VERIFY_PEER | OpenSSL::SSL::VERIFY_FAIL_IF_NO_PEER_CERT)
-        expect(backing_client.ssl_config.cert_store_items).to include(@ca_cert_file)
+        begin
+          backing_client = client.instance_variable_get(:@http_client).backing_client
+          expect(backing_client.ssl_config.verify_mode).to eq(OpenSSL::SSL::VERIFY_PEER | OpenSSL::SSL::VERIFY_FAIL_IF_NO_PEER_CERT)
+          expect(backing_client.ssl_config.cert_store_items).to include(@ca_cert_file)
 
-        expect(client.login).not_to be_nil
-        expect(client.list_categories).to be_a(Array)
+          expect(client.login).not_to be_nil
+          expect(client.list_categories).to be_a(Array)
+        ensure
+          client.logout rescue nil
+        end
       end
 
       it 'rejects the connection when a CA bundle does not sign the vCenter cert' do
@@ -224,7 +235,11 @@ module VSphereCloud
           ca_cert_file: bogus_ca.path,
         )
 
-        expect { client.login }.to raise_error(/does not have a valid SSL certificate/)
+        begin
+          expect { client.login }.to raise_error(/does not have a valid SSL certificate/)
+        ensure
+          client.logout rescue nil
+        end
       end
     end
 

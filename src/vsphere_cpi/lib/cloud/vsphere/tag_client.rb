@@ -16,6 +16,25 @@ module VSphereCloud
       end
     end
 
+    # A log writer wrapper that redacts sensitive details (session tokens, basic credentials)
+    # from HTTP logs to prevent them from being emitted into BOSH task logs.
+    class LogRedactor < StringIO
+      def initialize(log_writer)
+        super()
+        @log_writer = log_writer
+      end
+
+      def <<(content)
+        redacted = content.to_s
+          .gsub(/"value"\s*:\s*"[^"]+"/i, '"value":"[REDACTED]"')
+          .gsub(/vmware-api-session-id:\s*\S+/i, 'vmware-api-session-id: [REDACTED]')
+          .gsub(/Authorization:\s*Basic\s*\S+/i, 'Authorization: Basic [REDACTED]')
+
+        @log_writer << redacted
+        self
+      end
+    end
+
     # TagClient implements just enough of the vCenter CIS tagging REST API for
     # the CPI's set_vm_metadata flow.
     #
@@ -69,16 +88,18 @@ module VSphereCloud
         normalized_ca = ca_cert_file.to_s.strip
         @ca_cert_file = normalized_ca.empty? ? nil : normalized_ca
 
+        @redacted_log = http_log ? LogRedactor.new(http_log) : nil
+
         @http_client = if @ca_cert_file
           BaseHttpClient.new(
-            http_log: http_log,
+            http_log: @redacted_log,
             trusted_ca_file: @ca_cert_file,
             ca_cert_manifest_key: 'vcenter.connection_options.ca_cert',
             skip_ssl_verify: false,
           )
         else
           BaseHttpClient.new(
-            http_log: http_log,
+            http_log: @redacted_log,
             skip_ssl_verify: true,
           )
         end
@@ -100,7 +121,7 @@ module VSphereCloud
         )
         ensure_success!(response, 'create CIS session')
 
-        @session_id = parse_value(response)
+        @session_id = parse_value(response, 'create CIS session')
       end
 
       def logout
@@ -118,21 +139,21 @@ module VSphereCloud
         login
         response = authed_request(:get, "#{CIS_PATH}/tagging/category")
         ensure_success!(response, 'list tagging categories')
-        parse_value(response)
+        parse_value(response, 'list tagging categories')
       end
 
       def get_category(category_id)
         login
         response = authed_request(:get, "#{CIS_PATH}/tagging/category/id:#{escape(category_id)}")
         ensure_success!(response, "get tagging category #{category_id}")
-        parse_value(response)
+        parse_value(response, "get tagging category #{category_id}")
       end
 
       def get_tag(tag_id)
         login
         response = authed_request(:get, "#{CIS_PATH}/tagging/tag/id:#{escape(tag_id)}")
         ensure_success!(response, "get tagging tag #{tag_id}")
-        parse_value(response)
+        parse_value(response, "get tagging tag #{tag_id}")
       end
 
       def list_tags_for_category(category_id)
@@ -143,7 +164,7 @@ module VSphereCloud
           '',
         )
         ensure_success!(response, "list tags for category #{category_id}")
-        parse_value(response)
+        parse_value(response, "list tags for category #{category_id}")
       end
 
       def attach_tag(tag_id, vm_mob_id)
@@ -194,7 +215,7 @@ module VSphereCloud
           JSON.generate(body),
         )
         ensure_success!(response, 'list attached tags on objects')
-        parse_value(response)
+        parse_value(response, 'list attached tags on objects')
       end
 
       private
@@ -219,9 +240,17 @@ module VSphereCloud
         end
       end
 
-      def parse_value(response)
-        return nil if response.body.nil? || response.body.empty?
-        JSON.parse(response.body).fetch('value')
+      def parse_value(response, action)
+        return nil if response.body.nil? || response.body.strip.empty?
+        begin
+          JSON.parse(response.body).fetch('value')
+        rescue JSON::ParserError, KeyError => e
+          raise TagClientError.new(
+            "Malformed JSON response payload on #{action} (HTTP #{response.code}): #{e.message}",
+            code: response.code.to_i,
+            response_body: response.body
+          )
+        end
       end
 
       def ensure_success!(response, action)

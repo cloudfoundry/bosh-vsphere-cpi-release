@@ -96,6 +96,14 @@ module VSphereCloud
         let(:log) { StringIO.new('') }
         let(:logger) { Bosh::Cpi::Logger.new(log) }
 
+        context 'when non-Hash element is passed' do
+          let(:vm_config_tags) { ['this-is-not-a-hash'] }
+          it 'returns an empty hash and logs the issue' do
+            expect(tagging_tag.create_tag_hash(vm_config_tags)).to be_empty
+            expect(log.string).to include('Invalid tag configuration format in cloud config , skip processing this category-tag pair.')
+          end
+        end
+
         context 'when no category in category-tag pair' do
           let(:vm_config_tags) { [{ 'tag' => 'fake-tag-name' }] }
           it 'returns an empty hash and logs the issue' do

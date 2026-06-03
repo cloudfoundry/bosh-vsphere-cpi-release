@@ -75,7 +75,7 @@ module VSphereCloud
     let(:agent_env) { instance_double('VSphereCloud::AgentEnv')  }
     let(:pbm) { instance_double('VSphereCloud::Pbm') }
     let(:tagging_tagger) { instance_double(TaggingTag::AttachTagToVm) }
-    let(:tag_client) { instance_double(TaggingTag::AttachTagToVm) }
+    let(:tag_client) { instance_double(TaggingTag::TagClient) }
 
     let(:http_client) { instance_double('VSphereCloud::CpiHttpClient') }
     let(:custom_fields_manager) { instance_double('VimSdk::Vim::CustomFieldsManager') }

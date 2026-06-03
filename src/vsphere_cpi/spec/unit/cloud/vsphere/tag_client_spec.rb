@@ -340,7 +340,7 @@ module VSphereCloud
 
           it 'wires up cloud_config.soap_log and logs HTTP traffic correctly' do
             client = TagClient.new_from_config(cloud_config)
-            expect { client.login }.to raise_error(JSON::ParserError)
+            expect { client.login }.to raise_error(VSphereCloud::TaggingTag::TagClientError, /Malformed JSON response payload on create CIS session/)
 
             log_output = soap_log.string
             expect(log_output).to include('POST')
@@ -348,6 +348,61 @@ module VSphereCloud
             expect(log_output).to include('Status: 200 OK')
             expect(log_output).to include('Response Body:')
             expect(log_output).to include('success')
+            expect(log_output).to include('Authorization: Basic [REDACTED]')
+            expect(log_output).not_to include('Basic YWRtaW46cGFzc3dvcmQ=') # admin:password in basic auth
+          end
+        end
+      end
+
+      describe 'LogRedactor' do
+        let(:log_io) { StringIO.new }
+        subject(:redactor) { LogRedactor.new(log_io) }
+
+        it 'redacts session tokens, headers, and authorization' do
+          redactor << "Authorization: Basic dGVzdDp0ZXN0\n"
+          redactor << "vmware-api-session-id: some-sensitive-token-123\n"
+          redactor << '{"value":"sensitive-session-id"}' + "\n"
+          redactor << "some normal logs here\n"
+
+          output = log_io.string
+          expect(output).to include('Authorization: Basic [REDACTED]')
+          expect(output).not_to include('dGVzdDp0ZXN0')
+          expect(output).to include('vmware-api-session-id: [REDACTED]')
+          expect(output).not_to include('some-sensitive-token-123')
+          expect(output).to include('{"value":"[REDACTED]"}')
+          expect(output).not_to include('sensitive-session-id')
+          expect(output).to include('some normal logs here')
+        end
+      end
+
+      describe '#parse_value' do
+        let(:response) { double('HTTP::Message', code: 200, body: body) }
+
+        context 'when response contains a valid value key' do
+          let(:body) { '{"value":"some-value"}' }
+
+          it 'extracts and returns the value' do
+            expect(tag_client.send(:parse_value, response, 'test action')).to eq('some-value')
+          end
+        end
+
+        context 'when response contains malformed JSON' do
+          let(:body) { '{"value":' }
+
+          it 'raises TagClientError' do
+            expect {
+              tag_client.send(:parse_value, response, 'test action')
+            }.to raise_error(TagClientError, /Malformed JSON response payload on test action \(HTTP 200\):/)
+          end
+        end
+
+        context 'when response is missing the value key' do
+          let(:body) { '{"wrong_key":"some-value"}' }
+
+          it 'raises TagClientError' do
+            expect {
+              tag_client.send(:parse_value, response, 'test action')
+            }.to raise_error(TagClientError, /Malformed JSON response payload on test action \(HTTP 200\):/)
           end
         end
       end

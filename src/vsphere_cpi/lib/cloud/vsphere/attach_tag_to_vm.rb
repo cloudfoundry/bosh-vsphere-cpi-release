@@ -111,9 +111,10 @@ module VSphereCloud
       def create_tag_hash(vm_config_tags)
         tag_hash = {}
         vm_config_tags.each do |vm_config_tag|
-          category = vm_config_tag['category']
-          tag = vm_config_tag['tag']
           begin
+            raise BadCategoryTagInfoError.new('Invalid tag configuration format') unless vm_config_tag.is_a?(Hash)
+            category = vm_config_tag['category']
+            tag = vm_config_tag['tag']
             raise BadCategoryTagInfoError.new('Missing category content') if category.nil?
             raise BadCategoryTagInfoError.new('Empty category') if !category.is_a?(String) || category.strip.empty?
             raise CreateTagHashTagError.new('Missing tag', category) if tag.nil?
