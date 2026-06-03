@@ -35,7 +35,25 @@ module VSphereCloud
 
       attr_reader :session_id
 
-      # @param host [String] vCenter hostname (no scheme, no port)
+      # Factory method to build a TagClient from the global BOSH CPI configuration.
+      # @param cloud_config [VSphereCloud::Config] BOSH CPI configuration object
+      # @return [TagClient] a pre-configured TagClient instance
+      def self.new_from_config(cloud_config)
+        connection_options = cloud_config.vcenter_connection_options || {}
+        raw_ca = connection_options['ca_cert_file']
+        ca_file = raw_ca.to_s.strip
+        ca_file = nil if ca_file.empty?
+
+        new(
+          host: cloud_config.vcenter_host,
+          username: cloud_config.vcenter_user,
+          password: cloud_config.vcenter_password,
+          ca_cert_file: ca_file,
+          http_log: cloud_config.soap_log,
+        )
+      end
+
+      # @param host [String] vCenter hostname (no scheme; may include port)
       # @param username [String]
       # @param password [String]
       # @param ca_cert_file [String, nil] path to a PEM bundle; when nil/blank

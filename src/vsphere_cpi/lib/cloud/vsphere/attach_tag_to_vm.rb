@@ -90,25 +90,6 @@ module VSphereCloud
     class AttachTagToVm
       include Logger
 
-      # Builds a {TagClient} that connects to the configured vCenter and trusts
-      # the operator-provided CA bundle when one is present. The returned client
-      # is lazy: it does not contact vCenter until a method that requires a
-      # session is invoked.
-      def self.InitializeConnection(cloud_config, logger)
-        connection_options = cloud_config.vcenter_connection_options || {}
-        raw_ca = connection_options['ca_cert_file']
-        ca_file = raw_ca.to_s.strip
-        ca_file = nil if ca_file.empty?
-
-        TagClient.new(
-          host: cloud_config.vcenter_host,
-          username: cloud_config.vcenter_user,
-          password: cloud_config.vcenter_password,
-          ca_cert_file: ca_file,
-          http_log: logger,
-        )
-      end
-
       def initialize(tag_client)
         @tag_client = tag_client
       end
@@ -130,21 +111,25 @@ module VSphereCloud
       def create_tag_hash(vm_config_tags)
         tag_hash = {}
         vm_config_tags.each do |vm_config_tag|
+          category = vm_config_tag['category']
+          tag = vm_config_tag['tag']
           begin
-            raise BadCategoryTagInfoError.new('Missing category content') if vm_config_tag['category'].nil?
-            raise BadCategoryTagInfoError.new('Empty category') if vm_config_tag['category'].empty?
-            raise CreateTagHashTagError.new('Missing tag', vm_config_tag['category']) if vm_config_tag['tag'].nil?
-            raise CreateTagHashTagError.new('Empty tag', vm_config_tag['category']) if vm_config_tag['tag'].empty?
+            raise BadCategoryTagInfoError.new('Missing category content') if category.nil?
+            raise BadCategoryTagInfoError.new('Empty category') if !category.is_a?(String) || category.strip.empty?
+            raise CreateTagHashTagError.new('Missing tag', category) if tag.nil?
+            raise CreateTagHashTagError.new('Empty tag', category) if !tag.is_a?(String) || tag.strip.empty?
+            category = category.strip
+            tag = tag.strip
           rescue => e
             if e.instance_of?(BadCategoryTagInfoError)
               logger.warn("Create Tag Hash Category Error Raised with message : #{e.message}")
             else
-              logger.warn("Create Tag Hash Tag Error Error Raised with message : #{e.message}")
+              logger.warn("Create Tag Hash Tag Error Raised with message : #{e.message}")
             end
             next
           end
-          tag_hash[vm_config_tag['category']] ||= []
-          tag_hash[vm_config_tag['category']] << vm_config_tag['tag']
+          tag_hash[category] ||= []
+          tag_hash[category] << tag
         end
         tag_hash
       end

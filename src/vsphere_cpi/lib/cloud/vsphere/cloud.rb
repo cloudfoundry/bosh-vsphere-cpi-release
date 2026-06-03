@@ -142,8 +142,8 @@ module VSphereCloud
       end
 
       # Initialize tagging tagger object
-      tag_client = TaggingTag::AttachTagToVm.InitializeConnection(@config, logger)
-      @tagging_tagger = TaggingTag::AttachTagToVm.new(tag_client)
+      @tagging_client = TaggingTag::TagClient.new_from_config(@config)
+      @tagging_tagger = TaggingTag::AttachTagToVm.new(@tagging_client)
 
       # We get disconnected if the connection is inactive for a long period.
       @heartbeat_thread = Thread.new do
@@ -162,6 +162,10 @@ module VSphereCloud
         begin
           @client.logout
         rescue VSphereCloud::VCenterClient::NotLoggedInException
+        end
+        begin
+          @tagging_client.logout if @tagging_client
+        rescue StandardError
         end
       end
     end
