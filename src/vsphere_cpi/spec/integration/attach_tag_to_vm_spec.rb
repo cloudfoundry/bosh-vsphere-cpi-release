@@ -247,8 +247,9 @@ module VSphereCloud
         vcenter_password: @password,
         vcenter_user: @user,
         vcenter_connection_options: @ca_cert_file ? { 'ca_cert_file' => @ca_cert_file } : {},
+        soap_log: STDOUT,
       )
-      @tag_client = VSphereCloud::TaggingTag::AttachTagToVm.InitializeConnection(cloud_config, Bosh::Cpi::Logger.new(STDOUT))
+      @tag_client = VSphereCloud::TaggingTag::TagClient.new_from_config(cloud_config)
     end
 
     def create_category(spec)

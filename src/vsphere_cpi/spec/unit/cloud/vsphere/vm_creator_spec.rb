@@ -113,7 +113,7 @@ module VSphereCloud
       ).and_return(client)
       allow(Pbm).to receive(:new).and_return(pbm)
       allow(TaggingTag::AttachTagToVm).to receive(:new).with(any_args).and_return(tagging_tagger)
-      allow(TaggingTag::AttachTagToVm).to receive(:InitializeConnection).with(any_args).and_return(tag_client)
+      allow(TaggingTag::TagClient).to receive(:new_from_config).with(any_args).and_return(tag_client)
       allow(stemcell).to receive(:replicate).and_return(stemcell_vm)
       allow(cloud_searcher).to receive(:get_properties).with(
         stemcell_vm,

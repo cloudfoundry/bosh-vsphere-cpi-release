@@ -7,84 +7,6 @@ module VSphereCloud
       let(:tag_client) { instance_double(TaggingTag::TagClient) }
       subject(:tagging_tag) { TaggingTag::AttachTagToVm.new(tag_client) }
 
-      describe '.InitializeConnection' do
-        let(:logger) { ::Logger.new(StringIO.new) }
-        let(:cloud_config) do
-          instance_double(
-            VSphereCloud::Config,
-            vcenter_host: 'vc.example.test',
-            vcenter_user: 'u',
-            vcenter_password: 'p',
-            vcenter_connection_options: connection_options,
-          )
-        end
-        let(:connection_options) { {} }
-
-        it 'builds a TagClient that skips TLS verification when ca_cert_file is absent' do
-          expect(TaggingTag::TagClient).to receive(:new).with(
-            host: 'vc.example.test',
-            username: 'u',
-            password: 'p',
-            ca_cert_file: nil,
-            http_log: logger,
-          ).and_return(tag_client)
-
-          expect(described_class.InitializeConnection(cloud_config, logger)).to eq(tag_client)
-        end
-
-        context 'when vcenter.connection_options.ca_cert_file is set' do
-          let(:connection_options) { { 'ca_cert_file' => '/tmp/vcenter-ca.pem' } }
-
-          it 'builds a TagClient that pins the CA bundle' do
-            expect(TaggingTag::TagClient).to receive(:new).with(
-              host: 'vc.example.test',
-              username: 'u',
-              password: 'p',
-              ca_cert_file: '/tmp/vcenter-ca.pem',
-              http_log: logger,
-            ).and_return(tag_client)
-
-            described_class.InitializeConnection(cloud_config, logger)
-          end
-        end
-
-        context 'when vcenter.connection_options.ca_cert_file is blank' do
-          let(:connection_options) { { 'ca_cert_file' => '' } }
-
-          it 'treats blank as absent' do
-            expect(TaggingTag::TagClient).to receive(:new).with(
-              hash_including(ca_cert_file: nil)
-            ).and_return(tag_client)
-
-            described_class.InitializeConnection(cloud_config, logger)
-          end
-        end
-
-        context 'when vcenter.connection_options.ca_cert_file is whitespace only' do
-          let(:connection_options) { { 'ca_cert_file' => "  \t\n" } }
-
-          it 'treats whitespace-only as absent' do
-            expect(TaggingTag::TagClient).to receive(:new).with(
-              hash_including(ca_cert_file: nil)
-            ).and_return(tag_client)
-
-            described_class.InitializeConnection(cloud_config, logger)
-          end
-        end
-
-        context 'when vcenter_connection_options is nil' do
-          let(:connection_options) { nil }
-
-          it 'still constructs a TagClient with no CA' do
-            expect(TaggingTag::TagClient).to receive(:new).with(
-              hash_including(ca_cert_file: nil)
-            ).and_return(tag_client)
-
-            described_class.InitializeConnection(cloud_config, logger)
-          end
-        end
-      end
-
       describe '#retrieve_category_id' do
         let(:category_1) { { 'id' => 'fake-category-id-1', 'name' => 'fake-category-name-1' } }
         let(:category_2) { { 'id' => 'fake-category-id-2', 'name' => 'fake-category-name-2' } }
@@ -190,6 +112,14 @@ module VSphereCloud
           end
         end
 
+        context 'when category value is whitespace' do
+          let(:vm_config_tags) { [{ 'category' => '   ', 'tag' => 'fake-tag-name' }] }
+          it 'returns an empty hash' do
+            expect(tagging_tag.create_tag_hash(vm_config_tags)).to be_empty
+            expect(log.string).to include('Empty category in cloud config , skip processing this category-tag pair.')
+          end
+        end
+
         context 'when no tag in category-tag pair' do
           let(:vm_config_tags) { [{ 'category' => 'fake-category-name' }] }
           it 'returns an empty hash' do
@@ -200,6 +130,14 @@ module VSphereCloud
 
         context 'when tag value is empty' do
           let(:vm_config_tags) { [{ 'category' => 'fake-category-name', 'tag' => {} }] }
+          it 'returns an empty hash' do
+            expect(tagging_tag.create_tag_hash(vm_config_tags)).to be_empty
+            expect(log.string).to include("Empty tag in category 'fake-category-name', skip attaching this tag.")
+          end
+        end
+
+        context 'when tag value is whitespace' do
+          let(:vm_config_tags) { [{ 'category' => 'fake-category-name', 'tag' => '   ' }] }
           it 'returns an empty hash' do
             expect(tagging_tag.create_tag_hash(vm_config_tags)).to be_empty
             expect(log.string).to include("Empty tag in category 'fake-category-name', skip attaching this tag.")
@@ -323,7 +261,7 @@ module VSphereCloud
             allow(tag_client).to receive(:list_tags_for_category).with(category_id).and_return(tag_id_list)
             allow(tagging_tag).to receive(:retrieve_tag_id).with(tag_name_1, tag_id_list).and_return(tag_id_1)
             allow(tagging_tag).to receive(:retrieve_tag_id).with(tag_name_2, tag_id_list).and_return(tag_id_2)
-            allow(tag_client).to receive(:attach_multiple_tags_to_object).and_return(nil)
+            expect(tag_client).to receive(:attach_multiple_tags_to_object).with([tag_id_1, tag_id_2], vm_mob_id).and_return(nil)
             allow(tag_client).to receive(:get_category).and_return({ 'cardinality' => 'MULTIPLE' })
             result = tagging_tag.attach_tags(vm_mob_id, vm_config_tags, vm_config_name)
             expect(result).to be(true)

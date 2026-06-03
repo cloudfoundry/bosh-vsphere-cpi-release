@@ -141,6 +141,10 @@ module VSphereCloud
         @nsxt_policy_provider = NSXTPolicyProvider.new(nsxt_policy_client_builder, @config.nsxt.default_vif_type)
       end
 
+      # Initialize tagging tagger object
+      @tagging_client = TaggingTag::TagClient.new_from_config(@config)
+      @tagging_tagger = TaggingTag::AttachTagToVm.new(@tagging_client)
+
       # We get disconnected if the connection is inactive for a long period.
       @heartbeat_thread = Thread.new do
         while true do
@@ -158,6 +162,10 @@ module VSphereCloud
         begin
           @client.logout
         rescue VSphereCloud::VCenterClient::NotLoggedInException
+        end
+        begin
+          @tagging_client.logout if @tagging_client
+        rescue StandardError
         end
       end
     end
