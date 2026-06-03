@@ -894,8 +894,14 @@ module VSphereCloud
 
     def cleanup
       @heartbeat_thread.terminate
-      @client.logout
+      begin
+        @client.logout
       rescue VSphereCloud::VCenterClient::NotLoggedInException
+      end
+      begin
+        @tagging_client.logout if @tagging_client
+      rescue StandardError
+      end
     end
 
     def create_network(network_definition)
