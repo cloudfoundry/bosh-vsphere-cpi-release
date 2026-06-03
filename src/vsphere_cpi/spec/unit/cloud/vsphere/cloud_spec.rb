@@ -75,7 +75,7 @@ module VSphereCloud
     let(:vm) { instance_double('VSphereCloud::Resources::VM', mob: vm_mob, reload: nil, cid: 'vm-id') }
     let(:vm_mob) { instance_double('VimSdk::Vim::VirtualMachine') }
     let(:cluster_provider) { instance_double(VSphereCloud::Resources::ClusterProvider) }
-    let(:tag_client) { instance_double(TaggingTag::AttachTagToVm) }
+    let(:tag_client) { instance_double(TaggingTag::TagClient) }
     let(:tagging_tagger) { instance_double(TaggingTag::AttachTagToVm) }
     let(:cpi_metadata_version){1}
     let(:additional_agent_env) { {'something' => 'else'} }
@@ -97,8 +97,9 @@ module VSphereCloud
       allow_any_instance_of(Cloud).to receive(:at_exit)
     end
     before do
-      allow(TaggingTag::AttachTagToVm).to receive(:new).with(any_args).and_return(tagging_tagger)
-      allow(TaggingTag::AttachTagToVm).to receive(:InitializeConnection).with(any_args).and_return(tag_client)
+      allow(TaggingTag::TagClient).to receive(:new_from_config).with(cloud_config).and_return(tag_client)
+      allow(TaggingTag::AttachTagToVm).to receive(:new).with(tag_client).and_return(tagging_tagger)
+      allow(tag_client).to receive(:logout)
       allow(Resources::ClusterProvider).to receive(:new).and_return(cluster_provider)
       allow(Resources::Datacenter).to receive(:new).and_return(datacenter)
       allow(VSphereCloud::VMProvider).to receive(:new).and_return(vm_provider)
@@ -106,6 +107,24 @@ module VSphereCloud
       allow(Pbm).to receive(:new).and_return(pbm)
       allow(CloudSearcher).to receive(:new).and_return(cloud_searcher)
       allow(VSphereCloud::AgentEnv).to receive(:new).and_return(agent_env)
+    end
+
+    describe '#setup_at_exit' do
+      it 'registers an at_exit block that logs out both the vcenter client and the tag client' do
+        captured_block = nil
+        expect_any_instance_of(Cloud).to receive(:at_exit) do |&block|
+          captured_block = block
+        end
+
+        vsphere_cloud
+
+        expect(captured_block).not_to be_nil
+
+        expect(vcenter_client).to receive(:logout).once
+        expect(tag_client).to receive(:logout).once
+
+        captured_block.call
+      end
     end
 
 

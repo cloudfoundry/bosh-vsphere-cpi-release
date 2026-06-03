@@ -273,6 +273,84 @@ module VSphereCloud
           expect(response.body).to eq('success')
         end
       end
+
+      describe '.new_from_config' do
+        let(:soap_log) { StringIO.new }
+        let(:cloud_config) do
+          instance_double(
+            VSphereCloud::Config,
+            vcenter_host: 'vc.example.test',
+            vcenter_user: 'u',
+            vcenter_password: 'p',
+            vcenter_connection_options: connection_options,
+            soap_log: soap_log,
+          )
+        end
+        let(:connection_options) { {} }
+
+        it 'builds a TagClient that skips TLS verification when ca_cert_file is absent' do
+          client = TagClient.new_from_config(cloud_config)
+          backing_client = client.instance_variable_get(:@http_client).backing_client
+          expect(backing_client.ssl_config.verify_mode).to eq(OpenSSL::SSL::VERIFY_NONE)
+        end
+
+        context 'when vcenter.connection_options.ca_cert_file is set' do
+          let(:ca_cert_file) { certificate(:success).path }
+          let(:connection_options) { { 'ca_cert_file' => ca_cert_file } }
+
+          it 'builds a TagClient that pins the CA bundle' do
+            client = TagClient.new_from_config(cloud_config)
+            backing_client = client.instance_variable_get(:@http_client).backing_client
+            expect(backing_client.ssl_config.verify_mode).to eq(OpenSSL::SSL::VERIFY_PEER | OpenSSL::SSL::VERIFY_FAIL_IF_NO_PEER_CERT)
+            expect(backing_client.ssl_config.cert_store_items).to include(ca_cert_file)
+          end
+        end
+
+        context 'when vcenter.connection_options.ca_cert_file is blank' do
+          let(:connection_options) { { 'ca_cert_file' => '' } }
+
+          it 'treats blank as absent' do
+            client = TagClient.new_from_config(cloud_config)
+            backing_client = client.instance_variable_get(:@http_client).backing_client
+            expect(backing_client.ssl_config.verify_mode).to eq(OpenSSL::SSL::VERIFY_NONE)
+          end
+        end
+
+        context 'when vcenter_connection_options is nil' do
+          let(:connection_options) { nil }
+
+          it 'still constructs a TagClient with no CA' do
+            client = TagClient.new_from_config(cloud_config)
+            backing_client = client.instance_variable_get(:@http_client).backing_client
+            expect(backing_client.ssl_config.verify_mode).to eq(OpenSSL::SSL::VERIFY_NONE)
+          end
+        end
+
+        context 'with a live local server' do
+          let(:cloud_config) do
+            instance_double(
+              VSphereCloud::Config,
+              vcenter_host: "localhost:#{@server.port}",
+              vcenter_user: 'admin',
+              vcenter_password: 'password',
+              vcenter_connection_options: {},
+              soap_log: soap_log,
+            )
+          end
+
+          it 'wires up cloud_config.soap_log and logs HTTP traffic correctly' do
+            client = TagClient.new_from_config(cloud_config)
+            expect { client.login }.to raise_error(JSON::ParserError)
+
+            log_output = soap_log.string
+            expect(log_output).to include('POST')
+            expect(log_output).to include('/rest/com/vmware/cis/session')
+            expect(log_output).to include('Status: 200 OK')
+            expect(log_output).to include('Response Body:')
+            expect(log_output).to include('success')
+          end
+        end
+      end
     end
   end
 end
