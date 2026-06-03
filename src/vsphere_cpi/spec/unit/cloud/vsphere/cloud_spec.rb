@@ -2815,18 +2815,21 @@ module VSphereCloud
     end
 
     describe '#terminate_threads_and_logout' do
-      it 'terminates the thread and logs out the client' do
+      it 'terminates the thread and logs out the client and tagging client' do
         expect(vsphere_cloud.heartbeat_thread).to receive(:terminate).once.and_call_original
         expect(vsphere_cloud.client).to receive(:logout).once
+        expect(tag_client).to receive(:logout).once
         vsphere_cloud.cleanup
       end
 
       it 'does not raise an error when it\'s called twice in a row' do
         expect(vsphere_cloud.heartbeat_thread).to receive(:terminate).once.and_call_original
         expect(vsphere_cloud.client).to receive(:logout).once
+        expect(tag_client).to receive(:logout).once
         vsphere_cloud.cleanup
         expect(vsphere_cloud.heartbeat_thread).to receive(:terminate).once.and_call_original
         expect(vsphere_cloud.client).to receive(:logout).once.and_raise(VSphereCloud::VCenterClient::NotLoggedInException)
+        expect(tag_client).to receive(:logout).once
         vsphere_cloud.cleanup
       end
     end

@@ -86,7 +86,7 @@ module VSphereCloud
     let(:cloned_vm_mob) { instance_double('VimSdk::Vim::VirtualMachine' ) }
     let(:cloned_vm) { instance_double(VSphereCloud::Resources::VM, devices: []  ) }
     let(:tagging_tagger) { instance_double(TaggingTag::AttachTagToVm) }
-    let(:tag_client) { instance_double(TaggingTag::AttachTagToVm) }
+    let(:tag_client) { instance_double(TaggingTag::TagClient) }
 
     let(:option_manager) { instance_double('VimSdk::Vim::Option::OptionManager') }
     let(:service_content) {
