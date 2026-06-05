@@ -220,6 +220,17 @@ module VSphereCloud
         response = http_client.delete(url)
         expect(response.status).to eq(200)
       end
+
+      it 'passes headers correctly and sends nil body (live HTTP socket round-trip test)' do
+        url = "https://localhost:#{@server.port}/delete-test"
+        response = http_client.delete(url, { "x-custom-test-header" => "custom-value" })
+        expect(response.status).to eq(200)
+
+        payload = JSON.parse(response.body)
+        expect(payload['method']).to eq('DELETE')
+        expect(payload['headers']['x-custom-test-header']).to eq('custom-value')
+        expect(payload['body']).to eq('')
+      end
     end
 
 

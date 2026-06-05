@@ -83,7 +83,7 @@ module VSphereCloud
           when 'POST'
             resp = @backing_client.post(url, content, additional_headers)
           when 'DELETE'
-            resp = @backing_client.delete(url, additional_headers)
+            resp = @backing_client.delete(url, nil, additional_headers)
           else
             raise "Invalid HTTP method '#{method}'"
         end
