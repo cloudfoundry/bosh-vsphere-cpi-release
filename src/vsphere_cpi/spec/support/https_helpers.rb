@@ -120,6 +120,26 @@ module Support
               }
             end
 
+            map '/delete-test' do
+              run lambda { |env|
+                req = Rack::Request.new(env)
+                headers = {}
+                env.each do |key, value|
+                  if key.start_with?('HTTP_')
+                    headers[key.sub(/^HTTP_/, '').downcase.gsub('_', '-')] = value
+                  end
+                end
+                response = Rack::Response.new
+                response.headers['Content-Type'] = 'application/json'
+                response.write(JSON.generate({
+                  'method' => req.request_method,
+                  'headers' => headers,
+                  'body' => req.body.read
+                }))
+                response.finish
+              }
+            end
+
             run lambda { |env| [200, { 'Content-Type' => 'text/plain'}, ['success']] }
           }, **server_config)
         end
