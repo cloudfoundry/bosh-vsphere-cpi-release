@@ -305,7 +305,11 @@ module VSphereCloud
       tag_client.login
       response = tag_client.instance_variable_get(:@http_client).delete(
         "https://#{@host}/rest/com/vmware/cis/tagging/category/id:#{URI::DEFAULT_PARSER.escape(category_id)}",
-        { 'vmware-api-session-id' => tag_client.session_id }
+        {
+          'vmware-api-session-id' => tag_client.session_id,
+          'Accept' => 'application/json',
+          'Content-Type' => 'application/json'
+        }
       )
       unless response.code.to_i.between?(200, 299)
         raise "Failed to delete category #{category_id}: HTTP #{response.code} - #{response.body}"
@@ -316,7 +320,11 @@ module VSphereCloud
       tag_client.login
       response = tag_client.instance_variable_get(:@http_client).delete(
         "https://#{@host}/rest/com/vmware/cis/tagging/tag/id:#{URI::DEFAULT_PARSER.escape(tag_id)}",
-        { 'vmware-api-session-id' => tag_client.session_id }
+        {
+          'vmware-api-session-id' => tag_client.session_id,
+          'Accept' => 'application/json',
+          'Content-Type' => 'application/json'
+        }
       )
       unless response.code.to_i.between?(200, 299)
         raise "Failed to delete tag #{tag_id}: HTTP #{response.code} - #{response.body}"
