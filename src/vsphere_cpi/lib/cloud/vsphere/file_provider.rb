@@ -1,3 +1,4 @@
+require 'cgi'
 require 'cloud/vsphere/logger'
 
 module VSphereCloud
