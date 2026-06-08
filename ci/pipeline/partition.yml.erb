@@ -1,5 +1,8 @@
   - name: <%= e "lifecycle-#{pool}" %>
     serial: true
+    serial_groups:
+      - <%= e "pool-#{pool.shepherd_pool}" %>
+      - <%= e pool.testbed_group %>
     plan:
     - in_parallel:
       - get: source-ci

@@ -20,6 +20,14 @@ class Pipeline
     @pool.each { |_, pool| yield pool }
   end
 
+  # Returns the testbed_group name for the first pool whose shepherd_pool
+  # matches +shepherd_pool_name+.  Used by hardcoded BAT jobs in main.yml.erb
+  # to inherit the same serial group as their lifecycle counterpart.
+  def testbed_group_for_shepherd_pool(shepherd_pool_name)
+    each_pool.find { |p| p.shepherd_pool == shepherd_pool_name }&.testbed_group
+  end
+
+
   # Format an object for inclusion into a YAML document
   #
   # This actually uses `#to_json` rather than `#to_yaml` because the latter
