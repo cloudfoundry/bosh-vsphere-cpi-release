@@ -40,7 +40,7 @@ task :pipeline, [:name] => 'pipeline.yml' do |t, args|
   args.with_defaults(name: ENV.fetch('PIPELINE') do
     raise 'Pipeline name must be specified if HEAD is detached' if branch.empty?
 
-    branch == 'master' ? 'vsphere-cpi' : "vcpi-#{branch}"
+    branch == 'master' ? 'vsphere-cpi-oss' : "vcpi-#{branch}"
   end)
 
   # Default to master if the branch name is indeterminate (because HEAD is
