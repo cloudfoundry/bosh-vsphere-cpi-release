@@ -23,6 +23,42 @@ groups:
       - <%= "lifecycle-#{pool}" %>
       <% end %>
 
+
+  - name: vsphere-7
+    jobs:
+      - unit-test
+      - pre-bats-fan-in
+      - bats
+      - bats-70-cvds
+      - bats-policy
+      - pre-release-fan-in
+      <% each_pool do |pool| %>
+      <% next unless pool.generate_lifecycle_test? && pool.name.start_with?('7.') %>
+      - <%= "lifecycle-#{pool}" %>
+      <% end %>
+
+  - name: vsphere-8
+    jobs:
+      - unit-test
+      - pre-bats-fan-in
+      - bats-80-policy
+      - pre-release-fan-in
+      <% each_pool do |pool| %>
+      <% next unless pool.generate_lifecycle_test? && pool.name.start_with?('8.') %>
+      - <%= "lifecycle-#{pool}" %>
+      <% end %>
+
+  - name: vsphere-9
+    jobs:
+      - unit-test
+      - pre-bats-fan-in
+      - bats-90-policy
+      - pre-release-fan-in
+      <% each_pool do |pool| %>
+      <% next unless pool.generate_lifecycle_test? && pool.name.start_with?('9.') %>
+      - <%= "lifecycle-#{pool}" %>
+      <% end %>
+
   - name: images
     jobs:
       - build-vcpi-main-image
@@ -126,6 +162,9 @@ jobs:
 
   - name: bats-policy
     serial: true
+    serial_groups:
+      - pool-7.0-nsxt32-policy
+      - <%= testbed_group_for_shepherd_pool('7.0-nsxt32-policy') %>
     plan:
       - in_parallel:
           - get: source-ci
@@ -199,6 +238,9 @@ jobs:
 
   - name: bats
     serial: true
+    serial_groups:
+      - pool-7.0-nsxt32-nvds
+      - <%= testbed_group_for_shepherd_pool('7.0-nsxt32-nvds') %>
     plan:
       - in_parallel:
         - get: source-ci
@@ -272,6 +314,9 @@ jobs:
 
   - name: bats-70-cvds
     serial: true
+    serial_groups:
+      - pool-7.0-nsxt32-cvds
+      - <%= testbed_group_for_shepherd_pool('7.0-nsxt32-cvds') %>
     plan:
       - in_parallel:
           - get: source-ci
@@ -344,6 +389,9 @@ jobs:
 
   - name: bats-80-policy
     serial: true
+    serial_groups:
+      - pool-8.0-nsxt42-policy
+      - <%= testbed_group_for_shepherd_pool('8.0-nsxt42-policy') %>
     plan:
       - in_parallel:
           - get: source-ci
@@ -415,6 +463,9 @@ jobs:
 
   - name: bats-90-policy
     serial: true
+    serial_groups:
+      - pool-9.0-nsxt90-policy
+      - <%= testbed_group_for_shepherd_pool('9.0-nsxt90-policy') %>
     plan:
       - in_parallel:
           - get: source-ci
