@@ -205,7 +205,6 @@ jobs:
           OPTIONAL_OPS_FILE:  |
             -o certification/shared/assets/ops/remove-hm.yml
             -o bosh-deployment/vsphere/resource-pool.yml
-            -o certification/shared/assets/ops/remove-provider-cert.yml
       - do:
           - task: deploy-director
             tags: [nimbus]
@@ -282,7 +281,6 @@ jobs:
           OPTIONAL_OPS_FILE:  |
             -o certification/shared/assets/ops/remove-hm.yml
             -o bosh-deployment/vsphere/resource-pool.yml
-            -o certification/shared/assets/ops/remove-provider-cert.yml
       - do:
         - task: deploy-director
           tags: [nimbus]
@@ -357,7 +355,6 @@ jobs:
           OPTIONAL_OPS_FILE:  |
             -o certification/shared/assets/ops/remove-hm.yml
             -o bosh-deployment/vsphere/resource-pool.yml
-            -o certification/shared/assets/ops/remove-provider-cert.yml
       - do:
           - task: deploy-director
             tags: [nimbus]
@@ -432,7 +429,6 @@ jobs:
           OPTIONAL_OPS_FILE:  |
             -o certification/shared/assets/ops/remove-hm.yml
             -o bosh-deployment/vsphere/resource-pool.yml
-            -o certification/shared/assets/ops/remove-provider-cert.yml
       - do:
           - task: deploy-director
             tags: [nimbus]
@@ -506,7 +502,6 @@ jobs:
           OPTIONAL_OPS_FILE:  |
             -o certification/shared/assets/ops/remove-hm.yml
             -o bosh-deployment/vsphere/resource-pool.yml
-            -o certification/shared/assets/ops/remove-provider-cert.yml
       - do:
           - task: deploy-director
             tags: [nimbus]
