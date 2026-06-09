@@ -33,11 +33,7 @@
 <% pool.params.each do |k, v| -%>
         <%= e k %>: <%= e v %>
 <% end -%>
-      on_failure:
-        put: <%= e "pool-#{pool.shepherd_pool}" %>
-        tags: [nimbus]
-        params: { action: extend, lifetime: <%= 24 * 60 * 60 %>, resource: environment }
-      on_success:
+      ensure:
         put: <%= e "pool-#{pool.shepherd_pool}" %>
         tags: [nimbus]
         params : { action: release, resource: environment }
