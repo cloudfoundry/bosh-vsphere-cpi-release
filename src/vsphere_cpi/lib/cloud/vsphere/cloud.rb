@@ -170,12 +170,6 @@ module VSphereCloud
       end
     end
 
-    def tagging_tagger
-      @tagging_tagger ||= TaggingTag::AttachTagToVm.new(
-        TaggingTag::AttachTagToVm.InitializeConnection(@config, logger)
-      )
-    end
-
     def has_vm?(vm_cid)
       @plugin_registry.run_pre_hooks(__method__, self)
       vm_provider.find(vm_cid)
@@ -396,7 +390,7 @@ module VSphereCloud
             cpi: self,
             datacenter: @datacenter,
             agent_env: @agent_env,
-            tagging_tagger: tagging_tagger,
+            tagging_tagger: @tagging_tagger,
             ip_conflict_detector: IPConflictDetector.new(@client, @datacenter),
             ensure_no_ip_conflicts: @config.vcenter_ensure_no_ip_conflicts,
             default_disk_type: @config.vcenter_default_disk_type,
