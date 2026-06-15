@@ -1,15 +1,8 @@
-
 groups:
   - name: all
     jobs:
       - unit-test
-      - pre-bats-fan-in
-      - bats-policy
       - bats
-      - bats-70-cvds
-      - bats-80-policy
-      - bats-90-policy
-      - pre-release-fan-in
       - promote-candidate
       - bump-deps
       - bump-bosh-packages
@@ -18,46 +11,7 @@ groups:
       - release-new-major
       - automatically-release-new-patch
       - build-vcpi-main-image
-      <% each_pool do |pool| %>
-      <% next unless pool.generate_lifecycle_test? %>
-      - <%= "lifecycle-#{pool}" %>
-      <% end %>
-
-
-  - name: vsphere-7
-    jobs:
-      - unit-test
-      - pre-bats-fan-in
-      - bats
-      - bats-70-cvds
-      - bats-policy
-      - pre-release-fan-in
-      <% each_pool do |pool| %>
-      <% next unless pool.generate_lifecycle_test? && pool.name.start_with?('7.') %>
-      - <%= "lifecycle-#{pool}" %>
-      <% end %>
-
-  - name: vsphere-8
-    jobs:
-      - unit-test
-      - pre-bats-fan-in
-      - bats-80-policy
-      - pre-release-fan-in
-      <% each_pool do |pool| %>
-      <% next unless pool.generate_lifecycle_test? && pool.name.start_with?('8.') %>
-      - <%= "lifecycle-#{pool}" %>
-      <% end %>
-
-  - name: vsphere-9
-    jobs:
-      - unit-test
-      - pre-bats-fan-in
-      - bats-90-policy
-      - pre-release-fan-in
-      <% each_pool do |pool| %>
-      <% next unless pool.generate_lifecycle_test? && pool.name.start_with?('9.') %>
-      - <%= "lifecycle-#{pool}" %>
-      <% end %>
+      - lifecycle
 
   - name: images
     jobs:
@@ -144,324 +98,48 @@ jobs:
         params:
           RUBY_GEMS_MIRROR: ((repository_mirrors.rubygems))
 
-<% each_pool do |pool| -%>
-<% next unless pool.generate_lifecycle_test? %>
-<%= render('partition', pool: pool) %>
-<% end -%>
-
-  - name: pre-bats-fan-in
-    plan:
-    - in_parallel:
-      - get: bosh-cpi-src
-        trigger: true
-        passed:
-        <% each_pool do |pool| -%>
-        <% next unless pool.gating? %>
-        - <%= "lifecycle-#{pool}" %>
-        <% end -%>
-
-  - name: bats-policy
+  - name: lifecycle
+    old_name: lifecycle
     serial: true
     serial_groups:
-      - pool-7.0-nsxt32-policy
-      - <%= testbed_group_for_shepherd_pool('7.0-nsxt32-policy') %>
+      - testbed-pool
     plan:
-      - in_parallel:
-          - get: source-ci
-            tags: [nimbus]
-          - {get: bosh-release,             trigger: false, tags: [nimbus], resource: old-bosh-release}
-          - {get: stemcell,                 trigger: false, tags: [nimbus]}
-          - {get: stemcell-director,        trigger: false, tags: [nimbus]}
-          - {get: certification,            trigger: false, tags: [nimbus]}
-          - {get: bosh-deployment,          trigger: false, tags: [nimbus]}
-          - {get: bats,                     trigger: false, tags: [nimbus]}
-          - get: bosh-cli
-            params:
-              globs:
-              - 'bosh-cli-*-linux-amd64'
-            tags: [nimbus]
-          - get: vcpi-main-image
-          - get: bosh-cpi-src
-            tags: [nimbus]
-            passed: [pre-bats-fan-in]
-            trigger: true
-          - put: environment
-            tags: [nimbus]
-            resource: pool-7.0-nsxt32-policy
-            timeout: 4h
-            params:
-              action: create
-              lifetime: <%= 8 * 60 * 60 %>
-              timeout: <%= 4 * 60 * 60 %>
-              resource: testbed-lock
-      - task: build
-        file: source-ci/ci/tasks/build-candidate.yml
-        image: vcpi-main-image
-      - task: prepare-director-policy
+    - in_parallel:
+      - get: source-ci
         tags: [nimbus]
-        file: source-ci/ci/tasks/prepare-director-policy.yml
-        image: vcpi-main-image
+      - get: bosh-cpi-src
+        tags: [nimbus]
+        trigger: true
+        passed: [unit-test]
+      - get: vcpi-main-image
+      - get: stemcell
+        tags: [nimbus]
+      - put: environment
+        tags: [nimbus]
+        resource: testbed-pool
+        timeout: 4h
         params:
-          OPTIONAL_OPS_FILE:  |
-            -o certification/shared/assets/ops/remove-hm.yml
-            -o bosh-deployment/vsphere/resource-pool.yml
-      - do:
-          - task: deploy-director
-            tags: [nimbus]
-            file: source-ci/ci/tasks/deploy-director.yml
-            image: vcpi-main-image
-            input_mapping:
-              stemcell: stemcell-director
-            params:
-              JUMPBOX_PRIVATE_KEY: ((nimbus_jumpbox_key.private_key))
-          - task: run-bats
-            tags: [nimbus]
-            file: source-ci/ci/tasks/run-bats-policy.yml
-            image: vcpi-main-image
-            params:
-              BAT_INFRASTRUCTURE: vsphere
-              BAT_RSPEC_FLAGS:    "--tag ~dns --tag ~vip_networking --tag ~dynamic_networking --tag ~root_partition --tag ~raw_ephemeral_storage --tag ~ipv6"
-              STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-jammy-go_agent
-              JUMPBOX_PRIVATE_KEY: ((nimbus_jumpbox_key.private_key))
-              RUBY_GEMS_MIRROR: ((repository_mirrors.rubygems))
-        on_failure:
-          in_parallel:
-          - put: pool-7.0-nsxt32-policy
-            tags: [nimbus]
-            inputs: detect
-            params: { action: extend, lifetime: <%= 24 * 60 * 60 %>, resource: environment }
-        on_success:
-          put: pool-7.0-nsxt32-policy
-          tags: [nimbus]
-          params : { action: release, resource: environment }
+          action: create
+          lifetime: 14400
+          timeout: 14400
+          resource: testbed-lock
+    - task: test
+      tags: [nimbus]
+      file: source-ci/ci/tasks/run-lifecycle.yml
+      image: vcpi-main-image
+      privileged: true
+      params:
+        RUBY_GEMS_MIRROR: ((repository_mirrors.rubygems))
+        RSPEC_FLAGS: "--tag ~nvds --tag ~nsxt_management --tag cvds --tag nsxt_all --tag nsxt_pure_policy"
+      ensure:
+        put: testbed-pool
+        tags: [nimbus]
+        params : { action: release, resource: environment }
 
   - name: bats
     serial: true
     serial_groups:
-      - pool-7.0-nsxt32-nvds
-      - <%= testbed_group_for_shepherd_pool('7.0-nsxt32-nvds') %>
-    plan:
-      - in_parallel:
-        - get: source-ci
-          tags: [nimbus]
-        - {get: bosh-release,             trigger: false, tags: [nimbus], resource: old-bosh-release}
-        - {get: stemcell,                 trigger: false, tags: [nimbus]}
-        - {get: stemcell-director,        trigger: false, tags: [nimbus]}
-        - {get: certification,            trigger: false, tags: [nimbus]}
-        - {get: bosh-deployment,          trigger: false, tags: [nimbus]}
-        - {get: bats,                     trigger: false, tags: [nimbus]}
-        - get: bosh-cli
-          params:
-            globs:
-            - 'bosh-cli-*-linux-amd64'
-          tags: [nimbus]
-        - get: vcpi-main-image
-        - get: bosh-cpi-src
-          tags: [nimbus]
-          passed: [pre-bats-fan-in]
-          trigger: true
-        - put: environment
-          tags: [nimbus]
-          resource: pool-7.0-nsxt32-nvds
-          timeout: 4h
-          params:
-            action: create
-            lifetime: <%= 8 * 60 * 60 %>
-            timeout: <%= 4 * 60 * 60 %>
-            resource: testbed-lock
-
-      - task: build
-        file: source-ci/ci/tasks/build-candidate.yml
-        image: vcpi-main-image
-      - task: prepare-director
-        tags: [nimbus]
-        file: source-ci/ci/tasks/prepare-director.yml
-        image: vcpi-main-image
-        params:
-          OPTIONAL_OPS_FILE:  |
-            -o certification/shared/assets/ops/remove-hm.yml
-            -o bosh-deployment/vsphere/resource-pool.yml
-      - do:
-        - task: deploy-director
-          tags: [nimbus]
-          file: source-ci/ci/tasks/deploy-director.yml
-          image: vcpi-main-image
-          input_mapping:
-            stemcell: stemcell-director
-          params:
-            JUMPBOX_PRIVATE_KEY: ((nimbus_jumpbox_key.private_key))
-        - task: run-bats
-          tags: [nimbus]
-          file: source-ci/ci/tasks/run-bats.yml
-          image: vcpi-main-image
-          params:
-            BAT_INFRASTRUCTURE: vsphere
-            BAT_RSPEC_FLAGS:    "--tag ~dns --tag ~vip_networking --tag ~dynamic_networking --tag ~root_partition --tag ~raw_ephemeral_storage --tag ~ipv6"
-            STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-jammy-go_agent
-            JUMPBOX_PRIVATE_KEY: ((nimbus_jumpbox_key.private_key))
-            RUBY_GEMS_MIRROR: ((repository_mirrors.rubygems))
-        on_failure:
-          in_parallel:
-          - put: pool-7.0-nsxt32-nvds
-            tags: [nimbus]
-            params: { action: extend, lifetime: <%= 24 * 60 * 60 %>, resource: environment }
-        on_success:
-          put: pool-7.0-nsxt32-nvds
-          tags: [nimbus]
-          params : { action: release, resource: environment }
-
-  - name: bats-70-cvds
-    serial: true
-    serial_groups:
-      - pool-7.0-nsxt32-cvds
-      - <%= testbed_group_for_shepherd_pool('7.0-nsxt32-cvds') %>
-    plan:
-      - in_parallel:
-          - get: source-ci
-            tags: [nimbus]
-          - {get: bosh-release,             trigger: false, tags: [nimbus], resource: old-bosh-release}
-          - {get: stemcell,                 trigger: false, tags: [nimbus]}
-          - {get: stemcell-director,        trigger: false, tags: [nimbus]}
-          - {get: certification,            trigger: false, tags: [nimbus]}
-          - {get: bosh-deployment,          trigger: false, tags: [nimbus]}
-          - {get: bats,                     trigger: false, tags: [nimbus]}
-          - get: bosh-cli
-            params:
-              globs:
-              - 'bosh-cli-*-linux-amd64'
-            tags: [nimbus]
-          - get: vcpi-main-image
-          - get: bosh-cpi-src
-            tags: [nimbus]
-            passed: [pre-bats-fan-in]
-            trigger: true
-          - put: environment
-            tags: [nimbus]
-            resource: pool-7.0-nsxt32-cvds
-            timeout: 4h
-            params:
-              action: create
-              lifetime: <%= 8 * 60 * 60 %>
-              timeout: <%= 4 * 60 * 60 %>
-              resource: testbed-lock
-      - task: build
-        file: source-ci/ci/tasks/build-candidate.yml
-        image: vcpi-main-image
-      - task: prepare-director
-        tags: [nimbus]
-        file: source-ci/ci/tasks/prepare-director.yml
-        image: vcpi-main-image
-        params:
-          OPTIONAL_OPS_FILE:  |
-            -o certification/shared/assets/ops/remove-hm.yml
-            -o bosh-deployment/vsphere/resource-pool.yml
-      - do:
-          - task: deploy-director
-            tags: [nimbus]
-            file: source-ci/ci/tasks/deploy-director.yml
-            image: vcpi-main-image
-            input_mapping:
-              stemcell: stemcell-director
-            params:
-              JUMPBOX_PRIVATE_KEY: ((nimbus_jumpbox_key.private_key))
-          - task: run-bats
-            tags: [nimbus]
-            file: source-ci/ci/tasks/run-bats-cvds.yml
-            image: vcpi-main-image
-            params:
-              BAT_INFRASTRUCTURE: vsphere
-              BAT_RSPEC_FLAGS:    "--tag ~dns --tag ~vip_networking --tag ~dynamic_networking --tag ~root_partition --tag ~raw_ephemeral_storage --tag ~ipv6"
-              STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-jammy-go_agent
-              JUMPBOX_PRIVATE_KEY: ((nimbus_jumpbox_key.private_key))
-              RUBY_GEMS_MIRROR: ((repository_mirrors.rubygems))
-        on_failure:
-          in_parallel:
-            - put: pool-7.0-nsxt32-cvds
-              tags: [nimbus]
-              params: { action: extend, lifetime: <%= 24 * 60 * 60 %>, resource: environment }
-        on_success:
-          put: pool-7.0-nsxt32-cvds
-          tags: [nimbus]
-          params : { action: release, resource: environment }
-
-  - name: bats-80-policy
-    serial: true
-    serial_groups:
-      - pool-8.0-nsxt42-policy
-      - <%= testbed_group_for_shepherd_pool('8.0-nsxt42-policy') %>
-    plan:
-      - in_parallel:
-          - get: source-ci
-            tags: [nimbus]
-          - {get: bosh-release,             trigger: false, tags: [nimbus], resource: old-bosh-release}
-          - {get: stemcell,                 trigger: false, tags: [nimbus]}
-          - {get: stemcell-director,        trigger: false, tags: [nimbus]}
-          - {get: certification,            trigger: false, tags: [nimbus]}
-          - {get: bosh-deployment,          trigger: false, tags: [nimbus]}
-          - {get: bats,                     trigger: false, tags: [nimbus]}
-          - get: bosh-cli
-            params:
-              globs:
-              - 'bosh-cli-*-linux-amd64'
-            tags: [nimbus]
-          - get: vcpi-main-image
-          - get: bosh-cpi-src
-            tags: [nimbus]
-            passed: [pre-bats-fan-in]
-            trigger: true
-          - put: environment
-            tags: [nimbus]
-            resource: pool-8.0-nsxt42-policy
-            timeout: 4h
-            params:
-              action: create
-              lifetime: <%= 8 * 60 * 60 %>
-              timeout: <%= 4 * 60 * 60 %>
-              resource: testbed-lock
-      - task: build
-        file: source-ci/ci/tasks/build-candidate.yml
-        image: vcpi-main-image
-      - task: prepare-director-policy
-        tags: [nimbus]
-        file: source-ci/ci/tasks/prepare-director-policy.yml
-        image: vcpi-main-image
-        params:
-          OPTIONAL_OPS_FILE:  |
-            -o certification/shared/assets/ops/remove-hm.yml
-            -o bosh-deployment/vsphere/resource-pool.yml
-      - do:
-          - task: deploy-director
-            tags: [nimbus]
-            file: source-ci/ci/tasks/deploy-director.yml
-            image: vcpi-main-image
-            input_mapping:
-              stemcell: stemcell-director
-            params:
-              JUMPBOX_PRIVATE_KEY: ((nimbus_jumpbox_key.private_key))
-          - task: run-bats
-            tags: [nimbus]
-            file: source-ci/ci/tasks/run-bats-policy.yml
-            image: vcpi-main-image
-            params:
-              BAT_INFRASTRUCTURE: vsphere
-              BAT_RSPEC_FLAGS:    "--tag ~dns --tag ~vip_networking --tag ~dynamic_networking --tag ~root_partition --tag ~raw_ephemeral_storage --tag ~ipv6"
-              STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-jammy-go_agent
-              JUMPBOX_PRIVATE_KEY: ((nimbus_jumpbox_key.private_key))
-              RUBY_GEMS_MIRROR: ((repository_mirrors.rubygems))
-        on_failure:
-          put: pool-8.0-nsxt42-policy
-          tags: [nimbus]
-          params: { action: extend, lifetime: <%= 24 * 60 * 60 %>, resource: environment }
-        on_success:
-          put: pool-8.0-nsxt42-policy
-          tags: [nimbus]
-          params : { action: release, resource: environment }
-
-  - name: bats-90-policy
-    serial: true
-    serial_groups:
-      - pool-9.0-nsxt90-policy
-      - <%= testbed_group_for_shepherd_pool('9.0-nsxt90-policy') %>
+      - testbed-pool
     plan:
       - in_parallel:
           - get: source-ci
@@ -480,16 +158,17 @@ jobs:
           - get: vcpi-main-image
           - get: bosh-cpi-src
             tags: [nimbus]
-            passed: [pre-bats-fan-in]
+            passed:
+              - lifecycle
             trigger: true
           - put: environment
             tags: [nimbus]
-            resource: pool-9.0-nsxt90-policy
+            resource: testbed-pool
             timeout: 4h
             params:
               action: create
-              lifetime: <%= 8 * 60 * 60 %>
-              timeout: <%= 4 * 60 * 60 %>
+              lifetime: 28800
+              timeout: 14400
               resource: testbed-lock
       - task: build
         file: source-ci/ci/tasks/build-candidate.yml
@@ -521,25 +200,10 @@ jobs:
               STEMCELL_NAME:      bosh-vsphere-esxi-ubuntu-jammy-go_agent
               JUMPBOX_PRIVATE_KEY: ((nimbus_jumpbox_key.private_key))
               RUBY_GEMS_MIRROR: ((repository_mirrors.rubygems))
-        on_failure:
-          put: pool-9.0-nsxt90-policy
-          tags: [nimbus]
-          params: { action: extend, lifetime: <%= 24 * 60 * 60 %>, resource: environment }
-        on_success:
-          put: pool-9.0-nsxt90-policy
+        ensure:
+          put: testbed-pool
           tags: [nimbus]
           params : { action: release, resource: environment }
-
-  - name: pre-release-fan-in
-    serial: true
-    plan:
-    - in_parallel:
-      - get: source-ci
-        tags: [nimbus]
-      - get: bosh-cpi-src
-        trigger: true
-        tags: [nimbus]
-        passed: [bats, bats-policy, bats-70-cvds, bats-80-policy, bats-90-policy]
 
   - name: promote-candidate
     disable_manual_trigger: true
@@ -549,7 +213,7 @@ jobs:
     - in_parallel:
       - get: source-ci
       - get: bosh-cpi-src
-        passed: [pre-release-fan-in]
+        passed: [bats]
       - get: release-version-semver
         trigger: true
       - get: release-notes
@@ -744,7 +408,7 @@ jobs:
       - get: bosh-cpi-src
         trigger: true
         passed:
-        - pre-release-fan-in
+        - bats
       - get: current-version
         resource: release-version-semver
       - get: patched-version
@@ -808,21 +472,15 @@ resources:
     type: git
     source:
       uri: https://github.com/cloudfoundry/bosh-shared-ci.git
-<% seen_shepherd_pools = Set.new -%>
-<% each_pool do |pool| -%>
-<% next if seen_shepherd_pools.include?(pool.shepherd_pool) -%>
-<% seen_shepherd_pools.add(pool.shepherd_pool) -%>
-  - name: <%= e "pool-#{pool.shepherd_pool}" %>
+  - name: testbed-pool
     tags: [nimbus]
     type: shepherd-resource
     source:
       target: https://epc-shepherd.lvn.broadcom.net
       stream-logs: true
-      # log: debug # The value doesn't matter, just its presence
       config:
         namespace: bosh-team
-        pool: vcpi-<%= pool.shepherd_pool %>
-<% end -%>
+        pool: vcpi-9.0-nsxt90-policy
   - name: source-ci
     tags: [nimbus]
     type: git
@@ -832,7 +490,6 @@ resources:
       paths:       [ci]
   - name: source-ci-docker
     source:
-      # We dont want to accidentally override the image used by the main repo with our changes
       uri:      https://github.com/cloudfoundry/bosh-vsphere-cpi-release.git
       branch:   master
       username: bosh-admin-bot
@@ -984,7 +641,6 @@ resources:
       tag: '2.7'
       username: ((docker.username))
       password: ((docker.password))
-
 
 resource_types:
 - name: gcs-resource
