@@ -86,7 +86,7 @@ GEM
       ansi
       ast
     semi_semantic (1.2.0)
-    simplecov (1.0.2)
+    simplecov (1.0.3)
     timecop (0.9.11)
     typhoeus (1.6.0)
       ethon (>= 0.18.0)
