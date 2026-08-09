@@ -502,6 +502,31 @@ module VSphereCloud
         end
       end
 
+      context 'when drs_rules are specified with rule_type' do
+        let(:ram) { 512 }
+        let(:cloud_properties) {
+          {
+            'ram' => ram,
+            'datacenters' => [
+              'clusters' => [
+                {
+                  'fake-cluster-name' => {
+                    'drs_rules' => [
+                      { 'name' => 'fake-rule', 'type' => 'separate_vms', 'rule_type' => 'SHOULD' }
+                    ]
+                  }
+                }
+              ]
+            ]
+          }
+        }
+        let(:input) { { vm_type: vm_type } }
+
+        it 'returns the drs_rule with rule_type' do
+          expect(vm_config.drs_rule(fake_cluster)).to eq({ 'name' => 'fake-rule', 'type' => 'separate_vms', 'rule_type' => 'SHOULD' })
+        end
+      end
+
       context 'when drs_rules are not provided' do
         let(:cloud_properties) {
           {
@@ -709,11 +734,11 @@ module VSphereCloud
                         }
         )
       end
-      
+
       before do
         allow(vm_config).to receive(:cluster).and_return(fake_cluster)
       end
-      
+
       context 'when no DRS rules are specified' do
         let(:input) { {} }
 
