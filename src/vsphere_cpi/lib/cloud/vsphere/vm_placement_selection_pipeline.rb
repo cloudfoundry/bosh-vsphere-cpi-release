@@ -38,12 +38,12 @@ module VSphereCloud
       @balance_score = min + mean + median
     end
 
-    def cluster_free_memory
-      cluster.free_memory.cluster_free_memory
+    def cluster_free_memory_mb
+      cluster.free_memory.cluster_free_memory_mb
     end
 
-    def host_group_free_memory
-      cluster.free_memory.host_group_free_memory
+    def host_group_free_memory_mb
+      cluster.free_memory.host_group_free_memory_mb
     end
 
     def inspect_before
@@ -56,7 +56,7 @@ module VSphereCloud
     end
 
     def cluster_inspect
-      "VM Placement Cluster: #{cluster.name} Cluster free memory: #{cluster_free_memory}, host group free memory: #{host_group_free_memory}"
+      "VM Placement Cluster: #{cluster.name} Cluster free memory (MiB): #{cluster_free_memory_mb}, host group free memory (MiB): #{host_group_free_memory_mb}"
     end
 
     def datastore_inspect
@@ -66,29 +66,29 @@ module VSphereCloud
 
   class VmPlacementSelectionPipeline < SelectionPipeline
     class VmPlacementCriteria
-      DEFAULT_MEMORY_HEADROOM = 128
+      DEFAULT_MEMORY_HEADROOM_MB = 128
 
-      attr_reader :disk_config, :req_memory, :mem_headroom
+      attr_reader :disk_config, :req_memory_mb, :mem_headroom_mb
 
-      def required_memory
-        req_memory + mem_headroom
+      def required_memory_mb
+        req_memory_mb + mem_headroom_mb
       end
 
       def initialize(criteria = {})
         @disk_config = criteria[:disk_config]
-        @req_memory = criteria[:req_memory]
-        @mem_headroom = criteria[:mem_headroom] || DEFAULT_MEMORY_HEADROOM
+        @req_memory_mb = criteria[:req_memory_mb]
+        @mem_headroom_mb = criteria[:mem_headroom_mb] || DEFAULT_MEMORY_HEADROOM_MB
       end
 
       def inspect
-        "VM Placement Criteria: Disk Config: #{disk_config}  Req Memory: #{req_memory}  Mem Headroom: #{mem_headroom}"
+        "VM Placement Criteria: Disk Config: #{disk_config}  Req Memory (MiB): #{req_memory_mb}  Mem Headroom (MiB): #{mem_headroom_mb}"
       end
     end
     private_constant :VmPlacementCriteria
 
     with_filter do |vm_placement, criteria_object|
-      logger.debug("Filter #{vm_placement.cluster_inspect} for free memory required: #{criteria_object.required_memory}")
-      vm_placement.cluster_free_memory > criteria_object.required_memory
+      logger.debug("Filter #{vm_placement.cluster_inspect} for free memory required (MiB): #{criteria_object.required_memory_mb}")
+      vm_placement.cluster_free_memory_mb > criteria_object.required_memory_mb
     end
 
     with_filter ->(vm_placement, criteria_object) do
@@ -111,7 +111,7 @@ module VSphereCloud
         # There are two possibilities at this point. Either:
         #   1. The disk is an ephemeral disk
         #   2. The disk is a persistent disk that must be migrated
-        pipeline = DiskPlacementSelectionPipeline.new(disk.size, disk.target_datastore_pattern, nil, disk.ephemeral?, criteria_object.required_memory) do
+        pipeline = DiskPlacementSelectionPipeline.new(disk.size, disk.target_datastore_pattern, nil, disk.ephemeral?, criteria_object.required_memory_mb) do
           vm_placement.datastores
         end.with_filter do |storage_placement|
           # TODO: both accessible? and accessible_from? will be queried for
@@ -145,7 +145,7 @@ module VSphereCloud
     end
 
     with_scorer do |p1, p2|
-      -(p1.host_group_free_memory <=> p2.host_group_free_memory)
+      -(p1.host_group_free_memory_mb <=> p2.host_group_free_memory_mb)
     end
 
     def initialize(*args)
