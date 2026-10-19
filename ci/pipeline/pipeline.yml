@@ -480,7 +480,7 @@ resources:
       stream-logs: true
       config:
         namespace: bosh-team
-        pool: vcpi-9.0-nsxt90-policy
+        pool: vcpi-8.0-nsxt42-policy
   - name: source-ci
     tags: [nimbus]
     type: git
