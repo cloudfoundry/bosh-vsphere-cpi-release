@@ -131,6 +131,7 @@ jobs:
       params:
         RUBY_GEMS_MIRROR: ((repository_mirrors.rubygems))
         RSPEC_FLAGS: "--tag ~nvds --tag ~nsxt_management --tag cvds --tag nsxt_all --tag nsxt_pure_policy"
+        BOSH_VSPHERE_VERIFY_LIMITED_PERMISSIONS: false
       ensure:
         put: testbed-pool
         tags: [nimbus]
