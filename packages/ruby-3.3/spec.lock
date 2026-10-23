@@ -1,4 +1,4 @@
 name: ruby-3.3
-fingerprint: 25a461ce712b47ca8115da90a28a33fb30e5956c5498a076601154f256e56625
+fingerprint: d2c7ce03032505a717f6658328d777388ab8f96f39cd0f12bd55e061fd82b043
 dependencies:
 - rust-1-linux
