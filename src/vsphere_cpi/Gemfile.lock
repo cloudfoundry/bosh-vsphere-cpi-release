@@ -53,7 +53,7 @@ GEM
     parallel (2.3.0)
     parallel_tests (5.8.0)
       parallel
-    pry (0.16.0)
+    pry (0.16.1)
       coderay (~> 1.1)
       method_source (~> 1.0)
       reline (>= 0.6.0)
