@@ -563,7 +563,6 @@ resources:
     type: git
     source:
       uri: https://github.com/cloudfoundry/bosh-acceptance-tests.git
-      branch: master
   - name: golang-release
     tags: [nimbus]
     type: git
