@@ -538,7 +538,6 @@ resources:
     type: git
     source:
       uri: https://github.com/cloudfoundry/bosh-deployment
-      branch: master
   - name: certification
     tags: [nimbus]
     type: git
