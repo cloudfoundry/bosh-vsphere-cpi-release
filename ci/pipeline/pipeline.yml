@@ -544,7 +544,6 @@ resources:
     type: git
     source:
       uri: https://github.com/cloudfoundry/bosh-cpi-certification
-      branch: master
   - name: old-bosh-release
     tags: [nimbus]
     type: bosh-io-release
