@@ -4,11 +4,11 @@ set -euo pipefail
 fly="${FLY_CLI:-fly}"
 concourse_target="${CONCOURSE_TARGET:-bosh-ecosystem}"
 repo="${REPO:-https://github.com/cloudfoundry/bosh-vsphere-cpi-release.git}"
-branch="${BRANCH:-$(git symbolic-ref -q --short HEAD 2>/dev/null || echo master)}"
+branch="${BRANCH:-$(git symbolic-ref -q --short HEAD 2>/dev/null || echo main)}"
 
 if [[ -n "${PIPELINE:-}" ]]; then
   pipeline_name="$PIPELINE"
-elif [[ "$branch" == "master" ]]; then
+elif [[ "$branch" == "main" || "$branch" == "master" ]]; then
   pipeline_name="vsphere-cpi-oss"
 else
   pipeline_name="vcpi-$branch"

@@ -492,7 +492,7 @@ resources:
   - name: source-ci-docker
     source:
       uri:      https://github.com/cloudfoundry/bosh-vsphere-cpi-release.git
-      branch:   master
+      branch:   main
       username: bosh-admin-bot
       password: ((github_public_repo_token))
       paths:
