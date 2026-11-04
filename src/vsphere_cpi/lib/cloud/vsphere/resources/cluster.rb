@@ -17,7 +17,7 @@ module VSphereCloud
       HOST_PROPERTIES = %w(name hardware.memorySize runtime.connectionState runtime.inMaintenanceMode runtime.powerState summary.hardware.cpuMhz)
       HOST_COUNTERS = %w(mem.usage.average)
 
-      MEMORY_HEADROOM = 128
+      MEMORY_HEADROOM_MB = 128
 
       # @!attribute mob
       #   @return [Vim::ClusterComputeResource] cluster vSphere MOB.
@@ -27,7 +27,7 @@ module VSphereCloud
       #   @return [ResourcePool] resource pool.
       attr_reader :resource_pool
 
-      class FreeMemory < Struct.new(:cluster_free_memory, :host_group_free_memory); end
+      class FreeMemory < Struct.new(:cluster_free_memory_mb, :host_group_free_memory_mb); end
 
       # Creates a new Cluster resource from the specified datacenter, cluster
       # configuration, and prefetched properties.
@@ -60,7 +60,7 @@ module VSphereCloud
                                   FreeMemory.new(fetch_host_group_utilization, fetch_host_group_utilization)
                                 end
         else
-          @synced_free_memory = FreeMemory.new(fetch_resource_pool_utilization, fetch_resource_pool_utilization)
+          @synced_free_memory = FreeMemory.new(fetch_resource_pool_utilization_mb, fetch_resource_pool_utilization_mb)
         end
       end
 
@@ -212,7 +212,7 @@ module VSphereCloud
         raise "Failed to get utilization for cluster'#{self.mob.name}'" if properties.nil?
 
         compute_resource_summary = properties["summary"]
-        return compute_resource_summary.effective_memory
+        return compute_resource_summary.effective_memory - compute_resource_summary.usage_summary.mem_demand_mb
       end
 
       # Fetches the resource pool utilization from vSphere.
@@ -224,7 +224,7 @@ module VSphereCloud
       # so we can't use it for the raw clusters.
       #
       # @return [void]
-      def fetch_resource_pool_utilization
+      def fetch_resource_pool_utilization_mb
         logger.debug("Fetching Memory utilization for Resource Pool #{resource_pool.name}")
         properties = @client.cloud_searcher.get_properties(resource_pool.mob, Vim::ResourcePool, 'summary')
         raise "Failed to get utilization for resource pool '#{resource_pool}'" if properties.nil?
@@ -232,7 +232,9 @@ module VSphereCloud
         runtime_info = properties["summary"].runtime
         quick_stats = properties["summary"].quick_stats
         memory = runtime_info.memory
-        return (memory.max_usage - (quick_stats.host_memory_usage) * 1024) / BYTES_IN_MB
+        memory_max_mb = memory.max_usage / BYTES_IN_MB
+        host_memory_usage_mb = quick_stats.host_memory_usage
+        return memory_max_mb - host_memory_usage_mb
       end
     end
   end
