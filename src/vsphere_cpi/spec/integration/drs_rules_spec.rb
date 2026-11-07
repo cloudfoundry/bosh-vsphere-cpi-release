@@ -213,6 +213,97 @@ describe 'DRS rules', drs: true do
           end
         end
       end
+
+      context 'given a resource pool with a soft (SHOULD) drs rule' do
+        let(:drs_rule_name) { random_drs_rule_name }
+        let(:vm_type) do
+          {
+            'ram' => 512,
+            'disk' => 2048,
+            'cpu' => 1,
+            'datacenters' => [{
+              'name' => @datacenter_name,
+              'clusters' => [{
+                @cluster_name => {
+                  'drs_rules' => [{
+                    'name' => drs_rule_name,
+                    'type' => 'separate_vms',
+                    'rule_type' => 'SHOULD'
+                  }]
+                }
+              }]
+            }]
+          }
+        end
+
+        it 'should create a non-mandatory anti-affinity rule' do
+          begin
+            first_vm_id, _ = one_cluster_cpi.create_vm(
+              'agent-007',
+              @stemcell_id,
+              vm_type,
+              get_network_spec,
+              [],
+              {'key' => 'value'}
+            )
+            first_vm_mob = one_cluster_cpi.vm_provider.find(first_vm_id).mob
+            cluster = first_vm_mob.resource_pool.parent
+
+            drs_rules = cluster.configuration_ex.rule
+            expect(drs_rules).not_to be_empty
+            drs_rule = drs_rules.find { |rule| rule.name == drs_rule_name }
+            expect(drs_rule).to_not be_nil
+            expect(drs_rule.mandatory).to eq(false)
+          ensure
+            delete_vm(one_cluster_cpi, first_vm_id)
+          end
+        end
+
+        it 'should allow creating more VMs than there are hosts with SHOULD (soft) anti-affinity' do
+          begin
+            vm_ids = []
+            first_vm_id, _ = one_cluster_cpi.create_vm(
+              'agent-007',
+              @stemcell_id,
+              vm_type,
+              get_network_spec,
+              [],
+              {'key' => 'value'}
+            )
+            vm_ids << first_vm_id
+            first_vm_mob = one_cluster_cpi.vm_provider.find(first_vm_id).mob
+            cluster = first_vm_mob.resource_pool.parent
+
+            # With soft anti-affinity (rule_type: SHOULD), we should be able to
+            # create more VMs than hosts without failing
+            (0...cluster.host.length).each {
+              vm_id, _ = one_cluster_cpi.create_vm(
+                'agent-006',
+                @stemcell_id,
+                vm_type,
+                get_network_spec,
+                [],
+                { 'key' => 'value' }
+              )
+              vm_ids << vm_id
+            }
+
+            # Verify all VMs were created successfully
+            expect(vm_ids.length).to eq(cluster.host.length + 1)
+
+            # Verify the DRS rule exists and is non-mandatory
+            drs_rules = cluster.configuration_ex.rule
+            drs_rule = drs_rules.find { |rule| rule.name == drs_rule_name }
+            expect(drs_rule).to_not be_nil
+            expect(drs_rule.mandatory).to eq(false)
+            expect(drs_rule.vm.length).to eq(vm_ids.length)
+          ensure
+            vm_ids.each { |vm_id|
+              delete_vm(one_cluster_cpi, vm_id)
+            }
+          end
+        end
+      end
     end
 
     context 'given the director has "enable_auto_anti_affinity_drs_rules" set to false' do
