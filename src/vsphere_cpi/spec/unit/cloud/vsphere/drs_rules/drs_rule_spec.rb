@@ -6,8 +6,10 @@ describe VSphereCloud::DrsRule, fake_logger: true do
       'fake-rule-name',
       client,
       datacenter_cluster,
+      rule_type: rule_type
     )
   end
+  let(:rule_type) { 'MUST' }
   let(:client) { instance_double('VSphereCloud::VCenterClient') }
   before do
     allow(client).to receive(:service_content).and_return(service_content)
@@ -116,11 +118,40 @@ describe VSphereCloud::DrsRule, fake_logger: true do
             expect(rule_info.vm).to eq([existing_vm_1, existing_vm_2, vm])
             expect(rule_info.name).to eq('fake-rule-name')
             expect(rule_info.enabled).to eq(true)
+            expect(rule_info.mandatory).to eq(true)
             expect(rule_info.key).to eq(rule_key)
 
           end.ordered.and_return(task)
         end
         drs_rule.add_vm(vm)
+      end
+
+      context 'when rule_type is SHOULD (soft anti-affinity)' do
+        let(:rule_type) { 'SHOULD' }
+
+        it 'creates a non-mandatory rule' do
+          with_lock do
+            expect(datacenter_cluster).to receive(:reconfigure_ex) do |config|
+              rule_info = config.rules_spec.first.info
+              expect(rule_info.mandatory).to eq(false)
+            end.ordered.and_return(task)
+          end
+          drs_rule.add_vm(vm)
+        end
+      end
+
+      context 'when rule_type is lowercase' do
+        let(:rule_type) { 'must' }
+
+        it 'creates a mandatory rule (case insensitive)' do
+          with_lock do
+            expect(datacenter_cluster).to receive(:reconfigure_ex) do |config|
+              rule_info = config.rules_spec.first.info
+              expect(rule_info.mandatory).to eq(true)
+            end.ordered.and_return(task)
+          end
+          drs_rule.add_vm(vm)
+        end
       end
     end
 
@@ -140,12 +171,28 @@ describe VSphereCloud::DrsRule, fake_logger: true do
             expect(rule_info.vm).to eq([existing_vm_1, vm])
             expect(rule_info.name).to eq('fake-rule-name')
             expect(rule_info.enabled).to eq(true)
+            expect(rule_info.mandatory).to eq(true)
             expect(rule_info.key).to eq(nil)
 
           end.ordered.and_return(task)
         end
 
         drs_rule.add_vm(vm)
+      end
+
+      context 'when rule_type is SHOULD (soft anti-affinity)' do
+        let(:rule_type) { 'SHOULD' }
+
+        it 'creates a non-mandatory rule' do
+          with_lock do
+            expect(datacenter_cluster).to receive(:reconfigure_ex) do |config|
+              rule_info = config.rules_spec.first.info
+              expect(rule_info).to be_an_instance_of(VimSdk::Vim::Cluster::AntiAffinityRuleSpec)
+              expect(rule_info.mandatory).to eq(false)
+            end.ordered.and_return(task)
+          end
+          drs_rule.add_vm(vm)
+        end
       end
     end
   end
