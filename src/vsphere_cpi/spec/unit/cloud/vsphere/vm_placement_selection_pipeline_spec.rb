@@ -26,7 +26,7 @@ describe VSphereCloud::VmPlacementSelectionPipeline do
   end
 
   # Simulating a mini datacenter with two clusters. Each cluster has two dedicated datastores and one shared datastore.
-  let(:criteria) { [disk_config: disk_config, req_memory: 1024] }
+  let(:criteria) { [disk_config: disk_config, req_memory_mb: 1024] }
   let(:ds_cl1_1) { fake_datastore('fake-ds-cl1-1') }
   let(:ds_cl1_2) { fake_datastore('fake-ds-cl1-2') }
   let(:ds_cl2_1) { fake_datastore('fake-ds-cl2-1') }
@@ -65,19 +65,19 @@ describe VSphereCloud::VmPlacementSelectionPipeline do
       allow_any_instance_of(VSphereCloud::Resources::Datastore).to receive(:maintenance_mode?).and_return(false)
       allow_any_instance_of(VSphereCloud::VmPlacement).to receive(:migration_size).and_return(10)
       allow_any_instance_of(VSphereCloud::VmPlacement).to receive(:balance_score).and_return(10)
-      allow(placement_1).to receive(:host_group_free_memory).and_return (10000)
-      allow(placement_2).to receive(:host_group_free_memory).and_return (20000)
+      allow(placement_1).to receive(:host_group_free_memory_mb).and_return (10000)
+      allow(placement_2).to receive(:host_group_free_memory_mb).and_return (20000)
       expect(subject.to_a.first).to eq(placement_2)
     end
 
     it 'sorts the placements in ascending order of migration size then descending order of balance score and then free memory' do
       allow_any_instance_of(VSphereCloud::Resources::Datastore).to receive(:maintenance_mode?).and_return(false)
       placement_4 = placement_3 = placement_5 = placement_1.dup
-      allow(placement_1).to receive_messages(:host_group_free_memory => 10000, :balance_score => 10 , :migration_size => 10)
-      allow(placement_2).to receive_messages(:host_group_free_memory => 20000, :balance_score => 10 , :migration_size => 10)
-      allow(placement_3).to receive_messages(:host_group_free_memory => 10000, :balance_score => 4 , :migration_size => 5)
-      allow(placement_4).to receive_messages(:host_group_free_memory => 10000, :balance_score => 7 , :migration_size => 5)
-      allow(placement_5).to receive_messages(:host_group_free_memory => 40000, :balance_score => 10 , :migration_size => 1)
+      allow(placement_1).to receive_messages(:host_group_free_memory_mb => 10000, :balance_score => 10 , :migration_size => 10)
+      allow(placement_2).to receive_messages(:host_group_free_memory_mb => 20000, :balance_score => 10 , :migration_size => 10)
+      allow(placement_3).to receive_messages(:host_group_free_memory_mb => 10000, :balance_score => 4 , :migration_size => 5)
+      allow(placement_4).to receive_messages(:host_group_free_memory_mb => 10000, :balance_score => 7 , :migration_size => 5)
+      allow(placement_5).to receive_messages(:host_group_free_memory_mb => 40000, :balance_score => 10 , :migration_size => 1)
       pipeline = described_class.new(*criteria) {[placement_1, placement_2, placement_3, placement_4, placement_5]}
       expect(pipeline.to_a).to eq([placement_5, placement_4, placement_3, placement_2, placement_1])
     end
